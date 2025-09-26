@@ -2592,7 +2592,7 @@ export type ClientTeamAssignment = typeof clientTeamAssignments.$inferSelect;
 export type InsertClientTeamAssignment = z.infer<typeof insertClientTeamAssignmentSchema>;
 
 // Knowledge Base Categories - for organizing articles
-export const knowledgeBaseCategories: ReturnType<typeof pgTable> = pgTable("knowledge_base_categories", {
+export const knowledgeBaseCategories = pgTable("knowledge_base_categories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
@@ -2607,7 +2607,7 @@ export const knowledgeBaseCategories: ReturnType<typeof pgTable> = pgTable("know
 });
 
 // Knowledge Base Articles - the actual content
-export const knowledgeBaseArticles: ReturnType<typeof pgTable> = pgTable("knowledge_base_articles", {
+export const knowledgeBaseArticles = pgTable("knowledge_base_articles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
   content: jsonb("content").notNull(), // rich editor content in blocks format
@@ -2656,7 +2656,7 @@ export const knowledgeBaseLikes = pgTable("knowledge_base_likes", {
 });
 
 // Knowledge Base Comments - with @mention support
-export const knowledgeBaseComments: ReturnType<typeof pgTable> = pgTable("knowledge_base_comments", {
+export const knowledgeBaseComments = pgTable("knowledge_base_comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   articleId: varchar("article_id").notNull().references(() => knowledgeBaseArticles.id, { onDelete: "cascade" }),
   parentId: varchar("parent_id").references(() => knowledgeBaseComments.id), // for threaded comments

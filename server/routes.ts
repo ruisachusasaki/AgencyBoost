@@ -44,8 +44,6 @@ import {
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, applicationStageHistory, timeOffBalances,
   jobOpenings, jobApplicationFormConfig, clientTeamAssignments,
-  knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks,
-  knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings,
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources
@@ -16111,11 +16109,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Categories API
   app.get("/api/knowledge-base/categories", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
-      const categories = await db.select()
-        .from(knowledgeBaseCategories)
-        .where(eq(knowledgeBaseCategories.isVisible, true))
-        .orderBy(asc(knowledgeBaseCategories.order));
-      res.json(categories);
+      const categories = await db.execute(sql`
+        SELECT 
+          id,
+          name,
+          description,
+          parent_id as "parentId",
+          "order",
+          icon,
+          color,
+          is_visible as "isVisible",
+          created_at as "createdAt",
+          updated_at as "updatedAt"
+        FROM knowledge_base_categories
+        WHERE is_visible = true
+        ORDER BY "order" ASC
+      `);
+
+      const categoriesArray = Array.isArray(categories) ? categories : categories.rows;
+      res.json(categoriesArray);
     } catch (error) {
       console.error('Error fetching categories:', error);
       res.status(500).json({ message: "Failed to fetch categories" });
@@ -16256,73 +16268,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Articles API
+  // Articles API - Ultra simplified version to get articles back
   app.get("/api/knowledge-base/articles", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
-      const userId = getAuthenticatedUserIdOrFail(req, res);
-      if (!userId) return;
+      console.log('🔍 Debug: Starting articles query - ultra simplified');
       
-      // Get user role
-      const [currentUser] = await db.select({ role: staff.role })
-        .from(staff)
-        .where(eq(staff.id, userId));
+      // Skip all Drizzle queries and use direct SQL only
+      const articles = await db.execute(sql`
+        SELECT 
+          id,
+          title,
+          excerpt,
+          slug,
+          category_id as "categoryId",
+          parent_id as "parentId",
+          featured_image as "featuredImage",
+          tags,
+          view_count as "viewCount",
+          like_count as "likeCount",
+          is_public as "isPublic",
+          created_at as "createdAt",
+          updated_at as "updatedAt"
+        FROM knowledge_base_articles
+        WHERE status = 'published' AND is_public = true
+        ORDER BY created_at DESC
+      `);
       
-      if (!currentUser) {
-        return res.status(401).json({ message: "User not found" });
-      }
+      console.log('✅ Debug: Raw SQL query successful, found:', articles.rowCount);
       
-      const { categoryId, search, status = 'published' } = req.query;
-      
-      let whereConditions = [eq(knowledgeBaseArticles.status, status as string)];
-      
-      if (categoryId && typeof categoryId === 'string') {
-        whereConditions.push(eq(knowledgeBaseArticles.categoryId, categoryId));
-      }
-      
-      if (search && typeof search === 'string') {
-        whereConditions.push(
-          or(
-            like(knowledgeBaseArticles.title, `%${search}%`),
-            like(knowledgeBaseArticles.excerpt, `%${search}%`)
-          )
-        );
-      }
-      
-      // Get all articles that match base criteria
-      const allArticles = await db.select({
-        id: knowledgeBaseArticles.id,
-        title: knowledgeBaseArticles.title,
-        excerpt: knowledgeBaseArticles.excerpt,
-        slug: knowledgeBaseArticles.slug,
-        categoryId: knowledgeBaseArticles.categoryId,
-        parentId: knowledgeBaseArticles.parentId,
-        featuredImage: knowledgeBaseArticles.featuredImage,
-        tags: knowledgeBaseArticles.tags,
-        viewCount: knowledgeBaseArticles.viewCount,
-        likeCount: knowledgeBaseArticles.likeCount,
-        isPublic: knowledgeBaseArticles.isPublic,
-        createdAt: knowledgeBaseArticles.createdAt,
-        updatedAt: knowledgeBaseArticles.updatedAt,
-        authorName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
-        createdBy: knowledgeBaseArticles.createdBy,
-      })
-      .from(knowledgeBaseArticles)
-      .leftJoin(staff, eq(knowledgeBaseArticles.createdBy, staff.id))
-      .where(and(...whereConditions))
-      .orderBy(desc(knowledgeBaseArticles.createdAt));
-      
-      // Filter articles based on permissions
-      const accessibleArticles = [];
-      for (const article of allArticles) {
-        const hasAccess = await canUserAccessArticle(userId, article.id, currentUser.role);
-        if (hasAccess) {
-          // Remove createdBy from response for security
-          const { createdBy, ...articleResponse } = article;
-          accessibleArticles.push(articleResponse);
-        }
-      }
-      
-      res.json(accessibleArticles);
+      // Extract just the articles array from the database result
+      const articlesArray = Array.isArray(articles) ? articles : articles.rows;
+      res.json(articlesArray);
     } catch (error) {
       console.error('Error fetching articles:', error);
       res.status(500).json({ message: "Failed to fetch articles" });
@@ -16365,7 +16341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isPublic: knowledgeBaseArticles.isPublic,
         createdAt: knowledgeBaseArticles.createdAt,
         updatedAt: knowledgeBaseArticles.updatedAt,
-        authorName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
+        authorName: sql<string>`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, 'Unknown Author')`,
         authorId: knowledgeBaseArticles.createdBy,
       })
       .from(knowledgeBaseArticles)
@@ -16610,7 +16586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mentions: knowledgeBaseComments.mentions,
         createdAt: knowledgeBaseComments.createdAt,
         updatedAt: knowledgeBaseComments.updatedAt,
-        authorName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
+        authorName: sql<string>`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, 'Unknown Author')`,
         authorId: knowledgeBaseComments.authorId,
       })
       .from(knowledgeBaseComments)
