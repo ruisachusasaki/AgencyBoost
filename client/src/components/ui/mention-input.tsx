@@ -80,19 +80,34 @@ export function MentionInput({
   const convertToStorage = useCallback((displayText: string, mentions: MentionMatch[]): string => {
     let result = displayText;
     
-    // For each @Name in display, convert back to @[Name](id) if we have the mapping
-    const displayMentions = displayText.match(/@\w+(\s+\w+)*/g) || [];
+    // Find all @Name patterns in the text (including multi-word names)
+    const displayMentions = displayText.match(/@[A-Za-z]+(?:\s+[A-Za-z]+)*/g) || [];
     
     displayMentions.forEach(displayMention => {
       const name = displayMention.slice(1); // Remove @
+      
+      // First try to find in stored mentions (from previous selections)
       const storedMention = mentions.find(m => m.userName === name);
       if (storedMention) {
         result = result.replace(displayMention, `@[${storedMention.userName}](${storedMention.userId})`);
+        return;
+      }
+      
+      // If not found in stored mentions, try to match against staff data
+      // This handles manually typed mentions like "@Che Oliver"
+      const matchedStaff = staff.find(s => {
+        const fullName = `${s.firstName} ${s.lastName}`;
+        return fullName.toLowerCase() === name.toLowerCase();
+      });
+      
+      if (matchedStaff) {
+        const fullName = `${matchedStaff.firstName} ${matchedStaff.lastName}`;
+        result = result.replace(displayMention, `@[${fullName}](${matchedStaff.id})`);
       }
     });
     
     return result;
-  }, []);
+  }, [staff]);
 
   // Update displayValue when value prop changes
   useEffect(() => {
