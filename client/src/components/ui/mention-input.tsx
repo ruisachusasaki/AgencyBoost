@@ -76,46 +76,34 @@ export function MentionInput({
     return fullName.includes(mentionQuery.toLowerCase());
   }).slice(0, 5); // Limit to 5 suggestions
   
-  console.log("🔍 Dropdown state:", { isDropdownOpen, mentionQuery, filteredStaff: filteredStaff.length, dropdownPosition });
-  
-  // Debug the actual coordinates
-  if (isDropdownOpen && filteredStaff.length > 0) {
-    console.log("🎯 SHOULD BE RENDERING DROPDOWN AT:", dropdownPosition);
-  }
 
   // Check for @ symbol and show dropdown
   const checkForMention = useCallback((text: string, position: number) => {
-    console.log("🔍 checkForMention called:", { text, position, staff: staff.length });
     const beforeCursor = text.slice(0, position);
     const lastAtSymbol = beforeCursor.lastIndexOf('@');
     
     if (lastAtSymbol !== -1) {
       const afterAt = beforeCursor.slice(lastAtSymbol + 1);
-      console.log("🔍 afterAt:", afterAt);
       // Check if there's no space after @ (valid mention start)
       if (!afterAt.includes(' ') && !afterAt.includes('\n')) {
-        console.log("✅ Valid mention detected! Setting dropdown open");
         setMentionQuery(afterAt);
         setIsDropdownOpen(true);
         setSelectedIndex(0);
         
-        // Calculate dropdown position relative to viewport
+        // Calculate dropdown position relative to viewport - SIMPLIFIED
         const textarea = textareaRef.current;
         if (textarea) {
           const rect = textarea.getBoundingClientRect();
-          const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 20;
-          const lines = beforeCursor.split('\n').length - 1;
           
           setDropdownPosition({
-            top: rect.top + window.scrollY + (lines * lineHeight) + 30,
-            left: rect.left + window.scrollX + 10,
+            top: rect.bottom + 5, // Just below the textarea
+            left: rect.left,
           });
         }
         return;
       }
     }
     
-    console.log("❌ No valid mention found, closing dropdown");
     setIsDropdownOpen(false);
     setMentionQuery("");
   }, [staff]);
@@ -125,7 +113,6 @@ export function MentionInput({
     const newValue = e.target.value;
     const newPosition = e.target.selectionStart || 0;
     
-    console.log("🔍 MentionInput handleTextChange:", { newValue, newPosition });
     setCursorPosition(newPosition);
     checkForMention(newValue, newPosition);
     
@@ -269,9 +256,6 @@ export function MentionInput({
       
       {/* Mention suggestions dropdown - rendered via portal */}
       {isDropdownOpen && filteredStaff.length > 0 && (() => {
-        console.log("🚀 ATTEMPTING TO RENDER DROPDOWN VIA PORTAL!");
-        console.log("🎯 Portal target exists?", !!document.body);
-        console.log("📍 TOP:", dropdownPosition.top, "LEFT:", dropdownPosition.left);
         return createPortal(
           <Card 
             ref={dropdownRef}
@@ -279,8 +263,6 @@ export function MentionInput({
             style={{
               top: dropdownPosition.top,
               left: dropdownPosition.left,
-              backgroundColor: 'red', // DEBUG: Make it obvious
-              border: '5px solid blue', // DEBUG: Make it obvious
             }}
           >
             <div className="p-2">
