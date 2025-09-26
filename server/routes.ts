@@ -16243,6 +16243,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If user is the author, they can access
       if (article.createdBy === userId) return true;
       
+      // Get user's department (team) for team-based permissions
+      const userTeamResult = await db.execute(sql`
+        SELECT department FROM staff WHERE id = ${userId}
+      `);
+      const userTeamRows = Array.isArray(userTeamResult) ? userTeamResult : userTeamResult.rows;
+      const userDepartment = userTeamRows && userTeamRows.length > 0 ? userTeamRows[0].department : null;
+      
       // Check if user has specific permissions using raw SQL
       const permissionsResult = await db.execute(sql`
         SELECT * FROM knowledge_base_permissions
@@ -16250,7 +16257,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           AND resource_id = ${articleId}
           AND (
             (access_type = 'user' AND access_id = ${userId})
-            OR (access_type = 'role' AND access_id = ${userRole})
+            OR (access_type = 'team' AND access_id IN (
+              SELECT id FROM departments WHERE name = ${userDepartment}
+            ))
           )
       `);
       

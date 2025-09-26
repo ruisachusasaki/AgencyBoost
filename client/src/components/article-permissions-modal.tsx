@@ -28,7 +28,7 @@ interface ArticlePermissionsModalProps {
 
 interface Permission {
   id?: string;
-  accessType: 'role' | 'user';
+  accessType: 'team' | 'user';
   accessId: string;
   permission: 'read' | 'write' | 'admin';
 }
@@ -43,7 +43,7 @@ export function ArticlePermissionsModal({
   const queryClient = useQueryClient();
   const [isPublic, setIsPublic] = useState(true);
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [newPermissionType, setNewPermissionType] = useState<'role' | 'user'>('role');
+  const [newPermissionType, setNewPermissionType] = useState<'team' | 'user'>('team');
   const [newPermissionAccess, setNewPermissionAccess] = useState('');
   const [newPermissionLevel, setNewPermissionLevel] = useState<'read' | 'write' | 'admin'>('read');
 
@@ -53,9 +53,9 @@ export function ArticlePermissionsModal({
     enabled: isOpen
   });
 
-  // Fetch available roles for role permissions
-  const { data: availableRoles = [] } = useQuery({
-    queryKey: ['/api/roles/names'],
+  // Fetch available teams (departments) for team permissions
+  const { data: availableTeams = [] } = useQuery({
+    queryKey: ['/api/departments'],
     enabled: isOpen
   });
 
@@ -106,7 +106,7 @@ export function ArticlePermissionsModal({
     if (!newPermissionAccess) {
       toast({
         title: "Error",
-        description: "Please select a user or role",
+        description: "Please select a user or team",
         variant: "destructive",
       });
       return;
@@ -120,7 +120,7 @@ export function ArticlePermissionsModal({
     if (exists) {
       toast({
         title: "Error", 
-        description: "Permission already exists for this user/role",
+        description: "Permission already exists for this user/team",
         variant: "destructive",
       });
       return;
@@ -148,8 +148,9 @@ export function ArticlePermissionsModal({
   };
 
   const getDisplayName = (permission: Permission) => {
-    if (permission.accessType === 'role') {
-      return permission.accessId;
+    if (permission.accessType === 'team') {
+      const team = availableTeams.find((t: any) => t.id === permission.accessId);
+      return team ? team.name : 'Unknown Team';
     } else {
       const user = staff.find((s: any) => s.id === permission.accessId);
       return user ? `${user.firstName} ${user.lastName}` : 'Unknown User';
@@ -159,8 +160,8 @@ export function ArticlePermissionsModal({
   const availableUsers = staff.filter((s: any) => 
     !permissions.some(p => p.accessType === 'user' && p.accessId === s.id)
   );
-  const availableRolesFiltered = availableRoles.filter((role: string) =>
-    !permissions.some(p => p.accessType === 'role' && p.accessId === role)
+  const availableTeamsFiltered = availableTeams.filter((team: any) =>
+    !permissions.some(p => p.accessType === 'team' && p.accessId === team.id)
   );
 
   return (
@@ -224,7 +225,7 @@ export function ArticlePermissionsModal({
                   <div className="border rounded-lg p-4 bg-muted/50">
                     <Label className="text-sm font-medium mb-3 block">Add Access</Label>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                      <Select value={newPermissionType} onValueChange={(value: 'role' | 'user') => {
+                      <Select value={newPermissionType} onValueChange={(value: 'team' | 'user') => {
                         setNewPermissionType(value);
                         setNewPermissionAccess('');
                       }}>
@@ -232,19 +233,19 @@ export function ArticlePermissionsModal({
                           <SelectValue placeholder="Type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="role">Role</SelectItem>
+                          <SelectItem value="team">Team</SelectItem>
                           <SelectItem value="user">User</SelectItem>
                         </SelectContent>
                       </Select>
 
                       <Select value={newPermissionAccess} onValueChange={setNewPermissionAccess}>
                         <SelectTrigger data-testid="select-permission-access">
-                          <SelectValue placeholder={newPermissionType === 'role' ? "Select role" : "Select user"} />
+                          <SelectValue placeholder={newPermissionType === 'team' ? "Select team" : "Select user"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {newPermissionType === 'role' ? (
-                            availableRolesFiltered.map(role => (
-                              <SelectItem key={role} value={role}>{role}</SelectItem>
+                          {newPermissionType === 'team' ? (
+                            availableTeamsFiltered.map(team => (
+                              <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
                             ))
                           ) : (
                             availableUsers.map((user: any) => (
@@ -285,7 +286,7 @@ export function ArticlePermissionsModal({
                       {permissions.map((permission, index) => (
                         <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                           <div className="flex items-center gap-3">
-                            {permission.accessType === 'role' ? (
+                            {permission.accessType === 'team' ? (
                               <Users className="w-4 h-4 text-blue-600" />
                             ) : (
                               <User className="w-4 h-4 text-green-600" />
@@ -293,7 +294,7 @@ export function ArticlePermissionsModal({
                             <div>
                               <div className="font-medium">{getDisplayName(permission)}</div>
                               <div className="text-xs text-muted-foreground">
-                                {permission.accessType === 'role' ? 'Role' : 'User'}
+                                {permission.accessType === 'team' ? 'Team' : 'User'}
                               </div>
                             </div>
                           </div>
