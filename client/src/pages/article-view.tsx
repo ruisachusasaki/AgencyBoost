@@ -626,6 +626,7 @@ export default function ArticleView() {
               placeholder="Share your thoughts... Type @ to mention someone"
               value={comment}
               onChange={(newValue, mentions) => {
+                console.log('📝 MentionInput onChange:', { newValue, mentions });
                 setComment(newValue);
                 setCommentMentions(mentions);
               }}
@@ -638,6 +639,7 @@ export default function ArticleView() {
                 const mentionUserIds = commentMentions
                   .map(mention => mention.userId)
                   .filter(Boolean) as string[];
+                console.log('🚀 Submitting comment:', { content: comment, mentions: mentionUserIds, commentMentions });
                 commentMutation.mutate({ content: comment, mentions: mentionUserIds });
               }}
               disabled={!comment.trim() || commentMutation.isPending}
