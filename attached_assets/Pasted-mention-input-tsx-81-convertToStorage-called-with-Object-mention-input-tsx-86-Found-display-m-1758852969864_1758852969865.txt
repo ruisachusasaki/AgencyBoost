@@ -1,0 +1,109 @@
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(0)
+mention-input.tsx:118 🎯 convertToStorage result: Object
+article-view.tsx:629 📝 MentionInput onChange: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(0)
+mention-input.tsx:118 🎯 convertToStorage result: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: d against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: d
+mention-input.tsx:118 🎯 convertToStorage result: Object
+article-view.tsx:629 📝 MentionInput onChange: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: d against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: d
+mention-input.tsx:118 🎯 convertToStorage result: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: du against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: du
+mention-input.tsx:118 🎯 convertToStorage result: Object
+article-view.tsx:629 📝 MentionInput onChange: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: du against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: du
+mention-input.tsx:118 🎯 convertToStorage result: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: dus against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: dus
+mention-input.tsx:118 🎯 convertToStorage result: Object
+article-view.tsx:629 📝 MentionInput onChange: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: dus against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: dus
+mention-input.tsx:118 🎯 convertToStorage result: Object
+article-view.tsx:629 📝 MentionInput onChange: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:95 ✅ Found in stored mentions: Object
+mention-input.tsx:118 🎯 convertToStorage result: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:95 ✅ Found in stored mentions: Object
+mention-input.tsx:118 🎯 convertToStorage result: Object
+article-view.tsx:629 📝 MentionInput onChange: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:95 ✅ Found in stored mentions: Object
+mention-input.tsx:118 🎯 convertToStorage result: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: Dustin Mathews final debug test against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: Dustin Mathews final debug test
+mention-input.tsx:118 🎯 convertToStorage result: Object
+article-view.tsx:629 📝 MentionInput onChange: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: Dustin Mathews final debug test against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: Dustin Mathews final debug test
+mention-input.tsx:118 🎯 convertToStorage result: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: Dustin Mathews final debug test against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: Dustin Mathews final debug test
+mention-input.tsx:118 🎯 convertToStorage result: Object
+article-view.tsx:642 🚀 Submitting comment: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: Dustin Mathews final debug test against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: Dustin Mathews final debug test
+mention-input.tsx:118 🎯 convertToStorage result: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: Dustin Mathews final debug test against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: Dustin Mathews final debug test
+mention-input.tsx:118 🎯 convertToStorage result: Object
+article-view.tsx:629 📝 MentionInput onChange: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: Dustin Mathews final debug test against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: Dustin Mathews final debug test
+mention-input.tsx:118 🎯 convertToStorage result: Object
+mention-input.tsx:81 🔧 convertToStorage called with: Object
+mention-input.tsx:86 🔍 Found display mentions: Array(1)
+mention-input.tsx:90 📝 Processing mention: Object
+mention-input.tsx:107 🔍 Checking staff match for: Dustin Mathews final debug test against staff: Array(35)
+mention-input.tsx:114 ❌ No staff match found for: Dustin Mathews final debug test
+mention-input.tsx:118 🎯 convertToStorage result: Object
+8198 log entries are not shown.Understand this warning

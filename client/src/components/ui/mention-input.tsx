@@ -78,44 +78,34 @@ export function MentionInput({
 
   // Convert display format (@Name) to storage format (@[Name](id)) using stored mentions
   const convertToStorage = useCallback((displayText: string, mentions: MentionMatch[]): string => {
-    console.log('🔧 convertToStorage called with:', { displayText, mentions, staffCount: staff.length });
     let result = displayText;
     
-    // Find all @Name patterns in the text (including multi-word names)
-    const displayMentions = displayText.match(/@[A-Za-z]+(?:\s+[A-Za-z]+)*/g) || [];
-    console.log('🔍 Found display mentions:', displayMentions);
+    // Find all @Name patterns in the text (limit to 1-3 words for typical names)
+    const displayMentions = displayText.match(/@[A-Za-z]+(?:\s+[A-Za-z]+){0,2}(?=\s|$)/g) || [];
     
     displayMentions.forEach(displayMention => {
       const name = displayMention.slice(1); // Remove @
-      console.log('📝 Processing mention:', { displayMention, name });
       
       // First try to find in stored mentions (from previous selections)
       const storedMention = mentions.find(m => m.userName === name);
       if (storedMention) {
-        console.log('✅ Found in stored mentions:', storedMention);
         result = result.replace(displayMention, `@[${storedMention.userName}](${storedMention.userId})`);
         return;
       }
       
       // If not found in stored mentions, try to match against staff data
-      // This handles manually typed mentions like "@Che Oliver"
+      // This handles manually typed mentions like "@Dustin Mathews"
       const matchedStaff = staff.find(s => {
         const fullName = `${s.firstName} ${s.lastName}`;
         return fullName.toLowerCase() === name.toLowerCase();
       });
       
-      console.log('🔍 Checking staff match for:', name, 'against staff:', staff.map(s => `${s.firstName} ${s.lastName}`));
-      
       if (matchedStaff) {
         const fullName = `${matchedStaff.firstName} ${matchedStaff.lastName}`;
-        console.log('✅ Found staff match:', { matchedStaff, fullName });
         result = result.replace(displayMention, `@[${fullName}](${matchedStaff.id})`);
-      } else {
-        console.log('❌ No staff match found for:', name);
       }
     });
     
-    console.log('🎯 convertToStorage result:', { original: displayText, result });
     return result;
   }, [staff]);
 
