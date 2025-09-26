@@ -43,9 +43,9 @@ export function MentionInput({
   const [cursorPosition, setCursorPosition] = useState(0);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [displayValue, setDisplayValue] = useState(value); // Clean display value
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
 
   // Fetch staff data for mentions
   const { data: staff = [] } = useQuery<Staff[]>({
@@ -70,6 +70,34 @@ export function MentionInput({
 
     return mentions;
   }, []);
+
+  // Convert storage format (@[Name](id)) to display format (@Name)
+  const convertToDisplay = useCallback((text: string): string => {
+    return text.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1');
+  }, []);
+
+  // Convert display format (@Name) to storage format (@[Name](id)) using stored mentions
+  const convertToStorage = useCallback((displayText: string, mentions: MentionMatch[]): string => {
+    let result = displayText;
+    
+    // For each @Name in display, convert back to @[Name](id) if we have the mapping
+    const displayMentions = displayText.match(/@\w+(\s+\w+)*/g) || [];
+    
+    displayMentions.forEach(displayMention => {
+      const name = displayMention.slice(1); // Remove @
+      const storedMention = mentions.find(m => m.userName === name);
+      if (storedMention) {
+        result = result.replace(displayMention, `@[${storedMention.userName}](${storedMention.userId})`);
+      }
+    });
+    
+    return result;
+  }, []);
+
+  // Update displayValue when value prop changes
+  useEffect(() => {
+    setDisplayValue(convertToDisplay(value));
+  }, [value, convertToDisplay]);
 
   // Filter staff based on mention query
   const filteredStaff = staff.filter((member) => {
@@ -113,23 +141,21 @@ export function MentionInput({
 
   // Handle text change
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
+    const newDisplayValue = e.target.value;
     const newPosition = e.target.selectionStart || 0;
     
+    setDisplayValue(newDisplayValue);
     setCursorPosition(newPosition);
-    checkForMention(newValue, newPosition);
+    checkForMention(newDisplayValue, newPosition);
     
-    const mentions = parseMentions(newValue);
-    onChange(newValue, mentions);
+    // Convert to storage format and get mentions from the original value
+    const existingMentions = parseMentions(value);
+    const storageValue = convertToStorage(newDisplayValue, existingMentions);
+    const updatedMentions = parseMentions(storageValue);
+    
+    onChange(storageValue, updatedMentions);
   };
 
-  // Handle scroll synchronization
-  const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
-    if (overlayRef.current && textareaRef.current) {
-      overlayRef.current.scrollTop = textareaRef.current.scrollTop;
-      overlayRef.current.scrollLeft = textareaRef.current.scrollLeft;
-    }
-  };
 
   // Handle cursor position change
   const handleCursorChange = () => {
@@ -137,7 +163,7 @@ export function MentionInput({
     if (textarea) {
       const newPosition = textarea.selectionStart || 0;
       setCursorPosition(newPosition);
-      checkForMention(value, newPosition);
+      checkForMention(displayValue, newPosition);
     }
   };
 
@@ -146,18 +172,23 @@ export function MentionInput({
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    const beforeCursor = value.slice(0, cursorPosition);
-    const afterCursor = value.slice(cursorPosition);
+    const beforeCursor = displayValue.slice(0, cursorPosition);
+    const afterCursor = displayValue.slice(cursorPosition);
     const lastAtSymbol = beforeCursor.lastIndexOf('@');
     
     if (lastAtSymbol !== -1) {
-      const beforeMention = value.slice(0, lastAtSymbol);
-      const mentionText = `@[${staff.firstName} ${staff.lastName}](${staff.id})`;
-      const newValue = beforeMention + mentionText + afterCursor;
-      const newCursorPosition = lastAtSymbol + mentionText.length;
+      const beforeMention = displayValue.slice(0, lastAtSymbol);
+      const mentionDisplay = `@${staff.firstName} ${staff.lastName}`;
+      const newDisplayValue = beforeMention + mentionDisplay + afterCursor;
+      const newCursorPosition = lastAtSymbol + mentionDisplay.length;
       
-      const mentions = parseMentions(newValue);
-      onChange(newValue, mentions);
+      setDisplayValue(newDisplayValue);
+      
+      // Create storage format with the new mention
+      const mentionStorage = `@[${staff.firstName} ${staff.lastName}](${staff.id})`;
+      const newStorageValue = beforeMention + mentionStorage + afterCursor;
+      const mentions = parseMentions(newStorageValue);
+      onChange(newStorageValue, mentions);
       
       // Set cursor position after mention
       setTimeout(() => {
@@ -215,87 +246,20 @@ export function MentionInput({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Sync scroll position on value change
-  useEffect(() => {
-    if (overlayRef.current && textareaRef.current) {
-      overlayRef.current.scrollTop = textareaRef.current.scrollTop;
-      overlayRef.current.scrollLeft = textareaRef.current.scrollLeft;
-    }
-  }, [value]);
-
-  // Render text with highlighted mentions while preserving exact width
-  const renderTextWithMentions = () => {
-    const mentions = parseMentions(value);
-    if (mentions.length === 0) return value;
-
-    let lastIndex = 0;
-    const parts = [];
-
-    mentions.forEach((mention, index) => {
-      // Add text before mention
-      if (mention.start > lastIndex) {
-        parts.push(value.slice(lastIndex, mention.start));
-      }
-      
-      // Render mention with exact character-by-character width preservation
-      // Source: @[Name](id) -> visible: @ + Name, hidden: [ + ](id)
-      parts.push(
-        <span key={index}>
-          <span className="bg-primary/20 text-primary rounded">@</span>
-          <span className="absolute opacity-0 select-none pointer-events-none w-0 h-0 overflow-hidden">[</span>
-          <span className="bg-primary/20 text-primary rounded">{mention.userName}</span>
-          <span className="absolute opacity-0 select-none pointer-events-none w-0 h-0 overflow-hidden">]({mention.userId})</span>
-        </span>
-      );
-      
-      lastIndex = mention.end;
-    });
-
-    // Add remaining text
-    if (lastIndex < value.length) {
-      parts.push(value.slice(lastIndex));
-    }
-
-    return parts;
-  };
-
   return (
     <div className="relative">
-      {/* Visual overlay showing styled text with @Name only */}
-      <div 
-        ref={overlayRef}
-        className={cn(
-          "absolute inset-0 pointer-events-none z-10 px-3 py-2 min-h-[80px] border border-transparent rounded-md text-sm whitespace-pre-wrap break-words overflow-auto text-foreground",
-          disabled && "opacity-50"
-        )}
-        style={{
-          fontFamily: 'inherit',
-          fontSize: 'inherit',
-        }}
-      >
-        {value === "" ? (
-          <span className="text-muted-foreground">{placeholder}</span>
-        ) : (
-          renderTextWithMentions()
-        )}
-      </div>
-      
-      {/* Actual textarea - transparent text for functionality */}
+      {/* Simple textarea with clean @Name display */}
       <Textarea
         ref={textareaRef}
-        value={value}
+        value={displayValue}
         onChange={handleTextChange}
         onKeyDown={handleKeyDown}
         onSelect={handleCursorChange}
         onClick={handleCursorChange}
-        onScroll={handleScroll}
-        placeholder="" // Hide native placeholder
-        className={cn("min-h-[80px] relative z-20 text-transparent caret-neutral-900 dark:caret-neutral-100 selection:bg-blue-200", className)}
+        placeholder={placeholder}
+        className={cn("min-h-[80px]", className)}
         disabled={disabled}
         data-testid={dataTestId}
-        style={{
-          background: 'transparent',
-        }}
       />
       
       {/* Mention suggestions dropdown - rendered via portal */}
