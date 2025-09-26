@@ -271,6 +271,7 @@ export function MentionInput({
       {isDropdownOpen && filteredStaff.length > 0 && (() => {
         console.log("🚀 ATTEMPTING TO RENDER DROPDOWN VIA PORTAL!");
         console.log("🎯 Portal target exists?", !!document.body);
+        console.log("📍 EXACT COORDINATES:", dropdownPosition);
         return createPortal(
           <Card 
             ref={dropdownRef}
