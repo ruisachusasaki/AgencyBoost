@@ -53,6 +53,12 @@ export function ArticlePermissionsModal({
     enabled: isOpen
   });
 
+  // Fetch available roles for role permissions
+  const { data: availableRoles = [] } = useQuery({
+    queryKey: ['/api/roles/names'],
+    enabled: isOpen
+  });
+
   // Fetch current permissions
   const { data: currentPermissions, isLoading } = useQuery({
     queryKey: [`/api/knowledge-base/articles/${articleId}/permissions`],
@@ -150,11 +156,10 @@ export function ArticlePermissionsModal({
     }
   };
 
-  const availableRoles = ['Admin', 'Manager', 'User', 'Accounting'];
   const availableUsers = staff.filter((s: any) => 
     !permissions.some(p => p.accessType === 'user' && p.accessId === s.id)
   );
-  const availableRolesFiltered = availableRoles.filter(role =>
+  const availableRolesFiltered = availableRoles.filter((role: string) =>
     !permissions.some(p => p.accessType === 'role' && p.accessId === role)
   );
 

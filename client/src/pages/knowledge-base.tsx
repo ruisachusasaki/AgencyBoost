@@ -296,7 +296,7 @@ export default function KnowledgeBase() {
   });
 
   const { data: articles = [] } = useQuery<any[]>({
-    queryKey: ["/api/knowledge-base/articles/"],
+    queryKey: ["/api/knowledge-base/articles"],
   });
 
   // Fetch bookmarks

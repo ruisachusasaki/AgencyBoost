@@ -8794,6 +8794,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple role names for permissions assignment - available to managers and admins
+  app.get("/api/roles/names", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      // Check if user is admin or manager
+      const [currentUser] = await db.select({ role: staff.role })
+        .from(staff)
+        .where(eq(staff.id, userId));
+
+      if (!currentUser || !['Admin', 'Manager'].includes(currentUser.role)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const roleNames = await db
+        .select({
+          name: roles.name,
+        })
+        .from(roles)
+        .orderBy(asc(roles.name));
+
+      res.json(roleNames.map(r => r.name));
+    } catch (error) {
+      console.error('Error fetching role names:', error);
+      res.status(500).json({ message: "Failed to fetch role names" });
+    }
+  });
+
   // Roles API Routes - SECURED (Admin Only)
   app.get("/api/roles", requireAuth(), requireAdmin(), async (req, res) => {
     try {
@@ -16093,7 +16122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/knowledge-base/categories", async (req, res) => {
+  app.post("/api/knowledge-base/categories", requireAuth(), requirePermission('knowledge_base', 'canCreate'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
@@ -16127,7 +16156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/knowledge-base/categories/:id", async (req, res) => {
+  app.put("/api/knowledge-base/categories/:id", requireAuth(), requirePermission('knowledge_base', 'canEdit'), async (req, res) => {
     try {
       const { name, description, icon, color, isVisible } = req.body;
       
@@ -16154,7 +16183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/knowledge-base/categories/:id", async (req, res) => {
+  app.delete("/api/knowledge-base/categories/:id", requireAuth(), requirePermission('knowledge_base', 'canDelete'), async (req, res) => {
     try {
       // Check if category has articles or subcategories
       const articlesCount = await db.select({ count: sql<number>`count(*)` })
