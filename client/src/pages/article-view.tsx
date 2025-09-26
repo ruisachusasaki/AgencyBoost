@@ -21,7 +21,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, Eye, Heart, Bookmark, Calendar, User, Tag, 
-  MessageCircle, Send, Edit, Trash2, Save, X
+  MessageCircle, Send, Edit, Trash2, Save, X, Settings
 } from "lucide-react";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
@@ -30,6 +30,7 @@ import { SlateEditor, createEmptyDocument } from '@/components/slate-editor';
 import type { Descendant } from 'slate';
 import { MentionInput } from '@/components/ui/mention-input';
 import { MentionText } from '@/components/ui/mention-text';
+import { ArticlePermissionsModal } from '@/components/article-permissions-modal';
 
 export default function ArticleView() {
   const { id } = useParams();
@@ -46,6 +47,7 @@ export default function ArticleView() {
   const [currentContent, setCurrentContent] = useState<Descendant[]>(createEmptyDocument());
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 
   // Fetch current user data for role checking
   const { data: currentUser } = useQuery({
@@ -551,6 +553,20 @@ export default function ArticleView() {
                   <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
                 </Button>
 
+                {/* Settings button - only for Admins and Managers */}
+                {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPermissionsModal(true)}
+                    data-testid="button-settings"
+                    className="text-[#00C9C6] hover:text-[#00b3b0] hover:bg-[#00C9C6]/10"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </Button>
+                )}
+
                 {/* Delete button - only for Admins and Managers */}
                 {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
                   <Button
@@ -732,6 +748,14 @@ export default function ArticleView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Permissions Modal */}
+      <ArticlePermissionsModal
+        isOpen={showPermissionsModal}
+        onClose={() => setShowPermissionsModal(false)}
+        articleId={id || ''}
+        articleTitle={(article as any)?.title || ''}
+      />
     </div>
   );
 }
