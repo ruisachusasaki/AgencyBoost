@@ -16181,9 +16181,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Articles API
-  app.get("/api/knowledge-base/articles", async (req, res) => {
+  // Helper function to check if user has access to an article
+  async function canUserAccessArticle(userId: string, articleId: string, userRole: string): Promise<boolean> {
     try {
+      // Get article info
+      const [article] = await db.select({
+        isPublic: knowledgeBaseArticles.isPublic,
+        createdBy: knowledgeBaseArticles.createdBy,
+      })
+      .from(knowledgeBaseArticles)
+      .where(eq(knowledgeBaseArticles.id, articleId));
+      
+      if (!article) return false;
+      
+      // If article is public, everyone can access
+      if (article.isPublic) return true;
+      
+      // If user is the author, they can access
+      if (article.createdBy === userId) return true;
+      
+      // Check if user has specific permissions
+      const permissions = await db.select()
+        .from(knowledgeBasePermissions)
+        .where(
+          and(
+            eq(knowledgeBasePermissions.resourceType, 'article'),
+            eq(knowledgeBasePermissions.resourceId, articleId),
+            or(
+              and(
+                eq(knowledgeBasePermissions.accessType, 'user'),
+                eq(knowledgeBasePermissions.accessId, userId)
+              ),
+              and(
+                eq(knowledgeBasePermissions.accessType, 'role'),
+                eq(knowledgeBasePermissions.accessId, userRole)
+              )
+            )
+          )
+        );
+      
+      return permissions.length > 0;
+    } catch (error) {
+      console.error('Error checking article access:', error);
+      return false;
+    }
+  }
+
+  // Articles API
+  app.get("/api/knowledge-base/articles", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      // Get user role
+      const [currentUser] = await db.select({ role: staff.role })
+        .from(staff)
+        .where(eq(staff.id, userId));
+      
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
       const { categoryId, search, status = 'published' } = req.query;
       
       let whereConditions = [eq(knowledgeBaseArticles.status, status as string)];
@@ -16201,7 +16259,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       
-      const articles = await db.select({
+      // Get all articles that match base criteria
+      const allArticles = await db.select({
         id: knowledgeBaseArticles.id,
         title: knowledgeBaseArticles.title,
         excerpt: knowledgeBaseArticles.excerpt,
@@ -16216,13 +16275,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: knowledgeBaseArticles.createdAt,
         updatedAt: knowledgeBaseArticles.updatedAt,
         authorName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
+        createdBy: knowledgeBaseArticles.createdBy,
       })
       .from(knowledgeBaseArticles)
       .leftJoin(staff, eq(knowledgeBaseArticles.createdBy, staff.id))
       .where(and(...whereConditions))
       .orderBy(desc(knowledgeBaseArticles.createdAt));
       
-      res.json(articles);
+      // Filter articles based on permissions
+      const accessibleArticles = [];
+      for (const article of allArticles) {
+        const hasAccess = await canUserAccessArticle(userId, article.id, currentUser.role);
+        if (hasAccess) {
+          // Remove createdBy from response for security
+          const { createdBy, ...articleResponse } = article;
+          accessibleArticles.push(articleResponse);
+        }
+      }
+      
+      res.json(accessibleArticles);
     } catch (error) {
       console.error('Error fetching articles:', error);
       res.status(500).json({ message: "Failed to fetch articles" });
@@ -16233,6 +16304,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      // Get user role
+      const [currentUser] = await db.select({ role: staff.role })
+        .from(staff)
+        .where(eq(staff.id, userId));
+      
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      // Check if user has access to this specific article
+      const hasAccess = await canUserAccessArticle(userId, req.params.id, currentUser.role);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied to this article" });
+      }
       
       const [article] = await db.select({
         id: knowledgeBaseArticles.id,
@@ -16589,6 +16675,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating comment:', error);
       res.status(500).json({ message: "Failed to create comment" });
+    }
+  });
+
+  // Article Permissions Management Routes
+  app.get("/api/knowledge-base/articles/:id/permissions", requireAuth(), requirePermission('knowledge_base', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      // Check if user can manage permissions for this article
+      const [article] = await db.select({
+        isPublic: knowledgeBaseArticles.isPublic,
+        createdBy: knowledgeBaseArticles.createdBy,
+      })
+      .from(knowledgeBaseArticles)
+      .where(eq(knowledgeBaseArticles.id, req.params.id));
+
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+
+      // Only article author, admins, or managers can manage permissions
+      const [currentUser] = await db.select({ role: staff.role })
+        .from(staff)
+        .where(eq(staff.id, userId));
+
+      if (!currentUser || (article.createdBy !== userId && !['Admin', 'Manager'].includes(currentUser.role))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get current permissions
+      const permissions = await db.select({
+        id: knowledgeBasePermissions.id,
+        accessType: knowledgeBasePermissions.accessType,
+        accessId: knowledgeBasePermissions.accessId,
+        permission: knowledgeBasePermissions.permission,
+      })
+      .from(knowledgeBasePermissions)
+      .where(
+        and(
+          eq(knowledgeBasePermissions.resourceType, 'article'),
+          eq(knowledgeBasePermissions.resourceId, req.params.id)
+        )
+      );
+
+      res.json({
+        isPublic: article.isPublic,
+        permissions: permissions
+      });
+    } catch (error) {
+      console.error('Error fetching article permissions:', error);
+      res.status(500).json({ message: "Failed to fetch permissions" });
+    }
+  });
+
+  app.put("/api/knowledge-base/articles/:id/permissions", requireAuth(), requirePermission('knowledge_base', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { isPublic, permissions } = req.body;
+
+      // Check if user can manage permissions for this article
+      const [article] = await db.select({
+        isPublic: knowledgeBaseArticles.isPublic,
+        createdBy: knowledgeBaseArticles.createdBy,
+      })
+      .from(knowledgeBaseArticles)
+      .where(eq(knowledgeBaseArticles.id, req.params.id));
+
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+
+      // Only article author, admins, or managers can manage permissions
+      const [currentUser] = await db.select({ role: staff.role })
+        .from(staff)
+        .where(eq(staff.id, userId));
+
+      if (!currentUser || (article.createdBy !== userId && !['Admin', 'Manager'].includes(currentUser.role))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Update article visibility
+      if (typeof isPublic === 'boolean') {
+        await db.update(knowledgeBaseArticles)
+          .set({ 
+            isPublic: isPublic,
+            updatedAt: new Date()
+          })
+          .where(eq(knowledgeBaseArticles.id, req.params.id));
+      }
+
+      // Update permissions
+      if (permissions && Array.isArray(permissions)) {
+        // Delete existing permissions
+        await db.delete(knowledgeBasePermissions)
+          .where(
+            and(
+              eq(knowledgeBasePermissions.resourceType, 'article'),
+              eq(knowledgeBasePermissions.resourceId, req.params.id)
+            )
+          );
+
+        // Insert new permissions
+        for (const permission of permissions) {
+          await db.insert(knowledgeBasePermissions).values({
+            resourceType: 'article',
+            resourceId: req.params.id,
+            accessType: permission.accessType, // 'user' or 'role'
+            accessId: permission.accessId, // user ID or role name
+            permission: permission.permission || 'read',
+          });
+        }
+      }
+
+      res.json({ message: "Permissions updated successfully" });
+    } catch (error) {
+      console.error('Error updating article permissions:', error);
+      res.status(500).json({ message: "Failed to update permissions" });
     }
   });
 
