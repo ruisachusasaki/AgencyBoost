@@ -56,6 +56,11 @@ export default function ArticleView() {
     }
   });
 
+  // Fetch staff data for mention conversion
+  const { data: staff = [] } = useQuery({
+    queryKey: ['/api/staff']
+  });
+
   // Helper function to convert content between formats
   const parseContent = (content: any): Descendant[] => {
     if (!content || content === undefined || content === null) {
