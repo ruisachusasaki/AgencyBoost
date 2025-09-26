@@ -1,0 +1,86 @@
+ Dropdown state: Object
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:79 🔍 Dropdown state: Object
+youtube.js:11 [YOUTUBEJS][Player]: Failed to extract signature decipher algorithm.
+2 @ youtube.js:11Understand this warning
+mention-input.tsx:83 🔍 checkForMention called: Object
+mention-input.tsx:113 ❌ No valid mention found, closing dropdown
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🔍 checkForMention called: Object
+mention-input.tsx:113 ❌ No valid mention found, closing dropdown
+mention-input.tsx:123 🔍 MentionInput handleTextChange: Object
+mention-input.tsx:83 🔍 checkForMention called: Object
+mention-input.tsx:89 🔍 afterAt: 
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🔍 checkForMention called: Object
+mention-input.tsx:89 🔍 afterAt: 
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:123 🔍 MentionInput handleTextChange: Object
+mention-input.tsx:83 🔍 checkForMention called: Object
+mention-input.tsx:113 ❌ No valid mention found, closing dropdown
+mention-input.tsx:79 🔍 Dropdown state: Object
+mention-input.tsx:83 🔍 checkForMention called: Object
+mention-input.tsx:113 ❌ No valid mention found, closing dropdown
+mention-input.tsx:79 🔍 Dropdown state: Object
+7298 log entries are not shown.Understand this warning
+mention-input.tsx:83 🔍 checkForMention called: {text: '', position: 0, staff: 35}
+mention-input.tsx:113 ❌ No valid mention found, closing dropdown
+mention-input.tsx:83 🔍 checkForMention called: {text: '', position: 0, staff: 35}
+mention-input.tsx:113 ❌ No valid mention found, closing dropdown
+mention-input.tsx:123 🔍 MentionInput handleTextChange: {newValue: '@', newPosition: 1}
+mention-input.tsx:83 🔍 checkForMention called: {text: '@', position: 1, staff: 35}
+mention-input.tsx:89 🔍 afterAt: 
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: {isDropdownOpen: true, mentionQuery: '', filteredStaff: 5, dropdownPosition: {…}}
+mention-input.tsx:83 🔍 checkForMention called: {text: '@', position: 1, staff: 35}
+mention-input.tsx:89 🔍 afterAt: 
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: {isDropdownOpen: true, mentionQuery: '', filteredStaff: 5, dropdownPosition: {…}}
+mention-input.tsx:123 🔍 MentionInput handleTextChange: {newValue: '@b', newPosition: 2}
+mention-input.tsx:83 🔍 checkForMention called: {text: '@b', position: 2, staff: 35}
+mention-input.tsx:89 🔍 afterAt: b
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: {isDropdownOpen: true, mentionQuery: 'b', filteredStaff: 5, dropdownPosition: {…}}
+mention-input.tsx:83 🔍 checkForMention called: {text: '@b', position: 2, staff: 35}
+mention-input.tsx:89 🔍 afterAt: b
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: {isDropdownOpen: true, mentionQuery: 'b', filteredStaff: 5, dropdownPosition: {…}}
+mention-input.tsx:123 🔍 MentionInput handleTextChange: {newValue: '@br', newPosition: 3}
+mention-input.tsx:83 🔍 checkForMention called: {text: '@br', position: 3, staff: 35}
+mention-input.tsx:89 🔍 afterAt: br
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: {isDropdownOpen: true, mentionQuery: 'br', filteredStaff: 1, dropdownPosition: {…}}
+mention-input.tsx:83 🔍 checkForMention called: {text: '@br', position: 3, staff: 35}
+mention-input.tsx:89 🔍 afterAt: br
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: {isDropdownOpen: true, mentionQuery: 'br', filteredStaff: 1, dropdownPosition: {…}}
+mention-input.tsx:123 🔍 MentionInput handleTextChange: {newValue: '@bri', newPosition: 4}
+mention-input.tsx:83 🔍 checkForMention called: {text: '@bri', position: 4, staff: 35}
+mention-input.tsx:89 🔍 afterAt: bri
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: {isDropdownOpen: true, mentionQuery: 'bri', filteredStaff: 1, dropdownPosition: {…}}
+mention-input.tsx:83 🔍 checkForMention called: {text: '@bri', position: 4, staff: 35}
+mention-input.tsx:89 🔍 afterAt: bri
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: {isDropdownOpen: true, mentionQuery: 'bri', filteredStaff: 1, dropdownPosition: {…}}
+mention-input.tsx:123 🔍 MentionInput handleTextChange: {newValue: '@bria', newPosition: 5}
+mention-input.tsx:83 🔍 checkForMention called: {text: '@bria', position: 5, staff: 35}
+mention-input.tsx:89 🔍 afterAt: bria
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: {isDropdownOpen: true, mentionQuery: 'bria', filteredStaff: 1, dropdownPosition: {…}}
+mention-input.tsx:83 🔍 checkForMention called: {text: '@bria', position: 5, staff: 35}
+mention-input.tsx:89 🔍 afterAt: bria
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: {isDropdownOpen: true, mentionQuery: 'bria', filteredStaff: 1, dropdownPosition: {…}}
+mention-input.tsx:123 🔍 MentionInput handleTextChange: {newValue: '@brian', newPosition: 6}
+mention-input.tsx:83 🔍 checkForMention called: {text: '@brian', position: 6, staff: 35}
+mention-input.tsx:89 🔍 afterAt: brian
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: {isDropdownOpen: true, mentionQuery: 'brian', filteredStaff: 1, dropdownPosition: {…}}
+mention-input.tsx:83 🔍 checkForMention called: {text: '@brian', position: 6, staff: 35}
+mention-input.tsx:89 🔍 afterAt: brian
+mention-input.tsx:92 ✅ Valid mention detected! Setting dropdown open
+mention-input.tsx:79 🔍 Dropdown state: {isDropdownOpen: true, mentionQuery: 'brian', filteredStaff: 1, dropdownPosition: {…}}

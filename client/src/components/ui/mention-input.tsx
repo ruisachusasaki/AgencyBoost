@@ -77,6 +77,11 @@ export function MentionInput({
   }).slice(0, 5); // Limit to 5 suggestions
   
   console.log("🔍 Dropdown state:", { isDropdownOpen, mentionQuery, filteredStaff: filteredStaff.length, dropdownPosition });
+  
+  // Debug the actual coordinates
+  if (isDropdownOpen && filteredStaff.length > 0) {
+    console.log("🎯 SHOULD BE RENDERING DROPDOWN AT:", dropdownPosition);
+  }
 
   // Check for @ symbol and show dropdown
   const checkForMention = useCallback((text: string, position: number) => {
@@ -266,10 +271,12 @@ export function MentionInput({
       {isDropdownOpen && filteredStaff.length > 0 && createPortal(
         <Card 
           ref={dropdownRef}
-          className="fixed z-50 w-64 max-h-48 overflow-y-auto shadow-lg border bg-background"
+          className="fixed z-[9999] w-64 max-h-48 overflow-y-auto shadow-lg border"
           style={{
             top: dropdownPosition.top,
             left: dropdownPosition.left,
+            backgroundColor: 'red', // DEBUG: Make it obvious
+            border: '5px solid blue', // DEBUG: Make it obvious
           }}
         >
           <div className="p-2">
