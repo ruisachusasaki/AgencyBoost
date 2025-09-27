@@ -1964,19 +1964,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/workflows/:workflowId/trigger", requireAuth(), requirePermission('workflows', 'canExecute'), async (req, res) => {
     try {
       const { workflowId } = req.params;
-      const { clientId } = req.body;
+      
+      // Validate request body
+      const triggerSchema = z.object({
+        clientId: z.string().min(1, "Client ID is required")
+      });
 
-      if (!clientId) {
-        return res.status(400).json({ message: "Client ID is required" });
+      const validation = triggerSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data",
+          errors: validation.error.errors 
+        });
+      }
+
+      const { clientId } = validation.data;
+
+      // Verify client exists
+      const client = await appStorage.getClient(clientId);
+      if (!client) {
+        await createAuditLog({
+          entityType: "workflow",
+          entityId: workflowId,
+          action: "trigger_failed",
+          changes: { 
+            error: "Client not found",
+            clientId,
+            triggeredBy: req.user?.id 
+          },
+          userId: req.user?.id || null
+        });
+        return res.status(404).json({ message: "Client not found" });
       }
 
       // Verify workflow exists and is active
       const workflow = await appStorage.getWorkflow(workflowId);
       if (!workflow) {
+        await createAuditLog({
+          entityType: "workflow", 
+          entityId: workflowId,
+          action: "trigger_failed",
+          changes: { 
+            error: "Workflow not found",
+            clientId,
+            triggeredBy: req.user?.id 
+          },
+          userId: req.user?.id || null
+        });
         return res.status(404).json({ message: "Workflow not found" });
       }
 
       if (workflow.status !== 'active') {
+        await createAuditLog({
+          entityType: "workflow",
+          entityId: workflowId, 
+          action: "trigger_failed",
+          changes: { 
+            error: "Workflow not active",
+            workflowStatus: workflow.status,
+            clientId,
+            triggeredBy: req.user?.id 
+          },
+          userId: req.user?.id || null
+        });
         return res.status(400).json({ message: "Cannot trigger inactive workflow" });
       }
 
@@ -1995,12 +2045,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // Log successful trigger
+      await createAuditLog({
+        entityType: "workflow",
+        entityId: workflowId,
+        action: "trigger_success", 
+        changes: {
+          workflowName: workflow.name,
+          clientId,
+          clientName: client.name,
+          executionId: execution.id,
+          triggeredBy: req.user?.id
+        },
+        userId: req.user?.id || null
+      });
+
       res.json({ 
         message: "Workflow triggered successfully",
         execution 
       });
     } catch (error) {
       console.error("Error triggering workflow:", error);
+      await createAuditLog({
+        entityType: "workflow",
+        entityId: req.params.workflowId,
+        action: "trigger_error",
+        changes: { 
+          error: error instanceof Error ? error.message : "Unknown error",
+          clientId: req.body?.clientId,
+          triggeredBy: req.user?.id 
+        },
+        userId: req.user?.id || null
+      });
       res.status(500).json({ message: "Failed to trigger workflow" });
     }
   });
