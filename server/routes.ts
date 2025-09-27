@@ -60,7 +60,7 @@ import twilio from "twilio";
 import mailgun from "mailgun.js";
 import formData from "form-data";
 import { EncryptionService } from "./encryption";
-import { eq, like, or, and, asc, desc, sql, inArray, isNotNull, getTableColumns } from "drizzle-orm";
+import { eq, like, or, and, asc, desc, sql, inArray, isNotNull, gte, lte, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
@@ -19370,6 +19370,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Parse query parameters for filtering
+      const {
+        status,
+        priority,
+        projectId,
+        dateFrom,
+        dateTo,
+        dueDateFrom,
+        dueDateTo,
+        limit = "100",
+        offset = "0"
+      } = req.query;
+
+      // Build filter conditions
+      const filterConditions = [
+        eq(tasks.clientId, clientPortalUser.clientId),
+        eq(tasks.visibleToClient, true)
+      ];
+
+      // Filter by status (comma-separated list)
+      if (status && typeof status === 'string') {
+        const statusList = status.split(',').filter(s => s.trim());
+        if (statusList.length > 0) {
+          filterConditions.push(inArray(tasks.status, statusList as any));
+        }
+      }
+
+      // Filter by priority (comma-separated list)
+      if (priority && typeof priority === 'string') {
+        const priorityList = priority.split(',').filter(p => p.trim());
+        if (priorityList.length > 0) {
+          filterConditions.push(inArray(tasks.priority, priorityList as any));
+        }
+      }
+
+      // Filter by project
+      if (projectId && typeof projectId === 'string') {
+        filterConditions.push(eq(tasks.projectId, parseInt(projectId)));
+      }
+
+      // Filter by created date range
+      if (dateFrom && typeof dateFrom === 'string') {
+        filterConditions.push(gte(tasks.createdAt, new Date(dateFrom)));
+      }
+      if (dateTo && typeof dateTo === 'string') {
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999); // End of day
+        filterConditions.push(lte(tasks.createdAt, endDate));
+      }
+
+      // Filter by due date range
+      if (dueDateFrom && typeof dueDateFrom === 'string') {
+        filterConditions.push(
+          and(
+            isNotNull(tasks.dueDate),
+            gte(tasks.dueDate, new Date(dueDateFrom))
+          )
+        );
+      }
+      if (dueDateTo && typeof dueDateTo === 'string') {
+        const endDate = new Date(dueDateTo);
+        endDate.setHours(23, 59, 59, 999); // End of day
+        filterConditions.push(
+          and(
+            isNotNull(tasks.dueDate),
+            lte(tasks.dueDate, endDate)
+          )
+        );
+      }
+
       // Get tasks that are visible to client and belong to this client
       const clientTasks = await db
         .select({
@@ -19387,15 +19457,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(tasks)
         .leftJoin(projects, eq(tasks.projectId, projects.id))
         .leftJoin(staff, eq(tasks.assigneeId, staff.id))
-        .where(
-          and(
-            eq(tasks.clientId, clientPortalUser.clientId),
-            eq(tasks.visibleToClient, true)
-          )
-        )
-        .orderBy(desc(tasks.createdAt));
+        .where(and(...filterConditions))
+        .orderBy(desc(tasks.createdAt))
+        .limit(parseInt(limit as string))
+        .offset(parseInt(offset as string));
 
-      res.json(clientTasks);
+      // Get total count for pagination (using same filter conditions, no limit/offset)
+      const totalCountResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(tasks)
+        .leftJoin(projects, eq(tasks.projectId, projects.id))
+        .leftJoin(staff, eq(tasks.assigneeId, staff.id))
+        .where(and(...filterConditions));
+
+      const totalCount = totalCountResult[0]?.count || 0;
+
+      res.json({
+        tasks: clientTasks,
+        total: totalCount,
+        page: Math.floor(parseInt(offset as string) / parseInt(limit as string)) + 1,
+        pageSize: parseInt(limit as string),
+        totalPages: Math.ceil(totalCount / parseInt(limit as string))
+      });
 
     } catch (error) {
       console.error("Get client portal tasks error:", error);

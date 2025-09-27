@@ -5,8 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, CheckCircle2, Clock, Users, LogOut, BarChart3 } from "lucide-react";
-import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarIcon, CheckCircle2, Clock, Users, LogOut, BarChart3, Filter, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format, subDays, subMonths, startOfDay, endOfDay } from "date-fns";
 
 // Mock client portal user interface
 interface ClientPortalUser {
@@ -31,6 +35,18 @@ interface ClientTask {
   createdAt: string;
 }
 
+// Filter interfaces
+interface TaskFilters {
+  status: string[];
+  priority: string[];
+  dateRange: 'all' | 'last7' | 'last30' | 'last90' | 'custom';
+  dateFrom?: Date;
+  dateTo?: Date;
+  dueDateRange: 'all' | 'overdue' | 'thisWeek' | 'thisMonth' | 'custom';
+  dueDateFrom?: Date;
+  dueDateTo?: Date;
+}
+
 // Status color mapping
 const statusColors = {
   not_started: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
@@ -46,6 +62,37 @@ const priorityColors = {
   high: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
   urgent: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
 };
+
+// Available filter options
+const statusOptions = [
+  { value: 'not_started', label: 'Not Started' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'on_hold', label: 'On Hold' }
+];
+
+const priorityOptions = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'urgent', label: 'Urgent' }
+];
+
+const dateRangeOptions = [
+  { value: 'all', label: 'All Time' },
+  { value: 'last7', label: 'Last 7 Days' },
+  { value: 'last30', label: 'Last 30 Days' },
+  { value: 'last90', label: 'Last 3 Months' },
+  { value: 'custom', label: 'Custom Range' }
+];
+
+const dueDateOptions = [
+  { value: 'all', label: 'All Tasks' },
+  { value: 'overdue', label: 'Overdue' },
+  { value: 'thisWeek', label: 'Due This Week' },
+  { value: 'thisMonth', label: 'Due This Month' },
+  { value: 'custom', label: 'Custom Due Date' }
+];
 
 function TaskCard({ task }: { task: ClientTask }) {
   return (
@@ -90,7 +137,7 @@ function TaskCard({ task }: { task: ClientTask }) {
             )}
             {task.dueDate && (
               <div className="flex items-center gap-1" data-testid={`text-due-date-${task.id}`}>
-                <Calendar className="h-4 w-4" />
+                <CalendarIcon className="h-4 w-4" />
                 {format(new Date(task.dueDate), "MMM d, yyyy")}
               </div>
             )}
@@ -113,16 +160,127 @@ export default function ClientPortalDashboard() {
     return stored ? JSON.parse(stored) : null;
   });
 
+  // Filter state
+  const [filters, setFilters] = useState<TaskFilters>({
+    status: [],
+    priority: [],
+    dateRange: 'all',
+    dueDateRange: 'all'
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20); // Tasks per page
+
+  // Reset to first page when filters change
+  const resetPagination = () => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  };
+
+  // Handle filter changes and reset pagination
+  const updateFilters = (newFilters: TaskFilters) => {
+    setFilters(newFilters);
+    resetPagination();
+  };
+
   // Fetch current user details
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ["/api/client-portal/me"],
     enabled: !currentUser,
   });
 
-  // Fetch client tasks
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery<ClientTask[]>({
-    queryKey: ["/api/client-portal/tasks"],
+  // Build structured query object for API calls
+  const buildQueryObject = (filters: TaskFilters, page: number, pageSize: number) => {
+    const queryObj: any = {
+      limit: pageSize,
+      offset: (page - 1) * pageSize
+    };
+    
+    if (filters.status.length > 0) {
+      queryObj.status = filters.status.join(',');
+    }
+    
+    if (filters.priority.length > 0) {
+      queryObj.priority = filters.priority.join(',');
+    }
+    
+    // Handle created date ranges
+    if (filters.dateRange !== 'all') {
+      const today = new Date();
+      let dateFrom: Date | undefined;
+      
+      switch (filters.dateRange) {
+        case 'last7':
+          dateFrom = subDays(today, 7);
+          break;
+        case 'last30':
+          dateFrom = subDays(today, 30);
+          break;
+        case 'last90':
+          dateFrom = subMonths(today, 3);
+          break;
+        case 'custom':
+          dateFrom = filters.dateFrom;
+          break;
+      }
+      
+      if (dateFrom) {
+        queryObj.dateFrom = format(startOfDay(dateFrom), 'yyyy-MM-dd');
+      }
+      
+      if (filters.dateRange === 'custom' && filters.dateTo) {
+        queryObj.dateTo = format(endOfDay(filters.dateTo), 'yyyy-MM-dd');
+      }
+    }
+    
+    // Handle due date ranges
+    if (filters.dueDateRange !== 'all') {
+      const today = new Date();
+      let dueDateFrom: Date | undefined;
+      let dueDateTo: Date | undefined;
+      
+      switch (filters.dueDateRange) {
+        case 'overdue':
+          dueDateTo = today;
+          break;
+        case 'thisWeek':
+          dueDateFrom = today;
+          dueDateTo = subDays(today, -7);
+          break;
+        case 'thisMonth':
+          dueDateFrom = today;
+          dueDateTo = subDays(today, -30);
+          break;
+        case 'custom':
+          dueDateFrom = filters.dueDateFrom;
+          dueDateTo = filters.dueDateTo;
+          break;
+      }
+      
+      if (dueDateFrom) {
+        queryObj.dueDateFrom = format(startOfDay(dueDateFrom), 'yyyy-MM-dd');
+      }
+      
+      if (dueDateTo) {
+        queryObj.dueDateTo = format(endOfDay(dueDateTo), 'yyyy-MM-dd');
+      }
+    }
+    
+    return queryObj;
+  };
+
+  // Fetch client tasks with filters and pagination using structured query key
+  const queryObject = buildQueryObject(filters, currentPage, pageSize);
+  const { data: tasksResponse, isLoading: tasksLoading } = useQuery({
+    queryKey: ["/api/client-portal/tasks", queryObject],
   });
+  
+  const tasks = tasksResponse?.tasks || [];
+  const totalTaskCount = tasksResponse?.total || 0;
+  const totalPages = Math.ceil(totalTaskCount / pageSize);
 
   const handleLogout = async () => {
     try {
@@ -248,6 +406,273 @@ export default function ClientPortalDashboard() {
           </Card>
         </div>
 
+        {/* Filters Section */}
+        <Card className="mb-6">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-lg">Filter Tasks</CardTitle>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                data-testid="button-toggle-filters"
+              >
+                {showFilters ? 'Hide Filters' : 'Show Filters'}
+              </Button>
+            </div>
+          </CardHeader>
+          
+          {showFilters && (
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Status Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Status</label>
+                  <div className="space-y-2">
+                    {statusOptions.map((option) => (
+                      <div key={option.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`status-${option.value}`}
+                          checked={filters.status.includes(option.value)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              updateFilters({
+                                ...filters,
+                                status: [...filters.status, option.value]
+                              });
+                            } else {
+                              updateFilters({
+                                ...filters,
+                                status: filters.status.filter(s => s !== option.value)
+                              });
+                            }
+                          }}
+                          data-testid={`checkbox-status-${option.value}`}
+                        />
+                        <label
+                          htmlFor={`status-${option.value}`}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {option.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Priority Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Priority</label>
+                  <div className="space-y-2">
+                    {priorityOptions.map((option) => (
+                      <div key={option.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`priority-${option.value}`}
+                          checked={filters.priority.includes(option.value)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              updateFilters({
+                                ...filters,
+                                priority: [...filters.priority, option.value]
+                              });
+                            } else {
+                              updateFilters({
+                                ...filters,
+                                priority: filters.priority.filter(p => p !== option.value)
+                              });
+                            }
+                          }}
+                          data-testid={`checkbox-priority-${option.value}`}
+                        />
+                        <label
+                          htmlFor={`priority-${option.value}`}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {option.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Created Date Range */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Created Date</label>
+                  <Select
+                    value={filters.dateRange}
+                    onValueChange={(value: any) => updateFilters({ ...filters, dateRange: value })}
+                  >
+                    <SelectTrigger data-testid="select-date-range">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dateRangeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  {filters.dateRange === 'custom' && (
+                    <div className="space-y-2 mt-2">
+                      <div className="flex gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 justify-start text-left font-normal"
+                              data-testid="button-date-from"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {filters.dateFrom ? format(filters.dateFrom, "MMM d, yyyy") : "From Date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={filters.dateFrom}
+                              onSelect={(date) => updateFilters({ ...filters, dateFrom: date })}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 justify-start text-left font-normal"
+                              data-testid="button-date-to"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {filters.dateTo ? format(filters.dateTo, "MMM d, yyyy") : "To Date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={filters.dateTo}
+                              onSelect={(date) => updateFilters({ ...filters, dateTo: date })}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Due Date Range */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Due Date</label>
+                  <Select
+                    value={filters.dueDateRange}
+                    onValueChange={(value: any) => updateFilters({ ...filters, dueDateRange: value })}
+                  >
+                    <SelectTrigger data-testid="select-due-date-range">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dueDateOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  {filters.dueDateRange === 'custom' && (
+                    <div className="space-y-2 mt-2">
+                      <div className="flex gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 justify-start text-left font-normal"
+                              data-testid="button-due-date-from"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {filters.dueDateFrom ? format(filters.dueDateFrom, "MMM d, yyyy") : "From Date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={filters.dueDateFrom}
+                              onSelect={(date) => updateFilters({ ...filters, dueDateFrom: date })}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 justify-start text-left font-normal"
+                              data-testid="button-due-date-to"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {filters.dueDateTo ? format(filters.dueDateTo, "MMM d, yyyy") : "To Date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={filters.dueDateTo}
+                              onSelect={(date) => updateFilters({ ...filters, dueDateTo: date })}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Filter Actions */}
+              <div className="flex items-center gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    updateFilters({
+                      status: [],
+                      priority: [],
+                      dateRange: 'all',
+                      dueDateRange: 'all'
+                    });
+                  }}
+                  data-testid="button-clear-filters"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear All Filters
+                </Button>
+                
+                {/* Active filters indicator */}
+                {(filters.status.length > 0 || filters.priority.length > 0 || filters.dateRange !== 'all' || filters.dueDateRange !== 'all') && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Filters active:</span>
+                    {filters.status.length > 0 && <Badge variant="secondary">{filters.status.length} status</Badge>}
+                    {filters.priority.length > 0 && <Badge variant="secondary">{filters.priority.length} priority</Badge>}
+                    {filters.dateRange !== 'all' && <Badge variant="secondary">date range</Badge>}
+                    {filters.dueDateRange !== 'all' && <Badge variant="secondary">due date</Badge>}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+
         {/* Tasks Tabs */}
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 lg:w-[400px]">
@@ -344,6 +769,59 @@ export default function ClientPortalDashboard() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6 pt-6 border-t">
+            <div className="text-sm text-muted-foreground">
+              Showing {Math.min((currentPage - 1) * pageSize + 1, totalTaskCount)}-{Math.min(currentPage * pageSize, totalTaskCount)} of {totalTaskCount} tasks
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                data-testid="button-prev-page"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const page = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                  if (page > totalPages) return null;
+                  
+                  return (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="w-9 h-9 p-0"
+                      data-testid={`button-page-${page}`}
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                data-testid="button-next-page"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
