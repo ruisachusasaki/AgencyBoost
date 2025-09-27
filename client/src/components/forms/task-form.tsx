@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Flag, Repeat, FileText, Users, CalendarDays } from "lucide-react";
@@ -766,10 +767,10 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             render={({ field }) => (
               <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                 <FormControl>
-                  <Checkbox 
+                  <Switch 
                     checked={field.value || false}
                     onCheckedChange={field.onChange}
-                    data-testid="checkbox-visible-to-client"
+                    data-testid="switch-visible-to-client"
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">

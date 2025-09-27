@@ -9,7 +9,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
@@ -781,11 +781,10 @@ export default function TaskDetail() {
                       <span className="text-sm font-medium text-slate-700">Client Portal</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Checkbox
+                      <Switch
                         checked={task.visibleToClient || false}
                         onCheckedChange={(checked) => updateTaskMutation.mutate({ visibleToClient: !!checked })}
-                        className="h-4 w-4"
-                        data-testid="checkbox-task-visible-to-client"
+                        data-testid="switch-task-visible-to-client"
                       />
                       <span className="text-sm text-slate-600">
                         {task.visibleToClient ? "Visible to client" : "Hidden from client"}
