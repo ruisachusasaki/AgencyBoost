@@ -73,29 +73,47 @@ const getAllDescendantIds = (categoryId: string, categories: any[]): string[] =>
   return descendants;
 };
 
+// Centralized search function that's null-safe
+const createSearchMatcher = (searchTerm: string) => {
+  const q = searchTerm.trim().toLowerCase();
+  if (!q) return () => true; // Return all articles if no search term
+  
+  const matches = (s?: string) => (s ?? '').toLowerCase().includes(q);
+  return (article: any) => 
+    matches(article.title) || 
+    matches(article.excerpt) || 
+    matches(article.content);
+};
+
 // Category Overview Component
 function CategoryOverview({ 
   categoryId, 
   categories, 
   articles, 
-  onCategorySelect 
+  onCategorySelect,
+  searchTerm 
 }: { 
   categoryId: string;
   categories: any[];
   articles: any[];
   onCategorySelect: (id: string) => void;
+  searchTerm?: string;
 }) {
   const selectedCategory = categories.find(cat => cat.id === categoryId);
   const subCategories = categories.filter(cat => cat.parentId === categoryId);
   
   // Get articles from this category AND all its descendant categories
   const allDescendantIds = getAllDescendantIds(categoryId, categories);
-  const categoryArticles = articles.filter(article => 
-    allDescendantIds.includes(article.categoryId)
-  );
+  const searchMatcher = createSearchMatcher(searchTerm || '');
   
-  // Get articles directly in this category (not in sub-categories)
-  const directCategoryArticles = articles.filter(article => article.categoryId === categoryId);
+  const categoryArticles = articles
+    .filter(article => allDescendantIds.includes(article.categoryId))
+    .filter(searchMatcher);
+  
+  // Get articles directly in this category (not in sub-categories) - also apply search filter
+  const directCategoryArticles = articles
+    .filter(article => article.categoryId === categoryId)
+    .filter(searchMatcher);
 
   if (!selectedCategory) return null;
 
@@ -133,7 +151,9 @@ function CategoryOverview({
           <h2 className="text-xl font-semibold mb-4">Sub-categories</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {subCategories.map((subCat: any) => {
-              const subCatArticles = articles.filter(article => article.categoryId === subCat.id);
+              const subCatArticles = articles
+                .filter(article => article.categoryId === subCat.id)
+                .filter(searchMatcher);
               return (
                 <Card 
                   key={subCat.id} 
@@ -407,19 +427,12 @@ export default function KnowledgeBase() {
     },
   });
 
+  const searchMatcher = createSearchMatcher(searchTerm || '');
   const filteredArticles = (articles as any[])
     .filter((article: any) => {
-      // When no category is selected, show all articles
-      if (!selectedCategory) {
-        if (!searchTerm) return true;
-        return article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-               article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase());
-      }
-      
-      // When category is selected, don't filter here - let CategoryOverview handle it
-      if (!searchTerm) return true;
-      return article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase());
+      // Apply search to all articles regardless of category selection
+      // CategoryOverview will handle its own filtering when a category is selected
+      return searchMatcher(article);
     })
     .sort((a: any, b: any) => {
       switch (sortBy) {
@@ -947,6 +960,7 @@ export default function KnowledgeBase() {
                 categories={categories as any[]} 
                 articles={articles as any[]}
                 onCategorySelect={setSelectedCategory}
+                searchTerm={searchTerm}
               />
             ) : (
               <div className="space-y-4">
