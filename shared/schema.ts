@@ -2640,17 +2640,39 @@ export const insertTaskDependencySchema = createInsertSchema(taskDependencies).o
 export type TaskDependency = typeof taskDependencies.$inferSelect;
 export type InsertTaskDependency = z.infer<typeof insertTaskDependencySchema>;
 
+// Team Positions - configurable positions that can be assigned to clients
+export const teamPositions = pgTable("team_positions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(), // unique identifier like "setter", "bdr", "account_manager"
+  label: text("label").notNull(), // display name like "Setter", "BDR", "Account Manager"
+  description: text("description"), // optional description
+  order: integer("order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Client Team Assignments - for assigning staff to specific client positions
 export const clientTeamAssignments = pgTable("client_team_assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
   staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
-  position: text("position").notNull(), // setter, bdr, account_manager, media_buyer, cro_specialist, automation_specialist, show_rate_specialist, data_specialist, seo_specialist, social_media_specialist
+  positionId: varchar("position_id").notNull().references(() => teamPositions.id, { onDelete: "cascade" }),
   assignedAt: timestamp("assigned_at").defaultNow(),
   assignedBy: uuid("assigned_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Team Positions schema exports
+export const insertTeamPositionSchema = createInsertSchema(teamPositions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type TeamPosition = typeof teamPositions.$inferSelect;
+export type InsertTeamPosition = z.infer<typeof insertTeamPositionSchema>;
 
 // Client Team Assignments schema exports
 export const insertClientTeamAssignmentSchema = createInsertSchema(clientTeamAssignments).omit({
