@@ -7675,21 +7675,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignedBy: userId,
       });
 
-      const newAssignment = await appStorage.createClientTeamAssignment(insertData);
+      // Check if an assignment already exists for this client-position combination
+      const existingAssignments = await appStorage.getClientTeamAssignments(req.params.clientId);
+      const existingAssignment = existingAssignments.find(a => a.position?.id === insertData.position);
+
+      let assignment;
+      let auditAction = "created";
+
+      if (existingAssignment) {
+        // Update the existing assignment with new staff member
+        assignment = await appStorage.updateClientTeamAssignment(existingAssignment.id, {
+          staffId: insertData.staffId,
+          assignedBy: userId,
+          assignedAt: new Date(),
+        });
+        auditAction = "updated";
+      } else {
+        // Create new assignment
+        assignment = await appStorage.createClientTeamAssignment(insertData);
+      }
 
       await createAuditLog(
-        "created",
+        auditAction,
         "client_team_assignment",
-        newAssignment.id,
+        assignment!.id,
         `Client Team Assignment`,
         userId,
-        `Team member assigned to client`,
-        null,
-        newAssignment,
+        `Team member ${auditAction === "created" ? "assigned to" : "reassigned for"} client`,
+        existingAssignment || null,
+        assignment,
         req
       );
 
-      res.json(newAssignment);
+      res.json(assignment);
     } catch (error) {
       console.error('Error creating client team assignment:', error);
       res.status(500).json({ message: "Failed to create client team assignment" });

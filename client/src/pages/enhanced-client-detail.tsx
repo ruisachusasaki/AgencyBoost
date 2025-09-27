@@ -182,13 +182,10 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
   // Create team assignment mutation
   const createAssignmentMutation = useMutation({
     mutationFn: async ({ positionId, staffId }: { positionId: string; staffId: string }) => {
-      return apiRequest(`/api/clients/${clientId}/team`, {
-        method: 'POST',
-        body: { position: positionId, staffId },
-      });
+      return apiRequest('POST', `/api/clients/${clientId}/team`, { position: positionId, staffId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/clients`, clientId, "team"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/team`] });
       queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
       toast({
         title: "Success",
@@ -207,12 +204,10 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
   // Delete team assignment mutation  
   const deleteAssignmentMutation = useMutation({
     mutationFn: async (assignmentId: string) => {
-      return apiRequest(`/api/client-team-assignments/${assignmentId}`, {
-        method: 'DELETE',
-      });
+      return apiRequest('DELETE', `/api/client-team-assignments/${assignmentId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/clients`, clientId, "team"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/team`] });
       queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
       toast({
         title: "Success",
@@ -230,7 +225,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
 
   // Get assignment for a specific position
   const getAssignmentForPosition = (positionId: string) => {
-    return (teamAssignments as any[]).find((assignment: any) => assignment.position === positionId);
+    return (teamAssignments as any[]).find((assignment: any) => assignment.position?.id === positionId);
   };
 
   const isLoading = positionsLoading || assignmentsLoading;
