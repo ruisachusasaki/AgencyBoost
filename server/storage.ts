@@ -64,7 +64,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, sql, asc, desc, and, or, max } from "drizzle-orm";
+import { eq, sql, asc, desc, and, or, max, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // Clients
@@ -2002,7 +2002,8 @@ export class MemStorage implements IStorage {
   }
 
   async getClientsWithPagination(limit: number, offset: number, sortBy?: string, sortOrder?: string): Promise<{ clients: Client[]; total: number }> {
-    const allClients = Array.from(this.clients.values());
+    // Filter out archived clients by default
+    const allClients = Array.from(this.clients.values()).filter(client => !client.isArchived);
     
     // Sort clients if sortBy is specified
     if (sortBy) {
@@ -6112,12 +6113,15 @@ export class DbStorage implements IStorage {
 
   async getClientsWithPagination(limit: number, offset: number, sortBy?: string, sortOrder?: string): Promise<{ clients: Client[]; total: number }> {
     try {
-      // Get total count
-      const totalResult = await db.select({ count: sql`count(*)` }).from(clients);
+      // Get total count (excluding archived clients)
+      const totalResult = await db.select({ count: sql`count(*)` })
+        .from(clients)
+        .where(or(eq(clients.isArchived, false), isNull(clients.isArchived)));
       const total = Number(totalResult[0]?.count) || 0;
       
-      // Build the query with sorting
-      let query = db.select().from(clients);
+      // Build the query with sorting (excluding archived clients)
+      let query = db.select().from(clients)
+        .where(or(eq(clients.isArchived, false), isNull(clients.isArchived)));
       
       if (sortBy) {
         const column = clients[sortBy as keyof typeof clients];
