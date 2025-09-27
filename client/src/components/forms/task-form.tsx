@@ -117,6 +117,8 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       dueDate: task?.dueDate ? new Date(task.dueDate) : null,
       clientId: task?.clientId || "",
       // projectId removed
+      // Client portal visibility
+      visibleToClient: task?.visibleToClient || false,
       // Recurring task defaults
       isRecurring: task?.isRecurring || false,
       recurringInterval: task?.recurringInterval || 1,
@@ -148,6 +150,8 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         dueDate: task.dueDate ? new Date(task.dueDate) : null,
         clientId: task.clientId || "",
         // projectId removed
+        // Client portal visibility
+        visibleToClient: task.visibleToClient || false,
         isRecurring: task.isRecurring || false,
         recurringInterval: task.recurringInterval || 1,
         recurringUnit: (task.recurringUnit as "hours" | "days" | "weeks" | "months" | "years") || "days",
@@ -209,6 +213,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       title?: string;
       clientId?: string;
       workflowId?: string;
+      visibleToClient?: boolean;
       assigneeStrategy: string;
       dateStrategy: string;
     }) => {
@@ -216,6 +221,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         title: data.title,
         clientId: data.clientId && data.clientId !== "none" ? data.clientId : null,
         workflowId: data.workflowId && data.workflowId !== "none" ? data.workflowId : null,
+        visibleToClient: data.visibleToClient || false,
         assigneeStrategy: data.assigneeStrategy,
         dateStrategy: data.dateStrategy,
       });
@@ -243,6 +249,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         startDate: null,
         dueDate: null,
         clientId: "",
+        visibleToClient: false,
         isRecurring: false,
         recurringInterval: 1,
         recurringUnit: "days",
@@ -298,6 +305,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         title: data.title || undefined,
         clientId: data.clientId || undefined,
         workflowId: data.workflowId || undefined,
+        visibleToClient: data.visibleToClient || false,
         assigneeStrategy,
         dateStrategy,
       });
@@ -715,6 +723,34 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
 
           {/* 11. Project */}
           {/* Project field removed - projects no longer exist */}
+        </div>
+
+        {/* Client Portal Visibility */}
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name="visibleToClient"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                <FormControl>
+                  <Checkbox 
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    data-testid="checkbox-visible-to-client"
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel className="text-sm font-medium">
+                    Visible to Client
+                  </FormLabel>
+                  <p className="text-xs text-muted-foreground">
+                    Allow clients to see this task in their portal. Only applies if the task is assigned to a client.
+                  </p>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         {/* Recurring Task Settings */}

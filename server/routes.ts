@@ -4364,6 +4364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientId,
         campaignId,
         workflowId,
+        visibleToClient = false,
         assigneeStrategy = 'clear',
         dateStrategy = 'clear'
       } = req.body;
@@ -4401,6 +4402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           timeEstimate: templateData.timeEstimate,
           level: templateData.level,
           parentTaskId: parentTaskId,
+          visibleToClient: (clientId || templateData.clientId) ? visibleToClient : false, // Only apply if there's a client
           createdBy: normalizedUserId
         };
 
