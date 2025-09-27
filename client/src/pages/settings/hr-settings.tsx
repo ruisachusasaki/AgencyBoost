@@ -171,7 +171,7 @@ export default function HRSettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="categories" className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4" />
             Time Off Categories
@@ -187,10 +187,6 @@ export default function HRSettingsPage() {
           <TabsTrigger value="new-hire-onboarding-form" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             New Hire Onboarding Form
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            General Settings
           </TabsTrigger>
         </TabsList>
 
@@ -284,24 +280,6 @@ export default function HRSettingsPage() {
           <NewHireOnboardingFormEditor />
         </TabsContent>
 
-        {/* General Settings Tab */}
-        <TabsContent value="settings" className="space-y-6">
-          <div>
-            <h3 className="text-lg font-medium">General HR Settings</h3>
-            <p className="text-muted-foreground">
-              Configure global HR system settings and preferences.
-            </p>
-          </div>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-8 text-muted-foreground">
-                General HR settings coming soon. This will include working hours, 
-                holidays, and notification preferences.
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* Create/Edit Dialog */}
