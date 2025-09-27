@@ -16300,6 +16300,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userRoleData = userRoleRows && userRoleRows.length > 0 ? userRoleRows[0] : null;
       const isAdmin = userRoleData && userRoleData.role === 'Admin';
       
+      console.log('🔍 Debug: User role data:', userRoleData);
+      console.log('🔍 Debug: Is admin:', isAdmin);
+      
       // If admin, get ALL articles. If not admin, get public articles + articles they have access to
       let articles;
       if (isAdmin) {
