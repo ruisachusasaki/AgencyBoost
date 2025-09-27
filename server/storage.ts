@@ -4,7 +4,7 @@ import {
   type Campaign, type InsertCampaign, campaigns,
   type Lead, type InsertLead,
   type Task, type InsertTask, tasks,
-  type Invoice, type InsertInvoice,
+  type Invoice, type InsertInvoice, invoices,
   type User, type InsertUser,
   type AuditLog, type InsertAuditLog,
   type CustomField, type InsertCustomField,
@@ -74,6 +74,9 @@ export interface IStorage {
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, client: Partial<InsertClient>): Promise<Client | undefined>;
   deleteClient(id: string): Promise<boolean>;
+  archiveClient(id: string): Promise<Client | undefined>;
+  reassignClientTasks(fromClientId: string, toClientId: string): Promise<{ movedCount: number }>;
+  getClientRelationsCounts(id: string): Promise<{ tasks: number; campaigns: number; invoices: number; healthScores: number }>;
   
   // Client Health Scores
   createClientHealthScore(data: InsertClientHealthScore): Promise<ClientHealthScore>;
@@ -2103,6 +2106,40 @@ export class MemStorage implements IStorage {
 
   async deleteClient(id: string): Promise<boolean> {
     return this.clients.delete(id);
+  }
+
+  async archiveClient(id: string): Promise<Client | undefined> {
+    const client = this.clients.get(id);
+    if (!client) return undefined;
+    
+    const archivedClient = { ...client, isArchived: true };
+    this.clients.set(id, archivedClient);
+    return archivedClient;
+  }
+
+  async reassignClientTasks(fromClientId: string, toClientId: string): Promise<{ movedCount: number }> {
+    let movedCount = 0;
+    for (const [id, task] of this.tasks) {
+      if (task.clientId === fromClientId) {
+        this.tasks.set(id, { ...task, clientId: toClientId });
+        movedCount++;
+      }
+    }
+    return { movedCount };
+  }
+
+  async getClientRelationsCounts(id: string): Promise<{ tasks: number; campaigns: number; invoices: number; healthScores: number }> {
+    const tasksCount = Array.from(this.tasks.values()).filter(task => task.clientId === id).length;
+    const campaignsCount = Array.from(this.campaigns.values()).filter(campaign => campaign.clientId === id).length;
+    const invoicesCount = Array.from(this.invoices.values()).filter(invoice => invoice.clientId === id).length;
+    const healthScoresCount = Array.from(this.clientHealthScores.values()).filter(score => score.clientId === id).length;
+
+    return {
+      tasks: tasksCount,
+      campaigns: campaignsCount,
+      invoices: invoicesCount,
+      healthScores: healthScoresCount
+    };
   }
 
 
@@ -4327,6 +4364,55 @@ export class DbStorage implements IStorage {
       return result.length > 0;
     } catch (error) {
       console.error("Error deleting client:", error);
+      throw error;
+    }
+  }
+
+  async archiveClient(id: string): Promise<Client | undefined> {
+    try {
+      const result = await db
+        .update(clients)
+        .set({ isArchived: true })
+        .where(eq(clients.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error archiving client:", error);
+      throw error;
+    }
+  }
+
+  async reassignClientTasks(fromClientId: string, toClientId: string): Promise<{ movedCount: number }> {
+    try {
+      const result = await db
+        .update(tasks)
+        .set({ clientId: toClientId })
+        .where(eq(tasks.clientId, fromClientId))
+        .returning();
+      return { movedCount: result.length };
+    } catch (error) {
+      console.error("Error reassigning client tasks:", error);
+      throw error;
+    }
+  }
+
+  async getClientRelationsCounts(id: string): Promise<{ tasks: number; campaigns: number; invoices: number; healthScores: number }> {
+    try {
+      const [tasksCount, campaignsCount, invoicesCount, healthScoresCount] = await Promise.all([
+        db.select({ count: sql<number>`count(*)` }).from(tasks).where(eq(tasks.clientId, id)),
+        db.select({ count: sql<number>`count(*)` }).from(campaigns).where(eq(campaigns.clientId, id)),
+        db.select({ count: sql<number>`count(*)` }).from(invoices).where(eq(invoices.clientId, id)),
+        db.select({ count: sql<number>`count(*)` }).from(clientHealthScores).where(eq(clientHealthScores.clientId, id))
+      ]);
+
+      return {
+        tasks: Number(tasksCount[0]?.count || 0),
+        campaigns: Number(campaignsCount[0]?.count || 0),
+        invoices: Number(invoicesCount[0]?.count || 0),
+        healthScores: Number(healthScoresCount[0]?.count || 0)
+      };
+    } catch (error) {
+      console.error("Error getting client relations counts:", error);
       throw error;
     }
   }

@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal, ChevronLeft, ChevronRight, Users, Upload, Download, Filter, Save, X, Share2, Globe, Lock, Database, Eye, AlertTriangle } from "lucide-react";
 import { SimpleAddClientForm } from "@/components/forms/simple-add-client-form";
+import { ClientDeletionModal } from "@/components/client-deletion-modal";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -277,26 +278,6 @@ export default function Clients() {
     return client.company || "";
   }, [customFieldsData]);
 
-  const deleteClientMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/clients/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/clients?page=${currentPage}&limit=${pageSize}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] }); // Also invalidate base query
-      toast({
-        title: "Client deleted",
-        description: "The client has been successfully deleted.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to delete client. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
 
   // Apply filter to clients - memoized to prevent infinite re-renders
   const applyClientFilter = useCallback((clients: Client[], filter: ClientFilter): Client[] => {
@@ -778,20 +759,18 @@ export default function Clients() {
     }
   };
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeletionModal, setShowDeletionModal] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<{id: string, name: string} | null>(null);
 
   const handleDeleteClient = (id: string, clientName: string) => {
     setClientToDelete({id, name: clientName});
-    setShowDeleteModal(true);
+    setShowDeletionModal(true);
   };
 
-  const confirmDeleteClient = () => {
-    if (clientToDelete) {
-      deleteClientMutation.mutate(clientToDelete.id);
-      setShowDeleteModal(false);
-      setClientToDelete(null);
-    }
+  const handleDeletionSuccess = () => {
+    // Refresh the client list after successful deletion/archiving/reassignment
+    queryClient.invalidateQueries({ queryKey: [`/api/clients?page=${currentPage}&limit=${pageSize}`] });
+    queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
   };
 
   const renderCellContent = (client: Client, columnKey: string) => {
@@ -1776,48 +1755,13 @@ export default function Clients() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Client Confirmation Modal */}
-      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="h-5 w-5" />
-              Delete Client
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-gray-600 mb-3">
-              Are you sure you want to permanently delete
-            </p>
-            <p className="font-semibold text-gray-900 mb-3">
-              "{clientToDelete?.name}"?
-            </p>
-            <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
-              ⚠️ This action cannot be undone and will remove all associated data including projects, campaigns, and invoices.
-            </p>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowDeleteModal(false);
-                setClientToDelete(null);
-              }}
-              data-testid="button-cancel-delete"
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive"
-              onClick={confirmDeleteClient}
-              disabled={deleteClientMutation.isPending}
-              data-testid="button-confirm-delete"
-            >
-              {deleteClientMutation.isPending ? "Deleting..." : "Delete Client"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Guided Client Deletion Modal */}
+      <ClientDeletionModal
+        isOpen={showDeletionModal}
+        onClose={() => setShowDeletionModal(false)}
+        client={clientToDelete}
+        onSuccess={handleDeletionSuccess}
+      />
     </div>
   );
 }

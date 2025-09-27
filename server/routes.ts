@@ -1301,12 +1301,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Archive client - SECURED
+  app.patch("/api/clients/:id/archive", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
+    try {
+      const client = await appStorage.getClient(req.params.id);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const archivedClient = await appStorage.archiveClient(req.params.id);
+      if (!archivedClient) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      // Log the archiving
+      await createAuditLog(
+        "updated",
+        "contact",
+        req.params.id,
+        client.name || client.email,
+        userId,
+        `Client archived - ${client.name} (${client.email})`,
+        { name: client.name, email: client.email, company: client.company },
+        { isArchived: true },
+        req
+      );
+
+      res.json(archivedClient);
+    } catch (error) {
+      console.error("Error archiving client:", error);
+      res.status(500).json({ message: "Failed to archive client" });
+    }
+  });
+
+  // Reassign client tasks - SECURED
+  app.post("/api/clients/:id/reassign-tasks", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
+    try {
+      // Validate request body with Zod
+      const reassignTasksSchema = z.object({
+        toClientId: z.string().uuid("Target client ID must be a valid UUID")
+      });
+
+      const validation = reassignTasksSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: validation.error.errors 
+        });
+      }
+
+      const { toClientId } = validation.data;
+
+      // Prevent reassigning to the same client
+      if (toClientId === req.params.id) {
+        return res.status(400).json({ message: "Cannot reassign tasks to the same client" });
+      }
+
+      // Verify both clients exist
+      const [fromClient, toClient] = await Promise.all([
+        appStorage.getClient(req.params.id),
+        appStorage.getClient(toClientId)
+      ]);
+
+      if (!fromClient) {
+        return res.status(404).json({ message: "Source client not found" });
+      }
+      if (!toClient) {
+        return res.status(404).json({ message: "Target client not found" });
+      }
+
+      const result = await appStorage.reassignClientTasks(req.params.id, toClientId);
+
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      // Log the reassignment
+      if (result.movedCount > 0) {
+        await createAuditLog(
+          "updated",
+          "contact",
+          req.params.id,
+          fromClient.name || fromClient.email,
+          userId,
+          `Reassigned ${result.movedCount} tasks from ${fromClient.name} to ${toClient.name}`,
+          { fromClientName: fromClient.name, toClientName: toClient.name },
+          { movedTasks: result.movedCount },
+          req
+        );
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error reassigning client tasks:", error);
+      res.status(500).json({ message: "Failed to reassign client tasks" });
+    }
+  });
+
+  // Get client relations counts - SECURED
+  app.get("/api/clients/:id/relations-counts", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const client = await appStorage.getClient(req.params.id);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const counts = await appStorage.getClientRelationsCounts(req.params.id);
+      res.json(counts);
+    } catch (error) {
+      console.error("Error getting client relations counts:", error);
+      res.status(500).json({ message: "Failed to get client relations counts" });
+    }
+  });
+
   app.delete("/api/clients/:id", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
     try {
       // Get client data before deletion for audit logging
       const client = await appStorage.getClient(req.params.id);
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
+      }
+
+      // Check if the client has any related records
+      const counts = await appStorage.getClientRelationsCounts(req.params.id);
+      const totalRelated = counts.tasks + counts.campaigns + counts.invoices + counts.healthScores;
+
+      if (totalRelated > 0) {
+        return res.status(409).json({ 
+          message: "Cannot delete client with associated records", 
+          details: `Client has ${counts.tasks} tasks, ${counts.campaigns} campaigns, ${counts.invoices} invoices, and ${counts.healthScores} health scores. Archive the client or reassign tasks first.`,
+          counts 
+        });
       }
       
       const deleted = await appStorage.deleteClient(req.params.id);
@@ -1332,6 +1459,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(204).send();
     } catch (error) {
+      console.error("Error deleting client:", error);
+      
+      // Handle PostgreSQL foreign key constraint errors as fallback
+      if (error?.code === '23503' && error?.constraint && error.constraint.includes('_fk')) {
+        try {
+          const counts = await appStorage.getClientRelationsCounts(req.params.id);
+          return res.status(409).json({ 
+            message: "Cannot delete client with associated records", 
+            details: `Client has ${counts.tasks} tasks, ${counts.campaigns} campaigns, ${counts.invoices} invoices, and ${counts.healthScores} health scores. Archive the client or reassign tasks first.`,
+            counts
+          });
+        } catch (countError) {
+          console.error("Error getting counts for constraint error:", countError);
+        }
+      }
+      
       res.status(500).json({ message: "Failed to delete client" });
     }
   });
