@@ -1744,9 +1744,7 @@ export default function EnhancedClientDetail() {
   // Actions section accordion state
   const [actionsExpanded, setActionsExpanded] = useState({
     tags: true,
-    campaigns: false,
-    workflows: false,
-    opportunities: false
+    workflows: false
   });
   
 
@@ -3960,28 +3958,8 @@ export default function EnhancedClientDetail() {
                   )}
                 </div>
 
-                {/* Campaigns Accordion */}
-                <div className="border-b border-gray-200 pb-4">
-                  <div
-                    onClick={() => setActionsExpanded(prev => ({ ...prev, campaigns: !prev.campaigns }))}
-                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
-                  >
-                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                      <Briefcase className="h-4 w-4" />
-                      Campaigns
-                    </h4>
-                    {actionsExpanded.campaigns ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </div>
-                  {actionsExpanded.campaigns && (
-                    <div className="mt-3 space-y-2">
-                      <p className="text-sm text-gray-500">No campaigns associated</p>
-                      <p className="text-xs text-gray-400">Campaigns will appear when the client is added to marketing campaigns</p>
-                    </div>
-                  )}
-                </div>
-
                 {/* Workflows Accordion */}
-                <div className="border-b border-gray-200 pb-4">
+                <div className="pb-2">
                   <div
                     onClick={() => setActionsExpanded(prev => ({ ...prev, workflows: !prev.workflows }))}
                     className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
@@ -3996,26 +3974,6 @@ export default function EnhancedClientDetail() {
                     <div className="mt-3 space-y-2">
                       <p className="text-sm text-gray-500">No workflows active</p>
                       <p className="text-xs text-gray-400">Automated workflows will appear when triggered for this client</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Opportunities Accordion */}
-                <div className="pb-2">
-                  <div
-                    onClick={() => setActionsExpanded(prev => ({ ...prev, opportunities: !prev.opportunities }))}
-                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
-                  >
-                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                      <Target className="h-4 w-4" />
-                      Opportunities
-                    </h4>
-                    {actionsExpanded.opportunities ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </div>
-                  {actionsExpanded.opportunities && (
-                    <div className="mt-3 space-y-2">
-                      <p className="text-sm text-gray-500">No opportunities tracked</p>
-                      <p className="text-xs text-gray-400">Sales opportunities will appear when pipeline functionality is added</p>
                     </div>
                   )}
                 </div>
