@@ -7172,6 +7172,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deletedStaff) {
         return res.status(404).json({ message: "Staff member not found" });
       }
+
+      // Clean up system-generated calendar events (anniversaries and birthdays) for this staff member
+      try {
+        const deletedEvents = await db
+          .delete(calendarAppointments)
+          .where(
+            and(
+              eq(calendarAppointments.assignedTo, req.params.id),
+              eq(calendarAppointments.bookingSource, 'system')
+            )
+          )
+          .returning();
+        
+        console.log(`Cleaned up ${deletedEvents.length} system calendar events for deactivated staff member ${staffToDelete.firstName} ${staffToDelete.lastName}`);
+      } catch (cleanupError) {
+        console.error('Error cleaning up calendar events for deactivated staff:', cleanupError);
+        // Don't fail the staff deletion if calendar cleanup fails - just log the error
+      }
       
       // Log the deletion
       await createAuditLog(
