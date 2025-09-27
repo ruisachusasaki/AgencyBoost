@@ -2657,14 +2657,14 @@ export const clientTeamAssignments = pgTable("client_team_assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
   staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
-  positionId: varchar("position_id").notNull().references(() => teamPositions.id, { onDelete: "cascade" }),
+  position: varchar("position").notNull().references(() => teamPositions.id, { onDelete: "cascade" }),
   assignedAt: timestamp("assigned_at").defaultNow(),
   assignedBy: uuid("assigned_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   // Ensure one assignment per client-position combination
-  uniqueClientPosition: unique("client_team_assignments_client_position_unique").on(table.clientId, table.positionId),
+  uniqueClientPosition: unique("client_team_assignments_client_position_unique").on(table.clientId, table.position),
 }));
 
 // Team Positions schema exports

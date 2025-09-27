@@ -5611,21 +5611,24 @@ export class DbStorage implements IStorage {
       id: clientTeamAssignments.id,
       clientId: clientTeamAssignments.clientId,
       staffId: clientTeamAssignments.staffId,
-      positionId: clientTeamAssignments.positionId,
+      position: clientTeamAssignments.position,
       assignedAt: clientTeamAssignments.assignedAt,
       assignedBy: clientTeamAssignments.assignedBy,
       createdAt: clientTeamAssignments.createdAt,
       updatedAt: clientTeamAssignments.updatedAt,
-      position: teamPositions,
+      positionDetails: teamPositions,
       staffMember: staff,
     })
     .from(clientTeamAssignments)
-    .leftJoin(teamPositions, eq(clientTeamAssignments.positionId, teamPositions.id))
+    .leftJoin(teamPositions, eq(clientTeamAssignments.position, teamPositions.id))
     .leftJoin(staff, eq(clientTeamAssignments.staffId, staff.id))
     .where(eq(clientTeamAssignments.clientId, clientId))
     .orderBy(asc(teamPositions.order));
     
-    return result as (ClientTeamAssignment & { position: TeamPosition; staffMember: Staff })[];
+    return result.map(row => ({
+      ...row,
+      position: row.positionDetails,
+    })) as (ClientTeamAssignment & { position: TeamPosition; staffMember: Staff })[];
   }
   
   async createClientTeamAssignment(assignmentData: InsertClientTeamAssignment): Promise<ClientTeamAssignment> {

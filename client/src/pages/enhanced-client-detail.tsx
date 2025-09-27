@@ -184,7 +184,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
     mutationFn: async ({ positionId, staffId }: { positionId: string; staffId: string }) => {
       return apiRequest(`/api/clients/${clientId}/team`, {
         method: 'POST',
-        body: { positionId, staffId },
+        body: { position: positionId, staffId },
       });
     },
     onSuccess: () => {
@@ -230,7 +230,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
 
   // Get assignment for a specific position
   const getAssignmentForPosition = (positionId: string) => {
-    return (teamAssignments as any[]).find((assignment: any) => assignment.positionId === positionId);
+    return (teamAssignments as any[]).find((assignment: any) => assignment.position === positionId);
   };
 
   const isLoading = positionsLoading || assignmentsLoading;
