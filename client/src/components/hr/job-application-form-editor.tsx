@@ -22,7 +22,9 @@ import {
   Link as LinkIcon,
   DollarSign,
   User,
-  Briefcase
+  Briefcase,
+  Copy,
+  ExternalLink
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -275,6 +277,17 @@ export default function JobApplicationFormEditor() {
     });
   };
 
+  const handleCopyUrl = () => {
+    const careersUrl = `${window.location.origin}/careers`;
+    navigator.clipboard.writeText(careersUrl);
+    toast({
+      title: "Success",
+      description: "Careers URL copied to clipboard",
+    });
+  };
+
+  const careersUrl = `${window.location.origin}/careers`;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -289,6 +302,46 @@ export default function JobApplicationFormEditor() {
           Add Field
         </Button>
       </div>
+
+      {/* Careers URL Display */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ExternalLink className="h-5 w-5" />
+            Public Application Form URL
+          </CardTitle>
+          <CardDescription>
+            Share this URL with potential applicants or post it on your website. This page displays all open positions and the application form.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+            <div className="flex-1 font-mono text-sm break-all">
+              {careersUrl}
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleCopyUrl}
+                data-testid="button-copy-url"
+              >
+                <Copy className="h-4 w-4 mr-1" />
+                Copy
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.open(careersUrl, '_blank')}
+                data-testid="button-open-url"
+              >
+                <ExternalLink className="h-4 w-4 mr-1" />
+                Open
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

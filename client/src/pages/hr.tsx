@@ -33,16 +33,20 @@ import {
   Eye,
   ChevronUp,
   ChevronDown,
-  Trash2
+  Trash2,
+  Copy,
+  ExternalLink
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import TimeOffRequestForm from "@/components/forms/time-off-request-form";
 import ApprovalBoard from "@/components/hr/approval-board";
 
 export default function HRPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Admin permission state
   const [isHRAdmin, setIsHRAdmin] = useState(false);
@@ -485,6 +489,16 @@ export default function HRPage() {
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  // Copy careers URL handler
+  const handleCopyCareersUrl = () => {
+    const careersUrl = `${window.location.origin}/careers`;
+    navigator.clipboard.writeText(careersUrl);
+    toast({
+      title: "Success",
+      description: "Careers URL copied to clipboard",
+    });
   };
 
   const getApplicationStageBadge = (stage: string) => {
@@ -2121,6 +2135,46 @@ export default function HRPage() {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Careers URL Display */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ExternalLink className="h-5 w-5" />
+                Public Application Form URL
+              </CardTitle>
+              <CardDescription>
+                Share this URL with potential applicants or post it on your website. This page displays all open positions and the application form.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <div className="flex-1 font-mono text-sm break-all">
+                  {`${typeof window !== 'undefined' ? window.location.origin : ''}/careers`}
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleCopyCareersUrl}
+                    data-testid="button-copy-careers-url"
+                  >
+                    <Copy className="h-4 w-4 mr-1" />
+                    Copy
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => window.open(`${window.location.origin}/careers`, '_blank')}
+                    data-testid="button-open-careers-url"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    Open
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Existing Job Openings - Now the main content */}
           <Card>
