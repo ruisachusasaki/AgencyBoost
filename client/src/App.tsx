@@ -62,12 +62,16 @@ import EditCourse from "@/pages/training/edit-course";
 import LessonManagement from "@/pages/training/lesson-management";
 import CreateLesson from "@/pages/training/create-lesson";
 import EditLesson from "@/pages/training/edit-lesson";
+import ClientPortalLogin from "@/pages/client-portal/login";
+import ClientPortalDashboard from "@/pages/client-portal/dashboard";
 
 function Router() {
   return (
     <Switch>
       {/* Public routes - no authentication required */}
       <Route path="/login" component={LoginPage} />
+      <Route path="/client-portal/login" component={ClientPortalLogin} />
+      <Route path="/client-portal/dashboard" component={ClientPortalDashboard} />
       <Route path="/book/:customUrl" component={PublicBooking} />
       <Route path="/embed/:customUrl" component={BookingEmbed} />
       <Route path="/careers" component={CareersPage} />

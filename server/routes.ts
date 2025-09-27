@@ -19348,5 +19348,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get client portal tasks
+  app.get("/api/client-portal/tasks", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+
+      // Get the client portal user's client ID
+      const [clientPortalUser] = await db
+        .select({
+          clientId: clientPortalUsers.clientId
+        })
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.id, clientPortalUserId))
+        .limit(1);
+
+      if (!clientPortalUser) {
+        return res.status(404).json({
+          error: "User not found",
+          message: "Client portal user not found"
+        });
+      }
+
+      // Get tasks that are visible to client and belong to this client
+      const clientTasks = await db
+        .select({
+          id: tasks.id,
+          title: tasks.title,
+          description: tasks.description,
+          status: tasks.status,
+          priority: tasks.priority,
+          dueDate: tasks.dueDate,
+          completedAt: tasks.completedAt,
+          createdAt: tasks.createdAt,
+          projectName: projects.name,
+          assigneeName: staff.name
+        })
+        .from(tasks)
+        .leftJoin(projects, eq(tasks.projectId, projects.id))
+        .leftJoin(staff, eq(tasks.assigneeId, staff.id))
+        .where(
+          and(
+            eq(tasks.clientId, clientPortalUser.clientId),
+            eq(tasks.visibleToClient, true)
+          )
+        )
+        .orderBy(desc(tasks.createdAt));
+
+      res.json(clientTasks);
+
+    } catch (error) {
+      console.error("Get client portal tasks error:", error);
+      res.status(500).json({
+        error: "Failed to get tasks",
+        message: "An error occurred while retrieving tasks"
+      });
+    }
+  });
+
   return httpServer;
 }
