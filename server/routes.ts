@@ -47,7 +47,8 @@ import {
   jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, clientTeamAssignments,
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
-  trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources
+  trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
+  clientPortalUsers
 } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -76,7 +77,11 @@ import {
   hasPermission,
   IS_DEVELOPMENT,
   MOCK_ADMIN_USER_ID,
-  normalizeUserIdForDb
+  normalizeUserIdForDb,
+  // Client portal auth functions
+  requireClientPortalAuth,
+  getAuthenticatedClientPortalUserId,
+  getAuthenticatedClientPortalUserIdOrFail
 } from "./auth";
 
 
@@ -19024,6 +19029,321 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         error: "Failed to fetch time entries by date range", 
         message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+
+  // ========================================
+  // CLIENT PORTAL AUTHENTICATION ROUTES
+  // ========================================
+
+  // Validation schema for client portal login
+  const clientPortalLoginSchema = z.object({
+    email: z.string().email().transform((email) => email.toLowerCase()),
+    password: z.string().min(1, "Password is required")
+  });
+
+  // Client portal login
+  app.post("/api/client-portal/login", async (req, res) => {
+    const clientIp = req.ip || req.connection?.remoteAddress || "unknown";
+    
+    try {
+      // SECURITY: Check rate limiting first
+      if (isRateLimited(clientIp)) {
+        console.warn(`SECURITY: Rate-limited client portal login attempt from IP: ${clientIp}`);
+        await createAuditLog(
+          "created",
+          "client_portal_login_security",
+          "rate-limit-block",
+          "Rate Limited Client Portal Login Attempt",
+          "system",
+          `Rate-limited client portal login attempt from IP: ${clientIp}`,
+          null,
+          { ip: clientIp, userAgent: req.get("User-Agent") || "Unknown" },
+          req
+        );
+        return res.status(429).json({
+          error: "Too many login attempts",
+          message: "Please wait before trying again"
+        });
+      }
+
+      // Input validation
+      const validatedData = clientPortalLoginSchema.safeParse(req.body);
+      if (!validatedData.success) {
+        return res.status(400).json({
+          error: "Invalid input",
+          message: "Please provide valid email and password",
+          details: validatedData.error.errors
+        });
+      }
+
+      const { email, password } = validatedData.data;
+
+      // Find client portal user by email
+      const [clientPortalUser] = await db
+        .select({
+          id: clientPortalUsers.id,
+          email: clientPortalUsers.email,
+          passwordHash: clientPortalUsers.passwordHash,
+          firstName: clientPortalUsers.firstName,
+          lastName: clientPortalUsers.lastName,
+          clientId: clientPortalUsers.clientId,
+          isActive: clientPortalUsers.isActive
+        })
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.email, email))
+        .limit(1);
+
+      if (!clientPortalUser || !clientPortalUser.isActive) {
+        // SECURITY: Record failed login attempt
+        recordLoginAttempt(clientIp, false);
+        
+        // Log failed login attempt
+        try {
+          await createAuditLog(
+            "created",
+            "client_portal_login_attempt",
+            "failed",
+            `Failed login attempt for ${email}`,
+            "system",
+            `Client portal login failed - invalid credentials for email: ${email}`,
+            null,
+            { email, success: false, reason: "invalid_credentials" },
+            req
+          );
+        } catch (auditError) {
+          console.error("Failed to create audit log for failed client portal login:", auditError);
+        }
+        
+        return res.status(401).json({
+          error: "Invalid credentials",
+          message: "Invalid email or password"
+        });
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, clientPortalUser.passwordHash);
+      if (!isValidPassword) {
+        // SECURITY: Record failed login attempt
+        recordLoginAttempt(clientIp, false);
+        
+        // Log failed login attempt
+        try {
+          await createAuditLog(
+            "created",
+            "client_portal_login_attempt",
+            "failed",
+            `Failed login attempt for ${email}`,
+            "system",
+            `Client portal login failed - invalid password for email: ${email}`,
+            null,
+            { email, success: false, reason: "invalid_password" },
+            req
+          );
+        } catch (auditError) {
+          console.error("Failed to create audit log for failed client portal login:", auditError);
+        }
+        
+        return res.status(401).json({
+          error: "Invalid credentials",
+          message: "Invalid email or password"
+        });
+      }
+
+      // Get client name for session
+      const [client] = await db
+        .select({
+          name: clients.name
+        })
+        .from(clients)
+        .where(eq(clients.id, clientPortalUser.clientId))
+        .limit(1);
+
+      // Regenerate session to prevent session fixation attacks
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      // Clear main user session to prevent role confusion
+      req.session.userId = undefined;
+      req.session.user = undefined;
+
+      // Create client portal session
+      req.session.clientPortalUserId = clientPortalUser.id;
+      req.session.clientPortalUser = {
+        id: clientPortalUser.id,
+        email: clientPortalUser.email,
+        name: `${clientPortalUser.firstName} ${clientPortalUser.lastName}`,
+        clientId: clientPortalUser.clientId,
+        clientName: client?.name || "Unknown Client"
+      };
+
+      // Update last login time
+      await db
+        .update(clientPortalUsers)
+        .set({
+          lastLogin: new Date(),
+          lastActivity: new Date()
+        })
+        .where(eq(clientPortalUsers.id, clientPortalUser.id));
+
+      // SECURITY: Record successful login and clear rate limiting
+      recordLoginAttempt(clientIp, true);
+
+      // Log successful login attempt
+      try {
+        await createAuditLog(
+          "created",
+          "client_portal_login_attempt",
+          "success",
+          `Successful client portal login for ${email}`,
+          "system",
+          `Client portal login successful for email: ${email}, client: ${client?.name || "Unknown"}`,
+          null,
+          { 
+            email, 
+            success: true, 
+            clientId: clientPortalUser.clientId,
+            clientName: client?.name || "Unknown Client"
+          },
+          req
+        );
+      } catch (auditError) {
+        console.error("Failed to create audit log for successful client portal login:", auditError);
+      }
+
+      res.json({
+        success: true,
+        user: {
+          id: clientPortalUser.id,
+          email: clientPortalUser.email,
+          name: `${clientPortalUser.firstName} ${clientPortalUser.lastName}`,
+          clientId: clientPortalUser.clientId,
+          clientName: client?.name || "Unknown Client"
+        }
+      });
+
+    } catch (error) {
+      // SECURITY: Record failed login attempt for system errors
+      recordLoginAttempt(clientIp, false);
+      
+      console.error("Client portal login error:", error);
+      res.status(500).json({
+        error: "Login failed",
+        message: "An error occurred during login"
+      });
+    }
+  });
+
+  // Client portal logout
+  app.post("/api/client-portal/logout", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+
+      // Update last activity
+      await db
+        .update(clientPortalUsers)
+        .set({
+          lastActivity: new Date()
+        })
+        .where(eq(clientPortalUsers.id, clientPortalUserId));
+
+      // Destroy client portal session and regenerate session for security
+      req.session.clientPortalUserId = undefined;
+      req.session.clientPortalUser = undefined;
+
+      // Regenerate session for proper session hygiene
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      res.json({
+        success: true,
+        message: "Logged out successfully"
+      });
+
+    } catch (error) {
+      console.error("Client portal logout error:", error);
+      res.status(500).json({
+        error: "Logout failed",
+        message: "An error occurred during logout"
+      });
+    }
+  });
+
+  // Get current client portal user
+  app.get("/api/client-portal/me", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+
+      // Get current user details
+      const [clientPortalUser] = await db
+        .select({
+          id: clientPortalUsers.id,
+          email: clientPortalUsers.email,
+          firstName: clientPortalUsers.firstName,
+          lastName: clientPortalUsers.lastName,
+          clientId: clientPortalUsers.clientId,
+          lastLogin: clientPortalUsers.lastLogin,
+          lastActivity: clientPortalUsers.lastActivity
+        })
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.id, clientPortalUserId))
+        .limit(1);
+
+      if (!clientPortalUser) {
+        return res.status(404).json({
+          error: "User not found",
+          message: "Client portal user not found"
+        });
+      }
+
+      // Get client name
+      const [client] = await db
+        .select({
+          name: clients.name,
+          profileImage: clients.profileImage
+        })
+        .from(clients)
+        .where(eq(clients.id, clientPortalUser.clientId))
+        .limit(1);
+
+      // Update last activity
+      await db
+        .update(clientPortalUsers)
+        .set({
+          lastActivity: new Date()
+        })
+        .where(eq(clientPortalUsers.id, clientPortalUserId));
+
+      res.json({
+        success: true,
+        user: {
+          id: clientPortalUser.id,
+          email: clientPortalUser.email,
+          name: `${clientPortalUser.firstName} ${clientPortalUser.lastName}`,
+          clientId: clientPortalUser.clientId,
+          clientName: client?.name || "Unknown Client",
+          clientLogo: client?.profileImage || null,
+          lastLogin: clientPortalUser.lastLogin,
+          lastActivity: clientPortalUser.lastActivity
+        }
+      });
+
+    } catch (error) {
+      console.error("Get client portal user error:", error);
+      res.status(500).json({
+        error: "Failed to get user information",
+        message: "An error occurred while retrieving user information"
       });
     }
   });

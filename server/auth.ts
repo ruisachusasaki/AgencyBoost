@@ -32,6 +32,15 @@ declare module 'express-session' {
       email: string;
       roles: string[];
     };
+    // Client portal session data
+    clientPortalUserId?: string;
+    clientPortalUser?: {
+      id: string;
+      email: string;
+      name: string;
+      clientId: string;
+      clientName: string;
+    };
   }
 }
 
@@ -369,4 +378,75 @@ export async function normalizeUserIdForDb(userId: string): Promise<string> {
   
   console.log("✅ Using original valid UUID:", userId);
   return userId;
+}
+
+/**
+ * CLIENT PORTAL AUTHENTICATION FUNCTIONS
+ * 
+ * Separate authentication system for client portal access.
+ * Uses clientPortalUsers table and separate session management.
+ */
+
+/**
+ * Extract authenticated client portal user ID from request session.
+ * Returns client portal user ID or undefined if not authenticated.
+ */
+export function getAuthenticatedClientPortalUserId(req: Request): string | undefined {
+  return req.session?.clientPortalUserId;
+}
+
+/**
+ * Middleware to require client portal authentication.
+ * Returns 401 if no valid client portal session exists.
+ * Updates last activity on each authenticated request.
+ */
+export function requireClientPortalAuth() {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const clientPortalUserId = getAuthenticatedClientPortalUserId(req);
+    
+    if (!clientPortalUserId) {
+      return res.status(401).json({ 
+        error: "Client portal authentication required",
+        message: "Please log in to access your client portal"
+      });
+    }
+    
+    // Update last activity for the client portal user
+    try {
+      const { db } = await import('./db');
+      const { clientPortalUsers } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      await db
+        .update(clientPortalUsers)
+        .set({
+          lastActivity: new Date()
+        })
+        .where(eq(clientPortalUsers.id, clientPortalUserId));
+    } catch (error) {
+      console.error("Failed to update client portal user last activity:", error);
+      // Don't block the request for this error
+    }
+    
+    next();
+  };
+}
+
+/**
+ * Get authenticated client portal user ID with error handling.
+ * Returns client portal user ID or throws error with 401 response.
+ * Use this in client portal route handlers after requireClientPortalAuth() middleware.
+ */
+export function getAuthenticatedClientPortalUserIdOrFail(req: Request, res: Response): string | null {
+  const clientPortalUserId = getAuthenticatedClientPortalUserId(req);
+  
+  if (!clientPortalUserId) {
+    res.status(401).json({ 
+      error: "Client portal authentication required",
+      message: "Please log in to access your client portal"
+    });
+    return null;
+  }
+  
+  return clientPortalUserId;
 }
