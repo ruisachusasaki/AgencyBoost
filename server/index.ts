@@ -5,7 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments } from "@shared/schema";
+import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions } from "@shared/schema";
 
 /**
  * Startup migration to ensure client brief columns exist
@@ -501,6 +501,37 @@ async function initializeDefaultTeamPositions() {
   try {
     log("Running startup migration: initializeDefaultTeamPositions");
     
+    // Create team_positions table if it doesn't exist
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS team_positions (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        key text NOT NULL UNIQUE,
+        label text NOT NULL,
+        description text,
+        "order" integer DEFAULT 0,
+        is_active boolean DEFAULT true,
+        created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now()
+      );
+    `);
+    
+    // Create client_team_assignments table if it doesn't exist
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS client_team_assignments (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        client_id varchar NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+        staff_id uuid NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+        position_id varchar NOT NULL REFERENCES team_positions(id) ON DELETE CASCADE,
+        assigned_at timestamp DEFAULT now(),
+        assigned_by uuid NOT NULL REFERENCES staff(id),
+        created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now(),
+        UNIQUE(client_id, position_id)
+      );
+    `);
+    
+    log("Team position tables created successfully");
+
     // Check if positions already exist
     const existingPositions = await db.select().from(teamPositions).limit(1);
     if (existingPositions.length > 0) {
