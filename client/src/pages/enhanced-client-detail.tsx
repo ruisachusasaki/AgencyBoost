@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -500,12 +500,148 @@ function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string;
   );
 }
 
+// WorkflowSelectionModal Component
+function WorkflowSelectionModal({ 
+  isOpen, 
+  onClose, 
+  clientId, 
+  onWorkflowSelected 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  clientId: string; 
+  onWorkflowSelected: () => void;
+}) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch active workflows
+  const { data: workflows = [], isLoading } = useQuery({
+    queryKey: ['/api/workflows/active'],
+    enabled: isOpen,
+  });
+
+  // Filter workflows based on search term
+  const filteredWorkflows = workflows.filter((workflow: any) =>
+    workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    workflow.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Handle workflow selection and trigger
+  const handleSelectWorkflow = async (workflowId: string, workflowName: string) => {
+    try {
+      await apiRequest(`/api/workflows/${workflowId}/trigger`, {
+        method: 'POST',
+        body: { clientId }
+      });
+      
+      toast({
+        title: "Workflow Started",
+        description: `${workflowName} has been triggered for this client.`,
+      });
+
+      // Refresh workflow executions
+      await queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/workflow-executions`] });
+      
+      onWorkflowSelected();
+      onClose();
+    } catch (error) {
+      console.error('Error triggering workflow:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start workflow. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>Add Workflow</DialogTitle>
+          <DialogDescription>
+            Select a workflow to manually trigger for this client.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search workflows..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+              data-testid="input-workflow-search"
+            />
+          </div>
+
+          {/* Workflows List */}
+          <div className="max-h-96 overflow-y-auto">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-sm text-gray-500">Loading workflows...</div>
+              </div>
+            ) : filteredWorkflows.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-sm text-gray-500">
+                  {searchTerm ? 'No workflows match your search.' : 'No active workflows found.'}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredWorkflows.map((workflow: any) => (
+                  <div
+                    key={workflow.id}
+                    onClick={() => handleSelectWorkflow(workflow.id, workflow.name)}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
+                    data-testid={`workflow-option-${workflow.id}`}
+                  >
+                    <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900">{workflow.name}</h4>
+                      {workflow.description && (
+                        <p className="text-sm text-gray-600 mt-1">{workflow.description}</p>
+                      )}
+                      {workflow.category && (
+                        <div className="mt-2">
+                          <Badge variant="secondary" className="text-xs">
+                            {workflow.category}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={onClose}
+            data-testid="button-workflow-modal-cancel"
+          >
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ClientWorkflowsSection Component
 function ClientWorkflowsSection({ clientId, actionsExpanded, setActionsExpanded }: { 
   clientId: string;
   actionsExpanded: { workflows: boolean };
   setActionsExpanded: (updater: (prev: any) => any) => void;
 }) {
+  const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
 
   const { data: workflowExecutions, isLoading } = useQuery({
     queryKey: [`/api/clients/${clientId}/workflow-executions`],
@@ -538,6 +674,7 @@ function ClientWorkflowsSection({ clientId, actionsExpanded, setActionsExpanded 
                     variant="outline"
                     size="sm"
                     className="h-6 px-2 text-xs"
+                    onClick={() => setIsWorkflowModalOpen(true)}
                     data-testid="button-add-workflow"
                   >
                     <Plus className="h-3 w-3 mr-1" />
@@ -581,6 +718,16 @@ function ClientWorkflowsSection({ clientId, actionsExpanded, setActionsExpanded 
           )}
         </div>
       )}
+
+      {/* Workflow Selection Modal */}
+      <WorkflowSelectionModal
+        isOpen={isWorkflowModalOpen}
+        onClose={() => setIsWorkflowModalOpen(false)}
+        clientId={clientId}
+        onWorkflowSelected={() => {
+          // Refresh workflow executions will be handled by the modal
+        }}
+      />
     </div>
   );
 }

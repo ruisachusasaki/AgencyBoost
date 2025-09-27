@@ -1947,6 +1947,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all active workflows for selection - SECURED
+  app.get("/api/workflows/active", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
+    try {
+      const allWorkflows = await appStorage.getWorkflows();
+      const activeWorkflows = allWorkflows.filter(workflow => workflow.status === 'active');
+      
+      res.json(activeWorkflows);
+    } catch (error) {
+      console.error("Error fetching active workflows:", error);
+      res.status(500).json({ message: "Failed to fetch active workflows" });
+    }
+  });
+
+  // Manually trigger workflow for a client - SECURED
+  app.post("/api/workflows/:workflowId/trigger", requireAuth(), requirePermission('workflows', 'canExecute'), async (req, res) => {
+    try {
+      const { workflowId } = req.params;
+      const { clientId } = req.body;
+
+      if (!clientId) {
+        return res.status(400).json({ message: "Client ID is required" });
+      }
+
+      // Verify workflow exists and is active
+      const workflow = await appStorage.getWorkflow(workflowId);
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+
+      if (workflow.status !== 'active') {
+        return res.status(400).json({ message: "Cannot trigger inactive workflow" });
+      }
+
+      // Create workflow execution
+      const execution = await appStorage.createWorkflowExecution({
+        workflowId,
+        contactId: clientId,
+        status: 'running',
+        currentStep: 0,
+        totalSteps: workflow.actions ? (workflow.actions as any[]).length : 1,
+        startedAt: new Date(),
+        triggerData: { 
+          type: 'manual',
+          triggeredBy: req.user?.id,
+          clientId 
+        }
+      });
+
+      res.json({ 
+        message: "Workflow triggered successfully",
+        execution 
+      });
+    } catch (error) {
+      console.error("Error triggering workflow:", error);
+      res.status(500).json({ message: "Failed to trigger workflow" });
+    }
+  });
+
   // Get workflow executions for a specific client - SECURED
   app.get("/api/clients/:id/workflow-executions", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
