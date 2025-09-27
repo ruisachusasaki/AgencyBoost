@@ -200,7 +200,7 @@ function PortalAccessManagement() {
   };
 
   // Filter users by selected client
-  const filteredUsers = selectedClient 
+  const filteredUsers = (selectedClient && selectedClient !== "all")
     ? portalUsers.filter((user: any) => user.clientId === selectedClient)
     : portalUsers;
 
@@ -253,7 +253,7 @@ function PortalAccessManagement() {
                     <SelectValue placeholder="All clients" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All clients</SelectItem>
+                    <SelectItem value="all">All clients</SelectItem>
                     {clients.map((client: any) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
@@ -286,10 +286,10 @@ function PortalAccessManagement() {
             <div className="text-center py-8">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {selectedClient ? "No portal users for this client" : "No portal users yet"}
+                {(selectedClient && selectedClient !== "all") ? "No portal users for this client" : "No portal users yet"}
               </h3>
               <p className="text-gray-500 mb-4">
-                {selectedClient 
+                {(selectedClient && selectedClient !== "all")
                   ? "This client doesn't have any portal users yet." 
                   : "Get started by creating portal access for your clients."
                 }

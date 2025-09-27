@@ -19815,7 +19815,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           clientName: clients.name,
           isActive: clientPortalUsers.isActive,
           lastLogin: clientPortalUsers.lastLogin,
-          lastActivity: clientPortalUsers.lastActivity,
           createdAt: clientPortalUsers.createdAt
         })
         .from(clientPortalUsers)
@@ -19842,7 +19841,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastName: clientPortalUsers.lastName,
           isActive: clientPortalUsers.isActive,
           lastLogin: clientPortalUsers.lastLogin,
-          lastActivity: clientPortalUsers.lastActivity,
           createdAt: clientPortalUsers.createdAt
         })
         .from(clientPortalUsers)
@@ -19907,9 +19905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName,
           lastName,
           passwordHash,
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          isActive: true
         })
         .returning({
           id: clientPortalUsers.id,
@@ -19922,19 +19918,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
       // Log the creation
-      await createAuditLog({
-        entityType: "client_portal_user",
-        entityId: newUser.id,
-        action: "create",
-        changes: {
+      await createAuditLog(
+        "created",
+        "client_portal_user",
+        newUser.id,
+        `${firstName} ${lastName}`,
+        req.user?.id || "system",
+        `Created portal user for client ${client[0].name}`,
+        {},
+        {
           clientId,
           email,
           firstName,
           lastName,
-          clientName: client[0].name
+          isActive: true
         },
-        userId: req.user?.id || null
-      });
+        req
+      );
 
       res.status(201).json(newUser);
     } catch (error) {
@@ -20001,8 +20001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update user
       const updateValues = {
         ...updateData,
-        ...(updateData.password && { passwordHash: updateData.password }),
-        updatedAt: new Date()
+        ...(updateData.password && { passwordHash: updateData.password })
       };
 
       // Remove password from updateValues as we use passwordHash
@@ -20025,13 +20024,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
       // Log the update
-      await createAuditLog({
-        entityType: "client_portal_user",
-        entityId: id,
-        action: "update",
-        changes: updateData,
-        userId: req.user?.id || null
-      });
+      await createAuditLog(
+        "updated",
+        "client_portal_user",
+        id,
+        `${updatedUser.firstName} ${updatedUser.lastName}`,
+        req.user?.id || "system",
+        `Updated portal user`,
+        existingUser[0],
+        updateData,
+        req
+      );
 
       res.json(updatedUser);
     } catch (error) {
@@ -20060,8 +20063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [updatedUser] = await db
         .update(clientPortalUsers)
         .set({ 
-          isActive: false,
-          updatedAt: new Date()
+          isActive: false
         })
         .where(eq(clientPortalUsers.id, id))
         .returning({
@@ -20070,16 +20072,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
       // Log the deletion
-      await createAuditLog({
-        entityType: "client_portal_user",
-        entityId: id,
-        action: "deactivate",
-        changes: {
-          isActive: false,
-          reason: "User deactivated via admin panel"
-        },
-        userId: req.user?.id || null
-      });
+      await createAuditLog(
+        "deleted",
+        "client_portal_user",
+        id,
+        `${existingUser[0].firstName} ${existingUser[0].lastName}`,
+        req.user?.id || "system",
+        `Deactivated portal user via admin panel`,
+        { isActive: true },
+        { isActive: false },
+        req
+      );
 
       res.json({ message: "Client portal user deactivated successfully", user: updatedUser });
     } catch (error) {
