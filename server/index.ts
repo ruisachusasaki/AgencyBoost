@@ -493,6 +493,46 @@ async function generateAnniversaryAndBirthdayEvents() {
   }
 }
 
+/**
+ * Initialize default team positions for client assignments
+ * Creates the standard positions used in the Client Hub
+ */
+async function initializeDefaultTeamPositions() {
+  try {
+    log("Running startup migration: initializeDefaultTeamPositions");
+    
+    // Check if positions already exist
+    const existingPositions = await db.select().from(teamPositions).limit(1);
+    if (existingPositions.length > 0) {
+      log("Team positions already exist - skipping initialization");
+      return;
+    }
+
+    const defaultPositions = [
+      { key: "setter", label: "Setter", description: "Lead qualification and appointment setting", order: 1 },
+      { key: "bdr", label: "BDR", description: "Business Development Representative", order: 2 },
+      { key: "account_manager", label: "Account Manager", description: "Client relationship management", order: 3 },
+      { key: "media_buyer", label: "Media Buyer", description: "Paid advertising management", order: 4 },
+      { key: "cro_specialist", label: "CRO Specialist", description: "Conversion rate optimization", order: 5 },
+      { key: "automation_specialist", label: "Automation Specialist", description: "Marketing automation setup", order: 6 },
+      { key: "show_rate_specialist", label: "Show Rate Specialist", description: "Appointment show rate optimization", order: 7 },
+      { key: "data_specialist", label: "Data Specialist", description: "Analytics and reporting", order: 8 },
+      { key: "seo_specialist", label: "SEO Specialist", description: "Search engine optimization", order: 9 },
+      { key: "social_media_specialist", label: "Social Media Specialist", description: "Social media management", order: 10 }
+    ];
+
+    for (const position of defaultPositions) {
+      await db.insert(teamPositions).values(position);
+      log(`Created default team position: ${position.label}`);
+    }
+
+    log("Default team positions initialization completed successfully");
+  } catch (error: any) {
+    log(`Default team positions initialization error: ${error.message}`);
+    log("WARNING: Team positions initialization failed - team assignments may not work properly");
+  }
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -585,6 +625,7 @@ app.use((req, res, next) => {
   await initializeDefaultAutomationTriggers();
   await initializeDefaultCalendars();
   await generateAnniversaryAndBirthdayEvents();
+  await initializeDefaultTeamPositions();
   
   const server = await registerRoutes(app);
 

@@ -2650,10 +2650,7 @@ export const teamPositions = pgTable("team_positions", {
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  // Ensure key uniqueness across all positions
-  uniqueKey: unique("team_positions_key_unique").on(table.key),
-}));
+});
 
 // Client Team Assignments - for assigning staff to specific client positions
 export const clientTeamAssignments = pgTable("client_team_assignments", {
