@@ -15,6 +15,7 @@ import {
   insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema,
   insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertTimeOffBalanceSchema,
   insertJobOpeningSchema, insertJobApplicationFormConfigSchema,
+  insertNewHireOnboardingFormConfigSchema, insertNewHireOnboardingSubmissionSchema,
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
   insertProductBundleSchema, insertBundleProductSchema,
@@ -43,7 +44,7 @@ import {
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, applicationStageHistory, timeOffBalances,
-  jobOpenings, jobApplicationFormConfig, clientTeamAssignments,
+  jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, clientTeamAssignments,
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources
@@ -15137,6 +15138,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ error: "Failed to save form configuration" });
+    }
+  });
+
+  // New Hire Onboarding Form Configuration Routes
+  app.get("/api/new-hire-onboarding-form-config", async (req, res) => {
+    try {
+      let config;
+      try {
+        [config] = await db.select()
+          .from(newHireOnboardingFormConfig)
+          .orderBy(desc(newHireOnboardingFormConfig.updatedAt))
+          .limit(1);
+      } catch (tableError) {
+        // Table might not exist yet, return default config
+        console.log("New hire onboarding form config table not found, using defaults");
+        return res.json({
+          fields: [
+            { id: 'name', label: 'Full Name', type: 'text', placeholder: 'Enter your full name', required: true, order: 0 },
+            { id: 'address', label: 'Address', type: 'textarea', placeholder: 'Enter your full address', required: true, order: 1 },
+            { id: 'phone_number', label: 'Phone Number', type: 'phone', placeholder: '+1 (555) 123-4567', required: true, order: 2 },
+            { id: 'date_of_birth', label: 'Date of Birth', type: 'date', required: true, order: 3 },
+            { id: 'start_date', label: 'Start Date', type: 'date', required: true, order: 4 },
+            { id: 'emergency_contact_name', label: 'Emergency Contact Name', type: 'text', placeholder: 'Enter emergency contact name', required: true, order: 5 },
+            { id: 'emergency_contact_number', label: 'Emergency Contact Number', type: 'phone', placeholder: '+1 (555) 123-4567', required: true, order: 6 },
+            { id: 'emergency_contact_relationship', label: 'Emergency Contact Relationship', type: 'select', required: true, options: ['Spouse', 'Parent', 'Sibling', 'Child', 'Friend', 'Other'], order: 7 },
+            { id: 'tshirt_size', label: 'T-shirt Size', type: 'select', required: true, options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'], order: 8 },
+            { id: 'payment_platform', label: 'Payment Platform', type: 'select', required: true, options: ['PayPal', 'Direct Deposit', 'Zelle', 'Venmo', 'Cash App', 'Wire Transfer'], order: 9 },
+            { id: 'payment_email', label: 'Email linked to Payment Platform', type: 'email', placeholder: 'payment@example.com', required: true, order: 10 }
+          ]
+        });
+      }
+      
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching new hire onboarding form config:", error);
+      res.status(500).json({ error: "Failed to fetch form configuration" });
+    }
+  });
+
+  app.post("/api/new-hire-onboarding-form-config", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // Authentication failed
+      const validatedData = insertNewHireOnboardingFormConfigSchema.parse({
+        ...req.body,
+        updatedBy: currentUserId
+      });
+
+      // Delete existing config and insert new one (simpler than upsert)
+      await db.delete(newHireOnboardingFormConfig);
+      const [newConfig] = await db.insert(newHireOnboardingFormConfig)
+        .values(validatedData)
+        .returning();
+
+      res.json(newConfig);
+    } catch (error) {
+      console.error("Error saving new hire onboarding form config:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to save form configuration" });
+    }
+  });
+
+  // New Hire Onboarding Form Submission Routes
+  app.post("/api/new-hire-onboarding-submissions", async (req, res) => {
+    try {
+      const validatedData = insertNewHireOnboardingSubmissionSchema.parse(req.body);
+
+      const [newSubmission] = await db.insert(newHireOnboardingSubmissions)
+        .values(validatedData)
+        .returning();
+
+      res.status(201).json(newSubmission);
+    } catch (error) {
+      console.error("Error creating new hire onboarding submission:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create submission" });
+    }
+  });
+
+  app.get("/api/new-hire-onboarding-submissions", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+    try {
+      const submissions = await db.select()
+        .from(newHireOnboardingSubmissions)
+        .orderBy(desc(newHireOnboardingSubmissions.submittedAt));
+
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching new hire onboarding submissions:", error);
+      res.status(500).json({ error: "Failed to fetch submissions" });
+    }
+  });
+
+  app.put("/api/new-hire-onboarding-submissions/:id", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // Authentication failed
+
+      const validatedData = insertNewHireOnboardingSubmissionSchema.partial().parse({
+        ...req.body,
+        reviewedBy: currentUserId,
+        reviewedAt: new Date()
+      });
+
+      const [updatedSubmission] = await db.update(newHireOnboardingSubmissions)
+        .set(validatedData)
+        .where(eq(newHireOnboardingSubmissions.id, id))
+        .returning();
+
+      if (!updatedSubmission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+
+      res.json(updatedSubmission);
+    } catch (error) {
+      console.error("Error updating new hire onboarding submission:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update submission" });
     }
   });
 
