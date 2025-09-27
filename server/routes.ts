@@ -16347,7 +16347,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
       }
       
-      console.log('✅ Debug: Raw SQL query successful, found:', articles.rowCount);
       
       // Extract just the articles array from the database result
       const articlesArray = Array.isArray(articles) ? articles : articles.rows;
