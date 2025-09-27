@@ -163,18 +163,10 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const positions = [
-    { key: "setter", label: "Setter" },
-    { key: "bdr", label: "BDR" },
-    { key: "account_manager", label: "Account Manager" },
-    { key: "media_buyer", label: "Media Buyer" },
-    { key: "cro_specialist", label: "CRO Specialist" },
-    { key: "automation_specialist", label: "Automation Specialist" },
-    { key: "show_rate_specialist", label: "Show Rate Specialist" },
-    { key: "data_specialist", label: "Data Specialist" },
-    { key: "seo_specialist", label: "SEO Specialist" },
-    { key: "social_media_specialist", label: "Social Media Specialist" }
-  ];
+  // Get configurable team positions
+  const { data: positions = [], isLoading: positionsLoading } = useQuery({
+    queryKey: ["/api/team-positions"],
+  });
 
   // Get all staff members
   const { data: staffList = [] } = useQuery({
@@ -182,52 +174,72 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
   });
 
   // Get current team assignments
-  const { data: teamAssignments = [], isLoading } = useQuery({
+  const { data: teamAssignments = [], isLoading: assignmentsLoading } = useQuery({
     queryKey: [`/api/clients/${clientId}/team`],
     enabled: !!clientId,
   });
 
-  // Update team assignment mutation
-  const updateAssignmentMutation = useMutation({
-    mutationFn: async ({ position, staffId }: { position: string; staffId?: string }) => {
-      const response = await fetch(`/api/clients/${clientId}/team/${position}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ staffId }),
+  // Create team assignment mutation
+  const createAssignmentMutation = useMutation({
+    mutationFn: async ({ positionId, staffId }: { positionId: string; staffId: string }) => {
+      return apiRequest(`/api/clients/${clientId}/team`, {
+        method: 'POST',
+        body: { positionId, staffId },
       });
-      if (!response.ok) {
-        throw new Error('Failed to update team assignment');
-      }
-      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/team`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients`, clientId, "team"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
       toast({
         title: "Success",
-        description: "Team assignment updated successfully",
+        description: "Team assignment created successfully",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to update team assignment",
+        description: error.message || "Failed to create team assignment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete team assignment mutation  
+  const deleteAssignmentMutation = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      return apiRequest(`/api/client-team-assignments/${assignmentId}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/clients`, clientId, "team"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
+      toast({
+        title: "Success",
+        description: "Team assignment removed successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error", 
+        description: error.message || "Failed to remove team assignment",
         variant: "destructive",
       });
     },
   });
 
   // Get assignment for a specific position
-  const getAssignmentForPosition = (position: string) => {
-    return (teamAssignments as any[]).find((assignment: any) => assignment.position === position);
+  const getAssignmentForPosition = (positionId: string) => {
+    return (teamAssignments as any[]).find((assignment: any) => assignment.positionId === positionId);
   };
 
+  const isLoading = positionsLoading || assignmentsLoading;
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4" data-testid="team-assignments-section">
+      <div className="flex items-center justify-between" data-testid="team-assignments-header">
         <h3 className="font-semibold text-gray-900">Team Assignments</h3>
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-gray-500" data-testid="assignments-count">
           {(teamAssignments as any[]).length} of {positions.length} positions filled
         </div>
       </div>
@@ -244,27 +256,46 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
           ))}
         </div>
       ) : (
-        <div className="space-y-3 max-h-[600px] overflow-y-auto">
-          {positions.map((position) => {
-            const assignment = getAssignmentForPosition(position.key);
+        <div className="space-y-3 max-h-[600px] overflow-y-auto" data-testid="team-positions-list">
+          {positions.map((position: any) => {
+            const assignment = getAssignmentForPosition(position.id);
             const assignedStaff = assignment ? (staffList as any[]).find((staff: any) => staff.id === assignment.staffId) : null;
 
             return (
-              <div key={position.key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div 
+                key={position.id} 
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                data-testid={`team-position-${position.key}`}
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="font-medium text-gray-900">{position.label}:</span>
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
+                  <div>
+                    <span className="font-medium text-gray-900" data-testid={`position-label-${position.key}`}>{position.label}:</span>
+                    {position.description && (
+                      <p className="text-sm text-gray-500">{position.description}</p>
+                    )}
+                  </div>
                 </div>
                 
                 <Select
                   value={assignment?.staffId || "not_assigned"}
                   onValueChange={(value) => {
-                    updateAssignmentMutation.mutate({
-                      position: position.key,
-                      staffId: value === "not_assigned" ? undefined : value,
-                    });
+                    if (value === "not_assigned") {
+                      if (assignment) {
+                        deleteAssignmentMutation.mutate(assignment.id);
+                      }
+                    } else {
+                      if (assignment) {
+                        // Update existing assignment - delete and recreate
+                        deleteAssignmentMutation.mutate(assignment.id);
+                      }
+                      createAssignmentMutation.mutate({
+                        positionId: position.id,
+                        staffId: value,
+                      });
+                    }
                   }}
-                  disabled={updateAssignmentMutation.isPending}
+                  disabled={createAssignmentMutation.isPending || deleteAssignmentMutation.isPending}
                 >
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="Not Assigned">
