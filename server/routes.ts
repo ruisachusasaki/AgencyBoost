@@ -11,7 +11,7 @@ import {
   insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
-  insertStaffSchema, insertDepartmentSchema, insertPositionSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
+  insertStaffSchema, insertDepartmentSchema, insertPositionSchema, insertTeamPositionSchema, insertClientTeamAssignmentSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
   insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema,
   insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertTimeOffBalanceSchema,
   insertJobOpeningSchema, insertJobApplicationFormConfigSchema,
@@ -44,7 +44,7 @@ import {
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, applicationStageHistory, timeOffBalances,
-  jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, clientTeamAssignments,
+  jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, teamPositions, clientTeamAssignments,
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
@@ -7526,6 +7526,233 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting staff:', error);
       res.status(500).json({ message: "Failed to delete staff member" });
+    }
+  });
+
+  // Team Positions API - SECURED
+  app.get("/api/team-positions", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
+    try {
+      const positions = await appStorage.getTeamPositions();
+      res.json(positions);
+    } catch (error) {
+      console.error('Error fetching team positions:', error);
+      res.status(500).json({ message: "Failed to fetch team positions" });
+    }
+  });
+
+  app.get("/api/team-positions/:id", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
+    try {
+      const position = await appStorage.getTeamPosition(req.params.id);
+      if (!position) {
+        return res.status(404).json({ message: "Team position not found" });
+      }
+      res.json(position);
+    } catch (error) {
+      console.error('Error fetching team position:', error);
+      res.status(500).json({ message: "Failed to fetch team position" });
+    }
+  });
+
+  app.post("/api/team-positions", requireAuth(), requirePermission('settings', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const insertData = insertTeamPositionSchema.parse(req.body);
+      const newPosition = await appStorage.createTeamPosition(insertData);
+
+      await createAuditLog(
+        "created",
+        "team_position",
+        newPosition.id,
+        newPosition.label,
+        userId,
+        `Team position created: ${newPosition.label}`,
+        null,
+        newPosition,
+        req
+      );
+
+      res.json(newPosition);
+    } catch (error) {
+      console.error('Error creating team position:', error);
+      res.status(500).json({ message: "Failed to create team position" });
+    }
+  });
+
+  app.put("/api/team-positions/:id", requireAuth(), requirePermission('settings', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const oldPosition = await appStorage.getTeamPosition(req.params.id);
+      if (!oldPosition) {
+        return res.status(404).json({ message: "Team position not found" });
+      }
+
+      const updateData = insertTeamPositionSchema.partial().parse(req.body);
+      const updatedPosition = await appStorage.updateTeamPosition(req.params.id, updateData);
+
+      if (!updatedPosition) {
+        return res.status(404).json({ message: "Team position not found" });
+      }
+
+      await createAuditLog(
+        "updated",
+        "team_position",
+        req.params.id,
+        updatedPosition.label,
+        userId,
+        `Team position updated: ${updatedPosition.label}`,
+        oldPosition,
+        updatedPosition,
+        req
+      );
+
+      res.json(updatedPosition);
+    } catch (error) {
+      console.error('Error updating team position:', error);
+      res.status(500).json({ message: "Failed to update team position" });
+    }
+  });
+
+  app.delete("/api/team-positions/:id", requireAuth(), requirePermission('settings', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const positionToDelete = await appStorage.getTeamPosition(req.params.id);
+      if (!positionToDelete) {
+        return res.status(404).json({ message: "Team position not found" });
+      }
+
+      // Check if position is being used in any client assignments
+      // This would prevent deletion if there are active assignments
+      
+      const deleted = await appStorage.deleteTeamPosition(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Team position not found" });
+      }
+
+      await createAuditLog(
+        "deleted",
+        "team_position",
+        req.params.id,
+        positionToDelete.label,
+        userId,
+        `Team position deleted: ${positionToDelete.label}`,
+        positionToDelete,
+        null,
+        req
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting team position:', error);
+      res.status(500).json({ message: "Failed to delete team position" });
+    }
+  });
+
+  // Client Team Assignments API - SECURED  
+  app.get("/api/clients/:clientId/team", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const assignments = await appStorage.getClientTeamAssignments(req.params.clientId);
+      res.json(assignments);
+    } catch (error) {
+      console.error('Error fetching client team assignments:', error);
+      res.status(500).json({ message: "Failed to fetch client team assignments" });
+    }
+  });
+
+  app.post("/api/clients/:clientId/team", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const insertData = insertClientTeamAssignmentSchema.parse({
+        ...req.body,
+        clientId: req.params.clientId,
+        assignedBy: userId,
+      });
+
+      const newAssignment = await appStorage.createClientTeamAssignment(insertData);
+
+      await createAuditLog(
+        "created",
+        "client_team_assignment",
+        newAssignment.id,
+        `Client Team Assignment`,
+        userId,
+        `Team member assigned to client`,
+        null,
+        newAssignment,
+        req
+      );
+
+      res.json(newAssignment);
+    } catch (error) {
+      console.error('Error creating client team assignment:', error);
+      res.status(500).json({ message: "Failed to create client team assignment" });
+    }
+  });
+
+  app.put("/api/client-team-assignments/:id", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const updateData = insertClientTeamAssignmentSchema.partial().parse(req.body);
+      const updatedAssignment = await appStorage.updateClientTeamAssignment(req.params.id, updateData);
+
+      if (!updatedAssignment) {
+        return res.status(404).json({ message: "Client team assignment not found" });
+      }
+
+      await createAuditLog(
+        "updated",
+        "client_team_assignment",
+        req.params.id,
+        `Client Team Assignment`,
+        userId,
+        `Client team assignment updated`,
+        null,
+        updatedAssignment,
+        req
+      );
+
+      res.json(updatedAssignment);
+    } catch (error) {
+      console.error('Error updating client team assignment:', error);
+      res.status(500).json({ message: "Failed to update client team assignment" });
+    }
+  });
+
+  app.delete("/api/client-team-assignments/:id", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const deleted = await appStorage.deleteClientTeamAssignment(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Client team assignment not found" });
+      }
+
+      await createAuditLog(
+        "deleted",
+        "client_team_assignment",
+        req.params.id,
+        `Client Team Assignment`,
+        userId,
+        `Team member unassigned from client`,
+        null,
+        null,
+        req
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting client team assignment:', error);
+      res.status(500).json({ message: "Failed to delete client team assignment" });
     }
   });
 

@@ -60,6 +60,8 @@ import {
   type ClientBriefValue, type InsertClientBriefValue, clientBriefValues,
   type AuthUser, type InsertAuthUser, authUsers,
   type EmailIntegration, type InsertEmailIntegration, emailIntegrations,
+  type TeamPosition, type InsertTeamPosition, teamPositions,
+  type ClientTeamAssignment, type InsertClientTeamAssignment, clientTeamAssignments,
   customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -350,6 +352,19 @@ export interface IStorage {
   createStaffMember(staff: InsertStaff): Promise<Staff>;
   updateStaffMember(id: string, staff: Partial<InsertStaff>): Promise<Staff | undefined>;
   deleteStaffMember(id: string): Promise<boolean>;
+  
+  // Team Positions
+  getTeamPositions(): Promise<TeamPosition[]>;
+  getTeamPosition(id: string): Promise<TeamPosition | undefined>;
+  createTeamPosition(position: InsertTeamPosition): Promise<TeamPosition>;
+  updateTeamPosition(id: string, position: Partial<InsertTeamPosition>): Promise<TeamPosition | undefined>;
+  deleteTeamPosition(id: string): Promise<boolean>;
+  
+  // Client Team Assignments
+  getClientTeamAssignments(clientId: string): Promise<(ClientTeamAssignment & { position: TeamPosition; staffMember: Staff })[]>;
+  createClientTeamAssignment(assignment: InsertClientTeamAssignment): Promise<ClientTeamAssignment>;
+  updateClientTeamAssignment(id: string, assignment: Partial<InsertClientTeamAssignment>): Promise<ClientTeamAssignment | undefined>;
+  deleteClientTeamAssignment(id: string): Promise<boolean>;
   
   // Departments
   getDepartments(): Promise<Department[]>;
@@ -5556,6 +5571,78 @@ export class DbStorage implements IStorage {
   
   async deleteStaffMember(id: string): Promise<boolean> {
     const result = await db.delete(staff).where(eq(staff.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Team Positions
+  async getTeamPositions(): Promise<TeamPosition[]> {
+    const result = await db.select().from(teamPositions)
+      .where(eq(teamPositions.isActive, true))
+      .orderBy(asc(teamPositions.order), asc(teamPositions.label));
+    return result;
+  }
+  
+  async getTeamPosition(id: string): Promise<TeamPosition | undefined> {
+    const result = await db.select().from(teamPositions).where(eq(teamPositions.id, id));
+    return result[0];
+  }
+  
+  async createTeamPosition(positionData: InsertTeamPosition): Promise<TeamPosition> {
+    const result = await db.insert(teamPositions).values(positionData).returning();
+    return result[0];
+  }
+  
+  async updateTeamPosition(id: string, positionData: Partial<InsertTeamPosition>): Promise<TeamPosition | undefined> {
+    const result = await db.update(teamPositions).set({
+      ...positionData,
+      updatedAt: new Date(),
+    }).where(eq(teamPositions.id, id)).returning();
+    return result[0];
+  }
+  
+  async deleteTeamPosition(id: string): Promise<boolean> {
+    const result = await db.delete(teamPositions).where(eq(teamPositions.id, id)).returning();
+    return result.length > 0;
+  }
+  
+  // Client Team Assignments
+  async getClientTeamAssignments(clientId: string): Promise<(ClientTeamAssignment & { position: TeamPosition; staffMember: Staff })[]> {
+    const result = await db.select({
+      id: clientTeamAssignments.id,
+      clientId: clientTeamAssignments.clientId,
+      staffId: clientTeamAssignments.staffId,
+      positionId: clientTeamAssignments.positionId,
+      assignedAt: clientTeamAssignments.assignedAt,
+      assignedBy: clientTeamAssignments.assignedBy,
+      createdAt: clientTeamAssignments.createdAt,
+      updatedAt: clientTeamAssignments.updatedAt,
+      position: teamPositions,
+      staffMember: staff,
+    })
+    .from(clientTeamAssignments)
+    .leftJoin(teamPositions, eq(clientTeamAssignments.positionId, teamPositions.id))
+    .leftJoin(staff, eq(clientTeamAssignments.staffId, staff.id))
+    .where(eq(clientTeamAssignments.clientId, clientId))
+    .orderBy(asc(teamPositions.order));
+    
+    return result as (ClientTeamAssignment & { position: TeamPosition; staffMember: Staff })[];
+  }
+  
+  async createClientTeamAssignment(assignmentData: InsertClientTeamAssignment): Promise<ClientTeamAssignment> {
+    const result = await db.insert(clientTeamAssignments).values(assignmentData).returning();
+    return result[0];
+  }
+  
+  async updateClientTeamAssignment(id: string, assignmentData: Partial<InsertClientTeamAssignment>): Promise<ClientTeamAssignment | undefined> {
+    const result = await db.update(clientTeamAssignments).set({
+      ...assignmentData,
+      updatedAt: new Date(),
+    }).where(eq(clientTeamAssignments.id, id)).returning();
+    return result[0];
+  }
+  
+  async deleteClientTeamAssignment(id: string): Promise<boolean> {
+    const result = await db.delete(clientTeamAssignments).where(eq(clientTeamAssignments.id, id)).returning();
     return result.length > 0;
   }
 
