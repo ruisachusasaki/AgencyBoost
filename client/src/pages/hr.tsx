@@ -1586,10 +1586,7 @@ export default function HRPage() {
                                       <Button
                                         onClick={() => {
                                           // Mark as reviewed
-                                          apiRequest(`/api/new-hire-onboarding-submissions/${submission.id}`, {
-                                            method: 'PUT',
-                                            body: { status: 'reviewed' }
-                                          }).then(() => {
+                                          apiRequest('PUT', `/api/new-hire-onboarding-submissions/${submission.id}`, { status: 'reviewed' }).then(() => {
                                             queryClient.invalidateQueries({ queryKey: ["/api/new-hire-onboarding-submissions"] });
                                             toast({
                                               title: "Success",
