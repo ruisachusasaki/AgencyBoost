@@ -26,6 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import JobApplicationFormEditor from "@/components/hr/job-application-form-editor";
+import NewHireOnboardingFormEditor from "@/components/hr/new-hire-onboarding-form-editor";
 import { Link } from "wouter";
 
 // Schema for time off categories
@@ -183,6 +184,10 @@ export default function HRSettingsPage() {
             <Briefcase className="h-4 w-4" />
             Job Application Form
           </TabsTrigger>
+          <TabsTrigger value="new-hire-onboarding-form" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            New Hire Onboarding Form
+          </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             General Settings
@@ -272,6 +277,11 @@ export default function HRSettingsPage() {
         {/* Job Application Form Tab */}
         <TabsContent value="job-application-form" className="space-y-6">
           <JobApplicationFormEditor />
+        </TabsContent>
+
+        {/* New Hire Onboarding Form Tab */}
+        <TabsContent value="new-hire-onboarding-form" className="space-y-6">
+          <NewHireOnboardingFormEditor />
         </TabsContent>
 
         {/* General Settings Tab */}

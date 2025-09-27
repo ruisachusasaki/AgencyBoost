@@ -2532,6 +2532,52 @@ export const insertJobApplicationFormConfigSchema = createInsertSchema(jobApplic
 export type JobApplicationFormConfig = typeof jobApplicationFormConfig.$inferSelect;
 export type InsertJobApplicationFormConfig = z.infer<typeof insertJobApplicationFormConfigSchema>;
 
+// New Hire Onboarding Form Configuration - stores the customizable form field configuration
+export const newHireOnboardingFormConfig = pgTable("new_hire_onboarding_form_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fields: jsonb("fields").notNull(), // Array of form field configurations
+  updatedBy: varchar("updated_by").notNull().references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertNewHireOnboardingFormConfigSchema = createInsertSchema(newHireOnboardingFormConfig).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type NewHireOnboardingFormConfig = typeof newHireOnboardingFormConfig.$inferSelect;
+export type InsertNewHireOnboardingFormConfig = z.infer<typeof insertNewHireOnboardingFormConfigSchema>;
+
+// New Hire Onboarding Submissions - when someone fills out the onboarding form
+export const newHireOnboardingSubmissions = pgTable("new_hire_onboarding_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  address: text("address"),
+  phoneNumber: text("phone_number"),
+  dateOfBirth: date("date_of_birth"),
+  startDate: date("start_date"),
+  emergencyContactName: text("emergency_contact_name"),
+  emergencyContactNumber: text("emergency_contact_number"),
+  emergencyContactRelationship: text("emergency_contact_relationship"),
+  tshirtSize: text("tshirt_size"),
+  paymentPlatform: text("payment_platform"),
+  paymentEmail: text("payment_email"),
+  status: text("status").notNull().default("pending"), // pending, reviewed, processed
+  reviewedBy: uuid("reviewed_by").references(() => staff.id),
+  reviewedAt: timestamp("reviewed_at"),
+  notes: text("notes"),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  customFieldData: jsonb("custom_field_data"), // for storing custom form field values
+});
+
+export const insertNewHireOnboardingSubmissionSchema = createInsertSchema(newHireOnboardingSubmissions).omit({
+  id: true,
+  submittedAt: true,
+});
+
+export type NewHireOnboardingSubmission = typeof newHireOnboardingSubmissions.$inferSelect;
+export type InsertNewHireOnboardingSubmission = z.infer<typeof insertNewHireOnboardingSubmissionSchema>;
+
 export const insertFormFieldSchema = createInsertSchema(formFields).omit({
   id: true,
   createdAt: true,
