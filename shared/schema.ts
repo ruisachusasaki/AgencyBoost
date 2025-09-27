@@ -573,6 +573,9 @@ export const tasks = pgTable("tasks", {
   recurringEndOccurrences: integer("recurring_end_occurrences"),
   createIfOverdue: boolean("create_if_overdue").default(false),
   
+  // Client portal visibility
+  visibleToClient: boolean("visible_to_client").default(false), // Controls if clients can see this task in their portal
+  
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
