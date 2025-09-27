@@ -60,7 +60,7 @@ interface ClientBriefSection {
 }
 
 export default function ClientsSettings() {
-  const [activeTab, setActiveTab] = useState<"overview" | "clientBrief">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "clientBrief" | "portalAccess">("overview");
   const [editingSection, setEditingSection] = useState<ClientBriefSection | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -324,6 +324,18 @@ export default function ClientsSettings() {
               <FileText className="h-4 w-4" />
               Client Brief
             </button>
+            <button
+              onClick={() => setActiveTab("portalAccess")}
+              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                activeTab === "portalAccess"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              data-testid="tab-portal-access"
+            >
+              <Users className="h-4 w-4" />
+              Portal Access
+            </button>
           </nav>
         </div>
 
@@ -478,6 +490,52 @@ export default function ClientsSettings() {
                     </Droppable>
                   </DragDropContext>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Portal Access Tab */}
+        {activeTab === "portalAccess" && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Client Portal Access Management</CardTitle>
+                <p className="text-sm text-gray-600 mt-2">
+                  Manage client portal access for all your clients. Create login credentials for clients to view their project progress and tasks.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Portal Access Management</h3>
+                  <p className="text-gray-500 mb-4">
+                    Portal access functionality will be available here. This will allow you to:
+                  </p>
+                  <div className="text-left max-w-md mx-auto space-y-2 text-sm text-gray-600">
+                    <div className="flex items-center">
+                      <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
+                      Create portal login credentials for each client
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
+                      Manage multiple users per client company
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
+                      Control which tasks are visible to clients
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
+                      Monitor client portal activity
+                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <Badge variant="secondary" className="text-xs">
+                      Coming Soon
+                    </Badge>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
