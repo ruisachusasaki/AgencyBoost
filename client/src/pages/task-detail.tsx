@@ -9,6 +9,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
@@ -760,15 +761,37 @@ export default function TaskDetail() {
                   </div>
                 </div>
 
-                {/* Row 4: Client */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Building className="h-4 w-4 text-slate-400" />
-                    <span className="text-sm font-medium text-slate-700">Client</span>
+                {/* Row 4: Client and Portal Visibility */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Client - Left Side */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Building className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700">Client</span>
+                    </div>
+                    <span className="text-sm text-slate-600">
+                      {getClientName(task.clientId) || "No client assigned"}
+                    </span>
                   </div>
-                  <span className="text-sm text-slate-600">
-                    {getClientName(task.clientId) || "No client assigned"}
-                  </span>
+
+                  {/* Client Portal Visibility - Right Side */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700">Client Portal</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={task.visibleToClient || false}
+                        onCheckedChange={(checked) => updateTaskMutation.mutate({ visibleToClient: !!checked })}
+                        className="h-4 w-4"
+                        data-testid="checkbox-task-visible-to-client"
+                      />
+                      <span className="text-sm text-slate-600">
+                        {task.visibleToClient ? "Visible to client" : "Hidden from client"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
