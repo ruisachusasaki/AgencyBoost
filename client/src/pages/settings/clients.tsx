@@ -20,8 +20,10 @@ import {
   Contact, ArrowLeft, Settings, FileText, Plus, Edit2, Trash2, GripVertical, 
   Eye, EyeOff, Users, Target, Briefcase, Building, ShoppingBag, TrendingUp,
   Monitor, FileX, User, Clock, Mail, Phone, Globe, MapPin, Calendar,
-  PenTool, Palette, Hash, Heart, Star, Zap, Coffee, Lightbulb, Rocket
+  PenTool, Palette, Hash, Heart, Star, Zap, Coffee, Lightbulb, Rocket,
+  Shield, ShieldCheck, ExternalLink
 } from "lucide-react";
+import { format } from "date-fns";
 import { Link } from "wouter";
 
 // Icon mapping for client brief sections
@@ -57,6 +59,476 @@ interface ClientBriefSection {
   type: 'text' | 'rich_text';
   createdAt: string;
   updatedAt: string;
+}
+
+// Portal Access Management Component
+function PortalAccessManagement() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedClient, setSelectedClient] = useState<string>("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+
+  // Portal user creation/edit form schema
+  const portalUserSchema = z.object({
+    clientId: z.string().min(1, "Client selection is required"),
+    email: z.string().email("Valid email is required"),
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    password: z.string().min(6, "Password must be at least 6 characters").optional(),
+    isActive: z.boolean()
+  });
+
+  const form = useForm<z.infer<typeof portalUserSchema>>({
+    resolver: zodResolver(portalUserSchema),
+    defaultValues: {
+      clientId: "",
+      email: "",
+      firstName: "",
+      lastName: "",
+      password: "",
+      isActive: true
+    }
+  });
+
+  // Fetch clients for selection
+  const { data: clients = [] } = useQuery({
+    queryKey: ["/api/clients"],
+    select: (data: any) => data.clients || []
+  });
+
+  // Fetch all portal users
+  const { data: portalUsers = [], isLoading: portalUsersLoading } = useQuery({
+    queryKey: ["/api/client-portal-users"]
+  });
+
+  // Create portal user mutation
+  const createMutation = useMutation({
+    mutationFn: (userData: z.infer<typeof portalUserSchema>) => 
+      apiRequest("POST", "/api/client-portal-users", userData),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Portal user created successfully"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/client-portal-users"] });
+      setIsCreateDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create portal user",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update portal user mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...userData }: { id: string } & Partial<z.infer<typeof portalUserSchema>>) => 
+      apiRequest("PUT", `/api/client-portal-users/${id}`, userData),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Portal user updated successfully"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/client-portal-users"] });
+      setEditingUser(null);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update portal user",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Deactivate portal user mutation
+  const deactivateMutation = useMutation({
+    mutationFn: (id: string) => 
+      apiRequest("DELETE", `/api/client-portal-users/${id}`),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Portal user deactivated successfully"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/client-portal-users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to deactivate portal user",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSubmit = (data: z.infer<typeof portalUserSchema>) => {
+    if (editingUser) {
+      // Update existing user (exclude password if empty)
+      const updateData = { ...data };
+      if (!updateData.password) {
+        delete updateData.password;
+      }
+      updateMutation.mutate({ id: editingUser.id, ...updateData });
+    } else {
+      // Create new user
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleEdit = (user: any) => {
+    setEditingUser(user);
+    form.reset({
+      clientId: user.clientId,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      password: "", // Don't pre-fill password
+      isActive: user.isActive
+    });
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleDeactivate = (user: any) => {
+    if (confirm(`Are you sure you want to deactivate portal access for ${user.firstName} ${user.lastName}?`)) {
+      deactivateMutation.mutate(user.id);
+    }
+  };
+
+  // Filter users by selected client
+  const filteredUsers = selectedClient 
+    ? portalUsers.filter((user: any) => user.clientId === selectedClient)
+    : portalUsers;
+
+  const getClientName = (clientId: string) => {
+    const client = clients.find((c: any) => c.id === clientId);
+    return client?.name || "Unknown Client";
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Client Portal Access Management</CardTitle>
+          <p className="text-sm text-gray-600 mt-2">
+            Manage client portal access for all your clients. Create login credentials for clients to view their project progress and tasks.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {/* Portal Info Banner */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start">
+              <ExternalLink className="h-5 w-5 text-blue-600 mt-0.5 mr-3" />
+              <div>
+                <h3 className="text-sm font-medium text-blue-900 mb-1">
+                  Client Portal Available
+                </h3>
+                <p className="text-sm text-blue-700 mb-2">
+                  Your client portal is live at <code className="bg-blue-100 px-1 rounded">/client-portal</code>
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => window.open("/client-portal", "_blank")}
+                  data-testid="button-view-portal"
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View Client Portal
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters and Actions */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="min-w-0 flex-1">
+                <Label htmlFor="client-filter">Filter by Client</Label>
+                <Select value={selectedClient} onValueChange={setSelectedClient}>
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="All clients" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All clients</SelectItem>
+                    {clients.map((client: any) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button 
+              onClick={() => {
+                setEditingUser(null);
+                form.reset();
+                setIsCreateDialogOpen(true);
+              }}
+              data-testid="button-add-portal-user"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Portal User
+            </Button>
+          </div>
+
+          {/* Portal Users Table */}
+          {portalUsersLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+              <p className="text-gray-500 mt-2">Loading portal users...</p>
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {selectedClient ? "No portal users for this client" : "No portal users yet"}
+              </h3>
+              <p className="text-gray-500 mb-4">
+                {selectedClient 
+                  ? "This client doesn't have any portal users yet." 
+                  : "Get started by creating portal access for your clients."
+                }
+              </p>
+              <Button 
+                onClick={() => {
+                  setEditingUser(null);
+                  form.reset({ clientId: selectedClient });
+                  setIsCreateDialogOpen(true);
+                }}
+                data-testid="button-add-first-user"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add First Portal User
+              </Button>
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left p-4 font-medium text-gray-900">User</th>
+                    <th className="text-left p-4 font-medium text-gray-900">Client</th>
+                    <th className="text-left p-4 font-medium text-gray-900">Email</th>
+                    <th className="text-left p-4 font-medium text-gray-900">Status</th>
+                    <th className="text-left p-4 font-medium text-gray-900">Last Login</th>
+                    <th className="text-left p-4 font-medium text-gray-900">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredUsers.map((user: any) => (
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="p-4">
+                        <div className="flex items-center">
+                          <div className="h-8 w-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                            <User className="h-4 w-4 text-gray-600" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {user.firstName} {user.lastName}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-gray-900">
+                        {user.clientName || getClientName(user.clientId)}
+                      </td>
+                      <td className="p-4 text-gray-600">
+                        {user.email}
+                      </td>
+                      <td className="p-4">
+                        <Badge variant={user.isActive ? "default" : "secondary"}>
+                          {user.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </td>
+                      <td className="p-4 text-gray-600">
+                        {user.lastLogin 
+                          ? format(new Date(user.lastLogin), "MMM d, yyyy") 
+                          : "Never"
+                        }
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(user)}
+                            data-testid={`button-edit-user-${user.id}`}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          {user.isActive && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeactivate(user)}
+                              className="text-red-600 hover:text-red-700"
+                              data-testid={`button-deactivate-user-${user.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create/Edit Portal User Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-portal-user">
+          <DialogHeader>
+            <DialogTitle>
+              {editingUser ? "Edit Portal User" : "Add Portal User"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingUser 
+                ? "Update portal user information and access settings."
+                : "Create portal access credentials for a client."
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="clientId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Client *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-client">
+                          <SelectValue placeholder="Select client" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {clients.map((client: any) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-first-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-last-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email *</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="email" data-testid="input-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Password {editingUser ? "(leave blank to keep current)" : "*"}
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} type="password" data-testid="input-password" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Active Status</FormLabel>
+                      <div className="text-sm text-gray-600">
+                        Allow this user to access the client portal
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-active"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsCreateDialogOpen(false)}
+                  data-testid="button-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  data-testid="button-save-user"
+                >
+                  {createMutation.isPending || updateMutation.isPending ? "Saving..." : (editingUser ? "Update User" : "Create User")}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
 
 export default function ClientsSettings() {
@@ -497,48 +969,7 @@ export default function ClientsSettings() {
 
         {/* Portal Access Tab */}
         {activeTab === "portalAccess" && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Client Portal Access Management</CardTitle>
-                <p className="text-sm text-gray-600 mt-2">
-                  Manage client portal access for all your clients. Create login credentials for clients to view their project progress and tasks.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Portal Access Management</h3>
-                  <p className="text-gray-500 mb-4">
-                    Portal access functionality will be available here. This will allow you to:
-                  </p>
-                  <div className="text-left max-w-md mx-auto space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
-                      Create portal login credentials for each client
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
-                      Manage multiple users per client company
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
-                      Control which tasks are visible to clients
-                    </div>
-                    <div className="flex items-center">
-                      <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
-                      Monitor client portal activity
-                    </div>
-                  </div>
-                  <div className="mt-6">
-                    <Badge variant="secondary" className="text-xs">
-                      Coming Soon
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <PortalAccessManagement />
         )}
 
         {/* Create Section Dialog */}

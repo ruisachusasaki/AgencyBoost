@@ -19800,5 +19800,293 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==== CLIENT PORTAL USER MANAGEMENT ENDPOINTS ====
+  
+  // Get all client portal users (for admin management)
+  app.get("/api/client-portal-users", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const portalUsers = await db
+        .select({
+          id: clientPortalUsers.id,
+          email: clientPortalUsers.email,
+          firstName: clientPortalUsers.firstName,
+          lastName: clientPortalUsers.lastName,
+          clientId: clientPortalUsers.clientId,
+          clientName: clients.name,
+          isActive: clientPortalUsers.isActive,
+          lastLogin: clientPortalUsers.lastLogin,
+          lastActivity: clientPortalUsers.lastActivity,
+          createdAt: clientPortalUsers.createdAt
+        })
+        .from(clientPortalUsers)
+        .leftJoin(clients, eq(clientPortalUsers.clientId, clients.id))
+        .orderBy(desc(clientPortalUsers.createdAt));
+
+      res.json(portalUsers);
+    } catch (error) {
+      console.error("Error fetching client portal users:", error);
+      res.status(500).json({ message: "Failed to fetch client portal users" });
+    }
+  });
+
+  // Get client portal users for a specific client
+  app.get("/api/clients/:clientId/portal-users", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+
+      const portalUsers = await db
+        .select({
+          id: clientPortalUsers.id,
+          email: clientPortalUsers.email,
+          firstName: clientPortalUsers.firstName,
+          lastName: clientPortalUsers.lastName,
+          isActive: clientPortalUsers.isActive,
+          lastLogin: clientPortalUsers.lastLogin,
+          lastActivity: clientPortalUsers.lastActivity,
+          createdAt: clientPortalUsers.createdAt
+        })
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.clientId, clientId))
+        .orderBy(desc(clientPortalUsers.createdAt));
+
+      res.json(portalUsers);
+    } catch (error) {
+      console.error("Error fetching client portal users:", error);
+      res.status(500).json({ message: "Failed to fetch client portal users" });
+    }
+  });
+
+  // Create new client portal user
+  app.post("/api/client-portal-users", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const createPortalUserSchema = z.object({
+        clientId: z.string().min(1, "Client ID is required"),
+        email: z.string().email("Valid email is required"),
+        firstName: z.string().min(1, "First name is required"),
+        lastName: z.string().min(1, "Last name is required"),
+        password: z.string().min(6, "Password must be at least 6 characters")
+      });
+
+      const validation = createPortalUserSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({
+          message: "Invalid request data",
+          errors: validation.error.errors
+        });
+      }
+
+      const { clientId, email, firstName, lastName, password } = validation.data;
+
+      // Check if client exists
+      const client = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
+      if (!client.length) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      // Check if email already exists
+      const existingUser = await db
+        .select()
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.email, email))
+        .limit(1);
+
+      if (existingUser.length) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 12);
+
+      // Create new portal user
+      const [newUser] = await db
+        .insert(clientPortalUsers)
+        .values({
+          id: randomUUID(),
+          clientId,
+          email,
+          firstName,
+          lastName,
+          passwordHash,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning({
+          id: clientPortalUsers.id,
+          email: clientPortalUsers.email,
+          firstName: clientPortalUsers.firstName,
+          lastName: clientPortalUsers.lastName,
+          clientId: clientPortalUsers.clientId,
+          isActive: clientPortalUsers.isActive,
+          createdAt: clientPortalUsers.createdAt
+        });
+
+      // Log the creation
+      await createAuditLog({
+        entityType: "client_portal_user",
+        entityId: newUser.id,
+        action: "create",
+        changes: {
+          clientId,
+          email,
+          firstName,
+          lastName,
+          clientName: client[0].name
+        },
+        userId: req.user?.id || null
+      });
+
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error("Error creating client portal user:", error);
+      res.status(500).json({ message: "Failed to create client portal user" });
+    }
+  });
+
+  // Update client portal user
+  app.put("/api/client-portal-users/:id", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updatePortalUserSchema = z.object({
+        firstName: z.string().min(1, "First name is required").optional(),
+        lastName: z.string().min(1, "Last name is required").optional(),
+        email: z.string().email("Valid email is required").optional(),
+        isActive: z.boolean().optional(),
+        password: z.string().min(6, "Password must be at least 6 characters").optional()
+      });
+
+      const validation = updatePortalUserSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({
+          message: "Invalid request data",
+          errors: validation.error.errors
+        });
+      }
+
+      const updateData = validation.data;
+
+      // Check if user exists
+      const existingUser = await db
+        .select()
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.id, id))
+        .limit(1);
+
+      if (!existingUser.length) {
+        return res.status(404).json({ message: "Client portal user not found" });
+      }
+
+      // If updating email, check for conflicts
+      if (updateData.email) {
+        const emailConflict = await db
+          .select()
+          .from(clientPortalUsers)
+          .where(and(
+            eq(clientPortalUsers.email, updateData.email),
+            sql`${clientPortalUsers.id} != ${id}`
+          ))
+          .limit(1);
+
+        if (emailConflict.length) {
+          return res.status(400).json({ message: "Email already exists" });
+        }
+      }
+
+      // Hash password if provided
+      if (updateData.password) {
+        updateData.password = await bcrypt.hash(updateData.password, 12);
+      }
+
+      // Update user
+      const updateValues = {
+        ...updateData,
+        ...(updateData.password && { passwordHash: updateData.password }),
+        updatedAt: new Date()
+      };
+
+      // Remove password from updateValues as we use passwordHash
+      if ('password' in updateValues) {
+        delete (updateValues as any).password;
+      }
+
+      const [updatedUser] = await db
+        .update(clientPortalUsers)
+        .set(updateValues)
+        .where(eq(clientPortalUsers.id, id))
+        .returning({
+          id: clientPortalUsers.id,
+          email: clientPortalUsers.email,
+          firstName: clientPortalUsers.firstName,
+          lastName: clientPortalUsers.lastName,
+          clientId: clientPortalUsers.clientId,
+          isActive: clientPortalUsers.isActive,
+          updatedAt: clientPortalUsers.updatedAt
+        });
+
+      // Log the update
+      await createAuditLog({
+        entityType: "client_portal_user",
+        entityId: id,
+        action: "update",
+        changes: updateData,
+        userId: req.user?.id || null
+      });
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating client portal user:", error);
+      res.status(500).json({ message: "Failed to update client portal user" });
+    }
+  });
+
+  // Delete/deactivate client portal user
+  app.delete("/api/client-portal-users/:id", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Check if user exists
+      const existingUser = await db
+        .select()
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.id, id))
+        .limit(1);
+
+      if (!existingUser.length) {
+        return res.status(404).json({ message: "Client portal user not found" });
+      }
+
+      // Soft delete by setting isActive to false
+      const [updatedUser] = await db
+        .update(clientPortalUsers)
+        .set({ 
+          isActive: false,
+          updatedAt: new Date()
+        })
+        .where(eq(clientPortalUsers.id, id))
+        .returning({
+          id: clientPortalUsers.id,
+          isActive: clientPortalUsers.isActive
+        });
+
+      // Log the deletion
+      await createAuditLog({
+        entityType: "client_portal_user",
+        entityId: id,
+        action: "deactivate",
+        changes: {
+          isActive: false,
+          reason: "User deactivated via admin panel"
+        },
+        userId: req.user?.id || null
+      });
+
+      res.json({ message: "Client portal user deactivated successfully", user: updatedUser });
+    } catch (error) {
+      console.error("Error deleting client portal user:", error);
+      res.status(500).json({ message: "Failed to deactivate client portal user" });
+    }
+  });
+
   return httpServer;
 }
