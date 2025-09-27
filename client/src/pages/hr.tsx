@@ -40,6 +40,7 @@ import {
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 import TimeOffRequestForm from "@/components/forms/time-off-request-form";
 import ApprovalBoard from "@/components/hr/approval-board";
 
@@ -182,6 +183,12 @@ export default function HRPage() {
   // Fetch job applications (role-based filtering handled on backend)
   const { data: jobApplications = [] } = useQuery<JobApplication[]>({
     queryKey: ["/api/hr/job-applications"],
+  });
+
+  // Fetch new hire onboarding submissions (Admin/Manager only)
+  const { data: onboardingSubmissions = [] } = useQuery({
+    queryKey: ["/api/new-hire-onboarding-submissions"],
+    enabled: isManager || isAdmin,
   });
 
   // Fetch job openings (visible to all, but creation restricted to managers/admins)
@@ -638,6 +645,7 @@ export default function HRPage() {
             ...(isManager ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length }] : []),
             { id: "job-openings", name: "Job Openings", icon: FileText, count: activeJobOpenings.length },
             { id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length },
+            ...(isManager || isAdmin ? [{ id: "onboarding-submissions", name: "Onboarding Submissions", icon: UserCheck, count: onboardingSubmissions?.length || 0 }] : []),
             ...(isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
           ].map((tab) => {
             const Icon = tab.icon;
@@ -1386,6 +1394,235 @@ export default function HRPage() {
               </div>
             );
           })()}
+        </div>
+      )}
+
+      {activeTab === "onboarding-submissions" && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold">New Hire Onboarding Submissions</h2>
+              <p className="text-slate-600">Review and manage new employee onboarding information</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button
+                asChild
+                variant="outline"
+                className="flex items-center gap-2"
+                data-testid="button-view-public-form"
+              >
+                <Link href="/onboarding" target="_blank">
+                  <ExternalLink className="h-4 w-4" />
+                  View Public Form
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          {onboardingSubmissions.length === 0 ? (
+            <div className="text-center py-12">
+              <UserPlus className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Onboarding Submissions Yet</h3>
+              <p className="text-gray-600 max-w-md mx-auto">
+                When new hires complete the onboarding form, their submissions will appear here for review.
+              </p>
+              <div className="mt-6">
+                <Button
+                  asChild
+                  className="flex items-center gap-2"
+                  data-testid="button-open-public-form"
+                >
+                  <Link href="/onboarding" target="_blank">
+                    <ExternalLink className="h-4 w-4" />
+                    Open Public Onboarding Form
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Emergency Contact</TableHead>
+                    <TableHead>Payment Platform</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {onboardingSubmissions.map((submission: any) => (
+                    <TableRow key={submission.id} data-testid={`row-submission-${submission.id}`}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-slate-900">{submission.name}</p>
+                          <p className="text-sm text-slate-600">DOB: {submission.dateOfBirth ? new Date(submission.dateOfBirth).toLocaleDateString() : 'N/A'}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {submission.startDate ? new Date(submission.startDate).toLocaleDateString() : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        {submission.phoneNumber || 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="text-sm font-medium">{submission.emergencyContactName || 'N/A'}</p>
+                          <p className="text-xs text-slate-600">
+                            {submission.emergencyContactRelationship} • {submission.emergencyContactNumber}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="text-sm font-medium">{submission.paymentPlatform || 'N/A'}</p>
+                          <p className="text-xs text-slate-600">{submission.paymentEmail}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="text-sm">{new Date(submission.submittedAt).toLocaleDateString()}</p>
+                          <p className="text-xs text-slate-600">{new Date(submission.submittedAt).toLocaleTimeString()}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={submission.status === 'reviewed' ? 'default' : 'secondary'}
+                          className={submission.status === 'reviewed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
+                        >
+                          {submission.status === 'reviewed' ? 'Reviewed' : 'Pending Review'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-1"
+                                data-testid={`button-view-submission-${submission.id}`}
+                              >
+                                <Eye className="h-4 w-4" />
+                                View Details
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>Onboarding Submission Details</DialogTitle>
+                                <DialogDescription>
+                                  Complete information submitted by {submission.name}
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-600">Full Name</label>
+                                    <p className="text-sm text-slate-900">{submission.name}</p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-600">Phone Number</label>
+                                    <p className="text-sm text-slate-900">{submission.phoneNumber || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-600">Date of Birth</label>
+                                    <p className="text-sm text-slate-900">
+                                      {submission.dateOfBirth ? new Date(submission.dateOfBirth).toLocaleDateString() : 'N/A'}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-600">Start Date</label>
+                                    <p className="text-sm text-slate-900">
+                                      {submission.startDate ? new Date(submission.startDate).toLocaleDateString() : 'N/A'}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-600">T-shirt Size</label>
+                                    <p className="text-sm text-slate-900">{submission.tshirtSize || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-600">Payment Platform</label>
+                                    <p className="text-sm text-slate-900">{submission.paymentPlatform || 'N/A'}</p>
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-slate-600">Address</label>
+                                  <p className="text-sm text-slate-900">{submission.address || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-slate-600">Payment Email</label>
+                                  <p className="text-sm text-slate-900">{submission.paymentEmail || 'N/A'}</p>
+                                </div>
+                                <div className="border-t pt-4">
+                                  <h4 className="text-sm font-medium text-slate-600 mb-2">Emergency Contact Information</h4>
+                                  <div className="grid grid-cols-3 gap-4">
+                                    <div>
+                                      <label className="text-xs font-medium text-slate-500">Name</label>
+                                      <p className="text-sm text-slate-900">{submission.emergencyContactName || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                      <label className="text-xs font-medium text-slate-500">Phone</label>
+                                      <p className="text-sm text-slate-900">{submission.emergencyContactNumber || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                      <label className="text-xs font-medium text-slate-500">Relationship</label>
+                                      <p className="text-sm text-slate-900">{submission.emergencyContactRelationship || 'N/A'}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="border-t pt-4">
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <label className="text-sm font-medium text-slate-600">Status</label>
+                                      <p className="text-sm text-slate-900">
+                                        {submission.status === 'reviewed' ? 'Reviewed' : 'Pending Review'}
+                                      </p>
+                                    </div>
+                                    {submission.status !== 'reviewed' && (
+                                      <Button
+                                        onClick={() => {
+                                          // Mark as reviewed
+                                          apiRequest(`/api/new-hire-onboarding-submissions/${submission.id}`, {
+                                            method: 'PUT',
+                                            body: { status: 'reviewed' }
+                                          }).then(() => {
+                                            queryClient.invalidateQueries({ queryKey: ["/api/new-hire-onboarding-submissions"] });
+                                            toast({
+                                              title: "Success",
+                                              description: "Submission marked as reviewed",
+                                            });
+                                          }).catch((error) => {
+                                            toast({
+                                              title: "Error",
+                                              description: "Failed to update submission status",
+                                              variant: "destructive",
+                                            });
+                                          });
+                                        }}
+                                        className="bg-green-600 hover:bg-green-700"
+                                        data-testid={`button-mark-reviewed-${submission.id}`}
+                                      >
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Mark as Reviewed
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -71,13 +71,27 @@ export default function OnboardingPage() {
   const fields = configData?.fields?.sort((a, b) => a.order - b.order) || [];
   const formSchema = createFormSchema(fields);
   
+  // Create form with proper defaultValues and resolver
+  const defaultValues = fields.reduce((acc, field) => {
+    acc[field.id] = '';
+    return acc;
+  }, {} as Record<string, string>);
+  
   const form = useForm({
     resolver: zodResolver(formSchema),
-    defaultValues: fields.reduce((acc, field) => {
-      acc[field.id] = '';
-      return acc;
-    }, {} as Record<string, string>)
+    defaultValues
   });
+
+  // Reset form when fields change (after config loads)
+  useEffect(() => {
+    if (fields.length > 0) {
+      const newDefaultValues = fields.reduce((acc, field) => {
+        acc[field.id] = '';
+        return acc;
+      }, {} as Record<string, string>);
+      form.reset(newDefaultValues);
+    }
+  }, [fields.map(f => f.id).join('|'), form]);
 
   // Submit form mutation
   const submitMutation = useMutation({

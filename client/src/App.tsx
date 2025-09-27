@@ -50,6 +50,7 @@ import ApplicantDetailPage from "@/pages/applicant-detail";
 import HRSettings from "@/pages/settings/hr-settings";
 import ClientsSettings from "@/pages/settings/clients";
 import CareersPage from "@/pages/careers";
+import OnboardingPage from "@/pages/onboarding";
 import KnowledgeBase from "@/pages/knowledge-base";
 import ArticleView from "@/pages/article-view";
 import Training from "@/pages/training";
@@ -70,6 +71,7 @@ function Router() {
       <Route path="/book/:customUrl" component={PublicBooking} />
       <Route path="/embed/:customUrl" component={BookingEmbed} />
       <Route path="/careers" component={CareersPage} />
+      <Route path="/onboarding" component={OnboardingPage} />
       
       {/* Protected routes - authentication required */}
       <Route path="/">

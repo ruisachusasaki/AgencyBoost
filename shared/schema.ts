@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, uuid, date } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, uuid, date, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -2550,7 +2550,7 @@ export type InsertNewHireOnboardingFormConfig = z.infer<typeof insertNewHireOnbo
 
 // New Hire Onboarding Submissions - when someone fills out the onboarding form
 export const newHireOnboardingSubmissions = pgTable("new_hire_onboarding_submissions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: serial("id").primaryKey(),
   name: text("name").notNull(),
   address: text("address"),
   phoneNumber: text("phone_number"),
