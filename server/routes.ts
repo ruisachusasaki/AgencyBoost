@@ -1947,6 +1947,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get workflow executions for a specific client - SECURED
+  app.get("/api/clients/:id/workflow-executions", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const { id: clientId } = req.params;
+      
+      // Get workflow executions for this client
+      const executions = await appStorage.getWorkflowExecutionsByContact(clientId);
+      
+      // Get workflow details for each execution to include workflow names
+      const executionsWithWorkflow = await Promise.all(
+        executions.map(async (execution) => {
+          const workflow = await appStorage.getWorkflow(execution.workflowId);
+          return {
+            ...execution,
+            workflowName: workflow?.name || 'Unknown Workflow',
+            workflowDescription: workflow?.description
+          };
+        })
+      );
+      
+      // Group by active and past
+      const activeExecutions = executionsWithWorkflow.filter(exec => exec.status === 'running');
+      const pastExecutions = executionsWithWorkflow.filter(exec => ['completed', 'failed', 'cancelled'].includes(exec.status));
+      
+      res.json({
+        active: activeExecutions,
+        past: pastExecutions
+      });
+    } catch (error) {
+      console.error("Error fetching client workflow executions:", error);
+      res.status(500).json({ message: "Failed to fetch workflow executions" });
+    }
+  });
+
   app.get("/api/clients/:clientId/health-scores", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const { clientId } = req.params;
