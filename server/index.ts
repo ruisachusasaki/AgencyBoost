@@ -5,7 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { clientBriefSections, automationTriggers, calendars, staff } from "@shared/schema";
+import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments } from "@shared/schema";
 
 /**
  * Startup migration to ensure client brief columns exist
@@ -402,6 +402,97 @@ async function initializeDefaultCalendars() {
   }
 }
 
+/**
+ * Generate anniversary and birthday calendar events for current year
+ * Creates calendar appointment entries for staff anniversaries and birthdays
+ */
+async function generateAnniversaryAndBirthdayEvents() {
+  try {
+    log("Running startup migration: generateAnniversaryAndBirthdayEvents");
+    
+    // Get the Anniversaries and Birthdays calendars
+    const [anniversaryCalendar] = await db.select().from(calendars).where(eq(calendars.name, 'Anniversaries')).limit(1);
+    const [birthdayCalendar] = await db.select().from(calendars).where(eq(calendars.name, 'Birthdays')).limit(1);
+    
+    if (!anniversaryCalendar || !birthdayCalendar) {
+      log("Anniversary or Birthday calendars not found - skipping event generation");
+      return;
+    }
+    
+    // Get all active staff members with hire dates and birthdays
+    const activeStaff = await db.select().from(staff).where(eq(staff.isActive, true));
+    
+    const currentYear = new Date().getFullYear();
+    const eventsToCreate = [];
+    
+    // Generate anniversary events
+    for (const staffMember of activeStaff) {
+      if (staffMember.hireDate) {
+        const hireDate = new Date(staffMember.hireDate);
+        const anniversaryDate = new Date(currentYear, hireDate.getMonth(), hireDate.getDate());
+        
+        // Calculate years of service
+        const yearsOfService = currentYear - hireDate.getFullYear();
+        
+        if (yearsOfService > 0) {
+          eventsToCreate.push({
+            calendarId: anniversaryCalendar.id,
+            assignedTo: staffMember.id,
+            title: `${staffMember.firstName} ${staffMember.lastName} - ${yearsOfService} Year Anniversary`,
+            description: `${staffMember.firstName} ${staffMember.lastName} joined the company on ${hireDate.toLocaleDateString()}. Today marks ${yearsOfService} year${yearsOfService === 1 ? '' : 's'} of service!`,
+            startTime: anniversaryDate,
+            endTime: new Date(anniversaryDate.getTime() + 60 * 60 * 1000), // 1 hour duration
+            status: 'confirmed',
+            timezone: 'America/New_York',
+            bookerEmail: staffMember.email || 'system@company.com',
+            bookerName: 'System Generated',
+            bookingSource: 'system'
+          });
+        }
+      }
+      
+      // Generate birthday events
+      if (staffMember.birthdate) {
+        const birthDate = new Date(staffMember.birthdate);
+        const birthdayDate = new Date(currentYear, birthDate.getMonth(), birthDate.getDate());
+        
+        eventsToCreate.push({
+          calendarId: birthdayCalendar.id,
+          assignedTo: staffMember.id,
+          title: `${staffMember.firstName} ${staffMember.lastName}'s Birthday`,
+          description: `Today is ${staffMember.firstName} ${staffMember.lastName}'s birthday! Wish them a happy birthday.`,
+          startTime: birthdayDate,
+          endTime: new Date(birthdayDate.getTime() + 60 * 60 * 1000), // 1 hour duration
+          status: 'confirmed',
+          timezone: 'America/New_York',
+          bookerEmail: staffMember.email || 'system@company.com',
+          bookerName: 'System Generated',
+          bookingSource: 'system'
+        });
+      }
+    }
+    
+    // Check which events already exist and only create new ones
+    let createdCount = 0;
+    for (const eventData of eventsToCreate) {
+      const existing = await db.select()
+        .from(calendarAppointments)
+        .where(eq(calendarAppointments.title, eventData.title))
+        .limit(1);
+        
+      if (existing.length === 0) {
+        await db.insert(calendarAppointments).values(eventData);
+        createdCount++;
+      }
+    }
+    
+    log(`Anniversary and birthday events generation completed - created ${createdCount} new events for ${currentYear}`);
+  } catch (error: any) {
+    log(`Anniversary and birthday events generation error: ${error.message}`);
+    log("WARNING: Event generation failed - some calendar events may be missing");
+  }
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -493,6 +584,7 @@ app.use((req, res, next) => {
   await initializeCoreClientBriefSections();
   await initializeDefaultAutomationTriggers();
   await initializeDefaultCalendars();
+  await generateAnniversaryAndBirthdayEvents();
   
   const server = await registerRoutes(app);
 
