@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, uuid, date, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, uuid, date, serial, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -2650,7 +2650,10 @@ export const teamPositions = pgTable("team_positions", {
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  // Ensure key uniqueness across all positions
+  uniqueKey: unique("team_positions_key_unique").on(table.key),
+}));
 
 // Client Team Assignments - for assigning staff to specific client positions
 export const clientTeamAssignments = pgTable("client_team_assignments", {
@@ -2662,7 +2665,10 @@ export const clientTeamAssignments = pgTable("client_team_assignments", {
   assignedBy: uuid("assigned_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  // Ensure one assignment per client-position combination
+  uniqueClientPosition: unique("client_team_assignments_client_position_unique").on(table.clientId, table.positionId),
+}));
 
 // Team Positions schema exports
 export const insertTeamPositionSchema = createInsertSchema(teamPositions).omit({

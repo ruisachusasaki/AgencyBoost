@@ -531,8 +531,493 @@ function PortalAccessManagement() {
   );
 }
 
+// Team Assignments Management Component
+function TeamAssignmentsManagement() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingPosition, setEditingPosition] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  // Team position creation/edit form schema
+  const teamPositionSchema = z.object({
+    key: z.string().min(1, "Key is required").max(50, "Key must be under 50 characters").regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, "Key must start with letter and contain only letters, numbers, underscore"),
+    label: z.string().min(1, "Label is required").max(100, "Label must be under 100 characters"),
+    description: z.string().max(500, "Description must be under 500 characters").optional(),
+    order: z.number().min(0, "Order must be non-negative").optional(),
+    isActive: z.boolean().default(true)
+  });
+
+  type TeamPositionForm = z.infer<typeof teamPositionSchema>;
+
+  // Fetch team positions
+  const { data: positions, isLoading: positionsLoading } = useQuery({
+    queryKey: ['/api/team-positions'],
+    enabled: true
+  });
+
+  // Create team position form
+  const createForm = useForm<TeamPositionForm>({
+    resolver: zodResolver(teamPositionSchema),
+    defaultValues: {
+      key: "",
+      label: "",
+      description: "",
+      order: 0,
+      isActive: true
+    }
+  });
+
+  // Edit team position form
+  const editForm = useForm<TeamPositionForm>({
+    resolver: zodResolver(teamPositionSchema)
+  });
+
+  // Create team position mutation
+  const createPositionMutation = useMutation({
+    mutationFn: async (data: TeamPositionForm) => {
+      const response = await apiRequest('/api/team-positions', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-positions'] });
+      toast({
+        title: "Success",
+        description: "Team position created successfully"
+      });
+      createForm.reset();
+      setIsCreateDialogOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create team position",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update team position mutation
+  const updatePositionMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: TeamPositionForm }) => {
+      const response = await apiRequest(`/api/team-positions/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-positions'] });
+      toast({
+        title: "Success",
+        description: "Team position updated successfully"
+      });
+      setEditingPosition(null);
+      setIsEditDialogOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update team position",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete team position mutation
+  const deletePositionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest(`/api/team-positions/${id}`, {
+        method: 'DELETE'
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-positions'] });
+      toast({
+        title: "Success",
+        description: "Team position deleted successfully"
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete team position",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const onCreateSubmit = (data: TeamPositionForm) => {
+    createPositionMutation.mutate(data);
+  };
+
+  const onEditSubmit = (data: TeamPositionForm) => {
+    if (editingPosition) {
+      updatePositionMutation.mutate({ id: editingPosition.id, data });
+    }
+  };
+
+  const handleEdit = (position: any) => {
+    setEditingPosition(position);
+    editForm.reset({
+      key: position.key,
+      label: position.label,
+      description: position.description || "",
+      order: position.order || 0,
+      isActive: position.isActive
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Are you sure you want to delete this team position? This action cannot be undone.")) {
+      deletePositionMutation.mutate(id);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              Team Positions
+            </CardTitle>
+            <p className="text-sm text-gray-600 mt-1">
+              Configure available positions that can be assigned to clients
+            </p>
+          </div>
+          <Button 
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="flex items-center gap-2"
+            data-testid="button-create-position"
+          >
+            <Plus className="h-4 w-4" />
+            Add Position
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {positionsLoading ? (
+            <div className="text-center py-8 text-gray-500">Loading positions...</div>
+          ) : positions && positions.length > 0 ? (
+            <div className="space-y-4">
+              {positions.map((position: any) => (
+                <div
+                  key={position.id}
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+                  data-testid={`position-item-${position.key}`}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <h4 className="font-medium" data-testid="text-position-label">
+                          {position.label}
+                        </h4>
+                        <p className="text-sm text-gray-500" data-testid="text-position-key">
+                          Key: {position.key}
+                        </p>
+                        {position.description && (
+                          <p className="text-sm text-gray-600 mt-1" data-testid="text-position-description">
+                            {position.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="ml-auto flex items-center gap-2">
+                        <Badge variant={position.isActive ? "default" : "secondary"}>
+                          {position.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                        <span className="text-xs text-gray-400">Order: {position.order || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(position)}
+                      data-testid={`button-edit-${position.key}`}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDelete(position.id)}
+                      disabled={deletePositionMutation.isPending}
+                      data-testid={`button-delete-${position.key}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No team positions configured yet. Click "Add Position" to create your first position.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create Position Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-create-position">
+          <DialogHeader>
+            <DialogTitle>Create Team Position</DialogTitle>
+            <DialogDescription>
+              Add a new team position that can be assigned to clients.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...createForm}>
+            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
+              <FormField
+                control={createForm.control}
+                name="label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Label *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., Account Manager" 
+                        {...field} 
+                        data-testid="input-create-label"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="key"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Key *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., account_manager" 
+                        {...field} 
+                        data-testid="input-create-key"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-gray-500">
+                      Unique identifier (letters, numbers, underscore only)
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Brief description of this position..."
+                        {...field} 
+                        data-testid="input-create-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={createForm.control}
+                  name="order"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Display Order</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0"
+                          {...field} 
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          data-testid="input-create-order"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Active</FormLabel>
+                      <FormControl>
+                        <Switch 
+                          checked={field.value} 
+                          onCheckedChange={field.onChange}
+                          data-testid="switch-create-active"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsCreateDialogOpen(false)}
+                  data-testid="button-create-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createPositionMutation.isPending}
+                  data-testid="button-create-submit"
+                >
+                  {createPositionMutation.isPending ? "Creating..." : "Create Position"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Position Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-edit-position">
+          <DialogHeader>
+            <DialogTitle>Edit Team Position</DialogTitle>
+            <DialogDescription>
+              Update the team position details.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Label *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., Account Manager" 
+                        {...field} 
+                        data-testid="input-edit-label"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="key"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Key *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., account_manager" 
+                        {...field} 
+                        data-testid="input-edit-key"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-gray-500">
+                      Unique identifier (letters, numbers, underscore only)
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Brief description of this position..."
+                        {...field} 
+                        data-testid="input-edit-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="order"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Display Order</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0"
+                          {...field} 
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          data-testid="input-edit-order"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Active</FormLabel>
+                      <FormControl>
+                        <Switch 
+                          checked={field.value} 
+                          onCheckedChange={field.onChange}
+                          data-testid="switch-edit-active"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditDialogOpen(false)}
+                  data-testid="button-edit-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={updatePositionMutation.isPending}
+                  data-testid="button-edit-submit"
+                >
+                  {updatePositionMutation.isPending ? "Updating..." : "Update Position"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export default function ClientsSettings() {
-  const [activeTab, setActiveTab] = useState<"overview" | "clientBrief" | "portalAccess">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "clientBrief" | "portalAccess" | "teamAssignments">("overview");
   const [editingSection, setEditingSection] = useState<ClientBriefSection | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -808,6 +1293,18 @@ export default function ClientsSettings() {
               <Users className="h-4 w-4" />
               Portal Access
             </button>
+            <button
+              onClick={() => setActiveTab("teamAssignments")}
+              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                activeTab === "teamAssignments"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              data-testid="tab-team-assignments"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Team Assignments
+            </button>
           </nav>
         </div>
 
@@ -970,6 +1467,11 @@ export default function ClientsSettings() {
         {/* Portal Access Tab */}
         {activeTab === "portalAccess" && (
           <PortalAccessManagement />
+        )}
+
+        {/* Team Assignments Tab */}
+        {activeTab === "teamAssignments" && (
+          <TeamAssignmentsManagement />
         )}
 
         {/* Create Section Dialog */}
