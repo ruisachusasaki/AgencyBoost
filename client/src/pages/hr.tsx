@@ -636,7 +636,7 @@ export default function HRPage() {
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
+        <nav className="-mb-px flex w-full">
           {[
             ...(isManager || isAdmin ? [{ id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 }] : []),
             { id: "staff-directory", name: "Staff Directory", icon: Users, count: filteredStaffData.length },
@@ -653,7 +653,7 @@ export default function HRPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                className={`py-2 px-2 border-b-2 font-medium text-sm flex-1 flex items-center justify-center gap-2 whitespace-nowrap ${
                   activeTab === tab.id
                     ? "border-primary text-primary"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
