@@ -233,7 +233,7 @@ function PortalAccessManagement() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => window.open("/client-portal", "_blank")}
+                  onClick={() => window.open("/client-portal/login", "_blank")}
                   data-testid="button-view-portal"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
