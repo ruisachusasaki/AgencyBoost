@@ -500,6 +500,91 @@ function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string;
   );
 }
 
+// ClientWorkflowsSection Component
+function ClientWorkflowsSection({ clientId, actionsExpanded, setActionsExpanded }: { 
+  clientId: string;
+  actionsExpanded: { workflows: boolean };
+  setActionsExpanded: (updater: (prev: any) => any) => void;
+}) {
+
+  const { data: workflowExecutions, isLoading } = useQuery({
+    queryKey: [`/api/clients/${clientId}/workflow-executions`],
+    enabled: !!clientId,
+  });
+
+  return (
+    <div className="pb-2">
+      <div
+        onClick={() => setActionsExpanded(prev => ({ ...prev, workflows: !prev.workflows }))}
+        className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
+      >
+        <h4 className="font-medium text-gray-900 flex items-center gap-2">
+          <Workflow className="h-4 w-4" />
+          Automation
+        </h4>
+        {actionsExpanded.workflows ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </div>
+      {actionsExpanded.workflows && (
+        <div className="mt-3 space-y-4">
+          {isLoading ? (
+            <div className="text-sm text-gray-500">Loading workflows...</div>
+          ) : (
+            <>
+              {/* Active Workflows */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h5 className="text-sm font-medium text-gray-700">Active</h5>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    data-testid="button-add-workflow"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  {workflowExecutions?.active?.length > 0 ? (
+                    workflowExecutions.active.map((execution: any) => (
+                      <div key={execution.id} className="flex items-center gap-2 p-2 bg-blue-50 rounded-md border border-blue-200">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                        <span className="text-sm text-blue-800 font-medium">{execution.workflowName}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No active workflows</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Past Workflows */}
+              <div>
+                <h5 className="text-sm font-medium text-gray-700 mb-2">Past</h5>
+                <div className="space-y-1">
+                  {workflowExecutions?.past?.length > 0 ? (
+                    workflowExecutions.past.map((execution: any) => (
+                      <div key={execution.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-md border border-gray-200">
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                          execution.status === 'completed' ? 'bg-green-500' : 
+                          execution.status === 'failed' ? 'bg-red-500' : 'bg-gray-400'
+                        }`}></div>
+                        <span className="text-sm text-gray-700">{execution.workflowName}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No completed workflows</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ClientHealthTabContent Component
 function ClientHealthTabContent({ clientId }: { clientId: string }) {
   console.log("ClientHealthTabContent rendering with clientId:", clientId);
@@ -3959,24 +4044,13 @@ export default function EnhancedClientDetail() {
                 </div>
 
                 {/* Workflows Accordion */}
-                <div className="pb-2">
-                  <div
-                    onClick={() => setActionsExpanded(prev => ({ ...prev, workflows: !prev.workflows }))}
-                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 -m-2 rounded cursor-pointer"
-                  >
-                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                      <Workflow className="h-4 w-4" />
-                      Workflows
-                    </h4>
-                    {actionsExpanded.workflows ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </div>
-                  {actionsExpanded.workflows && (
-                    <div className="mt-3 space-y-2">
-                      <p className="text-sm text-gray-500">No workflows active</p>
-                      <p className="text-xs text-gray-400">Automated workflows will appear when triggered for this client</p>
-                    </div>
-                  )}
-                </div>
+                <ClientWorkflowsSection 
+                  clientId={client.id}
+                  actionsExpanded={actionsExpanded}
+                  setActionsExpanded={setActionsExpanded}
+                />
+                
+                
               </CardContent>
             </Card>
 
