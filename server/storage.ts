@@ -5073,6 +5073,7 @@ export class DbStorage implements IStorage {
   async getWorkflowExecutions(): Promise<WorkflowExecution[]> { return this.memStorage.getWorkflowExecutions(); }
   async getWorkflowExecution(id: string): Promise<WorkflowExecution | undefined> { return this.memStorage.getWorkflowExecution(id); }
   async getWorkflowExecutionsByWorkflow(workflowId: string): Promise<WorkflowExecution[]> { return this.memStorage.getWorkflowExecutionsByWorkflow(workflowId); }
+  async getWorkflowExecutionsByContact(contactId: string): Promise<WorkflowExecution[]> { return this.memStorage.getWorkflowExecutionsByContact(contactId); }
   async createWorkflowExecution(execution: InsertWorkflowExecution): Promise<WorkflowExecution> { return this.memStorage.createWorkflowExecution(execution); }
   async updateWorkflowExecution(id: string, execution: Partial<InsertWorkflowExecution>): Promise<WorkflowExecution | undefined> { return this.memStorage.updateWorkflowExecution(id, execution); }
 
