@@ -27,6 +27,96 @@ interface OnboardingFormConfig {
   fields: FormField[];
 }
 
+// Default fields that match the form editor defaults
+const defaultFormFields: FormField[] = [
+  {
+    id: 'name',
+    label: 'Full Name',
+    type: 'text',
+    placeholder: 'Enter your full name',
+    required: true,
+    order: 0
+  },
+  {
+    id: 'address',
+    label: 'Address',
+    type: 'textarea',
+    placeholder: 'Enter your full address',
+    required: true,
+    order: 1
+  },
+  {
+    id: 'phone_number',
+    label: 'Phone Number',
+    type: 'phone',
+    placeholder: '+1 (555) 123-4567',
+    required: true,
+    order: 2
+  },
+  {
+    id: 'date_of_birth',
+    label: 'Date of Birth',
+    type: 'date',
+    required: true,
+    order: 3
+  },
+  {
+    id: 'start_date',
+    label: 'Start Date',
+    type: 'date',
+    required: true,
+    order: 4
+  },
+  {
+    id: 'emergency_contact_name',
+    label: 'Emergency Contact Name',
+    type: 'text',
+    placeholder: 'Enter emergency contact name',
+    required: true,
+    order: 5
+  },
+  {
+    id: 'emergency_contact_number',
+    label: 'Emergency Contact Number',
+    type: 'phone',
+    placeholder: '+1 (555) 123-4567',
+    required: true,
+    order: 6
+  },
+  {
+    id: 'emergency_contact_relationship',
+    label: 'Emergency Contact Relationship',
+    type: 'select',
+    required: true,
+    options: ['Spouse', 'Parent', 'Sibling', 'Child', 'Friend', 'Other'],
+    order: 7
+  },
+  {
+    id: 'tshirt_size',
+    label: 'T-shirt Size',
+    type: 'select',
+    required: true,
+    options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
+    order: 8
+  },
+  {
+    id: 'payment_platform',
+    label: 'Preferred Payment Platform',
+    type: 'select',
+    required: true,
+    options: ['Direct Deposit', 'PayPal', 'Venmo', 'Zelle', 'Check'],
+    order: 9
+  },
+  {
+    id: 'payment_email',
+    label: 'Payment Email (if applicable)',
+    type: 'email',
+    placeholder: 'Enter email for PayPal, Venmo, etc.',
+    required: false,
+    order: 10
+  }
+];
+
 export default function OnboardingPage() {
   const [submissionComplete, setSubmissionComplete] = useState(false);
   const { toast } = useToast();
@@ -68,7 +158,9 @@ export default function OnboardingPage() {
     return z.object(schemaFields);
   };
 
-  const fields = configData?.fields?.sort((a, b) => a.order - b.order) || [];
+  const fields = (configData?.fields && configData.fields.length > 0) 
+    ? configData.fields.sort((a, b) => a.order - b.order) 
+    : defaultFormFields;
   const formSchema = createFormSchema(fields);
   
   // Create form with proper defaultValues and resolver
