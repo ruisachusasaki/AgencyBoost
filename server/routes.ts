@@ -16240,6 +16240,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If article is public, everyone can access
       if (article.isPublic) return true;
       
+      // ADMIN OVERRIDE: Admins can access ALL articles regardless of permissions
+      const userRoleResult = await db.execute(sql`
+        SELECT r.name as role FROM staff s 
+        JOIN roles r ON s.role_id = r.id 
+        WHERE s.id = ${userId}
+      `);
+      const userRoleRows = Array.isArray(userRoleResult) ? userRoleResult : userRoleResult.rows;
+      const userRoleData = userRoleRows && userRoleRows.length > 0 ? userRoleRows[0] : null;
+      
+      if (userRoleData && userRoleData.role === 'Admin') return true;
+      
       // If user is the author, they can access
       if (article.createdBy === userId) return true;
       
@@ -16324,8 +16335,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not found" });
       }
       
-      // Check if user has access to this specific article
-      const hasAccess = await canUserAccessArticle(userId, req.params.id, currentUser.role);
+      // Check if user has access to this specific article (admin override is handled inside the function)
+      const hasAccess = await canUserAccessArticle(userId, req.params.id, '');
       if (!hasAccess) {
         return res.status(403).json({ message: "Access denied to this article" });
       }
