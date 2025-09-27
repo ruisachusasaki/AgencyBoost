@@ -352,6 +352,28 @@ export const clients = pgTable("clients", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Client Portal Users - Manages access to client-facing portal
+export const clientPortalUsers = pgTable("client_portal_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  isActive: boolean("is_active").default(true),
+  lastLogin: timestamp("last_login"),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetExpires: timestamp("password_reset_expires"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate emails per client
+  uniqueClientEmail: {
+    columns: [table.clientId, table.email],
+    unique: true
+  }
+}));
+
 // Client Health Scores - Weekly scoring system for client performance tracking
 export const clientHealthScores = pgTable("client_health_scores", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
