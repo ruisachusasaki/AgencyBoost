@@ -5,7 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { clientBriefSections, automationTriggers } from "@shared/schema";
+import { clientBriefSections, automationTriggers, calendars, staff } from "@shared/schema";
 
 /**
  * Startup migration to ensure client brief columns exist
@@ -343,6 +343,65 @@ async function initializeCoreClientBriefSections() {
   }
 }
 
+/**
+ * Initialize default calendars for Anniversaries and Birthdays
+ * Creates two system calendars to track staff anniversaries and birthdays
+ */
+async function initializeDefaultCalendars() {
+  try {
+    log("Running startup migration: initializeDefaultCalendars");
+    
+    // Get the first available staff member to be the creator of system calendars
+    const [firstStaff] = await db.select().from(staff).where(eq(staff.isActive, true)).limit(1);
+    
+    if (!firstStaff) {
+      log("No active staff members found - skipping default calendars initialization");
+      return;
+    }
+    
+    const defaultCalendars = [
+      {
+        name: 'Anniversaries',
+        description: 'Staff work anniversaries based on hire dates',
+        type: 'system',
+        customUrl: 'anniversaries-system',
+        duration: 60,
+        location: 'none',
+        isActive: true,
+        createdBy: firstStaff.id
+      },
+      {
+        name: 'Birthdays',
+        description: 'Staff birthdays',
+        type: 'system',
+        customUrl: 'birthdays-system',
+        duration: 60,
+        location: 'none',
+        isActive: true,
+        createdBy: firstStaff.id
+      }
+    ];
+
+    // Check if calendars already exist and create them if they don't
+    for (const calendarData of defaultCalendars) {
+      const existing = await db.select().from(calendars).where(eq(calendars.name, calendarData.name)).limit(1);
+      
+      if (existing.length === 0) {
+        await db.insert(calendars).values(calendarData);
+        log(`Created default calendar: ${calendarData.name}`);
+      } else {
+        log(`Default calendar already exists: ${calendarData.name}`);
+      }
+    }
+    
+    log("Default calendars initialization completed successfully");
+  } catch (error: any) {
+    log(`Default calendars initialization error: ${error.message}`);
+    // Don't crash the server if initialization fails - log warning and continue
+    log("WARNING: Default calendars initialization failed - calendar functionality may not work correctly");
+  }
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -433,6 +492,7 @@ app.use((req, res, next) => {
   await ensureClientBriefColumns();
   await initializeCoreClientBriefSections();
   await initializeDefaultAutomationTriggers();
+  await initializeDefaultCalendars();
   
   const server = await registerRoutes(app);
 
