@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 const loginSchema = z.object({
@@ -67,10 +67,12 @@ export default function ClientPortalLogin() {
       <div className="w-full max-w-md">
         {/* AgencyFlow Branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-xl mb-4">
-            <div className="w-8 h-8 bg-primary rounded-lg"></div>
+          <div className="inline-flex items-center justify-center gap-3 mb-2">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-xl">
+              <ArrowRight className="w-6 h-6 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">AgencyFlow</h1>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">AgencyFlow</h1>
           <p className="text-muted-foreground">Client Portal</p>
         </div>
 
