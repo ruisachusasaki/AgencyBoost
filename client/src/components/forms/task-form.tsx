@@ -925,6 +925,39 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
           )}
         </div>
 
+        {/* Client Portal Visibility */}
+        <div className="space-y-4 border-l-4 border-primary/20 pl-4 bg-primary/5 p-4 rounded">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <h3 className="font-medium text-primary">Client Portal Visibility</h3>
+          </div>
+          
+          <FormField
+            control={form.control}
+            name="visibleToClient"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox 
+                    checked={field.value || false}
+                    onCheckedChange={field.onChange}
+                    data-testid="checkbox-visible-to-client"
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel className="text-sm font-normal">
+                    Make this task visible to client in their portal
+                  </FormLabel>
+                  <p className="text-xs text-muted-foreground">
+                    When enabled, clients can see this task's progress and details in their client portal dashboard.
+                  </p>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <div className="flex justify-end gap-2 pt-4">
           <Button type="submit" disabled={isLoading} data-testid="button-submit">
             {isLoading ? (watchedTemplateId && watchedTemplateId !== "none" && watchedTemplateId !== "" ? "Creating from template..." : "Saving...") : task ? "Update Task" : "Create Task"}
