@@ -16718,7 +16718,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only article author, admins, or managers can manage permissions using raw SQL
       const userResult = await db.execute(sql`
-        SELECT role FROM staff WHERE id = ${userId}
+        SELECT r.name as role FROM staff s 
+        JOIN roles r ON s.role_id = r.id 
+        WHERE s.id = ${userId}
       `);
       const userRows = Array.isArray(userResult) ? userResult : userResult.rows;
       const currentUser = userRows && userRows.length > 0 ? userRows[0] : null;
@@ -16765,7 +16767,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only article author, admins, or managers can manage permissions using raw SQL
       const userResult = await db.execute(sql`
-        SELECT role FROM staff WHERE id = ${userId}
+        SELECT r.name as role FROM staff s 
+        JOIN roles r ON s.role_id = r.id 
+        WHERE s.id = ${userId}
       `);
       const userRows = Array.isArray(userResult) ? userResult : userResult.rows;
       const currentUser = userRows && userRows.length > 0 ? userRows[0] : null;
