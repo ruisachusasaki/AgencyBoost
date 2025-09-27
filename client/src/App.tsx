@@ -64,6 +64,7 @@ import CreateLesson from "@/pages/training/create-lesson";
 import EditLesson from "@/pages/training/edit-lesson";
 import ClientPortalLogin from "@/pages/client-portal/login";
 import ClientPortalDashboard from "@/pages/client-portal/dashboard";
+import ClientPortalAuthGuard from "@/components/ClientPortalAuthGuard";
 
 function Router() {
   return (
@@ -71,7 +72,13 @@ function Router() {
       {/* Public routes - no authentication required */}
       <Route path="/login" component={LoginPage} />
       <Route path="/client-portal/login" component={ClientPortalLogin} />
-      <Route path="/client-portal/dashboard" component={ClientPortalDashboard} />
+      <Route path="/client-portal/dashboard">
+        {() => (
+          <ClientPortalAuthGuard>
+            <ClientPortalDashboard />
+          </ClientPortalAuthGuard>
+        )}
+      </Route>
       <Route path="/book/:customUrl" component={PublicBooking} />
       <Route path="/embed/:customUrl" component={BookingEmbed} />
       <Route path="/careers" component={CareersPage} />
