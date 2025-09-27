@@ -27,8 +27,8 @@ import {
   type SmsTemplate, type InsertSmsTemplate, smsTemplates,
   type ScheduledEmail, type InsertScheduledEmail, scheduledEmails,
   type SmartList, type InsertSmartList, smartLists,
-  type Workflow, type InsertWorkflow,
-  type WorkflowExecution, type InsertWorkflowExecution,
+  type Workflow, type InsertWorkflow, workflows,
+  type WorkflowExecution, type InsertWorkflowExecution, workflowExecutions,
   type WorkflowTemplate, type InsertWorkflowTemplate,
   type TaskCategory, type InsertTaskCategory, taskCategories,
   type TaskTemplate, type InsertTaskTemplate,
@@ -5064,8 +5064,25 @@ export class DbStorage implements IStorage {
 
 
   // Workflows
-  async getWorkflows(): Promise<Workflow[]> { return this.memStorage.getWorkflows(); }
-  async getWorkflow(id: string): Promise<Workflow | undefined> { return this.memStorage.getWorkflow(id); }
+  async getWorkflows(): Promise<Workflow[]> {
+    try {
+      const result = await db.select().from(workflows);
+      return result;
+    } catch (error) {
+      console.error("Error fetching workflows from database:", error);
+      return [];
+    }
+  }
+  
+  async getWorkflow(id: string): Promise<Workflow | undefined> {
+    try {
+      const result = await db.select().from(workflows).where(eq(workflows.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching workflow from database:", error);
+      return undefined;
+    }
+  }
   async createWorkflow(workflow: InsertWorkflow): Promise<Workflow> { return this.memStorage.createWorkflow(workflow); }
   async updateWorkflow(id: string, workflow: Partial<InsertWorkflow>): Promise<Workflow | undefined> { return this.memStorage.updateWorkflow(id, workflow); }
   async deleteWorkflow(id: string): Promise<boolean> { return this.memStorage.deleteWorkflow(id); }
