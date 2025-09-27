@@ -161,10 +161,7 @@ export default function NewHireOnboardingFormEditor() {
   // Save configuration mutation
   const saveConfigMutation = useMutation({
     mutationFn: async (fields: FormField[]) => {
-      return apiRequest('/api/new-hire-onboarding-form-config', {
-        method: 'POST',
-        body: { fields }
-      });
+      return apiRequest('POST', '/api/new-hire-onboarding-form-config', { fields });
     },
     onSuccess: () => {
       toast({

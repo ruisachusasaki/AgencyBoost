@@ -112,10 +112,7 @@ export default function OnboardingPage() {
         customFieldData: formData // Store all form data for custom fields
       };
 
-      return apiRequest('/api/new-hire-onboarding-submissions', {
-        method: 'POST',
-        body: submissionData
-      });
+      return apiRequest('POST', '/api/new-hire-onboarding-submissions', submissionData);
     },
     onSuccess: () => {
       setSubmissionComplete(true);
