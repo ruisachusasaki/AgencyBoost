@@ -117,6 +117,21 @@ export default function Calendar() {
     setCurrentDate(new Date());
   };
 
+  // Filter appointments based on selected calendar and staff
+  const filteredAppointments = appointments.filter((appointment) => {
+    // Filter by calendar
+    if (selectedCalendar !== "all" && appointment.calendarId !== selectedCalendar) {
+      return false;
+    }
+    
+    // Filter by staff
+    if (selectedStaff !== "all" && appointment.assignedTo !== selectedStaff) {
+      return false;
+    }
+    
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
@@ -230,7 +245,7 @@ export default function Calendar() {
 
           <TabsContent value="list" className="space-y-4">
             <div className="grid gap-4">
-              {appointments.map((appointment: AppointmentData) => (
+              {filteredAppointments.map((appointment: AppointmentData) => (
                 <Card key={appointment.id} className="border-l-4 hover:shadow-md transition-shadow">
                   <div 
                     className="border-l-4 rounded-l-lg"
