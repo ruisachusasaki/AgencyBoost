@@ -16285,28 +16285,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Articles API - Ultra simplified version to get articles back
   app.get("/api/knowledge-base/articles", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
       console.log('🔍 Debug: Starting articles query - ultra simplified');
       
-      // Skip all Drizzle queries and use direct SQL only
-      const articles = await db.execute(sql`
-        SELECT 
-          id,
-          title,
-          excerpt,
-          slug,
-          category_id as "categoryId",
-          parent_id as "parentId",
-          featured_image as "featuredImage",
-          tags,
-          view_count as "viewCount",
-          like_count as "likeCount",
-          is_public as "isPublic",
-          created_at as "createdAt",
-          updated_at as "updatedAt"
-        FROM knowledge_base_articles
-        WHERE status = 'published' AND is_public = true
-        ORDER BY created_at DESC
+      // Check if user is admin
+      const userRoleResult = await db.execute(sql`
+        SELECT r.name as role FROM staff s 
+        JOIN roles r ON s.role_id = r.id 
+        WHERE s.id = ${userId}
       `);
+      const userRoleRows = Array.isArray(userRoleResult) ? userRoleResult : userRoleResult.rows;
+      const userRoleData = userRoleRows && userRoleRows.length > 0 ? userRoleRows[0] : null;
+      const isAdmin = userRoleData && userRoleData.role === 'Admin';
+      
+      // If admin, get ALL articles. If not admin, get public articles + articles they have access to
+      let articles;
+      if (isAdmin) {
+        articles = await db.execute(sql`
+          SELECT 
+            id,
+            title,
+            excerpt,
+            slug,
+            category_id as "categoryId",
+            parent_id as "parentId",
+            featured_image as "featuredImage",
+            tags,
+            view_count as "viewCount",
+            like_count as "likeCount",
+            is_public as "isPublic",
+            created_at as "createdAt",
+            updated_at as "updatedAt"
+          FROM knowledge_base_articles
+          WHERE status = 'published'
+          ORDER BY created_at DESC
+        `);
+      } else {
+        articles = await db.execute(sql`
+          SELECT 
+            id,
+            title,
+            excerpt,
+            slug,
+            category_id as "categoryId",
+            parent_id as "parentId",
+            featured_image as "featuredImage",
+            tags,
+            view_count as "viewCount",
+            like_count as "likeCount",
+            is_public as "isPublic",
+            created_at as "createdAt",
+            updated_at as "updatedAt"
+          FROM knowledge_base_articles
+          WHERE status = 'published' AND is_public = true
+          ORDER BY created_at DESC
+        `);
+      }
       
       console.log('✅ Debug: Raw SQL query successful, found:', articles.rowCount);
       
