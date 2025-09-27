@@ -349,6 +349,7 @@ export const clients = pgTable("clients", {
   followers: varchar("followers").array(),
   
   lastActivity: timestamp("last_activity"),
+  isArchived: boolean("is_archived").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
