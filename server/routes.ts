@@ -16716,29 +16716,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Article not found" });
       }
 
-      // Only article author, admins, or managers can manage permissions
-      const [currentUser] = await db.select({ role: staff.role })
-        .from(staff)
-        .where(eq(staff.id, userId));
+      // Only article author, admins, or managers can manage permissions using raw SQL
+      const userResult = await db.execute(sql`
+        SELECT role FROM staff WHERE id = ${userId}
+      `);
+      const userRows = Array.isArray(userResult) ? userResult : userResult.rows;
+      const currentUser = userRows && userRows.length > 0 ? userRows[0] : null;
 
-      if (!currentUser || (article.createdBy !== userId && !['Admin', 'Manager'].includes(currentUser.role))) {
+      if (!currentUser || (article.created_by !== userId && !['Admin', 'Manager'].includes(currentUser.role))) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      // Get current permissions
-      const permissions = await db.select({
-        id: knowledgeBasePermissions.id,
-        accessType: knowledgeBasePermissions.accessType,
-        accessId: knowledgeBasePermissions.accessId,
-        permission: knowledgeBasePermissions.permission,
-      })
-      .from(knowledgeBasePermissions)
-      .where(
-        and(
-          eq(knowledgeBasePermissions.resourceType, 'article'),
-          eq(knowledgeBasePermissions.resourceId, req.params.id)
-        )
-      );
+      // Get current permissions using raw SQL
+      const permissionsResult = await db.execute(sql`
+        SELECT id, access_type, access_id, permission 
+        FROM knowledge_base_permissions
+        WHERE resource_type = 'article' AND resource_id = ${req.params.id}
+      `);
+      const permissions = Array.isArray(permissionsResult) ? permissionsResult : permissionsResult.rows;
 
       res.json({
         isPublic: article.is_public,
@@ -16768,10 +16763,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Article not found" });
       }
 
-      // Only article author, admins, or managers can manage permissions
-      const [currentUser] = await db.select({ role: staff.role })
-        .from(staff)
-        .where(eq(staff.id, userId));
+      // Only article author, admins, or managers can manage permissions using raw SQL
+      const userResult = await db.execute(sql`
+        SELECT role FROM staff WHERE id = ${userId}
+      `);
+      const userRows = Array.isArray(userResult) ? userResult : userResult.rows;
+      const currentUser = userRows && userRows.length > 0 ? userRows[0] : null;
 
       if (!currentUser || (article.created_by !== userId && !['Admin', 'Manager'].includes(currentUser.role))) {
         return res.status(403).json({ message: "Access denied" });
@@ -16786,26 +16783,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
       }
 
-      // Update permissions
+      // Update permissions using raw SQL
       if (permissions && Array.isArray(permissions)) {
         // Delete existing permissions
-        await db.delete(knowledgeBasePermissions)
-          .where(
-            and(
-              eq(knowledgeBasePermissions.resourceType, 'article'),
-              eq(knowledgeBasePermissions.resourceId, req.params.id)
-            )
-          );
+        await db.execute(sql`
+          DELETE FROM knowledge_base_permissions 
+          WHERE resource_type = 'article' AND resource_id = ${req.params.id}
+        `);
 
         // Insert new permissions
         for (const permission of permissions) {
-          await db.insert(knowledgeBasePermissions).values({
-            resourceType: 'article',
-            resourceId: req.params.id,
-            accessType: permission.accessType, // 'user' or 'role'
-            accessId: permission.accessId, // user ID or role name
-            permission: permission.permission || 'read',
-          });
+          await db.execute(sql`
+            INSERT INTO knowledge_base_permissions (resource_type, resource_id, access_type, access_id, permission)
+            VALUES ('article', ${req.params.id}, ${permission.accessType}, ${permission.accessId}, ${permission.permission || 'read'})
+          `);
         }
       }
 
