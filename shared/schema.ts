@@ -599,6 +599,12 @@ export const tasks = pgTable("tasks", {
   // Client portal visibility
   visibleToClient: boolean("visible_to_client").default(false), // Controls if clients can see this task in their portal
   
+  // Client approval workflow
+  requiresClientApproval: boolean("requires_client_approval").default(false), // If true, client must approve before task completion
+  clientApprovalStatus: text("client_approval_status").default("pending"), // pending, approved, rejected, changes_requested
+  clientApprovalNotes: text("client_approval_notes"), // Client feedback/notes on the task
+  clientApprovalDate: timestamp("client_approval_date"), // When client approved/rejected
+  
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -1088,6 +1094,7 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   level: true, // Auto-calculated based on parent hierarchy
   taskPath: true, // Auto-calculated based on parent hierarchy
   hasSubTasks: true, // Auto-calculated when sub-tasks exist
+  clientApprovalDate: true, // Auto-calculated when client approves/rejects
 }).extend({
   startDate: z.union([z.string(), z.date(), z.null()]).optional().transform((val) => {
     if (!val || val === '' || val === null) return null;
@@ -1111,6 +1118,10 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   recurringEndType: z.enum(["never", "on_date", "after_occurrences"]).optional(),
   recurringEndOccurrences: z.number().optional(),
   createIfOverdue: z.boolean().optional().default(false),
+  // Client approval workflow validation
+  requiresClientApproval: z.boolean().optional().default(false),
+  clientApprovalStatus: z.enum(["pending", "approved", "rejected", "changes_requested"]).optional().default("pending"),
+  clientApprovalNotes: z.string().optional(),
 });
 
 export const insertTaskActivitySchema = createInsertSchema(taskActivities).omit({
