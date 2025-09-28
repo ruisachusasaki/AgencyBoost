@@ -3994,6 +3994,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client Approval Routes - SECURED
+  app.put("/api/tasks/:id/approve", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
+    try {
+      const { notes } = req.body;
+      const taskId = req.params.id;
+      
+      // Update task approval status
+      const [updatedTask] = await db.update(tasks)
+        .set({
+          clientApprovalStatus: 'approved',
+          clientApprovalNotes: notes || null,
+          clientApprovalDate: new Date()
+        })
+        .where(eq(tasks.id, taskId))
+        .returning();
+
+      if (!updatedTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Log the approval activity
+      await logTaskActivity(
+        taskId, 
+        'client_approval', 
+        'clientApprovalStatus', 
+        'pending', 
+        'approved',
+        'client-portal',
+        'Client Portal User'
+      );
+
+      res.json(updatedTask);
+    } catch (error) {
+      console.error("Error approving task:", error);
+      res.status(500).json({ message: "Failed to approve task" });
+    }
+  });
+
+  app.put("/api/tasks/:id/request-changes", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
+    try {
+      const { notes } = req.body;
+      const taskId = req.params.id;
+      
+      if (!notes?.trim()) {
+        return res.status(400).json({ message: "Notes are required when requesting changes" });
+      }
+      
+      // Update task approval status
+      const [updatedTask] = await db.update(tasks)
+        .set({
+          clientApprovalStatus: 'changes_requested',
+          clientApprovalNotes: notes,
+          clientApprovalDate: new Date()
+        })
+        .where(eq(tasks.id, taskId))
+        .returning();
+
+      if (!updatedTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Log the changes request activity
+      await logTaskActivity(
+        taskId, 
+        'client_changes_requested', 
+        'clientApprovalStatus', 
+        'pending', 
+        'changes_requested',
+        'client-portal',
+        'Client Portal User'
+      );
+
+      res.json(updatedTask);
+    } catch (error) {
+      console.error("Error requesting task changes:", error);
+      res.status(500).json({ message: "Failed to request task changes" });
+    }
+  });
+
+  app.put("/api/tasks/:id/client-approval", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
+    try {
+      const { status, notes } = req.body;
+      const taskId = req.params.id;
+      
+      if (!['pending', 'approved', 'rejected', 'changes_requested'].includes(status)) {
+        return res.status(400).json({ message: "Invalid approval status" });
+      }
+      
+      // Update task approval status
+      const [updatedTask] = await db.update(tasks)
+        .set({
+          clientApprovalStatus: status,
+          clientApprovalNotes: notes || null,
+          clientApprovalDate: new Date()
+        })
+        .where(eq(tasks.id, taskId))
+        .returning();
+
+      if (!updatedTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Log the approval status change
+      await logTaskActivity(
+        taskId, 
+        'client_approval_status_change', 
+        'clientApprovalStatus', 
+        'pending', 
+        status,
+        'client-portal',
+        'Client Portal User'
+      );
+
+      res.json(updatedTask);
+    } catch (error) {
+      console.error("Error updating client approval status:", error);
+      res.status(500).json({ message: "Failed to update client approval status" });
+    }
+  });
+
   app.get("/api/tasks/:id/activities", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const activities = await db.select()

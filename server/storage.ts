@@ -156,6 +156,15 @@ export interface IStorage {
   updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: string): Promise<boolean>;
   
+  // Client Approval Operations
+  updateTaskClientApproval(
+    taskId: string, 
+    status: 'pending' | 'approved' | 'rejected' | 'changes_requested',
+    notes?: string
+  ): Promise<Task | undefined>;
+  approveTask(taskId: string, notes?: string): Promise<Task | undefined>;
+  requestTaskChanges(taskId: string, notes: string): Promise<Task | undefined>;
+  
   // Time Tracking Reports
   getTimeTrackingReport(filters: import("@shared/schema").TimeTrackingReportFilters): Promise<import("@shared/schema").TimeTrackingReportData>;
   getUserTimeEntries(userId: string, dateFrom: string, dateTo: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>>;
@@ -2374,6 +2383,33 @@ export class MemStorage implements IStorage {
     };
     this.tasks.set(id, updatedTask);
     return updatedTask;
+  }
+
+  // Client Approval Operations
+  async updateTaskClientApproval(
+    taskId: string, 
+    status: 'pending' | 'approved' | 'rejected' | 'changes_requested',
+    notes?: string
+  ): Promise<Task | undefined> {
+    const task = this.tasks.get(taskId);
+    if (!task) return undefined;
+    
+    const updatedTask = {
+      ...task,
+      clientApprovalStatus: status,
+      clientApprovalNotes: notes || null,
+      clientApprovalDate: new Date()
+    };
+    this.tasks.set(taskId, updatedTask);
+    return updatedTask;
+  }
+
+  async approveTask(taskId: string, notes?: string): Promise<Task | undefined> {
+    return this.updateTaskClientApproval(taskId, 'approved', notes);
+  }
+
+  async requestTaskChanges(taskId: string, notes: string): Promise<Task | undefined> {
+    return this.updateTaskClientApproval(taskId, 'changes_requested', notes);
   }
 
   async deleteTask(id: string): Promise<boolean> {
@@ -5042,6 +5078,21 @@ export class DbStorage implements IStorage {
   async createTask(task: InsertTask): Promise<Task> { return this.memStorage.createTask(task); }
   async updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined> { return this.memStorage.updateTask(id, task); }
   async deleteTask(id: string): Promise<boolean> { return this.memStorage.deleteTask(id); }
+  
+  // Client Approval Operations
+  async updateTaskClientApproval(
+    taskId: string, 
+    status: 'pending' | 'approved' | 'rejected' | 'changes_requested',
+    notes?: string
+  ): Promise<Task | undefined> { 
+    return this.memStorage.updateTaskClientApproval(taskId, status, notes); 
+  }
+  async approveTask(taskId: string, notes?: string): Promise<Task | undefined> { 
+    return this.memStorage.approveTask(taskId, notes); 
+  }
+  async requestTaskChanges(taskId: string, notes: string): Promise<Task | undefined> { 
+    return this.memStorage.requestTaskChanges(taskId, notes); 
+  }
 
   // Smart Lists - using database implementation at end of file
 
