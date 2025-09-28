@@ -535,7 +535,7 @@ export const leads = pgTable("leads", {
   phone: text("phone"),
   company: text("company"),
   source: text("source"), // website, referral, social_media, advertising, cold_outreach
-  status: text("status").notNull().default("new"), // will be deprecated in favor of stageId
+  status: text("status").notNull().default("Open"), // Lead status: Open, Lost, Won, Abandon
   stageId: varchar("stage_id").references(() => leadPipelineStages.id),
   value: decimal("value", { precision: 10, scale: 2 }),
   probability: integer("probability").default(0), // 0-100

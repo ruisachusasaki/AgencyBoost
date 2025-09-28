@@ -103,7 +103,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
 
   const updateLeadMutation = useMutation({
     mutationFn: async (data: InsertLead & { customFields?: Record<string, any> }) => {
-      return await apiRequest(`/api/leads/${lead!.id}`, "PUT", data);
+      return await apiRequest("PUT", `/api/leads/${lead!.id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -139,7 +139,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
       const response = await apiRequest("/api/clients", "POST", clientData);
       
       // Update lead status to "won" and mark as converted
-      await apiRequest(`/api/leads/${lead.id}`, "PUT", {
+      await apiRequest("PUT", `/api/leads/${lead.id}`, {
         ...lead,
         status: "won",
       });

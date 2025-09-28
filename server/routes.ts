@@ -2732,18 +2732,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: leads.email,
         phone: leads.phone,
         company: leads.company,
-        position: leads.position,
         status: leads.status,
         source: leads.source,
         assignedTo: leads.assignedTo,
         value: leads.value,
+        probability: leads.probability,
         notes: leads.notes,
-        customFields: leads.customFields,
-        pipelineStage: leads.pipelineStage,
-        lastContactedAt: leads.lastContactedAt,
-        nextFollowUpAt: leads.nextFollowUpAt,
-        createdAt: leads.createdAt,
-        updatedAt: leads.updatedAt
+        stageId: leads.stageId,
+        customFieldData: leads.customFieldData,
+        lastContactDate: leads.lastContactDate,
+        stageHistory: leads.stageHistory,
+        tags: leads.tags,
+        createdAt: leads.createdAt
       }).from(leads).where(eq(leads.id, req.params.id));
       if (!oldLead) {
         return res.status(404).json({ message: "Lead not found" });
