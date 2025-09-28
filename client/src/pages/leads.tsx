@@ -61,6 +61,7 @@ export default function Leads() {
   const [filterOwner, setFilterOwner] = useState<string>("");
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [filterVertical, setFilterVertical] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<string>("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -164,6 +165,11 @@ export default function Leads() {
         if (leadVertical !== filterVertical) {
           return false;
         }
+      }
+
+      // Status filter
+      if (filterStatus && lead.status !== filterStatus) {
+        return false;
       }
 
       return true;
@@ -612,8 +618,24 @@ export default function Leads() {
               </Select>
             </div>
 
+            {/* Status Filter */}
+            <div className="min-w-[160px]">
+              <Select value={filterStatus || "all"} onValueChange={(value) => setFilterStatus(value === "all" ? "" : value)}>
+                <SelectTrigger className="h-8 text-sm" data-testid="filter-status">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="Open">Open</SelectItem>
+                  <SelectItem value="Lost">Lost</SelectItem>
+                  <SelectItem value="Won">Won</SelectItem>
+                  <SelectItem value="Abandon">Abandon</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Clear Filters Button */}
-            {(filterOwner || filterTags.length > 0 || filterVertical) && (
+            {(filterOwner || filterTags.length > 0 || filterVertical || filterStatus) && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -621,6 +643,7 @@ export default function Leads() {
                   setFilterOwner("");
                   setFilterTags([]);
                   setFilterVertical("");
+                  setFilterStatus("");
                 }}
                 className="h-8 text-sm"
               >
@@ -630,9 +653,9 @@ export default function Leads() {
             )}
             
             {/* Active filters count */}
-            {(filterOwner || filterTags.length > 0 || filterVertical) && (
+            {(filterOwner || filterTags.length > 0 || filterVertical || filterStatus) && (
               <Badge variant="secondary" className="text-xs">
-                {[filterOwner, filterTags.length > 0, filterVertical].filter(Boolean).length} active
+                {[filterOwner, filterTags.length > 0, filterVertical, filterStatus].filter(Boolean).length} active
               </Badge>
             )}
           </div>
