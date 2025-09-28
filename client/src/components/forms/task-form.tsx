@@ -120,6 +120,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       // projectId removed
       // Client portal visibility
       visibleToClient: task?.visibleToClient || false,
+      requiresClientApproval: task?.requiresClientApproval || false,
       // Recurring task defaults
       isRecurring: task?.isRecurring || false,
       recurringInterval: task?.recurringInterval || 1,
@@ -153,6 +154,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         // projectId removed
         // Client portal visibility
         visibleToClient: task.visibleToClient || false,
+        requiresClientApproval: task.requiresClientApproval || false,
         isRecurring: task.isRecurring || false,
         recurringInterval: task.recurringInterval || 1,
         recurringUnit: (task.recurringUnit as "hours" | "days" | "weeks" | "months" | "years") || "days",
@@ -251,6 +253,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         dueDate: null,
         clientId: "",
         visibleToClient: false,
+        requiresClientApproval: false,
         isRecurring: false,
         recurringInterval: 1,
         recurringUnit: "days",
