@@ -87,7 +87,7 @@ export default function Leads() {
 
   const deleteLeadMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest(`/api/leads/${id}`, "DELETE");
+      await apiRequest("DELETE", `/api/leads/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -107,7 +107,7 @@ export default function Leads() {
 
   const moveLeadStageMutation = useMutation({
     mutationFn: ({ leadId, stageId }: { leadId: string; stageId: string }) => 
-      apiRequest(`/api/leads/${leadId}/stage`, "PUT", { stageId }),
+      apiRequest("PUT", `/api/leads/${leadId}/stage`, { stageId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
