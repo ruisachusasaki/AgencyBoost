@@ -77,6 +77,7 @@ export default function Tasks() {
     { id: "status", label: "Status", width: "w-1/10" },
     { id: "priority", label: "Priority", width: "w-1/10" },
     { id: "category", label: "Category", width: "w-1/10" },
+    { id: "approval", label: "Approval", width: "w-1/10" },
     { id: "client", label: "Client", width: "w-1/8" },
   ]);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -989,6 +990,32 @@ export default function Tasks() {
           </div>
         ) : (
           <span className="text-slate-400 text-sm">No category</span>
+        );
+
+      case "approval":
+        if (!task.requiresClientApproval) {
+          return <span className="text-slate-400 text-sm">Not required</span>;
+        }
+        
+        const getApprovalBadge = () => {
+          switch (task.clientApprovalStatus) {
+            case "pending":
+              return <Badge variant="outline" className="text-yellow-700 border-yellow-300 bg-yellow-50">Pending</Badge>;
+            case "approved":
+              return <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50">Approved</Badge>;
+            case "rejected":
+              return <Badge variant="outline" className="text-red-700 border-red-300 bg-red-50">Rejected</Badge>;
+            case "changes_requested":
+              return <Badge variant="outline" className="text-orange-700 border-orange-300 bg-orange-50">Changes Requested</Badge>;
+            default:
+              return <Badge variant="outline" className="text-yellow-700 border-yellow-300 bg-yellow-50">Pending</Badge>;
+          }
+        };
+        
+        return (
+          <div className="flex items-center gap-1">
+            {getApprovalBadge()}
+          </div>
         );
       
       default:

@@ -42,6 +42,20 @@ import { useState, useEffect } from "react";
 // Create extended form schema that includes template fields
 const taskFormSchema = insertTaskSchema.extend({
   templateId: z.string().optional(),
+}).refine((data) => {
+  // If client approval is required, task must be visible to client and have a client assigned
+  if (data.requiresClientApproval) {
+    if (!data.visibleToClient) {
+      return false;
+    }
+    if (!data.clientId || data.clientId === "" || data.clientId === "none") {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: "Tasks requiring client approval must be visible to the client and have a client assigned",
+  path: ["requiresClientApproval"],
 });
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
@@ -217,6 +231,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       clientId?: string;
       workflowId?: string;
       visibleToClient?: boolean;
+      requiresClientApproval?: boolean;
       assigneeStrategy: string;
       dateStrategy: string;
     }) => {
@@ -225,6 +240,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         clientId: data.clientId && data.clientId !== "none" ? data.clientId : null,
         workflowId: data.workflowId && data.workflowId !== "none" ? data.workflowId : null,
         visibleToClient: data.visibleToClient || false,
+        requiresClientApproval: data.requiresClientApproval || false,
         assigneeStrategy: data.assigneeStrategy,
         dateStrategy: data.dateStrategy,
       });
@@ -310,6 +326,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         clientId: data.clientId || undefined,
         workflowId: data.workflowId || undefined,
         visibleToClient: data.visibleToClient || false,
+        requiresClientApproval: data.requiresClientApproval || false,
         assigneeStrategy,
         dateStrategy,
       });
@@ -729,33 +746,6 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
           {/* Project field removed - projects no longer exist */}
         </div>
 
-        {/* Client Portal Visibility */}
-        <div className="space-y-4">
-          <FormField
-            control={form.control}
-            name="visibleToClient"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                <FormControl>
-                  <Checkbox 
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    data-testid="checkbox-visible-to-client"
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel className="text-sm font-medium">
-                    Visible to Client
-                  </FormLabel>
-                  <p className="text-xs text-muted-foreground">
-                    Allow clients to see this task in their portal. Only applies if the task is assigned to a client.
-                  </p>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
 
         {/* Client Portal Visibility */}
         <div className="space-y-4 border-l-4 border-primary/20 pl-4 bg-primary/5 p-4 rounded">
@@ -782,6 +772,31 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                   </FormLabel>
                   <p className="text-xs text-muted-foreground">
                     When enabled, clients can see this task's progress and details in their client portal dashboard.
+                  </p>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="requiresClientApproval"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                <FormControl>
+                  <Switch 
+                    checked={field.value || false}
+                    onCheckedChange={field.onChange}
+                    data-testid="switch-requires-client-approval"
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel className="text-sm font-normal">
+                    Require client approval before completion
+                  </FormLabel>
+                  <p className="text-xs text-muted-foreground">
+                    When enabled, clients must approve or request changes to task attachments before the task can be marked complete.
                   </p>
                 </div>
                 <FormMessage />

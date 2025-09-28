@@ -1124,6 +1124,27 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   clientApprovalNotes: z.string().optional(),
 });
 
+// Server-side validated schema that enforces client approval invariants
+export const insertTaskSchemaValidated = insertTaskSchema.superRefine((data, ctx) => {
+  // Enforce invariant: requiresClientApproval=true requires visibleToClient=true and valid clientId
+  if (data.requiresClientApproval) {
+    if (!data.visibleToClient) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Tasks requiring client approval must be visible to the client",
+        path: ["requiresClientApproval"],
+      });
+    }
+    if (!data.clientId || data.clientId === "" || data.clientId === "none") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Tasks requiring client approval must have a client assigned",
+        path: ["requiresClientApproval"],
+      });
+    }
+  }
+});
+
 export const insertTaskActivitySchema = createInsertSchema(taskActivities).omit({
   id: true,
   createdAt: true,

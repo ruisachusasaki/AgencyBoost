@@ -6,7 +6,7 @@ import { Readable } from "stream";
 import { storage as appStorage } from "./storage";
 import { 
   insertClientSchema, insertCampaignSchema, insertLeadSchema, 
-  insertTaskSchema, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
+  insertTaskSchema, insertTaskSchemaValidated, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
   insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, 
   insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
@@ -3558,7 +3558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
-      const validatedData = insertTaskSchema.parse(req.body);
+      const validatedData = insertTaskSchemaValidated.parse(req.body);
       
       const result = await db.insert(tasks)
         .values(validatedData)
@@ -4819,6 +4819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         campaignId,
         workflowId,
         visibleToClient = false,
+        requiresClientApproval = false,
         assigneeStrategy = 'clear',
         dateStrategy = 'clear'
       } = req.body;
@@ -4857,6 +4858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           level: templateData.level,
           parentTaskId: parentTaskId,
           visibleToClient: (clientId || templateData.clientId) ? visibleToClient : false, // Only apply if there's a client
+          requiresClientApproval: (clientId || templateData.clientId) ? requiresClientApproval : false, // Only apply if there's a client
           createdBy: normalizedUserId
         };
 
@@ -4883,9 +4885,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Debug logging before database insert
         console.log("🐛 DEBUG: Task data before insert:", JSON.stringify(taskData, null, 2));
         
+        // Validate task data with insertTaskSchemaValidated to enforce server-side invariants
+        const validatedTaskData = insertTaskSchemaValidated.parse(taskData);
+        
         // Create the task
         const [newTask] = await db.insert(tasks)
-          .values(taskData)
+          .values(validatedTaskData)
           .returning();
 
         // Store ID mapping for potential dependency handling
