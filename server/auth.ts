@@ -420,7 +420,7 @@ export function requireClientPortalAuth() {
       await db
         .update(clientPortalUsers)
         .set({
-          lastActivity: new Date()
+          lastLogin: new Date()
         })
         .where(eq(clientPortalUsers.id, clientPortalUserId));
     } catch (error) {

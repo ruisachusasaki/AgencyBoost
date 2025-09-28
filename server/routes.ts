@@ -3994,125 +3994,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client Approval Routes - SECURED
-  app.put("/api/tasks/:id/approve", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
-    try {
-      const { notes } = req.body;
-      const taskId = req.params.id;
-      
-      // Update task approval status
-      const [updatedTask] = await db.update(tasks)
-        .set({
-          clientApprovalStatus: 'approved',
-          clientApprovalNotes: notes || null,
-          clientApprovalDate: new Date()
-        })
-        .where(eq(tasks.id, taskId))
-        .returning();
-
-      if (!updatedTask) {
-        return res.status(404).json({ message: "Task not found" });
-      }
-
-      // Log the approval activity
-      await logTaskActivity(
-        taskId, 
-        'client_approval', 
-        'clientApprovalStatus', 
-        'pending', 
-        'approved',
-        'client-portal',
-        'Client Portal User'
-      );
-
-      res.json(updatedTask);
-    } catch (error) {
-      console.error("Error approving task:", error);
-      res.status(500).json({ message: "Failed to approve task" });
-    }
-  });
-
-  app.put("/api/tasks/:id/request-changes", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
-    try {
-      const { notes } = req.body;
-      const taskId = req.params.id;
-      
-      if (!notes?.trim()) {
-        return res.status(400).json({ message: "Notes are required when requesting changes" });
-      }
-      
-      // Update task approval status
-      const [updatedTask] = await db.update(tasks)
-        .set({
-          clientApprovalStatus: 'changes_requested',
-          clientApprovalNotes: notes,
-          clientApprovalDate: new Date()
-        })
-        .where(eq(tasks.id, taskId))
-        .returning();
-
-      if (!updatedTask) {
-        return res.status(404).json({ message: "Task not found" });
-      }
-
-      // Log the changes request activity
-      await logTaskActivity(
-        taskId, 
-        'client_changes_requested', 
-        'clientApprovalStatus', 
-        'pending', 
-        'changes_requested',
-        'client-portal',
-        'Client Portal User'
-      );
-
-      res.json(updatedTask);
-    } catch (error) {
-      console.error("Error requesting task changes:", error);
-      res.status(500).json({ message: "Failed to request task changes" });
-    }
-  });
-
-  app.put("/api/tasks/:id/client-approval", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
-    try {
-      const { status, notes } = req.body;
-      const taskId = req.params.id;
-      
-      if (!['pending', 'approved', 'rejected', 'changes_requested'].includes(status)) {
-        return res.status(400).json({ message: "Invalid approval status" });
-      }
-      
-      // Update task approval status
-      const [updatedTask] = await db.update(tasks)
-        .set({
-          clientApprovalStatus: status,
-          clientApprovalNotes: notes || null,
-          clientApprovalDate: new Date()
-        })
-        .where(eq(tasks.id, taskId))
-        .returning();
-
-      if (!updatedTask) {
-        return res.status(404).json({ message: "Task not found" });
-      }
-
-      // Log the approval status change
-      await logTaskActivity(
-        taskId, 
-        'client_approval_status_change', 
-        'clientApprovalStatus', 
-        'pending', 
-        status,
-        'client-portal',
-        'Client Portal User'
-      );
-
-      res.json(updatedTask);
-    } catch (error) {
-      console.error("Error updating client approval status:", error);
-      res.status(500).json({ message: "Failed to update client approval status" });
-    }
-  });
 
   app.get("/api/tasks/:id/activities", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
@@ -19860,6 +19741,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/client-portal/login", async (req, res) => {
     const clientIp = req.ip || req.connection?.remoteAddress || "unknown";
     
+    console.log("🔐 Client Portal Login Attempt:", { body: req.body, ip: clientIp });
+    
     try {
       // SECURITY: Check rate limiting first
       if (isRateLimited(clientIp)) {
@@ -20299,6 +20182,247 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Failed to get tasks",
         message: "An error occurred while retrieving tasks"
       });
+    }
+  });
+
+  // Client Approval Operations - SECURED FOR CLIENT PORTAL
+  const clientApprovalSchema = z.object({
+    notes: z.string().optional().transform(val => val?.trim() || null)
+  });
+
+  const clientRequestChangesSchema = z.object({
+    notes: z.string().min(1, "Notes are required when requesting changes").transform(val => val.trim())
+  });
+
+  app.put("/api/client-portal/tasks/:id/approve", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+
+      const taskId = req.params.id;
+      const validation = clientApprovalSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({
+          message: "Invalid request data",
+          errors: validation.error.errors
+        });
+      }
+
+      const { notes } = validation.data;
+
+      // Get client portal user's client ID
+      const [clientPortalUser] = await db
+        .select({ clientId: clientPortalUsers.clientId, firstName: clientPortalUsers.firstName, lastName: clientPortalUsers.lastName })
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.id, clientPortalUserId))
+        .limit(1);
+
+      if (!clientPortalUser) {
+        return res.status(404).json({ message: "Client portal user not found" });
+      }
+
+      // Get task to verify ownership and approval requirements
+      const [task] = await db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, taskId))
+        .limit(1);
+
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Verify ownership - task must belong to the client
+      if (task.clientId !== clientPortalUser.clientId) {
+        return res.status(403).json({ message: "Access denied - task does not belong to your organization" });
+      }
+
+      // Verify task requires client approval
+      if (!task.requiresClientApproval) {
+        return res.status(400).json({ message: "This task does not require client approval" });
+      }
+
+      // Verify task is in pending approval state
+      if (task.clientApprovalStatus !== 'pending') {
+        return res.status(400).json({ message: `Task approval status is already '${task.clientApprovalStatus}'` });
+      }
+
+      // Update task approval status
+      const [updatedTask] = await db.update(tasks)
+        .set({
+          clientApprovalStatus: 'approved',
+          clientApprovalNotes: notes,
+          clientApprovalDate: new Date()
+        })
+        .where(eq(tasks.id, taskId))
+        .returning();
+
+      // Log the approval activity
+      await logTaskActivity(
+        taskId, 
+        'client_approval', 
+        'clientApprovalStatus', 
+        'pending', 
+        'approved',
+        clientPortalUserId,
+        `${clientPortalUser.firstName} ${clientPortalUser.lastName}`
+      );
+
+      res.json(updatedTask);
+    } catch (error) {
+      console.error("Error approving task:", error);
+      res.status(500).json({ message: "Failed to approve task" });
+    }
+  });
+
+  app.put("/api/client-portal/tasks/:id/request-changes", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+
+      const taskId = req.params.id;
+      const validation = clientRequestChangesSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({
+          message: "Invalid request data",
+          errors: validation.error.errors
+        });
+      }
+
+      const { notes } = validation.data;
+
+      // Get client portal user's client ID
+      const [clientPortalUser] = await db
+        .select({ clientId: clientPortalUsers.clientId, firstName: clientPortalUsers.firstName, lastName: clientPortalUsers.lastName })
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.id, clientPortalUserId))
+        .limit(1);
+
+      if (!clientPortalUser) {
+        return res.status(404).json({ message: "Client portal user not found" });
+      }
+
+      // Get task to verify ownership and approval requirements
+      const [task] = await db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, taskId))
+        .limit(1);
+
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Verify ownership - task must belong to the client
+      if (task.clientId !== clientPortalUser.clientId) {
+        return res.status(403).json({ message: "Access denied - task does not belong to your organization" });
+      }
+
+      // Verify task requires client approval
+      if (!task.requiresClientApproval) {
+        return res.status(400).json({ message: "This task does not require client approval" });
+      }
+
+      // Verify task is in pending approval state
+      if (task.clientApprovalStatus !== 'pending') {
+        return res.status(400).json({ message: `Task approval status is already '${task.clientApprovalStatus}'` });
+      }
+
+      // Update task approval status
+      const [updatedTask] = await db.update(tasks)
+        .set({
+          clientApprovalStatus: 'changes_requested',
+          clientApprovalNotes: notes,
+          clientApprovalDate: new Date()
+        })
+        .where(eq(tasks.id, taskId))
+        .returning();
+
+      // Log the changes request activity
+      await logTaskActivity(
+        taskId, 
+        'client_changes_requested', 
+        'clientApprovalStatus', 
+        'pending', 
+        'changes_requested',
+        clientPortalUserId,
+        `${clientPortalUser.firstName} ${clientPortalUser.lastName}`
+      );
+
+      res.json(updatedTask);
+    } catch (error) {
+      console.error("Error requesting task changes:", error);
+      res.status(500).json({ message: "Failed to request task changes" });
+    }
+  });
+
+  // Client Portal Task Attachments - SECURED FOR CLIENT PORTAL
+  app.get("/api/client-portal/tasks/:taskId/attachments", requireClientPortalAuth(), async (req, res) => {
+    try {
+      const clientPortalUserId = getAuthenticatedClientPortalUserIdOrFail(req, res);
+      if (!clientPortalUserId) return;
+
+      const { taskId } = req.params;
+
+      // Get client portal user's client ID
+      const [clientPortalUser] = await db
+        .select({ clientId: clientPortalUsers.clientId })
+        .from(clientPortalUsers)
+        .where(eq(clientPortalUsers.id, clientPortalUserId))
+        .limit(1);
+
+      if (!clientPortalUser) {
+        return res.status(404).json({ message: "Client portal user not found" });
+      }
+
+      // Get task to verify ownership
+      const [task] = await db
+        .select({ clientId: tasks.clientId, visibleToClient: tasks.visibleToClient })
+        .from(tasks)
+        .where(eq(tasks.id, taskId))
+        .limit(1);
+
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Verify ownership - task must belong to the client
+      if (task.clientId !== clientPortalUser.clientId) {
+        return res.status(403).json({ message: "Access denied - task does not belong to your organization" });
+      }
+
+      // Verify task is visible to client
+      if (!task.visibleToClient) {
+        return res.status(403).json({ message: "Access denied - task is not visible to clients" });
+      }
+
+      // Get attachments for the task
+      const attachments = await db
+        .select({
+          id: taskAttachments.id,
+          taskId: taskAttachments.taskId,
+          fileName: taskAttachments.fileName,
+          fileType: taskAttachments.fileType,
+          fileSize: taskAttachments.fileSize,
+          fileUrl: taskAttachments.fileUrl,
+          uploadedBy: taskAttachments.uploadedBy,
+          createdAt: taskAttachments.createdAt,
+          uploaderName: staff.firstName
+        })
+        .from(taskAttachments)
+        .leftJoin(staff, eq(taskAttachments.uploadedBy, staff.id))
+        .where(eq(taskAttachments.taskId, taskId))
+        .orderBy(desc(taskAttachments.createdAt));
+
+      console.log(`Returning attachments with URLs:`, attachments.map(a => ({
+        fileName: a.fileName,
+        fileUrl: a.fileUrl
+      })));
+
+      res.json(attachments);
+    } catch (error) {
+      console.error("Error fetching task attachments for client portal:", error);
+      res.status(500).json({ message: "Failed to fetch task attachments" });
     }
   });
 

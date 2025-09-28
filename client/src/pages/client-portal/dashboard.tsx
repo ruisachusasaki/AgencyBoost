@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +8,15 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, CheckCircle2, Clock, Users, LogOut, BarChart3, Filter, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Calendar as CalendarIcon, CheckCircle2, Clock, Users, LogOut, BarChart3, Filter, X, ChevronLeft, ChevronRight, ThumbsUp, MessageCircle } from "lucide-react";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format, subDays, subMonths, startOfDay, endOfDay } from "date-fns";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import ClientPortalTaskAttachments from "@/components/ClientPortalTaskAttachments";
 
 // Mock client portal user interface
 interface ClientPortalUser {
@@ -33,6 +39,10 @@ interface ClientTask {
   assigneeName: string | null;
   completedAt: string | null;
   createdAt: string;
+  requiresClientApproval?: boolean;
+  clientApprovalStatus?: 'pending' | 'approved' | 'changes_requested';
+  clientApprovalNotes?: string | null;
+  clientApprovalDate?: string | null;
 }
 
 // Filter interfaces
@@ -95,6 +105,89 @@ const dueDateOptions = [
 ];
 
 function TaskCard({ task }: { task: ClientTask }) {
+  const [approvalNotes, setApprovalNotes] = useState("");
+  const [changesNotes, setChangesNotes] = useState("");
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [showChangesDialog, setShowChangesDialog] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // Approval mutation
+  const approveMutation = useMutation({
+    mutationFn: async (notes: string) => {
+      return await apiRequest(`/api/client-portal/tasks/${task.id}/approve`, {
+        method: 'PUT',
+        body: { notes }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/client-portal/tasks'] });
+      setShowApprovalDialog(false);
+      setApprovalNotes("");
+      toast({
+        title: "Task Approved",
+        description: "Your approval has been recorded successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Request changes mutation
+  const requestChangesMutation = useMutation({
+    mutationFn: async (notes: string) => {
+      return await apiRequest(`/api/client-portal/tasks/${task.id}/request-changes`, {
+        method: 'PUT',
+        body: { notes }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/client-portal/tasks'] });
+      setShowChangesDialog(false);
+      setChangesNotes("");
+      toast({
+        title: "Changes Requested",
+        description: "Your feedback has been sent to the team.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to request changes",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleApprove = () => {
+    if (!approvalNotes.trim()) {
+      toast({
+        title: "Notes Required",
+        description: "Please provide notes for your approval.",
+        variant: "destructive",
+      });
+      return;
+    }
+    approveMutation.mutate(approvalNotes);
+  };
+
+  const handleRequestChanges = () => {
+    if (!changesNotes.trim()) {
+      toast({
+        title: "Notes Required",
+        description: "Please provide details about the requested changes.",
+        variant: "destructive",
+      });
+      return;
+    }
+    requestChangesMutation.mutate(changesNotes);
+  };
+
   return (
     <Card className="hover:shadow-md transition-shadow" data-testid={`card-task-${task.id}`}>
       <CardHeader className="pb-3">
@@ -149,6 +242,155 @@ function TaskCard({ task }: { task: ClientTask }) {
             </div>
           )}
         </div>
+        
+        {/* Display attachments in compact mode */}
+        <div className="mt-3 pt-3 border-t border-muted/50">
+          <ClientPortalTaskAttachments taskId={task.id} compact={true} />
+        </div>
+
+        {/* Client Approval Section */}
+        {task.requiresClientApproval && (
+          <div className="mt-3 pt-3 border-t border-muted/50">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-muted-foreground">Client Approval</h4>
+              <Badge 
+                variant={
+                  task.clientApprovalStatus === 'approved' ? 'default' : 
+                  task.clientApprovalStatus === 'changes_requested' ? 'secondary' : 
+                  'outline'
+                }
+                className={
+                  task.clientApprovalStatus === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                  task.clientApprovalStatus === 'changes_requested' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
+                  'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                }
+                data-testid={`badge-approval-status-${task.id}`}
+              >
+                {task.clientApprovalStatus === 'approved' ? 'Approved' :
+                 task.clientApprovalStatus === 'changes_requested' ? 'Changes Requested' :
+                 'Pending Review'}
+              </Badge>
+            </div>
+
+            {task.clientApprovalNotes && (
+              <p className="text-sm text-muted-foreground mt-2" data-testid={`text-approval-notes-${task.id}`}>
+                {task.clientApprovalNotes}
+              </p>
+            )}
+
+            {task.clientApprovalDate && (
+              <p className="text-xs text-muted-foreground mt-1" data-testid={`text-approval-date-${task.id}`}>
+                {task.clientApprovalStatus === 'approved' ? 'Approved' : 'Changes requested'} on {format(new Date(task.clientApprovalDate), "MMM d, yyyy 'at' h:mm a")}
+              </p>
+            )}
+
+            {/* Approval Action Buttons - only show if status is pending */}
+            {task.clientApprovalStatus === 'pending' && (
+              <div className="flex gap-2 mt-3">
+                <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      data-testid={`button-approve-${task.id}`}
+                    >
+                      <ThumbsUp className="h-4 w-4 mr-1" />
+                      Approve
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Approve Task</DialogTitle>
+                      <DialogDescription>
+                        Please provide your approval notes for "{task.title}". This will notify the team that you approve the work.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="approval-notes">Approval Notes</Label>
+                        <Textarea
+                          id="approval-notes"
+                          placeholder="Enter your approval feedback..."
+                          value={approvalNotes}
+                          onChange={(e) => setApprovalNotes(e.target.value)}
+                          rows={4}
+                          data-testid={`textarea-approval-notes-${task.id}`}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowApprovalDialog(false)}
+                        data-testid={`button-cancel-approval-${task.id}`}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleApprove}
+                        disabled={approveMutation.isPending}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        data-testid={`button-confirm-approval-${task.id}`}
+                      >
+                        {approveMutation.isPending ? "Approving..." : "Approve Task"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={showChangesDialog} onOpenChange={setShowChangesDialog}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      data-testid={`button-request-changes-${task.id}`}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-1" />
+                      Request Changes
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Request Changes</DialogTitle>
+                      <DialogDescription>
+                        Please provide detailed feedback for "{task.title}". Describe what changes you'd like the team to make.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="changes-notes">Change Requests</Label>
+                        <Textarea
+                          id="changes-notes"
+                          placeholder="Describe the changes you'd like..."
+                          value={changesNotes}
+                          onChange={(e) => setChangesNotes(e.target.value)}
+                          rows={4}
+                          data-testid={`textarea-changes-notes-${task.id}`}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowChangesDialog(false)}
+                        data-testid={`button-cancel-changes-${task.id}`}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleRequestChanges}
+                        disabled={requestChangesMutation.isPending}
+                        data-testid={`button-confirm-changes-${task.id}`}
+                      >
+                        {requestChangesMutation.isPending ? "Sending..." : "Request Changes"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

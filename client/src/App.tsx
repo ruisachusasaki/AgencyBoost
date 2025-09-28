@@ -79,6 +79,13 @@ function Router() {
           </ClientPortalAuthGuard>
         )}
       </Route>
+      <Route path="/client-portal">
+        {() => (
+          <ClientPortalAuthGuard>
+            <ClientPortalDashboard />
+          </ClientPortalAuthGuard>
+        )}
+      </Route>
       <Route path="/book/:customUrl" component={PublicBooking} />
       <Route path="/embed/:customUrl" component={BookingEmbed} />
       <Route path="/careers" component={CareersPage} />

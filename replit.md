@@ -4,6 +4,7 @@
 AgencyFlow is a comprehensive Customer Relationship Management (CRM) system for marketing agencies. It manages clients, projects, campaigns, leads, tasks, and invoices, with integrated reporting and a responsive interface. The system aims to enhance efficiency and operational oversight, providing a modern solution for agencies.
 
 ## Recent Changes
+- **Implemented comprehensive Client Approval Workflow system** - Enables compliance review of client assets (video/image ads) before publication with task attachments shown in Client Portal and client approval/annotation capabilities
 - Successfully implemented profile photo upload functionality and header profile image display with clickable navigation
 - Added emergency contact fields (name, phone, relationship) to database schema and Personal tab form
 - Resolved critical emergency contact save functionality issue by implementing two-step database update approach
@@ -53,6 +54,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Knowledge Base**: Notion-like documentation platform with categories, hierarchy, social features, RBAC, and search.
 - **Automation System**: GoHighLevel-style API-driven, database-backed automation with dynamic triggers (e.g., Task Overdue Timing Controls, Dynamic Lead Pipeline Integration, Field Change Trigger System, Note Added Trigger System, Inbound Webhook Trigger System).
 - **Client Management**: Client Team Assignment and Client Health Scoring System with proactive monitoring, visual highlighting, and automated team notifications.
+- **Client Approval Workflow**: Comprehensive system for compliance review of client assets before publication. Features client portal task attachment display, approval/annotation capabilities, secure client-portal authentication, ownership verification, and integration with existing ImageAnnotationModal for collaborative feedback on images and PDFs.
 
 ## External Dependencies
 
