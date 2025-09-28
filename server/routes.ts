@@ -957,6 +957,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team Workload Report API endpoint
+  app.get("/api/reports/team-workload", requireAuth(), requirePermission('reporting', 'canView'), async (req, res) => {
+    try {
+      console.log("🧑‍💼 TEAM WORKLOAD REPORT ENDPOINT CALLED");
+      
+      // Get all team assignments with related staff and client data
+      const teamAssignments = await appStorage.getTeamAssignments();
+      
+      // Get all staff members for reference
+      const allStaff = await appStorage.getStaff();
+      
+      // Get all clients for reference
+      const clients = await appStorage.getClients();
+      
+      // Create workload map - count clients per staff member
+      const staffWorkloadMap = new Map<string, {
+        staffId: string;
+        staffName: string;
+        staffRole: string;
+        department: string;
+        clientCount: number;
+        clients: Array<{
+          clientId: string;
+          clientName: string;
+          positions: Array<{
+            positionId: string;
+            positionLabel: string;
+            assignedAt: Date;
+          }>;
+        }>;
+      }>();
+      
+      // Initialize all staff members with zero assignments
+      allStaff.forEach(staff => {
+        staffWorkloadMap.set(staff.id, {
+          staffId: staff.id,
+          staffName: `${staff.firstName} ${staff.lastName}`,
+          staffRole: staff.position || 'Unknown',
+          department: staff.department || 'Unknown',
+          clientCount: 0,
+          clients: []
+        });
+      });
+      
+      // Process team assignments to count workload
+      teamAssignments.forEach(assignment => {
+        const staffId = assignment.staffId;
+        const clientId = assignment.clientId;
+        const client = clients.find(c => c.id === clientId);
+        
+        if (!staffWorkloadMap.has(staffId)) {
+          // Handle case where staff member is assigned but not in staff list
+          const unknownStaff = {
+            staffId,
+            staffName: 'Unknown Staff',
+            staffRole: 'Unknown',
+            department: 'Unknown',
+            clientCount: 0,
+            clients: []
+          };
+          staffWorkloadMap.set(staffId, unknownStaff);
+        }
+        
+        const staffWorkload = staffWorkloadMap.get(staffId)!;
+        
+        // Check if this client is already tracked for this staff member
+        let existingClient = staffWorkload.clients.find(c => c.clientId === clientId);
+        
+        if (!existingClient) {
+          // New client for this staff member
+          existingClient = {
+            clientId,
+            clientName: client?.name || 'Unknown Client',
+            positions: []
+          };
+          staffWorkload.clients.push(existingClient);
+          staffWorkload.clientCount++;
+        }
+        
+        // Add position to this client assignment
+        existingClient.positions.push({
+          positionId: assignment.position?.id || 'unknown',
+          positionLabel: assignment.position?.label || 'Unknown Position',
+          assignedAt: assignment.assignedAt || new Date()
+        });
+      });
+      
+      // Convert map to array and sort by client count (descending)
+      const staffWorkloadData = Array.from(staffWorkloadMap.values())
+        .sort((a, b) => b.clientCount - a.clientCount);
+      
+      // Calculate summary statistics
+      const summary = {
+        totalStaff: allStaff.length,
+        staffWithAssignments: staffWorkloadData.filter(s => s.clientCount > 0).length,
+        staffWithoutAssignments: staffWorkloadData.filter(s => s.clientCount === 0).length,
+        totalAssignments: teamAssignments.length,
+        uniqueClientsWithAssignments: new Set(teamAssignments.map(a => a.clientId)).size,
+        averageClientsPerStaff: staffWorkloadData.length > 0 ? 
+          (staffWorkloadData.reduce((sum, s) => sum + s.clientCount, 0) / staffWorkloadData.length) : 0,
+        maxClientsPerStaff: Math.max(...staffWorkloadData.map(s => s.clientCount), 0),
+        workloadDistribution: {
+          '0_clients': staffWorkloadData.filter(s => s.clientCount === 0).length,
+          '1_client': staffWorkloadData.filter(s => s.clientCount === 1).length,
+          '2-3_clients': staffWorkloadData.filter(s => s.clientCount >= 2 && s.clientCount <= 3).length,
+          '4-5_clients': staffWorkloadData.filter(s => s.clientCount >= 4 && s.clientCount <= 5).length,
+          '6_plus_clients': staffWorkloadData.filter(s => s.clientCount >= 6).length,
+        }
+      };
+      
+      console.log("TEAM WORKLOAD REPORT: Generated successfully:", {
+        totalStaff: summary.totalStaff,
+        staffWithAssignments: summary.staffWithAssignments,
+        totalAssignments: summary.totalAssignments
+      });
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          staffWorkload: staffWorkloadData,
+          summary
+        },
+        meta: {
+          generatedAt: new Date().toISOString(),
+          reportType: 'team-workload'
+        }
+      });
+      
+    } catch (error) {
+      console.error("TEAM WORKLOAD REPORT: Error:", error);
+      res.status(500).json({
+        error: "Failed to generate team workload report",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Client routes - SECURED
   app.get("/api/clients", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {

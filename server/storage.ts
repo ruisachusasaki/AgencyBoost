@@ -362,6 +362,7 @@ export interface IStorage {
   
   // Client Team Assignments
   getClientTeamAssignments(clientId: string): Promise<(ClientTeamAssignment & { position: TeamPosition; staffMember: Staff })[]>;
+  getTeamAssignments(): Promise<(ClientTeamAssignment & { position: TeamPosition; staffMember: Staff })[]>;
   createClientTeamAssignment(assignment: InsertClientTeamAssignment): Promise<ClientTeamAssignment>;
   updateClientTeamAssignment(id: string, assignment: Partial<InsertClientTeamAssignment>): Promise<ClientTeamAssignment | undefined>;
   deleteClientTeamAssignment(id: string): Promise<boolean>;
@@ -5623,6 +5624,30 @@ export class DbStorage implements IStorage {
     .leftJoin(teamPositions, eq(clientTeamAssignments.position, teamPositions.id))
     .leftJoin(staff, eq(clientTeamAssignments.staffId, staff.id))
     .where(eq(clientTeamAssignments.clientId, clientId))
+    .orderBy(asc(teamPositions.order));
+    
+    return result.map(row => ({
+      ...row,
+      position: row.positionDetails,
+    })) as (ClientTeamAssignment & { position: TeamPosition; staffMember: Staff })[];
+  }
+
+  async getTeamAssignments(): Promise<(ClientTeamAssignment & { position: TeamPosition; staffMember: Staff })[]> {
+    const result = await db.select({
+      id: clientTeamAssignments.id,
+      clientId: clientTeamAssignments.clientId,
+      staffId: clientTeamAssignments.staffId,
+      position: clientTeamAssignments.position,
+      assignedAt: clientTeamAssignments.assignedAt,
+      assignedBy: clientTeamAssignments.assignedBy,
+      createdAt: clientTeamAssignments.createdAt,
+      updatedAt: clientTeamAssignments.updatedAt,
+      positionDetails: teamPositions,
+      staffMember: staff,
+    })
+    .from(clientTeamAssignments)
+    .leftJoin(teamPositions, eq(clientTeamAssignments.position, teamPositions.id))
+    .leftJoin(staff, eq(clientTeamAssignments.staffId, staff.id))
     .orderBy(asc(teamPositions.order));
     
     return result.map(row => ({
