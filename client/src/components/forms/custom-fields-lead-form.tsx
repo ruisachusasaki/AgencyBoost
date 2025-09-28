@@ -69,7 +69,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
       phone: lead?.phone || "",
       company: lead?.company || "",
       source: lead?.source || "",
-      status: lead?.status || "new",
+      status: lead?.status || "Open",
       value: lead?.value || "",
       probability: lead?.probability || 0,
       notes: lead?.notes || "",
@@ -349,6 +349,30 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                               </div>
                             </SelectItem>
                           ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || "Open"}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-lead-status">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Open">Open</SelectItem>
+                          <SelectItem value="Lost">Lost</SelectItem>
+                          <SelectItem value="Won">Won</SelectItem>
+                          <SelectItem value="Abandon">Abandon</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
