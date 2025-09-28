@@ -359,6 +359,47 @@ export default function Reports() {
   const healthScores = healthScoresData?.items || [];
   const healthPagination = healthScoresData?.pagination;
 
+  // Team Workload data fetching
+  const { data: teamWorkloadData, isLoading: teamWorkloadLoading } = useQuery<{
+    data: {
+      staffWorkload: Array<{
+        staffId: string;
+        staffName: string;
+        staffRole: string;
+        department: string;
+        clientCount: number;
+        clients: Array<{
+          clientId: string;
+          clientName: string;
+          positions: Array<{
+            positionId: string;
+            positionLabel: string;
+            assignedAt: Date;
+          }>;
+        }>;
+      }>;
+      summary: {
+        totalStaff: number;
+        staffWithAssignments: number;
+        staffWithoutAssignments: number;
+        totalAssignments: number;
+        uniqueClientsWithAssignments: number;
+        averageClientsPerStaff: number;
+        maxClientsPerStaff: number;
+        workloadDistribution: {
+          '0_clients': number;
+          '1_client': number;
+          '2-3_clients': number;
+          '4-5_clients': number;
+          '6_plus_clients': number;
+        };
+      };
+    };
+  }>({
+    queryKey: ["/api/reports/team-workload"],
+    enabled: activeTab === "team", // Only fetch when team tab is active
+  });
+
   const isLoading = clientsLoading || campaignsLoading || leadsLoading || tasksLoading || invoicesLoading;
 
   // Calculate date filter
@@ -1183,7 +1224,8 @@ export default function Reports() {
           {[
             { id: "overview", name: "Business Overview", icon: BarChart3, count: null },
             { id: "health", name: "Client Health", icon: Heart, count: null },
-            { id: "tasks", name: "Tasks", icon: Clock, count: null }
+            { id: "tasks", name: "Tasks", icon: Clock, count: null },
+            { id: "team", name: "Team Workload", icon: Users, count: null }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -3524,6 +3566,221 @@ export default function Reports() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Team Workload Report */}
+      {activeTab === "team" && (
+        <div className="space-y-6">
+          {/* Team Workload Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Users className="h-8 w-8 text-primary" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Total Staff</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {teamWorkloadData?.data?.summary?.totalStaff || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Target className="h-8 w-8 text-green-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Staff with Assignments</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {teamWorkloadData?.data?.summary?.staffWithAssignments || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Activity className="h-8 w-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Total Assignments</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {teamWorkloadData?.data?.summary?.totalAssignments || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <BarChart3 className="h-8 w-8 text-orange-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Avg Clients per Staff</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {teamWorkloadData?.data?.summary?.averageClientsPerStaff?.toFixed(1) || "0.0"}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Workload Distribution Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChart className="h-5 w-5" />
+                  Workload Distribution
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {teamWorkloadLoading ? (
+                  <div className="flex items-center justify-center h-64">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPieChart>
+                        <Pie
+                          data={[
+                            { name: "No clients", value: teamWorkloadData?.data?.summary?.workloadDistribution?.['0_clients'] || 0, fill: "#ef4444" },
+                            { name: "1 client", value: teamWorkloadData?.data?.summary?.workloadDistribution?.['1_client'] || 0, fill: "#f97316" },
+                            { name: "2-3 clients", value: teamWorkloadData?.data?.summary?.workloadDistribution?.['2-3_clients'] || 0, fill: "#eab308" },
+                            { name: "4-5 clients", value: teamWorkloadData?.data?.summary?.workloadDistribution?.['4-5_clients'] || 0, fill: "#22c55e" },
+                            { name: "6+ clients", value: teamWorkloadData?.data?.summary?.workloadDistribution?.['6_plus_clients'] || 0, fill: "#3b82f6" },
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          dataKey="value"
+                          label={(entry) => `${entry.name}: ${entry.value}`}
+                        >
+                          <Tooltip />
+                        </Pie>
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Top Performers by Client Count */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Top Staff by Client Count
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {teamWorkloadLoading ? (
+                  <div className="flex items-center justify-center h-64">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {(teamWorkloadData?.data?.staffWorkload || [])
+                      .filter(staff => staff.clientCount > 0)
+                      .slice(0, 5)
+                      .map((staff, index) => (
+                        <div key={staff.staffId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                              index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : index === 2 ? 'bg-orange-600' : 'bg-blue-500'
+                            }`}>
+                              {index + 1}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{staff.staffName}</p>
+                              <p className="text-sm text-gray-500">{staff.staffRole} • {staff.department}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-gray-900">{staff.clientCount}</p>
+                            <p className="text-sm text-gray-500">clients</p>
+                          </div>
+                        </div>
+                      ))}
+                    {(teamWorkloadData?.data?.staffWorkload || []).filter(staff => staff.clientCount > 0).length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>No staff assignments found</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Detailed Staff Workload Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileSpreadsheet className="h-5 w-5" />
+                Detailed Staff Workload
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {teamWorkloadLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Staff Member</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead className="text-center">Client Count</TableHead>
+                        <TableHead>Assigned Clients</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(teamWorkloadData?.data?.staffWorkload || []).map((staff) => (
+                        <TableRow key={staff.staffId}>
+                          <TableCell className="font-medium">{staff.staffName}</TableCell>
+                          <TableCell>{staff.staffRole}</TableCell>
+                          <TableCell>{staff.department}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant={staff.clientCount === 0 ? "secondary" : staff.clientCount > 3 ? "destructive" : "default"}>
+                              {staff.clientCount}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {staff.clients.length > 0 ? (
+                              <div className="space-y-1">
+                                {staff.clients.map((client, index) => (
+                                  <div key={client.clientId} className="text-sm">
+                                    <span className="font-medium">{client.clientName}</span>
+                                    <span className="text-gray-500 ml-2">
+                                      ({client.positions.map(p => p.positionLabel).join(", ")})
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 italic">No assignments</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
