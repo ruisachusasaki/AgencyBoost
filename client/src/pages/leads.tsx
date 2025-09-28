@@ -168,8 +168,18 @@ export default function Leads() {
       }
 
       // Status filter
-      if (filterStatus && lead.status !== filterStatus) {
-        return false;
+      if (filterStatus) {
+        if (filterStatus === "Open") {
+          // "Open" is an umbrella status for any lead that's not Won, Lost, or Abandon
+          if (["Won", "Lost", "Abandon"].includes(lead.status)) {
+            return false;
+          }
+        } else {
+          // Exact match for specific statuses
+          if (lead.status !== filterStatus) {
+            return false;
+          }
+        }
       }
 
       return true;
@@ -423,25 +433,21 @@ export default function Leads() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "new":
-        return "bg-yellow-100 text-yellow-800 border-l-yellow-500";
-      case "qualified":
-        return "bg-teal-100 text-teal-800 border-l-teal-500";
-      case "proposal":
-        return "bg-purple-100 text-purple-800 border-l-purple-500";
-      case "negotiation":
-        return "bg-green-100 text-green-800 border-l-green-500";
-      case "won":
+      case "Open":
+        return "bg-blue-100 text-blue-800 border-l-blue-500";
+      case "Won":
         return "bg-emerald-100 text-emerald-800 border-l-emerald-500";
-      case "lost":
+      case "Lost":
         return "bg-red-100 text-red-800 border-l-red-500";
+      case "Abandon":
+        return "bg-gray-100 text-gray-800 border-l-gray-500";
       default:
         return "bg-gray-100 text-gray-800 border-l-gray-500";
     }
   };
 
   const totalPipelineValue = leads
-    .filter(l => !["won", "lost"].includes(l.status))
+    .filter(l => !["Won", "Lost", "Abandon"].includes(l.status))
     .reduce((sum, lead) => sum + Number(lead.value || 0), 0);
 
   if (showStageManager) {
