@@ -3237,7 +3237,6 @@ export const insertQuoteSchema = createInsertSchema(quotes).omit({
 
 export const insertQuoteItemSchema = createInsertSchema(quoteItems).omit({
   id: true,
-  totalCost: true,
   createdAt: true,
 });
 

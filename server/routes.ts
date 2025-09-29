@@ -36,8 +36,9 @@ import {
   inputClientHealthScoreSchema, insertClientHealthScoreSchema,
   insertSmartListSchema, insertTaskTemplateSchema,
   insertClientBriefSectionSchema, insertClientBriefValueSchema,
+  insertQuoteSchema, insertQuoteItemSchema,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
-  roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
+  roles, permissions, userRoles, staffRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
@@ -48,8 +49,9 @@ import {
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
-  clientPortalUsers
+  clientPortalUsers, quotes, quoteItems
 } from "@shared/schema";
+import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
@@ -20719,6 +20721,314 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting client portal user:", error);
       res.status(500).json({ message: "Failed to deactivate client portal user" });
+    }
+  });
+
+  // ============================================
+  // QUOTES API ROUTES
+  // ============================================
+
+  // GET /api/quotes - Fetch all quotes
+  app.get("/api/quotes", requireAuth(), async (req, res) => {
+    try {
+      const quotesWithDetails = await db
+        .select({
+          id: quotes.id,
+          name: quotes.name,
+          clientBudget: quotes.clientBudget,
+          desiredMargin: quotes.desiredMargin,
+          totalCost: quotes.totalCost,
+          status: quotes.status,
+          notes: quotes.notes,
+          createdBy: quotes.createdBy,
+          approvedBy: quotes.approvedBy,
+          approvedAt: quotes.approvedAt,
+          createdAt: quotes.createdAt,
+          updatedAt: quotes.updatedAt,
+          clientId: quotes.clientId,
+          leadId: quotes.leadId,
+          // Join client data
+          clientName: clients.name,
+          clientCompany: clients.company,
+          // Join lead data  
+          leadName: leads.name,
+          leadCompany: leads.company,
+          // Join staff data
+          createdByName: staff.firstName,
+          createdByLastName: staff.lastName,
+        })
+        .from(quotes)
+        .leftJoin(clients, eq(quotes.clientId, clients.id))
+        .leftJoin(leads, eq(quotes.leadId, leads.id))
+        .leftJoin(staff, eq(quotes.createdBy, staff.id))
+        .orderBy(desc(quotes.createdAt));
+
+      res.json(quotesWithDetails);
+    } catch (error) {
+      console.error("Error fetching quotes:", error);
+      res.status(500).json({ message: "Failed to fetch quotes" });
+    }
+  });
+
+  // POST /api/quotes - Create new quote with items
+  app.post("/api/quotes", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req);
+      
+      // Validate the quote data (ignore client-provided status)
+      const validatedData = insertQuoteSchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+
+      // Server-side enforcement of minimum margin rule
+      const desiredMargin = parseFloat(validatedData.desiredMargin);
+      const effectiveStatus = desiredMargin < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? "pending_approval" : "draft";
+      
+      // Calculate total cost from quote items if provided
+      let calculatedTotalCost = '0';
+      if (req.body.items && Array.isArray(req.body.items)) {
+        calculatedTotalCost = req.body.items.reduce((sum: number, item: any) => {
+          return sum + parseFloat(item.totalCost || '0');
+        }, 0).toString();
+      }
+
+      // Override status and totalCost based on server calculations
+      const finalQuoteData = {
+        ...validatedData,
+        status: effectiveStatus,
+        totalCost: calculatedTotalCost,
+      };
+
+      // Create the quote
+      const [newQuote] = await db
+        .insert(quotes)
+        .values(finalQuoteData)
+        .returning();
+
+      // Create quote items if provided
+      if (req.body.items && Array.isArray(req.body.items)) {
+        const quoteItemsData = req.body.items.map((item: any) => ({
+          ...item,
+          quoteId: newQuote.id,
+        }));
+        
+        // Validate each item
+        const validatedItems = quoteItemsData.map(item => 
+          insertQuoteItemSchema.parse(item)
+        );
+        
+        if (validatedItems.length > 0) {
+          await db.insert(quoteItems).values(validatedItems);
+        }
+      }
+
+      // Log the creation
+      await createAuditLog(
+        "created",
+        "quote",
+        newQuote.id,
+        newQuote.name || "New Quote",
+        userId,
+        `Created quote with status: ${newQuote.status}`,
+        null,
+        validatedData,
+        req
+      );
+
+      // Create notifications for Sales Managers if approval required
+      if (newQuote.status === "pending_approval") {
+        // Get all Sales Managers
+        const salesManagers = await db
+          .select({
+            id: staff.id,
+            firstName: staff.firstName,
+            lastName: staff.lastName,
+          })
+          .from(staff)
+          .innerJoin(staffRoles, eq(staff.id, staffRoles.staffId))
+          .innerJoin(roles, eq(staffRoles.roleId, roles.id))
+          .where(eq(roles.name, ROLE_NAMES.SALES_MANAGER));
+
+        // Create notifications for each Sales Manager
+        const notificationPromises = salesManagers.map(manager => 
+          db.insert(notifications).values({
+            userId: manager.id,
+            type: "quote_approval_required",
+            title: "Quote Approval Required",
+            message: `Quote "${newQuote.name}" with ${desiredMargin}% margin requires your approval.`,
+            metadata: JSON.stringify({ 
+              quoteId: newQuote.id, 
+              desiredMargin: desiredMargin,
+              clientBudget: newQuote.clientBudget 
+            }),
+            isRead: false,
+          })
+        );
+
+        await Promise.all(notificationPromises);
+      }
+
+      res.status(201).json(newQuote);
+    } catch (error) {
+      console.error("=== DETAILED QUOTE ERROR ===");
+      console.error("Error creating quote:", error);
+      console.error("Request body:", JSON.stringify(req.body, null, 2));
+      if (error instanceof Error) {
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+      }
+      console.error("=== END QUOTE ERROR ===");
+      res.status(500).json({ message: "Failed to create quote" });
+    }
+  });
+
+  // GET /api/quotes/:id - Get specific quote with items
+  app.get("/api/quotes/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Get quote details
+      const [quote] = await db
+        .select({
+          id: quotes.id,
+          name: quotes.name,
+          clientBudget: quotes.clientBudget,
+          desiredMargin: quotes.desiredMargin,
+          totalCost: quotes.totalCost,
+          status: quotes.status,
+          notes: quotes.notes,
+          createdBy: quotes.createdBy,
+          approvedBy: quotes.approvedBy,
+          approvedAt: quotes.approvedAt,
+          createdAt: quotes.createdAt,
+          updatedAt: quotes.updatedAt,
+          clientId: quotes.clientId,
+          leadId: quotes.leadId,
+          // Join client data
+          clientName: clients.name,
+          clientCompany: clients.company,
+          // Join lead data  
+          leadName: leads.name,
+          leadCompany: leads.company,
+        })
+        .from(quotes)
+        .leftJoin(clients, eq(quotes.clientId, clients.id))
+        .leftJoin(leads, eq(quotes.leadId, leads.id))
+        .where(eq(quotes.id, id))
+        .limit(1);
+
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+
+      // Get quote items
+      const items = await db
+        .select({
+          id: quoteItems.id,
+          productId: quoteItems.productId,
+          bundleId: quoteItems.bundleId,
+          itemType: quoteItems.itemType,
+          quantity: quoteItems.quantity,
+          unitCost: quoteItems.unitCost,
+          totalCost: quoteItems.totalCost,
+          notes: quoteItems.notes,
+          // Join product data
+          productName: products.name,
+          productDescription: products.description,
+          // Join bundle data
+          bundleName: productBundles.name,
+          bundleDescription: productBundles.description,
+        })
+        .from(quoteItems)
+        .leftJoin(products, eq(quoteItems.productId, products.id))
+        .leftJoin(productBundles, eq(quoteItems.bundleId, productBundles.id))
+        .where(eq(quoteItems.quoteId, id));
+
+      res.json({ ...quote, items });
+    } catch (error) {
+      console.error("Error fetching quote:", error);
+      res.status(500).json({ message: "Failed to fetch quote" });
+    }
+  });
+
+  // PUT /api/quotes/:id/approval - Approve or reject quote (Sales Manager only)
+  app.put("/api/quotes/:id/approval", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { action, rejectionReason } = req.body;
+      const userId = getAuthenticatedUserIdOrFail(req);
+
+      if (!["approve", "reject"].includes(action)) {
+        return res.status(400).json({ message: "Invalid action. Must be 'approve' or 'reject'" });
+      }
+
+      // Verify user has Sales Manager role
+      const userRole = await db
+        .select({
+          roleName: roles.name,
+        })
+        .from(staff)
+        .innerJoin(staffRoles, eq(staff.id, staffRoles.staffId))
+        .innerJoin(roles, eq(staffRoles.roleId, roles.id))
+        .where(and(eq(staff.id, userId), eq(roles.name, ROLE_NAMES.SALES_MANAGER)))
+        .limit(1);
+
+      if (userRole.length === 0) {
+        return res.status(403).json({ message: "Only Sales Managers can approve or reject quotes" });
+      }
+
+      // Check if quote exists and is pending approval
+      const [quote] = await db
+        .select()
+        .from(quotes)
+        .where(eq(quotes.id, id))
+        .limit(1);
+
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+
+      if (quote.status !== "pending_approval") {
+        return res.status(400).json({ message: "Quote is not pending approval" });
+      }
+
+      // Update quote status
+      const [updatedQuote] = await db
+        .update(quotes)
+        .set({
+          status: action === "approve" ? "approved" : "rejected",
+          approvedBy: userId,
+          approvedAt: new Date(),
+          notes: action === "reject" && rejectionReason 
+            ? (quote.notes ? `${quote.notes}\n\nRejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}`)
+            : quote.notes,
+          updatedAt: new Date(),
+        })
+        .where(eq(quotes.id, id))
+        .returning();
+
+      // Log the approval/rejection
+      await createAuditLog(
+        "updated",
+        "quote",
+        id,
+        quote.name || "Quote",
+        userId,
+        `${action === "approve" ? "Approved" : "Rejected"} quote${rejectionReason ? ` with reason: ${rejectionReason}` : ""}`,
+        { status: quote.status },
+        { status: updatedQuote.status },
+        req
+      );
+
+      res.json({
+        message: `Quote ${action === "approve" ? "approved" : "rejected"} successfully`,
+        quote: updatedQuote
+      });
+    } catch (error) {
+      console.error("Error processing quote approval:", error);
+      res.status(500).json({ message: "Failed to process quote approval" });
     }
   });
 

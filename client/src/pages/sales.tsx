@@ -7,7 +7,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { SALES_CONFIG } from "@shared/constants";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -40,6 +43,8 @@ import {
 export default function Sales() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Sales Calculator state
   const [calculatorData, setCalculatorData] = useState({
@@ -104,6 +109,12 @@ export default function Sales() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch quotes for the quotes tab
+  const { data: quotesData = [] } = useQuery({
+    queryKey: ["/api/quotes"],
+    refetchOnWindowFocus: false,
+  });
+
   // Quote Builder helper functions
   const calculateQuoteTotals = () => {
     const budget = parseFloat(quoteData.budget) || 0;
@@ -146,7 +157,7 @@ export default function Sales() {
       profit,
       actualMargin,
       targetRevenue,
-      isMarginValid: actualMargin >= 35,
+      isMarginValid: actualMargin >= SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD,
       isMarginAchievable: budget >= targetRevenue
     };
   };
@@ -176,6 +187,83 @@ export default function Sales() {
     });
     setSelectedProducts([]);
     setProductSearch("");
+  };
+
+  // Save quote mutation
+  const saveQuoteMutation = useMutation({
+    mutationFn: async (quotePayload: any) => {
+      return await apiRequest("POST", "/api/quotes", quotePayload);
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      setIsQuoteBuilderOpen(false);
+      resetQuoteBuilder();
+      
+      const isLowMargin = parseFloat(quoteData.margin) < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD;
+      if (isLowMargin) {
+        toast({
+          title: "Quote Requires Approval",
+          description: `Quote submitted with ${quoteData.margin}% desired margin. Sales Manager approval required before proceeding.`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Quote saved successfully",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save quote",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle save quote with approval logic
+  const handleSaveQuote = () => {
+    const totals = calculateQuoteTotals();
+    const desiredMargin = parseFloat(quoteData.margin) || 0;
+    const isLowMargin = desiredMargin < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD;
+    
+    const quotePayload = {
+      name: quoteData.name,
+      clientId: quoteData.clientId || null,
+      leadId: quoteData.leadId || null,
+      clientBudget: quoteData.budget, // Keep as string for decimal schema
+      desiredMargin: quoteData.margin, // Keep as string for decimal schema
+      totalCost: totals.totalCost.toString(),
+      status: isLowMargin ? "pending_approval" : "draft",
+      notes: quoteData.description || null,
+      items: selectedProducts.map(item => {
+        let unitCost = 0;
+        if (item.type === 'product') {
+          unitCost = parseFloat(products.find(p => p.id === item.productId)?.cost || '0');
+        } else if (item.type === 'bundle') {
+          // Calculate bundle cost by summing product costs
+          const bundle = bundles.find(b => b.id === item.productId);
+          if (bundle && bundle.products) {
+            unitCost = bundle.products.reduce((sum: number, bundleProduct: any) => {
+              const cost = bundleProduct.productCost || bundleProduct.cost || 0;
+              return sum + (parseFloat(cost) || 0);
+            }, 0);
+          }
+        }
+        return {
+          productId: item.type === 'product' ? item.productId : null,
+          bundleId: item.type === 'bundle' ? item.productId : null,
+          itemType: item.type,
+          quantity: 1,
+          unitCost: unitCost.toString(), // Convert to string for decimal schema
+          totalCost: unitCost.toString(), // Convert to string for decimal schema
+        };
+      }),
+    };
+
+    // Always save the quote, regardless of margin status
+    saveQuoteMutation.mutate(quotePayload);
   };
 
   const filteredProducts = products.filter((product: any) =>
@@ -716,17 +804,17 @@ export default function Sales() {
                             <Input
                               id="quote-margin"
                               type="number"
-                              placeholder="35.00"
+                              placeholder={`${SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD}.00`}
                               value={quoteData.margin}
                               onChange={(e) => setQuoteData(prev => ({ ...prev, margin: e.target.value }))}
-                              className={`pl-10 ${parseFloat(quoteData.margin) < 35 ? 'border-red-300 focus:border-red-500' : ''}`}
+                              className={`pl-10 ${parseFloat(quoteData.margin) < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? 'border-red-300 focus:border-red-500' : ''}`}
                               data-testid="input-quote-margin"
                             />
                           </div>
-                          {parseFloat(quoteData.margin) < 35 && quoteData.margin && (
+                          {parseFloat(quoteData.margin) < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD && quoteData.margin && (
                             <div className="flex items-center gap-2 text-sm text-red-600">
                               <AlertTriangle className="h-4 w-4" />
-                              <span>Margin below 35% requires Sales Manager approval</span>
+                              <span>Margin below {SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD}% requires Sales Manager approval</span>
                             </div>
                           )}
                         </div>
@@ -851,7 +939,7 @@ export default function Sales() {
                                   </div>
                                   <div>
                                     <span className="text-muted-foreground">Actual Margin:</span>
-                                    <p className={`font-medium ${totals.actualMargin < 35 ? 'text-red-600' : 'text-green-600'}`} data-testid="quote-summary-margin">
+                                    <p className={`font-medium ${totals.actualMargin < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? 'text-red-600' : 'text-green-600'}`} data-testid="quote-summary-margin">
                                       {totals.actualMargin.toFixed(1)}%
                                     </p>
                                   </div>
@@ -876,7 +964,7 @@ export default function Sales() {
                                       <div className="mt-2 flex items-center gap-2 text-sm text-red-600">
                                         <AlertTriangle className="h-4 w-4" />
                                         <span>
-                                          Current margin ({totals.actualMargin.toFixed(1)}%) is below 35% minimum
+                                          Current margin ({totals.actualMargin.toFixed(1)}%) is below {SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD}% minimum
                                         </span>
                                       </div>
                                     )}
@@ -907,16 +995,11 @@ export default function Sales() {
                         </Button>
                         <Button 
                           type="button" 
-                          onClick={() => {
-                            // TODO: Implement save quote functionality
-                            console.log('Saving quote:', quoteData, selectedProducts);
-                            setIsQuoteBuilderOpen(false);
-                            resetQuoteBuilder();
-                          }}
-                          disabled={!quoteData.name || (!quoteData.clientId && !quoteData.leadId) || !quoteData.budget}
+                          onClick={handleSaveQuote}
+                          disabled={!quoteData.name || (!quoteData.clientId && !quoteData.leadId) || !quoteData.budget || saveQuoteMutation.isPending}
                           data-testid="button-save-quote"
                         >
-                          Save Quote
+                          {saveQuoteMutation.isPending ? "Saving..." : "Save Quote"}
                         </Button>
                       </div>
                     </div>
@@ -940,51 +1023,23 @@ export default function Sales() {
                   </div>
                 </div>
 
-                {/* Quotes List - Mock Data for now */}
+                {/* Quotes List */}
                 <div className="space-y-4">
                   {(() => {
-                    const mockQuotes = [
-                      {
-                        id: "1",
-                        name: "Website Redesign Quote",
-                        clientName: "TechCorp Inc.",
-                        budget: 25000,
-                        margin: 42,
-                        totalCost: 14500,
-                        status: "draft",
-                        createdAt: "2024-01-15",
-                      },
-                      {
-                        id: "2", 
-                        name: "Marketing Campaign Package",
-                        clientName: "StartupXYZ",
-                        budget: 15000,
-                        margin: 28,
-                        totalCost: 10800,
-                        status: "pending_approval",
-                        createdAt: "2024-01-10",
-                      },
-                      {
-                        id: "3",
-                        name: "Brand Identity Package",
-                        clientName: "RetailCorp",
-                        budget: 8000,
-                        margin: 45,
-                        totalCost: 4400,
-                        status: "approved",
-                        createdAt: "2024-01-08",
-                      }
-                    ];
-
-                    const filteredQuotes = mockQuotes.filter(quote => 
+                    const filteredQuotes = quotesData.filter((quote: any) => 
                       quote.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      quote.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+                      (quote.clientName || quote.leadName || '').toLowerCase().includes(searchTerm.toLowerCase())
                     );
 
-                    // Store filtered quotes for reuse in empty state
-                    window.currentFilteredQuotes = filteredQuotes;
+                    if (filteredQuotes.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-muted-foreground">
+                          {searchTerm ? 'No quotes found matching your search.' : 'No quotes found. Create your first quote to get started.'}
+                        </div>
+                      );
+                    }
 
-                    return filteredQuotes.map((quote) => (
+                    return filteredQuotes.map((quote: any) => (
                     <div key={quote.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
@@ -1031,27 +1086,33 @@ export default function Sales() {
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
-                          <span className="text-muted-foreground">Client:</span>
-                          <p className="font-medium" data-testid={`text-quote-client-${quote.id}`}>{quote.clientName}</p>
+                          <span className="text-muted-foreground">Client/Lead:</span>
+                          <p className="font-medium" data-testid={`text-quote-client-${quote.id}`}>
+                            {quote.clientName || quote.leadName || 'Unknown'}
+                          </p>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Budget:</span>
-                          <p className="font-medium" data-testid={`text-quote-budget-${quote.id}`}>${quote.budget.toLocaleString()}</p>
+                          <p className="font-medium" data-testid={`text-quote-budget-${quote.id}`}>
+                            ${parseFloat(quote.clientBudget || 0).toLocaleString()}
+                          </p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Margin:</span>
-                          <p className={`font-medium ${quote.margin < 35 ? 'text-red-600' : 'text-green-600'}`} data-testid={`text-quote-margin-${quote.id}`}>
-                            {quote.margin}%
+                          <span className="text-muted-foreground">Desired Margin:</span>
+                          <p className={`font-medium ${parseFloat(quote.desiredMargin) < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? 'text-red-600' : 'text-green-600'}`} data-testid={`text-quote-margin-${quote.id}`}>
+                            {parseFloat(quote.desiredMargin || 0)}%
                           </p>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Total Cost:</span>
-                          <p className="font-medium" data-testid={`text-quote-total-cost-${quote.id}`}>${quote.totalCost.toLocaleString()}</p>
+                          <p className="font-medium" data-testid={`text-quote-total-cost-${quote.id}`}>
+                            ${parseFloat(quote.totalCost || 0).toLocaleString()}
+                          </p>
                         </div>
                       </div>
 
                       <div className="mt-3 text-xs text-muted-foreground" data-testid={`text-quote-created-${quote.id}`}>
-                        Created: {new Date(quote.createdAt).toLocaleDateString()}
+                        Created: {new Date(quote.createdAt).toLocaleDateString()} by {quote.createdByName} {quote.createdByLastName}
                       </div>
                     </div>
                   ));
