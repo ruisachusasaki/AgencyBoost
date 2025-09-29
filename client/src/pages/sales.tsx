@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { 
   DollarSign, 
@@ -19,7 +18,9 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Banknote
+  Banknote,
+  PieChart,
+  BarChart3
 } from "lucide-react";
 
 export default function Sales() {
@@ -191,15 +192,36 @@ export default function Sales() {
         </Card>
       </div>
 
-      {/* Main Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="overview">Pipeline Overview</TabsTrigger>
-          <TabsTrigger value="deals">Active Deals</TabsTrigger>
-          <TabsTrigger value="reports">Sales Reports</TabsTrigger>
-        </TabsList>
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6 mt-6">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: "overview", name: "Pipeline Overview", icon: PieChart },
+            { id: "deals", name: "Active Deals", icon: Target },
+            { id: "reports", name: "Sales Reports", icon: BarChart3 }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.name}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
-        <TabsContent value="overview" className="space-y-6">
+      {/* Pipeline Overview Tab */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Sales Pipeline</CardTitle>
@@ -210,9 +232,12 @@ export default function Sales() {
               </p>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="deals" className="space-y-6">
+      {/* Active Deals Tab */}
+      {activeTab === "deals" && (
+        <div className="space-y-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Active Deals</CardTitle>
@@ -264,9 +289,12 @@ export default function Sales() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="reports" className="space-y-6">
+      {/* Sales Reports Tab */}
+      {activeTab === "reports" && (
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Sales Reports</CardTitle>
@@ -277,8 +305,8 @@ export default function Sales() {
               </p>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 }
