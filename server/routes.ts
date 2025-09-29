@@ -3740,12 +3740,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dependencies = await db
           .select({
             dependencyType: taskDependencies.dependencyType,
-            dependsOnTask: {
-              id: tasks.id,
-              title: tasks.title,
-              status: tasks.status,
-              completedAt: tasks.completedAt,
-            }
+            taskId: tasks.id,
+            taskTitle: tasks.title,
+            taskStatus: tasks.status,
+            taskCompletedAt: tasks.completedAt,
           })
           .from(taskDependencies)
           .innerJoin(tasks, eq(taskDependencies.dependsOnTaskId, tasks.id))
@@ -3755,27 +3753,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const unsatisfiedDependencies = [];
         
         for (const dep of dependencies) {
-          const { dependencyType, dependsOnTask } = dep;
+          const { dependencyType, taskTitle, taskStatus, taskCompletedAt } = dep;
           let isSatisfied = false;
 
           switch (dependencyType) {
             case 'finish_to_start':
             case 'finish_to_finish':
               // Dependency task must be completed
-              isSatisfied = dependsOnTask.status === 'completed' || dependsOnTask.completedAt !== null;
+              isSatisfied = taskStatus === 'completed' || taskCompletedAt !== null;
               break;
             case 'start_to_start':
             case 'start_to_finish':
               // Dependency task must be started (not in todo status)
-              isSatisfied = dependsOnTask.status !== 'todo';
+              isSatisfied = taskStatus !== 'todo';
               break;
           }
 
           if (!isSatisfied) {
             unsatisfiedDependencies.push({
-              taskTitle: dependsOnTask.title,
+              taskTitle,
               dependencyType,
-              currentStatus: dependsOnTask.status
+              currentStatus: taskStatus
             });
           }
         }
