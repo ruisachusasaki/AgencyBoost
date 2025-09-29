@@ -161,17 +161,20 @@ export default function RolesPermissions() {
     e.preventDefault();
     if (editingRole) {
       const { id, userCount, createdAt, updatedAt, ...roleData } = editingRole;
+      
+      const permissionsPayload = localRole.permissions.map(p => ({
+        module: p.module,
+        canView: p.canView ?? false,
+        canCreate: p.canCreate ?? false,
+        canEdit: p.canEdit ?? false,
+        canDelete: p.canDelete ?? false,
+        canManage: p.canManage ?? false,
+      }));
+      
       updateRoleMutation.mutate({ 
         id, 
         ...roleData, 
-        permissions: editingRole.permissions.map(p => ({
-          module: p.module,
-          canView: p.canView ?? false,
-          canCreate: p.canCreate ?? false,
-          canEdit: p.canEdit ?? false,
-          canDelete: p.canDelete ?? false,
-          canManage: p.canManage ?? false,
-        }))
+        permissions: permissionsPayload
       });
     }
   };
