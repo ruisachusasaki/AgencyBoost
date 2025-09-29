@@ -231,6 +231,38 @@ export const clientBundles = pgTable("client_bundles", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Sales Quotes
+export const quotes = pgTable("quotes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id),
+  leadId: varchar("lead_id").references(() => leads.id),
+  name: text("name").notNull(), // Quote name/title
+  clientBudget: decimal("client_budget", { precision: 10, scale: 2 }).notNull(),
+  desiredMargin: decimal("desired_margin", { precision: 5, scale: 2 }).notNull(), // percentage
+  totalCost: decimal("total_cost", { precision: 10, scale: 2 }).default('0'),
+  status: text("status").notNull().default("draft"), // draft, pending_approval, approved, sent, accepted, rejected
+  notes: text("notes"),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  approvedBy: uuid("approved_by").references(() => staff.id),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Quote Items (Products/Bundles in a quote)
+export const quoteItems = pgTable("quote_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  quoteId: varchar("quote_id").notNull().references(() => quotes.id),
+  productId: varchar("product_id").references(() => products.id),
+  bundleId: varchar("bundle_id").references(() => productBundles.id),
+  itemType: text("item_type").notNull(), // 'product' or 'bundle'
+  quantity: integer("quantity").notNull().default(1),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).notNull(),
+  totalCost: decimal("total_cost", { precision: 10, scale: 2 }).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Notes
 export const notes = pgTable("notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3193,6 +3225,22 @@ export const insertTrainingLessonResourceSchema = createInsertSchema(trainingLes
   updatedAt: true,
 });
 
+// Quotes insert schemas
+export const insertQuoteSchema = createInsertSchema(quotes).omit({
+  id: true,
+  totalCost: true,
+  approvedBy: true,
+  approvedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertQuoteItemSchema = createInsertSchema(quoteItems).omit({
+  id: true,
+  totalCost: true,
+  createdAt: true,
+});
+
 // Training Types
 export type TrainingCategory = typeof trainingCategories.$inferSelect;
 export type InsertTrainingCategory = z.infer<typeof insertTrainingCategorySchema>;
@@ -3235,6 +3283,13 @@ export type InsertTrainingDiscussionLike = z.infer<typeof insertTrainingDiscussi
 
 export type TrainingLessonResource = typeof trainingLessonResources.$inferSelect;
 export type InsertTrainingLessonResource = z.infer<typeof insertTrainingLessonResourceSchema>;
+
+// Quotes Types
+export type Quote = typeof quotes.$inferSelect;
+export type InsertQuote = z.infer<typeof insertQuoteSchema>;
+
+export type QuoteItem = typeof quoteItems.$inferSelect;
+export type InsertQuoteItem = z.infer<typeof insertQuoteItemSchema>;
 
 // Smart Lists schema exports - remove duplicate and use existing one
 
