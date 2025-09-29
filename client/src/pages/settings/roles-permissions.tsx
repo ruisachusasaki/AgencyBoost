@@ -72,8 +72,8 @@ export default function RolesPermissions() {
 
   // Available modules for permissions
   const modules = [
-    "clients", "projects", "campaigns", "sales", "tasks", "invoices", 
-    "leads", "workflows", "social_media", "reports", "settings", "staff", "roles"
+    "clients", "projects", "sales", "tasks", "invoices", 
+    "leads", "workflows", "reports", "settings", "staff", "roles"
   ];
 
   // Fetch roles - only if user is admin
@@ -239,7 +239,25 @@ export default function RolesPermissions() {
         const initialPermissions = initializePermissions();
         setLocalRole(prev => ({ ...prev, permissions: initialPermissions }));
       } else {
-        setLocalRole(role);
+        // Filter existing permissions to only show current modules
+        const filteredPermissions = role.permissions.filter(perm => 
+          modules.includes(perm.module)
+        );
+        
+        // Add any missing modules with default permissions
+        const existingModules = filteredPermissions.map(p => p.module);
+        const missingModules = modules.filter(module => !existingModules.includes(module));
+        const missingPermissions = missingModules.map(module => ({
+          module,
+          canView: false,
+          canCreate: false,
+          canEdit: false,
+          canDelete: false,
+          canManage: false,
+        }));
+        
+        const allPermissions = [...filteredPermissions, ...missingPermissions];
+        setLocalRole(prev => ({ ...prev, ...role, permissions: allPermissions }));
       }
     }, [role]);
 
@@ -486,9 +504,13 @@ export default function RolesPermissions() {
                     open={editingRole?.id === role.id} 
                     onOpenChange={(open) => {
                       if (open) {
-                        // Initialize permissions for ALL modules, not just existing ones
+                        // Initialize permissions for current modules only, filtering out old modules
+                        const filteredPermissions = role.permissions.filter(perm => 
+                          modules.includes(perm.module)
+                        );
+                        
                         const fullPermissions = modules.map(module => {
-                          const existingPerm = role.permissions.find(p => p.module === module);
+                          const existingPerm = filteredPermissions.find(p => p.module === module);
                           return {
                             module,
                             canView: existingPerm?.canView ?? false,
@@ -565,7 +587,9 @@ export default function RolesPermissions() {
               <div>
                 <h4 className="text-sm font-medium mb-2">Permissions Summary</h4>
                 <div className="space-y-1">
-                  {role.permissions.map((perm) => {
+                  {role.permissions
+                    .filter(perm => modules.includes(perm.module))
+                    .map((perm) => {
                     const actions = [];
                     if (perm.canView) actions.push("View");
                     if (perm.canCreate) actions.push("Create");
