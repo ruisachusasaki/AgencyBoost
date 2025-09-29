@@ -23,7 +23,7 @@ import {
   UserCheck,
   BookOpen,
   GraduationCap,
-  PiggyBank
+  Coins
 } from "lucide-react";
 
 interface SidebarProps {
@@ -37,7 +37,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Clients", href: "/clients", icon: Users },
   { name: "Marketing", href: "/marketing", icon: Megaphone },
-  { name: "Sales", href: "/sales", icon: PiggyBank },
+  { name: "Sales", href: "/sales", icon: Coins },
   { name: "Leads", href: "/leads", icon: UserPlus },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Calendars", href: "/calendar", icon: Calendar },
