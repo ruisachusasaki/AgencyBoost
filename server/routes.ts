@@ -3723,7 +3723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Task not found" });
       }
 
-      const validatedData = insertTaskSchema.partial().parse(req.body);
+      const validatedData = insertTaskSchemaValidated.partial().parse(req.body);
       
       // Check task dependencies before allowing completion
       if (validatedData.status === 'completed' && currentTask.status !== 'completed') {
