@@ -23,7 +23,11 @@ import {
   BarChart3,
   Calculator,
   Percent,
-  Minus
+  Minus,
+  Quote,
+  Edit,
+  Trash2,
+  Eye
 } from "lucide-react";
 
 export default function Sales() {
@@ -55,6 +59,26 @@ export default function Sales() {
   };
 
   const results = calculateCommission();
+
+  // Helper function for quote status badge styling
+  const getQuoteStatusBadge = (status: string) => {
+    switch (status) {
+      case "draft":
+        return "bg-gray-100 text-gray-800";
+      case "pending_approval":
+        return "bg-yellow-100 text-yellow-800";
+      case "approved":
+        return "bg-green-100 text-green-800";
+      case "sent":
+        return "bg-blue-100 text-blue-800";
+      case "accepted":
+        return "bg-emerald-100 text-emerald-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   // Fetch data for sales dashboard
   const { data: salesData, isLoading } = useQuery({
@@ -228,7 +252,8 @@ export default function Sales() {
             { id: "overview", name: "Pipeline Overview", icon: PieChart },
             { id: "deals", name: "Active Deals", icon: Target },
             { id: "reports", name: "Sales Reports", icon: BarChart3 },
-            { id: "calculator", name: "Sales Calculator", icon: Calculator }
+            { id: "calculator", name: "Sales Calculator", icon: Calculator },
+            { id: "quotes", name: "Quotes", icon: Quote }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -457,6 +482,169 @@ export default function Sales() {
                       </CardContent>
                     </Card>
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Quotes Tab */}
+      {activeTab === "quotes" && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Quote className="h-5 w-5" />
+                  Quote Management
+                </CardTitle>
+                <Button className="bg-primary hover:bg-primary/90" data-testid="button-create-quote">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create New Quote
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Search and Filter Bar */}
+                <div className="flex items-center gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      placeholder="Search quotes..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                      data-testid="input-search-quotes"
+                    />
+                  </div>
+                </div>
+
+                {/* Quotes List - Mock Data for now */}
+                <div className="space-y-4">
+                  {(() => {
+                    const mockQuotes = [
+                      {
+                        id: "1",
+                        name: "Website Redesign Quote",
+                        clientName: "TechCorp Inc.",
+                        budget: 25000,
+                        margin: 42,
+                        totalCost: 14500,
+                        status: "draft",
+                        createdAt: "2024-01-15",
+                      },
+                      {
+                        id: "2", 
+                        name: "Marketing Campaign Package",
+                        clientName: "StartupXYZ",
+                        budget: 15000,
+                        margin: 28,
+                        totalCost: 10800,
+                        status: "pending_approval",
+                        createdAt: "2024-01-10",
+                      },
+                      {
+                        id: "3",
+                        name: "Brand Identity Package",
+                        clientName: "RetailCorp",
+                        budget: 8000,
+                        margin: 45,
+                        totalCost: 4400,
+                        status: "approved",
+                        createdAt: "2024-01-08",
+                      }
+                    ];
+
+                    const filteredQuotes = mockQuotes.filter(quote => 
+                      quote.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      quote.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+                    );
+
+                    // Store filtered quotes for reuse in empty state
+                    window.currentFilteredQuotes = filteredQuotes;
+
+                    return filteredQuotes.map((quote) => (
+                    <div key={quote.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-semibold text-lg" data-testid={`text-quote-name-${quote.id}`}>
+                            {quote.name}
+                          </h3>
+                          <Badge 
+                            className={getQuoteStatusBadge(quote.status)}
+                            data-testid={`text-quote-status-${quote.id}`}
+                          >
+                            {quote.status.replace('_', ' ').toUpperCase()}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            data-testid={`button-view-quote-${quote.id}`}
+                            onClick={() => console.log('View quote:', quote.id)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            data-testid={`button-edit-quote-${quote.id}`}
+                            onClick={() => console.log('Edit quote:', quote.id)}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            data-testid={`button-delete-quote-${quote.id}`}
+                            onClick={() => console.log('Delete quote:', quote.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Client:</span>
+                          <p className="font-medium" data-testid={`text-quote-client-${quote.id}`}>{quote.clientName}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Budget:</span>
+                          <p className="font-medium" data-testid={`text-quote-budget-${quote.id}`}>${quote.budget.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Margin:</span>
+                          <p className={`font-medium ${quote.margin < 35 ? 'text-red-600' : 'text-green-600'}`} data-testid={`text-quote-margin-${quote.id}`}>
+                            {quote.margin}%
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Total Cost:</span>
+                          <p className="font-medium" data-testid={`text-quote-total-cost-${quote.id}`}>${quote.totalCost.toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 text-xs text-muted-foreground" data-testid={`text-quote-created-${quote.id}`}>
+                        Created: {new Date(quote.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ));
+                  })()}
+                  
+                  {/* Empty State - only show when no quotes match filter */}
+                  {window.currentFilteredQuotes && window.currentFilteredQuotes.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Quote className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No quotes found. Create your first quote to get started.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
