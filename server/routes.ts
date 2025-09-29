@@ -3825,20 +3825,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const getStaffName = async (staffId: string | null) => {
           if (!staffId) return 'Unassigned';
           const [staffMember] = await db.select({
-            id: staff.id,
             firstName: staff.firstName,
             lastName: staff.lastName,
-            email: staff.email,
-            phone: staff.phone,
-            roleId: staff.roleId,
-            profileImagePath: staff.profileImagePath,
-            hireDate: staff.hireDate,
-            department: staff.department,
-            position: staff.position,
-            managerId: staff.managerId,
-            status: staff.status,
-            createdAt: staff.createdAt,
-            updatedAt: staff.updatedAt
           }).from(staff).where(eq(staff.id, staffId));
           return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : 'Unknown User';
         };
