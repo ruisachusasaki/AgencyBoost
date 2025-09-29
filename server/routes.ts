@@ -3723,7 +3723,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Task not found" });
       }
 
-      const validatedData = insertTaskSchemaValidated.partial().parse(req.body);
+      const partialData = insertTaskSchema.partial().parse(req.body);
+      
+      // For updates, only validate if client approval fields are being modified
+      if (partialData.requiresClientApproval !== undefined || partialData.visibleToClient !== undefined || partialData.clientId !== undefined) {
+        // Create complete data for validation by merging current task with updates
+        const completeData = { ...currentTask, ...partialData };
+        insertTaskSchemaValidated.parse(completeData);
+      }
+      
+      const validatedData = partialData;
       
       // Check task dependencies before allowing completion
       if (validatedData.status === 'completed' && currentTask.status !== 'completed') {
