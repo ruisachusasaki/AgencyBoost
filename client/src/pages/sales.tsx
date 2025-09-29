@@ -19,7 +19,7 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  PiggyBank
+  Banknote
 } from "lucide-react";
 
 export default function Sales() {
@@ -107,7 +107,7 @@ export default function Sales() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <PiggyBank className="h-8 w-8 text-primary" />
+          <Banknote className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Sales</h1>
             <p className="text-muted-foreground">Loading sales data...</p>
@@ -122,7 +122,7 @@ export default function Sales() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <PiggyBank className="h-8 w-8 text-primary" />
+          <Banknote className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Sales</h1>
             <p className="text-muted-foreground">
