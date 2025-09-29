@@ -72,7 +72,7 @@ export default function RolesPermissions() {
 
   // Available modules for permissions
   const modules = [
-    "clients", "projects", "campaigns", "tasks", "invoices", 
+    "clients", "projects", "campaigns", "sales", "tasks", "invoices", 
     "leads", "workflows", "social_media", "reports", "settings", "staff", "roles"
   ];
 
