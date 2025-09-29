@@ -55,7 +55,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
   const isMobile = useIsMobile();
 
   // Fetch current user data for permission checking
-  const { data: currentUser } = useQuery({
+  const { data: currentUser, isLoading: loadingPermissions } = useQuery({
     queryKey: ['/api/auth/current-user'],
     retry: false,
     queryFn: async () => {
@@ -71,9 +71,19 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
 
   // Helper function to check if user has permission to view a module
   const hasPermission = (module: string) => {
-    if (!currentUser?.permissions) {
-      // If no permissions data, allow access (default behavior)
+    // If permissions are still loading, deny access to prevent flash of unauthorized content
+    if (loadingPermissions) {
+      return false;
+    }
+    
+    // Only admins get automatic access
+    if (currentUser?.role === 'Admin' || currentUser?.role === 'admin') {
       return true;
+    }
+    
+    if (!currentUser?.permissions) {
+      // DENY by default if no permissions data - only admins get fallback access
+      return false;
     }
     
     // Check if user has view permission for the module

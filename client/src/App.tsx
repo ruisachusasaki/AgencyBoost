@@ -13,6 +13,7 @@ import EnhancedClientDetail from "@/pages/enhanced-client-detail";
 
 import Campaigns from "@/pages/campaigns";
 import Sales from "@/pages/sales";
+import RequirePermission from "@/components/RequirePermission";
 import Leads from "@/pages/leads";
 import Tasks from "@/pages/tasks";
 import TaskDetail from "@/pages/task-detail";
@@ -135,9 +136,11 @@ function Router() {
       <Route path="/sales">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Sales />
-            </MainLayout>
+            <RequirePermission module="sales" permission="canView">
+              <MainLayout>
+                <Sales />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
