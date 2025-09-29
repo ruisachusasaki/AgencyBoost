@@ -3713,7 +3713,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
+      console.log("Task update: Starting task update for ID:", req.params.id);
+      
       // Get the current task data first
+      console.log("Task update: About to fetch current task");
       const currentTaskResult = await db.select()
         .from(tasks)
         .where(eq(tasks.id, req.params.id));
@@ -3736,18 +3739,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check task dependencies before allowing completion
       if (validatedData.status === 'completed' && currentTask.status !== 'completed') {
+          console.log("Task update: About to check dependencies");
         // Get all dependencies for this task
-        const dependencies = await db
-          .select({
-            dependencyType: taskDependencies.dependencyType,
-            taskId: tasks.id,
-            taskTitle: tasks.title,
-            taskStatus: tasks.status,
-            taskCompletedAt: tasks.completedAt,
-          })
-          .from(taskDependencies)
-          .innerJoin(tasks, eq(taskDependencies.dependsOnTaskId, tasks.id))
-          .where(eq(taskDependencies.taskId, req.params.id));
+        let dependencies;
+        try {
+          dependencies = await db
+            .select({
+              dependencyType: taskDependencies.dependencyType,
+              taskId: tasks.id,
+              taskTitle: tasks.title,
+              taskStatus: tasks.status,
+              taskCompletedAt: tasks.completedAt,
+            })
+            .from(taskDependencies)
+            .innerJoin(tasks, eq(taskDependencies.dependsOnTaskId, tasks.id))
+            .where(eq(taskDependencies.taskId, req.params.id));
+          console.log("Task update: Dependencies checked successfully");
+        } catch (depError) {
+          console.error("Task update: Error in dependency check:", depError);
+          throw depError;
+        }
 
         // Check if all dependencies are satisfied
         const unsatisfiedDependencies = [];
@@ -3800,14 +3811,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Clean the data by removing undefined values
+      console.log("Task update: About to clean data and update task");
       const cleanData = Object.fromEntries(
         Object.entries(validatedData).filter(([_, value]) => value !== undefined)
       );
+      console.log("Task update: Data cleaned, performing update");
       
       const [updatedTask] = await db.update(tasks)
         .set(cleanData)
         .where(eq(tasks.id, req.params.id))
         .returning();
+      console.log("Task update: Task updated successfully");
 
       // Log activities for changed fields
       const currentUser = 'current-user'; // Replace with actual user from session
@@ -3820,19 +3834,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check for assignee changes
       if (validatedData.assignedTo !== undefined && validatedData.assignedTo !== currentTask.assignedTo) {
+        console.log("Task update: About to check assignee changes");
+        
         const getStaffName = async (staffId: string | null) => {
           if (!staffId) return 'Unassigned';
-          const [staffMember] = await db.select({
-            firstName: staff.firstName,
-            lastName: staff.lastName,
-          }).from(staff).where(eq(staff.id, staffId));
-          return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : 'Unknown User';
+          console.log("Task update: About to query staff for ID:", staffId);
+          try {
+            const [staffMember] = await db.select({
+              firstName: staff.firstName,
+              lastName: staff.lastName,
+            }).from(staff).where(eq(staff.id, staffId));
+            console.log("Task update: Staff query successful for ID:", staffId);
+            return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : 'Unknown User';
+          } catch (staffError) {
+            console.error("Task update: Error in staff query for ID:", staffId, staffError);
+            throw staffError;
+          }
         };
 
+        console.log("Task update: Getting old assignee name");
         const oldAssigneeName = await getStaffName(currentTask.assignedTo);
+        console.log("Task update: Getting new assignee name");
         const newAssigneeName = await getStaffName(validatedData.assignedTo);
+        console.log("Task update: About to log assignee change activity");
         
         await logTaskActivity(req.params.id, 'assignee_change', 'assignedTo', oldAssigneeName, newAssigneeName, currentUser, currentUserName);
+        console.log("Task update: Assignee change logged successfully");
       }
 
       // Check for date changes
