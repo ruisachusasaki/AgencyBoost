@@ -43,6 +43,7 @@ import AuditLogs from "@/pages/settings/audit-logs";
 import PermissionAudit from "@/pages/settings/permission-audit";
 import TasksSettings from "@/pages/settings/tasks";
 import AutomationTriggers from "@/pages/settings/automation-triggers";
+import SalesSettings from "@/pages/settings/sales";
 import MainLayout from "@/components/layout/main-layout";
 import FormBuilder from "@/pages/form-builder";
 import FormsTest from "@/pages/forms-test";
@@ -462,6 +463,16 @@ function Router() {
           <AuthGate>
             <MainLayout>
               <ClientsSettings />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/sales">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <SalesSettings />
             </MainLayout>
           </AuthGate>
         )}
