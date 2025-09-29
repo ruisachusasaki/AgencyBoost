@@ -38,7 +38,7 @@ import {
   insertClientBriefSectionSchema, insertClientBriefValueSchema,
   insertQuoteSchema, insertQuoteItemSchema,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
-  roles, permissions, userRoles, staffRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
+  roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
@@ -20846,8 +20846,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastName: staff.lastName,
           })
           .from(staff)
-          .innerJoin(staffRoles, eq(staff.id, staffRoles.staffId))
-          .innerJoin(roles, eq(staffRoles.roleId, roles.id))
+          .innerJoin(roles, eq(staff.roleId, roles.id))
           .where(eq(roles.name, ROLE_NAMES.SALES_MANAGER));
 
         // Create notifications for each Sales Manager
@@ -20970,8 +20969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           roleName: roles.name,
         })
         .from(staff)
-        .innerJoin(staffRoles, eq(staff.id, staffRoles.staffId))
-        .innerJoin(roles, eq(staffRoles.roleId, roles.id))
+        .innerJoin(roles, eq(staff.roleId, roles.id))
         .where(and(eq(staff.id, userId), eq(roles.name, ROLE_NAMES.SALES_MANAGER)))
         .limit(1);
 
