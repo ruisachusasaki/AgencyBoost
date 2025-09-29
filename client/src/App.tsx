@@ -12,6 +12,7 @@ import Clients from "@/pages/clients";
 import EnhancedClientDetail from "@/pages/enhanced-client-detail";
 
 import Campaigns from "@/pages/campaigns";
+import Sales from "@/pages/sales";
 import Leads from "@/pages/leads";
 import Tasks from "@/pages/tasks";
 import TaskDetail from "@/pages/task-detail";
@@ -126,6 +127,16 @@ function Router() {
           <AuthGate>
             <MainLayout>
               <Campaigns />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+
+      <Route path="/sales">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <Sales />
             </MainLayout>
           </AuthGate>
         )}
