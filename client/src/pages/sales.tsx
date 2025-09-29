@@ -3,6 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
 import { 
   DollarSign, 
@@ -27,7 +31,10 @@ import {
   Quote,
   Edit,
   Trash2,
-  Eye
+  Eye,
+  Package,
+  X,
+  AlertTriangle
 } from "lucide-react";
 
 export default function Sales() {
@@ -41,6 +48,19 @@ export default function Sales() {
     bonusAmount: "",
     deductions: "",
   });
+
+  // Quote Builder state
+  const [isQuoteBuilderOpen, setIsQuoteBuilderOpen] = useState(false);
+  const [quoteData, setQuoteData] = useState({
+    name: "",
+    clientId: "",
+    leadId: "", 
+    budget: "",
+    margin: "",
+    description: "",
+  });
+  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: string, type: 'product' | 'bundle'}>>([]);
+  const [productSearch, setProductSearch] = useState("");
 
   const calculateCommission = () => {
     const deal = parseFloat(calculatorData.dealValue) || 0;
@@ -59,6 +79,114 @@ export default function Sales() {
   };
 
   const results = calculateCommission();
+
+  // Fetch data for Quote Builder
+  const { data: clientsData } = useQuery<{ clients: any[] }>({
+    queryKey: ["/api/clients"],
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: leads = [] } = useQuery({
+    queryKey: ["/api/leads"],
+    refetchOnWindowFocus: false,
+  });
+
+  // Extract clients array from the response object
+  const clients = clientsData?.clients || [];
+
+  const { data: products = [] } = useQuery({
+    queryKey: ["/api/products"],
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: bundles = [] } = useQuery({
+    queryKey: ["/api/product-bundles"],
+    refetchOnWindowFocus: false,
+  });
+
+  // Quote Builder helper functions
+  const calculateQuoteTotals = () => {
+    const budget = parseFloat(quoteData.budget) || 0;
+    const desiredMargin = parseFloat(quoteData.margin) || 0;
+    
+    // Calculate total cost of selected products/bundles
+    let totalCost = 0;
+    selectedProducts.forEach(item => {
+      if (item.type === 'product') {
+        const product = products.find(p => p.id === item.productId);
+        if (product && product.cost) {
+          totalCost += parseFloat(product.cost);
+        }
+      } else if (item.type === 'bundle') {
+        const bundle = bundles.find(b => b.id === item.productId);
+        if (bundle && bundle.products) {
+          bundle.products.forEach((bundleProduct: any) => {
+            const cost = bundleProduct.productCost || bundleProduct.cost || 0;
+            totalCost += parseFloat(cost) || 0;
+          });
+        }
+      }
+    });
+
+    // Correct calculation logic:
+    // revenue = budget (what client pays)
+    // profit = revenue - totalCost
+    // actualMargin = (profit / revenue) * 100
+    const revenue = budget;
+    const profit = revenue - totalCost;
+    const actualMargin = revenue > 0 ? ((profit / revenue) * 100) : 0;
+    
+    // Target revenue based on desired margin
+    const targetRevenue = totalCost > 0 ? (totalCost / (1 - desiredMargin / 100)) : budget;
+
+    return {
+      budget: revenue,
+      desiredMargin,
+      totalCost,
+      profit,
+      actualMargin,
+      targetRevenue,
+      isMarginValid: actualMargin >= 35,
+      isMarginAchievable: budget >= targetRevenue
+    };
+  };
+
+  const addProductToQuote = (type: 'product' | 'bundle') => {
+    setSelectedProducts([...selectedProducts, { productId: "", type }]);
+  };
+
+  const removeProductFromQuote = (index: number) => {
+    setSelectedProducts(selectedProducts.filter((_, i) => i !== index));
+  };
+
+  const updateQuoteProduct = (index: number, productId: string) => {
+    const updated = [...selectedProducts];
+    updated[index] = { ...updated[index], productId };
+    setSelectedProducts(updated);
+  };
+
+  const resetQuoteBuilder = () => {
+    setQuoteData({
+      name: "",
+      clientId: "",
+      leadId: "",
+      budget: "",
+      margin: "",
+      description: "",
+    });
+    setSelectedProducts([]);
+    setProductSearch("");
+  };
+
+  const filteredProducts = products.filter((product: any) =>
+    product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+    (product.description && product.description.toLowerCase().includes(productSearch.toLowerCase()))
+  );
+
+  const filteredBundles = bundles.filter((bundle: any) =>
+    bundle.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+    (bundle.description && bundle.description.toLowerCase().includes(productSearch.toLowerCase()))
+  );
 
   // Helper function for quote status badge styling
   const getQuoteStatusBadge = (status: string) => {
@@ -499,10 +627,301 @@ export default function Sales() {
                   <Quote className="h-5 w-5" />
                   Quote Management
                 </CardTitle>
-                <Button className="bg-primary hover:bg-primary/90" data-testid="button-create-quote">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create New Quote
-                </Button>
+                <Dialog open={isQuoteBuilderOpen} onOpenChange={(open) => {
+                  setIsQuoteBuilderOpen(open);
+                  if (!open) resetQuoteBuilder();
+                }}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-primary hover:bg-primary/90" data-testid="button-create-quote">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create New Quote
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Create New Quote</DialogTitle>
+                      <DialogDescription>
+                        Build a customized quote with client budget, desired margin, and product packages
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-6">
+                      {/* Quote Basic Information */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="quote-name">Quote Name</Label>
+                          <Input
+                            id="quote-name"
+                            placeholder="Enter quote name..."
+                            value={quoteData.name}
+                            onChange={(e) => setQuoteData(prev => ({ ...prev, name: e.target.value }))}
+                            data-testid="input-quote-name"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="quote-client">Client/Lead</Label>
+                          <Select value={quoteData.clientId ? `client:${quoteData.clientId}` : quoteData.leadId ? `lead:${quoteData.leadId}` : ""} onValueChange={(value) => {
+                            if (value.startsWith('client:')) {
+                              const clientId = value.replace('client:', '');
+                              setQuoteData(prev => ({ ...prev, clientId, leadId: "" }));
+                            } else if (value.startsWith('lead:')) {
+                              const leadId = value.replace('lead:', '');
+                              setQuoteData(prev => ({ ...prev, leadId, clientId: "" }));
+                            }
+                          }}>
+                            <SelectTrigger data-testid="select-quote-client">
+                              <SelectValue placeholder="Select client or lead" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="clients-header" disabled>--- CLIENTS ---</SelectItem>
+                              {clients.map((client: any) => (
+                                <SelectItem key={client.id} value={`client:${client.id}`}>
+                                  {client.name} - {client.company || 'No Company'}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="leads-header" disabled>--- LEADS ---</SelectItem>
+                              {leads.map((lead: any) => (
+                                <SelectItem key={lead.id} value={`lead:${lead.id}`}>
+                                  {lead.name} - {lead.company || 'No Company'}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Budget and Margin */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="quote-budget">Client Budget ($)</Label>
+                          <div className="relative">
+                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                            <Input
+                              id="quote-budget"
+                              type="number"
+                              placeholder="0.00"
+                              value={quoteData.budget}
+                              onChange={(e) => setQuoteData(prev => ({ ...prev, budget: e.target.value }))}
+                              className="pl-10"
+                              data-testid="input-quote-budget"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="quote-margin">Desired Margin (%)</Label>
+                          <div className="relative">
+                            <Percent className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                            <Input
+                              id="quote-margin"
+                              type="number"
+                              placeholder="35.00"
+                              value={quoteData.margin}
+                              onChange={(e) => setQuoteData(prev => ({ ...prev, margin: e.target.value }))}
+                              className={`pl-10 ${parseFloat(quoteData.margin) < 35 ? 'border-red-300 focus:border-red-500' : ''}`}
+                              data-testid="input-quote-margin"
+                            />
+                          </div>
+                          {parseFloat(quoteData.margin) < 35 && quoteData.margin && (
+                            <div className="flex items-center gap-2 text-sm text-red-600">
+                              <AlertTriangle className="h-4 w-4" />
+                              <span>Margin below 35% requires Sales Manager approval</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div className="space-y-2">
+                        <Label htmlFor="quote-description">Description (Optional)</Label>
+                        <Textarea
+                          id="quote-description"
+                          placeholder="Add any additional notes or description for this quote..."
+                          value={quoteData.description}
+                          onChange={(e) => setQuoteData(prev => ({ ...prev, description: e.target.value }))}
+                          data-testid="input-quote-description"
+                        />
+                      </div>
+
+                      {/* Product/Bundle Selection */}
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <Label>Products & Bundles</Label>
+                          <div className="flex gap-2">
+                            <Button type="button" variant="outline" size="sm" onClick={() => addProductToQuote('product')} data-testid="button-add-product">
+                              <Package className="w-4 h-4 mr-2" />
+                              Add Product
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => addProductToQuote('bundle')} data-testid="button-add-bundle">
+                              <Package className="w-4 h-4 mr-2" />
+                              Add Bundle
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {/* Product Search */}
+                        {selectedProducts.length > 0 && (
+                          <div className="space-y-2">
+                            <Label htmlFor="product-search">Search Products & Bundles</Label>
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                              <Input
+                                id="product-search"
+                                placeholder="Search products and bundles..."
+                                value={productSearch}
+                                onChange={(e) => setProductSearch(e.target.value)}
+                                className="pl-10"
+                                data-testid="input-product-search"
+                              />
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Selected Products/Bundles */}
+                        <div className="space-y-3">
+                          {selectedProducts.map((item, index) => (
+                            <div key={index} className="flex gap-2 items-end p-3 border rounded-lg" data-testid={`product-item-${index}`}>
+                              <div className="flex-1">
+                                <Label>{item.type === 'product' ? 'Product' : 'Bundle'}</Label>
+                                <Select
+                                  value={item.productId}
+                                  onValueChange={(value) => updateQuoteProduct(index, value)}
+                                >
+                                  <SelectTrigger data-testid={`select-${item.type}-${index}`}>
+                                    <SelectValue placeholder={`Select ${item.type}`} />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {item.type === 'product' ? (
+                                      filteredProducts.map((product: any) => (
+                                        <SelectItem key={product.id} value={product.id}>
+                                          {product.name} - ${product.cost || '0.00'} cost
+                                        </SelectItem>
+                                      ))
+                                    ) : (
+                                      filteredBundles.map((bundle: any) => (
+                                        <SelectItem key={bundle.id} value={bundle.id}>
+                                          {bundle.name} - Bundle
+                                        </SelectItem>
+                                      ))
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeProductFromQuote(index)}
+                                data-testid={`button-remove-${item.type}-${index}`}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Quote Calculations */}
+                      {(quoteData.budget || selectedProducts.length > 0) && (
+                        <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                          <h3 className="font-semibold">Quote Summary</h3>
+                          {(() => {
+                            const totals = calculateQuoteTotals();
+                            return (
+                              <>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground">Client Budget:</span>
+                                    <p className="font-medium" data-testid="quote-summary-budget">
+                                      ${totals.budget.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Total Cost:</span>
+                                    <p className="font-medium" data-testid="quote-summary-cost">
+                                      ${totals.totalCost.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Profit:</span>
+                                    <p className={`font-medium ${totals.profit < 0 ? 'text-red-600' : 'text-green-600'}`} data-testid="quote-summary-profit">
+                                      ${totals.profit.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Actual Margin:</span>
+                                    <p className={`font-medium ${totals.actualMargin < 35 ? 'text-red-600' : 'text-green-600'}`} data-testid="quote-summary-margin">
+                                      {totals.actualMargin.toFixed(1)}%
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                {/* Margin Analysis */}
+                                {selectedProducts.length > 0 && totals.totalCost > 0 && (
+                                  <div className="mt-4 p-3 border rounded-lg">
+                                    <h4 className="text-sm font-medium mb-2">Margin Analysis</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                                      <div>
+                                        <span className="text-muted-foreground">Desired Margin:</span>
+                                        <span className="ml-2 font-medium">{totals.desiredMargin}%</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground">Needed Revenue:</span>
+                                        <span className="ml-2 font-medium">${totals.targetRevenue.toLocaleString()}</span>
+                                      </div>
+                                    </div>
+                                    
+                                    {!totals.isMarginValid && (
+                                      <div className="mt-2 flex items-center gap-2 text-sm text-red-600">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <span>
+                                          Current margin ({totals.actualMargin.toFixed(1)}%) is below 35% minimum
+                                        </span>
+                                      </div>
+                                    )}
+                                    
+                                    {!totals.isMarginAchievable && totals.desiredMargin > 0 && (
+                                      <div className="mt-2 flex items-center gap-2 text-sm text-orange-600">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <span>
+                                          Budget too low for {totals.desiredMargin}% margin. Need ${totals.targetRevenue.toLocaleString()} revenue.
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex justify-end gap-2">
+                        <Button type="button" variant="outline" onClick={() => {
+                          setIsQuoteBuilderOpen(false);
+                          resetQuoteBuilder();
+                        }}>
+                          Cancel
+                        </Button>
+                        <Button 
+                          type="button" 
+                          onClick={() => {
+                            // TODO: Implement save quote functionality
+                            console.log('Saving quote:', quoteData, selectedProducts);
+                            setIsQuoteBuilderOpen(false);
+                            resetQuoteBuilder();
+                          }}
+                          disabled={!quoteData.name || (!quoteData.clientId && !quoteData.leadId) || !quoteData.budget}
+                          data-testid="button-save-quote"
+                        >
+                          Save Quote
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent>
