@@ -152,17 +152,17 @@ export default function RolesPermissions() {
     },
   });
 
-  const handleAddRole = (e: React.FormEvent) => {
+  const handleAddRole = (e: React.FormEvent, roleData: { name: string; description: string; permissions: PermissionFormData[] }) => {
     e.preventDefault();
-    createRoleMutation.mutate(newRole);
+    createRoleMutation.mutate(roleData);
   };
 
-  const handleUpdateRole = (e: React.FormEvent) => {
+  const handleUpdateRole = (e: React.FormEvent, roleData: { name: string; description: string; permissions: PermissionFormData[] }) => {
     e.preventDefault();
     if (editingRole) {
-      const { id, userCount, createdAt, updatedAt, ...roleData } = editingRole;
+      const { id, userCount, createdAt, updatedAt, ...existingRoleData } = editingRole;
       
-      const permissionsPayload = localRole.permissions.map(p => ({
+      const permissionsPayload = roleData.permissions.map(p => ({
         module: p.module,
         canView: p.canView ?? false,
         canCreate: p.canCreate ?? false,
@@ -173,7 +173,8 @@ export default function RolesPermissions() {
       
       updateRoleMutation.mutate({ 
         id, 
-        ...roleData, 
+        name: roleData.name,
+        description: roleData.description,
         permissions: permissionsPayload
       });
     }
@@ -231,7 +232,7 @@ export default function RolesPermissions() {
   }: { 
     role: { name: string; description: string; permissions: PermissionFormData[] },
     isEdit?: boolean,
-    onSubmit: (e: React.FormEvent) => void,
+    onSubmit: (e: React.FormEvent, roleData: { name: string; description: string; permissions: PermissionFormData[] }) => void,
     onCancel: () => void 
   }) => {
     const [localRole, setLocalRole] = useState(role);
@@ -266,7 +267,7 @@ export default function RolesPermissions() {
 
 
     return (
-      <form onSubmit={onSubmit} className="space-y-6">
+      <form onSubmit={(e) => onSubmit(e, localRole)} className="space-y-6">
         <div className="space-y-4">
           <div>
             <Label htmlFor="name">Role Name</Label>
