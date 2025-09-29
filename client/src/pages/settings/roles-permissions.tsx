@@ -486,16 +486,22 @@ export default function RolesPermissions() {
                     open={editingRole?.id === role.id} 
                     onOpenChange={(open) => {
                       if (open) {
+                        // Initialize permissions for ALL modules, not just existing ones
+                        const fullPermissions = modules.map(module => {
+                          const existingPerm = role.permissions.find(p => p.module === module);
+                          return {
+                            module,
+                            canView: existingPerm?.canView ?? false,
+                            canCreate: existingPerm?.canCreate ?? false,
+                            canEdit: existingPerm?.canEdit ?? false,
+                            canDelete: existingPerm?.canDelete ?? false,
+                            canManage: existingPerm?.canManage ?? false,
+                          };
+                        });
+                        
                         setEditingRole({
                           ...role,
-                          permissions: role.permissions.map(p => ({
-                            module: p.module,
-                            canView: p.canView ?? false,
-                            canCreate: p.canCreate ?? false,
-                            canEdit: p.canEdit ?? false,
-                            canDelete: p.canDelete ?? false,
-                            canManage: p.canManage ?? false,
-                          }))
+                          permissions: fullPermissions
                         });
                       } else {
                         setEditingRole(null);
