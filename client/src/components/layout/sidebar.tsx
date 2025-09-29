@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useQuery } from "@tanstack/react-query";
 import {
   Home,
   Users,
@@ -52,6 +53,67 @@ const navigation = [
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: SidebarProps) {
   const [location] = useLocation();
   const isMobile = useIsMobile();
+
+  // Fetch current user data for permission checking
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/current-user'],
+    retry: false,
+    queryFn: async () => {
+      const response = await fetch('/api/auth/current-user', {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch current user');
+      }
+      return response.json();
+    },
+  });
+
+  // Helper function to check if user has permission to view a module
+  const hasPermission = (module: string) => {
+    if (!currentUser?.permissions) {
+      // If no permissions data, allow access (default behavior)
+      return true;
+    }
+    
+    // Check if user has view permission for the module
+    const permission = currentUser.permissions.find((p: any) => p.module === module);
+    return permission?.canView === true;
+  };
+
+  // Filter navigation based on permissions
+  const visibleNavigation = navigation.filter(item => {
+    // Map navigation items to permission modules
+    const moduleMap: Record<string, string> = {
+      "/clients": "clients",
+      "/marketing": "campaigns",
+      "/sales": "sales",
+      "/leads": "leads",
+      "/tasks": "tasks",
+      "/calendar": "calendar",
+      "/workflows": "workflows",
+      "/hr": "hr",
+      "/training": "training",
+      "/resources": "resources",
+      "/invoices": "invoices",
+      "/reports": "reports",
+    };
+    
+    const module = moduleMap[item.href];
+    
+    // Always show Dashboard and Settings
+    if (item.href === "/" || item.href === "/settings") {
+      return true;
+    }
+    
+    // If no module mapping, show by default
+    if (!module) {
+      return true;
+    }
+    
+    // Check permission
+    return hasPermission(module);
+  });
 
   const NavItem = ({ item, showTooltip = false }: { item: typeof navigation[0], showTooltip?: boolean }) => {
     const Icon = item.icon;
@@ -124,7 +186,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
         
         <nav className={cn("px-4 pb-4", isCollapsed && "px-2")}>
           <ul className="space-y-2">
-            {navigation.map((item) => (
+            {visibleNavigation.map((item) => (
               <li key={item.name}>
                 <NavItem item={item} showTooltip={isCollapsed} />
               </li>
@@ -158,7 +220,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           
           <nav className="p-4">
             <ul className="space-y-2">
-              {navigation.map((item) => {
+              {visibleNavigation.map((item) => {
                 const Icon = item.icon;
                 const isActive = location === item.href || (item.href === "/settings" && location?.startsWith("/settings/"));
                 
