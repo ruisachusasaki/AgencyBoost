@@ -64,7 +64,9 @@ export default function Sales() {
     margin: "",
     description: "",
   });
-  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: string, type: 'product' | 'bundle'}>>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: string, type: 'product' | 'bundle', quantity: number}>>([]);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
 
   const calculateCommission = () => {
@@ -120,21 +122,24 @@ export default function Sales() {
     const budget = parseFloat(quoteData.budget) || 0;
     const desiredMargin = parseFloat(quoteData.margin) || 0;
     
-    // Calculate total cost of selected products/bundles
+    // Calculate total cost of selected products/bundles with quantities
     let totalCost = 0;
     selectedProducts.forEach(item => {
+      const quantity = item.quantity || 1;
       if (item.type === 'product') {
         const product = products.find(p => p.id === item.productId);
         if (product && product.cost) {
-          totalCost += parseFloat(product.cost);
+          totalCost += parseFloat(product.cost) * quantity;
         }
       } else if (item.type === 'bundle') {
         const bundle = bundles.find(b => b.id === item.productId);
         if (bundle && bundle.products) {
+          let bundleCost = 0;
           bundle.products.forEach((bundleProduct: any) => {
             const cost = bundleProduct.productCost || bundleProduct.cost || 0;
-            totalCost += parseFloat(cost) || 0;
+            bundleCost += parseFloat(cost) || 0;
           });
+          totalCost += bundleCost * quantity;
         }
       }
     });
@@ -163,7 +168,7 @@ export default function Sales() {
   };
 
   const addProductToQuote = (type: 'product' | 'bundle') => {
-    setSelectedProducts([...selectedProducts, { productId: "", type }]);
+    setSelectedProducts([...selectedProducts, { productId: "", type, quantity: 1 }]);
   };
 
   const removeProductFromQuote = (index: number) => {
@@ -173,6 +178,12 @@ export default function Sales() {
   const updateQuoteProduct = (index: number, productId: string) => {
     const updated = [...selectedProducts];
     updated[index] = { ...updated[index], productId };
+    setSelectedProducts(updated);
+  };
+
+  const updateQuoteQuantity = (index: number, quantity: number) => {
+    const updated = [...selectedProducts];
+    updated[index] = { ...updated[index], quantity: Math.max(1, quantity) };
     setSelectedProducts(updated);
   };
 
@@ -187,12 +198,57 @@ export default function Sales() {
     });
     setSelectedProducts([]);
     setProductSearch("");
+    setIsEditMode(false);
+    setEditingQuoteId(null);
+  };
+
+  const loadQuoteForEdit = async (quoteId: string) => {
+    try {
+      const response = await fetch(`/api/quotes/${quoteId}`);
+      const quote = await response.json();
+      
+      setQuoteData({
+        name: quote.name,
+        clientId: quote.clientId || "",
+        leadId: quote.leadId || "",
+        budget: quote.clientBudget,
+        margin: quote.desiredMargin,
+        description: quote.notes || "",
+      });
+      
+      // Load quote items
+      const items = quote.items || [];
+      setSelectedProducts(items.map((item: any) => ({
+        productId: item.productId || item.bundleId,
+        type: item.itemType,
+        quantity: item.quantity || 1,
+      })));
+      
+      setIsEditMode(true);
+      setEditingQuoteId(quoteId);
+      setIsQuoteBuilderOpen(true);
+    } catch (error) {
+      console.error("Error loading quote:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load quote for editing",
+        variant: "destructive",
+      });
+    }
   };
 
   // Save quote mutation
   const saveQuoteMutation = useMutation({
     mutationFn: async (quotePayload: any) => {
-      return await apiRequest("POST", "/api/quotes", quotePayload);
+      // Guard against missing editingQuoteId in edit mode
+      if (isEditMode && !editingQuoteId) {
+        throw new Error("Cannot update quote: missing quote ID");
+      }
+      
+      const method = isEditMode ? "PUT" : "POST";
+      const url = isEditMode ? `/api/quotes/${editingQuoteId}` : "/api/quotes";
+      
+      return await apiRequest(method, url, quotePayload);
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
@@ -239,6 +295,8 @@ export default function Sales() {
       notes: quoteData.description || null,
       items: selectedProducts.map(item => {
         let unitCost = 0;
+        const quantity = item.quantity || 1;
+        
         if (item.type === 'product') {
           unitCost = parseFloat(products.find(p => p.id === item.productId)?.cost || '0');
         } else if (item.type === 'bundle') {
@@ -251,13 +309,16 @@ export default function Sales() {
             }, 0);
           }
         }
+        
+        const itemTotalCost = unitCost * quantity;
+        
         return {
           productId: item.type === 'product' ? item.productId : null,
           bundleId: item.type === 'bundle' ? item.productId : null,
           itemType: item.type,
-          quantity: 1,
+          quantity: quantity,
           unitCost: unitCost.toString(), // Convert to string for decimal schema
-          totalCost: unitCost.toString(), // Convert to string for decimal schema
+          totalCost: itemTotalCost.toString(), // Convert to string for decimal schema
         };
       }),
     };
@@ -896,6 +957,16 @@ export default function Sales() {
                                   </SelectContent>
                                 </Select>
                               </div>
+                              <div className="w-24">
+                                <Label>Quantity</Label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={item.quantity || 1}
+                                  onChange={(e) => updateQuoteQuantity(index, parseInt(e.target.value) || 1)}
+                                  data-testid={`input-quantity-${index}`}
+                                />
+                              </div>
                               <Button
                                 type="button"
                                 variant="outline"
@@ -999,7 +1070,7 @@ export default function Sales() {
                           disabled={!quoteData.name || (!quoteData.clientId && !quoteData.leadId) || !quoteData.budget || saveQuoteMutation.isPending}
                           data-testid="button-save-quote"
                         >
-                          {saveQuoteMutation.isPending ? "Saving..." : "Save Quote"}
+                          {saveQuoteMutation.isPending ? "Saving..." : (isEditMode ? "Update Quote" : "Save Quote")}
                         </Button>
                       </div>
                     </div>
@@ -1067,7 +1138,7 @@ export default function Sales() {
                             variant="outline" 
                             size="sm" 
                             data-testid={`button-edit-quote-${quote.id}`}
-                            onClick={() => console.log('Edit quote:', quote.id)}
+                            onClick={() => loadQuoteForEdit(quote.id)}
                           >
                             <Edit className="h-4 w-4 mr-1" />
                             Edit

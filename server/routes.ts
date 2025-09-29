@@ -20952,6 +20952,229 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PUT /api/quotes/:id - Update existing quote
+  app.put("/api/quotes/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getAuthenticatedUserIdOrFail(req);
+      
+      // Get existing quote to preserve createdBy and check authorization
+      const [existingQuote] = await db
+        .select()
+        .from(quotes)
+        .where(eq(quotes.id, id))
+        .limit(1);
+
+      if (!existingQuote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+
+      // Authorization: Check if user has permission to edit quotes OR owns the quote
+      const hasPermission = await checkPermission(req, "sales", "canEdit");
+      const isOwner = existingQuote.createdBy === userId;
+      
+      if (!hasPermission && !isOwner) {
+        return res.status(403).json({ 
+          message: "You do not have permission to edit this quote" 
+        });
+      }
+
+      // Validate the update payload
+      const validatedQuote = insertQuoteSchema.omit({ 
+        createdBy: true, 
+        createdAt: true 
+      }).parse({
+        name: req.body.name,
+        clientId: req.body.clientId || null,
+        leadId: req.body.leadId || null,
+        clientBudget: req.body.clientBudget,
+        desiredMargin: req.body.desiredMargin,
+        notes: req.body.notes || null,
+      });
+
+      // Validate desiredMargin and calculate status
+      const desiredMargin = parseFloat(validatedQuote.desiredMargin);
+      if (isNaN(desiredMargin) || desiredMargin < 0 || desiredMargin > 100) {
+        return res.status(400).json({ message: "Invalid desired margin. Must be between 0 and 100." });
+      }
+
+      // Server-side enforcement of minimum margin rule
+      const effectiveStatus = desiredMargin < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? "pending_approval" : "draft";
+      
+      // Validate items array structure
+      const rawItems = req.body.items || [];
+      if (!Array.isArray(rawItems)) {
+        return res.status(400).json({ message: "Items must be an array" });
+      }
+
+      // Use transaction for atomic update with proper validation
+      const result = await db.transaction(async (tx) => {
+        // Validate and calculate costs inside transaction
+        let calculatedTotalCost = 0;
+        const processedItems: any[] = [];
+
+        for (const item of rawItems) {
+          // Validate item structure
+          if (!item.itemType || !['product', 'bundle'].includes(item.itemType)) {
+            throw new Error("Invalid item type. Must be 'product' or 'bundle'");
+          }
+
+          if (item.itemType === 'product' && !item.productId) {
+            throw new Error("Product ID is required for product items");
+          }
+          
+          if (item.itemType === 'bundle' && !item.bundleId) {
+            throw new Error("Bundle ID is required for bundle items");
+          }
+
+          const quantity = Math.max(1, parseInt(item.quantity || '1'));
+          let unitCost = 0;
+
+          if (item.itemType === 'product' && item.productId) {
+            const [product] = await tx
+              .select({ cost: products.cost })
+              .from(products)
+              .where(eq(products.id, item.productId))
+              .limit(1);
+            
+            if (!product) {
+              throw new Error(`Product with ID ${item.productId} not found`);
+            }
+            
+            unitCost = parseFloat(product.cost || '0');
+          } else if (item.itemType === 'bundle' && item.bundleId) {
+            // Try to get bundle cost, or calculate from constituent products
+            const [bundle] = await tx
+              .select({ 
+                bundleCost: productBundles.cost,
+                bundleId: productBundles.id 
+              })
+              .from(productBundles)
+              .where(eq(productBundles.id, item.bundleId))
+              .limit(1);
+            
+            if (!bundle) {
+              throw new Error(`Bundle with ID ${item.bundleId} not found`);
+            }
+            
+            let bundleCost = parseFloat(bundle.bundleCost || '0');
+            
+            // If bundle cost is zero or missing, calculate from constituent products
+            if (bundleCost === 0) {
+              const bundleProductsList = await tx
+                .select({
+                  productCost: products.cost,
+                  quantity: sql<number>`1`, // Bundle products have default quantity of 1
+                })
+                .from(bundleProducts)
+                .leftJoin(products, eq(bundleProducts.productId, products.id))
+                .where(eq(bundleProducts.bundleId, item.bundleId));
+              
+              bundleCost = bundleProductsList.reduce((sum, bp) => {
+                const cost = parseFloat(bp.productCost || '0');
+                const qty = bp.quantity || 1;
+                return sum + (cost * qty);
+              }, 0);
+            }
+            
+            unitCost = bundleCost;
+          }
+
+          const itemTotalCost = unitCost * quantity;
+          calculatedTotalCost += itemTotalCost;
+
+          processedItems.push({
+            quoteId: id,
+            productId: item.productId || null,
+            bundleId: item.bundleId || null,
+            itemType: item.itemType,
+            quantity,
+            unitCost: unitCost.toString(),
+            totalCost: itemTotalCost.toString(),
+            notes: item.notes || null,
+          });
+        }
+
+        // Prepare update data, preserving createdBy
+        const updateData = {
+          name: validatedQuote.name,
+          clientId: validatedQuote.clientId,
+          leadId: validatedQuote.leadId,
+          clientBudget: validatedQuote.clientBudget,
+          desiredMargin: desiredMargin.toString(),
+          totalCost: calculatedTotalCost.toString(),
+          status: effectiveStatus,
+          notes: validatedQuote.notes,
+          updatedAt: new Date(),
+          // Preserve createdBy from existing quote
+          createdBy: existingQuote.createdBy,
+        };
+
+        // Update the quote
+        await tx
+          .update(quotes)
+          .set(updateData)
+          .where(eq(quotes.id, id));
+
+        // Delete existing quote items
+        await tx.delete(quoteItems).where(eq(quoteItems.quoteId, id));
+
+        // Insert new quote items
+        if (processedItems.length > 0) {
+          await tx.insert(quoteItems).values(processedItems);
+        }
+
+        // Fetch updated quote
+        const [updatedQuote] = await tx
+          .select()
+          .from(quotes)
+          .where(eq(quotes.id, id))
+          .limit(1);
+
+        return { updatedQuote, updateData };
+      });
+
+      // Log the update (outside transaction for non-critical logging)
+      await createAuditLog(
+        "updated",
+        "quote",
+        id,
+        result.updateData.name || "Quote",
+        userId,
+        `Updated quote with status: ${result.updateData.status}`,
+        null,
+        result.updateData,
+        req
+      );
+
+      res.json(result.updatedQuote);
+    } catch (error) {
+      console.error("Error updating quote:", error);
+      
+      // Handle validation errors with 400
+      if (error instanceof Error) {
+        const errorMessage = error.message;
+        
+        // Check for validation errors
+        if (errorMessage.includes("not found") || 
+            errorMessage.includes("Invalid") || 
+            errorMessage.includes("required")) {
+          return res.status(400).json({ message: errorMessage });
+        }
+      }
+      
+      // Handle Zod validation errors
+      if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to update quote" });
+    }
+  });
+
   // PUT /api/quotes/:id/approval - Approve or reject quote (Sales Manager only)
   app.put("/api/quotes/:id/approval", requireAuth(), async (req, res) => {
     try {
