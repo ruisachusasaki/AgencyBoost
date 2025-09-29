@@ -3801,8 +3801,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Clean the data by removing undefined values
+      const cleanData = Object.fromEntries(
+        Object.entries(validatedData).filter(([_, value]) => value !== undefined)
+      );
+      
       const [updatedTask] = await db.update(tasks)
-        .set(validatedData)
+        .set(cleanData)
         .where(eq(tasks.id, req.params.id))
         .returning();
 
