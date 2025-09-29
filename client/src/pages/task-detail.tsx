@@ -251,6 +251,7 @@ export default function TaskDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/activities`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] }); // Invalidate tasks list
       toast({
         title: "Task updated",
         description: "Task has been updated successfully",
