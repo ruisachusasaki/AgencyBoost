@@ -17,7 +17,6 @@ import Tasks from "@/pages/tasks";
 import TaskDetail from "@/pages/task-detail";
 import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
-import SocialMedia from "@/pages/social-media";
 import Workflows from "@/pages/workflows";
 import WorkflowBuilder from "@/pages/workflow-builder";
 import Calendar from "@/pages/calendar";
@@ -182,15 +181,6 @@ function Router() {
         )}
       </Route>
       
-      <Route path="/social-media">
-        {() => (
-          <AuthGate>
-            <MainLayout>
-              <SocialMedia />
-            </MainLayout>
-          </AuthGate>
-        )}
-      </Route>
       
       <Route path="/workflows">
         {() => (

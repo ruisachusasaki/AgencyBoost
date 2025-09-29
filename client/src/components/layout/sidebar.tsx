@@ -17,7 +17,6 @@ import {
   ChevronLeft,
   ChevronRight,
   GitBranch,
-  Share2,
   Settings,
   Layout,
   UserCheck,
@@ -45,7 +44,6 @@ const navigation = [
   { name: "Resources", href: "/resources", icon: BookOpen },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
-  { name: "Social Media", href: "/social-media", icon: Share2 },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
