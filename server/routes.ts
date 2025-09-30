@@ -21174,7 +21174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const bundleProductsList = await tx
                 .select({
                   productCost: products.cost,
-                  quantity: sql<number>`1`, // Bundle products have default quantity of 1
+                  quantity: bundleProducts.quantity,
                 })
                 .from(bundleProducts)
                 .leftJoin(products, eq(bundleProducts.productId, products.id))
