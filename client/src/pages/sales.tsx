@@ -133,13 +133,8 @@ export default function Sales() {
         }
       } else if (item.type === 'bundle') {
         const bundle = bundles.find(b => b.id === item.productId);
-        if (bundle && bundle.products) {
-          let bundleCost = 0;
-          bundle.products.forEach((bundleProduct: any) => {
-            const cost = bundleProduct.productCost || bundleProduct.cost || 0;
-            bundleCost += parseFloat(cost) || 0;
-          });
-          totalCost += bundleCost * quantity;
+        if (bundle && bundle.cost) {
+          totalCost += parseFloat(bundle.cost) * quantity;
         }
       }
     });
@@ -893,6 +888,81 @@ export default function Sales() {
                         />
                       </div>
 
+                      {/* Quote Summary - Moved Above Search */}
+                      {(quoteData.budget || selectedProducts.length > 0) && (
+                        <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                          <h3 className="font-semibold">Quote Summary</h3>
+                          {(() => {
+                            const totals = calculateQuoteTotals();
+                            return (
+                              <>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground">Client Budget:</span>
+                                    <p className="font-medium" data-testid="quote-summary-budget">
+                                      ${totals.budget.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Total Cost:</span>
+                                    <p className="font-medium" data-testid="quote-summary-cost">
+                                      ${totals.totalCost.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Profit:</span>
+                                    <p className={`font-medium ${totals.profit < 0 ? 'text-red-600' : 'text-green-600'}`} data-testid="quote-summary-profit">
+                                      ${totals.profit.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Actual Margin:</span>
+                                    <p className={`font-medium ${totals.actualMargin < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? 'text-red-600' : 'text-green-600'}`} data-testid="quote-summary-margin">
+                                      {totals.actualMargin.toFixed(1)}%
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                {/* Margin Analysis */}
+                                {selectedProducts.length > 0 && totals.totalCost > 0 && (
+                                  <div className="mt-4 p-3 border rounded-lg">
+                                    <h4 className="text-sm font-medium mb-2">Margin Analysis</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                                      <div>
+                                        <span className="text-muted-foreground">Desired Margin:</span>
+                                        <span className="ml-2 font-medium">{totals.desiredMargin}%</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground">Needed Revenue:</span>
+                                        <span className="ml-2 font-medium">${totals.targetRevenue.toLocaleString()}</span>
+                                      </div>
+                                    </div>
+                                    
+                                    {!totals.isMarginValid && (
+                                      <div className="mt-2 flex items-center gap-2 text-sm text-red-600">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <span>
+                                          Current margin ({totals.actualMargin.toFixed(1)}%) is below {SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD}% minimum
+                                        </span>
+                                      </div>
+                                    )}
+                                    
+                                    {!totals.isMarginAchievable && totals.desiredMargin > 0 && (
+                                      <div className="mt-2 flex items-center gap-2 text-sm text-orange-600">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <span>
+                                          Budget too low for {totals.desiredMargin}% margin. Need ${totals.targetRevenue.toLocaleString()} revenue.
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+
                       {/* Product/Bundle Selection */}
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
@@ -980,81 +1050,6 @@ export default function Sales() {
                           ))}
                         </div>
                       </div>
-
-                      {/* Quote Calculations */}
-                      {(quoteData.budget || selectedProducts.length > 0) && (
-                        <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-                          <h3 className="font-semibold">Quote Summary</h3>
-                          {(() => {
-                            const totals = calculateQuoteTotals();
-                            return (
-                              <>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                  <div>
-                                    <span className="text-muted-foreground">Client Budget:</span>
-                                    <p className="font-medium" data-testid="quote-summary-budget">
-                                      ${totals.budget.toLocaleString()}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Total Cost:</span>
-                                    <p className="font-medium" data-testid="quote-summary-cost">
-                                      ${totals.totalCost.toLocaleString()}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Profit:</span>
-                                    <p className={`font-medium ${totals.profit < 0 ? 'text-red-600' : 'text-green-600'}`} data-testid="quote-summary-profit">
-                                      ${totals.profit.toLocaleString()}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Actual Margin:</span>
-                                    <p className={`font-medium ${totals.actualMargin < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? 'text-red-600' : 'text-green-600'}`} data-testid="quote-summary-margin">
-                                      {totals.actualMargin.toFixed(1)}%
-                                    </p>
-                                  </div>
-                                </div>
-                                
-                                {/* Margin Analysis */}
-                                {selectedProducts.length > 0 && totals.totalCost > 0 && (
-                                  <div className="mt-4 p-3 border rounded-lg">
-                                    <h4 className="text-sm font-medium mb-2">Margin Analysis</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                                      <div>
-                                        <span className="text-muted-foreground">Desired Margin:</span>
-                                        <span className="ml-2 font-medium">{totals.desiredMargin}%</span>
-                                      </div>
-                                      <div>
-                                        <span className="text-muted-foreground">Needed Revenue:</span>
-                                        <span className="ml-2 font-medium">${totals.targetRevenue.toLocaleString()}</span>
-                                      </div>
-                                    </div>
-                                    
-                                    {!totals.isMarginValid && (
-                                      <div className="mt-2 flex items-center gap-2 text-sm text-red-600">
-                                        <AlertTriangle className="h-4 w-4" />
-                                        <span>
-                                          Current margin ({totals.actualMargin.toFixed(1)}%) is below {SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD}% minimum
-                                        </span>
-                                      </div>
-                                    )}
-                                    
-                                    {!totals.isMarginAchievable && totals.desiredMargin > 0 && (
-                                      <div className="mt-2 flex items-center gap-2 text-sm text-orange-600">
-                                        <AlertTriangle className="h-4 w-4" />
-                                        <span>
-                                          Budget too low for {totals.desiredMargin}% margin. Need ${totals.targetRevenue.toLocaleString()} revenue.
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </>
-                            );
-                          })()}
-                        </div>
-                      )}
 
                       {/* Action Buttons */}
                       <div className="flex justify-end gap-2">

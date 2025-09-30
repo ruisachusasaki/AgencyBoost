@@ -20960,7 +20960,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get existing quote to preserve createdBy and check authorization
       const [existingQuote] = await db
-        .select()
+        .select({
+          id: quotes.id,
+          name: quotes.name,
+          clientId: quotes.clientId,
+          leadId: quotes.leadId,
+          clientBudget: quotes.clientBudget,
+          desiredMargin: quotes.desiredMargin,
+          totalCost: quotes.totalCost,
+          status: quotes.status,
+          notes: quotes.notes,
+          createdBy: quotes.createdBy,
+          createdAt: quotes.createdAt,
+          updatedAt: quotes.updatedAt,
+          approvedBy: quotes.approvedBy,
+          approvedAt: quotes.approvedAt,
+        })
         .from(quotes)
         .where(eq(quotes.id, id))
         .limit(1);
@@ -20970,10 +20985,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Authorization: Check if user has permission to edit quotes OR owns the quote
-      const hasPermission = await checkPermission(req, "sales", "canEdit");
+      const userHasPermission = await hasPermission(userId, "sales", "canEdit");
       const isOwner = existingQuote.createdBy === userId;
       
-      if (!hasPermission && !isOwner) {
+      if (!userHasPermission && !isOwner) {
         return res.status(403).json({ 
           message: "You do not have permission to edit this quote" 
         });
@@ -21124,14 +21139,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await tx.insert(quoteItems).values(processedItems);
         }
 
-        // Fetch updated quote
-        const [updatedQuote] = await tx
-          .select()
-          .from(quotes)
-          .where(eq(quotes.id, id))
-          .limit(1);
-
-        return { updatedQuote, updateData };
+        // Return update data (quote was already updated in transaction)
+        return { updateData };
       });
 
       // Log the update (outside transaction for non-critical logging)
@@ -21147,7 +21156,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req
       );
 
-      res.json(result.updatedQuote);
+      // Reselect the updated quote from DB to get accurate values
+      const [updatedQuote] = await db
+        .select({
+          id: quotes.id,
+          name: quotes.name,
+          clientId: quotes.clientId,
+          leadId: quotes.leadId,
+          clientBudget: quotes.clientBudget,
+          desiredMargin: quotes.desiredMargin,
+          totalCost: quotes.totalCost,
+          status: quotes.status,
+          notes: quotes.notes,
+          createdBy: quotes.createdBy,
+          createdAt: quotes.createdAt,
+          updatedAt: quotes.updatedAt,
+          approvedBy: quotes.approvedBy,
+          approvedAt: quotes.approvedAt,
+        })
+        .from(quotes)
+        .where(eq(quotes.id, id))
+        .limit(1);
+
+      res.json(updatedQuote);
     } catch (error) {
       console.error("Error updating quote:", error);
       
