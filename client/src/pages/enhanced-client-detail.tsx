@@ -23,6 +23,7 @@ import { ProductSearchResults } from "@/components/ProductSearchResults";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate, ClientHealthScore } from "@shared/schema";
 import { format, formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
