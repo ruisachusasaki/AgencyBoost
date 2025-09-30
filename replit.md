@@ -4,6 +4,7 @@
 AgencyFlow is a comprehensive Customer Relationship Management (CRM) system for marketing agencies. It manages clients, projects, campaigns, leads, tasks, and invoices, with integrated reporting and a responsive interface. The system aims to enhance efficiency and operational oversight, providing a modern solution for agencies.
 
 ## Recent Changes
+- **Implemented comprehensive Sales Reports system** - Built two production-ready report types: Pipeline Report (lead distribution by stage with conversion rates between stages) and Sales Rep Report (performance metrics including appointments, pitches, closed deals, close rates, and average MRR). Features dedicated reporting tables (lead_stage_transitions, sales_activities, deals) with optimized composite indexes for performant date-filtered queries. Includes date range filtering, team summary metrics, and detailed breakdowns with visual stage indicators.
 - **Implemented full Replit Auth OIDC authentication system** - Replaced development mode authentication bypass with production-ready Replit Auth integration. Features include: OIDC-based login flow, automatic user provisioning from Replit Auth claims, first-user admin bootstrap, session management with PostgreSQL, and secure logout with session clearing. Added `replitAuthSub` field to staff table to link Replit Auth users with CRM staff records.
 - **Implemented comprehensive Client Approval Workflow system** - Enables compliance review of client assets (video/image ads) before publication with task attachments shown in Client Portal and client approval/annotation capabilities
 - Successfully implemented profile photo upload functionality and header profile image display with clickable navigation
@@ -56,6 +57,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Automation System**: GoHighLevel-style API-driven, database-backed automation with dynamic triggers (e.g., Task Overdue Timing Controls, Dynamic Lead Pipeline Integration, Field Change Trigger System, Note Added Trigger System, Inbound Webhook Trigger System).
 - **Client Management**: Client Team Assignment and Client Health Scoring System with proactive monitoring, visual highlighting, and automated team notifications.
 - **Client Approval Workflow**: Comprehensive system for compliance review of client assets before publication. Features client portal task attachment display, approval/annotation capabilities, secure client-portal authentication, ownership verification, and integration with existing ImageAnnotationModal for collaborative feedback on images and PDFs.
+- **Sales Reports**: Comprehensive analytics system with Pipeline Report (lead distribution by stage, conversion rates between stages) and Sales Rep Report (appointments, pitches, closed deals, close rates, average MRR per rep). Date range filtering, dedicated reporting tables with composite indexes for performance, real-time data aggregation, and visual metrics display.
 
 ## External Dependencies
 
