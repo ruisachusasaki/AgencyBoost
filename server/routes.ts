@@ -21473,5 +21473,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // DELETE /api/quotes/:id - Delete a quote
+  app.delete("/api/quotes/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getAuthenticatedUserIdOrFail(req);
+
+      // Check if quote exists
+      const [quote] = await db
+        .select()
+        .from(quotes)
+        .where(eq(quotes.id, id))
+        .limit(1);
+
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+
+      // Delete quote items first (due to foreign key constraint)
+      await db
+        .delete(quoteItems)
+        .where(eq(quoteItems.quoteId, id));
+
+      // Delete the quote
+      await db
+        .delete(quotes)
+        .where(eq(quotes.id, id));
+
+      // Log the deletion
+      await createAuditLog(
+        "deleted",
+        "quote",
+        id,
+        quote.name || "Quote",
+        userId,
+        `Deleted quote`,
+        null,
+        null,
+        req
+      );
+
+      res.json({
+        message: "Quote deleted successfully"
+      });
+    } catch (error) {
+      console.error("Error deleting quote:", error);
+      res.status(500).json({ message: "Failed to delete quote" });
+    }
+  });
+
   return httpServer;
 }

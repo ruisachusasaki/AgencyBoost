@@ -80,6 +80,8 @@ export default function Sales() {
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
   const [bundleProductsData, setBundleProductsData] = useState<Record<string, any[]>>({});
+  const [viewingQuoteId, setViewingQuoteId] = useState<string | null>(null);
+  const [deleteConfirmQuoteId, setDeleteConfirmQuoteId] = useState<string | null>(null);
 
   const calculateCommission = () => {
     const deal = parseFloat(calculatorData.dealValue) || 0;
@@ -400,6 +402,28 @@ export default function Sales() {
         title: "Error",
         description: error?.message || "Failed to update quote status.",
         variant: "destructive",
+      });
+    },
+  });
+
+  // Delete quote mutation
+  const deleteQuoteMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      return await apiRequest("DELETE", `/api/quotes/${quoteId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      setDeleteConfirmQuoteId(null);
+      toast({
+        title: "Success",
+        description: "Quote deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete quote",
       });
     },
   });
@@ -1314,7 +1338,7 @@ export default function Sales() {
                             variant="outline" 
                             size="sm" 
                             data-testid={`button-view-quote-${quote.id}`}
-                            onClick={() => console.log('View quote:', quote.id)}
+                            onClick={() => setViewingQuoteId(quote.id)}
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             View
@@ -1332,7 +1356,7 @@ export default function Sales() {
                             variant="outline" 
                             size="sm" 
                             data-testid={`button-delete-quote-${quote.id}`}
-                            onClick={() => console.log('Delete quote:', quote.id)}
+                            onClick={() => setDeleteConfirmQuoteId(quote.id)}
                           >
                             <Trash2 className="h-4 w-4 mr-1" />
                             Delete
@@ -1432,6 +1456,126 @@ export default function Sales() {
           </Card>
         </div>
       )}
+
+      {/* View Quote Dialog */}
+      <Dialog open={viewingQuoteId !== null} onOpenChange={(open) => !open && setViewingQuoteId(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Quote Details</DialogTitle>
+          </DialogHeader>
+          {viewingQuoteId && (() => {
+            const quote = quotesData.find((q: any) => q.id === viewingQuoteId);
+            if (!quote) return null;
+            
+            return (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Quote Name</Label>
+                    <p className="font-medium" data-testid="text-view-quote-name">{quote.name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Status</Label>
+                    <div>
+                      <Badge className={getQuoteStatusBadge(quote.status)} data-testid="text-view-quote-status">
+                        {quote.status.replace('_', ' ').toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Client/Lead</Label>
+                    <p className="font-medium" data-testid="text-view-quote-client">{quote.clientName || quote.leadName || 'Unknown'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Budget</Label>
+                    <p className="font-medium" data-testid="text-view-quote-budget">${parseFloat(quote.clientBudget || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Desired Margin</Label>
+                    <p className={`font-medium ${parseFloat(quote.desiredMargin) < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? 'text-red-600' : 'text-green-600'}`} data-testid="text-view-quote-margin">
+                      {parseFloat(quote.desiredMargin || 0)}%
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Total Cost</Label>
+                    <p className="font-medium" data-testid="text-view-quote-cost">${parseFloat(quote.totalCost || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Created By</Label>
+                    <p className="font-medium" data-testid="text-view-quote-creator">{quote.createdByName} {quote.createdByLastName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Created At</Label>
+                    <p className="font-medium" data-testid="text-view-quote-created-at">{new Date(quote.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                
+                {quote.notes && (
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Notes</Label>
+                    <p className="mt-1 text-sm" data-testid="text-view-quote-notes">{quote.notes}</p>
+                  </div>
+                )}
+                
+                <div>
+                  <Label className="text-sm text-muted-foreground mb-2 block">Quote Items</Label>
+                  <div className="border rounded-md divide-y">
+                    {quote.items && quote.items.length > 0 ? (
+                      quote.items.map((item: any, index: number) => (
+                        <div key={index} className="p-3 flex justify-between items-center" data-testid={`div-quote-item-${index}`}>
+                          <div>
+                            <p className="font-medium">{item.productName || item.bundleName}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {item.itemType === 'product' ? 'Product' : 'Bundle'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">${parseFloat(item.totalCost || 0).toLocaleString()}</p>
+                            <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="p-3 text-sm text-muted-foreground">No items</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmQuoteId !== null} onOpenChange={(open) => !open && setDeleteConfirmQuoteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Quote</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this quote? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setDeleteConfirmQuoteId(null)}
+                data-testid="button-cancel-delete"
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => deleteConfirmQuoteId && deleteQuoteMutation.mutate(deleteConfirmQuoteId)}
+                disabled={deleteQuoteMutation.isPending}
+                data-testid="button-confirm-delete"
+              >
+                {deleteQuoteMutation.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
