@@ -446,13 +446,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Not authenticated" });
       }
       
-      // Get staff information
-      const staffUser = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+      // Get staff information with their direct role assignment
+      const staffUser = await db
+        .select({
+          id: staff.id,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email,
+          roleId: staff.roleId,
+        })
+        .from(staff)
+        .where(eq(staff.id, userId))
+        .limit(1);
+        
       if (!staffUser.length) {
         return res.status(404).json({ error: "User not found" });
       }
       
-      // Get user roles and permissions
+      // Collect all roles from multiple sources
+      const allRoles: string[] = [];
+      
+      // 1. Get direct role from staff.roleId (legacy/primary role)
+      if (staffUser[0].roleId) {
+        const directRole = await db
+          .select({ name: roles.name })
+          .from(roles)
+          .where(eq(roles.id, staffUser[0].roleId))
+          .limit(1);
+        if (directRole.length > 0 && directRole[0].name) {
+          allRoles.push(directRole[0].name);
+        }
+      }
+      
+      // 2. Get additional roles from user_roles junction table (RBAC system)
       const userRolesList = await db
         .select({ 
           roleId: userRoles.roleId, 
@@ -462,12 +488,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .leftJoin(roles, eq(userRoles.roleId, roles.id))
         .where(eq(userRoles.userId, userId));
       
+      // Add roles from junction table (avoid duplicates)
+      userRolesList.forEach(ur => {
+        if (ur.roleName && !allRoles.includes(ur.roleName)) {
+          allRoles.push(ur.roleName);
+        }
+      });
+      
       res.json({
         id: staffUser[0].id,
         firstName: staffUser[0].firstName,
         lastName: staffUser[0].lastName,
         email: staffUser[0].email,
-        roles: userRolesList.map(ur => ur.roleName)
+        roles: allRoles
       });
       
     } catch (error) {
