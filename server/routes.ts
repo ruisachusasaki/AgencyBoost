@@ -20833,9 +20833,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               unitCost = parseFloat(product.cost || '0');
             } else if (item.itemType === 'bundle' && item.bundleId) {
-              // Get actual bundle cost from database
+              // Verify bundle exists
               const [bundle] = await tx
-                .select({ bundleCost: productBundles.cost })
+                .select({ 
+                  id: productBundles.id,
+                  name: productBundles.name
+                })
                 .from(productBundles)
                 .where(eq(productBundles.id, item.bundleId))
                 .limit(1);
@@ -20844,25 +20847,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 throw new Error(`Bundle with ID ${item.bundleId} not found`);
               }
               
-              let bundleCost = parseFloat(bundle.bundleCost || '0');
+              // Calculate bundle cost from constituent products
+              const bundleProductsList = await tx
+                .select({
+                  productCost: products.cost,
+                  quantity: bundleProducts.quantity,
+                })
+                .from(bundleProducts)
+                .leftJoin(products, eq(bundleProducts.productId, products.id))
+                .where(eq(bundleProducts.bundleId, item.bundleId));
               
-              // If bundle cost is zero, calculate from constituent products with actual quantities
-              if (bundleCost === 0) {
-                const bundleProductsList = await tx
-                  .select({
-                    productCost: products.cost,
-                    quantity: bundleProducts.quantity,
-                  })
-                  .from(bundleProducts)
-                  .leftJoin(products, eq(bundleProducts.productId, products.id))
-                  .where(eq(bundleProducts.bundleId, item.bundleId));
-                
-                bundleCost = bundleProductsList.reduce((sum, bp) => {
-                  const cost = parseFloat(bp.productCost || '0');
-                  const qty = bp.quantity || 1;
-                  return sum + (cost * qty);
-                }, 0);
-              }
+              const bundleCost = bundleProductsList.reduce((sum, bp) => {
+                const cost = parseFloat(bp.productCost || '0');
+                const qty = bp.quantity || 1;
+                return sum + (cost * qty);
+              }, 0);
               
               unitCost = bundleCost;
             } else {
@@ -21153,11 +21152,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             unitCost = parseFloat(product.cost || '0');
           } else if (item.itemType === 'bundle' && item.bundleId) {
-            // Try to get bundle cost, or calculate from constituent products
+            // Verify bundle exists
             const [bundle] = await tx
               .select({ 
-                bundleCost: productBundles.cost,
-                bundleId: productBundles.id 
+                id: productBundles.id,
+                name: productBundles.name
               })
               .from(productBundles)
               .where(eq(productBundles.id, item.bundleId))
@@ -21167,25 +21166,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
               throw new Error(`Bundle with ID ${item.bundleId} not found`);
             }
             
-            let bundleCost = parseFloat(bundle.bundleCost || '0');
+            // Calculate bundle cost from constituent products
+            const bundleProductsList = await tx
+              .select({
+                productCost: products.cost,
+                quantity: bundleProducts.quantity,
+              })
+              .from(bundleProducts)
+              .leftJoin(products, eq(bundleProducts.productId, products.id))
+              .where(eq(bundleProducts.bundleId, item.bundleId));
             
-            // If bundle cost is zero or missing, calculate from constituent products
-            if (bundleCost === 0) {
-              const bundleProductsList = await tx
-                .select({
-                  productCost: products.cost,
-                  quantity: bundleProducts.quantity,
-                })
-                .from(bundleProducts)
-                .leftJoin(products, eq(bundleProducts.productId, products.id))
-                .where(eq(bundleProducts.bundleId, item.bundleId));
-              
-              bundleCost = bundleProductsList.reduce((sum, bp) => {
-                const cost = parseFloat(bp.productCost || '0');
-                const qty = bp.quantity || 1;
-                return sum + (cost * qty);
-              }, 0);
-            }
+            const bundleCost = bundleProductsList.reduce((sum, bp) => {
+              const cost = parseFloat(bp.productCost || '0');
+              const qty = bp.quantity || 1;
+              return sum + (cost * qty);
+            }, 0);
             
             unitCost = bundleCost;
           }
