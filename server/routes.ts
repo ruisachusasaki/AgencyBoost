@@ -20847,11 +20847,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 throw new Error(`Bundle with ID ${item.bundleId} not found`);
               }
               
-              // Calculate bundle cost from constituent products
+              // Calculate bundle cost from constituent products (each product = 1 unit)
               const bundleProductsList = await tx
                 .select({
                   productCost: products.cost,
-                  quantity: bundleProducts.quantity,
                 })
                 .from(bundleProducts)
                 .leftJoin(products, eq(bundleProducts.productId, products.id))
@@ -20859,8 +20858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               const bundleCost = bundleProductsList.reduce((sum, bp) => {
                 const cost = parseFloat(bp.productCost || '0');
-                const qty = bp.quantity || 1;
-                return sum + (cost * qty);
+                return sum + cost; // Each product is 1 unit by default
               }, 0);
               
               unitCost = bundleCost;
@@ -21166,11 +21164,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               throw new Error(`Bundle with ID ${item.bundleId} not found`);
             }
             
-            // Calculate bundle cost from constituent products
+            // Calculate bundle cost from constituent products (each product = 1 unit)
             const bundleProductsList = await tx
               .select({
                 productCost: products.cost,
-                quantity: bundleProducts.quantity,
               })
               .from(bundleProducts)
               .leftJoin(products, eq(bundleProducts.productId, products.id))
@@ -21178,8 +21175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             const bundleCost = bundleProductsList.reduce((sum, bp) => {
               const cost = parseFloat(bp.productCost || '0');
-              const qty = bp.quantity || 1;
-              return sum + (cost * qty);
+              return sum + cost; // Each product is 1 unit by default
             }, 0);
             
             unitCost = bundleCost;
