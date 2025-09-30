@@ -230,6 +230,16 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
     return (teamAssignments as any[]).find((assignment: any) => assignment.position?.id === positionId);
   };
 
+  // Count how many positions have at least one staff assignment
+  const filledPositionsCount = useMemo(() => {
+    return positions.filter((position: any) => {
+      const assignment = (teamAssignments as any[]).find(
+        (a: any) => (a.position?.id === position.id || a.position === position.key) && a.staffId
+      );
+      return !!assignment;
+    }).length;
+  }, [positions, teamAssignments]);
+
   const isLoading = positionsLoading || assignmentsLoading;
 
   return (
@@ -237,7 +247,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
       <div className="flex items-center justify-between" data-testid="team-assignments-header">
         <h3 className="font-semibold text-gray-900">Team Assignments</h3>
         <div className="text-sm text-gray-500" data-testid="assignments-count">
-          {(teamAssignments as any[]).filter((a: any) => a.staffId).length} of {positions.length} positions filled
+          {filledPositionsCount} of {positions.length} positions filled
         </div>
       </div>
 
