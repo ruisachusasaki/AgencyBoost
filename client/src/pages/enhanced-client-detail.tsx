@@ -4265,69 +4265,66 @@ export default function EnhancedClientDetail() {
                         
                         return (
                           <AccordionItem key={section.id} value={section.id} data-testid={`accordion-item-${section.key}`}>
-                            <AccordionTrigger className="px-6 hover:no-underline" data-testid={`accordion-trigger-${section.key}`}>
-                              <div className="flex items-center justify-between w-full pr-4">
+                            <div className="flex items-center justify-between px-6">
+                              <AccordionTrigger className="flex-1 hover:no-underline" data-testid={`accordion-trigger-${section.key}`}>
                                 <div className="flex items-center gap-2">
                                   <IconComponent className="h-5 w-5 text-primary" />
                                   <span className="text-lg font-semibold text-gray-900">{section.title}</span>
                                 </div>
-                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                  {!isEditing ? (
+                              </AccordionTrigger>
+                              <div className="flex items-center gap-2 ml-4">
+                                {!isEditing ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingSections(prev => new Set([...prev, section.id]));
+                                    }}
+                                    data-testid={`button-edit-${section.key}`}
+                                  >
+                                    <Edit2 className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </Button>
+                                ) : (
+                                  <div className="flex items-center gap-2">
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingSections(prev => new Set([...prev, section.id]));
+                                      onClick={() => {
+                                        setEditingSections(prev => {
+                                          const next = new Set(prev);
+                                          next.delete(section.id);
+                                          return next;
+                                        });
+                                        // Reset to original content
+                                        setEditingContent(prev => ({
+                                          ...prev,
+                                          [section.id]: section.value || ""
+                                        }));
                                       }}
-                                      data-testid={`button-edit-${section.key}`}
+                                      data-testid={`button-cancel-${section.key}`}
                                     >
-                                      <Edit2 className="h-4 w-4 mr-2" />
-                                      Edit
+                                      <X className="h-4 w-4 mr-2" />
+                                      Cancel
                                     </Button>
-                                  ) : (
-                                    <div className="flex items-center gap-2">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditingSections(prev => {
-                                            const next = new Set(prev);
-                                            next.delete(section.id);
-                                            return next;
-                                          });
-                                          // Reset to original content
-                                          setEditingContent(prev => ({
-                                            ...prev,
-                                            [section.id]: section.value || ""
-                                          }));
-                                        }}
-                                        data-testid={`button-cancel-${section.key}`}
-                                      >
-                                        <X className="h-4 w-4 mr-2" />
-                                        Cancel
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          updateClientBriefSectionMutation.mutate({
-                                            sectionId: section.id,
-                                            content: currentContent
-                                          });
-                                        }}
-                                        disabled={updateClientBriefSectionMutation.isPending}
-                                        data-testid={`button-save-${section.key}`}
-                                      >
-                                        <Save className="h-4 w-4 mr-2" />
-                                        {updateClientBriefSectionMutation.isPending ? "Saving..." : "Save"}
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        updateClientBriefSectionMutation.mutate({
+                                          sectionId: section.id,
+                                          content: currentContent
+                                        });
+                                      }}
+                                      disabled={updateClientBriefSectionMutation.isPending}
+                                      data-testid={`button-save-${section.key}`}
+                                    >
+                                      <Save className="h-4 w-4 mr-2" />
+                                      {updateClientBriefSectionMutation.isPending ? "Saving..." : "Save"}
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
-                            </AccordionTrigger>
+                            </div>
                             <AccordionContent className="px-6 pb-6">
                               {isEditing ? (
                                 <div className="border rounded-md">
