@@ -20785,43 +20785,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const desiredMargin = parseFloat(validatedData.desiredMargin);
       const effectiveStatus = desiredMargin < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? "pending_approval" : "draft";
       
-      // Calculate total cost from quote items if provided
-      let calculatedTotalCost = '0';
-      if (req.body.items && Array.isArray(req.body.items)) {
-        calculatedTotalCost = req.body.items.reduce((sum: number, item: any) => {
-          return sum + parseFloat(item.totalCost || '0');
-        }, 0).toString();
-      }
-
-      // Override status and totalCost based on server calculations
-      const finalQuoteData = {
-        ...validatedData,
-        status: effectiveStatus,
-        totalCost: calculatedTotalCost,
-      };
-
-      // Create the quote
-      const [newQuote] = await db
-        .insert(quotes)
-        .values(finalQuoteData)
-        .returning();
-
-      // Create quote items if provided
-      if (req.body.items && Array.isArray(req.body.items)) {
-        const quoteItemsData = req.body.items.map((item: any) => ({
-          ...item,
-          quoteId: newQuote.id,
-        }));
+      // Use transaction to ensure atomic quote+items creation
+      const result = await db.transaction(async (tx) => {
+        // Calculate total cost from quote items using DATABASE prices (not client values)
+        let calculatedTotalCost = 0;
+        const processedItems: any[] = [];
         
-        // Validate each item
-        const validatedItems = quoteItemsData.map(item => 
-          insertQuoteItemSchema.parse(item)
-        );
-        
-        if (validatedItems.length > 0) {
-          await db.insert(quoteItems).values(validatedItems);
+        if (req.body.items && Array.isArray(req.body.items)) {
+          for (const item of req.body.items) {
+            let unitCost = 0;
+            const quantity = parseInt(item.quantity) || 1;
+            
+            if (item.itemType === 'product' && item.productId) {
+              // Get actual product cost from database
+              const [product] = await tx
+                .select({ cost: products.cost })
+                .from(products)
+                .where(eq(products.id, item.productId))
+                .limit(1);
+              
+              if (!product) {
+                throw new Error(`Product with ID ${item.productId} not found`);
+              }
+              
+              unitCost = parseFloat(product.cost || '0');
+            } else if (item.itemType === 'bundle' && item.bundleId) {
+              // Get actual bundle cost from database
+              const [bundle] = await tx
+                .select({ bundleCost: productBundles.cost })
+                .from(productBundles)
+                .where(eq(productBundles.id, item.bundleId))
+                .limit(1);
+              
+              if (!bundle) {
+                throw new Error(`Bundle with ID ${item.bundleId} not found`);
+              }
+              
+              let bundleCost = parseFloat(bundle.bundleCost || '0');
+              
+              // If bundle cost is zero, calculate from constituent products with actual quantities
+              if (bundleCost === 0) {
+                const bundleProductsList = await tx
+                  .select({
+                    productCost: products.cost,
+                    quantity: bundleProducts.quantity,
+                  })
+                  .from(bundleProducts)
+                  .leftJoin(products, eq(bundleProducts.productId, products.id))
+                  .where(eq(bundleProducts.bundleId, item.bundleId));
+                
+                bundleCost = bundleProductsList.reduce((sum, bp) => {
+                  const cost = parseFloat(bp.productCost || '0');
+                  const qty = bp.quantity || 1;
+                  return sum + (cost * qty);
+                }, 0);
+              }
+              
+              unitCost = bundleCost;
+            } else {
+              // Reject unknown item types
+              throw new Error(`Invalid item type: ${item.itemType}. Must be 'product' or 'bundle'`);
+            }
+            
+            const itemTotalCost = unitCost * quantity;
+            calculatedTotalCost += itemTotalCost;
+            
+            processedItems.push({
+              productId: item.productId || null,
+              bundleId: item.bundleId || null,
+              itemType: item.itemType,
+              quantity,
+              unitCost: unitCost.toString(),
+              totalCost: itemTotalCost.toString(),
+              notes: item.notes || null,
+            });
+          }
         }
-      }
+
+        // Override status and totalCost based on server calculations
+        const finalQuoteData = {
+          ...validatedData,
+          status: effectiveStatus,
+          totalCost: calculatedTotalCost.toString(),
+        };
+
+        // Create the quote
+        const [newQuote] = await tx
+          .insert(quotes)
+          .values(finalQuoteData)
+          .returning();
+
+        // Create quote items with server-calculated costs
+        if (processedItems.length > 0) {
+          const quoteItemsData = processedItems.map((item: any) => ({
+            ...item,
+            quoteId: newQuote.id,
+          }));
+          
+          // Validate each item
+          const validatedItems = quoteItemsData.map(item => 
+            insertQuoteItemSchema.parse(item)
+          );
+          
+          await tx.insert(quoteItems).values(validatedItems);
+        }
+
+        return { newQuote, processedItems };
+      });
+
+      const { newQuote } = result;
 
       // Log the creation
       await createAuditLog(
