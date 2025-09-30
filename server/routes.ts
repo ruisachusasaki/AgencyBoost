@@ -11924,6 +11924,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
+      // Development mode: Return mock admin with full permissions
+      if (IS_DEVELOPMENT && userId === MOCK_ADMIN_USER_ID) {
+        const allModules = ['clients', 'sales', 'leads', 'tasks', 'calendar', 'workflows', 'hr', 'training', 'resources', 'invoices', 'reports', 'campaigns', 'projects', 'staff', 'settings', 'roles', 'templates', 'knowledge_base', 'social_media'];
+        const mockPermissions = allModules.map(module => ({
+          module,
+          canView: true,
+          canCreate: true,
+          canEdit: true,
+          canDelete: true,
+          canManage: true,
+          canExport: true,
+          canImport: true,
+          dataAccessLevel: 'all'
+        }));
+        
+        return res.json({
+          id: MOCK_ADMIN_USER_ID,
+          firstName: 'Admin',
+          lastName: 'User',
+          email: 'admin@dev.local',
+          roleId: 'mock-admin-role',
+          role: 'Admin',
+          permissions: mockPermissions
+        });
+      }
+      
       // Get actual user data from database with role information
       const userData = await db.select({
         id: staff.id,
