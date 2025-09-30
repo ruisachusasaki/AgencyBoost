@@ -32,6 +32,7 @@ import { getCurrentWeekRange } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import ClientHealthModal from "@/components/client-health-modal";
 import type { HealthStatusResult } from "@shared/utils/healthAnalysis";
+import DOMPurify from "dompurify";
 
 // MergeTagSelector Component for Email and SMS
 function MergeTagSelector({ searchValue, onSearchChange, onSelectTag, customFields }: {
@@ -5431,7 +5432,15 @@ export default function EnhancedClientDetail() {
                                   {/* Show message content */}
                                   <div>
                                     <p className="text-xs font-medium text-gray-600 uppercase tracking-wider">Message:</p>
-                                    <p className="text-sm text-gray-800 whitespace-pre-wrap" data-testid={`text-full-message-${log.id}`}>{fullMessage}</p>
+                                    {log.entityType === 'email' || log.entity_type === 'email' ? (
+                                      <div 
+                                        className="prose prose-sm max-w-none text-gray-800" 
+                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(fullMessage) }}
+                                        data-testid={`text-full-message-${log.id}`}
+                                      />
+                                    ) : (
+                                      <p className="text-sm text-gray-800 whitespace-pre-wrap" data-testid={`text-full-message-${log.id}`}>{fullMessage}</p>
+                                    )}
                                   </div>
                                 </div>
                               </div>
