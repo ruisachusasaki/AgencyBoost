@@ -1,7 +1,18 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, uuid, date, serial, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, uuid, date, serial, unique, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Session storage table for Replit Auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
 
 // SECURITY: UUID generation with fallback for maximum compatibility
 // Uses gen_random_uuid() if available, otherwise falls back to Node.js crypto.randomUUID()
@@ -1813,6 +1824,7 @@ export const positions = pgTable("positions", {
 // Staff Management
 export const staff = pgTable("staff", {
   id: uuid("id").primaryKey().defaultRandom(),
+  replitAuthSub: varchar("replit_auth_sub", { length: 255 }).unique(), // Replit Auth user ID
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
