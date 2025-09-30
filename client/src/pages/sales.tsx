@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { SALES_CONFIG } from "@shared/constants";
+import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -47,6 +47,15 @@ export default function Sales() {
   const [activeTab, setActiveTab] = useState("overview");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Fetch current user to check for Sales Manager role
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/auth/me"],
+    refetchOnWindowFocus: false,
+  });
+  
+  // Check if current user is a Sales Manager
+  const isSalesManager = currentUser?.position === ROLE_NAMES.SALES_MANAGER || currentUser?.role === 'Admin';
   
   // Sales Calculator state
   const [calculatorData, setCalculatorData] = useState({
@@ -327,6 +336,48 @@ export default function Sales() {
       toast({
         title: "Error",
         description: error.message || "Failed to save quote",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Approve quote mutation
+  const approveQuoteMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      return await apiRequest("PUT", `/api/quotes/${quoteId}/approval`, { action: "approve" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      toast({
+        title: "Quote Approved",
+        description: "The quote has been successfully approved.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to approve quote.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Reject quote mutation
+  const rejectQuoteMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      return await apiRequest("PUT", `/api/quotes/${quoteId}/approval`, { action: "reject" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      toast({
+        title: "Quote Rejected",
+        description: "The quote has been rejected.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to reject quote.",
         variant: "destructive",
       });
     },
@@ -1212,6 +1263,32 @@ export default function Sales() {
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2">
+                          {/* Show approve/reject buttons for quotes pending approval - only for Sales Managers */}
+                          {quote.status === 'pending_approval' && isSalesManager && (
+                            <>
+                              <Button 
+                                variant="default"
+                                size="sm" 
+                                className="bg-primary hover:bg-primary/90"
+                                data-testid={`button-approve-quote-${quote.id}`}
+                                onClick={() => approveQuoteMutation.mutate(quote.id)}
+                                disabled={approveQuoteMutation.isPending}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                {approveQuoteMutation.isPending ? "Approving..." : "Approve"}
+                              </Button>
+                              <Button 
+                                variant="destructive" 
+                                size="sm" 
+                                data-testid={`button-reject-quote-${quote.id}`}
+                                onClick={() => rejectQuoteMutation.mutate(quote.id)}
+                                disabled={rejectQuoteMutation.isPending}
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                {rejectQuoteMutation.isPending ? "Rejecting..." : "Reject"}
+                              </Button>
+                            </>
+                          )}
                           <Button 
                             variant="outline" 
                             size="sm" 
