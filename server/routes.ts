@@ -11908,7 +11908,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
       
-      res.json(userData[0]);
+      const user = userData[0];
+      
+      // Get user's permissions from their role
+      let userPermissions: any[] = [];
+      if (user.roleId) {
+        userPermissions = await db.select({
+          module: permissions.module,
+          canView: permissions.canView,
+          canCreate: permissions.canCreate,
+          canEdit: permissions.canEdit,
+          canDelete: permissions.canDelete,
+          canManage: permissions.canManage,
+          canExport: permissions.canExport,
+          canImport: permissions.canImport,
+          dataAccessLevel: permissions.dataAccessLevel,
+        }).from(permissions)
+        .where(eq(permissions.roleId, user.roleId));
+      }
+      
+      // Return user data with permissions array
+      res.json({
+        ...user,
+        permissions: userPermissions
+      });
     } catch (error) {
       console.error('Error getting current user:', error);
       res.status(500).json({ message: "Failed to get current user" });
