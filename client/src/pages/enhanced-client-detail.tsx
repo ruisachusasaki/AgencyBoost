@@ -237,7 +237,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
       <div className="flex items-center justify-between" data-testid="team-assignments-header">
         <h3 className="font-semibold text-gray-900">Team Assignments</h3>
         <div className="text-sm text-gray-500" data-testid="assignments-count">
-          {(teamAssignments as any[]).length} of {positions.length} positions filled
+          {(teamAssignments as any[]).filter((a: any) => a.staffId).length} of {positions.length} positions filled
         </div>
       </div>
 
@@ -294,7 +294,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
                   }}
                   disabled={createAssignmentMutation.isPending || deleteAssignmentMutation.isPending}
                 >
-                  <SelectTrigger className="w-[200px]">
+                  <SelectTrigger className="w-[260px]">
                     <SelectValue placeholder="Not Assigned">
                       {assignedStaff ? (
                         <div className="flex items-center gap-2">
