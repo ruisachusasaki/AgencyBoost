@@ -604,6 +604,8 @@ export const leadStageTransitions = pgTable("lead_stage_transitions", {
   index("idx_stage_transitions_lead").on(table.leadId),
   index("idx_stage_transitions_date").on(table.transitionedAt),
   index("idx_stage_transitions_stages").on(table.fromStageId, table.toStageId),
+  index("idx_lead_stage_transitions_to_stage_date").on(table.toStageId, table.transitionedAt),
+  index("idx_lead_stage_transitions_from_stage_date").on(table.fromStageId, table.transitionedAt),
 ]);
 
 // Sales Activities - Track appointments, pitches, demos, etc.
@@ -621,6 +623,8 @@ export const salesActivities = pgTable("sales_activities", {
   index("idx_sales_activities_lead").on(table.leadId),
   index("idx_sales_activities_rep").on(table.assignedTo),
   index("idx_sales_activities_type").on(table.type),
+  index("idx_sales_activities_rep_date").on(table.assignedTo, table.createdAt),
+  index("idx_sales_activities_lead_date").on(table.leadId, table.createdAt),
 ]);
 
 // Deals - Track won deals with MRR and contract details
@@ -645,6 +649,7 @@ export const deals = pgTable("deals", {
   index("idx_deals_rep").on(table.assignedTo),
   index("idx_deals_won_date").on(table.wonDate),
   index("idx_deals_lead").on(table.leadId),
+  index("idx_deals_rep_won_date").on(table.assignedTo, table.wonDate),
 ]);
 
 // Smart Lists for saved client and task filters

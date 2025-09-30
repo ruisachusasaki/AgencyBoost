@@ -40,6 +40,11 @@ import {
 export default function Sales() {
   const [activeTab, setActiveTab] = useState("quotes");
   const [searchTerm, setSearchTerm] = useState("");
+  const [reportType, setReportType] = useState<"pipeline" | "sales-reps">("pipeline");
+  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({
+    startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // Start of year
+    endDate: new Date().toISOString().split('T')[0] // Today
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -99,6 +104,30 @@ export default function Sales() {
   // Fetch quotes for the quotes tab
   const { data: quotesData = [] } = useQuery({
     queryKey: ["/api/quotes"],
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch Pipeline Report data
+  const { data: pipelineReport, isLoading: pipelineReportLoading } = useQuery({
+    queryKey: ["/api/sales/reports/pipeline", dateRange.startDate, dateRange.endDate],
+    queryFn: async () => {
+      const response = await fetch(`/api/sales/reports/pipeline?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+      if (!response.ok) throw new Error('Failed to fetch pipeline report');
+      return response.json();
+    },
+    enabled: activeTab === "reports" && reportType === "pipeline",
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch Sales Rep Report data
+  const { data: salesRepReport, isLoading: salesRepReportLoading } = useQuery({
+    queryKey: ["/api/sales/reports/sales-reps", dateRange.startDate, dateRange.endDate],
+    queryFn: async () => {
+      const response = await fetch(`/api/sales/reports/sales-reps?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+      if (!response.ok) throw new Error('Failed to fetch sales rep report');
+      return response.json();
+    },
+    enabled: activeTab === "reports" && reportType === "sales-reps",
     refetchOnWindowFocus: false,
   });
 
@@ -516,14 +545,279 @@ export default function Sales() {
       {/* Sales Reports Tab */}
       {activeTab === "reports" && (
         <div className="space-y-6">
+          {/* Report Controls */}
           <Card>
             <CardHeader>
-              <CardTitle>Sales Reports</CardTitle>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Sales Reports
+                </CardTitle>
+                
+                {/* Date Range Filter */}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="start-date" className="text-sm whitespace-nowrap">Start Date:</Label>
+                    <Input
+                      id="start-date"
+                      type="date"
+                      value={dateRange.startDate}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                      className="w-40"
+                      data-testid="input-start-date"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="end-date" className="text-sm whitespace-nowrap">End Date:</Label>
+                    <Input
+                      id="end-date"
+                      type="date"
+                      value={dateRange.endDate}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                      className="w-40"
+                      data-testid="input-end-date"
+                    />
+                  </div>
+                </div>
+              </div>
             </CardHeader>
+            
+            {/* Report Type Tabs */}
             <CardContent>
-              <p className="text-muted-foreground">
-                Detailed sales analytics and reporting features will be implemented here.
-              </p>
+              <div className="border-b border-gray-200 mb-6">
+                <nav className="-mb-px flex space-x-8">
+                  <button
+                    onClick={() => setReportType("pipeline")}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      reportType === "pipeline"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                    data-testid="button-pipeline-report"
+                  >
+                    Pipeline Report
+                  </button>
+                  <button
+                    onClick={() => setReportType("sales-reps")}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      reportType === "sales-reps"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                    data-testid="button-sales-rep-report"
+                  >
+                    Sales Rep Report
+                  </button>
+                </nav>
+              </div>
+
+              {/* Pipeline Report Content */}
+              {reportType === "pipeline" && (
+                <div className="space-y-6">
+                  {pipelineReportLoading ? (
+                    <div className="text-center py-8 text-muted-foreground">Loading pipeline data...</div>
+                  ) : pipelineReport ? (
+                    <>
+                      {/* Summary Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <Card>
+                          <CardContent className="pt-6">
+                            <div className="text-sm text-muted-foreground">Total Leads</div>
+                            <div className="text-2xl font-bold" data-testid="text-total-leads">
+                              {pipelineReport.summary?.totalLeads || 0}
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="pt-6">
+                            <div className="text-sm text-muted-foreground">Total Value</div>
+                            <div className="text-2xl font-bold" data-testid="text-total-value">
+                              ${pipelineReport.summary?.totalValue?.toLocaleString() || 0}
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="pt-6">
+                            <div className="text-sm text-muted-foreground">Total Transitions</div>
+                            <div className="text-2xl font-bold" data-testid="text-total-transitions">
+                              {pipelineReport.summary?.totalTransitions || 0}
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="pt-6">
+                            <div className="text-sm text-muted-foreground">Average Value</div>
+                            <div className="text-2xl font-bold" data-testid="text-average-value">
+                              ${pipelineReport.summary?.averageValue?.toFixed(2) || 0}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* Pipeline Stages */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Pipeline Stages</h3>
+                        {pipelineReport.stages?.length > 0 ? (
+                          pipelineReport.stages.map((stage: any) => (
+                            <Card key={stage.id} className="border-l-4" style={{ borderLeftColor: stage.color }}>
+                              <CardContent className="pt-6">
+                                <div className="flex items-center justify-between mb-4">
+                                  <div className="flex items-center gap-3">
+                                    <div 
+                                      className="w-4 h-4 rounded-full" 
+                                      style={{ backgroundColor: stage.color }}
+                                    />
+                                    <h4 className="font-semibold text-lg" data-testid={`text-stage-name-${stage.id}`}>
+                                      {stage.name}
+                                    </h4>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-2xl font-bold" data-testid={`text-stage-count-${stage.id}`}>
+                                      {stage.leadCount} leads
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      ${stage.totalValue?.toLocaleString()} value
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Conversion Rates */}
+                                {stage.conversions && stage.conversions.length > 0 && (
+                                  <div className="mt-4 pl-7">
+                                    <div className="text-sm font-medium text-muted-foreground mb-2">Conversions:</div>
+                                    <div className="space-y-2">
+                                      {stage.conversions.map((conversion: any, idx: number) => (
+                                        <div key={idx} className="flex items-center justify-between text-sm">
+                                          <span>→ {conversion.toStageName}</span>
+                                          <span className="font-medium">
+                                            {conversion.count} leads ({conversion.rate.toFixed(1)}%)
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            No pipeline data available for the selected date range
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">No data available</div>
+                  )}
+                </div>
+              )}
+
+              {/* Sales Rep Report Content */}
+              {reportType === "sales-reps" && (
+                <div className="space-y-6">
+                  {salesRepReportLoading ? (
+                    <div className="text-center py-8 text-muted-foreground">Loading sales rep data...</div>
+                  ) : salesRepReport ? (
+                    <>
+                      {/* Team Summary */}
+                      {salesRepReport.totals && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                          <Card>
+                            <CardContent className="pt-6">
+                              <div className="text-sm text-muted-foreground">Total Appointments</div>
+                              <div className="text-2xl font-bold">{salesRepReport.totals.appointments}</div>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardContent className="pt-6">
+                              <div className="text-sm text-muted-foreground">Total Pitches</div>
+                              <div className="text-2xl font-bold">{salesRepReport.totals.pitches}</div>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardContent className="pt-6">
+                              <div className="text-sm text-muted-foreground">Closed Deals</div>
+                              <div className="text-2xl font-bold">{salesRepReport.totals.closedDeals}</div>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardContent className="pt-6">
+                              <div className="text-sm text-muted-foreground">Total Leads</div>
+                              <div className="text-2xl font-bold">{salesRepReport.totals.totalLeads}</div>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardContent className="pt-6">
+                              <div className="text-sm text-muted-foreground">Avg Close Rate</div>
+                              <div className="text-2xl font-bold">{salesRepReport.totals.avgCloseRate?.toFixed(1)}%</div>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardContent className="pt-6">
+                              <div className="text-sm text-muted-foreground">Total Revenue</div>
+                              <div className="text-2xl font-bold">${salesRepReport.totals.totalValue?.toLocaleString()}</div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      )}
+
+                      {/* Sales Rep Performance Table */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4">Sales Rep Performance</h3>
+                        <div className="border rounded-lg overflow-hidden">
+                          <table className="w-full">
+                            <thead className="bg-muted">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-sm font-medium">Rep Name</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium">Department</th>
+                                <th className="px-4 py-3 text-right text-sm font-medium">Appointments</th>
+                                <th className="px-4 py-3 text-right text-sm font-medium">Pitches</th>
+                                <th className="px-4 py-3 text-right text-sm font-medium">Closed</th>
+                                <th className="px-4 py-3 text-right text-sm font-medium">Total Leads</th>
+                                <th className="px-4 py-3 text-right text-sm font-medium">Close Rate</th>
+                                <th className="px-4 py-3 text-right text-sm font-medium">Avg MRR</th>
+                                <th className="px-4 py-3 text-right text-sm font-medium">Total Value</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                              {salesRepReport.salesReps && salesRepReport.salesReps.length > 0 ? (
+                                salesRepReport.salesReps.map((rep: any) => (
+                                  <tr key={rep.id} className="hover:bg-muted/50" data-testid={`row-sales-rep-${rep.id}`}>
+                                    <td className="px-4 py-3 text-sm font-medium">{rep.name}</td>
+                                    <td className="px-4 py-3 text-sm text-muted-foreground">{rep.department || '-'}</td>
+                                    <td className="px-4 py-3 text-sm text-right">{rep.metrics.appointments}</td>
+                                    <td className="px-4 py-3 text-sm text-right">{rep.metrics.pitches}</td>
+                                    <td className="px-4 py-3 text-sm text-right font-semibold">{rep.metrics.closedDeals}</td>
+                                    <td className="px-4 py-3 text-sm text-right">{rep.metrics.totalLeads}</td>
+                                    <td className="px-4 py-3 text-sm text-right">
+                                      <span className={rep.metrics.closeRate > 30 ? 'text-green-600 font-medium' : ''}>
+                                        {rep.metrics.closeRate.toFixed(1)}%
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-right">${rep.metrics.avgMRR.toFixed(2)}</td>
+                                    <td className="px-4 py-3 text-sm text-right font-semibold">
+                                      ${rep.metrics.totalValue.toLocaleString()}
+                                    </td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
+                                    No sales rep data available for the selected date range
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">No data available</div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

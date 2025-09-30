@@ -21529,5 +21529,243 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/sales/reports/pipeline - Pipeline Report with lead counts and conversion rates
+  app.get("/api/sales/reports/pipeline", requireAuth(), async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      // Build date filter
+      let dateFilter = undefined;
+      if (startDate && endDate) {
+        dateFilter = and(
+          gte(leads.createdAt, new Date(startDate as string)),
+          lte(leads.createdAt, new Date(endDate as string))
+        );
+      }
+
+      // Get all active pipeline stages
+      const stages = await db
+        .select()
+        .from(leadPipelineStages)
+        .where(eq(leadPipelineStages.isActive, true))
+        .orderBy(asc(leadPipelineStages.order));
+
+      // Get lead counts by stage
+      const leadCounts = await db
+        .select({
+          stageId: leads.stageId,
+          count: sql<number>`count(*)::int`,
+          totalValue: sql<string>`COALESCE(sum(${leads.value}), 0)::text`
+        })
+        .from(leads)
+        .where(dateFilter)
+        .groupBy(leads.stageId);
+
+      // Create stage map with counts
+      const stageMap = new Map(leadCounts.map(lc => [lc.stageId, lc]));
+
+      // Get stage transitions for conversion rates
+      const transitions = await db
+        .select({
+          fromStageId: leadStageTransitions.fromStageId,
+          toStageId: leadStageTransitions.toStageId,
+          count: sql<number>`count(*)::int`
+        })
+        .from(leadStageTransitions)
+        .where(
+          dateFilter 
+            ? and(
+                gte(leadStageTransitions.transitionedAt, new Date(startDate as string)),
+                lte(leadStageTransitions.transitionedAt, new Date(endDate as string))
+              )
+            : undefined
+        )
+        .groupBy(leadStageTransitions.fromStageId, leadStageTransitions.toStageId);
+
+      // Build report with stage data and conversion rates
+      const stageData = stages.map(stage => {
+        const counts = stageMap.get(stage.id) || { count: 0, totalValue: '0' };
+        
+        // Find transitions from this stage
+        const outgoingTransitions = transitions.filter(t => t.fromStageId === stage.id);
+        const totalTransitions = outgoingTransitions.reduce((sum, t) => sum + t.count, 0);
+        
+        // Calculate conversion rates correctly:
+        // Rate = (transitions to next stage / total leads that were in this stage) * 100
+        // Total leads in stage = current count + all transitions out
+        const totalLeadsInStage = counts.count + totalTransitions;
+        
+        return {
+          id: stage.id,
+          name: stage.name,
+          color: stage.color,
+          order: stage.order,
+          leadCount: counts.count,
+          totalValue: parseFloat(counts.totalValue),
+          conversions: outgoingTransitions.map(t => ({
+            toStageId: t.toStageId,
+            toStageName: stages.find(s => s.id === t.toStageId)?.name || 'Unknown',
+            count: t.count,
+            rate: totalLeadsInStage > 0 ? (t.count / totalLeadsInStage) * 100 : 0
+          }))
+        };
+      });
+
+      // Calculate overall pipeline metrics
+      const totalLeads = leadCounts.reduce((sum, lc) => sum + lc.count, 0);
+      const totalValue = leadCounts.reduce((sum, lc) => sum + parseFloat(lc.totalValue), 0);
+      const totalTransitions = transitions.reduce((sum, t) => sum + t.count, 0);
+
+      res.json({
+        stages: stageData,
+        summary: {
+          totalLeads,
+          totalValue,
+          totalTransitions,
+          averageValue: totalLeads > 0 ? totalValue / totalLeads : 0
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching pipeline report:", error);
+      res.status(500).json({ message: "Failed to fetch pipeline report" });
+    }
+  });
+
+  // GET /api/sales/reports/sales-reps - Sales Rep Performance Report
+  app.get("/api/sales/reports/sales-reps", requireAuth(), async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      // Build date filter for deals
+      let dealDateFilter = undefined;
+      if (startDate && endDate) {
+        dealDateFilter = and(
+          gte(deals.wonDate, new Date(startDate as string)),
+          lte(deals.wonDate, new Date(endDate as string))
+        );
+      }
+
+      // Build date filter for activities
+      let activityDateFilter = undefined;
+      if (startDate && endDate) {
+        activityDateFilter = and(
+          gte(salesActivities.createdAt, new Date(startDate as string)),
+          lte(salesActivities.createdAt, new Date(endDate as string))
+        );
+      }
+
+      // Get all staff members
+      const staffMembers = await db
+        .select({
+          id: staff.id,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email,
+          department: staff.department
+        })
+        .from(staff);
+
+      // Get appointment counts by rep
+      const appointmentCounts = await db
+        .select({
+          assignedTo: salesActivities.assignedTo,
+          appointmentCount: sql<number>`count(*) filter (where ${salesActivities.type} = 'appointment')::int`,
+          pitchCount: sql<number>`count(*) filter (where ${salesActivities.type} IN ('pitch', 'demo'))::int`
+        })
+        .from(salesActivities)
+        .where(activityDateFilter)
+        .groupBy(salesActivities.assignedTo);
+
+      // Get closed deals by rep
+      const dealStats = await db
+        .select({
+          assignedTo: deals.assignedTo,
+          closedCount: sql<number>`count(*)::int`,
+          totalValue: sql<string>`COALESCE(sum(${deals.value}), 0)::text`,
+          avgMRR: sql<string>`COALESCE(avg(${deals.mrr}), 0)::text`
+        })
+        .from(deals)
+        .where(dealDateFilter)
+        .groupBy(deals.assignedTo);
+
+      // Get total leads assigned to each rep
+      const leadCounts = await db
+        .select({
+          assignedTo: leads.assignedTo,
+          totalLeads: sql<number>`count(*)::int`
+        })
+        .from(leads)
+        .where(
+          startDate && endDate
+            ? and(
+                gte(leads.createdAt, new Date(startDate as string)),
+                lte(leads.createdAt, new Date(endDate as string))
+              )
+            : undefined
+        )
+        .groupBy(leads.assignedTo);
+
+      // Build report data
+      const reportData = staffMembers.map(member => {
+        const activities = appointmentCounts.find(a => a.assignedTo === member.id);
+        const dealData = dealStats.find(d => d.assignedTo === member.id);
+        const leadData = leadCounts.find(l => l.assignedTo === member.id);
+
+        const appointmentCount = activities?.appointmentCount || 0;
+        const pitchCount = activities?.pitchCount || 0;
+        const closedCount = dealData?.closedCount || 0;
+        const totalLeads = leadData?.totalLeads || 0;
+        const totalValue = parseFloat(dealData?.totalValue || '0');
+        const avgMRR = parseFloat(dealData?.avgMRR || '0');
+
+        return {
+          id: member.id,
+          name: `${member.firstName} ${member.lastName}`,
+          email: member.email,
+          department: member.department,
+          metrics: {
+            appointments: appointmentCount,
+            pitches: pitchCount,
+            closedDeals: closedCount,
+            totalLeads: totalLeads,
+            closeRate: totalLeads > 0 ? (closedCount / totalLeads) * 100 : 0,
+            totalValue: totalValue,
+            avgMRR: avgMRR
+          }
+        };
+      });
+
+      // Sort by closed deals (highest first)
+      reportData.sort((a, b) => b.metrics.closedDeals - a.metrics.closedDeals);
+
+      // Calculate team totals
+      const totals = reportData.reduce((acc, rep) => ({
+        appointments: acc.appointments + rep.metrics.appointments,
+        pitches: acc.pitches + rep.metrics.pitches,
+        closedDeals: acc.closedDeals + rep.metrics.closedDeals,
+        totalLeads: acc.totalLeads + rep.metrics.totalLeads,
+        totalValue: acc.totalValue + rep.metrics.totalValue
+      }), {
+        appointments: 0,
+        pitches: 0,
+        closedDeals: 0,
+        totalLeads: 0,
+        totalValue: 0
+      });
+
+      res.json({
+        salesReps: reportData,
+        totals: {
+          ...totals,
+          avgCloseRate: totals.totalLeads > 0 ? (totals.closedDeals / totals.totalLeads) * 100 : 0,
+          avgMRR: reportData.reduce((sum, rep) => sum + rep.metrics.avgMRR, 0) / reportData.length
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching sales rep report:", error);
+      res.status(500).json({ message: "Failed to fetch sales rep report" });
+    }
+  });
+
   return httpServer;
 }
