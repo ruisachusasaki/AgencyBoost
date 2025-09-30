@@ -438,6 +438,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true });
   });
 
+  // GET /api/logout - Logout and redirect to login
+  app.get("/api/logout", (req, res) => {
+    req.session = null;
+    // Redirect to a login page or home page
+    res.redirect("/");
+  });
+
   // GET /api/auth/me - Return current user profile and permissions
   app.get("/api/auth/me", requireAuth(), async (req, res) => {
     try {
