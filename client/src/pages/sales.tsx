@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,7 +38,8 @@ import {
   Eye,
   Package,
   X,
-  AlertTriangle
+  AlertTriangle,
+  ChevronDown
 } from "lucide-react";
 
 export default function Sales() {
@@ -64,10 +66,11 @@ export default function Sales() {
     margin: "",
     description: "",
   });
-  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: string, type: 'product' | 'bundle', quantity: number}>>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: string, type: 'product' | 'bundle', quantity: number, customQuantities?: Record<string, number>}>>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
+  const [bundleProductsData, setBundleProductsData] = useState<Record<string, any[]>>({});
 
   const calculateCommission = () => {
     const deal = parseFloat(calculatorData.dealValue) || 0;
@@ -117,6 +120,33 @@ export default function Sales() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch bundle products when a bundle is selected
+  const fetchBundleProducts = async (bundleId: string) => {
+    if (bundleProductsData[bundleId]) {
+      return bundleProductsData[bundleId]; // Return cached data
+    }
+    
+    try {
+      const response = await fetch(`/api/product-bundles/${bundleId}/products`);
+      const bundleProducts = await response.json();
+      setBundleProductsData(prev => ({ ...prev, [bundleId]: bundleProducts }));
+      return bundleProducts;
+    } catch (error) {
+      console.error('Error fetching bundle products:', error);
+      return [];
+    }
+  };
+
+  // Calculate bundle cost based on constituent products and custom quantities
+  const calculateBundleCost = (bundleId: string, customQuantities?: Record<string, number>) => {
+    const bundleProducts = bundleProductsData[bundleId] || [];
+    return bundleProducts.reduce((sum, bp) => {
+      const cost = parseFloat(bp.productCost || '0');
+      const qty = customQuantities?.[bp.productId] || 1; // Default to 1 if no custom quantity
+      return sum + (cost * qty);
+    }, 0);
+  };
+
   // Quote Builder helper functions
   const calculateQuoteTotals = () => {
     const budget = parseFloat(quoteData.budget) || 0;
@@ -132,10 +162,9 @@ export default function Sales() {
           totalCost += parseFloat(product.cost) * quantity;
         }
       } else if (item.type === 'bundle') {
-        const bundle = bundles.find(b => b.id === item.productId);
-        if (bundle && bundle.cost) {
-          totalCost += parseFloat(bundle.cost) * quantity;
-        }
+        // Calculate bundle cost from constituent products
+        const bundleCost = calculateBundleCost(item.productId, item.customQuantities);
+        totalCost += bundleCost * quantity;
       }
     });
 
@@ -170,15 +199,34 @@ export default function Sales() {
     setSelectedProducts(selectedProducts.filter((_, i) => i !== index));
   };
 
-  const updateQuoteProduct = (index: number, productId: string) => {
+  const updateQuoteProduct = async (index: number, productId: string) => {
     const updated = [...selectedProducts];
     updated[index] = { ...updated[index], productId };
+    
+    // If it's a bundle, fetch bundle products
+    if (updated[index].type === 'bundle' && productId) {
+      await fetchBundleProducts(productId);
+    }
+    
     setSelectedProducts(updated);
   };
 
   const updateQuoteQuantity = (index: number, quantity: number) => {
     const updated = [...selectedProducts];
     updated[index] = { ...updated[index], quantity: Math.max(1, quantity) };
+    setSelectedProducts(updated);
+  };
+
+  const updateBundleProductQuantity = (bundleIndex: number, productId: string, quantity: number) => {
+    const updated = [...selectedProducts];
+    const currentCustomQuantities = updated[bundleIndex].customQuantities || {};
+    updated[bundleIndex] = {
+      ...updated[bundleIndex],
+      customQuantities: {
+        ...currentCustomQuantities,
+        [productId]: Math.max(1, quantity)
+      }
+    };
     setSelectedProducts(updated);
   };
 
@@ -213,12 +261,23 @@ export default function Sales() {
       
       // Load quote items
       const items = quote.items || [];
-      setSelectedProducts(items.map((item: any) => ({
-        productId: item.productId || item.bundleId,
-        type: item.itemType,
-        quantity: item.quantity || 1,
-      })));
+      const loadedProducts = await Promise.all(items.map(async (item: any) => {
+        const productId = item.productId || item.bundleId;
+        
+        // If it's a bundle, fetch bundle products
+        if (item.itemType === 'bundle' && productId) {
+          await fetchBundleProducts(productId);
+        }
+        
+        return {
+          productId,
+          type: item.itemType,
+          quantity: item.quantity || 1,
+          customQuantities: item.customQuantities || undefined,
+        };
+      }));
       
+      setSelectedProducts(loadedProducts);
       setIsEditMode(true);
       setEditingQuoteId(quoteId);
       setIsQuoteBuilderOpen(true);
@@ -295,14 +354,8 @@ export default function Sales() {
         if (item.type === 'product') {
           unitCost = parseFloat(products.find(p => p.id === item.productId)?.cost || '0');
         } else if (item.type === 'bundle') {
-          // Calculate bundle cost by summing product costs
-          const bundle = bundles.find(b => b.id === item.productId);
-          if (bundle && bundle.products) {
-            unitCost = bundle.products.reduce((sum: number, bundleProduct: any) => {
-              const cost = bundleProduct.productCost || bundleProduct.cost || 0;
-              return sum + (parseFloat(cost) || 0);
-            }, 0);
-          }
+          // Calculate bundle cost from constituent products with custom quantities
+          unitCost = calculateBundleCost(item.productId, item.customQuantities);
         }
         
         const itemTotalCost = unitCost * quantity;
@@ -314,6 +367,7 @@ export default function Sales() {
           quantity: quantity,
           unitCost: unitCost.toString(), // Convert to string for decimal schema
           totalCost: itemTotalCost.toString(), // Convert to string for decimal schema
+          customQuantities: item.type === 'bundle' && item.customQuantities ? item.customQuantities : undefined,
         };
       }),
     };
@@ -1000,52 +1054,90 @@ export default function Sales() {
                         {/* Selected Products/Bundles */}
                         <div className="space-y-3">
                           {selectedProducts.map((item, index) => (
-                            <div key={index} className="flex gap-2 items-end p-3 border rounded-lg" data-testid={`product-item-${index}`}>
-                              <div className="flex-1">
-                                <Label>{item.type === 'product' ? 'Product' : 'Bundle'}</Label>
-                                <Select
-                                  value={item.productId}
-                                  onValueChange={(value) => updateQuoteProduct(index, value)}
+                            <div key={index} className="border rounded-lg" data-testid={`product-item-${index}`}>
+                              <div className="flex gap-2 items-end p-3">
+                                <div className="flex-1">
+                                  <Label>{item.type === 'product' ? 'Product' : 'Bundle'}</Label>
+                                  <Select
+                                    value={item.productId}
+                                    onValueChange={(value) => updateQuoteProduct(index, value)}
+                                  >
+                                    <SelectTrigger data-testid={`select-${item.type}-${index}`}>
+                                      <SelectValue placeholder={`Select ${item.type}`} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {item.type === 'product' ? (
+                                        filteredProducts.map((product: any) => (
+                                          <SelectItem key={product.id} value={product.id}>
+                                            {product.name} - ${product.cost || '0.00'} cost
+                                          </SelectItem>
+                                        ))
+                                      ) : (
+                                        filteredBundles.map((bundle: any) => {
+                                          const bundleCost = calculateBundleCost(bundle.id, item.customQuantities);
+                                          return (
+                                            <SelectItem key={bundle.id} value={bundle.id}>
+                                              {bundle.name} - ${bundleCost.toFixed(2)} cost
+                                            </SelectItem>
+                                          );
+                                        })
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="w-24">
+                                  <Label>Quantity</Label>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    value={item.quantity || 1}
+                                    onChange={(e) => updateQuoteQuantity(index, parseInt(e.target.value) || 1)}
+                                    data-testid={`input-quantity-${index}`}
+                                  />
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeProductFromQuote(index)}
+                                  data-testid={`button-remove-${item.type}-${index}`}
                                 >
-                                  <SelectTrigger data-testid={`select-${item.type}-${index}`}>
-                                    <SelectValue placeholder={`Select ${item.type}`} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {item.type === 'product' ? (
-                                      filteredProducts.map((product: any) => (
-                                        <SelectItem key={product.id} value={product.id}>
-                                          {product.name} - ${product.cost || '0.00'} cost
-                                        </SelectItem>
-                                      ))
-                                    ) : (
-                                      filteredBundles.map((bundle: any) => (
-                                        <SelectItem key={bundle.id} value={bundle.id}>
-                                          {bundle.name} - Bundle
-                                        </SelectItem>
-                                      ))
-                                    )}
-                                  </SelectContent>
-                                </Select>
+                                  <X className="w-4 h-4" />
+                                </Button>
                               </div>
-                              <div className="w-24">
-                                <Label>Quantity</Label>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  value={item.quantity || 1}
-                                  onChange={(e) => updateQuoteQuantity(index, parseInt(e.target.value) || 1)}
-                                  data-testid={`input-quantity-${index}`}
-                                />
-                              </div>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeProductFromQuote(index)}
-                                data-testid={`button-remove-${item.type}-${index}`}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
+                              
+                              {/* Bundle Products - Collapsible Section */}
+                              {item.type === 'bundle' && item.productId && bundleProductsData[item.productId] && (
+                                <Collapsible className="border-t">
+                                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-sm hover:bg-muted/50 transition-colors" data-testid={`button-toggle-bundle-products-${index}`}>
+                                    <span className="font-medium">Edit Bundle Products ({bundleProductsData[item.productId].length} items)</span>
+                                    <ChevronDown className="h-4 w-4 transition-transform ui-open:rotate-180" />
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent className="p-3 space-y-2 bg-muted/20">
+                                    {bundleProductsData[item.productId].map((bundleProduct: any) => {
+                                      const customQty = item.customQuantities?.[bundleProduct.productId] || 1;
+                                      return (
+                                        <div key={bundleProduct.productId} className="flex items-center gap-2 p-2 bg-background rounded border">
+                                          <div className="flex-1">
+                                            <p className="text-sm font-medium">{bundleProduct.productName}</p>
+                                            <p className="text-xs text-muted-foreground">${bundleProduct.productCost || '0.00'} each</p>
+                                          </div>
+                                          <div className="w-20">
+                                            <Input
+                                              type="number"
+                                              min="1"
+                                              value={customQty}
+                                              onChange={(e) => updateBundleProductQuantity(index, bundleProduct.productId, parseInt(e.target.value) || 1)}
+                                              className="text-sm"
+                                              data-testid={`input-bundle-product-quantity-${index}-${bundleProduct.productId}`}
+                                            />
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              )}
                             </div>
                           ))}
                         </div>

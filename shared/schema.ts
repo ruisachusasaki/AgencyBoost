@@ -259,6 +259,7 @@ export const quoteItems = pgTable("quote_items", {
   quantity: integer("quantity").notNull().default(1),
   unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).notNull(),
   totalCost: decimal("total_cost", { precision: 10, scale: 2 }).notNull(),
+  customQuantities: jsonb("custom_quantities"), // For bundles: map of productId to quantity
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
