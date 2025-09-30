@@ -49,7 +49,7 @@ import {
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
-  clientPortalUsers, quotes, quoteItems
+  clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
@@ -21532,16 +21532,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/sales/reports/pipeline - Pipeline Report with lead counts and conversion rates
   app.get("/api/sales/reports/pipeline", requireAuth(), async (req, res) => {
     try {
-      const { startDate, endDate } = req.query;
+      const { startDate, endDate, salesRepId } = req.query;
       
-      // Build date filter
-      let dateFilter = undefined;
+      // Build filters
+      const filters = [];
       if (startDate && endDate) {
-        dateFilter = and(
+        filters.push(
           gte(leads.createdAt, new Date(startDate as string)),
           lte(leads.createdAt, new Date(endDate as string))
         );
       }
+      if (salesRepId && salesRepId !== 'all') {
+        filters.push(eq(leads.assignedTo, salesRepId as string));
+      }
+      const dateFilter = filters.length > 0 ? and(...filters) : undefined;
 
       // Get all active pipeline stages
       const stages = await db
@@ -21565,6 +21569,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stageMap = new Map(leadCounts.map(lc => [lc.stageId, lc]));
 
       // Get stage transitions for conversion rates
+      // Build transition filters
+      const transitionFilters = [];
+      if (startDate && endDate) {
+        transitionFilters.push(
+          gte(leadStageTransitions.transitionedAt, new Date(startDate as string)),
+          lte(leadStageTransitions.transitionedAt, new Date(endDate as string))
+        );
+      }
+      if (salesRepId && salesRepId !== 'all') {
+        transitionFilters.push(eq(leads.assignedTo, salesRepId as string));
+      }
+
       const transitions = await db
         .select({
           fromStageId: leadStageTransitions.fromStageId,
@@ -21572,14 +21588,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           count: sql<number>`count(*)::int`
         })
         .from(leadStageTransitions)
-        .where(
-          dateFilter 
-            ? and(
-                gte(leadStageTransitions.transitionedAt, new Date(startDate as string)),
-                lte(leadStageTransitions.transitionedAt, new Date(endDate as string))
-              )
-            : undefined
-        )
+        .innerJoin(leads, eq(leadStageTransitions.leadId, leads.id))
+        .where(transitionFilters.length > 0 ? and(...transitionFilters) : undefined)
         .groupBy(leadStageTransitions.fromStageId, leadStageTransitions.toStageId);
 
       // Build report with stage data and conversion rates
@@ -21634,27 +21644,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/sales/reports/sales-reps - Sales Rep Performance Report
   app.get("/api/sales/reports/sales-reps", requireAuth(), async (req, res) => {
     try {
-      const { startDate, endDate } = req.query;
+      const { startDate, endDate, salesRepId } = req.query;
       
       // Build date filter for deals
-      let dealDateFilter = undefined;
+      const dealFilters = [];
       if (startDate && endDate) {
-        dealDateFilter = and(
+        dealFilters.push(
           gte(deals.wonDate, new Date(startDate as string)),
           lte(deals.wonDate, new Date(endDate as string))
         );
       }
+      if (salesRepId && salesRepId !== 'all') {
+        dealFilters.push(eq(deals.assignedTo, salesRepId as string));
+      }
+      const dealDateFilter = dealFilters.length > 0 ? and(...dealFilters) : undefined;
 
       // Build date filter for activities
-      let activityDateFilter = undefined;
+      const activityFilters = [];
       if (startDate && endDate) {
-        activityDateFilter = and(
+        activityFilters.push(
           gte(salesActivities.createdAt, new Date(startDate as string)),
           lte(salesActivities.createdAt, new Date(endDate as string))
         );
       }
+      if (salesRepId && salesRepId !== 'all') {
+        activityFilters.push(eq(salesActivities.assignedTo, salesRepId as string));
+      }
+      const activityDateFilter = activityFilters.length > 0 ? and(...activityFilters) : undefined;
 
-      // Get all staff members
+      // Build filter for leads
+      const leadFilters = [];
+      if (startDate && endDate) {
+        leadFilters.push(
+          gte(leads.createdAt, new Date(startDate as string)),
+          lte(leads.createdAt, new Date(endDate as string))
+        );
+      }
+      if (salesRepId && salesRepId !== 'all') {
+        leadFilters.push(eq(leads.assignedTo, salesRepId as string));
+      }
+      const leadDateFilter = leadFilters.length > 0 ? and(...leadFilters) : undefined;
+
+      // Get staff members (filtered if specific rep selected)
       const staffMembers = await db
         .select({
           id: staff.id,
@@ -21663,7 +21694,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: staff.email,
           department: staff.department
         })
-        .from(staff);
+        .from(staff)
+        .where(salesRepId && salesRepId !== 'all' ? eq(staff.id, salesRepId as string) : undefined);
 
       // Get appointment counts by rep
       const appointmentCounts = await db
@@ -21695,14 +21727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalLeads: sql<number>`count(*)::int`
         })
         .from(leads)
-        .where(
-          startDate && endDate
-            ? and(
-                gte(leads.createdAt, new Date(startDate as string)),
-                lte(leads.createdAt, new Date(endDate as string))
-              )
-            : undefined
-        )
+        .where(leadDateFilter)
         .groupBy(leads.assignedTo);
 
       // Build report data

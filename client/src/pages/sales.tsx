@@ -45,6 +45,7 @@ export default function Sales() {
     startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // Start of year
     endDate: new Date().toISOString().split('T')[0] // Today
   });
+  const [selectedSalesRep, setSelectedSalesRep] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -107,11 +108,22 @@ export default function Sales() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch staff for sales rep filter
+  const { data: staffData = [] } = useQuery({
+    queryKey: ["/api/staff"],
+    refetchOnWindowFocus: false,
+  });
+
   // Fetch Pipeline Report data
   const { data: pipelineReport, isLoading: pipelineReportLoading } = useQuery({
-    queryKey: ["/api/sales/reports/pipeline", dateRange.startDate, dateRange.endDate],
+    queryKey: ["/api/sales/reports/pipeline", dateRange.startDate, dateRange.endDate, selectedSalesRep],
     queryFn: async () => {
-      const response = await fetch(`/api/sales/reports/pipeline?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+      const params = new URLSearchParams({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        ...(selectedSalesRep !== "all" && { salesRepId: selectedSalesRep })
+      });
+      const response = await fetch(`/api/sales/reports/pipeline?${params}`);
       if (!response.ok) throw new Error('Failed to fetch pipeline report');
       return response.json();
     },
@@ -121,9 +133,14 @@ export default function Sales() {
 
   // Fetch Sales Rep Report data
   const { data: salesRepReport, isLoading: salesRepReportLoading } = useQuery({
-    queryKey: ["/api/sales/reports/sales-reps", dateRange.startDate, dateRange.endDate],
+    queryKey: ["/api/sales/reports/sales-reps", dateRange.startDate, dateRange.endDate, selectedSalesRep],
     queryFn: async () => {
-      const response = await fetch(`/api/sales/reports/sales-reps?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+      const params = new URLSearchParams({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        ...(selectedSalesRep !== "all" && { salesRepId: selectedSalesRep })
+      });
+      const response = await fetch(`/api/sales/reports/sales-reps?${params}`);
       if (!response.ok) throw new Error('Failed to fetch sales rep report');
       return response.json();
     },
@@ -554,8 +571,8 @@ export default function Sales() {
                   Sales Reports
                 </CardTitle>
                 
-                {/* Date Range Filter */}
-                <div className="flex items-center gap-4">
+                {/* Date Range and Sales Rep Filters */}
+                <div className="flex items-center gap-4 flex-wrap">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="start-date" className="text-sm whitespace-nowrap">Start Date:</Label>
                     <Input
@@ -577,6 +594,25 @@ export default function Sales() {
                       className="w-40"
                       data-testid="input-end-date"
                     />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="sales-rep-filter" className="text-sm whitespace-nowrap">Sales Rep:</Label>
+                    <Select
+                      value={selectedSalesRep}
+                      onValueChange={setSelectedSalesRep}
+                    >
+                      <SelectTrigger id="sales-rep-filter" className="w-48" data-testid="select-sales-rep-filter">
+                        <SelectValue placeholder="All Sales Reps" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Sales Reps</SelectItem>
+                        {staffData.map((staff: any) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.firstName} {staff.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
