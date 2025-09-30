@@ -4253,108 +4253,119 @@ export default function EnhancedClientDetail() {
                 </CardContent>
               </Card>
             ) : (
-              briefSections
-                .filter((section: any) => section.isEnabled) // Only show enabled sections
-                .map((section: any) => {
-                  const isEditing = editingSections.has(section.id);
-                  const IconComponent = iconMap[section.icon] || FileText;
-                  const currentContent = editingContent[section.id] || section.value || "";
-                  
-                  return (
-                    <Card key={section.id} data-testid={`card-brief-${section.key}`}>
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                            <IconComponent className="h-5 w-5 text-primary" />
-                            {section.title}
-                          </h2>
-                          {!isEditing ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setEditingSections(prev => new Set([...prev, section.id]));
-                              }}
-                              data-testid={`button-edit-${section.key}`}
-                            >
-                              <Edit2 className="h-4 w-4 mr-2" />
-                              Edit
-                            </Button>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingSections(prev => {
-                                    const next = new Set(prev);
-                                    next.delete(section.id);
-                                    return next;
-                                  });
-                                  // Reset to original content
-                                  setEditingContent(prev => ({
-                                    ...prev,
-                                    [section.id]: section.value || ""
-                                  }));
-                                }}
-                                data-testid={`button-cancel-${section.key}`}
-                              >
-                                <X className="h-4 w-4 mr-2" />
-                                Cancel
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  updateClientBriefSectionMutation.mutate({
-                                    sectionId: section.id,
-                                    content: currentContent
-                                  });
-                                }}
-                                disabled={updateClientBriefSectionMutation.isPending}
-                                data-testid={`button-save-${section.key}`}
-                              >
-                                <Save className="h-4 w-4 mr-2" />
-                                {updateClientBriefSectionMutation.isPending ? "Saving..." : "Save"}
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        {isEditing ? (
-                          <div className="border rounded-md">
-                            <RichTextEditor
-                              content={currentContent}
-                              onChange={(content) => {
-                                setEditingContent(prev => ({
-                                  ...prev,
-                                  [section.id]: content
-                                }));
-                              }}
-                              placeholder={section.placeholder || `Add ${section.title.toLowerCase()} information...`}
-                              className="min-h-[200px]"
-                              data-testid={`editor-${section.key}`}
-                            />
-                          </div>
-                        ) : (
-                          <div className="min-h-[120px]">
-                            {currentContent ? (
-                              <div 
-                                className="prose prose-sm max-w-none text-gray-700"
-                                dangerouslySetInnerHTML={{ __html: currentContent }}
-                                data-testid={`content-${section.key}`}
-                              />
-                            ) : (
-                              <p className="text-gray-500 italic" data-testid={`placeholder-${section.key}`}>
-                                No {section.title.toLowerCase()} added yet. Click Edit to add {section.title.toLowerCase()} information.
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })
+              <Card>
+                <CardContent className="p-0">
+                  <Accordion type="multiple" className="w-full" data-testid="accordion-client-brief">
+                    {briefSections
+                      .filter((section: any) => section.isEnabled) // Only show enabled sections
+                      .map((section: any) => {
+                        const isEditing = editingSections.has(section.id);
+                        const IconComponent = iconMap[section.icon] || FileText;
+                        const currentContent = editingContent[section.id] || section.value || "";
+                        
+                        return (
+                          <AccordionItem key={section.id} value={section.id} data-testid={`accordion-item-${section.key}`}>
+                            <AccordionTrigger className="px-6 hover:no-underline" data-testid={`accordion-trigger-${section.key}`}>
+                              <div className="flex items-center justify-between w-full pr-4">
+                                <div className="flex items-center gap-2">
+                                  <IconComponent className="h-5 w-5 text-primary" />
+                                  <span className="text-lg font-semibold text-gray-900">{section.title}</span>
+                                </div>
+                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                  {!isEditing ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingSections(prev => new Set([...prev, section.id]));
+                                      }}
+                                      data-testid={`button-edit-${section.key}`}
+                                    >
+                                      <Edit2 className="h-4 w-4 mr-2" />
+                                      Edit
+                                    </Button>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingSections(prev => {
+                                            const next = new Set(prev);
+                                            next.delete(section.id);
+                                            return next;
+                                          });
+                                          // Reset to original content
+                                          setEditingContent(prev => ({
+                                            ...prev,
+                                            [section.id]: section.value || ""
+                                          }));
+                                        }}
+                                        data-testid={`button-cancel-${section.key}`}
+                                      >
+                                        <X className="h-4 w-4 mr-2" />
+                                        Cancel
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          updateClientBriefSectionMutation.mutate({
+                                            sectionId: section.id,
+                                            content: currentContent
+                                          });
+                                        }}
+                                        disabled={updateClientBriefSectionMutation.isPending}
+                                        data-testid={`button-save-${section.key}`}
+                                      >
+                                        <Save className="h-4 w-4 mr-2" />
+                                        {updateClientBriefSectionMutation.isPending ? "Saving..." : "Save"}
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-6 pb-6">
+                              {isEditing ? (
+                                <div className="border rounded-md">
+                                  <RichTextEditor
+                                    content={currentContent}
+                                    onChange={(content) => {
+                                      setEditingContent(prev => ({
+                                        ...prev,
+                                        [section.id]: content
+                                      }));
+                                    }}
+                                    placeholder={section.placeholder || `Add ${section.title.toLowerCase()} information...`}
+                                    className="min-h-[200px]"
+                                    data-testid={`editor-${section.key}`}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="min-h-[120px]">
+                                  {currentContent ? (
+                                    <div 
+                                      className="prose prose-sm max-w-none text-gray-700"
+                                      dangerouslySetInnerHTML={{ __html: currentContent }}
+                                      data-testid={`content-${section.key}`}
+                                    />
+                                  ) : (
+                                    <p className="text-gray-500 italic" data-testid={`placeholder-${section.key}`}>
+                                      No {section.title.toLowerCase()} added yet. Click Edit to add {section.title.toLowerCase()} information.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </AccordionContent>
+                          </AccordionItem>
+                        );
+                      })}
+                  </Accordion>
+                </CardContent>
+              </Card>
             )}
 
 
