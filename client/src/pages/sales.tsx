@@ -491,8 +491,8 @@ export default function Sales() {
       <div className="border-b border-gray-200 mb-6 mt-6">
         <nav className="-mb-px flex space-x-8">
           {[
-            { id: "reports", name: "Sales Reports", icon: BarChart3 },
-            { id: "quotes", name: "Quotes", icon: Quote }
+            { id: "quotes", name: "Quotes", icon: Quote },
+            { id: "reports", name: "Sales Reports", icon: BarChart3 }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
