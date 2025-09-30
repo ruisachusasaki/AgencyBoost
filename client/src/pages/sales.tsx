@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
+import { SALES_CONFIG, ROLE_NAMES, QUOTE_STATUS } from "@shared/constants";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -378,6 +378,27 @@ export default function Sales() {
       toast({
         title: "Error",
         description: error?.message || "Failed to reject quote.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update quote status mutation
+  const updateQuoteStatusMutation = useMutation({
+    mutationFn: async ({ quoteId, newStatus }: { quoteId: string; newStatus: string }) => {
+      return await apiRequest("PATCH", `/api/quotes/${quoteId}/status`, { status: newStatus });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      toast({
+        title: "Status Updated",
+        description: "Quote status has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to update quote status.",
         variant: "destructive",
       });
     },
@@ -1346,8 +1367,53 @@ export default function Sales() {
                         </div>
                       </div>
 
-                      <div className="mt-3 text-xs text-muted-foreground" data-testid={`text-quote-created-${quote.id}`}>
-                        Created: {new Date(quote.createdAt).toLocaleDateString()} by {quote.createdByName} {quote.createdByLastName}
+                      <div className="mt-3 flex items-center justify-between">
+                        <div className="text-xs text-muted-foreground" data-testid={`text-quote-created-${quote.id}`}>
+                          Created: {new Date(quote.createdAt).toLocaleDateString()} by {quote.createdByName} {quote.createdByLastName}
+                        </div>
+                        
+                        {/* Status Update Dropdown - don't show for rejected quotes */}
+                        {quote.status !== 'rejected' && (
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground">Update Status:</Label>
+                            <Select
+                              value={quote.status}
+                              onValueChange={(newStatus) => updateQuoteStatusMutation.mutate({ quoteId: quote.id, newStatus })}
+                              disabled={updateQuoteStatusMutation.isPending}
+                            >
+                              <SelectTrigger className="w-[140px] h-8 text-xs" data-testid={`select-quote-status-${quote.id}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {/* Only show valid status transitions */}
+                                {quote.status === 'draft' && (
+                                  <>
+                                    <SelectItem value="draft">Draft</SelectItem>
+                                    <SelectItem value="sent">Sent</SelectItem>
+                                  </>
+                                )}
+                                {quote.status === 'pending_approval' && (
+                                  <SelectItem value="pending_approval">Pending Approval</SelectItem>
+                                )}
+                                {quote.status === 'approved' && (
+                                  <>
+                                    <SelectItem value="approved">Approved</SelectItem>
+                                    <SelectItem value="sent">Sent</SelectItem>
+                                  </>
+                                )}
+                                {quote.status === 'sent' && (
+                                  <>
+                                    <SelectItem value="sent">Sent</SelectItem>
+                                    <SelectItem value="accepted">Accepted</SelectItem>
+                                  </>
+                                )}
+                                {quote.status === 'accepted' && (
+                                  <SelectItem value="accepted">Accepted</SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ));

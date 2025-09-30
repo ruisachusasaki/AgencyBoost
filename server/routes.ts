@@ -21403,5 +21403,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PATCH /api/quotes/:id/status - Update quote status
+  app.patch("/api/quotes/:id/status", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const userId = getAuthenticatedUserIdOrFail(req);
+
+      // Define valid status transitions
+      const validTransitions: Record<string, string[]> = {
+        "draft": ["draft", "sent"], // Can stay draft or move to sent
+        "pending_approval": ["pending_approval"], // Can only stay pending (changed by approval endpoint)
+        "approved": ["approved", "sent"], // Can stay approved or move to sent
+        "sent": ["sent", "accepted"], // Can stay sent or move to accepted
+        "accepted": ["accepted"], // Final state
+        "rejected": ["rejected"], // Final state
+      };
+
+      // Check if quote exists
+      const [quote] = await db
+        .select()
+        .from(quotes)
+        .where(eq(quotes.id, id))
+        .limit(1);
+
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+
+      // Validate status transition
+      const allowedNextStatuses = validTransitions[quote.status] || [];
+      if (!allowedNextStatuses.includes(status)) {
+        return res.status(400).json({ 
+          message: `Invalid status transition from ${quote.status} to ${status}`,
+          allowedStatuses: allowedNextStatuses
+        });
+      }
+
+      // Update quote status
+      const [updatedQuote] = await db
+        .update(quotes)
+        .set({
+          status: status,
+          updatedAt: new Date(),
+        })
+        .where(eq(quotes.id, id))
+        .returning();
+
+      // Log the status change
+      await createAuditLog(
+        "updated",
+        "quote",
+        id,
+        quote.name || "Quote",
+        userId,
+        `Changed quote status from ${quote.status} to ${status}`,
+        { status: quote.status },
+        { status: updatedQuote.status },
+        req
+      );
+
+      res.json({
+        message: "Quote status updated successfully",
+        quote: updatedQuote
+      });
+    } catch (error) {
+      console.error("Error updating quote status:", error);
+      res.status(500).json({ message: "Failed to update quote status" });
+    }
+  });
+
   return httpServer;
 }
