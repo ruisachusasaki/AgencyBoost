@@ -29,9 +29,7 @@ import {
   Banknote,
   PieChart,
   BarChart3,
-  Calculator,
   Percent,
-  Minus,
   Quote,
   Edit,
   Trash2,
@@ -57,13 +55,6 @@ export default function Sales() {
   // Check if current user is a Sales Manager or Admin
   const isSalesManager = currentUser?.roles?.includes(ROLE_NAMES.SALES_MANAGER) || currentUser?.roles?.includes('Admin');
   
-  // Sales Calculator state
-  const [calculatorData, setCalculatorData] = useState({
-    dealValue: "",
-    commissionRate: "",
-    bonusAmount: "",
-    deductions: "",
-  });
 
   // Quote Builder state
   const [isQuoteBuilderOpen, setIsQuoteBuilderOpen] = useState(false);
@@ -83,23 +74,6 @@ export default function Sales() {
   const [viewingQuoteId, setViewingQuoteId] = useState<string | null>(null);
   const [deleteConfirmQuoteId, setDeleteConfirmQuoteId] = useState<string | null>(null);
 
-  const calculateCommission = () => {
-    const deal = parseFloat(calculatorData.dealValue) || 0;
-    const rate = parseFloat(calculatorData.commissionRate) || 0;
-    const bonus = parseFloat(calculatorData.bonusAmount) || 0;
-    const deductions = parseFloat(calculatorData.deductions) || 0;
-    
-    const baseCommission = (deal * rate) / 100;
-    const totalCommission = baseCommission + bonus - deductions;
-    
-    return {
-      baseCommission,
-      totalCommission,
-      dealValue: deal
-    };
-  };
-
-  const results = calculateCommission();
 
   // Fetch data for Quote Builder
   const { data: clientsData } = useQuery<{ clients: any[] }>({
@@ -674,7 +648,6 @@ export default function Sales() {
             { id: "overview", name: "Pipeline Overview", icon: PieChart },
             { id: "deals", name: "Active Deals", icon: Target },
             { id: "reports", name: "Sales Reports", icon: BarChart3 },
-            { id: "calculator", name: "Sales Calculator", icon: Calculator },
             { id: "quotes", name: "Quotes", icon: Quote }
           ].map((tab) => {
             const Icon = tab.icon;
@@ -785,131 +758,6 @@ export default function Sales() {
         </div>
       )}
 
-      {/* Sales Calculator Tab */}
-      {activeTab === "calculator" && (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
-                Commission Calculator
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Input Section */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Deal Information</h3>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="dealValue" className="block text-sm font-medium">Deal Value ($)</label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        id="dealValue"
-                        type="number"
-                        placeholder="0.00"
-                        value={calculatorData.dealValue}
-                        onChange={(e) => setCalculatorData(prev => ({ ...prev, dealValue: e.target.value }))}
-                        className="pl-10"
-                        data-testid="input-deal-value"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="commissionRate" className="block text-sm font-medium">Commission Rate (%)</label>
-                    <div className="relative">
-                      <Percent className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        id="commissionRate"
-                        type="number"
-                        placeholder="0.00"
-                        value={calculatorData.commissionRate}
-                        onChange={(e) => setCalculatorData(prev => ({ ...prev, commissionRate: e.target.value }))}
-                        className="pl-10"
-                        data-testid="input-commission-rate"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="bonusAmount" className="block text-sm font-medium">Bonus Amount ($)</label>
-                    <div className="relative">
-                      <Plus className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        id="bonusAmount"
-                        type="number"
-                        placeholder="0.00"
-                        value={calculatorData.bonusAmount}
-                        onChange={(e) => setCalculatorData(prev => ({ ...prev, bonusAmount: e.target.value }))}
-                        className="pl-10"
-                        data-testid="input-bonus-amount"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="deductions" className="block text-sm font-medium">Deductions ($)</label>
-                    <div className="relative">
-                      <Minus className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        id="deductions"
-                        type="number"
-                        placeholder="0.00"
-                        value={calculatorData.deductions}
-                        onChange={(e) => setCalculatorData(prev => ({ ...prev, deductions: e.target.value }))}
-                        className="pl-10"
-                        data-testid="input-deductions"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Results Section */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Commission Results</h3>
-                  
-                  <div className="space-y-4">
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="text-center">
-                          <p className="text-sm text-muted-foreground">Deal Value</p>
-                          <p className="text-2xl font-bold text-gray-900" data-testid="result-deal-value">
-                            ${results.dealValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="text-center">
-                          <p className="text-sm text-muted-foreground">Base Commission</p>
-                          <p className="text-2xl font-bold text-blue-600" data-testid="result-base-commission">
-                            ${results.baseCommission.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="text-center">
-                          <p className="text-sm text-muted-foreground">Total Commission</p>
-                          <p className="text-3xl font-bold text-primary" data-testid="result-total-commission">
-                            ${results.totalCommission.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Quotes Tab */}
       {activeTab === "quotes" && (
