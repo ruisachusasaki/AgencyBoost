@@ -592,6 +592,61 @@ export const leads = pgTable("leads", {
   tags: text("tags").array().default([]), // array of tag names
 });
 
+// Lead Stage Transitions - Track stage movements for pipeline analytics
+export const leadStageTransitions = pgTable("lead_stage_transitions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  fromStageId: varchar("from_stage_id").references(() => leadPipelineStages.id),
+  toStageId: varchar("to_stage_id").notNull().references(() => leadPipelineStages.id),
+  transitionedAt: timestamp("transitioned_at").notNull().defaultNow(),
+  transitionedBy: uuid("transitioned_by").references(() => staff.id),
+}, (table) => [
+  index("idx_stage_transitions_lead").on(table.leadId),
+  index("idx_stage_transitions_date").on(table.transitionedAt),
+  index("idx_stage_transitions_stages").on(table.fromStageId, table.toStageId),
+]);
+
+// Sales Activities - Track appointments, pitches, demos, etc.
+export const salesActivities = pgTable("sales_activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // appointment, pitch, demo, follow_up, proposal_sent
+  outcome: text("outcome"), // scheduled, completed, no_show, cancelled, won, lost
+  notes: text("notes"),
+  assignedTo: uuid("assigned_to").notNull().references(() => staff.id),
+  scheduledAt: timestamp("scheduled_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_sales_activities_lead").on(table.leadId),
+  index("idx_sales_activities_rep").on(table.assignedTo),
+  index("idx_sales_activities_type").on(table.type),
+]);
+
+// Deals - Track won deals with MRR and contract details
+export const deals = pgTable("deals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").notNull().references(() => leads.id),
+  clientId: varchar("client_id").references(() => clients.id),
+  name: text("name").notNull(),
+  value: decimal("value", { precision: 10, scale: 2 }).notNull(),
+  mrr: decimal("mrr", { precision: 10, scale: 2 }), // Monthly Recurring Revenue
+  isRecurring: boolean("is_recurring").default(false),
+  contractTerm: integer("contract_term"), // in months
+  assignedTo: uuid("assigned_to").notNull().references(() => staff.id),
+  wonDate: timestamp("won_date").notNull().defaultNow(),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  status: text("status").notNull().default("active"), // active, paused, cancelled, completed
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_deals_rep").on(table.assignedTo),
+  index("idx_deals_won_date").on(table.wonDate),
+  index("idx_deals_lead").on(table.leadId),
+]);
+
 // Smart Lists for saved client and task filters
 export const smartLists = pgTable("smart_lists", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1131,6 +1186,37 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   tags: z.array(z.string()).optional().default([]),
 });
 
+export const insertLeadStageTransitionSchema = createInsertSchema(leadStageTransitions).omit({
+  id: true,
+  transitionedAt: true,
+});
+
+export const insertSalesActivitySchema = createInsertSchema(salesActivities).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDealSchema = createInsertSchema(deals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  value: z.union([z.string(), z.number()]).transform((val) => {
+    if (typeof val === 'string') {
+      return parseFloat(val).toString();
+    }
+    return val.toString();
+  }),
+  mrr: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => {
+    if (val === '' || val === null || val === undefined) return null;
+    if (typeof val === 'string') {
+      const parsed = parseFloat(val);
+      return isNaN(parsed) ? null : parsed.toString();
+    }
+    return val?.toString() || null;
+  }),
+});
+
 export const insertTaskSchema = createInsertSchema(tasks).omit({
   id: true,
   createdAt: true,
@@ -1355,6 +1441,15 @@ export type InsertLeadPipelineStage = z.infer<typeof insertLeadPipelineStagSchem
 
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
+
+export type LeadStageTransition = typeof leadStageTransitions.$inferSelect;
+export type InsertLeadStageTransition = z.infer<typeof insertLeadStageTransitionSchema>;
+
+export type SalesActivity = typeof salesActivities.$inferSelect;
+export type InsertSalesActivity = z.infer<typeof insertSalesActivitySchema>;
+
+export type Deal = typeof deals.$inferSelect;
+export type InsertDeal = z.infer<typeof insertDealSchema>;
 
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
