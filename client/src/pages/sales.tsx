@@ -54,8 +54,8 @@ export default function Sales() {
     refetchOnWindowFocus: false,
   });
   
-  // Check if current user is a Sales Manager
-  const isSalesManager = currentUser?.position === ROLE_NAMES.SALES_MANAGER || currentUser?.role === 'Admin';
+  // Check if current user is a Sales Manager or Admin
+  const isSalesManager = currentUser?.roles?.includes(ROLE_NAMES.SALES_MANAGER) || currentUser?.roles?.includes('Admin');
   
   // Sales Calculator state
   const [calculatorData, setCalculatorData] = useState({
