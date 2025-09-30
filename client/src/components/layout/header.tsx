@@ -2,11 +2,19 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, Search, Bell, X, MessageSquare, Check } from "lucide-react";
+import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
@@ -255,26 +263,47 @@ export default function Header({ onMenuClick }: HeaderProps) {
           
           <NotificationButton />
           
-          <Link 
-            href="/settings/my-profile" 
-            className="flex items-center gap-3 hover:bg-slate-50 rounded-lg px-2 py-1 transition-colors cursor-pointer"
-            data-testid="link-profile"
-          >
-            <span className="text-sm font-medium text-slate-700 hidden sm:block">
-              {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'}
-            </span>
-            <Avatar className="w-8 h-8" data-testid="img-avatar">
-              <AvatarImage 
-                src={currentUser?.profileImagePath ? `/api/objects/${currentUser.profileImagePath}` : undefined} 
-                alt={currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'} 
-              />
-              <AvatarFallback className="bg-slate-300 text-slate-600 text-sm font-medium">
-                {currentUser 
-                  ? `${currentUser.firstName?.[0] || ''}${currentUser.lastName?.[0] || ''}` 
-                  : 'U'}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button 
+                className="flex items-center gap-3 hover:bg-slate-50 rounded-lg px-2 py-1 transition-colors cursor-pointer"
+                data-testid="button-user-menu"
+              >
+                <span className="text-sm font-medium text-slate-700 hidden sm:block">
+                  {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'}
+                </span>
+                <Avatar className="w-8 h-8" data-testid="img-avatar">
+                  <AvatarImage 
+                    src={currentUser?.profileImagePath ? `/api/objects/${currentUser.profileImagePath}` : undefined} 
+                    alt={currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'} 
+                  />
+                  <AvatarFallback className="bg-slate-300 text-slate-600 text-sm font-medium">
+                    {currentUser 
+                      ? `${currentUser.firstName?.[0] || ''}${currentUser.lastName?.[0] || ''}` 
+                      : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/settings/my-profile" className="flex items-center cursor-pointer" data-testid="menu-item-profile">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => window.location.href = '/api/logout'}
+                className="flex items-center cursor-pointer text-red-600 focus:text-red-600"
+                data-testid="menu-item-logout"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>
