@@ -4,6 +4,7 @@
 AgencyFlow is a comprehensive Customer Relationship Management (CRM) system for marketing agencies. It manages clients, projects, campaigns, leads, tasks, and invoices, with integrated reporting and a responsive interface. The system aims to enhance efficiency and operational oversight, providing a modern solution for agencies.
 
 ## Recent Changes
+- **Implemented full Replit Auth OIDC authentication system** - Replaced development mode authentication bypass with production-ready Replit Auth integration. Features include: OIDC-based login flow, automatic user provisioning from Replit Auth claims, first-user admin bootstrap, session management with PostgreSQL, and secure logout with session clearing. Added `replitAuthSub` field to staff table to link Replit Auth users with CRM staff records.
 - **Implemented comprehensive Client Approval Workflow system** - Enables compliance review of client assets (video/image ads) before publication with task attachments shown in Client Portal and client approval/annotation capabilities
 - Successfully implemented profile photo upload functionality and header profile image display with clickable navigation
 - Added emergency contact fields (name, phone, relationship) to database schema and Personal tab form
@@ -38,7 +39,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 
 ### Technical Implementations
 - **Data Models**: Relational schema for core entities (Clients, Projects, Campaigns, Leads, Tasks, Invoices).
-- **Authentication & Authorization**: Session-based authentication with role-based access control (Admin, Manager, User, Accounting) and granular permissions. Centralized middleware (`server/auth.ts`) handles authentication and permission checks (e.g., `requireAuth()`, `requirePermission()`, `requireAdmin()`). Development mode bypass creates mock admin session when NODE_ENV=development for full platform access during development.
+- **Authentication & Authorization**: Production-ready Replit Auth OIDC authentication with session-based state management and role-based access control (Admin, Manager, User, Accounting) with granular permissions. Replit Auth handles secure login/logout flows via OpenID Connect (`server/replitAuth.ts`). User provisioning automatically creates staff records from Replit Auth claims (sub, email, name, profile image) with first-user admin bootstrap. Centralized middleware (`server/auth.ts`) handles permission checks (e.g., `requireAuth()`, `requirePermission()`, `requireAdmin()`). Session data stored in PostgreSQL via `connect-pg-simple` with automatic token refresh.
 - **Data Management**: CRUD operations, audit logs, table sorting, pagination, CSV import/export.
 - **Customization**: Custom Field Management with drag-and-drop reordering, and Marketing Template Management with WYSIWYG editor.
 - **Task Management**: Dynamic project progress, hierarchical sub-task system (up to 5 levels), task dependencies (Finish to Start, Start to Start, Finish to Finish, Start to Finish), ClickUp-style recurring tasks, comprehensive bulk actions, and task status visibility controls.
