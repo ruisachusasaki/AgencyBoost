@@ -2037,7 +2037,7 @@ export default function Tasks() {
                 <SelectContent>
                   <SelectItem value="all">All Workflows</SelectItem>
                   <SelectItem value="none">No Workflow</SelectItem>
-                  {teamWorkflows?.map((workflow) => (
+                  {workflows?.map((workflow) => (
                     <SelectItem key={workflow.id} value={workflow.id}>
                       {workflow.name}
                     </SelectItem>
