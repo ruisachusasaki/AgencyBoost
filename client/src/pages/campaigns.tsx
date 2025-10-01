@@ -118,6 +118,16 @@ export default function Campaigns() {
       ]
     },
     {
+      label: "User Fields",
+      tags: [
+        { label: "User First Name", value: "{{user_first_name}}" },
+        { label: "User Last Name", value: "{{user_last_name}}" },
+        { label: "User Full Name", value: "{{user_full_name}}" },
+        { label: "User Email", value: "{{user_email}}" },
+        { label: "User Phone", value: "{{user_phone}}" },
+      ]
+    },
+    {
       label: "Other",
       tags: [
         { label: "Notes", value: "{{notes}}" },

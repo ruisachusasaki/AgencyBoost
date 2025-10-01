@@ -102,9 +102,9 @@ function MergeTagSelector({ searchValue, onSearchChange, onSelectTag, customFiel
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-2">
-            {filteredMergeTags.map((mergeTag) => (
+            {filteredMergeTags.map((mergeTag, index) => (
               <button
-                key={mergeTag.tag}
+                key={`${mergeTag.tag}-${index}`}
                 className="text-left p-3 border rounded-md hover:bg-gray-50 transition-colors"
                 onClick={() => onSelectTag(mergeTag.tag)}
                 data-testid={`merge-tag-${mergeTag.tag.replace(/[{}]/g, '')}`}
@@ -445,16 +445,25 @@ function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string;
 
   // Built-in merge tags (standard system fields)
   const builtInTags = [
-    { name: 'First Name', key: 'first_name' },
-    { name: 'Last Name', key: 'last_name' },
-    { name: 'Full Name', key: 'full_name' },
-    { name: 'Company', key: 'company' },
-    { name: 'Phone', key: 'phone' },
-    { name: 'Email', key: 'email' },
-    { name: 'City', key: 'city' },
-    { name: 'State', key: 'state' },
-    { name: 'Today Date', key: 'today_date' },
-    { name: 'Current Time', key: 'current_time' }
+    { name: 'First Name', key: 'first_name', category: 'client' },
+    { name: 'Last Name', key: 'last_name', category: 'client' },
+    { name: 'Full Name', key: 'full_name', category: 'client' },
+    { name: 'Company', key: 'company', category: 'client' },
+    { name: 'Phone', key: 'phone', category: 'client' },
+    { name: 'Email', key: 'email', category: 'client' },
+    { name: 'City', key: 'city', category: 'client' },
+    { name: 'State', key: 'state', category: 'client' },
+    { name: 'Today Date', key: 'today_date', category: 'system' },
+    { name: 'Current Time', key: 'current_time', category: 'system' }
+  ];
+
+  // User/Staff merge tags
+  const userTags = [
+    { name: 'User First Name', key: 'user_first_name', category: 'user' },
+    { name: 'User Last Name', key: 'user_last_name', category: 'user' },
+    { name: 'User Full Name', key: 'user_full_name', category: 'user' },
+    { name: 'User Email', key: 'user_email', category: 'user' },
+    { name: 'User Phone', key: 'user_phone', category: 'user' }
   ];
 
   // Generate merge tag key from custom field name
@@ -462,13 +471,15 @@ function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string;
     return fieldName.toLowerCase().replace(/[^a-z0-9]/g, '_');
   };
 
-  // Combine built-in tags with custom fields
+  // Combine built-in tags, user tags, and custom fields
   const allTags = [
     ...builtInTags,
+    ...userTags,
     ...customFields.map((field: CustomField) => ({
       name: field.name,
       key: generateMergeKey(field.name),
       isCustom: true,
+      category: 'custom',
       type: field.type
     }))
   ];
@@ -491,11 +502,11 @@ function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string;
         </div>
       ) : (
         <>
-          {/* Built-in Tags Section */}
-          {filteredTags.some(tag => !tag.isCustom) && (
+          {/* Client Fields Section */}
+          {filteredTags.some(tag => tag.category === 'client') && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-700 mb-2 px-2">System Fields</h4>
-              {filteredTags.filter(tag => !tag.isCustom).map((tag) => (
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 px-2">Client Fields</h4>
+              {filteredTags.filter(tag => tag.category === 'client').map((tag) => (
                 <Button
                   key={tag.key}
                   variant="outline"
@@ -504,7 +515,47 @@ function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string;
                   data-testid={`button-sms-tag-${tag.key}`}
                 >
                   <Hash className="h-4 w-4 mr-2" />
-                  <span className="font-mono text-sm">{`{{${tag.name}}}`}</span>
+                  <span className="font-mono text-sm">{`{{${tag.key}}}`}</span>
+                  <span className="ml-2 text-gray-500">({tag.name})</span>
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {/* User Fields Section */}
+          {filteredTags.some(tag => tag.category === 'user') && (
+            <div className="mt-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 px-2">User Fields</h4>
+              {filteredTags.filter(tag => tag.category === 'user').map((tag) => (
+                <Button
+                  key={tag.key}
+                  variant="outline"
+                  className="w-full justify-start text-left mb-1"
+                  onClick={() => onSelectTag(tag.name)}
+                  data-testid={`button-sms-tag-${tag.key}`}
+                >
+                  <Hash className="h-4 w-4 mr-2" />
+                  <span className="font-mono text-sm">{`{{${tag.key}}}`}</span>
+                  <span className="ml-2 text-gray-500">({tag.name})</span>
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {/* System Fields Section */}
+          {filteredTags.some(tag => tag.category === 'system') && (
+            <div className="mt-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 px-2">System Fields</h4>
+              {filteredTags.filter(tag => tag.category === 'system').map((tag) => (
+                <Button
+                  key={tag.key}
+                  variant="outline"
+                  className="w-full justify-start text-left mb-1"
+                  onClick={() => onSelectTag(tag.name)}
+                  data-testid={`button-sms-tag-${tag.key}`}
+                >
+                  <Hash className="h-4 w-4 mr-2" />
+                  <span className="font-mono text-sm">{`{{${tag.key}}}`}</span>
                   <span className="ml-2 text-gray-500">({tag.name})</span>
                 </Button>
               ))}
@@ -512,12 +563,10 @@ function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string;
           )}
 
           {/* Custom Fields Section */}
-          {filteredTags.some(tag => tag.isCustom) && (
-            <div className={filteredTags.some(tag => !tag.isCustom) ? "mt-4" : ""}>
-              {filteredTags.some(tag => !tag.isCustom) && (
-                <h4 className="text-sm font-semibold text-gray-700 mb-2 px-2">Custom Fields</h4>
-              )}
-              {filteredTags.filter(tag => tag.isCustom).map((tag) => (
+          {filteredTags.some(tag => tag.category === 'custom') && (
+            <div className="mt-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 px-2">Custom Fields</h4>
+              {filteredTags.filter(tag => tag.category === 'custom').map((tag) => (
                 <Button
                   key={tag.key}
                   variant="outline"
@@ -526,7 +575,7 @@ function SmsMergeTagsSelector({ searchTerm, onSelectTag }: { searchTerm: string;
                   data-testid={`button-sms-tag-${tag.key}`}
                 >
                   <Hash className="h-4 w-4 mr-2" />
-                  <span className="font-mono text-sm">{`{{${tag.name}}}`}</span>
+                  <span className="font-mono text-sm">{`{{${tag.key}}}`}</span>
                   <span className="ml-2 text-gray-500">({tag.name})</span>
                   {tag.type && (
                     <Badge variant="secondary" className="ml-auto text-xs">
