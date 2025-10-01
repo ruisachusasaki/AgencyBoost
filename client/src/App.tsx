@@ -15,6 +15,7 @@ import Campaigns from "@/pages/campaigns";
 import Sales from "@/pages/sales";
 import RequirePermission from "@/components/RequirePermission";
 import Leads from "@/pages/leads";
+import LeadDetail from "@/pages/lead-detail";
 import Tasks from "@/pages/tasks";
 import TaskDetail from "@/pages/task-detail";
 import Reports from "@/pages/reports";
@@ -150,6 +151,16 @@ function Router() {
           <AuthGate>
             <MainLayout>
               <Leads />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/leads/:id">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <LeadDetail />
             </MainLayout>
           </AuthGate>
         )}

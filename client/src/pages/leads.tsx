@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ const AVAILABLE_COLUMNS: Column[] = [
 type SortField = 'name' | 'email' | 'company' | 'phone' | 'stage' | 'value' | 'source' | 'assignedTo' | 'lastContactDate' | 'createdAt';
 
 export default function Leads() {
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -299,12 +301,14 @@ export default function Leads() {
     switch (columnKey) {
       case 'name':
         return (
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-              {getLeadInitials(lead)}
+          <Link href={`/leads/${lead.id}`} data-testid={`link-lead-${lead.id}`}>
+            <div className="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                {getLeadInitials(lead)}
+              </div>
+              <span className="font-medium">{lead.name}</span>
             </div>
-            <span className="font-medium">{lead.name}</span>
-          </div>
+          </Link>
         );
       case 'email':
         return lead.email;
@@ -746,7 +750,8 @@ export default function Leads() {
                                                 className={`cursor-pointer transition-shadow relative ${
                                                   snapshot.isDragging ? "shadow-lg rotate-1" : "hover:shadow-md"
                                                 }`}
-                                                onClick={() => setEditingLead(lead)}
+                                                onClick={() => setLocation(`/leads/${lead.id}`)}
+                                                data-testid={`card-lead-${lead.id}`}
                                               >
                                                 <CardContent className="p-4">
                                                   <div className="flex items-start justify-between mb-3">
