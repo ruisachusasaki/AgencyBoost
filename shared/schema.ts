@@ -1257,7 +1257,7 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   // Client approval workflow validation
   requiresClientApproval: z.boolean().optional().default(false),
   clientApprovalStatus: z.enum(["pending", "approved", "rejected", "changes_requested"]).optional().default("pending"),
-  clientApprovalNotes: z.string().optional(),
+  clientApprovalNotes: z.string().nullable().optional(),
 });
 
 // Server-side validated schema that enforces client approval invariants
