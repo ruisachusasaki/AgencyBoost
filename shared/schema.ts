@@ -517,7 +517,7 @@ export const emailTemplates = pgTable("email_templates", {
   isPublic: boolean("is_public").default(false),
   usageCount: integer("usage_count").default(0),
   lastUsed: timestamp("last_used"),
-  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -532,7 +532,7 @@ export const smsTemplates = pgTable("sms_templates", {
   isPublic: boolean("is_public").default(false),
   usageCount: integer("usage_count").default(0),
   lastUsed: timestamp("last_used"),
-  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
