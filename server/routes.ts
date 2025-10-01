@@ -4858,6 +4858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const {
         title,
         clientId,
+        leadId,
         campaignId,
         workflowId,
         visibleToClient = false,
@@ -4895,6 +4896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           categoryId: templateData.categoryId,
           workflowId: workflowId || templateData.workflowId,
           clientId: clientId || templateData.clientId,
+          leadId: leadId || templateData.leadId,
           campaignId: campaignId || templateData.campaignId,
           timeEstimate: templateData.timeEstimate,
           level: templateData.level,

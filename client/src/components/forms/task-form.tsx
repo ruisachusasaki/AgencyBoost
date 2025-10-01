@@ -135,6 +135,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       startDate: task?.startDate ? new Date(task.startDate) : null,
       dueDate: task?.dueDate ? new Date(task.dueDate) : null,
       clientId: task?.clientId || "",
+      leadId: task?.leadId || "",
       // projectId removed
       // Client portal visibility
       visibleToClient: task?.visibleToClient || false,
@@ -169,6 +170,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         startDate: task.startDate ? new Date(task.startDate) : null,
         dueDate: task.dueDate ? new Date(task.dueDate) : null,
         clientId: task.clientId || "",
+        leadId: task.leadId || "",
         // projectId removed
         // Client portal visibility
         visibleToClient: task.visibleToClient || false,
@@ -233,6 +235,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       templateId: string;
       title?: string;
       clientId?: string;
+      leadId?: string;
       workflowId?: string;
       visibleToClient?: boolean;
       requiresClientApproval?: boolean;
@@ -242,6 +245,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       const response = await apiRequest("POST", `/api/task-templates/${data.templateId}/instantiate`, {
         title: data.title,
         clientId: data.clientId && data.clientId !== "none" ? data.clientId : null,
+        leadId: data.leadId && data.leadId !== "none" ? data.leadId : null,
         workflowId: data.workflowId && data.workflowId !== "none" ? data.workflowId : null,
         visibleToClient: data.visibleToClient || false,
         requiresClientApproval: data.requiresClientApproval || false,
@@ -272,6 +276,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         startDate: null,
         dueDate: null,
         clientId: "",
+        leadId: "",
         visibleToClient: false,
         requiresClientApproval: false,
         isRecurring: false,
@@ -311,6 +316,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       const cleanData = {
         ...taskData,
         clientId: taskData.clientId && taskData.clientId !== "none" && taskData.clientId !== "" ? taskData.clientId : null,
+        leadId: taskData.leadId && taskData.leadId !== "none" && taskData.leadId !== "" ? taskData.leadId : null,
         assignedTo: taskData.assignedTo && taskData.assignedTo !== "unassigned" && taskData.assignedTo !== "" ? taskData.assignedTo : null,
         categoryId: taskData.categoryId && taskData.categoryId !== "" ? taskData.categoryId : null,
         workflowId: taskData.workflowId && taskData.workflowId !== "" ? taskData.workflowId : null,
@@ -328,6 +334,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         templateId: data.templateId,
         title: data.title || undefined,
         clientId: data.clientId || undefined,
+        leadId: data.leadId || undefined,
         workflowId: data.workflowId || undefined,
         visibleToClient: data.visibleToClient || false,
         requiresClientApproval: data.requiresClientApproval || false,
@@ -340,6 +347,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       const cleanData = {
         ...taskData,
         clientId: taskData.clientId && taskData.clientId !== "none" && taskData.clientId !== "" ? taskData.clientId : null,
+        leadId: taskData.leadId && taskData.leadId !== "none" && taskData.leadId !== "" ? taskData.leadId : null,
         assignedTo: taskData.assignedTo && taskData.assignedTo !== "unassigned" && taskData.assignedTo !== "" ? taskData.assignedTo : null,
         categoryId: taskData.categoryId && taskData.categoryId !== "" ? taskData.categoryId : null,
         workflowId: taskData.workflowId && taskData.workflowId !== "" ? taskData.workflowId : null,
