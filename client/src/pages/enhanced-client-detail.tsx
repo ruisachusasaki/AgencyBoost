@@ -121,7 +121,7 @@ function MergeTagSelector({ searchValue, onSearchChange, onSelectTag, customFiel
 }
 
 // EmailTemplateSelector Component
-function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content: string, name: string) => void }) {
+function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (content: string, name: string, previewText?: string) => void }) {
   const [searchTerm, setSearchTerm] = useState("");
   
   const { data: emailTemplates = [], isLoading } = useQuery({
@@ -153,7 +153,7 @@ function EmailTemplateSelector({ onSelectTemplate }: { onSelectTemplate: (conten
             <div 
               key={template.id}
               className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
-              onClick={() => onSelectTemplate(template.content, template.name)}
+              onClick={() => onSelectTemplate(template.content, template.name, template.previewText)}
             >
               <h4 className="font-medium">{template.name}</h4>
               <p className="text-sm text-gray-600">{template.previewText || template.subject}</p>
@@ -1811,7 +1811,7 @@ export default function EnhancedClientDetail() {
   
   // Communication form state
   const [smsData, setSmsData] = useState({ fromNumber: "", message: "" });
-  const [emailData, setEmailData] = useState({ fromName: "", fromEmail: "", to: "", cc: "", bcc: "", subject: "", message: "" });
+  const [emailData, setEmailData] = useState({ fromName: "", fromEmail: "", to: "", cc: "", bcc: "", subject: "", previewText: "", message: "" });
   const [showCC, setShowCC] = useState(false);
   const [showBCC, setShowBCC] = useState(false);
   
@@ -3380,8 +3380,13 @@ export default function EnhancedClientDetail() {
     setShowMergeTagsModal(false);
   };
 
-  const selectTemplate = (templateContent: string, templateName: string) => {
-    setEmailData(prev => ({ ...prev, message: templateContent, subject: templateName }));
+  const selectTemplate = (templateContent: string, templateName: string, templatePreviewText?: string) => {
+    setEmailData(prev => ({ 
+      ...prev, 
+      message: templateContent, 
+      subject: templateName,
+      previewText: templatePreviewText || ""
+    }));
     setShowTemplateModal(false);
     toast({
       title: "Template Applied",
@@ -3422,6 +3427,7 @@ export default function EnhancedClientDetail() {
       const response = await apiRequest('POST', '/api/communications/send-email', {
         to: client.email,
         subject: emailData.subject,
+        previewText: emailData.previewText,
         message: emailData.message,
         fromEmail: emailData.fromEmail,
         fromName: emailData.fromName,
@@ -3440,6 +3446,7 @@ export default function EnhancedClientDetail() {
         fromEmail: emailData.fromEmail, // Keep from email
         fromName: emailData.fromName,   // Keep from name
         subject: "",                    // Clear subject
+        previewText: "",                // Clear preview text
         message: ""                     // Clear message
       });
       
@@ -3506,6 +3513,7 @@ export default function EnhancedClientDetail() {
         clientId: client.id,
         toEmail: client.email,
         subject: emailData.subject,
+        previewText: emailData.previewText,
         content: emailData.message,
         plainTextContent: emailData.message, // For now, use same content for plain text
         scheduledFor: scheduleDateTime.toISOString(),
@@ -3525,6 +3533,7 @@ export default function EnhancedClientDetail() {
         fromEmail: emailData.fromEmail, // Keep from email
         fromName: emailData.fromName,   // Keep from name
         subject: "",                    // Clear subject
+        previewText: "",                // Clear preview text
         message: ""                     // Clear message
       });
       
@@ -5327,6 +5336,17 @@ export default function EnhancedClientDetail() {
                           </div>
                           
                           <div>
+                            <Label htmlFor="email-preview-text">Preview Text</Label>
+                            <Input
+                              id="email-preview-text"
+                              value={emailData.previewText}
+                              onChange={(e) => handleEmailFieldChange('previewText', e.target.value)}
+                              placeholder="Preview text (optional)"
+                              data-testid="input-email-preview-text"
+                            />
+                          </div>
+                          
+                          <div>
                             <div className="flex items-center justify-between mb-2">
                               <Label htmlFor="email-message">Message</Label>
                               <div className="flex items-center gap-2">
@@ -6756,10 +6776,7 @@ export default function EnhancedClientDetail() {
             </DialogDescription>
           </DialogHeader>
           <EmailTemplateSelector 
-            onSelectTemplate={(content, name) => {
-              setEmailData(prev => ({ ...prev, message: content }));
-              setShowTemplateModal(false);
-            }}
+            onSelectTemplate={selectTemplate}
           />
         </DialogContent>
       </Dialog>
