@@ -173,6 +173,13 @@ export default function Tasks() {
     }
   }, [workflows, workflowFilter]);
 
+  // Clear selected team members when visibility changes away from "shared"
+  React.useEffect(() => {
+    if (shareVisibility !== 'shared') {
+      setShareWithUsers([]);
+    }
+  }, [shareVisibility]);
+
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await apiRequest("DELETE", `/api/tasks/${id}`);
@@ -2309,6 +2316,37 @@ export default function Tasks() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Team Member Selection - Only show when "Shared with Team" is selected */}
+            {shareVisibility === 'shared' && (
+              <div className="space-y-2">
+                <Label>Share With</Label>
+                <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                  {staff.map((member) => (
+                    <div key={member.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`share-${member.id}`}
+                        checked={shareWithUsers.includes(member.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setShareWithUsers([...shareWithUsers, member.id]);
+                          } else {
+                            setShareWithUsers(shareWithUsers.filter(id => id !== member.id));
+                          }
+                        }}
+                        data-testid={`checkbox-share-${member.id}`}
+                      />
+                      <label
+                        htmlFor={`share-${member.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {member.firstName} {member.lastName}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -2319,6 +2357,7 @@ export default function Tasks() {
                 setSmartListName("");
                 setSmartListDescription("");
                 setShareVisibility('personal');
+                setShareWithUsers([]);
               }}
               data-testid="button-cancel-smart-list"
             >
