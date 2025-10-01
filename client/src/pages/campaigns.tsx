@@ -249,7 +249,7 @@ export default function Campaigns() {
   // Create folder mutation
   const createFolderMutation = useMutation({
     mutationFn: async (data: { name: string; type: string; description?: string }) => {
-      return await apiRequest("/api/template-folders", "POST", data);
+      return await apiRequest("POST", "/api/template-folders", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/template-folders"] });
@@ -264,7 +264,7 @@ export default function Campaigns() {
   // Create form folder mutation
   const createFormFolderMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("/api/form-folders", "POST", data);
+      return await apiRequest("POST", "/api/form-folders", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/form-folders"] });
@@ -284,7 +284,7 @@ export default function Campaigns() {
   const createEmailTemplateMutation = useMutation({
     mutationFn: async (data: any) => {
       console.log("Frontend: Creating email template with data:", data);
-      return await apiRequest("/api/email-templates", "POST", data);
+      return await apiRequest("POST", "/api/email-templates", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
@@ -301,7 +301,7 @@ export default function Campaigns() {
   // Create SMS template mutation
   const createSmsTemplateMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("/api/sms-templates", "POST", data);
+      return await apiRequest("POST", "/api/sms-templates", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sms-templates"] });
@@ -316,7 +316,7 @@ export default function Campaigns() {
   // Update email template mutation
   const updateEmailTemplateMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest(`/api/email-templates/${data.id}`, "PUT", data);
+      return await apiRequest("PUT", `/api/email-templates/${data.id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
@@ -331,7 +331,7 @@ export default function Campaigns() {
   // Update SMS template mutation
   const updateSmsTemplateMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest(`/api/sms-templates/${data.id}`, "PUT", data);
+      return await apiRequest("PUT", `/api/sms-templates/${data.id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sms-templates"] });
@@ -347,7 +347,7 @@ export default function Campaigns() {
   const deleteTemplateMutation = useMutation({
     mutationFn: async ({ id, type }: { id: string; type: string }) => {
       const endpoint = type === "email" ? "/api/email-templates" : "/api/sms-templates";
-      return await apiRequest(`${endpoint}/${id}`, "DELETE");
+      return await apiRequest("DELETE", `${endpoint}/${id}`);
     },
     onSuccess: (_, { type }) => {
       const queryKey = type === "email" ? ["/api/email-templates"] : ["/api/sms-templates"];
@@ -362,7 +362,7 @@ export default function Campaigns() {
   // Form-specific mutations
   const duplicateFormMutation = useMutation({
     mutationFn: async (formId: string) => {
-      return await apiRequest(`/api/forms/${formId}/duplicate`, "POST");
+      return await apiRequest("POST", `/api/forms/${formId}/duplicate`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/forms"] });
@@ -375,7 +375,7 @@ export default function Campaigns() {
 
   const moveFormToFolderMutation = useMutation({
     mutationFn: async ({ formId, folderId }: { formId: string; folderId: string | null }) => {
-      return await apiRequest(`/api/forms/${formId}/move`, "PUT", { folderId });
+      return await apiRequest("PUT", `/api/forms/${formId}/move`, { folderId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/forms"] });
@@ -395,7 +395,7 @@ export default function Campaigns() {
       const currentTemplate = emailTemplates.find(t => t.id === templateId);
       if (!currentTemplate) throw new Error("Template not found");
       
-      return await apiRequest(`/api/email-templates/${templateId}`, "PATCH", {
+      return await apiRequest("PATCH", `/api/email-templates/${templateId}`, {
         name: currentTemplate.name,
         subject: currentTemplate.subject,
         content: currentTemplate.content,
@@ -423,7 +423,7 @@ export default function Campaigns() {
       const currentTemplate = smsTemplates.find(t => t.id === templateId);
       if (!currentTemplate) throw new Error("Template not found");
       
-      return await apiRequest(`/api/sms-templates/${templateId}`, "PATCH", {
+      return await apiRequest("PATCH", `/api/sms-templates/${templateId}`, {
         name: currentTemplate.name,
         content: currentTemplate.content,
         tags: currentTemplate.tags || [],
@@ -444,7 +444,7 @@ export default function Campaigns() {
 
   const deleteFormMutation = useMutation({
     mutationFn: async (formId: string) => {
-      return await apiRequest(`/api/forms/${formId}`, "DELETE");
+      return await apiRequest("DELETE", `/api/forms/${formId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/forms"] });
@@ -457,7 +457,7 @@ export default function Campaigns() {
 
   const editFolderMutation = useMutation({
     mutationFn: async ({ folderId, name, description }: { folderId: string; name: string; description?: string }) => {
-      return await apiRequest(`/api/template-folders/${folderId}`, "PATCH", {
+      return await apiRequest("PATCH", `/api/template-folders/${folderId}`, {
         name,
         description,
       });
