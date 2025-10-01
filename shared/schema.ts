@@ -659,7 +659,7 @@ export const smartLists = pgTable("smart_lists", {
   description: text("description"),
   entityType: text("entity_type").notNull().default("clients"), // clients, tasks
   filters: jsonb("filters").notNull(), // JSON object containing filter criteria
-  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
   visibility: text("visibility").notNull().default("personal"), // personal, shared, universal
   sharedWith: text("shared_with").array(), // Array of user IDs for shared lists
   isDefault: boolean("is_default").default(false),
