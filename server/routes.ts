@@ -13500,23 +13500,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper function to process merge tags in messages
-  function processMergeTags(message: string, clientData: any): string {
-    if (!clientData) return message;
+  function processMergeTags(message: string, clientData: any, userData?: any): string {
+    let result = message;
     
-    // Replace common merge tags with client data
-    return message
-      .replace(/{{firstName}}/g, clientData.firstName || '')
-      .replace(/{{lastName}}/g, clientData.lastName || '')
-      .replace(/{{name}}/g, clientData.name || `${clientData.firstName || ''} ${clientData.lastName || ''}`.trim())
-      .replace(/{{email}}/g, clientData.email || '')
-      .replace(/{{phone}}/g, clientData.phone || '')
-      .replace(/{{companyName}}/g, clientData.companyName || '')
-      .replace(/{{industry}}/g, clientData.industry || '')
-      .replace(/{{website}}/g, clientData.website || '')
-      .replace(/{{address1}}/g, clientData.address1 || '')
-      .replace(/{{city}}/g, clientData.city || '')
-      .replace(/{{state}}/g, clientData.state || '')
-      .replace(/{{zipCode}}/g, clientData.zipCode || '');
+    // Replace client merge tags
+    if (clientData) {
+      result = result
+        .replace(/{{firstName}}/g, clientData.firstName || '')
+        .replace(/{{lastName}}/g, clientData.lastName || '')
+        .replace(/{{name}}/g, clientData.name || `${clientData.firstName || ''} ${clientData.lastName || ''}`.trim())
+        .replace(/{{email}}/g, clientData.email || '')
+        .replace(/{{phone}}/g, clientData.phone || '')
+        .replace(/{{companyName}}/g, clientData.companyName || '')
+        .replace(/{{industry}}/g, clientData.industry || '')
+        .replace(/{{website}}/g, clientData.website || '')
+        .replace(/{{address1}}/g, clientData.address1 || '')
+        .replace(/{{city}}/g, clientData.city || '')
+        .replace(/{{state}}/g, clientData.state || '')
+        .replace(/{{zipCode}}/g, clientData.zipCode || '')
+        // Also support lowercase with underscores
+        .replace(/{{first_name}}/g, clientData.firstName || '')
+        .replace(/{{last_name}}/g, clientData.lastName || '')
+        .replace(/{{full_name}}/g, clientData.name || `${clientData.firstName || ''} ${clientData.lastName || ''}`.trim())
+        .replace(/{{company}}/g, clientData.companyName || '');
+    }
+    
+    // Replace user/staff merge tags
+    if (userData) {
+      result = result
+        .replace(/{{user_first_name}}/g, userData.firstName || '')
+        .replace(/{{user_last_name}}/g, userData.lastName || '')
+        .replace(/{{user_full_name}}/g, `${userData.firstName || ''} ${userData.lastName || ''}`.trim())
+        .replace(/{{user_email}}/g, userData.email || '')
+        .replace(/{{user_phone}}/g, userData.phoneNumber || '');
+    }
+    
+    return result;
   }
 
   // Send SMS using connected Twilio integration
@@ -13531,24 +13550,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Get authenticated user ID for merge tags
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      // Get user/staff data for merge tag processing
+      let userData = null;
+      try {
+        const [staffData] = await db
+          .select()
+          .from(staff)
+          .where(eq(staff.id, userId));
+        userData = staffData;
+      } catch (error) {
+        console.error('Error fetching user data for merge tags:', error);
+      }
+      
       // Get client data for merge tag processing
       let processedMessage = message;
+      let clientData = null;
       if (clientId) {
         try {
-          const [clientData] = await db
+          const [data] = await db
             .select()
             .from(clients)
             .where(eq(clients.id, clientId));
-          
-          if (clientData) {
-            processedMessage = processMergeTags(message, clientData);
-            console.log('Processed message:', processedMessage?.substring(0, 50) + '...');
-          }
+          clientData = data;
         } catch (error) {
           console.error('Error fetching client data for merge tags:', error);
-          // Continue with original message if client fetch fails
         }
       }
+      
+      // Process merge tags with both client and user data
+      processedMessage = processMergeTags(message, clientData, userData);
+      console.log('Processed message:', processedMessage?.substring(0, 50) + '...');
       
       // Find the specific integration for the FROM number
       const [integration] = await db
@@ -13594,9 +13629,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Create audit log for SMS sending
-        const userId = getAuthenticatedUserIdOrFail(req, res);
-        if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
-        
         await createAuditLog(
           "created",
           "sms",
@@ -13639,12 +13671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Create audit log for SMS sending
-      const userId = getAuthenticatedUserIdOrFail(req, res);
-      console.log('SMS audit log - userId from getAuthenticatedUserIdOrFail:', userId);
-      if (!userId) {
-        console.log('SMS audit log - No userId found, skipping audit log creation');
-        return; // getAuthenticatedUserIdOrFail already sent 401 response
-      }
+      console.log('SMS audit log - userId:', userId);
       
       console.log('SMS audit log - Creating audit log with:', {
         action: "created",
@@ -13895,6 +13922,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const actualFromEmail = fromEmail || integration.fromEmail;
       const actualFromName = fromName || integration.fromName;
       
+      // Get authenticated user ID for merge tags
+      const userId = await getAuthenticatedUserIdOrFail(req);
+      
+      // Get user/staff data for merge tag processing
+      let userData = null;
+      try {
+        const [staffData] = await db
+          .select()
+          .from(staff)
+          .where(eq(staff.id, userId));
+        userData = staffData;
+      } catch (error) {
+        console.error('Error fetching user data for merge tags:', error);
+      }
+      
+      // Get client data for merge tag processing
+      let clientData = null;
+      if (clientId) {
+        try {
+          const [data] = await db
+            .select()
+            .from(clients)
+            .where(eq(clients.id, clientId));
+          clientData = data;
+        } catch (error) {
+          console.error('Error fetching client data for merge tags:', error);
+        }
+      }
+      
+      // Process merge tags in subject and message
+      const processedSubject = processMergeTags(subject, clientData, userData);
+      const processedMessage = processMergeTags(message, clientData, userData);
+      
       console.log(`Sending email to ${to} via MailGun...`);
 
       // Decrypt API key and send email
@@ -13904,9 +13964,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const emailData = {
         from: `${actualFromName} <${actualFromEmail}>`,
         to: to,
-        subject: subject,
-        html: message,
-        text: message.replace(/<[^>]*>/g, '') // Strip HTML for plain text version
+        subject: processedSubject,
+        html: processedMessage,
+        text: processedMessage.replace(/<[^>]*>/g, '') // Strip HTML for plain text version
       };
 
       const result = await mg.messages.create(integration.domain, emailData);
@@ -13914,7 +13974,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create audit log for email communication
       try {
-        const userId = await getAuthenticatedUserIdOrFail(req);
         await createAuditLog(
           "created",
           "email", 

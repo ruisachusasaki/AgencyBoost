@@ -49,6 +49,11 @@ function MergeTagSelector({ searchValue, onSearchChange, onSelectTag, customFiel
     { tag: '{{email}}', description: 'Client Email' },
     { tag: '{{phone}}', description: 'Client Phone' },
     { tag: '{{company}}', description: 'Client Company' },
+    { tag: '{{user_first_name}}', description: 'User First Name' },
+    { tag: '{{user_last_name}}', description: 'User Last Name' },
+    { tag: '{{user_full_name}}', description: 'User Full Name' },
+    { tag: '{{user_email}}', description: 'User Email' },
+    { tag: '{{user_phone}}', description: 'User Phone' },
     { tag: '{{today_date}}', description: 'Today\'s Date' },
     { tag: '{{current_time}}', description: 'Current Time' }
   ];
