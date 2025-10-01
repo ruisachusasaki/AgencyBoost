@@ -387,17 +387,26 @@ export default function TasksSettingsPage() {
   const createWorkflowMutation = useMutation({
     mutationFn: (data: TeamWorkflowFormData) => apiRequest("POST", "/api/team-workflows", data),
     onSuccess: async (newWorkflow: any) => {
+      console.log("Created workflow response:", newWorkflow);
+      
       // If statuses were selected for the new workflow, save them
       if (newWorkflowStatuses.length > 0) {
-        try {
-          const statusesToSave = newWorkflowStatuses.map(ws => ({
-            statusId: ws.statusId,
-            order: ws.order,
-            isRequired: ws.isRequired
-          }));
-          await apiRequest("PUT", `/api/team-workflows/${newWorkflow.id}/statuses`, { statuses: statusesToSave });
-        } catch (error: any) {
-          toast({ title: "Warning", description: "Workflow created but failed to save statuses. Please configure them manually.", variant: "destructive" });
+        if (!newWorkflow?.id) {
+          console.error("No workflow ID in response:", newWorkflow);
+          toast({ title: "Warning", description: "Workflow created but ID not found. Please configure statuses manually.", variant: "destructive" });
+        } else {
+          try {
+            const statusesToSave = newWorkflowStatuses.map(ws => ({
+              statusId: ws.statusId,
+              order: ws.order,
+              isRequired: ws.isRequired
+            }));
+            console.log("Saving statuses for workflow ID:", newWorkflow.id, statusesToSave);
+            await apiRequest("PUT", `/api/team-workflows/${newWorkflow.id}/statuses`, { statuses: statusesToSave });
+          } catch (error: any) {
+            console.error("Failed to save workflow statuses:", error);
+            toast({ title: "Warning", description: "Workflow created but failed to save statuses. Please configure them manually.", variant: "destructive" });
+          }
         }
       }
       

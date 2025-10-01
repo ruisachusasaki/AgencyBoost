@@ -14994,7 +14994,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const workflows = await db.select()
         .from(teamWorkflows)
-        .where(eq(teamWorkflows.isActive, true))
         .orderBy(asc(teamWorkflows.name));
       
       // Get statuses for each workflow using the same logic as the individual endpoint
