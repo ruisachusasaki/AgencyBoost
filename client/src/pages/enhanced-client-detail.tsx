@@ -6214,6 +6214,18 @@ export default function EnhancedClientDetail() {
                                   >
                                     <ExternalLink className="h-3 w-3" />
                                   </Button>
+                                  {currentUser?.role === 'Admin' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                                      onClick={() => setDocumentToDelete(document)}
+                                      title="Delete document"
+                                      data-testid={`button-delete-document-${document.id}`}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -6306,6 +6318,32 @@ export default function EnhancedClientDetail() {
                 if (deletingNote) {
                   deleteNoteMutation.mutate(deletingNote.id);
                   setDeletingNote(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Document Confirmation Dialog */}
+      <AlertDialog open={!!documentToDelete} onOpenChange={(open) => !open && setDocumentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{documentToDelete?.fileName}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (documentToDelete) {
+                  deleteDocumentMutation.mutate(documentToDelete.id);
+                  setDocumentToDelete(null);
                 }
               }}
               className="bg-red-600 hover:bg-red-700"

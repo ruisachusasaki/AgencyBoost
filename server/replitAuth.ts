@@ -40,6 +40,7 @@ export function getSession() {
     cookie: {
       httpOnly: true,
       secure: true,
+      sameSite: 'lax',
       maxAge: sessionTtl,
     },
   });
@@ -58,9 +59,16 @@ function updateUserSession(
 async function upsertStaffFromClaims(claims: any) {
   const replitSub = claims["sub"];
   const email = claims["email"];
+  
+  // Defensive check: ensure email is present
+  if (!email || typeof email !== 'string') {
+    throw new Error('Email claim is required for authentication');
+  }
+  
   const firstName = claims["first_name"] || "User";
   const lastName = claims["last_name"] || "";
   const profileImageUrl = claims["profile_image_url"];
+  const normalizedEmail = email.toLowerCase().trim();
 
   // Check if staff member already exists by Replit Auth sub
   let existingStaff = await db
@@ -74,13 +82,44 @@ async function upsertStaffFromClaims(claims: any) {
     const [updated] = await db
       .update(staff)
       .set({
-        email,
+        email: normalizedEmail,
         firstName,
         lastName,
         profileImagePath: profileImageUrl,
         updatedAt: new Date(),
       })
       .where(eq(staff.id, existingStaff[0].id))
+      .returning();
+    return updated;
+  }
+
+  // Check if staff member exists by email (link OIDC to existing account)
+  // Only link if the existing staff doesn't have a replitAuthSub yet
+  let existingByEmail = await db
+    .select()
+    .from(staff)
+    .where(eq(staff.email, normalizedEmail))
+    .limit(1);
+
+  if (existingByEmail.length > 0) {
+    const existingStaffMember = existingByEmail[0];
+    
+    // Security: Only link if staff doesn't have an existing OIDC identity
+    if (existingStaffMember.replitAuthSub) {
+      // Staff already has a different OIDC identity linked
+      throw new Error('This email is already linked to a different Replit account. Please contact your administrator.');
+    }
+    
+    // Link OIDC identity to existing staff member (preserve existing data)
+    const [updated] = await db
+      .update(staff)
+      .set({
+        replitAuthSub: replitSub,
+        // Only update profile image if not already set
+        profileImagePath: existingStaffMember.profileImagePath || profileImageUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(staff.id, existingStaffMember.id))
       .returning();
     return updated;
   }
@@ -94,7 +133,7 @@ async function upsertStaffFromClaims(claims: any) {
     .insert(staff)
     .values({
       replitAuthSub: replitSub,
-      email,
+      email: normalizedEmail,
       firstName,
       lastName,
       profileImagePath: profileImageUrl,
