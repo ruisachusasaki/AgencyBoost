@@ -84,7 +84,7 @@ export default function Tasks() {
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [showCompleted, setShowCompleted] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>("");
+  const [workflowFilter, setWorkflowFilter] = useState<string>("all");
   
   // Smart Lists state
   const [currentFilter, setCurrentFilter] = useState<TaskFilter>({
@@ -168,10 +168,10 @@ export default function Tasks() {
 
   // Auto-select first workflow if none selected and workflows are available
   React.useEffect(() => {
-    if (workflows.length > 0 && !selectedWorkflowId) {
-      setSelectedWorkflowId(workflows[0].id);
+    if (workflows.length > 0 && !workflowFilter) {
+      setWorkflowFilter(workflows[0].id);
     }
-  }, [workflows, selectedWorkflowId]);
+  }, [workflows, workflowFilter]);
 
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -419,6 +419,7 @@ export default function Tasks() {
       priorityFilter !== "all" ||
       clientFilter !== "all" ||
       categoryFilter !== "all" ||
+      workflowFilter !== "all" ||
       showCompleted ||
       showCancelled ||
       currentFilter.conditions.length > 0
@@ -433,6 +434,7 @@ export default function Tasks() {
     setPriorityFilter("all");
     setClientFilter("all");
     setCategoryFilter("all");
+    setWorkflowFilter("all");
     setShowCompleted(false);
     setShowCancelled(false);
     setCurrentFilter({ conditions: [], logic: 'AND' });
@@ -733,12 +735,15 @@ export default function Tasks() {
       const matchesCategory = categoryFilter === "all" || 
         (categoryFilter === "none" && !task.categoryId) ||
         task.categoryId === categoryFilter;
+      const matchesWorkflow = workflowFilter === "all" || 
+        (workflowFilter === "none" && !task.workflowId) ||
+        task.workflowId === workflowFilter;
 
       // Show/hide completed and cancelled tasks based on toggle settings
       const shouldShowCompleted = showCompleted || task.status !== "completed";
       const shouldShowCancelled = showCancelled || task.status !== "cancelled";
       
-      return matchesSearch && matchesStatus && matchesAssignee && matchesPriority && matchesClient && matchesProject && matchesCategory && shouldShowCompleted && shouldShowCancelled;
+      return matchesSearch && matchesStatus && matchesAssignee && matchesPriority && matchesClient && matchesProject && matchesCategory && matchesWorkflow && shouldShowCompleted && shouldShowCancelled;
     })
     .sort((a, b) => {
       let aValue: any = '';
@@ -788,7 +793,7 @@ export default function Tasks() {
     });
 
     return filtered;
-  }, [tasks, currentFilter, searchTerm, statusFilter, assigneeFilter, priorityFilter, clientFilter, categoryFilter, showCompleted, showCancelled, sortField, sortDirection, staff, clients, taskCategories]);
+  }, [tasks, currentFilter, searchTerm, statusFilter, assigneeFilter, priorityFilter, clientFilter, categoryFilter, workflowFilter, showCompleted, showCancelled, sortField, sortDirection, staff, clients, taskCategories]);
 
   // Handle column reordering (excluding name column)
   const handleColumnDragEnd = (result: any) => {
@@ -1440,7 +1445,7 @@ export default function Tasks() {
   };
 
   // Dynamic task stats based on selected workflow
-  const selectedWorkflow = workflows.find(w => w.id === selectedWorkflowId) || workflows[0];
+  const selectedWorkflow = workflows.find(w => w.id === workflowFilter) || workflows[0];
   const workflowStatuses = selectedWorkflow?.statuses || [];
   
   const taskStats = {
@@ -1497,7 +1502,7 @@ export default function Tasks() {
     deleteTaskMutation: any;
   }) => {
     // Get the selected workflow or default to the first one
-    const selectedWorkflow = workflows.find(w => w.id === selectedWorkflowId) || workflows[0];
+    const selectedWorkflow = workflows.find(w => w.id === workflowFilter) || workflows[0];
     
     // Generate dynamic columns based on workflow statuses
     const columns = selectedWorkflow?.statuses?.map((workflowStatus: any, index: number) => {
@@ -1598,8 +1603,8 @@ export default function Tasks() {
           <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
             <label className="text-sm font-medium text-slate-700">Workflow:</label>
             <Select 
-              value={selectedWorkflowId} 
-              onValueChange={setSelectedWorkflowId}
+              value={workflowFilter} 
+              onValueChange={setWorkflowFilter}
             >
               <SelectTrigger className="w-64">
                 <SelectValue placeholder="Select a workflow" />
@@ -2023,6 +2028,22 @@ export default function Tasks() {
                   ))}
                 </SelectContent>
               </Select>
+              
+              {/* Workflow Filter */}
+              <Select value={workflowFilter} onValueChange={setWorkflowFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Workflows" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Workflows</SelectItem>
+                  <SelectItem value="none">No Workflow</SelectItem>
+                  {teamWorkflows?.map((workflow) => (
+                    <SelectItem key={workflow.id} value={workflow.id}>
+                      {workflow.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             {/* Action Buttons */}
@@ -2068,12 +2089,12 @@ export default function Tasks() {
           {viewMode === "table" && filteredAndSortedTasks.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-500 mb-4">
-                {searchTerm || statusFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all" || clientFilter !== "all" || categoryFilter !== "all"
+                {searchTerm || statusFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all" || clientFilter !== "all" || categoryFilter !== "all" || workflowFilter !== "all"
                   ? "No tasks found matching your criteria." 
                   : "No tasks found."
                 }
               </p>
-              {!searchTerm && statusFilter === "all" && assigneeFilter === "all" && priorityFilter === "all" && clientFilter === "all" && categoryFilter === "all" && (
+              {!searchTerm && statusFilter === "all" && assigneeFilter === "all" && priorityFilter === "all" && clientFilter === "all" && categoryFilter === "all" && workflowFilter === "all" && (
                 <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>Create Your First Task</Button>
