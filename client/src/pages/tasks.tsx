@@ -104,7 +104,7 @@ export default function Tasks() {
   
   // Smart list overflow handling
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
-  const maxVisibleTabs = 4; // Show "All Tasks" + up to 3 smart lists, then "More"
+  const maxVisibleTabs = 5; // Show "All Tasks" + "My Tasks" + up to 3 smart lists, then "More"
   
   // Confirmation dialog state
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -555,6 +555,19 @@ export default function Tasks() {
   const handleTabChange = (tabValue: string) => {
     if (tabValue === "all-tasks") {
       setCurrentFilter({ conditions: [], logic: 'AND' });
+      setActiveSmartList(null);
+    } else if (tabValue === "my-tasks") {
+      // Filter to show only tasks assigned to current user
+      if (currentUser) {
+        setCurrentFilter({
+          conditions: [{
+            field: 'assignedTo',
+            operator: 'equals',
+            value: currentUser.id
+          }],
+          logic: 'AND'
+        });
+      }
       setActiveSmartList(null);
     } else {
       const smartList = getVisibleSmartLists().find(list => list.id === tabValue);
@@ -1779,7 +1792,10 @@ export default function Tasks() {
                   <TabsTrigger value="all-tasks" className="whitespace-nowrap" data-testid="tab-all-tasks">
                     All Tasks
                   </TabsTrigger>
-                  {getVisibleSmartLists().slice(0, maxVisibleTabs - 1).map((smartList) => (
+                  <TabsTrigger value="my-tasks" className="whitespace-nowrap" data-testid="tab-my-tasks">
+                    My Tasks
+                  </TabsTrigger>
+                  {getVisibleSmartLists().slice(0, maxVisibleTabs - 2).map((smartList) => (
                     <div key={smartList.id} className="relative flex items-center">
                       <TabsTrigger 
                         value={smartList.id} 
@@ -1816,7 +1832,7 @@ export default function Tasks() {
                       </DropdownMenu>
                     </div>
                   ))}
-                  {getVisibleSmartLists().length > maxVisibleTabs - 1 && (
+                  {getVisibleSmartLists().length > maxVisibleTabs - 2 && (
                     <DropdownMenu open={isMoreDropdownOpen} onOpenChange={setIsMoreDropdownOpen}>
                       <DropdownMenuTrigger asChild>
                         <TabsTrigger value="more" className="whitespace-nowrap">
@@ -1824,7 +1840,7 @@ export default function Tasks() {
                         </TabsTrigger>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        {getVisibleSmartLists().slice(maxVisibleTabs - 1).map((smartList) => (
+                        {getVisibleSmartLists().slice(maxVisibleTabs - 2).map((smartList) => (
                           <DropdownMenuItem
                             key={smartList.id}
                             onClick={() => {
