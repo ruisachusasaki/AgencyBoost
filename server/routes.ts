@@ -11229,7 +11229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks/:taskId/comments", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
+  app.post("/api/tasks/:taskId/comments", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
       const { taskId } = req.params;
       const { content, mentions, fileUrls } = req.body;
