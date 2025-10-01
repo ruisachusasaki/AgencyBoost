@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, FolderOpen, DollarSign, UserPlus, TrendingUp, TrendingDown } from "lucide-react";
-import type { Client, Lead, Invoice } from "@shared/schema";
+import { Users, FolderOpen, UserPlus, TrendingUp, TrendingDown } from "lucide-react";
+import type { Client, Lead } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 interface PaginatedClientsResponse {
@@ -23,18 +23,9 @@ export default function MetricsCards() {
     queryKey: ["/api/leads"],
   });
 
-  const { data: invoices = [] } = useQuery<Invoice[]>({
-    queryKey: ["/api/invoices"],
-  });
-
   // Projects have been removed from the system
   const activeProjects = 0;
   const newLeads = leads.filter(l => l.status === "new").length;
-  
-  const currentMonth = new Date().getMonth();
-  const monthlyRevenue = invoices
-    .filter(i => i.paidDate && new Date(i.paidDate).getMonth() === currentMonth)
-    .reduce((sum, i) => sum + Number(i.total || 0), 0);
 
   const metrics = [
     {
@@ -56,15 +47,6 @@ export default function MetricsCards() {
       iconColor: "text-gray-600"
     },
     {
-      title: "Monthly Revenue",
-      value: `$${monthlyRevenue.toLocaleString()}`,
-      change: "-2% from last month",
-      changeType: "negative" as const,
-      icon: DollarSign,
-      bgColor: "bg-yellow-100",
-      iconColor: "text-yellow-600"
-    },
-    {
       title: "New Leads",
       value: newLeads.toString(),
       change: "+8 this week",
@@ -76,7 +58,7 @@ export default function MetricsCards() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {metrics.map((metric) => {
         const Icon = metric.icon;
         const ChangeIcon = metric.changeType === "positive" ? TrendingUp : TrendingDown;

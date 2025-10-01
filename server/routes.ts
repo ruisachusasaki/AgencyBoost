@@ -6,7 +6,7 @@ import { Readable } from "stream";
 import { storage as appStorage } from "./storage";
 import { 
   insertClientSchema, insertCampaignSchema, insertLeadSchema, 
-  insertTaskSchema, insertTaskSchemaValidated, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, 
+  insertTaskSchema, insertTaskSchemaValidated, insertTaskActivitySchema, insertSocialMediaAccountSchema, 
   insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, 
   insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
@@ -41,7 +41,7 @@ import {
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, customFieldFileUploads,
-  forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments, invoices,
+  forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments,
   socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, applicationStageHistory, timeOffBalances,
@@ -1605,12 +1605,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if the client has any related records
       const counts = await appStorage.getClientRelationsCounts(req.params.id);
-      const totalRelated = counts.tasks + counts.campaigns + counts.invoices + counts.healthScores;
+      const totalRelated = counts.tasks + counts.campaigns + counts.healthScores;
 
       if (totalRelated > 0) {
         return res.status(409).json({ 
           message: "Cannot delete client with associated records", 
-          details: `Client has ${counts.tasks} tasks, ${counts.campaigns} campaigns, ${counts.invoices} invoices, and ${counts.healthScores} health scores. Archive the client or reassign tasks first.`,
+          details: `Client has ${counts.tasks} tasks, ${counts.campaigns} campaigns, and ${counts.healthScores} health scores. Archive the client or reassign tasks first.`,
           counts 
         });
       }
@@ -1646,7 +1646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const counts = await appStorage.getClientRelationsCounts(req.params.id);
           return res.status(409).json({ 
             message: "Cannot delete client with associated records", 
-            details: `Client has ${counts.tasks} tasks, ${counts.campaigns} campaigns, ${counts.invoices} invoices, and ${counts.healthScores} health scores. Archive the client or reassign tasks first.`,
+            details: `Client has ${counts.tasks} tasks, ${counts.campaigns} campaigns, and ${counts.healthScores} health scores. Archive the client or reassign tasks first.`,
             counts
           });
         } catch (countError) {
@@ -4972,191 +4972,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error instantiating task template:", error);
       res.status(500).json({ message: "Failed to create tasks from template" });
-    }
-  });
-
-  // Invoice routes - Database Storage - SECURED
-  app.get("/api/invoices", (req, res, next) => next(), (req, res, next) => next(), async (req, res) => {
-    try {
-      const { search, status, clientId } = req.query;
-      // projectId removed - projects no longer exist
-      
-      const conditions = [];
-      
-      if (search && typeof search === 'string') {
-        conditions.push(
-          or(
-            like(invoices.invoiceNumber, `%${search}%`),
-            like(invoices.notes, `%${search}%`)
-          )
-        );
-      }
-      
-      if (status && typeof status === 'string') {
-        conditions.push(eq(invoices.status, status));
-      }
-      
-      if (clientId && typeof clientId === 'string') {
-        conditions.push(eq(invoices.clientId, clientId));
-      }
-      
-      // projectId filtering removed - projects no longer exist
-      
-      let invoicesList;
-      if (conditions.length > 0) {
-        invoicesList = await db.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt));
-      } else {
-        invoicesList = await db.select().from(invoices).orderBy(desc(invoices.createdAt));
-      }
-      res.json(invoicesList);
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-      res.status(500).json({ message: "Failed to fetch invoices" });
-    }
-  });
-
-  app.get("/api/invoices/:id", requireAuth(), requirePermission('invoices', 'canView'), async (req, res) => {
-    try {
-      const [invoice] = await db.select()
-        .from(invoices)
-        .where(eq(invoices.id, req.params.id));
-      
-      if (!invoice) {
-        return res.status(404).json({ message: "Invoice not found" });
-      }
-      res.json(invoice);
-    } catch (error) {
-      console.error("Error fetching invoice:", error);
-      res.status(500).json({ message: "Failed to fetch invoice" });
-    }
-  });
-
-  app.post("/api/invoices", requireAuth(), requirePermission('invoices', 'canCreate'), async (req, res) => {
-    try {
-      const userId = getAuthenticatedUserIdOrFail(req, res);
-      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
-      
-      const validatedData = insertInvoiceSchema.parse(req.body);
-      
-      const [newInvoice] = await db.insert(invoices)
-        .values(validatedData)
-        .returning();
-      
-      // Log the creation for audit
-      await createAuditLog(
-        "created",
-        "invoice",
-        newInvoice.id,
-        newInvoice.invoiceNumber || `Invoice ${newInvoice.id}`,
-        userId, // SECURE: Use authenticated user ID only
-        `New invoice created for ${newInvoice.amount ? `$${newInvoice.amount}` : 'undetermined amount'}`,
-        null,
-        { invoiceNumber: newInvoice.invoiceNumber, amount: newInvoice.amount, status: newInvoice.status },
-        req
-      );
-      
-      res.status(201).json(newInvoice);
-    } catch (error) {
-      console.error("Error creating invoice:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create invoice" });
-    }
-  });
-
-  app.put("/api/invoices/:id", requireAuth(), requirePermission('invoices', 'canEdit'), async (req, res) => {
-    try {
-      const userId = getAuthenticatedUserIdOrFail(req, res);
-      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
-      
-      // Get the old invoice data first for audit logging
-      const [oldInvoice] = await db.select().from(invoices).where(eq(invoices.id, req.params.id));
-      if (!oldInvoice) {
-        return res.status(404).json({ message: "Invoice not found" });
-      }
-      
-      const validatedData = insertInvoiceSchema.partial().parse(req.body);
-      
-      const [updatedInvoice] = await db.update(invoices)
-        .set(validatedData)
-        .where(eq(invoices.id, req.params.id))
-        .returning();
-      
-      if (!updatedInvoice) {
-        return res.status(404).json({ message: "Invoice not found" });
-      }
-      
-      // Determine what changed for audit logging
-      const changes = [];
-      if (validatedData.amount && validatedData.amount !== oldInvoice.amount) {
-        changes.push(`amount from $${oldInvoice.amount} to $${validatedData.amount}`);
-      }
-      if (validatedData.status && validatedData.status !== oldInvoice.status) {
-        changes.push(`status from ${oldInvoice.status} to ${validatedData.status}`);
-      }
-      if (validatedData.dueDate && validatedData.dueDate !== oldInvoice.dueDate) {
-        changes.push(`due date from ${oldInvoice.dueDate} to ${validatedData.dueDate}`);
-      }
-      
-      // Log the update
-      await createAuditLog(
-        "updated",
-        "invoice",
-        updatedInvoice.id,
-        updatedInvoice.invoiceNumber || `Invoice ${updatedInvoice.id}`,
-        userId, // SECURE: Use authenticated user ID only
-        changes.length > 0 ? `FINANCIAL UPDATE: ${changes.join(", ")}` : "Invoice updated",
-        { amount: oldInvoice.amount, status: oldInvoice.status, dueDate: oldInvoice.dueDate },
-        { amount: updatedInvoice.amount, status: updatedInvoice.status, dueDate: updatedInvoice.dueDate },
-        req
-      );
-      
-      res.json(updatedInvoice);
-    } catch (error) {
-      console.error("Error updating invoice:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update invoice" });
-    }
-  });
-
-  app.delete("/api/invoices/:id", requireAuth(), requirePermission('invoices', 'canDelete'), async (req, res) => {
-    try {
-      const userId = getAuthenticatedUserIdOrFail(req, res);
-      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
-      
-      // Get invoice data before deletion for audit logging
-      const [invoice] = await db.select().from(invoices).where(eq(invoices.id, req.params.id));
-      if (!invoice) {
-        return res.status(404).json({ message: "Invoice not found" });
-      }
-      
-      const deletedRows = await db.delete(invoices)
-        .where(eq(invoices.id, req.params.id));
-      
-      if (deletedRows.rowCount === 0) {
-        return res.status(404).json({ message: "Invoice not found" });
-      }
-      
-      // Log the deletion
-      await createAuditLog(
-        "deleted",
-        "invoice",
-        req.params.id,
-        invoice.invoiceNumber || `Invoice ${invoice.id}`,
-        userId, // SECURE: Use authenticated user ID only
-        `FINANCIAL DELETION: Invoice permanently deleted - ${invoice.invoiceNumber} ($${invoice.amount})`,
-        { invoiceNumber: invoice.invoiceNumber, amount: invoice.amount, status: invoice.status },
-        null,
-        req
-      );
-      
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting invoice:", error);
-      res.status(500).json({ message: "Failed to delete invoice" });
     }
   });
 

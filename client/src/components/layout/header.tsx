@@ -32,7 +32,6 @@ const pageNames: Record<string, string> = {
   "/campaigns": "Campaigns",
   "/leads": "Leads",
   "/tasks": "Tasks",
-  "/invoices": "Invoices",
   "/reports": "Reports"
 };
 

@@ -17,7 +17,6 @@ import RequirePermission from "@/components/RequirePermission";
 import Leads from "@/pages/leads";
 import Tasks from "@/pages/tasks";
 import TaskDetail from "@/pages/task-detail";
-import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import Workflows from "@/pages/workflows";
 import WorkflowBuilder from "@/pages/workflow-builder";
@@ -171,16 +170,6 @@ function Router() {
           <AuthGate>
             <MainLayout>
               <TaskDetail />
-            </MainLayout>
-          </AuthGate>
-        )}
-      </Route>
-      
-      <Route path="/invoices">
-        {() => (
-          <AuthGate>
-            <MainLayout>
-              <Invoices />
             </MainLayout>
           </AuthGate>
         )}

@@ -59,7 +59,7 @@ import {
   Area,
   AreaChart,
 } from "recharts";
-import type { Client, Campaign, Lead, Task, Invoice, ClientHealthScore } from "@shared/schema";
+import type { Client, Campaign, Lead, Task, ClientHealthScore } from "@shared/schema";
 
 // Utility function for user-friendly time formatting
 const formatDuration = (minutes: number, mode: 'friendly' | 'decimal' = 'friendly'): string => {
@@ -240,10 +240,6 @@ export default function Reports() {
   const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
-
-  const { data: invoices = [], isLoading: invoicesLoading } = useQuery<Invoice[]>({
-    queryKey: ["/api/invoices"],
-  });
   
   // Time tracking data query for client breakdowns - fixed filter logic with memoization
   const timeTrackingFilters = useMemo(() => ({
@@ -400,7 +396,7 @@ export default function Reports() {
     enabled: activeTab === "team", // Only fetch when team tab is active
   });
 
-  const isLoading = clientsLoading || campaignsLoading || leadsLoading || tasksLoading || invoicesLoading;
+  const isLoading = clientsLoading || campaignsLoading || leadsLoading || tasksLoading;
 
   // Calculate date filter
   const getDateFilter = () => {
@@ -431,18 +427,9 @@ export default function Reports() {
     const clientMatch = clientFilter === "all" || task.clientId === clientFilter;
     return dateMatch && clientMatch;
   });
-  const filteredInvoices = filterData(invoices);
 
   // Calculate metrics
   const metrics = {
-    totalRevenue: filteredInvoices
-      .filter(i => i.status === "paid")
-      .reduce((sum, i) => sum + Number(i.total || 0), 0),
-    
-    outstandingInvoices: filteredInvoices
-      .filter(i => i.status === "sent" || i.status === "overdue")
-      .reduce((sum, i) => sum + Number(i.total || 0), 0),
-    
     activeProjects: filteredProjects.filter(p => p.status === "active").length,
     
     completedProjects: filteredProjects.filter(p => p.status === "completed").length,
@@ -496,23 +483,8 @@ export default function Reports() {
     lost: filteredLeads.filter(l => l.status === "lost").length,
   };
 
-  // Top clients by revenue
-  const clientRevenue = filteredInvoices
-    .filter(i => i.status === "paid")
-    .reduce((acc, invoice) => {
-      const clientId = invoice.clientId;
-      acc[clientId] = (acc[clientId] || 0) + Number(invoice.total || 0);
-      return acc;
-    }, {} as Record<string, number>);
-
-  const topClients = Object.entries(clientRevenue)
-    .map(([clientId, revenue]) => ({
-      client: clients.find(c => c.id === clientId),
-      revenue
-    }))
-    .filter(item => item.client)
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 5);
+  // Top clients by revenue - removed (invoices system removed)
+  const topClients: { client: Client | undefined, revenue: number }[] = [];
 
   // Health analytics calculations
   const healthAnalytics = {
@@ -1295,47 +1267,7 @@ export default function Reports() {
       </Card>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="shadow-sm border border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-                <p className="text-3xl font-bold text-slate-900">
-                  ${metrics.totalRevenue.toLocaleString()}
-                </p>
-                <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" />
-                  From paid invoices
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Outstanding</p>
-                <p className="text-3xl font-bold text-slate-900">
-                  ${metrics.outstandingInvoices.toLocaleString()}
-                </p>
-                <p className="text-sm text-orange-600 mt-1 flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  Pending payment
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-orange-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-sm border border-slate-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -1556,10 +1488,6 @@ export default function Reports() {
             <div className="text-center">
               <p className="text-2xl font-bold text-slate-900">{filteredTasks.length}</p>
               <p className="text-sm text-slate-600">Total Tasks</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-slate-900">{filteredInvoices.length}</p>
-              <p className="text-sm text-slate-600">Total Invoices</p>
             </div>
           </div>
         </CardContent>

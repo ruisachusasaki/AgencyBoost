@@ -45,7 +45,6 @@ const navigation = [
   { name: "HR", href: "/hr", icon: UserCheck },
   { name: "Training", href: "/training", icon: GraduationCap },
   { name: "Resources", href: "/resources", icon: BookOpen },
-  { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
@@ -104,7 +103,6 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       "/hr": "hr",
       "/training": "training",
       "/resources": "resources",
-      "/invoices": "invoices",
       "/reports": "reports",
     };
     
