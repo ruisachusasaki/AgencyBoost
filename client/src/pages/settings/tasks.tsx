@@ -387,26 +387,17 @@ export default function TasksSettingsPage() {
   const createWorkflowMutation = useMutation({
     mutationFn: (data: TeamWorkflowFormData) => apiRequest("POST", "/api/team-workflows", data),
     onSuccess: async (newWorkflow: any) => {
-      console.log("Created workflow response:", newWorkflow);
-      
       // If statuses were selected for the new workflow, save them
-      if (newWorkflowStatuses.length > 0) {
-        if (!newWorkflow?.id) {
-          console.error("No workflow ID in response:", newWorkflow);
-          toast({ title: "Warning", description: "Workflow created but ID not found. Please configure statuses manually.", variant: "destructive" });
-        } else {
-          try {
-            const statusesToSave = newWorkflowStatuses.map(ws => ({
-              statusId: ws.statusId,
-              order: ws.order,
-              isRequired: ws.isRequired
-            }));
-            console.log("Saving statuses for workflow ID:", newWorkflow.id, statusesToSave);
-            await apiRequest("PUT", `/api/team-workflows/${newWorkflow.id}/statuses`, { statuses: statusesToSave });
-          } catch (error: any) {
-            console.error("Failed to save workflow statuses:", error);
-            toast({ title: "Warning", description: "Workflow created but failed to save statuses. Please configure them manually.", variant: "destructive" });
-          }
+      if (newWorkflowStatuses.length > 0 && newWorkflow?.id) {
+        try {
+          const statusesToSave = newWorkflowStatuses.map(ws => ({
+            statusId: ws.statusId,
+            order: ws.order,
+            isRequired: ws.isRequired
+          }));
+          await apiRequest("PUT", `/api/team-workflows/${newWorkflow.id}/statuses`, { statuses: statusesToSave });
+        } catch (error: any) {
+          toast({ title: "Warning", description: "Workflow created but failed to save statuses. Please configure them manually.", variant: "destructive" });
         }
       }
       
@@ -422,7 +413,21 @@ export default function TasksSettingsPage() {
   const updateWorkflowMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: TeamWorkflowFormData }) => 
       apiRequest("PUT", `/api/team-workflows/${id}`, data),
-    onSuccess: () => {
+    onSuccess: async (_result: any, variables: any) => {
+      // Save updated statuses
+      if (newWorkflowStatuses.length >= 0) {
+        try {
+          const statusesToSave = newWorkflowStatuses.map(ws => ({
+            statusId: ws.statusId,
+            order: ws.order,
+            isRequired: ws.isRequired
+          }));
+          await apiRequest("PUT", `/api/team-workflows/${variables.id}/statuses`, { statuses: statusesToSave });
+        } catch (error: any) {
+          toast({ title: "Warning", description: "Workflow updated but failed to save statuses.", variant: "destructive" });
+        }
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/team-workflows"] });
       toast({ title: "Success", description: "Team workflow updated successfully" });
       handleCloseDialog();
@@ -701,8 +706,21 @@ export default function TasksSettingsPage() {
           isDefault: workflow.isDefault,
           isActive: workflow.isActive,
         });
+        // Load existing statuses when editing
+        if (workflow.statuses && workflow.statuses.length > 0) {
+          const existingStatuses = workflow.statuses.map((ws: any) => ({
+            id: ws.id,
+            statusId: ws.status?.id || ws.statusId,
+            order: ws.order,
+            isRequired: ws.isRequired
+          }));
+          setNewWorkflowStatuses(existingStatuses);
+        } else {
+          setNewWorkflowStatuses([]);
+        }
       } else {
         setEditingItem(null);
+        setNewWorkflowStatuses([]);
         workflowForm.reset({
           name: "",
           description: "",
@@ -2039,15 +2057,14 @@ export default function TasksSettingsPage() {
                   />
                 </div>
 
-                {/* Status Selection - Only when creating new workflow */}
-                {!editingItem && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label>Workflow Statuses</Label>
-                      <span className="text-xs text-muted-foreground">
-                        {newWorkflowStatuses.length} selected
-                      </span>
-                    </div>
+                {/* Status Selection - Available for both create and edit */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Workflow Statuses</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {newWorkflowStatuses.length} selected
+                    </span>
+                  </div>
                     
                     <div className="grid grid-cols-2 gap-4">
                       {/* Available Statuses */}
@@ -2152,23 +2169,13 @@ export default function TasksSettingsPage() {
                             </div>
                           )}
                         </div>
-                      </div>
                     </div>
-                    
-                    <p className="text-xs text-muted-foreground">
-                      💡 Define which statuses are part of this workflow and their progression order.
-                    </p>
                   </div>
-                )}
-
-                {/* Editing info message */}
-                {editingItem && (
-                  <div className="bg-muted/50 p-4 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      💡 <strong>Configure statuses:</strong> Use the "Configure Status Flow" button (⋮⋮) in the workflows table to manage status progression for this workflow.
-                    </p>
-                  </div>
-                )}
+                  
+                  <p className="text-xs text-muted-foreground">
+                    💡 Define which statuses are part of this workflow and their progression order.
+                  </p>
+                </div>
 
                 <DialogFooter>
                   <Button
