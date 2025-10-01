@@ -82,6 +82,10 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
   
   const clients = clientsData?.clients || [];
 
+  const { data: leads = [] } = useQuery<any[]>({
+    queryKey: ["/api/leads"],
+  });
+
   // Projects removed from system
 
   const { data: staff = [] } = useQuery<Staff[]>({
@@ -724,7 +728,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                 <FormLabel>Client (Optional)</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger data-testid="select-client">
                       <SelectValue placeholder="Select client" />
                     </SelectTrigger>
                   </FormControl>
@@ -742,7 +746,34 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
-          {/* 11. Project */}
+          {/* 11. Lead */}
+          <FormField
+            control={form.control}
+            name="leadId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Lead (Optional)</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger data-testid="select-lead">
+                      <SelectValue placeholder="Select lead" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">No Lead</SelectItem>
+                    {leads.map((lead: any) => (
+                      <SelectItem key={lead.id} value={lead.id}>
+                        {lead.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* 12. Project */}
           {/* Project field removed - projects no longer exist */}
         </div>
 
