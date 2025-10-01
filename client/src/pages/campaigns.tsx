@@ -1312,7 +1312,7 @@ export default function Campaigns() {
                         required
                       />
                       <div className="flex justify-end mt-1">
-                        <div className="text-xs text-gray-500">
+                        <div className={`text-xs ${smsContent.length > 160 ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
                           {smsContent.length}/160 characters
                         </div>
                       </div>
@@ -1599,7 +1599,7 @@ export default function Campaigns() {
                   required
                 />
                 <div className="flex justify-end mt-1">
-                  <div className="text-xs text-gray-500">
+                  <div className={`text-xs ${smsContent.length > 160 ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
                     {smsContent.length}/160 characters
                   </div>
                 </div>

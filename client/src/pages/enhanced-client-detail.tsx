@@ -5163,7 +5163,7 @@ export default function EnhancedClientDetail() {
                               data-testid="textarea-sms-message"
                             />
                             <div className="flex justify-between items-center mt-2">
-                              <span className="text-xs text-gray-500">
+                              <span className={`text-xs ${characterCount > 160 ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
                                 {characterCount}/160 characters
                               </span>
                               <span className="text-xs text-gray-500">
