@@ -10389,18 +10389,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/lead-notes", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
     try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
       const validatedData = insertLeadNoteSchema.parse(req.body);
-      const [note] = await db.insert(leadNotes).values(validatedData).returning();
+      const noteData = {
+        ...validatedData,
+        authorId: userId
+      };
+      const [note] = await db.insert(leadNotes).values(noteData).returning();
       
       await createAuditLog(
         "created",
         "lead_note",
         note.id,
         `Note for lead ${validatedData.leadId}`,
-        validatedData.authorId,
+        userId,
         "Lead note created",
         null,
-        validatedData,
+        noteData,
         req
       );
 
