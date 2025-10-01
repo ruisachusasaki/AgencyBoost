@@ -793,6 +793,54 @@ export default function TaskDetail() {
                     </div>
                   </div>
                 </div>
+
+                {/* Row 5: Client Approval */}
+                {task.visibleToClient && task.clientId && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Client Approval - Left Side */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-slate-400" />
+                        <span className="text-sm font-medium text-slate-700">Client Approval</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={task.requiresClientApproval || false}
+                          onCheckedChange={(checked) => updateTaskMutation.mutate({ requiresClientApproval: !!checked })}
+                          data-testid="switch-requires-client-approval"
+                        />
+                        <span className="text-sm text-slate-600">
+                          {task.requiresClientApproval ? "Required" : "Not required"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Approval Status - Right Side */}
+                    {task.requiresClientApproval && (
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-slate-700">Status:</span>
+                        </div>
+                        <Badge 
+                          variant={
+                            task.clientApprovalStatus === 'approved' ? 'default' : 
+                            task.clientApprovalStatus === 'changes_requested' ? 'destructive' : 
+                            'secondary'
+                          }
+                          className={
+                            task.clientApprovalStatus === 'approved' ? 'bg-green-500' : 
+                            task.clientApprovalStatus === 'changes_requested' ? 'bg-orange-500' : 
+                            'bg-yellow-500'
+                          }
+                        >
+                          {task.clientApprovalStatus === 'approved' ? 'Approved' : 
+                           task.clientApprovalStatus === 'changes_requested' ? 'Changes Requested' : 
+                           'Pending Approval'}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
