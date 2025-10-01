@@ -10392,7 +10392,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return;
 
-      const validatedData = insertLeadNoteSchema.parse(req.body);
+      // Make authorId optional during validation since we set it from the session
+      const validatedData = insertLeadNoteSchema.omit({ authorId: true }).parse(req.body);
       const noteData = {
         ...validatedData,
         authorId: userId
