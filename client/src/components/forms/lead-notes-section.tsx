@@ -32,7 +32,7 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
   const { toast } = useToast();
 
   const { data: notes = [], isLoading } = useQuery<LeadNote[]>({
-    queryKey: ["/api/lead-notes", leadId],
+    queryKey: [`/api/lead-notes/${leadId}`],
     enabled: !!leadId,
   });
 
@@ -84,7 +84,7 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/lead-notes", leadId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/lead-notes/${leadId}`] });
       toast({
         title: "Success",
         description: "Note added successfully",
@@ -119,7 +119,7 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/lead-notes", leadId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/lead-notes/${leadId}`] });
       toast({
         title: "Success",
         description: "Note updated successfully",
@@ -147,7 +147,7 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/lead-notes", leadId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/lead-notes/${leadId}`] });
       toast({
         title: "Success",
         description: "Note deleted successfully",
@@ -178,7 +178,7 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/lead-notes", leadId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/lead-notes/${leadId}`] });
       toast({
         title: "Success",
         description: "Note lock status updated",
