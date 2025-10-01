@@ -114,13 +114,23 @@ export default function LeadDetail() {
         </Button>
       </div>
 
-      {/* Lead Info Card */}
+      {/* Lead Details Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Lead Information</CardTitle>
+          <CardTitle>Lead Details</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Name */}
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-gray-500" />
+              <div>
+                <div className="text-sm text-gray-500">Name</div>
+                <div className="font-medium" data-testid="text-lead-detail-name">{lead.name}</div>
+              </div>
+            </div>
+
+            {/* Email */}
             {lead.email && (
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-gray-500" />
@@ -131,6 +141,7 @@ export default function LeadDetail() {
               </div>
             )}
             
+            {/* Phone */}
             {lead.phone && (
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-gray-500" />
@@ -141,6 +152,7 @@ export default function LeadDetail() {
               </div>
             )}
             
+            {/* Company */}
             {lead.company && (
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-gray-500" />
@@ -150,7 +162,24 @@ export default function LeadDetail() {
                 </div>
               </div>
             )}
+
+            {/* Pipeline Stage */}
+            {currentStage && (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-gray-500" />
+                <div>
+                  <div className="text-sm text-gray-500">Pipeline Stage</div>
+                  <Badge 
+                    style={{ backgroundColor: currentStage.color }}
+                    data-testid="badge-lead-detail-stage"
+                  >
+                    {currentStage.name}
+                  </Badge>
+                </div>
+              </div>
+            )}
             
+            {/* Status */}
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-gray-500" />
               <div>
@@ -168,6 +197,7 @@ export default function LeadDetail() {
               </div>
             </div>
             
+            {/* Potential Value */}
             {lead.value && (
               <div className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-gray-500" />
@@ -180,6 +210,7 @@ export default function LeadDetail() {
               </div>
             )}
             
+            {/* Probability */}
             {lead.probability !== null && lead.probability !== undefined && (
               <div className="flex items-center gap-2">
                 <Percent className="h-4 w-4 text-gray-500" />
@@ -192,6 +223,7 @@ export default function LeadDetail() {
               </div>
             )}
             
+            {/* Assigned To */}
             {assignedStaff && (
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-gray-500" />
@@ -204,6 +236,7 @@ export default function LeadDetail() {
               </div>
             )}
             
+            {/* Source */}
             {lead.source && (
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-gray-500" />
@@ -214,6 +247,7 @@ export default function LeadDetail() {
               </div>
             )}
             
+            {/* Last Contact Date */}
             {lead.lastContactDate && (
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-gray-500" />
@@ -226,6 +260,7 @@ export default function LeadDetail() {
               </div>
             )}
             
+            {/* Created Date */}
             {lead.createdAt && (
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-gray-500" />
