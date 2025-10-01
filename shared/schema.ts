@@ -727,7 +727,7 @@ export const taskComments = pgTable("task_comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   taskId: varchar("task_id").notNull().references(() => tasks.id),
   content: text("content").notNull(),
-  authorId: varchar("author_id").notNull().references(() => users.id),
+  authorId: uuid("author_id").notNull().references(() => staff.id),
   mentions: text("mentions").array(), // Array of user IDs mentioned in the comment
   parentId: varchar("parent_id"), // For threaded replies - will reference task_comments.id
   createdAt: timestamp("created_at").defaultNow(),
@@ -738,7 +738,7 @@ export const taskComments = pgTable("task_comments", {
 export const taskCommentReactions = pgTable("task_comment_reactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   commentId: varchar("comment_id").notNull().references(() => taskComments.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
   emoji: varchar("emoji").notNull(), // The emoji reaction (👍, ❤️, 😊, etc.)
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -751,7 +751,7 @@ export const commentFiles = pgTable("comment_files", {
   fileType: text("file_type").notNull(), // pdf, doc, docx, jpg, png, etc.
   fileSize: integer("file_size").notNull(),
   fileUrl: text("file_url").notNull(), // Object storage URL
-  uploadedBy: varchar("uploaded_by").notNull().references(() => users.id),
+  uploadedBy: uuid("uploaded_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
