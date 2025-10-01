@@ -448,7 +448,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   };
 
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-12rem)]">
+    <div className="flex flex-col h-full max-h-[calc(100vh-8rem)]">
       {/* Comments List - Responsive viewport */}
       <div className="flex-1 overflow-y-auto space-y-3 mb-4 min-h-0">
         {comments.length === 0 ? (
