@@ -238,8 +238,8 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
         </React.Fragment>
       ))}
       
-      {/* Add Sub-task Button and Form - Show at any level under the max */}
-      {level < maxLevel - 1 && (
+      {/* Add Sub-task Button and Form - Only show when there are no sub-tasks OR at top level */}
+      {level < maxLevel - 1 && (subTasks.length === 0 || level === 0) && (
         <>
           {!showAddForm ? (
             <TableRow>
