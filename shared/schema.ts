@@ -1135,6 +1135,7 @@ export const insertSmsTemplateSchema = createInsertSchema(smsTemplates).omit({
   updatedAt: true,
   lastUsed: true,
   usageCount: true,
+  createdBy: true,
 });
 
 export const insertScheduledEmailSchema = createInsertSchema(scheduledEmails).omit({
