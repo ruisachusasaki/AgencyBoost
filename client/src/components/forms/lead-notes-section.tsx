@@ -64,10 +64,10 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
     mutationFn: async (data: NoteFormData) => {
       if (!leadId) throw new Error("Lead ID is required");
       
-      const noteData: InsertLeadNote = {
+      // authorId will be set by backend from authenticated user session
+      const noteData = {
         ...data,
         leadId,
-        // authorId will be set by backend from authenticated user session
       };
 
       return await fetch("/api/lead-notes", {
