@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Edit, Trash2, GripVertical, Eye, EyeOff, Settings, Flag, Layers, Folder, ArrowUp, ArrowDown, ArrowLeft, X } from "lucide-react";
+import { Plus, Edit, Trash2, GripVertical, Eye, EyeOff, Settings, Flag, Layers, Folder, ArrowUp, ArrowDown, ArrowLeft, X, ChevronUp, ChevronDown } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import * as LucideIcons from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { IconPicker } from "@/components/ui/icon-picker";
 import {
   Select,
@@ -47,7 +48,7 @@ import {
 } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskCategorySchema, insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema } from "@shared/schema";
+import { insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskCategorySchema, insertTeamWorkflowSchema } from "@shared/schema";
 import { z } from "zod";
 
 // Color options for task statuses and priorities
@@ -157,7 +158,8 @@ export default function TasksSettingsPage() {
   const [isStatusFlowDialogOpen, setIsStatusFlowDialogOpen] = useState(false);
   const [currentWorkflow, setCurrentWorkflow] = useState<TeamWorkflow | null>(null);
   const [workflowStatuses, setWorkflowStatuses] = useState<{id: string; order: number; isRequired: boolean; statusId: string}[]>([]);
-  const { toast } = useToast();
+  const [newWorkflowStatuses, setNewWorkflowStatuses] = useState<{id: string; order: number; isRequired: boolean; statusId: string}[]>([]);
+  const { toast} = useToast();
   const queryClient = useQueryClient();
 
   // Fetch task statuses
@@ -384,7 +386,21 @@ export default function TasksSettingsPage() {
   // Workflow mutations
   const createWorkflowMutation = useMutation({
     mutationFn: (data: TeamWorkflowFormData) => apiRequest("POST", "/api/team-workflows", data),
-    onSuccess: () => {
+    onSuccess: async (newWorkflow: any) => {
+      // If statuses were selected for the new workflow, save them
+      if (newWorkflowStatuses.length > 0) {
+        try {
+          const statusesToSave = newWorkflowStatuses.map(ws => ({
+            statusId: ws.statusId,
+            order: ws.order,
+            isRequired: ws.isRequired
+          }));
+          await apiRequest("PUT", `/api/team-workflows/${newWorkflow.id}/statuses`, { statuses: statusesToSave });
+        } catch (error: any) {
+          toast({ title: "Warning", description: "Workflow created but failed to save statuses. Please configure them manually.", variant: "destructive" });
+        }
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/team-workflows"] });
       toast({ title: "Success", description: "Team workflow created successfully" });
       handleCloseDialog();
@@ -461,6 +477,43 @@ export default function TasksSettingsPage() {
 
   const handleRemoveStatusFromWorkflow = (statusId: string) => {
     setWorkflowStatuses(workflowStatuses.filter(ws => ws.statusId !== statusId));
+  };
+
+  // Helper functions for new workflow status management
+  const handleAddStatusToNewWorkflow = (statusId: string) => {
+    const maxOrder = newWorkflowStatuses.length > 0 ? Math.max(...newWorkflowStatuses.map(ws => ws.order)) : -1;
+    setNewWorkflowStatuses([...newWorkflowStatuses, {
+      id: `temp-${Date.now()}`,
+      statusId,
+      order: maxOrder + 1,
+      isRequired: true
+    }]);
+  };
+
+  const handleRemoveStatusFromNewWorkflow = (statusId: string) => {
+    setNewWorkflowStatuses(newWorkflowStatuses.filter(ws => ws.statusId !== statusId));
+  };
+
+  const handleMoveNewWorkflowStatusUp = (statusId: string) => {
+    const index = newWorkflowStatuses.findIndex(ws => ws.statusId === statusId);
+    if (index > 0) {
+      const newStatuses = [...newWorkflowStatuses];
+      [newStatuses[index - 1], newStatuses[index]] = [newStatuses[index], newStatuses[index - 1]];
+      // Update order values
+      newStatuses.forEach((ws, idx) => ws.order = idx);
+      setNewWorkflowStatuses(newStatuses);
+    }
+  };
+
+  const handleMoveNewWorkflowStatusDown = (statusId: string) => {
+    const index = newWorkflowStatuses.findIndex(ws => ws.statusId === statusId);
+    if (index < newWorkflowStatuses.length - 1) {
+      const newStatuses = [...newWorkflowStatuses];
+      [newStatuses[index], newStatuses[index + 1]] = [newStatuses[index + 1], newStatuses[index]];
+      // Update order values
+      newStatuses.forEach((ws, idx) => ws.order = idx);
+      setNewWorkflowStatuses(newStatuses);
+    }
   };
 
   const handleToggleStatusRequired = (statusId: string) => {
@@ -655,6 +708,7 @@ export default function TasksSettingsPage() {
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingItem(null);
+    setNewWorkflowStatuses([]);
     statusForm.reset();
     priorityForm.reset();
     categoryForm.reset();
@@ -1976,11 +2030,136 @@ export default function TasksSettingsPage() {
                   />
                 </div>
 
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    💡 <strong>Next steps:</strong> After creating this workflow, you can assign specific status progression in the workflow editor, then assign it to departments in the Teams section.
-                  </p>
-                </div>
+                {/* Status Selection - Only when creating new workflow */}
+                {!editingItem && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Workflow Statuses</Label>
+                      <span className="text-xs text-muted-foreground">
+                        {newWorkflowStatuses.length} selected
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Available Statuses */}
+                      <div className="space-y-2">
+                        <h5 className="text-sm font-medium text-muted-foreground">Available Statuses</h5>
+                        <div className="border rounded-lg p-2 max-h-48 overflow-y-auto space-y-1">
+                          {statuses
+                            .filter(status => !newWorkflowStatuses.some(ws => ws.statusId === status.id))
+                            .map(status => (
+                              <div
+                                key={status.id}
+                                className="flex items-center justify-between p-2 hover:bg-muted rounded text-sm"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-2 h-2 rounded-full" 
+                                    style={{ backgroundColor: status.color }}
+                                  />
+                                  <span>{status.name}</span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleAddStatusToNewWorkflow(status.id)}
+                                  className="h-6 w-6 p-0"
+                                  data-testid={`button-add-status-${status.id}`}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          {statuses.filter(s => !newWorkflowStatuses.some(ws => ws.statusId === s.id)).length === 0 && (
+                            <div className="text-xs text-center text-muted-foreground py-4">
+                              All statuses added
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Selected Statuses */}
+                      <div className="space-y-2">
+                        <h5 className="text-sm font-medium text-muted-foreground">Workflow Progression</h5>
+                        <div className="border rounded-lg p-2 max-h-48 overflow-y-auto space-y-1">
+                          {newWorkflowStatuses
+                            .sort((a, b) => a.order - b.order)
+                            .map((ws, index) => {
+                              const status = statuses.find(s => s.id === ws.statusId);
+                              return (
+                                <div
+                                  key={ws.id}
+                                  className="flex items-center justify-between p-2 bg-muted rounded text-sm"
+                                >
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <div 
+                                      className="w-2 h-2 rounded-full" 
+                                      style={{ backgroundColor: status?.color }}
+                                    />
+                                    <span className="text-xs text-muted-foreground">{index + 1}.</span>
+                                    <span className="flex-1">{status?.name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleMoveNewWorkflowStatusUp(ws.statusId)}
+                                      disabled={index === 0}
+                                      className="h-6 w-6 p-0"
+                                      data-testid={`button-move-up-${ws.statusId}`}
+                                    >
+                                      <ChevronUp className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleMoveNewWorkflowStatusDown(ws.statusId)}
+                                      disabled={index === newWorkflowStatuses.length - 1}
+                                      className="h-6 w-6 p-0"
+                                      data-testid={`button-move-down-${ws.statusId}`}
+                                    >
+                                      <ChevronDown className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleRemoveStatusFromNewWorkflow(ws.statusId)}
+                                      className="h-6 w-6 p-0"
+                                      data-testid={`button-remove-status-${ws.statusId}`}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          {newWorkflowStatuses.length === 0 && (
+                            <div className="text-xs text-center text-muted-foreground py-4">
+                              No statuses added yet
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground">
+                      💡 Define which statuses are part of this workflow and their progression order.
+                    </p>
+                  </div>
+                )}
+
+                {/* Editing info message */}
+                {editingItem && (
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      💡 <strong>Configure statuses:</strong> Use the "Configure Status Flow" button (⋮⋮) in the workflows table to manage status progression for this workflow.
+                    </p>
+                  </div>
+                )}
 
                 <DialogFooter>
                   <Button
