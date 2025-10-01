@@ -5740,6 +5740,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
+      console.log('DEBUG SMS Template Create - Request body:', JSON.stringify(req.body, null, 2));
+      
       const validatedData = insertSmsTemplateSchema.parse(req.body);
       // SECURE: Use authenticated user ID only, not hardcoded fallback
       validatedData.createdBy = userId;
@@ -5762,8 +5764,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(template);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.log('DEBUG SMS Template Create - Zod validation error:', JSON.stringify(error.errors, null, 2));
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
+      console.log('DEBUG SMS Template Create - Unknown error:', error);
       res.status(500).json({ message: "Failed to create SMS template" });
     }
   });
