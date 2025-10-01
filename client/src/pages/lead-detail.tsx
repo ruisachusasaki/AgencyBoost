@@ -3,10 +3,9 @@ import { useState } from "react";
 import { useLocation, Link, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Mail, Phone, Building2, Calendar, DollarSign, User, CheckCircle2, Edit, Tag as TagIcon, FileText, Percent, MessageSquare } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Building2, Calendar, DollarSign, User, CheckCircle2, Edit, Tag as TagIcon, FileText, Percent, MessageSquare, StickyNote, ListTodo, CalendarCheck } from "lucide-react";
 import { format } from "date-fns";
 import type { Lead, Task, User as StaffUser, LeadPipelineStage, CustomField, Tag } from "@shared/schema";
 import LeadNotesSection from "@/components/forms/lead-notes-section";
@@ -18,13 +17,14 @@ export default function LeadDetail() {
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/leads/:id");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"notes" | "tasks" | "appointments">("notes");
   
   // Extract lead ID from route params
   const leadId = params?.id;
 
-  // Fetch lead data
+  // Fetch lead data - using the specific lead endpoint
   const { data: lead, isLoading: leadLoading } = useQuery<Lead>({
-    queryKey: ["/api/leads", leadId],
+    queryKey: [`/api/leads/${leadId}`],
     enabled: !!leadId,
   });
 
@@ -336,25 +336,49 @@ export default function LeadDetail() {
         </Card>
       )}
 
-      {/* Tabs Section */}
-      <Tabs defaultValue="notes" className="w-full">
-        <TabsList>
-          <TabsTrigger value="notes" data-testid="tab-notes">Notes</TabsTrigger>
-          <TabsTrigger value="tasks" data-testid="tab-tasks">
-            Tasks {leadTasks.length > 0 && `(${leadTasks.length})`}
-          </TabsTrigger>
-          <TabsTrigger value="appointments" data-testid="tab-appointments">Appointments</TabsTrigger>
-        </TabsList>
+      {/* Tabs Section - Marketing Page Style */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: "notes" as const, name: "Notes", icon: StickyNote, count: 0 },
+            { id: "tasks" as const, name: "Tasks", icon: ListTodo, count: leadTasks.length },
+            { id: "appointments" as const, name: "Appointments", icon: CalendarCheck, count: 0 }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+                data-testid={`tab-${tab.id}`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.name} {tab.count > 0 && `(${tab.count})`}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
-        <TabsContent value="notes" className="mt-6">
+      {/* Tab Content */}
+      {activeTab === "notes" && (
+        <div className="mt-6">
           <LeadNotesSection leadId={leadId || ""} />
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="appointments" className="mt-6">
+      {activeTab === "appointments" && (
+        <div className="mt-6">
           <LeadAppointmentsDisplay leadId={leadId || ""} />
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="tasks" className="mt-6">
+      {activeTab === "tasks" && (
+        <div className="mt-6">
           <Card>
             <CardHeader>
               <CardTitle>Tasks</CardTitle>
@@ -437,8 +461,8 @@ export default function LeadDetail() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
 
       {/* Edit Lead Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
