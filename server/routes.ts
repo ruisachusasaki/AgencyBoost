@@ -16867,6 +16867,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get watchers for a job application
+  app.get('/api/hr/job-applications/:id/watchers', requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const watchers = await db
+        .select({
+          id: jobApplicationWatchers.id,
+          staffId: jobApplicationWatchers.staffId,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email,
+          profileImagePath: staff.profileImagePath,
+          addedAt: jobApplicationWatchers.addedAt,
+          addedBy: jobApplicationWatchers.addedBy
+        })
+        .from(jobApplicationWatchers)
+        .innerJoin(staff, eq(jobApplicationWatchers.staffId, staff.id))
+        .where(eq(jobApplicationWatchers.applicationId, id))
+        .orderBy(asc(jobApplicationWatchers.addedAt));
+      
+      res.json(watchers);
+    } catch (error) {
+      console.error("Error fetching watchers:", error);
+      res.status(500).json({ message: "Failed to fetch watchers" });
+    }
+  });
+
+  // Add a watcher to a job application
+  app.post('/api/hr/job-applications/:id/watchers', requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { staffId } = req.body;
+      
+      if (!staffId) {
+        return res.status(400).json({ message: "Staff ID is required" });
+      }
+      
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      
+      // Check if watcher already exists
+      const existing = await db
+        .select()
+        .from(jobApplicationWatchers)
+        .where(
+          and(
+            eq(jobApplicationWatchers.applicationId, id),
+            eq(jobApplicationWatchers.staffId, staffId)
+          )
+        )
+        .limit(1);
+      
+      if (existing.length > 0) {
+        return res.status(400).json({ message: "This staff member is already a watcher" });
+      }
+      
+      // Add the watcher
+      const [newWatcher] = await db
+        .insert(jobApplicationWatchers)
+        .values({
+          applicationId: id,
+          staffId: staffId,
+          addedBy: currentUserId
+        })
+        .returning();
+      
+      // Get staff details for the response
+      const [staffDetails] = await db
+        .select({
+          id: staff.id,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email,
+          profileImagePath: staff.profileImagePath
+        })
+        .from(staff)
+        .where(eq(staff.id, staffId));
+      
+      res.status(201).json({
+        id: newWatcher.id,
+        staffId: newWatcher.staffId,
+        firstName: staffDetails.firstName,
+        lastName: staffDetails.lastName,
+        email: staffDetails.email,
+        profileImagePath: staffDetails.profileImagePath,
+        addedAt: newWatcher.addedAt,
+        addedBy: newWatcher.addedBy
+      });
+    } catch (error) {
+      console.error("Error adding watcher:", error);
+      res.status(500).json({ message: "Failed to add watcher" });
+    }
+  });
+
+  // Remove a watcher from a job application
+  app.delete('/api/hr/job-applications/:id/watchers/:watcherId', requireAuth(), async (req, res) => {
+    try {
+      const { id, watcherId } = req.params;
+      
+      const deleted = await db
+        .delete(jobApplicationWatchers)
+        .where(
+          and(
+            eq(jobApplicationWatchers.id, watcherId),
+            eq(jobApplicationWatchers.applicationId, id)
+          )
+        )
+        .returning();
+      
+      if (!deleted.length) {
+        return res.status(404).json({ message: "Watcher not found" });
+      }
+      
+      res.json({ message: "Watcher removed successfully" });
+    } catch (error) {
+      console.error("Error removing watcher:", error);
+      res.status(500).json({ message: "Failed to remove watcher" });
+    }
+  });
+
   // Public endpoint for submitting job applications (no authentication required)
   app.post('/api/job-applications', async (req, res) => {
     try {
