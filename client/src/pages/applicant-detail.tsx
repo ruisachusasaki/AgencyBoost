@@ -563,7 +563,7 @@ export default function ApplicantDetailPage() {
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={watcher.profileImagePath} />
                             <AvatarFallback className="text-xs">
-                              {watcher.firstName[0]}{watcher.lastName[0]}
+                              {watcher.firstName?.[0] || '?'}{watcher.lastName?.[0] || '?'}
                             </AvatarFallback>
                           </Avatar>
                           <div>
@@ -618,7 +618,7 @@ export default function ApplicantDetailPage() {
                                   <Avatar className="h-6 w-6">
                                     <AvatarImage src={member.profileImagePath} />
                                     <AvatarFallback className="text-xs">
-                                      {member.firstName[0]}{member.lastName[0]}
+                                      {member.firstName?.[0] || '?'}{member.lastName?.[0] || '?'}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
