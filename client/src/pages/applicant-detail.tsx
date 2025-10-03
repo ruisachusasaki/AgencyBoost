@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { 
   ArrowLeft, 
   Star, 
@@ -19,7 +21,10 @@ import {
   MessageSquare,
   User,
   Clock,
-  Send
+  Send,
+  Eye,
+  UserPlus,
+  X
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { JobApplication, JobApplicationComment } from "@shared/schema";
@@ -33,6 +38,7 @@ export default function ApplicantDetailPage() {
   const [mentionQuery, setMentionQuery] = useState("");
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [isWatcherPopoverOpen, setIsWatcherPopoverOpen] = useState(false);
 
   // Fetch applicant details
   const { data: application, isLoading, error } = useQuery<JobApplication>({
@@ -60,6 +66,33 @@ export default function ApplicantDetailPage() {
   // Fetch staff for @mentions
   const { data: staff = [] } = useQuery({
     queryKey: ["/api/staff"],
+  });
+
+  // Fetch watchers for this application
+  const { data: watchers = [] } = useQuery({
+    queryKey: ["/api/hr/job-applications", id, "watchers"],
+    enabled: !!id,
+  });
+
+  // Add watcher mutation
+  const addWatcherMutation = useMutation({
+    mutationFn: async (staffId: string) => {
+      return await apiRequest("POST", `/api/hr/job-applications/${id}/watchers`, { staffId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/job-applications", id, "watchers"] });
+      setIsWatcherPopoverOpen(false);
+    },
+  });
+
+  // Remove watcher mutation
+  const removeWatcherMutation = useMutation({
+    mutationFn: async (watcherId: string) => {
+      return await apiRequest("DELETE", `/api/hr/job-applications/${id}/watchers/${watcherId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/job-applications", id, "watchers"] });
+    },
   });
 
   // Update application mutation
@@ -506,6 +539,100 @@ export default function ApplicantDetailPage() {
                     ))}
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Watchers */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Eye className="h-5 w-5" />
+                  Watchers/Followers
+                </CardTitle>
+                <CardDescription>
+                  Team members who can view this application
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Watcher List */}
+                {watchers.length > 0 ? (
+                  <div className="space-y-2">
+                    {watchers.map((watcher: any) => (
+                      <div key={watcher.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={watcher.profileImagePath} />
+                            <AvatarFallback className="text-xs">
+                              {watcher.firstName[0]}{watcher.lastName[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-medium">{watcher.firstName} {watcher.lastName}</p>
+                            <p className="text-xs text-gray-500">{watcher.email}</p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeWatcherMutation.mutate(watcher.id)}
+                          disabled={removeWatcherMutation.isPending}
+                          data-testid={`button-remove-watcher-${watcher.staffId}`}
+                        >
+                          <X className="h-4 w-4 text-gray-500 hover:text-red-600" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    No watchers yet
+                  </p>
+                )}
+                
+                {/* Add Watcher Button */}
+                <Popover open={isWatcherPopoverOpen} onOpenChange={setIsWatcherPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full" data-testid="button-add-watcher">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Watcher
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search staff..." />
+                      <CommandList>
+                        <CommandEmpty>No staff found.</CommandEmpty>
+                        <CommandGroup>
+                          {staff
+                            .filter((member: any) => 
+                              !watchers.some((w: any) => w.staffId === member.id)
+                            )
+                            .map((member: any) => (
+                              <CommandItem
+                                key={member.id}
+                                value={`${member.firstName} ${member.lastName}`}
+                                onSelect={() => addWatcherMutation.mutate(member.id)}
+                                data-testid={`option-add-watcher-${member.id}`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={member.profileImagePath} />
+                                    <AvatarFallback className="text-xs">
+                                      {member.firstName[0]}{member.lastName[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="text-sm font-medium">{member.firstName} {member.lastName}</p>
+                                    <p className="text-xs text-gray-500">{member.email}</p>
+                                  </div>
+                                </div>
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </CardContent>
             </Card>
 
