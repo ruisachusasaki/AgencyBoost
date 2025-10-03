@@ -860,6 +860,15 @@ export const jobApplicationComments = pgTable("job_application_comments", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// HR System - Job Application Watchers (staff who should have visibility to specific applications)
+export const jobApplicationWatchers = pgTable("job_application_watchers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull().references(() => jobApplications.id, { onDelete: "cascade" }),
+  staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  addedBy: uuid("added_by").notNull().references(() => staff.id),
+  addedAt: timestamp("added_at").defaultNow(),
+});
+
 // HR System - Time Off Balances (for tracking remaining days)
 export const timeOffBalances = pgTable("time_off_balances", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1367,6 +1376,11 @@ export const insertApplicationStageHistorySchema = createInsertSchema(applicatio
   changedAt: true,
 });
 
+export const insertJobApplicationWatcherSchema = createInsertSchema(jobApplicationWatchers).omit({
+  id: true,
+  addedAt: true,
+});
+
 export const insertTimeOffBalanceSchema = createInsertSchema(timeOffBalances).omit({
   id: true,
   createdAt: true,
@@ -1388,6 +1402,8 @@ export type InsertJobApplicationComment = typeof jobApplicationComments.$inferIn
 export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
 export type ApplicationStageHistory = typeof applicationStageHistory.$inferSelect;
 export type InsertApplicationStageHistory = z.infer<typeof insertApplicationStageHistorySchema>;
+export type JobApplicationWatcher = typeof jobApplicationWatchers.$inferSelect;
+export type InsertJobApplicationWatcher = z.infer<typeof insertJobApplicationWatcherSchema>;
 export type TimeOffBalance = typeof timeOffBalances.$inferSelect;
 export type InsertTimeOffBalance = z.infer<typeof insertTimeOffBalanceSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
