@@ -32,6 +32,11 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
+  // For iframe contexts (like Replit preview), we need sameSite: 'none' and secure: true
+  // Replit always serves over HTTPS, so secure: true works in both dev and prod
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -39,8 +44,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true, // Always use secure since Replit serves over HTTPS
+      sameSite: 'none', // Required for cookies to work in iframe contexts
       maxAge: sessionTtl,
     },
   });
