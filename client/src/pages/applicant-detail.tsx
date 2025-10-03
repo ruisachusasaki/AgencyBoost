@@ -54,6 +54,11 @@ export default function ApplicantDetailPage() {
   // Fetch application comments
   const { data: comments = [] } = useQuery<JobApplicationComment[]>({
     queryKey: ["/api/hr/job-applications", id, "comments"],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/job-applications/${id}/comments`);
+      if (!response.ok) throw new Error('Failed to fetch comments');
+      return response.json();
+    },
     enabled: !!id,
   });
 
@@ -71,6 +76,11 @@ export default function ApplicantDetailPage() {
   // Fetch watchers for this application
   const { data: watchers = [] } = useQuery({
     queryKey: ["/api/hr/job-applications", id, "watchers"],
+    queryFn: async () => {
+      const response = await fetch(`/api/hr/job-applications/${id}/watchers`);
+      if (!response.ok) throw new Error('Failed to fetch watchers');
+      return response.json();
+    },
     enabled: !!id,
   });
 
