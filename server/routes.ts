@@ -16212,8 +16212,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Admin sees all applications
         applications = await db.select().from(jobApplications).orderBy(desc(jobApplications.appliedAt));
       } else {
-        // Non-admin users see only applications for job openings where they are the hiring manager
-        applications = await db.select({
+        // Non-admin users see:
+        // 1. Applications for job openings where they are the hiring manager
+        // 2. Applications where they are added as a watcher
+        
+        // Get applications where user is hiring manager
+        const hiringManagerApps = await db.select({
           id: jobApplications.id,
           applicantName: jobApplications.applicantName,
           applicantEmail: jobApplications.applicantEmail,
@@ -16232,6 +16236,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .innerJoin(jobOpenings, eq(jobApplications.jobOpeningId, jobOpenings.id))
         .where(eq(jobOpenings.hiringManagerId, currentUserId))
         .orderBy(desc(jobApplications.appliedAt));
+        
+        // Get applications where user is a watcher
+        const watchedApps = await db.select({
+          id: jobApplications.id,
+          applicantName: jobApplications.applicantName,
+          applicantEmail: jobApplications.applicantEmail,
+          applicantPhone: jobApplications.applicantPhone,
+          positionTitle: jobApplications.positionTitle,
+          stage: jobApplications.stage,
+          rating: jobApplications.rating,
+          appliedAt: jobApplications.appliedAt,
+          resumeUrl: jobApplications.resumeUrl,
+          coverLetter: jobApplications.coverLetter,
+          notes: jobApplications.notes,
+          customFields: jobApplications.customFields,
+          jobOpeningId: jobApplications.jobOpeningId
+        })
+        .from(jobApplications)
+        .innerJoin(jobApplicationWatchers, eq(jobApplications.id, jobApplicationWatchers.applicationId))
+        .where(eq(jobApplicationWatchers.staffId, currentUserId))
+        .orderBy(desc(jobApplications.appliedAt));
+        
+        // Merge and deduplicate applications
+        const applicationMap = new Map();
+        [...hiringManagerApps, ...watchedApps].forEach(app => {
+          applicationMap.set(app.id, app);
+        });
+        applications = Array.from(applicationMap.values());
       }
       
       res.json(applications);
