@@ -43,7 +43,7 @@ import {
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments,
-  socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
+  socialMediaAccounts, socialMediaPosts, workflows, workflowExecutions, workflowActionAnalytics, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, jobApplicationWatchers, applicationStageHistory, timeOffBalances,
   jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, teamPositions, clientTeamAssignments,
@@ -5902,6 +5902,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching workflow:", error);
       res.status(500).json({ message: "Failed to fetch workflow" });
+    }
+  });
+
+  app.get("/api/workflows/:id/action-analytics", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
+    try {
+      const analytics = await db.select()
+        .from(workflowActionAnalytics)
+        .where(eq(workflowActionAnalytics.workflowId, req.params.id));
+      
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching workflow action analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
     }
   });
 

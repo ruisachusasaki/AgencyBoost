@@ -1535,6 +1535,37 @@ export const workflowExecutions = pgTable("workflow_executions", {
   nextRunAt: timestamp("next_run_at"), // for scheduled actions
 });
 
+export const workflowActionAnalytics = pgTable("workflow_action_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").references(() => workflows.id).notNull(),
+  actionType: text("action_type").notNull(), // send_email, send_sms
+  
+  // Email Analytics
+  emailsSent: integer("emails_sent").default(0),
+  emailsDelivered: integer("emails_delivered").default(0),
+  emailsOpened: integer("emails_opened").default(0),
+  emailsClicked: integer("emails_clicked").default(0),
+  emailsReplied: integer("emails_replied").default(0),
+  emailsBounced: integer("emails_bounced").default(0),
+  emailsUnsubscribed: integer("emails_unsubscribed").default(0),
+  emailsAccepted: integer("emails_accepted").default(0),
+  emailsRejected: integer("emails_rejected").default(0),
+  emailsComplained: integer("emails_complained").default(0),
+  
+  // SMS Analytics
+  smsSent: integer("sms_sent").default(0),
+  smsDelivered: integer("sms_delivered").default(0),
+  smsClicked: integer("sms_clicked").default(0),
+  smsFailed: integer("sms_failed").default(0),
+  smsOptedOut: integer("sms_opted_out").default(0),
+  
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_workflow_action_analytics_workflow_id").on(table.workflowId),
+  index("idx_workflow_action_analytics_workflow_action").on(table.workflowId, table.actionType),
+]);
+
 export const workflowTemplates = pgTable("workflow_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -1785,6 +1816,12 @@ export const insertWorkflowExecutionSchema = createInsertSchema(workflowExecutio
   id: true,
 });
 
+export const insertWorkflowActionAnalyticsSchema = createInsertSchema(workflowActionAnalytics).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true,
+});
+
 export const insertWorkflowTemplateSchema = createInsertSchema(workflowTemplates).omit({
   id: true,
   createdAt: true,
@@ -1857,6 +1894,9 @@ export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
 
 export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
 export type InsertWorkflowExecution = z.infer<typeof insertWorkflowExecutionSchema>;
+
+export type WorkflowActionAnalytics = typeof workflowActionAnalytics.$inferSelect;
+export type InsertWorkflowActionAnalytics = z.infer<typeof insertWorkflowActionAnalyticsSchema>;
 
 export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;
 export type InsertWorkflowTemplate = z.infer<typeof insertWorkflowTemplateSchema>;

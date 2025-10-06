@@ -49,6 +49,17 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
     enabled: isOpen,
   });
 
+  // Fetch workflow action analytics
+  const { data: actionAnalytics = [] } = useQuery({
+    queryKey: ["/api/workflows", workflow.id, "action-analytics"],
+    queryFn: async () => {
+      const response = await fetch(`/api/workflows/${workflow.id}/action-analytics`);
+      if (!response.ok) throw new Error('Failed to fetch analytics');
+      return response.json();
+    },
+    enabled: isOpen,
+  });
+
   // Update workflow status mutation
   const updateWorkflowMutation = useMutation({
     mutationFn: async ({ status }: { status: string }) => {
@@ -376,6 +387,149 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
                 </CardContent>
               </Card>
             </div>
+
+            {actionAnalytics && actionAnalytics.length > 0 && (
+              <div className="space-y-4">
+                {actionAnalytics.map((analytics: any) => {
+                  if (analytics.actionType === 'send_email') {
+                    const totalSent = analytics.emailsSent || 0;
+                    const delivered = analytics.emailsDelivered || 0;
+                    const opened = analytics.emailsOpened || 0;
+                    const clicked = analytics.emailsClicked || 0;
+                    const replied = analytics.emailsReplied || 0;
+                    const bounced = analytics.emailsBounced || 0;
+                    const unsubscribed = analytics.emailsUnsubscribed || 0;
+                    const accepted = analytics.emailsAccepted || 0;
+                    const rejected = analytics.emailsRejected || 0;
+                    const complained = analytics.emailsComplained || 0;
+
+                    return (
+                      <Card key={analytics.id}>
+                        <CardHeader>
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-5 w-5 text-[#00C9C6]" />
+                            <CardTitle>Email Analytics</CardTitle>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Total Sent:</span>
+                              <span className="font-semibold">{totalSent}</span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Delivered %:</span>
+                              <span className="font-semibold text-green-600">
+                                {totalSent > 0 ? `${Math.round((delivered / totalSent) * 100)}%` : '0%'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Open %:</span>
+                              <span className="font-semibold text-blue-600">
+                                {delivered > 0 ? `${Math.round((opened / delivered) * 100)}%` : '0%'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Clicked:</span>
+                              <span className="font-semibold">{clicked}</span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Replied %:</span>
+                              <span className="font-semibold text-purple-600">
+                                {delivered > 0 ? `${Math.round((replied / delivered) * 100)}%` : '0%'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Bounced %:</span>
+                              <span className="font-semibold text-orange-600">
+                                {totalSent > 0 ? `${Math.round((bounced / totalSent) * 100)}%` : '0%'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Unsubscribed %:</span>
+                              <span className="font-semibold text-red-600">
+                                {delivered > 0 ? `${Math.round((unsubscribed / delivered) * 100)}%` : '0%'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Accepted %:</span>
+                              <span className="font-semibold text-green-600">
+                                {totalSent > 0 ? `${Math.round((accepted / totalSent) * 100)}%` : '0%'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Rejected %:</span>
+                              <span className="font-semibold text-red-600">
+                                {totalSent > 0 ? `${Math.round((rejected / totalSent) * 100)}%` : '0%'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Complained %:</span>
+                              <span className="font-semibold text-red-600">
+                                {delivered > 0 ? `${Math.round((complained / delivered) * 100)}%` : '0%'}
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
+                  if (analytics.actionType === 'send_sms') {
+                    const totalSent = analytics.smsSent || 0;
+                    const delivered = analytics.smsDelivered || 0;
+                    const clicked = analytics.smsClicked || 0;
+                    const failed = analytics.smsFailed || 0;
+                    const optedOut = analytics.smsOptedOut || 0;
+
+                    return (
+                      <Card key={analytics.id}>
+                        <CardHeader>
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5 text-[#00C9C6]" />
+                            <CardTitle>SMS Analytics</CardTitle>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Total Sent:</span>
+                              <span className="font-semibold">{totalSent}</span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Delivered %:</span>
+                              <span className="font-semibold text-green-600">
+                                {totalSent > 0 ? `${Math.round((delivered / totalSent) * 100)}%` : '0%'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Clicked %:</span>
+                              <span className="font-semibold text-blue-600">
+                                {delivered > 0 ? `${Math.round((clicked / delivered) * 100)}%` : '0%'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Failed %:</span>
+                              <span className="font-semibold text-red-600">
+                                {totalSent > 0 ? `${Math.round((failed / totalSent) * 100)}%` : '0%'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">Opted Out %:</span>
+                              <span className="font-semibold text-orange-600">
+                                {delivered > 0 ? `${Math.round((optedOut / delivered) * 100)}%` : '0%'}
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
+                  return null;
+                })}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>
