@@ -5471,6 +5471,20 @@ export default function EnhancedClientDetail() {
                                   <Mail className="h-4 w-4 text-blue-600" />
                                 )}
                                 <span className="font-medium text-gray-900 capitalize" data-testid={`text-message-type-${log.id}`}>{log.entityType}</span>
+                                {/* Provider Status Badge */}
+                                {log.newValues?.status && (
+                                  <span 
+                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
+                                    data-testid={`badge-provider-status-${log.id}`}
+                                  >
+                                    {log.newValues.provider && (
+                                      <span className="text-gray-600 capitalize mr-1">
+                                        {log.newValues.provider === 'twilio' ? 'Twilio' : log.newValues.provider === 'mailgun' ? 'MailGun' : log.newValues.provider}:
+                                      </span>
+                                    )}
+                                    <span className="capitalize">{log.newValues.status}</span>
+                                  </span>
+                                )}
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-sm text-gray-500" data-testid={`text-timestamp-${log.id}`}>

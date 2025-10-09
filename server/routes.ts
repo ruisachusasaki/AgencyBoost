@@ -13595,7 +13595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
           `Sent SMS message to ${to}: ${processedMessage.substring(0, 100)}${processedMessage.length > 100 ? '...' : ''}`,
           null,
-          { to, from: fallbackIntegration.phoneNumber, message: processedMessage, clientId, status: smsMessage.status },
+          { to, from: fallbackIntegration.phoneNumber, message: processedMessage, clientId, status: smsMessage.status, provider: 'twilio' },
           req
         );
         
@@ -13648,7 +13648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
           `Sent SMS message to ${to}: ${processedMessage.substring(0, 100)}${processedMessage.length > 100 ? '...' : ''}`,
           null,
-          { to, from: integration.phoneNumber, message: processedMessage, clientId, status: smsMessage.status },
+          { to, from: integration.phoneNumber, message: processedMessage, clientId, status: smsMessage.status, provider: 'twilio' },
           req
         );
         console.log('SMS audit log - Successfully created audit log for SMS:', smsMessage.sid);
@@ -13928,7 +13928,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const result = await mg.messages.create(integration.domain, emailData);
-      console.log('MailGun send successful:', result.id);
+      console.log('MailGun send successful:', { id: result.id, status: result.status, message: result.message });
+
+      // MailGun initial status (typically "queued" or from result.message)
+      const emailStatus = result.status || (result.message?.toLowerCase().includes('queued') ? 'queued' : 'sent');
 
       // Create audit log for email communication
       try {
@@ -13940,10 +13943,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
           `Sent email to ${to}: "${subject}"`,
           null,
-          { to, subject, message, fromEmail: actualFromEmail, fromName: actualFromName, messageId: result.id, clientId },
+          { 
+            to, 
+            subject, 
+            message, 
+            fromEmail: actualFromEmail, 
+            fromName: actualFromName, 
+            messageId: result.id, 
+            clientId,
+            status: emailStatus,
+            provider: 'mailgun'
+          },
           req
         );
-        console.log('Email communication audit log created');
+        console.log('Email communication audit log created with status:', emailStatus);
       } catch (auditError) {
         console.error('Failed to create email communication audit log:', auditError);
         // Continue with response even if audit log fails
