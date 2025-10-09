@@ -29,7 +29,7 @@ import {
   type SmartList, type InsertSmartList, smartLists,
   type Workflow, type InsertWorkflow, workflows,
   type WorkflowExecution, type InsertWorkflowExecution, workflowExecutions,
-  type WorkflowTemplate, type InsertWorkflowTemplate,
+  type WorkflowTemplate, type InsertWorkflowTemplate, workflowTemplates,
   type TaskCategory, type InsertTaskCategory, taskCategories,
   type TaskTemplate, type InsertTaskTemplate,
   type EnhancedTask, type InsertEnhancedTask,
