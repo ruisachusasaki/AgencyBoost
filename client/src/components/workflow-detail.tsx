@@ -10,9 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   Play, Pause, Edit, Trash2, BarChart3, Clock, CheckSquare, 
   Mail, MessageSquare, Tag, Phone, Zap, ArrowRight, Calendar,
-  Users, Activity, TrendingUp
+  Users, Activity, TrendingUp, Save
 } from "lucide-react";
 import type { Workflow, WorkflowExecution, EnhancedTask } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 interface WorkflowDetailProps {
   workflow: Workflow;
@@ -36,6 +37,12 @@ const getActionIcon = (actionType: string) => {
 export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: WorkflowDetailProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch current user for permission check
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/current-user'],
+    enabled: isOpen,
+  });
 
   // Fetch workflow executions
   const { data: executions = [] } = useQuery({
@@ -92,6 +99,27 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
     },
   });
 
+  // Save as template mutation
+  const saveAsTemplateMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", `/api/workflows/${workflow.id}/save-as-template`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workflow-templates"] });
+      toast({ 
+        title: "Success", 
+        description: `"${workflow.name}" has been saved as a template` 
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        variant: "destructive",
+        title: "Error", 
+        description: error.message || "Failed to save workflow as template" 
+      });
+    },
+  });
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active": return "bg-green-500";
@@ -108,6 +136,21 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
   };
 
   const actions = Array.isArray(workflow.actions) ? workflow.actions : [];
+
+  // Check if user has permission to create workflow templates
+  const canCreateTemplates = () => {
+    if (!currentUser) return false;
+    
+    // Admins get automatic access
+    if (currentUser.role === 'Admin' || currentUser.role === 'admin') {
+      return true;
+    }
+    
+    // Check if user has canCreate permission for workflows
+    if (!currentUser.permissions) return false;
+    const workflowPermission = currentUser.permissions.find((p: any) => p.module === 'workflows');
+    return workflowPermission?.canCreate === true;
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -196,11 +239,23 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
             </div>
 
             <div className="flex gap-2">
+              {canCreateTemplates() && (
+                <Button 
+                  variant="outline"
+                  onClick={() => saveAsTemplateMutation.mutate()}
+                  disabled={saveAsTemplateMutation.isPending}
+                  data-testid="button-save-as-template"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {saveAsTemplateMutation.isPending ? "Saving..." : "Save As Template"}
+                </Button>
+              )}
               <Button 
                 onClick={() => updateWorkflowMutation.mutate({ 
                   status: workflow.status === "active" ? "paused" : "active" 
                 })}
-                className="bg-[#46a1a0] hover:bg-[#3a8a89]"
+                className="bg-[#00C9C6] hover:bg-[#00b0ad]"
+                data-testid="button-activate-workflow"
               >
                 {workflow.status === "active" ? (
                   <>
@@ -214,7 +269,7 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
                   </>
                 )}
               </Button>
-              <Button variant="outline" onClick={() => onEdit(workflow)}>
+              <Button variant="outline" onClick={() => onEdit(workflow)} data-testid="button-edit-workflow">
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Workflow
               </Button>

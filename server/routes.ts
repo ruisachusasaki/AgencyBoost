@@ -6049,6 +6049,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Workflow Templates routes - SECURED
+  app.get("/api/workflow-templates", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
+    try {
+      const templates = await appStorage.getWorkflowTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching workflow templates:", error);
+      res.status(500).json({ message: "Failed to fetch workflow templates" });
+    }
+  });
+
+  app.post("/api/workflows/:id/save-as-template", requireAuth(), requirePermission('workflows', 'canCreate'), async (req, res) => {
+    try {
+      // Get authenticated user
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+
+      // Get the workflow
+      const [workflow] = await db.select()
+        .from(workflows)
+        .where(eq(workflows.id, req.params.id));
+      
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+
+      // Create template from workflow
+      const templateData = {
+        name: workflow.name,
+        description: workflow.description,
+        category: workflow.category,
+        industry: req.body.industry || null,
+        useCase: req.body.useCase || null,
+        triggers: workflow.triggers,
+        actions: workflow.actions,
+        conditions: workflow.conditions,
+        settings: workflow.settings,
+        isPublic: req.body.isPublic || false,
+        tags: req.body.tags || [],
+        createdBy: userId,
+      };
+
+      const template = await appStorage.createWorkflowTemplate(templateData);
+
+      // Create audit log
+      await createAuditLog(
+        "created",
+        "workflow_template",
+        template.id,
+        template.name,
+        userId,
+        `Saved workflow "${workflow.name}" as template`,
+        null,
+        { workflowId: workflow.id, templateName: template.name },
+        req
+      );
+
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error saving workflow as template:", error);
+      res.status(500).json({ message: "Failed to save workflow as template" });
+    }
+  });
+
   // Enhanced Task routes - SECURED
   app.get("/api/enhanced-tasks", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
