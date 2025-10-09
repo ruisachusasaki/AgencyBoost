@@ -3313,6 +3313,18 @@ export const trainingDiscussionLikes = pgTable("training_discussion_likes", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// User View Preferences - Store per-user customization for views (column preferences, etc.)
+export const userViewPreferences = pgTable("user_view_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  viewType: text("view_type").notNull(), // e.g., 'clients_all', 'leads_all', 'tasks_all'
+  preferences: jsonb("preferences").notNull(), // Store column visibility, sort order, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique().on(table.userId, table.viewType), // One preference per user per view type
+]);
+
 // =============================================================================
 // TRAINING SYSTEM SCHEMAS & TYPES
 // =============================================================================
@@ -3397,6 +3409,13 @@ export const insertTrainingLessonResourceSchema = createInsertSchema(trainingLes
   updatedAt: true,
 });
 
+// User View Preferences insert schema
+export const insertUserViewPreferenceSchema = createInsertSchema(userViewPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Quotes insert schemas
 export const insertQuoteSchema = createInsertSchema(quotes).omit({
   id: true,
@@ -3454,6 +3473,10 @@ export type InsertTrainingDiscussionLike = z.infer<typeof insertTrainingDiscussi
 
 export type TrainingLessonResource = typeof trainingLessonResources.$inferSelect;
 export type InsertTrainingLessonResource = z.infer<typeof insertTrainingLessonResourceSchema>;
+
+// User View Preferences Types
+export type UserViewPreference = typeof userViewPreferences.$inferSelect;
+export type InsertUserViewPreference = z.infer<typeof insertUserViewPreferenceSchema>;
 
 // Quotes Types
 export type Quote = typeof quotes.$inferSelect;
