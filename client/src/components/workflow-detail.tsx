@@ -170,6 +170,51 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
           </div>
         </DialogHeader>
 
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-4">
+          {canSaveAsTemplate() && (
+            <Button 
+              variant="outline"
+              onClick={() => saveAsTemplateMutation.mutate()}
+              disabled={saveAsTemplateMutation.isPending}
+              data-testid="button-save-as-template"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {saveAsTemplateMutation.isPending ? "Saving..." : "Save As Template"}
+            </Button>
+          )}
+          <Button 
+            onClick={() => updateWorkflowMutation.mutate({ 
+              status: workflow.status === "active" ? "paused" : "active" 
+            })}
+            className="bg-[#00C9C6] hover:bg-[#00b0ad]"
+            data-testid="button-activate-workflow"
+          >
+            {workflow.status === "active" ? (
+              <>
+                <Pause className="h-4 w-4 mr-2" />
+                Pause Workflow
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4 mr-2" />
+                Activate Workflow
+              </>
+            )}
+          </Button>
+          <Button variant="outline" onClick={() => onEdit(workflow)} data-testid="button-edit-workflow">
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Workflow
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={() => deleteWorkflowMutation.mutate()}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
+        </div>
+
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -227,50 +272,6 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
                   </div>
                 </CardContent>
               </Card>
-            </div>
-
-            <div className="flex gap-2">
-              {canSaveAsTemplate() && (
-                <Button 
-                  variant="outline"
-                  onClick={() => saveAsTemplateMutation.mutate()}
-                  disabled={saveAsTemplateMutation.isPending}
-                  data-testid="button-save-as-template"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {saveAsTemplateMutation.isPending ? "Saving..." : "Save As Template"}
-                </Button>
-              )}
-              <Button 
-                onClick={() => updateWorkflowMutation.mutate({ 
-                  status: workflow.status === "active" ? "paused" : "active" 
-                })}
-                className="bg-[#00C9C6] hover:bg-[#00b0ad]"
-                data-testid="button-activate-workflow"
-              >
-                {workflow.status === "active" ? (
-                  <>
-                    <Pause className="h-4 w-4 mr-2" />
-                    Pause Workflow
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4 mr-2" />
-                    Activate Workflow
-                  </>
-                )}
-              </Button>
-              <Button variant="outline" onClick={() => onEdit(workflow)} data-testid="button-edit-workflow">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Workflow
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={() => deleteWorkflowMutation.mutate()}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
             </div>
           </TabsContent>
 
