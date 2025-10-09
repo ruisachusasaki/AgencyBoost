@@ -6114,6 +6114,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // DELETE /api/workflow-templates/:id - Delete workflow template (ADMIN ONLY)
+  app.delete("/api/workflow-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      // Get the template before deletion for audit logging
+      const template = await appStorage.getWorkflowTemplate(req.params.id);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Workflow template not found" });
+      }
+
+      // Delete the template (NOT the original workflow)
+      const deleted = await appStorage.deleteWorkflowTemplate(req.params.id);
+      
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete workflow template" });
+      }
+
+      // Create audit log
+      await createAuditLog(
+        "deleted",
+        "workflow_template",
+        req.params.id,
+        template.name,
+        userId,
+        `Deleted workflow template: ${template.name}`,
+        { name: template.name, category: template.category },
+        null,
+        req
+      );
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting workflow template:", error);
+      res.status(500).json({ message: "Failed to delete workflow template" });
+    }
+  });
+
   // Enhanced Task routes - SECURED
   app.get("/api/enhanced-tasks", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {

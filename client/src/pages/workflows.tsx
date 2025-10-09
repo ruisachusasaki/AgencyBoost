@@ -46,6 +46,11 @@ export default function WorkflowsPage() {
     queryKey: ["/api/workflows"],
   });
 
+  // Fetch current user for admin check
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/current-user'],
+  });
+
   // Fetch workflow templates
   const { data: workflowTemplates = [], isLoading: templatesLoading } = useQuery({
     queryKey: ["/api/workflow-templates"],
@@ -102,6 +107,20 @@ export default function WorkflowsPage() {
     },
     onError: () => {
       toast({ variant: "destructive", title: "Error", description: "Failed to delete workflow" });
+    }
+  });
+
+  // Delete workflow template mutation (ADMIN ONLY)
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      return await apiRequest("DELETE", `/api/workflow-templates/${templateId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workflow-templates"] });
+      toast({ title: "Success", description: "Template deleted successfully" });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete template" });
     }
   });
 
@@ -805,9 +824,42 @@ export default function WorkflowsPage() {
                       <span className="font-medium">{template.usageCount} times</span>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full mt-4">
-                    Use Template
-                  </Button>
+                  <div className="flex gap-2 mt-4">
+                    <Button variant="outline" size="sm" className="flex-1">
+                      Use Template
+                    </Button>
+                    {currentUser?.role === 'Admin' && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            data-testid={`button-delete-template-${template.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete the template "{template.name}"? This will only delete the template, not the original workflow. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => deleteTemplateMutation.mutate(template.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete Template
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -913,9 +965,42 @@ export default function WorkflowsPage() {
                       <span className="font-medium">{template.usageCount} times</span>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full mt-4">
-                    Use Template
-                  </Button>
+                  <div className="flex gap-2 mt-4">
+                    <Button variant="outline" size="sm" className="flex-1">
+                      Use Template
+                    </Button>
+                    {currentUser?.role === 'Admin' && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            data-testid={`button-delete-template-${template.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete the template "{template.name}"? This will only delete the template, not the original workflow. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => deleteTemplateMutation.mutate(template.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete Template
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
