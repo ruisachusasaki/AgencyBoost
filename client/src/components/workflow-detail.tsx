@@ -112,10 +112,14 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
       });
     },
     onError: (error: any) => {
+      // Handle duplicate template error specifically
+      const isDuplicate = error.message?.includes("already exists");
       toast({ 
         variant: "destructive",
         title: "Error", 
-        description: error.message || "Failed to save workflow as template" 
+        description: isDuplicate 
+          ? "A template already exists for this workflow. Please delete the existing template first if you want to create a new one."
+          : error.message || "Failed to save workflow as template" 
       });
     },
   });

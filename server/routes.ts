@@ -6076,6 +6076,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Workflow not found" });
       }
 
+      // Check if a template already exists for this workflow
+      const [existingTemplate] = await db.select()
+        .from(workflowTemplates)
+        .where(eq(workflowTemplates.workflowId, req.params.id));
+      
+      if (existingTemplate) {
+        return res.status(409).json({ 
+          message: "A template already exists for this workflow",
+          templateId: existingTemplate.id 
+        });
+      }
+
       // Create template from workflow
       const templateData = {
         name: workflow.name,
@@ -6089,6 +6101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         settings: workflow.settings,
         isPublic: req.body.isPublic || false,
         tags: req.body.tags || [],
+        workflowId: workflow.id, // Link template to source workflow with unique constraint
         createdBy: userId,
       };
 
