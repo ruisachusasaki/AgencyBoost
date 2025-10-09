@@ -1581,7 +1581,7 @@ export const workflowTemplates = pgTable("workflow_templates", {
   usageCount: integer("usage_count").default(0),
   rating: decimal("rating", { precision: 3, scale: 2 }),
   tags: text("tags").array(),
-  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
