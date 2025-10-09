@@ -237,13 +237,13 @@ export default function Clients() {
   });
 
   // Load saved view preferences for this user
-  const { data: savedPreferences, isSuccess: preferencesLoaded } = useQuery({
+  const { data: savedPreferences } = useQuery({
     queryKey: ['/api/user-view-preferences/clients-table'],
     enabled: !!currentUser?.id,
   });
 
-  // Track if we've loaded initial preferences
-  const [hasLoadedPreferences, setHasLoadedPreferences] = React.useState(false);
+  // Use ref to track if we've loaded preferences to avoid infinite loops
+  const hasLoadedPreferencesRef = React.useRef(false);
 
   // Save view preferences mutation
   const savePreferencesMutation = useMutation({
@@ -255,20 +255,20 @@ export default function Clients() {
     },
   });
 
-  // Load saved column preferences on mount
+  // Load saved column preferences on mount (runs once)
   React.useEffect(() => {
-    if (preferencesLoaded && !hasLoadedPreferences) {
-      if (savedPreferences?.preferences?.visibleColumns) {
+    if (savedPreferences && !hasLoadedPreferencesRef.current) {
+      if (savedPreferences.preferences?.visibleColumns) {
         setVisibleColumns(new Set(savedPreferences.preferences.visibleColumns));
       }
-      setHasLoadedPreferences(true);
+      hasLoadedPreferencesRef.current = true;
     }
-  }, [savedPreferences, preferencesLoaded, hasLoadedPreferences]);
+  }, [savedPreferences]);
 
   // Save column preferences when they change (with debounce)
   React.useEffect(() => {
     // Only save after initial load is complete
-    if (!hasLoadedPreferences || !currentUser?.id) return;
+    if (!hasLoadedPreferencesRef.current || !currentUser?.id) return;
     
     const timeoutId = setTimeout(() => {
       const visibleColumnsArray = Array.from(visibleColumns);
@@ -277,7 +277,7 @@ export default function Clients() {
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleColumns, hasLoadedPreferences, currentUser?.id]);
+  }, [visibleColumns, currentUser?.id]);
 
   // Fetch staff data to display contact owner names
   const { data: staff = [] } = useQuery<Array<{ id: string; firstName: string; lastName: string }>>({
