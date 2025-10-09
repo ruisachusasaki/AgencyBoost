@@ -90,17 +90,6 @@ export default function Clients() {
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key))
   );
-  
-  // Update visible columns when custom fields are loaded
-  React.useEffect(() => {
-    if (customFieldsData && customFieldsData.length > 0) {
-      // Keep existing visible columns, just ensure they're valid
-      setVisibleColumns(prev => {
-        const validKeys = new Set(availableColumns.map(col => col.key));
-        return new Set([...prev].filter(key => validKeys.has(key)));
-      });
-    }
-  }, [customFieldsData]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [isImporting, setIsImporting] = useState(false);
@@ -225,6 +214,17 @@ export default function Clients() {
     
     return baseColumns;
   }, [customFieldsData]);
+
+  // Update visible columns when custom fields are loaded
+  React.useEffect(() => {
+    if (customFieldsData && customFieldsData.length > 0) {
+      // Keep existing visible columns, just ensure they're valid
+      setVisibleColumns(prev => {
+        const validKeys = new Set(availableColumns.map(col => col.key));
+        return new Set([...prev].filter(key => validKeys.has(key)));
+      });
+    }
+  }, [customFieldsData, availableColumns]);
 
   // Fetch current user role to check admin permissions
   const { data: currentUser } = useQuery<{ id: string; role: string; firstName: string; lastName: string }>({
