@@ -236,6 +236,41 @@ export default function Clients() {
     queryKey: ['/api/auth/current-user'],
   });
 
+  // Load saved view preferences for this user
+  const { data: savedPreferences } = useQuery({
+    queryKey: ['/api/user-view-preferences/clients-table'],
+    enabled: !!currentUser?.id,
+  });
+
+  // Save view preferences mutation
+  const savePreferencesMutation = useMutation({
+    mutationFn: async (preferences: { visibleColumns: string[] }) => {
+      return apiRequest('/api/user-view-preferences/clients-table', {
+        method: 'POST',
+        body: JSON.stringify({ preferences }),
+      });
+    },
+  });
+
+  // Load saved column preferences on mount
+  React.useEffect(() => {
+    if (savedPreferences?.preferences?.visibleColumns) {
+      setVisibleColumns(new Set(savedPreferences.preferences.visibleColumns));
+    }
+  }, [savedPreferences]);
+
+  // Save column preferences when they change (with debounce)
+  React.useEffect(() => {
+    if (!currentUser?.id || !savedPreferences) return; // Only save after initial load
+    
+    const timeoutId = setTimeout(() => {
+      const visibleColumnsArray = Array.from(visibleColumns);
+      savePreferencesMutation.mutate({ visibleColumns: visibleColumnsArray });
+    }, 500); // Debounce for 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [visibleColumns, currentUser?.id, savedPreferences, savePreferencesMutation]);
+
   // Fetch staff data to display contact owner names
   const { data: staff = [] } = useQuery<Array<{ id: string; firstName: string; lastName: string }>>({
     queryKey: ['/api/staff'],
