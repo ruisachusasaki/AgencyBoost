@@ -62,6 +62,7 @@ import {
   type EmailIntegration, type InsertEmailIntegration, emailIntegrations,
   type TeamPosition, type InsertTeamPosition, teamPositions,
   type ClientTeamAssignment, type InsertClientTeamAssignment, clientTeamAssignments,
+  type UserViewPreference, type InsertUserViewPreference, userViewPreferences,
   customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -548,6 +549,10 @@ export interface IStorage {
   createEmailIntegration(integration: InsertEmailIntegration): Promise<EmailIntegration>;
   updateEmailIntegration(id: string, integration: Partial<InsertEmailIntegration>): Promise<EmailIntegration | undefined>;
   deleteEmailIntegration(id: string): Promise<boolean>;
+  
+  // User View Preferences
+  getUserViewPreference(userId: string, viewType: string): Promise<any>;
+  saveUserViewPreference(userId: string, viewType: string, preferences: any): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
@@ -4072,6 +4077,14 @@ export class MemStorage implements IStorage {
     return this.emailIntegrations.delete(id);
   }
 
+  async getUserViewPreference(userId: string, viewType: string): Promise<any> {
+    return null;
+  }
+
+  async saveUserViewPreference(userId: string, viewType: string, preferences: any): Promise<any> {
+    return { userId, viewType, preferences };
+  }
+
 }
 
 // Database storage implementation using PostgreSQL
@@ -6242,6 +6255,54 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error("Error deleting email integration:", error);
       return false;
+    }
+  }
+
+  async getUserViewPreference(userId: string, viewType: string): Promise<UserViewPreference | null> {
+    try {
+      const result = await db
+        .select()
+        .from(userViewPreferences)
+        .where(and(
+          eq(userViewPreferences.userId, userId),
+          eq(userViewPreferences.viewType, viewType)
+        ))
+        .limit(1);
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error getting user view preference:", error);
+      return null;
+    }
+  }
+
+  async saveUserViewPreference(userId: string, viewType: string, preferences: any): Promise<UserViewPreference> {
+    try {
+      const existing = await this.getUserViewPreference(userId, viewType);
+      
+      if (existing) {
+        const result = await db
+          .update(userViewPreferences)
+          .set({
+            preferences,
+            updatedAt: new Date(),
+          })
+          .where(eq(userViewPreferences.id, existing.id))
+          .returning();
+        return result[0];
+      } else {
+        const result = await db
+          .insert(userViewPreferences)
+          .values({
+            userId,
+            viewType,
+            preferences,
+          })
+          .returning();
+        return result[0];
+      }
+    } catch (error) {
+      console.error("Error saving user view preference:", error);
+      throw error;
     }
   }
 }

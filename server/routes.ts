@@ -21988,5 +21988,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user view preferences
+  app.get("/api/user-view-preferences/:viewType", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const { viewType } = req.params;
+      const preference = await appStorage.getUserViewPreference(userId, viewType);
+      
+      res.json(preference || { preferences: {} });
+    } catch (error) {
+      console.error("Error fetching user view preference:", error);
+      res.status(500).json({ message: "Failed to fetch view preferences" });
+    }
+  });
+
+  // Save user view preferences
+  app.post("/api/user-view-preferences/:viewType", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const { viewType } = req.params;
+      const { preferences } = req.body;
+      
+      const savedPreference = await appStorage.saveUserViewPreference(userId, viewType, preferences);
+      
+      res.json(savedPreference);
+    } catch (error) {
+      console.error("Error saving user view preference:", error);
+      res.status(500).json({ message: "Failed to save view preferences" });
+    }
+  });
+
   return httpServer;
 }
