@@ -4943,11 +4943,63 @@ export class DbStorage implements IStorage {
   async updateWorkflowExecution(id: string, execution: Partial<InsertWorkflowExecution>): Promise<WorkflowExecution | undefined> { return this.memStorage.updateWorkflowExecution(id, execution); }
 
 
-  async getWorkflowTemplates(): Promise<WorkflowTemplate[]> { return this.memStorage.getWorkflowTemplates(); }
-  async getWorkflowTemplate(id: string): Promise<WorkflowTemplate | undefined> { return this.memStorage.getWorkflowTemplate(id); }
-  async createWorkflowTemplate(template: InsertWorkflowTemplate): Promise<WorkflowTemplate> { return this.memStorage.createWorkflowTemplate(template); }
-  async updateWorkflowTemplate(id: string, template: Partial<InsertWorkflowTemplate>): Promise<WorkflowTemplate | undefined> { return this.memStorage.updateWorkflowTemplate(id, template); }
-  async deleteWorkflowTemplate(id: string): Promise<boolean> { return this.memStorage.deleteWorkflowTemplate(id); }
+  async getWorkflowTemplates(): Promise<WorkflowTemplate[]> {
+    try {
+      const result = await db.select().from(workflowTemplates).orderBy(desc(workflowTemplates.createdAt));
+      return result;
+    } catch (error) {
+      console.error("Error fetching workflow templates from database:", error);
+      return [];
+    }
+  }
+
+  async getWorkflowTemplate(id: string): Promise<WorkflowTemplate | undefined> {
+    try {
+      const result = await db.select().from(workflowTemplates).where(eq(workflowTemplates.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching workflow template from database:", error);
+      return undefined;
+    }
+  }
+
+  async createWorkflowTemplate(template: InsertWorkflowTemplate): Promise<WorkflowTemplate> {
+    try {
+      const result = await db.insert(workflowTemplates).values({
+        ...template,
+        id: sql`gen_random_uuid()`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating workflow template in database:", error);
+      throw error;
+    }
+  }
+
+  async updateWorkflowTemplate(id: string, template: Partial<InsertWorkflowTemplate>): Promise<WorkflowTemplate | undefined> {
+    try {
+      const result = await db.update(workflowTemplates)
+        .set({ ...template, updatedAt: new Date() })
+        .where(eq(workflowTemplates.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating workflow template in database:", error);
+      return undefined;
+    }
+  }
+
+  async deleteWorkflowTemplate(id: string): Promise<boolean> {
+    try {
+      await db.delete(workflowTemplates).where(eq(workflowTemplates.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting workflow template from database:", error);
+      return false;
+    }
+  }
 
   // Task Categories
   async getTaskCategories(): Promise<TaskCategory[]> {
