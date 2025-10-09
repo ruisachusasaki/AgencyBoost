@@ -13930,8 +13930,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await mg.messages.create(integration.domain, emailData);
       console.log('MailGun send successful:', { id: result.id, status: result.status, message: result.message });
 
-      // MailGun initial status (typically "queued" or from result.message)
-      const emailStatus = result.status || (result.message?.toLowerCase().includes('queued') ? 'queued' : 'sent');
+      // Parse MailGun status from message (e.g., "Queued. Thank you." -> "Queued")
+      let emailStatus = 'sent';
+      if (result.message) {
+        const messageLower = result.message.toLowerCase();
+        if (messageLower.includes('queued')) {
+          emailStatus = 'queued';
+        } else if (messageLower.includes('sent')) {
+          emailStatus = 'sent';
+        } else if (messageLower.includes('delivered')) {
+          emailStatus = 'delivered';
+        } else {
+          // Extract first word before period as status
+          const firstWord = result.message.split('.')[0].trim().toLowerCase();
+          emailStatus = firstWord || 'sent';
+        }
+      }
 
       // Create audit log for email communication
       try {
