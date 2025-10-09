@@ -180,6 +180,46 @@ export function requirePermission(module: string, permission: 'canView' | 'canCr
 }
 
 /**
+ * Middleware to require specific role(s).
+ * Must be used AFTER requireAuth().
+ */
+export function requireRole(allowedRoles: string[]) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const userId = getAuthenticatedUserId(req);
+    
+    // This should never happen if requireAuth() is used first
+    if (!userId) {
+      return res.status(401).json({ 
+        error: "Authentication required",
+        message: "Please log in to access this resource"
+      });
+    }
+    
+    // Get user's roles from database
+    const userRolesList = await db
+      .select({ roleName: roles.name })
+      .from(userRoles)
+      .leftJoin(roles, eq(userRoles.roleId, roles.id))
+      .where(eq(userRoles.userId, userId));
+    
+    // Normalize allowed roles and user roles for case-insensitive comparison
+    const normalizedAllowedRoles = allowedRoles.map(role => role.toLowerCase());
+    const userHasRole = userRolesList.some(userRole => 
+      userRole.roleName && normalizedAllowedRoles.includes(userRole.roleName.toLowerCase())
+    );
+    
+    if (!userHasRole) {
+      return res.status(403).json({ 
+        error: "Insufficient permissions",
+        message: `This operation requires one of the following roles: ${allowedRoles.join(', ')}`
+      });
+    }
+    
+    next();
+  };
+}
+
+/**
  * Get authenticated user ID with error handling.
  * Returns user ID or throws error with 401 response.
  * Use this in route handlers after requireAuth() middleware.

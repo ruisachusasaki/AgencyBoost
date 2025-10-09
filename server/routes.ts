@@ -71,6 +71,7 @@ import { calculateHealthMetrics, analyzeHealthStatus } from "@shared/utils/healt
 import { 
   requireAuth, 
   requirePermission, 
+  requireRole,
   requireAdmin,
   getAuthenticatedUserId,
   getAuthenticatedUserIdOrFail,
@@ -6060,7 +6061,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/workflows/:id/save-as-template", requireAuth(), requirePermission('workflows', 'canCreate'), async (req, res) => {
+  app.post("/api/workflows/:id/save-as-template", requireAuth(), requireRole(['Admin', 'Manager']), async (req, res) => {
     try {
       // Get authenticated user
       const userId = getAuthenticatedUserIdOrFail(req, res);

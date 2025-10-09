@@ -137,14 +137,10 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
 
   const actions = Array.isArray(workflow.actions) ? workflow.actions : [];
 
-  // Check if user has permission to create workflow templates
-  const canCreateTemplates = () => {
+  // Check if user can save workflows as templates (Admins and Managers only)
+  const canSaveAsTemplate = () => {
     if (!currentUser) return false;
-    
-    // Check if user has canCreate permission for workflows
-    if (!currentUser.permissions) return false;
-    const workflowPermission = currentUser.permissions.find((p: any) => p.module === 'workflows');
-    return workflowPermission?.canCreate === true;
+    return currentUser.role === 'Admin' || currentUser.role === 'Manager';
   };
 
   return (
@@ -234,7 +230,7 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
             </div>
 
             <div className="flex gap-2">
-              {canCreateTemplates() && (
+              {canSaveAsTemplate() && (
                 <Button 
                   variant="outline"
                   onClick={() => saveAsTemplateMutation.mutate()}
