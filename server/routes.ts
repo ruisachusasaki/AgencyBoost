@@ -6080,7 +6080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const templateData = {
         name: workflow.name,
         description: workflow.description,
-        category: workflow.category,
+        category: workflow.category || 'General', // Default to 'General' if workflow has no category
         industry: req.body.industry || null,
         useCase: req.body.useCase || null,
         triggers: workflow.triggers,
