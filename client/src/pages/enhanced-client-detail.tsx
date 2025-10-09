@@ -3856,8 +3856,13 @@ export default function EnhancedClientDetail() {
         });
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+    onSuccess: async (data) => {
+      // Update the cache with the returned data to ensure immediate UI update
+      queryClient.setQueryData(['/api/clients', clientId], data);
+      
+      // Also invalidate to ensure fresh data on next fetch
+      await queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+      
       toast({
         title: "Field Updated",
         description: "Field value has been saved successfully.",
