@@ -90,6 +90,17 @@ export default function Clients() {
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(AVAILABLE_COLUMNS.filter(col => col.defaultVisible).map(col => col.key))
   );
+  
+  // Update visible columns when custom fields are loaded
+  React.useEffect(() => {
+    if (customFieldsData && customFieldsData.length > 0) {
+      // Keep existing visible columns, just ensure they're valid
+      setVisibleColumns(prev => {
+        const validKeys = new Set(availableColumns.map(col => col.key));
+        return new Set([...prev].filter(key => validKeys.has(key)));
+      });
+    }
+  }, [customFieldsData]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [isImporting, setIsImporting] = useState(false);
@@ -187,6 +198,33 @@ export default function Clients() {
   const { data: customFieldsData } = useQuery<Array<{ id: string; name: string; type: string; required: boolean; folderId: string; options?: string[] }>>({
     queryKey: ['/api/custom-fields'],
   });
+
+  // Dynamically create columns including all custom fields
+  const availableColumns = React.useMemo(() => {
+    const baseColumns = [...AVAILABLE_COLUMNS];
+    
+    // Add all custom fields as columns
+    if (customFieldsData && customFieldsData.length > 0) {
+      customFieldsData.forEach(field => {
+        // Check if a column with this name already exists (like 'Client Vertical')
+        const existingColumn = baseColumns.find(col => 
+          col.label.toLowerCase() === field.name.toLowerCase()
+        );
+        
+        if (!existingColumn) {
+          // Add new custom field as column
+          baseColumns.push({
+            key: `customField_${field.id}`,
+            label: field.name,
+            sortable: true,
+            defaultVisible: false
+          });
+        }
+      });
+    }
+    
+    return baseColumns;
+  }, [customFieldsData]);
 
   // Fetch current user role to check admin permissions
   const { data: currentUser } = useQuery<{ id: string; role: string; firstName: string; lastName: string }>({
@@ -807,9 +845,25 @@ export default function Clients() {
           </div>
         ) : '-';
       case 'city':
-        return client.city || '-';
+        // Check standard field first, then custom field
+        if (client.city) return client.city;
+        // Check if there's a custom field named "City"
+        const cityCustomField = customFieldsData?.find(cf => cf.name.toLowerCase() === 'city');
+        if (cityCustomField && client.customFieldValues) {
+          const customFieldValues = client.customFieldValues as Record<string, any>;
+          return customFieldValues[cityCustomField.id] || '-';
+        }
+        return '-';
       case 'state':
-        return client.state || '-';
+        // Check standard field first, then custom field
+        if (client.state) return client.state;
+        // Check if there's a custom field named "State"
+        const stateCustomField = customFieldsData?.find(cf => cf.name.toLowerCase() === 'state');
+        if (stateCustomField && client.customFieldValues) {
+          const customFieldValues = client.customFieldValues as Record<string, any>;
+          return customFieldValues[stateCustomField.id] || '-';
+        }
+        return '-';
       case 'clientVertical':
         // Handle Client Vertical as a custom field
         if (!customFieldsData || !client.customFieldValues) return '-';
@@ -853,6 +907,13 @@ export default function Clients() {
           </div>
         ) : null;
       default:
+        // Handle custom field columns (key format: customField_{fieldId})
+        if (columnKey.startsWith('customField_')) {
+          const fieldId = columnKey.replace('customField_', '');
+          if (!client.customFieldValues) return '-';
+          const customFieldValues = client.customFieldValues as Record<string, any>;
+          return customFieldValues[fieldId] || '-';
+        }
         return '-';
     }
   };
@@ -1135,8 +1196,8 @@ export default function Clients() {
                 Columns
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {AVAILABLE_COLUMNS.map((column) => (
+            <DropdownMenuContent align="end" className="w-48 max-h-96 overflow-y-auto">
+              {availableColumns.map((column) => (
                 <DropdownMenuCheckboxItem
                   key={column.key}
                   checked={visibleColumns.has(column.key)}
@@ -1157,7 +1218,7 @@ export default function Clients() {
               <Table className="min-w-full">
                 <TableHeader>
                   <TableRow>
-                    {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => {
+                    {availableColumns.filter(col => visibleColumns.has(col.key)).map((column) => {
                       if (column.sortable) {
                         return (
                           <SortableHeader key={column.key} column={column.key as SortField}>
@@ -1184,7 +1245,7 @@ export default function Clients() {
                   ) : (
                     filteredAndSortedClients.map((client) => (
                       <TableRow key={client.id} className="hover:bg-slate-50">
-                        {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => (
+                        {availableColumns.filter(col => visibleColumns.has(col.key)).map((column) => (
                           <TableCell key={column.key} className="py-3">
                             {renderCellContent(client, column.key)}
                           </TableCell>
