@@ -215,16 +215,21 @@ export default function Clients() {
     return baseColumns;
   }, [customFieldsData]);
 
-  // Update visible columns when custom fields are loaded
+  // Update visible columns when custom fields are loaded (only once when customFieldsData changes)
   React.useEffect(() => {
     if (customFieldsData && customFieldsData.length > 0) {
       // Keep existing visible columns, just ensure they're valid
       setVisibleColumns(prev => {
         const validKeys = new Set(availableColumns.map(col => col.key));
-        return new Set([...prev].filter(key => validKeys.has(key)));
+        const filtered = new Set([...prev].filter(key => validKeys.has(key)));
+        // Only update if there's actually a change to prevent infinite loops
+        if (filtered.size !== prev.size || ![...filtered].every(key => prev.has(key))) {
+          return filtered;
+        }
+        return prev;
       });
     }
-  }, [customFieldsData, availableColumns]);
+  }, [customFieldsData]); // Only depend on customFieldsData, not availableColumns
 
   // Fetch current user role to check admin permissions
   const { data: currentUser } = useQuery<{ id: string; role: string; firstName: string; lastName: string }>({
