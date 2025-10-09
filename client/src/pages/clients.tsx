@@ -248,10 +248,7 @@ export default function Clients() {
   // Save view preferences mutation
   const savePreferencesMutation = useMutation({
     mutationFn: async (preferences: { visibleColumns: string[] }) => {
-      return apiRequest('/api/user-view-preferences/clients-table', {
-        method: 'POST',
-        body: JSON.stringify({ preferences }),
-      });
+      return apiRequest('POST', '/api/user-view-preferences/clients-table', { preferences });
     },
   });
 
