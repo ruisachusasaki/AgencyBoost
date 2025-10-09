@@ -811,7 +811,14 @@ export default function Clients() {
       case 'state':
         return client.state || '-';
       case 'clientVertical':
-        return client.clientVertical || '-';
+        // Handle Client Vertical as a custom field
+        if (!customFieldsData || !client.customFieldValues) return '-';
+        const clientVerticalField = customFieldsData.find(cf => cf.name === 'Client Vertical');
+        if (clientVerticalField && client.customFieldValues) {
+          const customFieldValues = client.customFieldValues as Record<string, any>;
+          return customFieldValues[clientVerticalField.id] || '-';
+        }
+        return '-';
       case 'status':
         return (
           <Badge className={getStatusColor(client.status)}>
