@@ -30,6 +30,11 @@ export default function WorkflowBuilderPage() {
   const [location, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch current user for permission check
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/current-user'],
+  });
   
   // Parse URL parameters to see if we're editing an existing workflow
   const searchParams = new URLSearchParams(window.location.search);
@@ -281,8 +286,59 @@ export default function WorkflowBuilderPage() {
     });
   };
 
+  // Delete workflow mutation
+  const deleteWorkflowMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("DELETE", `/api/workflows/${editingWorkflowId}`);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
+      toast({ 
+        title: "Success", 
+        description: "Workflow deleted successfully" 
+      });
+      navigate("/workflows");
+    },
+    onError: () => {
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: "Failed to delete workflow" 
+      });
+    }
+  });
+
+  // Save as template mutation
+  const saveAsTemplateMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/workflows/${editingWorkflowId}/save-as-template`);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workflow-templates"] });
+      toast({ 
+        title: "Success", 
+        description: `"${workflowData.name}" has been saved as a template` 
+      });
+    },
+    onError: () => {
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: "Failed to save workflow as template" 
+      });
+    }
+  });
+
   const handleBack = () => {
     navigate("/workflows");
+  };
+
+  // Check if user can save workflows as templates (Admins and Managers only)
+  const canSaveAsTemplate = () => {
+    if (!currentUser) return false;
+    return currentUser.role === 'Admin' || currentUser.role === 'Manager';
   };
 
   const handleAddTrigger = () => {
@@ -555,6 +611,17 @@ export default function WorkflowBuilderPage() {
               <SelectItem value="paused">Paused</SelectItem>
             </SelectContent>
           </Select>
+          {editingWorkflowId && canSaveAsTemplate() && (
+            <Button 
+              variant="outline"
+              onClick={() => saveAsTemplateMutation.mutate()}
+              disabled={saveAsTemplateMutation.isPending}
+              data-testid="button-save-as-template"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {saveAsTemplateMutation.isPending ? "Saving..." : "Save As Template"}
+            </Button>
+          )}
           <Button 
             variant="outline"
             onClick={() => setWorkflowData(prev => ({ ...prev, status: "active" }))}
@@ -565,12 +632,23 @@ export default function WorkflowBuilderPage() {
           <Button 
             onClick={handleSave}
             disabled={isSaving || createWorkflowMutation.isPending}
-            className="bg-[#46a1a0] hover:bg-[#3a8a89]"
+            className="bg-[#00C9C6] hover:bg-[#00b0ad]"
             data-testid="button-save-workflow"
           >
             <Save className="h-4 w-4 mr-2" />
             {(isSaving || createWorkflowMutation.isPending) ? "Saving..." : "Save Workflow"}
           </Button>
+          {editingWorkflowId && (
+            <Button 
+              variant="destructive"
+              onClick={() => deleteWorkflowMutation.mutate()}
+              disabled={deleteWorkflowMutation.isPending}
+              data-testid="button-delete-workflow"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {deleteWorkflowMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          )}
         </div>
       </div>
 
