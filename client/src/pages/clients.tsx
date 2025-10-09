@@ -237,10 +237,13 @@ export default function Clients() {
   });
 
   // Load saved view preferences for this user
-  const { data: savedPreferences } = useQuery({
+  const { data: savedPreferences, isSuccess: preferencesLoaded } = useQuery({
     queryKey: ['/api/user-view-preferences/clients-table'],
     enabled: !!currentUser?.id,
   });
+
+  // Track if we've loaded initial preferences
+  const [hasLoadedPreferences, setHasLoadedPreferences] = React.useState(false);
 
   // Save view preferences mutation
   const savePreferencesMutation = useMutation({
@@ -254,14 +257,18 @@ export default function Clients() {
 
   // Load saved column preferences on mount
   React.useEffect(() => {
-    if (savedPreferences?.preferences?.visibleColumns) {
-      setVisibleColumns(new Set(savedPreferences.preferences.visibleColumns));
+    if (preferencesLoaded && !hasLoadedPreferences) {
+      if (savedPreferences?.preferences?.visibleColumns) {
+        setVisibleColumns(new Set(savedPreferences.preferences.visibleColumns));
+      }
+      setHasLoadedPreferences(true);
     }
-  }, [savedPreferences]);
+  }, [savedPreferences, preferencesLoaded, hasLoadedPreferences]);
 
   // Save column preferences when they change (with debounce)
   React.useEffect(() => {
-    if (!currentUser?.id || !savedPreferences) return; // Only save after initial load
+    // Only save after initial load is complete
+    if (!hasLoadedPreferences || !currentUser?.id) return;
     
     const timeoutId = setTimeout(() => {
       const visibleColumnsArray = Array.from(visibleColumns);
@@ -269,7 +276,8 @@ export default function Clients() {
     }, 500); // Debounce for 500ms
 
     return () => clearTimeout(timeoutId);
-  }, [visibleColumns, currentUser?.id, savedPreferences, savePreferencesMutation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleColumns, hasLoadedPreferences, currentUser?.id]);
 
   // Fetch staff data to display contact owner names
   const { data: staff = [] } = useQuery<Array<{ id: string; firstName: string; lastName: string }>>({
