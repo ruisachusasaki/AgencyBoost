@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, X, Clock, MapPin, Repeat, Users } from "lucide-react";
+import { Calendar, X, Clock, MapPin, Repeat, Users, Tag } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -56,6 +57,48 @@ const timezones = [
   { value: 'America/Anchorage', label: 'Alaska Time (AKST)' },
   { value: 'Pacific/Honolulu', label: 'Hawaii Time (HST)' },
   { value: 'UTC', label: 'UTC' },
+];
+
+// Merge tags for Client Hub Calendar
+const clientHubMergeTagGroups = [
+  {
+    label: "Client Information",
+    tags: [
+      { label: "First Name", value: "{{first_name}}" },
+      { label: "Last Name", value: "{{last_name}}" },
+      { label: "Full Name", value: "{{full_name}}" },
+      { label: "Email", value: "{{email}}" },
+      { label: "Phone", value: "{{phone}}" },
+      { label: "Company", value: "{{company}}" },
+    ]
+  },
+  {
+    label: "Staff/Team Information",
+    tags: [
+      { label: "Staff First Name", value: "{{user_first_name}}" },
+      { label: "Staff Last Name", value: "{{user_last_name}}" },
+      { label: "Staff Full Name", value: "{{user_full_name}}" },
+      { label: "Staff Email", value: "{{user_email}}" },
+      { label: "Staff Phone", value: "{{user_phone}}" },
+    ]
+  },
+  {
+    label: "Appointment Details",
+    tags: [
+      { label: "Appointment Date", value: "{{appointment_date}}" },
+      { label: "Appointment Time", value: "{{appointment_time}}" },
+      { label: "Calendar Name", value: "{{calendar_name}}" },
+      { label: "Meeting Location", value: "{{location}}" },
+      { label: "Meeting Link", value: "{{meeting_link}}" },
+    ]
+  },
+  {
+    label: "System",
+    tags: [
+      { label: "Today's Date", value: "{{today_date}}" },
+      { label: "Current Time", value: "{{current_time}}" },
+    ]
+  }
 ];
 
 // Generate time slots (15-minute increments)
@@ -108,6 +151,40 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
   });
 
   const isEditMode = !!(appointmentId && existingAppointment);
+
+  // Search state for merge tags
+  const [titleMergeTagSearch, setTitleMergeTagSearch] = useState("");
+  const [descriptionMergeTagSearch, setDescriptionMergeTagSearch] = useState("");
+
+  // Merge tag insert functions
+  const insertMergeTagInTitle = (tag: string) => {
+    const currentTitle = appointmentData.title;
+    const cursorPos = currentTitle.length;
+    const newTitle = currentTitle.slice(0, cursorPos) + tag + currentTitle.slice(cursorPos);
+    setAppointmentData(prev => ({ ...prev, title: newTitle }));
+    setTitleMergeTagSearch(""); // Reset search after insertion
+  };
+
+  const insertMergeTagInDescription = (tag: string) => {
+    const currentDescription = appointmentData.description;
+    const cursorPos = currentDescription.length;
+    const newDescription = currentDescription.slice(0, cursorPos) + tag + currentDescription.slice(cursorPos);
+    setAppointmentData(prev => ({ ...prev, description: newDescription }));
+    setDescriptionMergeTagSearch(""); // Reset search after insertion
+  };
+
+  // Filter merge tag groups based on search
+  const filterMergeTags = (searchTerm: string) => {
+    if (!searchTerm) return clientHubMergeTagGroups;
+    
+    return clientHubMergeTagGroups.map(group => ({
+      ...group,
+      tags: group.tags.filter(tag => 
+        tag.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tag.value.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    })).filter(group => group.tags.length > 0);
+  };
 
   // Fetch calendars
   const { data: calendars = [] } = useQuery({
@@ -360,12 +437,62 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
           {/* Appointment Title */}
           <div className="space-y-2">
             <Label htmlFor="title" className="text-sm font-medium">Appointment Title *</Label>
-            <Input
-              id="title"
-              value={appointmentData.title}
-              onChange={(e) => setAppointmentData(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="Enter appointment title..."
-            />
+            <div className="relative">
+              <Input
+                id="title"
+                value={appointmentData.title}
+                onChange={(e) => setAppointmentData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Enter appointment title..."
+                className="pr-10"
+                data-testid="input-appointment-title"
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100"
+                    data-testid="button-merge-tags-title"
+                  >
+                    <Tag className="h-4 w-4 text-gray-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64" align="end">
+                  <div className="p-2">
+                    <Input
+                      placeholder="Search merge tags..."
+                      value={titleMergeTagSearch}
+                      onChange={(e) => setTitleMergeTagSearch(e.target.value)}
+                      className="h-8 text-sm"
+                      data-testid="input-search-merge-tags-title"
+                    />
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {filterMergeTags(titleMergeTagSearch).map((group, groupIndex) => (
+                      <div key={groupIndex}>
+                        {groupIndex > 0 && <DropdownMenuSeparator />}
+                        <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">
+                          {group.label}
+                        </div>
+                        {group.tags.map((tag, tagIndex) => (
+                          <DropdownMenuItem
+                            key={`${groupIndex}-${tagIndex}`}
+                            onClick={() => insertMergeTagInTitle(tag.value)}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex flex-col items-start">
+                              <span className="text-sm">{tag.label}</span>
+                              <span className="text-xs text-gray-500">{tag.value}</span>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {/* Team Member */}
@@ -704,13 +831,63 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-1 hover:bg-gray-100"
+                    data-testid="button-merge-tags-description"
+                  >
+                    <Tag className="h-4 w-4 text-gray-500" />
+                    <span className="text-xs">Merge Tags</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64" align="end">
+                  <div className="p-2">
+                    <Input
+                      placeholder="Search merge tags..."
+                      value={descriptionMergeTagSearch}
+                      onChange={(e) => setDescriptionMergeTagSearch(e.target.value)}
+                      className="h-8 text-sm"
+                      data-testid="input-search-merge-tags-description"
+                    />
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {filterMergeTags(descriptionMergeTagSearch).map((group, groupIndex) => (
+                      <div key={groupIndex}>
+                        {groupIndex > 0 && <DropdownMenuSeparator />}
+                        <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">
+                          {group.label}
+                        </div>
+                        {group.tags.map((tag, tagIndex) => (
+                          <DropdownMenuItem
+                            key={`${groupIndex}-${tagIndex}`}
+                            onClick={() => insertMergeTagInDescription(tag.value)}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex flex-col items-start">
+                              <span className="text-sm">{tag.label}</span>
+                              <span className="text-xs text-gray-500">{tag.value}</span>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <Textarea
               id="description"
               value={appointmentData.description}
               onChange={(e) => setAppointmentData(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Add any additional notes or agenda items..."
               rows={3}
+              data-testid="textarea-appointment-description"
             />
           </div>
 
