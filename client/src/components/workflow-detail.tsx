@@ -141,11 +141,6 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
   const canCreateTemplates = () => {
     if (!currentUser) return false;
     
-    // Admins get automatic access
-    if (currentUser.role === 'Admin' || currentUser.role === 'admin') {
-      return true;
-    }
-    
     // Check if user has canCreate permission for workflows
     if (!currentUser.permissions) return false;
     const workflowPermission = currentUser.permissions.find((p: any) => p.module === 'workflows');
