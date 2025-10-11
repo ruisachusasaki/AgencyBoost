@@ -188,6 +188,9 @@ export default function Clients() {
     queryKey: ['/api/custom-fields'],
   });
 
+  // Use ref to track if we've loaded preferences to avoid infinite loops (must be declared early)
+  const hasLoadedPreferencesRef = React.useRef(false);
+
   // Dynamically create columns including all custom fields
   const availableColumns = React.useMemo(() => {
     const baseColumns = [...AVAILABLE_COLUMNS];
@@ -216,8 +219,9 @@ export default function Clients() {
   }, [customFieldsData]);
 
   // Update visible columns when custom fields are loaded (only once when customFieldsData changes)
+  // BUT: Skip this if we've already loaded saved preferences to prevent conflicts
   React.useEffect(() => {
-    if (customFieldsData && customFieldsData.length > 0) {
+    if (customFieldsData && customFieldsData.length > 0 && !hasLoadedPreferencesRef.current) {
       // Keep existing visible columns, just ensure they're valid
       setVisibleColumns(prev => {
         const validKeys = new Set(availableColumns.map(col => col.key));
@@ -241,9 +245,6 @@ export default function Clients() {
     queryKey: ['/api/user-view-preferences/clients-table'],
     enabled: !!currentUser?.id,
   });
-
-  // Use ref to track if we've loaded preferences to avoid infinite loops
-  const hasLoadedPreferencesRef = React.useRef(false);
 
   // Save view preferences mutation
   const savePreferencesMutation = useMutation({
