@@ -21677,6 +21677,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(quotes.id, id))
         .returning();
 
+      // Auto-transfer products/bundles to client when quote is accepted
+      if (status === "accepted" && quote.clientId) {
+        try {
+          // Fetch all quote items
+          const items = await db
+            .select()
+            .from(quoteItems)
+            .where(eq(quoteItems.quoteId, id));
+
+          let transferredCount = 0;
+
+          // Transfer each item to the client
+          for (const item of items) {
+            if (item.itemType === 'product' && item.productId) {
+              // Check if product already assigned to client
+              const existing = await db
+                .select()
+                .from(clientProducts)
+                .where(
+                  and(
+                    eq(clientProducts.clientId, quote.clientId),
+                    eq(clientProducts.productId, item.productId)
+                  )
+                )
+                .limit(1);
+
+              if (existing.length === 0) {
+                // Add product to client
+                await db
+                  .insert(clientProducts)
+                  .values({
+                    clientId: quote.clientId,
+                    productId: item.productId,
+                    price: item.unitCost.toString(),
+                    status: "active"
+                  });
+                transferredCount++;
+              }
+            } else if (item.itemType === 'bundle' && item.bundleId) {
+              // Check if bundle already assigned to client
+              const existing = await db
+                .select()
+                .from(clientBundles)
+                .where(
+                  and(
+                    eq(clientBundles.clientId, quote.clientId),
+                    eq(clientBundles.bundleId, item.bundleId)
+                  )
+                )
+                .limit(1);
+
+              if (existing.length === 0) {
+                // Add bundle to client with custom quantities
+                await db
+                  .insert(clientBundles)
+                  .values({
+                    clientId: quote.clientId,
+                    bundleId: item.bundleId,
+                    price: item.unitCost.toString(),
+                    status: "active",
+                    customQuantities: item.customQuantities
+                  });
+                transferredCount++;
+              }
+            }
+          }
+
+          // Log product transfer if any were transferred
+          if (transferredCount > 0) {
+            await createAuditLog(
+              "created",
+              "client_products",
+              quote.clientId,
+              `Client Products from Quote ${quote.name}`,
+              userId,
+              `Automatically transferred ${transferredCount} products/bundles from accepted quote to client`,
+              null,
+              { quoteId: id, itemsTransferred: transferredCount },
+              req
+            );
+          }
+        } catch (transferError) {
+          console.error("Error transferring quote items to client:", transferError);
+          // Don't fail the status update if product transfer fails
+          // The status was already updated successfully
+        }
+      }
+
       // Log the status change
       await createAuditLog(
         "updated",
