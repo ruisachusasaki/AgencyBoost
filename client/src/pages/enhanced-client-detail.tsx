@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -1791,6 +1791,10 @@ export default function EnhancedClientDetail() {
   const [activeRightSection, setActiveRightSection] = useState<"notes">("notes");
   const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team" | "health">("notes");
   const [showCompletedTasks, setShowCompletedTasks] = useState(false);
+  const [taskStatusFilter, setTaskStatusFilter] = useState<string>("all");
+  const [taskPriorityFilter, setTaskPriorityFilter] = useState<string>("all");
+  const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<string>("all");
+  const [taskSortBy, setTaskSortBy] = useState<string>("dueDate");
   const [smsMessage, setSmsMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [newNote, setNewNote] = useState("");
@@ -2330,6 +2334,59 @@ export default function EnhancedClientDetail() {
     },
     enabled: !!clientId && activeHubSection === "tasks",
   });
+
+  // Filter and sort client tasks
+  const filteredAndSortedTasks = useMemo(() => {
+    let tasks = [...clientTasksData];
+
+    // Apply status filter
+    if (taskStatusFilter !== "all") {
+      tasks = tasks.filter((task: any) => task.status === taskStatusFilter);
+    }
+
+    // Apply priority filter
+    if (taskPriorityFilter !== "all") {
+      tasks = tasks.filter((task: any) => task.priority === taskPriorityFilter);
+    }
+
+    // Apply assignee filter
+    if (taskAssigneeFilter !== "all") {
+      tasks = tasks.filter((task: any) => task.assignedTo === taskAssigneeFilter);
+    }
+
+    // Apply show completed filter
+    if (!showCompletedTasks) {
+      tasks = tasks.filter((task: any) => task.status !== 'completed');
+    }
+
+    // Apply sorting
+    tasks.sort((a: any, b: any) => {
+      switch (taskSortBy) {
+        case "dueDate":
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        case "dueDateDesc":
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+        case "title":
+          return (a.title || "").localeCompare(b.title || "");
+        case "priority":
+          const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
+          return (priorityOrder[a.priority as keyof typeof priorityOrder] || 2) - 
+                 (priorityOrder[b.priority as keyof typeof priorityOrder] || 2);
+        case "status":
+          return (a.status || "").localeCompare(b.status || "");
+        default:
+          return 0;
+      }
+    });
+
+    return tasks;
+  }, [clientTasksData, taskStatusFilter, taskPriorityFilter, taskAssigneeFilter, showCompletedTasks, taskSortBy]);
 
   // Fetch client documents data
   const { data: clientDocuments = [], isLoading: documentsLoading } = useQuery({
@@ -5870,147 +5927,67 @@ export default function EnhancedClientDetail() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900">Tasks</h3>
-                      <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Create New Task</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Title *</Label>
-                              <Input
-                                value={newTask.title}
-                                onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
-                                placeholder="Enter task title"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Description</Label>
-                              <Textarea
-                                value={newTask.description}
-                                onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                                placeholder="Enter task description"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</Label>
-                                <Input
-                                  type="date"
-                                  value={newTask.dueDate}
-                                  onChange={(e) => setNewTask(prev => ({ ...prev, dueDate: e.target.value }))}
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700 mb-1 block">Due Time</Label>
-                                <Input
-                                  type="time"
-                                  value={newTask.dueTime}
-                                  onChange={(e) => setNewTask(prev => ({ ...prev, dueTime: e.target.value }))}
-                                />
-                              </div>
-                            </div>
-                            <div className="relative">
-                              <Label className="text-sm font-medium text-gray-700 mb-1 block">Assignee</Label>
-                              <Input
-                                value={assigneeSearchTerm}
-                                onChange={(e) => {
-                                  setAssigneeSearchTerm(e.target.value);
-                                  if (e.target.value.trim() && staffData) {
-                                    const filtered = staffData.filter((staff: any) => 
-                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(e.target.value.toLowerCase()) ||
-                                      staff.email?.toLowerCase().includes(e.target.value.toLowerCase())
-                                    );
-                                    setFilteredAssignees(filtered);
-                                    setShowAssigneeSuggestions(filtered.length > 0);
-                                  } else {
-                                    setFilteredAssignees([]);
-                                    setShowAssigneeSuggestions(false);
-                                  }
-                                }}
-                                placeholder="Search staff members..."
-                                onFocus={() => {
-                                  if (assigneeSearchTerm.trim() && staffData) {
-                                    const filtered = staffData.filter((staff: any) => 
-                                      `${staff.firstName} ${staff.lastName}`.toLowerCase().includes(assigneeSearchTerm.toLowerCase()) ||
-                                      staff.email?.toLowerCase().includes(assigneeSearchTerm.toLowerCase())
-                                    );
-                                    setFilteredAssignees(filtered);
-                                    setShowAssigneeSuggestions(filtered.length > 0);
-                                  }
-                                }}
-                                onBlur={() => {
-                                  setTimeout(() => setShowAssigneeSuggestions(false), 200);
-                                }}
-                              />
-                              
-                              {showAssigneeSuggestions && (
-                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                                  {filteredAssignees.map((staff: any) => (
-                                    <button
-                                      key={staff.id}
-                                      onClick={() => {
-                                        setNewTask(prev => ({ ...prev, assignee: staff.id }));
-                                        setAssigneeSearchTerm(`${staff.firstName} ${staff.lastName}`);
-                                        setShowAssigneeSuggestions(false);
-                                      }}
-                                      className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 border-b last:border-b-0"
-                                    >
-                                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
-                                        {staff.firstName?.charAt(0)}{staff.lastName?.charAt(0)}
-                                      </div>
-                                      <div>
-                                        <div className="text-sm font-medium">{staff.firstName} {staff.lastName}</div>
-                                        <div className="text-xs text-gray-500">{staff.email}</div>
-                                      </div>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex justify-end gap-2">
-                              <Button variant="outline" onClick={() => {
-                                setIsTaskDialogOpen(false);
-                                setNewTask({
-                                  title: "",
-                                  description: "",
-                                  dueDate: "",
-                                  dueTime: "",
-                                  assignee: "",
-                                  recurring: false
-                                });
-                                setAssigneeSearchTerm("");
-                                setShowAssigneeSuggestions(false);
-                                setFilteredAssignees([]);
-                              }}>
-                                Cancel
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  if (newTask.title.trim()) {
-                                    const taskData = {
-                                      title: newTask.title,
-                                      description: newTask.description,
-                                      dueDate: newTask.dueDate ? `${newTask.dueDate}${newTask.dueTime ? ` ${newTask.dueTime}` : ''}` : undefined,
-                                      assignedTo: newTask.assignee || undefined
-                                    };
-                                    createTaskMutation.mutate(taskData);
-                                  }
-                                }}
-                                disabled={!newTask.title.trim() || createTaskMutation.isPending}
-                                className="bg-primary hover:bg-primary/90"
-                              >
-                                {createTaskMutation.isPending ? "Creating..." : "Create Task"}
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      <Link href="/tasks">
+                        <Button size="sm" variant="outline" data-testid="button-goto-tasks">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </div>
+
+                    {/* Filters and Sorting */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Select value={taskStatusFilter} onValueChange={setTaskStatusFilter}>
+                        <SelectTrigger className="h-9" data-testid="select-task-status-filter">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="todo">To Do</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={taskPriorityFilter} onValueChange={setTaskPriorityFilter}>
+                        <SelectTrigger className="h-9" data-testid="select-task-priority-filter">
+                          <SelectValue placeholder="Priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Priorities</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="low">Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={taskAssigneeFilter} onValueChange={setTaskAssigneeFilter}>
+                        <SelectTrigger className="h-9" data-testid="select-task-assignee-filter">
+                          <SelectValue placeholder="Assignee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Assignees</SelectItem>
+                          {staffData?.map((staff: any) => (
+                            <SelectItem key={staff.id} value={staff.id}>
+                              {staff.firstName} {staff.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={taskSortBy} onValueChange={setTaskSortBy}>
+                        <SelectTrigger className="h-9" data-testid="select-task-sort">
+                          <SelectValue placeholder="Sort by" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="dueDate">Due Date (Asc)</SelectItem>
+                          <SelectItem value="dueDateDesc">Due Date (Desc)</SelectItem>
+                          <SelectItem value="title">Title</SelectItem>
+                          <SelectItem value="priority">Priority</SelectItem>
+                          <SelectItem value="status">Status</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     
                     <div className="flex items-center gap-2 mb-4">
@@ -6029,15 +6006,14 @@ export default function EnhancedClientDetail() {
                         <div className="text-center py-8 text-gray-500">
                           <div className="text-sm">Loading tasks...</div>
                         </div>
-                      ) : clientTasksData.length === 0 ? (
+                      ) : filteredAndSortedTasks.length === 0 ? (
                         <div className="text-center py-8 text-gray-500">
                           <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm">No tasks yet</p>
-                          <p className="text-xs text-gray-400">Create a task to get started</p>
+                          <p className="text-sm">No tasks found</p>
+                          <p className="text-xs text-gray-400">Try adjusting your filters</p>
                         </div>
                       ) : (
-                        clientTasksData
-                          .filter((task: any) => showCompletedTasks || task.status !== 'completed')
+                        filteredAndSortedTasks
                           .map((task: any) => (
                             <div 
                               key={task.id} 
