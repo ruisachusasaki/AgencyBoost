@@ -82,6 +82,10 @@ export default function HRPage() {
   const [requestStatusFilter, setRequestStatusFilter] = useState("all");
   const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
   
+  // Pagination state for time off requests
+  const [timeOffPage, setTimeOffPage] = useState(1);
+  const [timeOffPageSize, setTimeOffPageSize] = useState(20);
+  
   // Filter states for applications
   const [applicationPositionFilter, setApplicationPositionFilter] = useState("all");
   const [applicationStatusFilter, setApplicationStatusFilter] = useState("all");
@@ -95,7 +99,7 @@ export default function HRPage() {
       return await apiRequest("DELETE", `/api/hr/time-off-requests/${requestId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/hr/time-off-requests?page=${timeOffPage}&limit=${timeOffPageSize}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests/pending-for-approval"] });
       // Show success message
     },
@@ -175,10 +179,25 @@ export default function HRPage() {
   const canManageJobOpenings = isManager || isAdmin;
   
 
-  // Fetch time off requests
-  const { data: timeOffRequests = [] } = useQuery<TimeOffRequest[]>({
-    queryKey: ["/api/hr/time-off-requests"],
+  // Fetch time off requests with pagination
+  interface PaginatedTimeOffResponse {
+    requests: TimeOffRequest[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrevious: boolean;
+    };
+  }
+  
+  const { data: timeOffData } = useQuery<PaginatedTimeOffResponse>({
+    queryKey: [`/api/hr/time-off-requests?page=${timeOffPage}&limit=${timeOffPageSize}`],
   });
+  
+  const timeOffRequests = timeOffData?.requests || [];
+  const timeOffPagination = timeOffData?.pagination;
 
   // Fetch job applications (role-based filtering handled on backend)
   const { data: jobApplications = [] } = useQuery<JobApplication[]>({
@@ -983,6 +1002,85 @@ export default function HRPage() {
                   </div>
                 );
               })()}
+              
+              {timeOffPagination && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600">Items per page:</span>
+                      <Select value={timeOffPageSize.toString()} onValueChange={(value) => {
+                        setTimeOffPageSize(Number(value));
+                        setTimeOffPage(1);
+                      }}>
+                        <SelectTrigger className="w-20" data-testid="select-timeoff-page-size">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="20">20</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <span className="text-sm text-gray-600">
+                      Showing {((timeOffPage - 1) * timeOffPageSize) + 1} to {Math.min(timeOffPage * timeOffPageSize, timeOffPagination.total)} of {timeOffPagination.total} requests
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTimeOffPage(Math.max(1, timeOffPage - 1))}
+                      disabled={!timeOffPagination.hasPrevious}
+                      data-testid="button-timeoff-prev"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: Math.min(5, timeOffPagination.totalPages) }, (_, i) => {
+                        let pageNumber: number;
+                        if (timeOffPagination.totalPages <= 5) {
+                          pageNumber = i + 1;
+                        } else if (timeOffPage <= 3) {
+                          pageNumber = i + 1;
+                        } else if (timeOffPage >= timeOffPagination.totalPages - 2) {
+                          pageNumber = timeOffPagination.totalPages - 4 + i;
+                        } else {
+                          pageNumber = timeOffPage - 2 + i;
+                        }
+                        
+                        return (
+                          <Button
+                            key={pageNumber}
+                            variant={timeOffPage === pageNumber ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setTimeOffPage(pageNumber)}
+                            className="w-9 h-9"
+                            data-testid={`button-timeoff-page-${pageNumber}`}
+                          >
+                            {pageNumber}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTimeOffPage(Math.min(timeOffPagination.totalPages, timeOffPage + 1))}
+                      disabled={!timeOffPagination.hasNext}
+                      data-testid="button-timeoff-next"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
