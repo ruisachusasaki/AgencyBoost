@@ -34,6 +34,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Client Management**: Client team assignment, health scoring, and a comprehensive client approval workflow for assets with annotation capabilities. Includes per-user customizable and saveable column views for the "All Clients" table with automatic persistence.
 - **HR Features**: Time off requests, job application form configuration, and a job application watchers/followers system.
 - **Sales Reports**: Comprehensive analytics system including Pipeline and Sales Rep Reports with date range filtering and performance-optimized data aggregation.
+- **Quote to Client Products Transfer**: Automatic transfer of quote products/bundles to client's Products Tab when quote status changes to "accepted" with existing clientId. Includes duplicate prevention and audit logging.
 - **Activity & Comments**: Global timer system, comprehensive activity logging, and a threaded comments system with @mentions and emoji picker.
 - **File & Media**: Advanced file uploads, inline image display, voice recording, secure object storage, and collaborative image/PDF annotation.
 - **Knowledge Base**: Notion-like documentation platform with categories, hierarchy, RBAC, and search.
