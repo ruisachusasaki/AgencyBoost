@@ -1001,14 +1001,37 @@ export default function CalendarMain() {
 
                 {/* Filters */}
                 <Card className="border border-gray-200 dark:border-gray-700">
-                  <CardContent className="p-0">
-                    <Tabs value={sidebarTab} onValueChange={setSidebarTab}>
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="users" data-testid="tab-users">Users</TabsTrigger>
-                        <TabsTrigger value="calendars" data-testid="tab-calendars">Calendars</TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="users" className="p-4">
+                  <CardContent className="p-4">
+                    {/* Tab Buttons */}
+                    <div className="flex items-center gap-0 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-4">
+                      <button
+                        onClick={() => setSidebarTab("users")}
+                        className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                          sidebarTab === "users"
+                            ? "text-white shadow-sm"
+                            : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                        }`}
+                        style={sidebarTab === "users" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
+                        data-testid="tab-users"
+                      >
+                        Users
+                      </button>
+                      <button
+                        onClick={() => setSidebarTab("calendars")}
+                        className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                          sidebarTab === "calendars"
+                            ? "text-white shadow-sm"
+                            : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                        }`}
+                        style={sidebarTab === "calendars" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
+                        data-testid="tab-calendars"
+                      >
+                        Calendars
+                      </button>
+                    </div>
+                    
+                    {/* Users Tab Content */}
+                    {sidebarTab === "users" && (
                         <div className="space-y-3">
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -1037,9 +1060,10 @@ export default function CalendarMain() {
                             ))}
                           </div>
                         </div>
-                      </TabsContent>
-                      
-                      <TabsContent value="calendars" className="p-4">
+                    )}
+                    
+                    {/* Calendars Tab Content */}
+                    {sidebarTab === "calendars" && (
                         <div className="space-y-3">
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -1074,8 +1098,7 @@ export default function CalendarMain() {
                             ))}
                           </div>
                         </div>
-                      </TabsContent>
-                    </Tabs>
+                    )}
                   </CardContent>
                 </Card>
               </div>
