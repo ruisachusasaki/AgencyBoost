@@ -7411,6 +7411,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Toggle annotation completion status - SECURED
+  app.patch("/api/annotations/:annotationId/toggle-complete", requireAuth(), async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { imageAnnotations } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      // Get current annotation
+      const [currentAnnotation] = await db
+        .select()
+        .from(imageAnnotations)
+        .where(eq(imageAnnotations.id, req.params.annotationId));
+      
+      if (!currentAnnotation) {
+        return res.status(404).json({ error: "Annotation not found" });
+      }
+      
+      // Toggle completion status
+      const newStatus = !currentAnnotation.isCompleted;
+      
+      const result = await db
+        .update(imageAnnotations)
+        .set({ 
+          isCompleted: newStatus,
+          updatedAt: new Date()
+        })
+        .where(eq(imageAnnotations.id, req.params.annotationId))
+        .returning();
+      
+      if (result.length === 0) {
+        return res.status(404).json({ error: "Failed to update annotation" });
+      }
+      
+      const updatedAnnotation = result[0];
+      res.json(updatedAnnotation);
+      
+      // Create task activity for completion toggle (don't await)
+      (async () => {
+        try {
+          const { commentFiles, taskComments, taskActivities, staff } = await import("@shared/schema");
+          const { eq } = await import("drizzle-orm");
+          
+          // Find the task ID by tracing: annotation -> fileId -> commentFiles -> taskComments -> taskId
+          const fileToComment = await db.select({
+            taskId: taskComments.taskId
+          })
+          .from(commentFiles)
+          .leftJoin(taskComments, eq(commentFiles.commentId, taskComments.id))
+          .where(eq(commentFiles.id, updatedAnnotation.fileId))
+          .limit(1);
+          
+          if (fileToComment.length > 0 && fileToComment[0].taskId) {
+            const taskId = fileToComment[0].taskId;
+            const userId = getAuthenticatedUserId(req);
+            if (!userId) {
+              console.log("No authenticated user for annotation completion activity");
+              return;
+            }
+            
+            // Get user name for activity
+            const userInfo = await db.select({
+              firstName: staff.firstName,
+              lastName: staff.lastName
+            })
+            .from(staff)
+            .where(eq(staff.id, userId))
+            .limit(1);
+            
+            const userName = userInfo.length > 0 
+              ? `${userInfo[0].firstName} ${userInfo[0].lastName}`
+              : 'Unknown User';
+            
+            // Create task activity
+            const actionType = newStatus ? "annotation_completed" : "annotation_reopened";
+            const description = newStatus 
+              ? `Marked annotation as completed: "${updatedAnnotation.content.substring(0, 50)}${updatedAnnotation.content.length > 50 ? '...' : ''}"`
+              : `Reopened annotation: "${updatedAnnotation.content.substring(0, 50)}${updatedAnnotation.content.length > 50 ? '...' : ''}"`;
+            
+            await db.insert(taskActivities).values({
+              taskId,
+              actionType,
+              description,
+              userId,
+              userName,
+              details: {
+                annotationId: updatedAnnotation.id,
+                fileId: updatedAnnotation.fileId,
+                content: updatedAnnotation.content,
+                isCompleted: newStatus
+              },
+            });
+            
+            console.log(`Task activity created for annotation ${newStatus ? 'completion' : 'reopening'} on task: ${taskId}`);
+          }
+        } catch (activityError) {
+          console.log("Failed to create task activity for annotation completion:", activityError);
+        }
+      })();
+    } catch (error) {
+      console.error("Error toggling annotation completion:", error);
+      res.status(500).json({ error: "Failed to toggle annotation completion" });
+    }
+  });
+
 
 
   // Staff/Users Management API - SECURED
