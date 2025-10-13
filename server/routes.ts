@@ -15419,8 +15419,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Time Off Request Routes - SECURED (Employee privacy data)
   app.get("/api/hr/time-off-requests", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
-      const requests = await db.select().from(timeOffRequests).orderBy(desc(timeOffRequests.createdAt));
-      res.json(requests);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = (page - 1) * limit;
+      
+      // Get total count
+      const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(timeOffRequests);
+      const total = Number(count);
+      
+      // Get paginated requests
+      const requests = await db.select()
+        .from(timeOffRequests)
+        .orderBy(desc(timeOffRequests.createdAt))
+        .limit(limit)
+        .offset(offset);
+      
+      res.json({
+        requests,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasNext: page * limit < total,
+          hasPrevious: page > 1
+        }
+      });
     } catch (error) {
       console.error("Error fetching time off requests:", error);
       res.status(500).json({ error: "Failed to fetch time off requests" });
