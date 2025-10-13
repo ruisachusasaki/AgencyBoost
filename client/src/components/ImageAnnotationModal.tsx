@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, MessageSquare, Plus, AtSign } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Trash2, MessageSquare, Plus, AtSign, Check } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +26,7 @@ interface AnnotationPin {
   content: string;
   mentions?: string[];
   isNew?: boolean;
+  isCompleted?: boolean;
 }
 
 export function ImageAnnotationModal({ 
@@ -75,6 +77,7 @@ export function ImageAnnotationModal({
         y: parseFloat(ann.y),
         content: ann.content,
         mentions: ann.mentions || [],
+        isCompleted: ann.isCompleted || false,
       }));
       setAnnotations(formattedAnnotations);
     }
@@ -231,6 +234,23 @@ export function ImageAnnotationModal({
     },
   });
 
+  // Toggle annotation completion mutation
+  const toggleCompletionMutation = useMutation({
+    mutationFn: async (annotationId: string) => {
+      return apiRequest("PATCH", `/api/annotations/${annotationId}/toggle-complete`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/files/${fileId}/annotations`] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update annotation status",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleImageClick = (event: React.MouseEvent<HTMLImageElement | HTMLDivElement>) => {
     if (!isAddingAnnotation || !imageRef.current) return;
 
@@ -378,11 +398,13 @@ export function ImageAnnotationModal({
                             selectedAnnotation === annotation 
                               ? 'bg-blue-600 ring-2 ring-blue-300' 
                               : annotation.isNew 
-                                ? 'bg-yellow-500' 
-                                : 'bg-red-500'
+                                ? 'bg-yellow-500'
+                                : annotation.isCompleted
+                                  ? 'bg-green-500'
+                                  : 'bg-red-500'
                           }`}
                         >
-                          {index + 1}
+                          {annotation.isCompleted ? <Check className="w-4 h-4" /> : index + 1}
                         </div>
                       </div>
                     ))}
@@ -427,11 +449,13 @@ export function ImageAnnotationModal({
                             selectedAnnotation === annotation 
                               ? 'bg-blue-600 ring-2 ring-blue-300' 
                               : annotation.isNew 
-                                ? 'bg-yellow-500' 
-                                : 'bg-red-500'
+                                ? 'bg-yellow-500'
+                                : annotation.isCompleted
+                                  ? 'bg-green-500'
+                                  : 'bg-red-500'
                           }`}
                         >
-                          {index + 1}
+                          {annotation.isCompleted ? <Check className="w-4 h-4" /> : index + 1}
                         </div>
                       </div>
                     ))}
@@ -468,11 +492,13 @@ export function ImageAnnotationModal({
                             selectedAnnotation === annotation 
                               ? 'bg-blue-600 ring-2 ring-blue-300' 
                               : annotation.isNew 
-                                ? 'bg-yellow-500' 
-                                : 'bg-red-500'
+                                ? 'bg-yellow-500'
+                                : annotation.isCompleted
+                                  ? 'bg-green-500'
+                                  : 'bg-red-500'
                           }`}
                         >
-                          {index + 1}
+                          {annotation.isCompleted ? <Check className="w-4 h-4" /> : index + 1}
                         </div>
                       </div>
                     ))}
@@ -506,30 +532,47 @@ export function ImageAnnotationModal({
                       <div className="flex items-center gap-2 mb-1">
                         <div 
                           className={`w-4 h-4 rounded-full text-white text-xs flex items-center justify-center ${
-                            annotation.isNew ? 'bg-yellow-500' : 'bg-red-500'
+                            annotation.isNew 
+                              ? 'bg-yellow-500' 
+                              : annotation.isCompleted 
+                                ? 'bg-green-500' 
+                                : 'bg-red-500'
                           }`}
                         >
-                          {index + 1}
+                          {annotation.isCompleted ? <Check className="w-3 h-3" /> : index + 1}
                         </div>
                         <span className="text-xs text-gray-500">
                           ({Math.round(annotation.x)}%, {Math.round(annotation.y)}%)
                         </span>
                       </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <p className={`text-sm ${annotation.isCompleted ? 'text-green-600 dark:text-green-400 line-through' : 'text-gray-700 dark:text-gray-300'}`}>
                         {annotation.content || 'Click to add content...'}
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteAnnotation(annotation);
-                      }}
-                      data-testid={`button-delete-annotation-${annotation.id || index}`}
-                    >
-                      <Trash2 className="w-3 h-3 text-red-500" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {!annotation.isNew && annotation.id && (
+                        <Checkbox
+                          checked={annotation.isCompleted || false}
+                          onCheckedChange={(checked) => {
+                            toggleCompletionMutation.mutate(annotation.id!);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          data-testid={`checkbox-complete-annotation-${annotation.id || index}`}
+                          className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                        />
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteAnnotation(annotation);
+                        }}
+                        data-testid={`button-delete-annotation-${annotation.id || index}`}
+                      >
+                        <Trash2 className="w-3 h-3 text-red-500" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}

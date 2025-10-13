@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, Clock, User, Calendar, Timer, Flag, MessageSquare } from "lucide-react";
+import { Activity, Clock, User, Calendar, Timer, Flag, MessageSquare, CheckCircle2, RotateCcw } from "lucide-react";
 import { TaskActivity } from "@shared/schema";
 
 interface TaskActivitiesProps {
@@ -194,6 +194,38 @@ export default function TaskActivities({ taskId, showCard = true }: TaskActiviti
               <p className="text-sm text-slate-700">
                 <span className="font-medium">{activity.userName}</span> deleted an annotation:{' '}
                 <span className="italic text-slate-600">"{activity.description?.replace('Deleted annotation: ', '') || 'Deleted annotation'}"</span>
+              </p>
+              <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
+            </div>
+          </div>
+        );
+        
+      case 'annotation_completed':
+        return (
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-full flex-shrink-0">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-slate-700">
+                <span className="font-medium">{activity.userName}</span> marked annotation as completed:{' '}
+                <span className="italic text-slate-600">"{activity.description?.replace('Marked annotation as completed: ', '') || 'Completed annotation'}"</span>
+              </p>
+              <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
+            </div>
+          </div>
+        );
+        
+      case 'annotation_reopened':
+        return (
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-yellow-100 rounded-full flex-shrink-0">
+              <RotateCcw className="h-4 w-4 text-yellow-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-slate-700">
+                <span className="font-medium">{activity.userName}</span> reopened annotation:{' '}
+                <span className="italic text-slate-600">"{activity.description?.replace('Reopened annotation: ', '') || 'Reopened annotation'}"</span>
               </p>
               <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
             </div>
