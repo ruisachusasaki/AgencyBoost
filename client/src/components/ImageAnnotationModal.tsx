@@ -396,6 +396,9 @@ export function ImageAnnotationModal({
                       className="max-w-full max-h-full border border-gray-300 rounded"
                       data-testid="annotation-video"
                       style={{ maxHeight: '600px' }}
+                      onLoadStart={() => console.log("Video load started:", imageUrl)}
+                      onError={(e) => console.error("Video load error:", e, imageUrl)}
+                      onLoadedData={() => console.log("Video data loaded successfully")}
                     />
                     {/* Invisible overlay to capture clicks for video annotation - only when adding annotation */}
                     {isAddingAnnotation && (
