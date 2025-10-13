@@ -36,7 +36,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Sales Reports**: Comprehensive analytics system including Pipeline and Sales Rep Reports with date range filtering and performance-optimized data aggregation.
 - **Quote to Client Products Transfer**: Automatic transfer of quote products/bundles to client's Products Tab when quote status changes to "accepted" with existing clientId. Includes duplicate prevention and audit logging.
 - **Activity & Comments**: Global timer system, comprehensive activity logging, and a threaded comments system with @mentions and emoji picker.
-- **File & Media**: Advanced file uploads, inline image display, voice recording, secure object storage, and collaborative image/PDF annotation.
+- **File & Media**: Advanced file uploads with support for images, videos, audio, and documents. Inline media display (images, videos, audio players), voice recording, secure object storage, and collaborative annotation for images, PDFs, and videos.
 - **Knowledge Base**: Notion-like documentation platform with categories, hierarchy, RBAC, and search.
 - **User Preferences**: Per-user view customization system storing column visibility preferences in database with automatic save (500ms debounce) and load on page mount. Supports view-specific configurations across different tables and pages.
 
