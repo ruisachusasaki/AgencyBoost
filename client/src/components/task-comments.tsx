@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Send, AtSign, User, Reply, Smile, Paperclip, Download, FileText, Image, Music, Mic, MicOff, Pause, Play, MessageSquare } from "lucide-react";
+import { Send, AtSign, User, Reply, Smile, Paperclip, Download, FileText, Image, Music, Mic, MicOff, Pause, Play, MessageSquare, Video } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FileUploader } from "./FileUploader";
 import { ImageAnnotationModal } from "./ImageAnnotationModal";
@@ -66,7 +66,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [commentReactions, setCommentReactions] = useState<Record<string, CommentReaction[]>>({});
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<{ url: string; fileId: string; fileName: string } | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; fileId: string; fileName: string; fileType?: string } | null>(null);
   const [fileAnnotations, setFileAnnotations] = useState<Record<string, boolean>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
@@ -118,9 +118,9 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
       fetchReactions(comment.id);
       comment.replies?.forEach(reply => fetchReactions(reply.id));
       
-      // Check annotations for image files
+      // Check annotations for image and video files
       comment.files?.forEach(file => {
-        if (file.fileType.startsWith('image/')) {
+        if (file.fileType.startsWith('image/') || file.fileType.startsWith('video/')) {
           checkFileAnnotations(file.id);
         }
       });
@@ -496,7 +496,8 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                           {comment.files.map((file) => {
                             const isImage = file.fileType.startsWith('image/');
                             const isAudio = file.fileType.startsWith('audio/');
-                            const isDocument = !isImage && !isAudio;
+                            const isVideo = file.fileType.startsWith('video/');
+                            const isDocument = !isImage && !isAudio && !isVideo;
                             
                             return (
                               <div key={file.id} className="mb-2">
@@ -510,7 +511,8 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                       onClick={() => setSelectedImage({ 
                                         url: file.fileUrl, 
                                         fileId: file.id, 
-                                        fileName: file.fileName 
+                                        fileName: file.fileName,
+                                        fileType: file.fileType
                                       })}
                                       data-testid={`image-${file.id}`}
                                       title="Click to annotate image"
@@ -529,7 +531,8 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                           onClick={() => setSelectedImage({ 
                                             url: file.fileUrl, 
                                             fileId: file.id, 
-                                            fileName: file.fileName 
+                                            fileName: file.fileName,
+                                            fileType: file.fileType
                                           })}
                                           data-testid={`button-annotate-${file.id}`}
                                           title={fileAnnotations[file.id] ? "View/edit annotations" : "Add annotation"}
@@ -570,6 +573,52 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                       <source src={file.fileUrl} type={file.fileType} />
                                       Your browser does not support the audio element.
                                     </audio>
+                                  </div>
+                                ) : isVideo ? (
+                                  // Display inline video player for video files
+                                  <div className="space-y-2">
+                                    <video 
+                                      controls 
+                                      className="max-w-full max-h-96 rounded-lg border shadow-sm"
+                                      preload="metadata"
+                                      data-testid={`video-${file.id}`}
+                                    >
+                                      <source src={file.fileUrl} type={file.fileType} />
+                                      Your browser does not support the video element.
+                                    </video>
+                                    <div className="flex items-center justify-between text-xs text-slate-500">
+                                      <span>{file.fileName} • {(file.fileSize / 1024 / 1024).toFixed(2)} MB</span>
+                                      <div className="flex gap-1">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className={`h-6 px-2 ${
+                                            fileAnnotations[file.id] 
+                                              ? 'text-green-600 hover:text-green-700 bg-green-50' 
+                                              : 'text-blue-600 hover:text-blue-700'
+                                          }`}
+                                          onClick={() => setSelectedImage({ 
+                                            url: file.fileUrl, 
+                                            fileId: file.id, 
+                                            fileName: file.fileName,
+                                            fileType: file.fileType
+                                          })}
+                                          data-testid={`button-annotate-video-${file.id}`}
+                                          title={fileAnnotations[file.id] ? "View/edit annotations" : "Add annotation"}
+                                        >
+                                          <MessageSquare className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => window.open(file.fileUrl, '_blank')}
+                                          className="h-6 px-2"
+                                          title="Download video file"
+                                        >
+                                          <Download className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </div>
                                   </div>
                                 ) : (
                                   // Display file attachment for documents and other file types
@@ -921,7 +970,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
         </div>
       </form>
 
-      {/* Image Annotation Modal */}
+      {/* Image/Video Annotation Modal */}
       {selectedImage && (
         <ImageAnnotationModal
           isOpen={!!selectedImage}
@@ -935,6 +984,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
           imageUrl={selectedImage.url}
           fileId={selectedImage.fileId}
           fileName={selectedImage.fileName}
+          fileType={selectedImage.fileType}
         />
       )}
 

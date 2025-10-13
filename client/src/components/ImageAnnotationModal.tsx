@@ -49,7 +49,7 @@ export function ImageAnnotationModal({
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [mentionPosition, setMentionPosition] = useState<{top: number, left: number}>({ top: 0, left: 0 });
   
-  const imageRef = useRef<HTMLImageElement>(null);
+  const imageRef = useRef<HTMLImageElement | HTMLVideoElement | HTMLIFrameElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -231,7 +231,7 @@ export function ImageAnnotationModal({
     },
   });
 
-  const handleImageClick = (event: React.MouseEvent<HTMLImageElement>) => {
+  const handleImageClick = (event: React.MouseEvent<HTMLImageElement | HTMLDivElement>) => {
     if (!isAddingAnnotation || !imageRef.current) return;
 
     const rect = imageRef.current.getBoundingClientRect();
@@ -315,7 +315,7 @@ export function ImageAnnotationModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
-            Annotate {fileType?.includes('pdf') ? 'PDF' : 'Image'}: {fileName}
+            Annotate {fileType?.includes('pdf') ? 'PDF' : fileType?.includes('video') ? 'Video' : 'Image'}: {fileName}
           </DialogTitle>
         </DialogHeader>
 
@@ -334,7 +334,7 @@ export function ImageAnnotationModal({
               </Button>
               {isAddingAnnotation && (
                 <Badge variant="secondary">
-                  Click on the {fileType?.includes('pdf') ? 'PDF' : 'image'} to add annotation
+                  Click on the {fileType?.includes('pdf') ? 'PDF' : fileType?.includes('video') ? 'video' : 'image'} to add annotation
                 </Badge>
               )}
             </div>
@@ -358,6 +358,55 @@ export function ImageAnnotationModal({
                     />
                     
                     {/* Annotation Pins for PDF */}
+                    {annotations.map((annotation, index) => (
+                      <div
+                        key={annotation.id || `temp-${index}`}
+                        className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer"
+                        style={{
+                          left: `${annotation.x}%`,
+                          top: `${annotation.y}%`,
+                          zIndex: 10
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectAnnotation(annotation);
+                        }}
+                        data-testid={`annotation-pin-${annotation.id || index}`}
+                      >
+                        <div 
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white ${
+                            selectedAnnotation === annotation 
+                              ? 'bg-blue-600 ring-2 ring-blue-300' 
+                              : annotation.isNew 
+                                ? 'bg-yellow-500' 
+                                : 'bg-red-500'
+                          }`}
+                        >
+                          {index + 1}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : fileType?.includes('video') ? (
+                  <div className="relative">
+                    <video
+                      ref={imageRef as any}
+                      src={imageUrl}
+                      controls
+                      className="max-w-full max-h-full border border-gray-300 rounded"
+                      data-testid="annotation-video"
+                      style={{ maxHeight: '600px' }}
+                    />
+                    {/* Invisible overlay to capture clicks for video annotation - only when adding annotation */}
+                    {isAddingAnnotation && (
+                      <div 
+                        className="absolute inset-0 cursor-crosshair"
+                        onClick={handleImageClick}
+                        style={{ zIndex: 5 }}
+                      />
+                    )}
+                    
+                    {/* Annotation Pins for Video */}
                     {annotations.map((annotation, index) => (
                       <div
                         key={annotation.id || `temp-${index}`}
