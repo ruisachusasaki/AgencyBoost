@@ -33,6 +33,8 @@ import {
   Eye,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Trash2,
   Copy,
   ExternalLink
