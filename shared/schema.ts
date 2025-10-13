@@ -765,6 +765,7 @@ export const imageAnnotations = pgTable("image_annotations", {
   content: text("content").notNull(), // Annotation text/comment
   mentions: text("mentions").array().default([]), // Array of mentioned user IDs
   authorId: uuid("author_id").notNull().references(() => staff.id),
+  isCompleted: boolean("is_completed").default(false), // Track if annotation is resolved/completed
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
