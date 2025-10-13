@@ -99,7 +99,7 @@ export default function HRPage() {
       return await apiRequest("DELETE", `/api/hr/time-off-requests/${requestId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/hr/time-off-requests?page=${timeOffPage}&limit=${timeOffPageSize}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/time-off-requests'] });
       queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests/pending-for-approval"] });
       // Show success message
     },
@@ -193,7 +193,7 @@ export default function HRPage() {
   }
   
   const { data: timeOffData } = useQuery<PaginatedTimeOffResponse>({
-    queryKey: [`/api/hr/time-off-requests?page=${timeOffPage}&limit=${timeOffPageSize}`],
+    queryKey: ['/api/hr/time-off-requests', { page: timeOffPage, limit: timeOffPageSize }],
   });
   
   const timeOffRequests = timeOffData?.requests || [];
