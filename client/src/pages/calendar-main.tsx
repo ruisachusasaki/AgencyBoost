@@ -408,6 +408,17 @@ export default function CalendarMain() {
     );
   };
 
+  // Filter appointments by selected calendars for calendar view
+  const calendarViewFilteredAppointments = useMemo(() => {
+    // If no calendars are selected, show all appointments
+    if (selectedCalendars.length === 0) {
+      return appointments;
+    }
+    
+    // Otherwise, only show appointments from selected calendars
+    return appointments.filter(apt => selectedCalendars.includes(apt.calendarId));
+  }, [appointments, selectedCalendars]);
+
   // Appointments filtering and sorting logic
   const filteredAndSortedAppointments = useMemo(() => {
     let filtered = appointments;
@@ -690,7 +701,7 @@ export default function CalendarMain() {
                         {generateMonthDays().map((day, index) => {
                           const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                           const isToday = day.toDateString() === new Date().toDateString();
-                          const dayAppointments = appointments.filter(apt => 
+                          const dayAppointments = calendarViewFilteredAppointments.filter(apt => 
                             new Date(apt.startTime).toDateString() === day.toDateString()
                           );
                           
@@ -794,7 +805,7 @@ export default function CalendarMain() {
                                 day.setDate(startOfWeek.getDate() + dayIndex);
                                 day.setHours(hour, 0, 0, 0);
                                 
-                                const dayAppointments = appointments.filter(apt => {
+                                const dayAppointments = calendarViewFilteredAppointments.filter(apt => {
                                   const aptStart = new Date(apt.startTime);
                                   return aptStart.toDateString() === day.toDateString() && 
                                          aptStart.getHours() === hour;
@@ -856,7 +867,7 @@ export default function CalendarMain() {
                           const currentHour = new Date(currentDate);
                           currentHour.setHours(hour, 0, 0, 0);
                           
-                          const hourAppointments = appointments.filter(apt => {
+                          const hourAppointments = calendarViewFilteredAppointments.filter(apt => {
                             const aptStart = new Date(apt.startTime);
                             return aptStart.toDateString() === currentDate.toDateString() && 
                                    aptStart.getHours() === hour;
