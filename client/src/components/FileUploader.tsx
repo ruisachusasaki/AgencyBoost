@@ -39,6 +39,7 @@ interface FileUploaderProps {
  * Images: .jpeg, .jpg, .png, .gif, .tiff
  * Presentations: .ppt, .pptx, .key
  * Audio: .mp3, .wav, .m4a, .aac (for audio clips)
+ * Video: .mp4, .webm, .mov, .avi, .mkv, .flv, .wmv, .m4v
  * 
  * @param props - Component props
  * @param props.maxNumberOfFiles - Maximum number of files allowed (default: 5)
@@ -56,7 +57,8 @@ export function FileUploader({
     '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt', '.rtf', '.pages', '.numbers',
     '.jpeg', '.jpg', '.png', '.gif', '.tiff',
     '.ppt', '.pptx', '.key',
-    '.mp3', '.wav', '.m4a', '.aac' // Audio files
+    '.mp3', '.wav', '.m4a', '.aac', // Audio files
+    '.mp4', '.webm', '.mov', '.avi', '.mkv', '.flv', '.wmv', '.m4v' // Video files
   ],
   onGetUploadParameters,
   onComplete,
