@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1437,6 +1437,13 @@ export default function HRPage() {
             const startIndex = (whosOffPage - 1) * whosOffPageSize;
             const endIndex = startIndex + whosOffPageSize;
             const paginatedTimeOff = sortedTimeOff.slice(startIndex, endIndex);
+
+            // Clamp page number when data changes
+            useEffect(() => {
+              if (totalPages > 0 && whosOffPage > totalPages) {
+                setWhosOffPage(Math.max(1, totalPages));
+              }
+            }, [totalPages, whosOffPage]);
 
             // Removed type color function for privacy
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Check, 
   X, 
@@ -15,7 +16,9 @@ import {
   Eye,
   Calendar,
   User,
-  Trash2
+  Trash2,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -40,6 +43,8 @@ export default function ApprovalBoard() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [actionType, setActionType] = useState<"approve" | "reject" | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [approvalsPage, setApprovalsPage] = useState(1);
+  const [approvalsPageSize, setApprovalsPageSize] = useState(20);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -214,6 +219,20 @@ export default function ApprovalBoard() {
     );
   }
 
+  // Calculate pagination
+  const totalItems = pendingRequests.length;
+  const totalPages = Math.ceil(totalItems / approvalsPageSize);
+  const startIndex = (approvalsPage - 1) * approvalsPageSize;
+  const endIndex = startIndex + approvalsPageSize;
+  const paginatedRequests = pendingRequests.slice(startIndex, endIndex);
+
+  // Clamp page number when data changes
+  useEffect(() => {
+    if (totalPages > 0 && approvalsPage > totalPages) {
+      setApprovalsPage(Math.max(1, totalPages));
+    }
+  }, [totalPages, approvalsPage]);
+
   return (
     <>
       <Card>
@@ -236,7 +255,7 @@ export default function ApprovalBoard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pendingRequests.map((request) => (
+              {paginatedRequests.map((request) => (
                 <TableRow key={request.id}>
                   <TableCell>
                     <div className="flex flex-col">
@@ -319,6 +338,86 @@ export default function ApprovalBoard() {
               ))}
             </TableBody>
           </Table>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-600">Items per page:</span>
+                  <Select value={approvalsPageSize.toString()} onValueChange={(value) => {
+                    setApprovalsPageSize(Number(value));
+                    setApprovalsPage(1);
+                  }}>
+                    <SelectTrigger className="w-20" data-testid="select-approvals-page-size">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span className="text-sm text-gray-600">
+                  Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} requests
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setApprovalsPage(Math.max(1, approvalsPage - 1))}
+                  disabled={approvalsPage === 1}
+                  data-testid="button-approvals-prev"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNumber: number;
+                    if (totalPages <= 5) {
+                      pageNumber = i + 1;
+                    } else if (approvalsPage <= 3) {
+                      pageNumber = i + 1;
+                    } else if (approvalsPage >= totalPages - 2) {
+                      pageNumber = totalPages - 4 + i;
+                    } else {
+                      pageNumber = approvalsPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNumber}
+                        variant={approvalsPage === pageNumber ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setApprovalsPage(pageNumber)}
+                        className="w-9 h-9"
+                        data-testid={`button-approvals-page-${pageNumber}`}
+                      >
+                        {pageNumber}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setApprovalsPage(Math.min(totalPages, approvalsPage + 1))}
+                  disabled={approvalsPage === totalPages}
+                  data-testid="button-approvals-next"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
