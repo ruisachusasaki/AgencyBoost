@@ -12,8 +12,8 @@ import {
   type ClientGroup, type InsertClientGroup,
   type Product, type InsertProduct,
   type ClientProduct, type InsertClientProduct,
-  type Note, type InsertNote,
-  type ClientAppointment, type InsertClientAppointment,
+  type Note, type InsertNote, notes,
+  type ClientAppointment, type InsertClientAppointment, appointments,
   type Document, type InsertDocument,
   type ClientHealthScore, type InsertClientHealthScore, clientHealthScores,
   clientBriefValues,
@@ -6149,17 +6149,93 @@ export class DbStorage implements IStorage {
         .where(or(eq(clients.isArchived, false), isNull(clients.isArchived)));
       const total = Number(totalResult[0]?.count) || 0;
       
-      // Build the query with sorting (excluding archived clients)
-      let query = db.select().from(clients)
+      // Build the query with calculated lastActivity (excluding archived clients)
+      // Calculate lastActivity as the maximum of:
+      // - client's own createdAt
+      // - max task createdAt (tasks table has no updatedAt)
+      // - max note updatedAt or createdAt  
+      // - max appointment createdAt
+      // - max activity createdAt
+      const lastActivitySubquery = sql`
+        GREATEST(
+          ${clients.createdAt},
+          COALESCE((SELECT MAX(tasks.created_at) FROM tasks WHERE tasks.client_id = ${clients.id}), ${clients.createdAt}),
+          COALESCE((SELECT MAX(GREATEST(COALESCE(notes.updated_at, notes.created_at), notes.created_at)) FROM notes WHERE notes.client_id = ${clients.id}), ${clients.createdAt}),
+          COALESCE((SELECT MAX(appointments.created_at) FROM appointments WHERE appointments.client_id = ${clients.id}), ${clients.createdAt}),
+          COALESCE((SELECT MAX(activities.created_at) FROM activities WHERE activities.client_id = ${clients.id}), ${clients.createdAt})
+        )
+      `;
+      
+      let query = db.select({
+        id: clients.id,
+        name: clients.name,
+        email: clients.email,
+        phone: clients.phone,
+        company: clients.company,
+        position: clients.position,
+        status: clients.status,
+        contactType: clients.contactType,
+        contactSource: clients.contactSource,
+        address: clients.address,
+        address2: clients.address2,
+        city: clients.city,
+        state: clients.state,
+        zipCode: clients.zipCode,
+        website: clients.website,
+        notes: clients.notes,
+        tags: clients.tags,
+        clientVertical: clients.clientVertical,
+        contactOwner: clients.contactOwner,
+        profileImage: clients.profileImage,
+        mrr: clients.mrr,
+        invoicingContact: clients.invoicingContact,
+        invoicingEmail: clients.invoicingEmail,
+        paymentTerms: clients.paymentTerms,
+        upsideBonus: clients.upsideBonus,
+        briefBackground: clients.briefBackground,
+        briefObjectives: clients.briefObjectives,
+        briefBrandInfo: clients.briefBrandInfo,
+        briefAudienceInfo: clients.briefAudienceInfo,
+        briefProductsServices: clients.briefProductsServices,
+        briefCompetitors: clients.briefCompetitors,
+        briefMarketingTech: clients.briefMarketingTech,
+        briefMiscellaneous: clients.briefMiscellaneous,
+        growthOsDashboard: clients.growthOsDashboard,
+        storyBrand: clients.storyBrand,
+        styleGuide: clients.styleGuide,
+        googleDriveFolder: clients.googleDriveFolder,
+        testingLog: clients.testingLog,
+        cornerstoneBlueprint: clients.cornerstoneBlueprint,
+        customGpt: clients.customGpt,
+        dndAll: clients.dndAll,
+        dndEmail: clients.dndEmail,
+        dndSms: clients.dndSms,
+        dndCalls: clients.dndCalls,
+        groupId: clients.groupId,
+        customFieldValues: clients.customFieldValues,
+        followers: clients.followers,
+        lastActivity: lastActivitySubquery.as('last_activity'),
+        isArchived: clients.isArchived,
+        createdAt: clients.createdAt,
+      }).from(clients)
         .where(or(eq(clients.isArchived, false), isNull(clients.isArchived)));
       
       if (sortBy) {
-        const column = clients[sortBy as keyof typeof clients];
-        if (column) {
+        if (sortBy === 'lastActivity') {
+          // Sort by calculated lastActivity
           if (sortOrder === 'desc') {
-            query = query.orderBy(desc(column));
+            query = query.orderBy(desc(lastActivitySubquery));
           } else {
-            query = query.orderBy(asc(column));
+            query = query.orderBy(asc(lastActivitySubquery));
+          }
+        } else {
+          const column = clients[sortBy as keyof typeof clients];
+          if (column) {
+            if (sortOrder === 'desc') {
+              query = query.orderBy(desc(column));
+            } else {
+              query = query.orderBy(asc(column));
+            }
           }
         }
       } else {
