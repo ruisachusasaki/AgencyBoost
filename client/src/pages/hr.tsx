@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { 
   CalendarDays, 
@@ -37,7 +38,8 @@ import {
   ChevronRight,
   Trash2,
   Copy,
-  ExternalLink
+  ExternalLink,
+  MoreHorizontal
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -53,6 +55,9 @@ export default function HRPage() {
   
   // Admin permission state
   const [isHRAdmin, setIsHRAdmin] = useState(false);
+  
+  // Responsive tabs state
+  const [visibleTabsCount, setVisibleTabsCount] = useState(10);
   
   // Check if current user has HR admin permissions
   useQuery({
@@ -647,6 +652,31 @@ export default function HRPage() {
     </TableHead>
   );
 
+  // Calculate visible tabs based on screen width
+  useEffect(() => {
+    const calculateVisibleTabs = () => {
+      const width = window.innerWidth;
+      
+      // Responsive breakpoints for tab visibility
+      if (width >= 1280) {
+        setVisibleTabsCount(10); // XL screens - show all tabs
+      } else if (width >= 1024) {
+        setVisibleTabsCount(7); // Large screens
+      } else if (width >= 768) {
+        setVisibleTabsCount(5); // Medium screens
+      } else if (width >= 640) {
+        setVisibleTabsCount(3); // Small screens
+      } else {
+        setVisibleTabsCount(2); // Extra small screens
+      }
+    };
+    
+    calculateVisibleTabs();
+    window.addEventListener('resize', calculateVisibleTabs);
+    
+    return () => window.removeEventListener('resize', calculateVisibleTabs);
+  }, []);
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
@@ -662,33 +692,80 @@ export default function HRPage() {
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex w-full">
-          {[
-            ...(isManager || isAdmin ? [{ id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 }] : []),
-            { id: "staff-directory", name: "Staff Directory", icon: Users, count: filteredStaffData.length },
-            { id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length },
-            { id: "time-off-calendar", name: "Who's Off", icon: Calendar, count: 0 },
-            ...(isManager ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length }] : []),
-            { id: "job-openings", name: "Job Openings", icon: FileText, count: activeJobOpenings.length },
-            { id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length },
-            ...(isManager || isAdmin ? [{ id: "onboarding-submissions", name: "Onboarding Submissions", icon: UserCheck, count: onboardingSubmissions?.length || 0 }] : []),
-            ...(isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
-          ].map((tab) => {
-            const Icon = tab.icon;
+          {(() => {
+            const allTabs = [
+              ...(isManager || isAdmin ? [{ id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 }] : []),
+              { id: "staff-directory", name: "Staff Directory", icon: Users, count: filteredStaffData.length },
+              { id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length },
+              { id: "time-off-calendar", name: "Who's Off", icon: Calendar, count: 0 },
+              ...(isManager ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length }] : []),
+              { id: "job-openings", name: "Job Openings", icon: FileText, count: activeJobOpenings.length },
+              { id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length },
+              ...(isManager || isAdmin ? [{ id: "onboarding-submissions", name: "Onboarding Submissions", icon: UserCheck, count: onboardingSubmissions?.length || 0 }] : []),
+              ...(isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
+            ];
+            
+            const visibleTabs = allTabs.slice(0, visibleTabsCount);
+            const overflowTabs = allTabs.slice(visibleTabsCount);
+            
             return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-2 border-b-2 font-medium text-sm flex-1 flex items-center justify-center gap-2 whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "border-primary text-primary"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {tab.name} {tab.count > 0 && `(${tab.count})`}
-              </button>
+              <>
+                {visibleTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`py-2 px-2 border-b-2 font-medium text-sm flex-1 flex items-center justify-center gap-2 whitespace-nowrap ${
+                        activeTab === tab.id
+                          ? "border-primary text-primary"
+                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      }`}
+                      data-testid={`tab-${tab.id}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {tab.name} {tab.count > 0 && `(${tab.count})`}
+                    </button>
+                  );
+                })}
+                
+                {overflowTabs.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className={`py-2 px-3 border-b-2 font-medium text-sm flex items-center justify-center gap-2 whitespace-nowrap ${
+                          overflowTabs.some(tab => tab.id === activeTab)
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        }`}
+                        data-testid="tab-overflow-menu"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      {overflowTabs.map((tab) => {
+                        const Icon = tab.icon;
+                        return (
+                          <DropdownMenuItem
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-2 ${
+                              activeTab === tab.id ? "bg-primary/10 text-primary" : ""
+                            }`}
+                            data-testid={`dropdown-tab-${tab.id}`}
+                          >
+                            <Icon className="h-4 w-4" />
+                            {tab.name} {tab.count > 0 && `(${tab.count})`}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </>
             );
-          })}
+          })()}
         </nav>
       </div>
 
