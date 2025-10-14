@@ -1638,8 +1638,8 @@ export default function HRPage() {
               </div>
             </div>
           ) : (
-            <div className="border rounded-lg">
-              <Table>
+            <div className="border rounded-lg overflow-hidden bg-white">
+              <Table className="bg-white">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
@@ -1654,7 +1654,7 @@ export default function HRPage() {
                 </TableHeader>
                 <TableBody>
                   {onboardingSubmissions.map((submission: any) => (
-                    <TableRow key={submission.id} data-testid={`row-submission-${submission.id}`}>
+                    <TableRow key={submission.id} className="hover:bg-gray-50" data-testid={`row-submission-${submission.id}`}>
                       <TableCell>
                         <div>
                           <p className="font-medium text-slate-900">{submission.name}</p>
