@@ -658,13 +658,13 @@ export default function HRPage() {
       const width = window.innerWidth;
       
       // Responsive breakpoints for tab visibility
-      if (width >= 1280) {
+      if (width >= 1400) {
         setVisibleTabsCount(10); // XL screens - show all tabs
-      } else if (width >= 1024) {
-        setVisibleTabsCount(7); // Large screens
-      } else if (width >= 768) {
-        setVisibleTabsCount(5); // Medium screens
-      } else if (width >= 640) {
+      } else if (width >= 1200) {
+        setVisibleTabsCount(6); // Large screens
+      } else if (width >= 900) {
+        setVisibleTabsCount(4); // Medium screens
+      } else if (width >= 600) {
         setVisibleTabsCount(3); // Small screens
       } else {
         setVisibleTabsCount(2); // Extra small screens
@@ -716,7 +716,7 @@ export default function HRPage() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`py-2 px-2 border-b-2 font-medium text-sm flex-1 flex items-center justify-center gap-2 whitespace-nowrap ${
+                      className={`py-2 px-4 border-b-2 font-medium text-sm flex items-center justify-center gap-2 whitespace-nowrap ${
                         activeTab === tab.id
                           ? "border-primary text-primary"
                           : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
