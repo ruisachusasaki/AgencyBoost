@@ -23,6 +23,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - Responsive sidebar navigation and mobile-first design utilizing Radix UI primitives, shadcn/ui components, and Tailwind CSS for optimized 3-column layouts.
 - Enhanced visual design for elements like pipeline views and a professional icon picker.
 - Component-scoped CSS with design system variables to prevent styling issues.
+- Responsive tab navigation with intelligent overflow menus: HR section tabs automatically adapt to screen size, showing visible tabs inline and placing overflow tabs in a "..." dropdown menu. Breakpoints: XL (≥1280px) shows all tabs, Large (≥1024px) shows 7, Medium (≥768px) shows 5, Small (≥640px) shows 3, and Extra Small (<640px) shows 2 tabs.
 
 ### Technical Implementations
 - **Authentication & Authorization**: Production-ready Replit Auth OIDC with session management, role-based access control (Admin, Manager, User, Accounting), and granular permissions. Includes automatic user provisioning and first-user admin bootstrapping.
