@@ -88,6 +88,10 @@ export default function HRPage() {
   const [timeOffPage, setTimeOffPage] = useState(1);
   const [timeOffPageSize, setTimeOffPageSize] = useState(20);
   
+  // Pagination state for who's off calendar
+  const [whosOffPage, setWhosOffPage] = useState(1);
+  const [whosOffPageSize, setWhosOffPageSize] = useState(20);
+  
   // Filter states for applications
   const [applicationPositionFilter, setApplicationPositionFilter] = useState("all");
   const [applicationStatusFilter, setApplicationStatusFilter] = useState("all");
@@ -1427,6 +1431,13 @@ export default function HRPage() {
             const sortedTimeOff = Object.entries(timeOffByDateRange)
               .sort(([,a], [,b]) => a.startDate.getTime() - b.startDate.getTime());
 
+            // Calculate pagination
+            const totalItems = sortedTimeOff.length;
+            const totalPages = Math.ceil(totalItems / whosOffPageSize);
+            const startIndex = (whosOffPage - 1) * whosOffPageSize;
+            const endIndex = startIndex + whosOffPageSize;
+            const paginatedTimeOff = sortedTimeOff.slice(startIndex, endIndex);
+
             // Removed type color function for privacy
 
             return (
@@ -1440,49 +1451,129 @@ export default function HRPage() {
                     </CardContent>
                   </Card>
                 ) : (
-                  sortedTimeOff.map(([dateRange, data]) => (
-                    <Card key={dateRange} className="overflow-hidden">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg flex items-center gap-2">
-                            <Calendar className="h-5 w-5 text-blue-600" />
-                            {dateRange}
-                          </CardTitle>
-                          <Badge variant="outline" className="text-xs">
-                            {data.requests.length} {data.requests.length === 1 ? 'person' : 'people'} off
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="space-y-3">
-                          {data.requests.map((request: any) => (
-                            <div key={request.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10">
-                                  <AvatarFallback className="text-sm font-medium">
-                                    {request.staffName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="font-medium text-slate-900">{request.staffName}</p>
-                                  <p className="text-sm text-slate-600">{request.department} • {request.position}</p>
+                  <>
+                    {paginatedTimeOff.map(([dateRange, data]) => (
+                      <Card key={dateRange} className="overflow-hidden">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <Calendar className="h-5 w-5 text-blue-600" />
+                              {dateRange}
+                            </CardTitle>
+                            <Badge variant="outline" className="text-xs">
+                              {data.requests.length} {data.requests.length === 1 ? 'person' : 'people'} off
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="space-y-3">
+                            {data.requests.map((request: any) => (
+                              <div key={request.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-10 w-10">
+                                    <AvatarFallback className="text-sm font-medium">
+                                      {request.staffName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-medium text-slate-900">{request.staffName}</p>
+                                    <p className="text-sm text-slate-600">{request.department} • {request.position}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <Badge variant="outline" className="bg-slate-50 text-slate-700">
+                                    Time Off
+                                  </Badge>
+                                  <p className="text-sm text-slate-600 mt-1">
+                                    {request.totalDays} {request.totalDays === 1 ? 'day' : 'days'}
+                                    {request.totalHours && ` (${request.totalHours}h)`}
+                                  </p>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <Badge variant="outline" className="bg-slate-50 text-slate-700">
-                                  Time Off
-                                </Badge>
-                                <p className="text-sm text-slate-600 mt-1">
-                                  {request.totalDays} {request.totalDays === 1 ? 'day' : 'days'}
-                                  {request.totalHours && ` (${request.totalHours}h)`}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    
+                    {/* Pagination Controls */}
+                    <div className="flex items-center justify-between pt-4 border-t">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-600">Items per page:</span>
+                          <Select value={whosOffPageSize.toString()} onValueChange={(value) => {
+                            setWhosOffPageSize(Number(value));
+                            setWhosOffPage(1);
+                          }}>
+                            <SelectTrigger className="w-20" data-testid="select-whosoff-page-size">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="10">10</SelectItem>
+                              <SelectItem value="20">20</SelectItem>
+                              <SelectItem value="50">50</SelectItem>
+                              <SelectItem value="100">100</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                        <span className="text-sm text-gray-600">
+                          Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} date ranges
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setWhosOffPage(Math.max(1, whosOffPage - 1))}
+                          disabled={whosOffPage === 1}
+                          data-testid="button-whosoff-prev"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Previous
+                        </Button>
+                        
+                        <div className="flex items-center space-x-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNumber: number;
+                            if (totalPages <= 5) {
+                              pageNumber = i + 1;
+                            } else if (whosOffPage <= 3) {
+                              pageNumber = i + 1;
+                            } else if (whosOffPage >= totalPages - 2) {
+                              pageNumber = totalPages - 4 + i;
+                            } else {
+                              pageNumber = whosOffPage - 2 + i;
+                            }
+                            
+                            return (
+                              <Button
+                                key={pageNumber}
+                                variant={whosOffPage === pageNumber ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setWhosOffPage(pageNumber)}
+                                className="w-9 h-9"
+                                data-testid={`button-whosoff-page-${pageNumber}`}
+                              >
+                                {pageNumber}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setWhosOffPage(Math.min(totalPages, whosOffPage + 1))}
+                          disabled={whosOffPage === totalPages}
+                          data-testid="button-whosoff-next"
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </>
                 )}
                 
                 {sortedTimeOff.length > 0 && (
