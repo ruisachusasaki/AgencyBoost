@@ -2841,6 +2841,53 @@ export const insertNewHireOnboardingSubmissionSchema = createInsertSchema(newHir
 export type NewHireOnboardingSubmission = typeof newHireOnboardingSubmissions.$inferSelect;
 export type InsertNewHireOnboardingSubmission = z.infer<typeof insertNewHireOnboardingSubmissionSchema>;
 
+// Expense Report Form Configuration - stores the customizable form field configuration
+export const expenseReportFormConfig = pgTable("expense_report_form_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fields: jsonb("fields").notNull(), // Array of form field configurations
+  updatedBy: varchar("updated_by").notNull().references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertExpenseReportFormConfigSchema = createInsertSchema(expenseReportFormConfig).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type ExpenseReportFormConfig = typeof expenseReportFormConfig.$inferSelect;
+export type InsertExpenseReportFormConfig = z.infer<typeof insertExpenseReportFormConfigSchema>;
+
+// Expense Report Submissions - when someone submits an expense report
+export const expenseReportSubmissions = pgTable("expense_report_submissions", {
+  id: serial("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  supervisorId: uuid("supervisor_id").references(() => staff.id),
+  purpose: text("purpose"),
+  expenseType: text("expense_type"), // Hotel, Fuel, Travel, Meals, Education/Training, Other
+  expenseDate: date("expense_date"),
+  expenseTotal: decimal("expense_total", { precision: 10, scale: 2 }),
+  departmentTeam: text("department_team"),
+  clientId: varchar("client_id").references(() => clients.id),
+  reimbursement: text("reimbursement"), // Yes, No, Not Sure
+  paymentMethod: text("payment_method"), // Joe's Card, Che's Card, Personal Card
+  notes: text("notes"),
+  receiptFiles: text("receipt_files").array(), // array of file URLs/paths
+  status: text("status").notNull().default("pending"), // pending, approved, rejected, processed
+  submittedById: uuid("submitted_by_id").references(() => staff.id),
+  reviewedBy: uuid("reviewed_by").references(() => staff.id),
+  reviewedAt: timestamp("reviewed_at"),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  customFieldData: jsonb("custom_field_data"), // for storing custom form field values
+});
+
+export const insertExpenseReportSubmissionSchema = createInsertSchema(expenseReportSubmissions).omit({
+  id: true,
+  submittedAt: true,
+});
+
+export type ExpenseReportSubmission = typeof expenseReportSubmissions.$inferSelect;
+export type InsertExpenseReportSubmission = z.infer<typeof insertExpenseReportSubmissionSchema>;
+
 export const insertFormFieldSchema = createInsertSchema(formFields).omit({
   id: true,
   createdAt: true,
