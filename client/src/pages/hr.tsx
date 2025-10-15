@@ -816,7 +816,7 @@ export default function HRPage() {
       
       // Responsive breakpoints for tab visibility
       if (width >= 1400) {
-        setVisibleTabsCount(10); // XL screens - show all tabs
+        setVisibleTabsCount(20); // XL screens - show all tabs (max possible is ~11)
       } else if (width >= 1200) {
         setVisibleTabsCount(6); // Large screens
       } else if (width >= 900) {
