@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import JobApplicationFormEditor from "@/components/hr/job-application-form-editor";
 import NewHireOnboardingFormEditor from "@/components/hr/new-hire-onboarding-form-editor";
+import ExpenseReportFormEditor from "@/components/hr/expense-report-form-editor";
 import { Link } from "wouter";
 
 // Schema for time off categories
@@ -171,7 +172,7 @@ export default function HRSettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="categories" className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4" />
             Time Off Categories
@@ -187,6 +188,10 @@ export default function HRSettingsPage() {
           <TabsTrigger value="new-hire-onboarding-form" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             New Hire Onboarding Form
+          </TabsTrigger>
+          <TabsTrigger value="expense-report-form" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Expense Report Form
           </TabsTrigger>
         </TabsList>
 
@@ -278,6 +283,11 @@ export default function HRSettingsPage() {
         {/* New Hire Onboarding Form Tab */}
         <TabsContent value="new-hire-onboarding-form" className="space-y-6">
           <NewHireOnboardingFormEditor />
+        </TabsContent>
+
+        {/* Expense Report Form Tab */}
+        <TabsContent value="expense-report-form" className="space-y-6">
+          <ExpenseReportFormEditor />
         </TabsContent>
 
       </Tabs>
