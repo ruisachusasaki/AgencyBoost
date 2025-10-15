@@ -4,7 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./replitAuth";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions } from "@shared/schema";
+import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users } from "@shared/schema";
 
 /**
  * Startup migration to ensure client brief columns exist
@@ -563,6 +563,56 @@ async function initializeDefaultTeamPositions() {
   }
 }
 
+/**
+ * Initialize default expense report form fields
+ * Creates default form configuration with 12 standard fields
+ */
+async function initializeDefaultExpenseReportFormFields() {
+  try {
+    log("Running startup migration: initializeDefaultExpenseReportFormFields");
+    
+    // Check if config already exists
+    const existingConfig = await db.select().from(expenseReportFormConfig).limit(1);
+    if (existingConfig.length > 0) {
+      log("Expense report form config already exists - skipping initialization");
+      return;
+    }
+
+    // Get the first admin user to be the creator
+    const [adminUser] = await db.select().from(users).where(eq(users.role, 'Admin')).limit(1);
+    
+    if (!adminUser) {
+      log("WARNING: No admin user found to create default expense report form config");
+      return;
+    }
+
+    const defaultFields = [
+      { id: 'full_name', label: 'Full Name', type: 'text', placeholder: 'Enter your full name', required: true, order: 0 },
+      { id: 'supervisor', label: 'Your Supervisor', type: 'user-dropdown', required: true, order: 1 },
+      { id: 'purpose', label: 'Purpose of the Expense', type: 'text', placeholder: 'Enter the purpose of this expense', required: true, order: 2 },
+      { id: 'expense_type', label: 'Expense Type', type: 'select', required: true, options: ['Hotel', 'Fuel', 'Travel', 'Meals', 'Education/Training', 'Other'], order: 3 },
+      { id: 'expense_date', label: 'Expense Date', type: 'date', required: true, order: 4 },
+      { id: 'expense_total', label: 'Expense(s) Total', type: 'currency', placeholder: '0.00', required: true, order: 5 },
+      { id: 'department_team', label: 'Department/Team', type: 'select', required: true, order: 6 },
+      { id: 'client', label: 'Client', type: 'select', required: false, order: 7 },
+      { id: 'reimbursement', label: 'Reimbursement', type: 'select', required: true, options: ['Yes', 'No', 'Not Sure'], order: 8 },
+      { id: 'payment_method', label: 'Payment Method', type: 'select', required: true, options: ["Joe's Card", "Che's Card", "Personal Card"], order: 9 },
+      { id: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Add any additional notes or details', required: false, order: 10 },
+      { id: 'receipts', label: 'Receipt(s)', type: 'file', required: false, order: 11 }
+    ];
+
+    await db.insert(expenseReportFormConfig).values({
+      fields: defaultFields,
+      updatedBy: adminUser.id
+    });
+
+    log("Default expense report form fields initialization completed successfully");
+  } catch (error: any) {
+    log(`Default expense report form fields initialization error: ${error.message}`);
+    log("WARNING: Expense report form initialization failed - using form defaults");
+  }
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -607,6 +657,7 @@ app.use((req, res, next) => {
   await initializeDefaultCalendars();
   await generateAnniversaryAndBirthdayEvents();
   await initializeDefaultTeamPositions();
+  await initializeDefaultExpenseReportFormFields();
   
   // Setup Replit Auth
   await setupAuth(app);
