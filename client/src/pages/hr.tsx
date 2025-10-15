@@ -515,6 +515,51 @@ export default function HRPage() {
     });
   }, [staffData, departmentFilter, positionFilter]);
 
+  // Who's Off calendar data calculation (moved to top level to avoid hooks inside conditionals)
+  const whosOffSortedTimeOff = useMemo(() => {
+    const today = new Date();
+    const sixtyDaysFromNow = new Date();
+    sixtyDaysFromNow.setDate(today.getDate() + 60);
+
+    const approvedTimeOff = filteredTimeOffRequests.filter(request => {
+      if (request.status !== 'approved') return false;
+      const startDate = new Date(request.startDate);
+      const endDate = new Date(request.endDate);
+      return (startDate <= sixtyDaysFromNow && endDate >= today);
+    });
+
+    const timeOffByDateRange = approvedTimeOff.reduce((acc, request) => {
+      const staff = staffData.find(s => s.id === request.staffId);
+      if (!staff) return acc;
+
+      const startDate = new Date(request.startDate);
+      const endDate = new Date(request.endDate);
+      const startStr = startDate.toLocaleDateString();
+      const endStr = endDate.toLocaleDateString();
+      const dateRangeKey = startStr === endStr ? startStr : `${startStr} - ${endStr}`;
+      
+      if (!acc[dateRangeKey]) {
+        acc[dateRangeKey] = { startDate, endDate, requests: [] };
+      }
+      
+      acc[dateRangeKey].requests.push({
+        ...request,
+        staffName: `${staff.firstName} ${staff.lastName}`,
+        department: staff.department,
+        position: staff.position
+      });
+      
+      return acc;
+    }, {} as Record<string, any>);
+
+    return Object.entries(timeOffByDateRange)
+      .sort(([,a], [,b]) => a.startDate.getTime() - b.startDate.getTime());
+  }, [filteredTimeOffRequests, staffData]);
+
+  const whosOffTotalPages = useMemo(() => {
+    return Math.ceil(whosOffSortedTimeOff.length / whosOffPageSize);
+  }, [whosOffSortedTimeOff.length, whosOffPageSize]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
@@ -676,6 +721,13 @@ export default function HRPage() {
     
     return () => window.removeEventListener('resize', calculateVisibleTabs);
   }, []);
+
+  // Clamp Who's Off page number when data changes
+  useEffect(() => {
+    if (whosOffTotalPages > 0 && whosOffPage > whosOffTotalPages) {
+      setWhosOffPage(Math.max(1, whosOffTotalPages));
+    }
+  }, [whosOffTotalPages, whosOffPage]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -1458,71 +1510,12 @@ export default function HRPage() {
           </div>
 
           {(() => {
-            // Get approved time off requests for the next 60 days
-            const today = new Date();
-            const sixtyDaysFromNow = new Date();
-            sixtyDaysFromNow.setDate(today.getDate() + 60);
-
-            // Filter approved time off requests within date range
-            const approvedTimeOff = filteredTimeOffRequests.filter(request => {
-              if (request.status !== 'approved') return false;
-              
-              const startDate = new Date(request.startDate);
-              const endDate = new Date(request.endDate);
-              
-              return (startDate <= sixtyDaysFromNow && endDate >= today);
-            });
-
-            // Group time off by date ranges
-            const timeOffByDateRange = approvedTimeOff.reduce((acc, request) => {
-              const staff = staffData.find(s => s.id === request.staffId);
-              if (!staff) return acc;
-
-              const startDate = new Date(request.startDate);
-              const endDate = new Date(request.endDate);
-              
-              // Create date range key
-              const startStr = startDate.toLocaleDateString();
-              const endStr = endDate.toLocaleDateString();
-              const dateRangeKey = startStr === endStr ? startStr : `${startStr} - ${endStr}`;
-              
-              if (!acc[dateRangeKey]) {
-                acc[dateRangeKey] = {
-                  startDate,
-                  endDate,
-                  requests: []
-                };
-              }
-              
-              acc[dateRangeKey].requests.push({
-                ...request,
-                staffName: `${staff.firstName} ${staff.lastName}`,
-                department: staff.department,
-                position: staff.position
-              });
-              
-              return acc;
-            }, {} as Record<string, any>);
-
-            // Sort by date
-            const sortedTimeOff = Object.entries(timeOffByDateRange)
-              .sort(([,a], [,b]) => a.startDate.getTime() - b.startDate.getTime());
-
-            // Calculate pagination
-            const totalItems = sortedTimeOff.length;
-            const totalPages = Math.ceil(totalItems / whosOffPageSize);
+            // Use pre-calculated sorted time off data
+            const sortedTimeOff = whosOffSortedTimeOff;
+            const totalPages = whosOffTotalPages;
             const startIndex = (whosOffPage - 1) * whosOffPageSize;
             const endIndex = startIndex + whosOffPageSize;
             const paginatedTimeOff = sortedTimeOff.slice(startIndex, endIndex);
-
-            // Clamp page number when data changes
-            useEffect(() => {
-              if (totalPages > 0 && whosOffPage > totalPages) {
-                setWhosOffPage(Math.max(1, totalPages));
-              }
-            }, [totalPages, whosOffPage]);
-
-            // Removed type color function for privacy
 
             return (
               <div className="space-y-4">
