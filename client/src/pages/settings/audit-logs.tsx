@@ -94,12 +94,13 @@ export default function AuditLogs() {
     }
   ]);
 
-  const actions = ["created", "updated", "deleted"];
-  const entityTypes = ["contact", "project", "campaign", "task", "invoice"];
-  const users = Object.values(userLookup);
-
   // Use real data if available, otherwise show mock data
   const displayLogs = auditLogsWithUserNames.length > 0 ? auditLogsWithUserNames : mockAuditLogs;
+  
+  // Extract unique actions and entity types from actual logs
+  const actions = Array.from(new Set(displayLogs.map(log => log.action))).sort();
+  const entityTypes = Array.from(new Set(displayLogs.map(log => log.entityType))).sort();
+  const users = Object.values(userLookup);
   
   const filteredLogs = displayLogs.filter(log => {
     const matchesSearch = 
@@ -119,19 +120,49 @@ export default function AuditLogs() {
       case "created": return "bg-green-100 text-green-800 border-green-200";
       case "updated": return "bg-blue-100 text-blue-800 border-blue-200"; 
       case "deleted": return "bg-red-100 text-red-800 border-red-200";
+      case "manual_log": return "bg-purple-100 text-purple-800 border-purple-200";
       default: return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
   const getEntityIcon = (entityType: string) => {
+    // More comprehensive icon mapping
     switch (entityType) {
       case "contact": return "👤";
       case "project": return "📁";
       case "campaign": return "📢";
       case "task": return "✓";
       case "invoice": return "📄";
+      case "login_security": return "🔐";
+      case "client_portal_login_attempt": return "🔐";
+      case "appointment": return "📅";
+      case "automation_trigger": return "⚡";
+      case "calendar": return "📆";
+      case "client_health_score": return "❤️";
+      case "quote": return "💰";
+      case "lead": return "🎯";
+      case "staff": return "👥";
+      case "role": return "🎭";
+      case "permission_audit_access": return "🔒";
+      case "email": return "📧";
+      case "sms": return "💬";
+      case "document": return "📄";
+      case "note": return "📝";
+      case "workflow": return "🔄";
+      case "training_course": return "📚";
+      case "training_lesson": return "📖";
+      case "department": return "🏢";
+      case "time_off_request": return "🏖️";
       default: return "📝";
     }
+  };
+
+  // Format entity type for display (convert snake_case to Title Case)
+  const formatEntityType = (entityType: string) => {
+    return entityType
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   return (
@@ -206,7 +237,7 @@ export default function AuditLogs() {
                     <SelectItem value="all">All Types</SelectItem>
                     {entityTypes.map((entity) => (
                       <SelectItem key={entity} value={entity}>
-                        {entity.charAt(0).toUpperCase() + entity.slice(1)}
+                        {formatEntityType(entity)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -316,9 +347,9 @@ export default function AuditLogs() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
                         <Badge className={getActionBadgeColor(log.action)}>
-                          {log.action.toUpperCase()}
+                          {log.action.toUpperCase().replace('_', ' ')}
                         </Badge>
-                        <span className="text-sm font-medium">{log.entityType}</span>
+                        <span className="text-sm font-medium">{formatEntityType(log.entityType)}</span>
                         <span className="text-sm text-gray-500">→</span>
                         <span className="text-sm font-semibold text-gray-900">{log.entityName}</span>
                       </div>
