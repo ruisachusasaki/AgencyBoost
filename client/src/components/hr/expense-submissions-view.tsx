@@ -65,7 +65,7 @@ export default function ExpenseSubmissionsView() {
   // Sortable header component
   const SortableHeader = ({ field, children }: { field: keyof ExpenseSubmission; children: React.ReactNode }) => (
     <TableHead
-      className="cursor-pointer select-none hover:bg-slate-50"
+      className="cursor-pointer select-none hover:bg-gray-50"
       onClick={() => {
         if (sortField === field) {
           setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -74,12 +74,26 @@ export default function ExpenseSubmissionsView() {
           setSortDirection('asc');
         }
       }}
+      data-testid={`header-sort-${field}`}
     >
       <div className="flex items-center gap-2">
         {children}
-        {sortField === field && (
-          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-        )}
+        <div className="flex flex-col ml-1">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              sortField === field && sortDirection === 'asc' 
+                ? 'text-primary' 
+                : 'text-gray-400'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              sortField === field && sortDirection === 'desc' 
+                ? 'text-primary' 
+                : 'text-gray-400'
+            }`} 
+          />
+        </div>
       </div>
     </TableHead>
   );
