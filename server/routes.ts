@@ -17,6 +17,7 @@ import {
   insertJobApplicationWatcherSchema,
   insertJobOpeningSchema, insertJobApplicationFormConfigSchema,
   insertNewHireOnboardingFormConfigSchema, insertNewHireOnboardingSubmissionSchema,
+  insertExpenseReportFormConfigSchema, insertExpenseReportSubmissionSchema,
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
   insertProductBundleSchema, insertBundleProductSchema,
@@ -46,7 +47,7 @@ import {
   socialMediaAccounts, socialMediaPosts, workflows, workflowTemplates, workflowExecutions, workflowActionAnalytics, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, jobApplicationWatchers, applicationStageHistory, timeOffBalances,
-  jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, teamPositions, clientTeamAssignments,
+  jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, expenseReportFormConfig, expenseReportSubmissions, teamPositions, clientTeamAssignments,
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
@@ -16218,6 +16219,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedSubmission);
     } catch (error) {
       console.error("Error updating new hire onboarding submission:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update submission" });
+    }
+  });
+
+  // Expense Report Form Configuration Routes
+  app.get("/api/expense-report-form-config", async (req, res) => {
+    try {
+      let config;
+      try {
+        [config] = await db.select()
+          .from(expenseReportFormConfig)
+          .orderBy(desc(expenseReportFormConfig.updatedAt))
+          .limit(1);
+      } catch (tableError) {
+        console.log("Expense report form config table not found, using defaults");
+        config = null;
+      }
+      
+      if (!config) {
+        // Return default configuration matching the requirements
+        return res.json({
+          id: null,
+          fields: [],
+          updatedBy: null,
+          updatedAt: null
+        });
+      }
+      
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching expense report form config:", error);
+      res.status(500).json({ error: "Failed to fetch form configuration" });
+    }
+  });
+
+  app.post("/api/expense-report-form-config", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      
+      const validatedData = insertExpenseReportFormConfigSchema.parse({
+        ...req.body,
+        updatedBy: currentUserId
+      });
+
+      // Delete existing config and insert new one
+      await db.delete(expenseReportFormConfig);
+      const [newConfig] = await db.insert(expenseReportFormConfig).values(validatedData).returning();
+
+      res.json(newConfig);
+    } catch (error) {
+      console.error("Error saving expense report form config:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to save form configuration" });
+    }
+  });
+
+  // Expense Report Submission Routes
+  app.post("/api/expense-report-submissions", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      
+      const validatedData = insertExpenseReportSubmissionSchema.parse({
+        ...req.body,
+        submittedById: currentUserId
+      });
+
+      const [newSubmission] = await db.insert(expenseReportSubmissions)
+        .values(validatedData)
+        .returning();
+
+      res.status(201).json(newSubmission);
+    } catch (error) {
+      console.error("Error creating expense report submission:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create submission" });
+    }
+  });
+
+  app.get("/api/expense-report-submissions", requireAuth(), async (req, res) => {
+    try {
+      // Check if user has admin or accounting role to view all submissions
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      const hasAccountingPermission = await hasPermission(currentUserId, 'accounting', 'canView');
+      
+      let submissions;
+      if (isAdmin || hasAccountingPermission) {
+        // Admins and Accounting users can see all submissions
+        submissions = await db.select()
+          .from(expenseReportSubmissions)
+          .orderBy(desc(expenseReportSubmissions.submittedAt));
+      } else {
+        // Regular users can only see their own submissions
+        submissions = await db.select()
+          .from(expenseReportSubmissions)
+          .where(eq(expenseReportSubmissions.submittedById, currentUserId))
+          .orderBy(desc(expenseReportSubmissions.submittedAt));
+      }
+
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching expense report submissions:", error);
+      res.status(500).json({ error: "Failed to fetch submissions" });
+    }
+  });
+
+  app.put("/api/expense-report-submissions/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      const hasAccountingPermission = await hasPermission(currentUserId, 'accounting', 'canEdit');
+      
+      const validatedData = insertExpenseReportSubmissionSchema.partial().parse({
+        ...req.body,
+        ...(isAdmin || hasAccountingPermission ? { reviewedBy: currentUserId, reviewedAt: new Date() } : {})
+      });
+
+      const [updatedSubmission] = await db.update(expenseReportSubmissions)
+        .set(validatedData)
+        .where(eq(expenseReportSubmissions.id, Number(id)))
+        .returning();
+
+      if (!updatedSubmission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+
+      res.json(updatedSubmission);
+    } catch (error) {
+      console.error("Error updating expense report submission:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
