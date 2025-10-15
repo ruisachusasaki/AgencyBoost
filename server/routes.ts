@@ -16349,6 +16349,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/expense-report-submissions/:id/status", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      const hasAccountingPermission = await hasPermission(currentUserId, 'accounting', 'canEdit');
+      
+      if (!isAdmin && !hasAccountingPermission) {
+        return res.status(403).json({ error: "You do not have permission to update submission status" });
+      }
+
+      // Validate status
+      const validStatuses = ['pending', 'approved', 'rejected'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: "Invalid status. Must be: pending, approved, or rejected" });
+      }
+
+      const [updatedSubmission] = await db.update(expenseReportSubmissions)
+        .set({ 
+          status,
+          reviewedBy: currentUserId,
+          reviewedAt: new Date()
+        })
+        .where(eq(expenseReportSubmissions.id, Number(id)))
+        .returning();
+
+      if (!updatedSubmission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+
+      res.json(updatedSubmission);
+    } catch (error) {
+      console.error("Error updating expense report submission status:", error);
+      res.status(500).json({ error: "Failed to update submission status" });
+    }
+  });
+
   app.put("/api/expense-report-submissions/:id", requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
