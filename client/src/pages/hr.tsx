@@ -50,6 +50,7 @@ import { Link } from "wouter";
 import TimeOffRequestForm from "@/components/forms/time-off-request-form";
 import ApprovalBoard from "@/components/hr/approval-board";
 import ExpenseReportForm from "@/components/hr/expense-report-form";
+import ExpenseSubmissionsView from "@/components/hr/expense-submissions-view";
 
 export default function HRPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -3007,15 +3008,11 @@ export default function HRPage() {
       {activeTab === "expense-submissions" && (isAdmin || isAccounting) && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold">Expense Submissions</h2>
+            <h2 className="text-2xl font-bold">Expense Report Submissions</h2>
             <p className="text-slate-600">Review and manage expense report submissions</p>
           </div>
 
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">Expense submissions coming soon...</p>
-            </CardContent>
-          </Card>
+          <ExpenseSubmissionsView />
         </div>
       )}
 
