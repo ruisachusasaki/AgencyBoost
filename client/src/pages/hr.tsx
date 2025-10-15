@@ -39,7 +39,9 @@ import {
   Trash2,
   Copy,
   ExternalLink,
-  MoreHorizontal
+  MoreHorizontal,
+  DollarSign,
+  Receipt
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -47,6 +49,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import TimeOffRequestForm from "@/components/forms/time-off-request-form";
 import ApprovalBoard from "@/components/hr/approval-board";
+import ExpenseReportForm from "@/components/hr/expense-report-form";
 
 export default function HRPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -192,6 +195,7 @@ export default function HRPage() {
   
   const isManager = directReports.length > 0;
   const isAdmin = ((currentUser as any)?.role?.toLowerCase() === 'admin') || (currentUser as any)?.id?.startsWith('dev-admin'); // Include dev admin detection with case-insensitive check
+  const isAccounting = (currentUser as any)?.role?.toLowerCase() === 'accounting';
   const canViewAllData = isAdmin;
   const canManageJobOpenings = isManager || isAdmin;
   
@@ -861,6 +865,8 @@ export default function HRPage() {
               { id: "job-openings", name: "Job Openings", icon: FileText, count: activeJobOpenings.length },
               { id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length },
               ...(isManager || isAdmin ? [{ id: "onboarding-submissions", name: "Onboarding Submissions", icon: UserCheck, count: onboardingSubmissions?.length || 0 }] : []),
+              { id: "expense-report", name: "Expense Report", icon: DollarSign, count: 0 },
+              ...(isAdmin || isAccounting ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
             ];
             
@@ -2982,6 +2988,32 @@ export default function HRPage() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === "expense-report" && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold">Submit Expense Report</h2>
+            <p className="text-slate-600">Submit expenses for reporting and reimbursement</p>
+          </div>
+
+          <ExpenseReportForm />
+        </div>
+      )}
+
+      {activeTab === "expense-submissions" && (isAdmin || isAccounting) && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold">Expense Submissions</h2>
+            <p className="text-slate-600">Review and manage expense report submissions</p>
+          </div>
+
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">Expense submissions coming soon...</p>
             </CardContent>
           </Card>
         </div>
