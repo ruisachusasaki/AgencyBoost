@@ -854,8 +854,8 @@ export default function HRPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex w-full">
+      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
+        <nav className="-mb-px flex">
           {(() => {
             const allTabs = [
               ...(isManager || isAdmin ? [{ id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 }] : []),
@@ -882,7 +882,7 @@ export default function HRPage() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`py-2 px-4 border-b-2 font-medium text-sm flex items-center justify-center gap-2 whitespace-nowrap ${
+                      className={`py-2 px-4 border-b-2 font-medium text-sm flex items-center justify-center gap-2 whitespace-nowrap flex-shrink-0 ${
                         activeTab === tab.id
                           ? "border-primary text-primary"
                           : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
