@@ -160,6 +160,12 @@ export default function HRPage() {
   const [applicationSortField, setApplicationSortField] = useState<'applicantName' | 'positionTitle' | 'stage' | 'rating' | 'appliedAt' | null>(null);
   const [applicationSortDirection, setApplicationSortDirection] = useState<'asc' | 'desc'>('asc');
 
+  // Onboarding submissions sorting and pagination state
+  const [onboardingSortField, setOnboardingSortField] = useState<'name' | 'startDate' | 'phone' | 'emergencyContact' | 'paymentPlatform' | 'submitted' | 'status' | null>(null);
+  const [onboardingSortDirection, setOnboardingSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [onboardingPage, setOnboardingPage] = useState(1);
+  const [onboardingPageSize, setOnboardingPageSize] = useState(20);
+
   // Fetch staff data
   const { data: staffData = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
@@ -689,6 +695,107 @@ export default function HRPage() {
             className={`h-3 w-3 -mt-1 ${
               applicationSortField === field && applicationSortDirection === 'desc' 
                 ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
+
+  // Onboarding sorting handler
+  const handleOnboardingSort = (field: 'name' | 'startDate' | 'phone' | 'emergencyContact' | 'paymentPlatform' | 'submitted' | 'status') => {
+    if (onboardingSortField === field) {
+      setOnboardingSortDirection(onboardingSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setOnboardingSortField(field);
+      setOnboardingSortDirection('asc');
+    }
+  };
+
+  // Sort and paginate onboarding submissions
+  const sortedOnboardingSubmissions = useMemo(() => {
+    let sorted = [...onboardingSubmissions];
+    
+    if (onboardingSortField) {
+      sorted.sort((a: any, b: any) => {
+        let aValue: any;
+        let bValue: any;
+
+        switch (onboardingSortField) {
+          case 'name':
+            aValue = a.name?.toLowerCase() || '';
+            bValue = b.name?.toLowerCase() || '';
+            break;
+          case 'startDate':
+            aValue = a.startDate ? new Date(a.startDate).getTime() : 0;
+            bValue = b.startDate ? new Date(b.startDate).getTime() : 0;
+            break;
+          case 'phone':
+            aValue = a.phoneNumber?.toLowerCase() || '';
+            bValue = b.phoneNumber?.toLowerCase() || '';
+            break;
+          case 'emergencyContact':
+            aValue = a.emergencyContactName?.toLowerCase() || '';
+            bValue = b.emergencyContactName?.toLowerCase() || '';
+            break;
+          case 'paymentPlatform':
+            aValue = a.paymentPlatform?.toLowerCase() || '';
+            bValue = b.paymentPlatform?.toLowerCase() || '';
+            break;
+          case 'submitted':
+            aValue = new Date(a.submittedAt).getTime();
+            bValue = new Date(b.submittedAt).getTime();
+            break;
+          case 'status':
+            aValue = a.status?.toLowerCase() || '';
+            bValue = b.status?.toLowerCase() || '';
+            break;
+          default:
+            return 0;
+        }
+
+        if (onboardingSortDirection === 'asc') {
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        } else {
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        }
+      });
+    }
+    
+    return sorted;
+  }, [onboardingSubmissions, onboardingSortField, onboardingSortDirection]);
+
+  // Onboarding pagination
+  const onboardingTotalPages = Math.ceil(sortedOnboardingSubmissions.length / onboardingPageSize);
+  const onboardingCurrentPage = onboardingTotalPages > 0 && onboardingPage > onboardingTotalPages 
+    ? Math.max(1, onboardingTotalPages) 
+    : onboardingPage;
+  const onboardingStartIndex = (onboardingCurrentPage - 1) * onboardingPageSize;
+  const onboardingEndIndex = onboardingStartIndex + onboardingPageSize;
+  const paginatedOnboardingSubmissions = sortedOnboardingSubmissions.slice(onboardingStartIndex, onboardingEndIndex);
+
+  // Onboarding Sortable Header Component
+  const OnboardingSortableHeader = ({ field, children }: { field: 'name' | 'startDate' | 'phone' | 'emergencyContact' | 'paymentPlatform' | 'submitted' | 'status'; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-gray-50 select-none"
+      onClick={() => handleOnboardingSort(field)}
+      data-testid={`header-sort-${field}`}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        <div className="flex flex-col ml-1">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              onboardingSortField === field && onboardingSortDirection === 'asc' 
+                ? 'text-primary' 
+                : 'text-gray-400'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              onboardingSortField === field && onboardingSortDirection === 'desc' 
+                ? 'text-primary' 
                 : 'text-gray-400'
             }`} 
           />
@@ -1713,18 +1820,18 @@ export default function HRPage() {
               <Table className="bg-white">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Emergency Contact</TableHead>
-                    <TableHead>Payment Platform</TableHead>
-                    <TableHead>Submitted</TableHead>
-                    <TableHead>Status</TableHead>
+                    <OnboardingSortableHeader field="name">Name</OnboardingSortableHeader>
+                    <OnboardingSortableHeader field="startDate">Start Date</OnboardingSortableHeader>
+                    <OnboardingSortableHeader field="phone">Phone</OnboardingSortableHeader>
+                    <OnboardingSortableHeader field="emergencyContact">Emergency Contact</OnboardingSortableHeader>
+                    <OnboardingSortableHeader field="paymentPlatform">Payment Platform</OnboardingSortableHeader>
+                    <OnboardingSortableHeader field="submitted">Submitted</OnboardingSortableHeader>
+                    <OnboardingSortableHeader field="status">Status</OnboardingSortableHeader>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {onboardingSubmissions.map((submission: any) => (
+                  {paginatedOnboardingSubmissions.map((submission: any) => (
                     <TableRow key={submission.id} className="hover:bg-gray-50" data-testid={`row-submission-${submission.id}`}>
                       <TableCell>
                         <div>
@@ -1887,6 +1994,86 @@ export default function HRPage() {
                   ))}
                 </TableBody>
               </Table>
+              
+              {/* Pagination Controls */}
+              {onboardingTotalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600">Items per page:</span>
+                      <Select value={onboardingPageSize.toString()} onValueChange={(value) => {
+                        setOnboardingPageSize(Number(value));
+                        setOnboardingPage(1);
+                      }}>
+                        <SelectTrigger className="w-20" data-testid="select-onboarding-page-size">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="20">20</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <span className="text-sm text-gray-600">
+                      Showing {onboardingStartIndex + 1} to {Math.min(onboardingEndIndex, sortedOnboardingSubmissions.length)} of {sortedOnboardingSubmissions.length} submissions
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setOnboardingPage(Math.max(1, onboardingPage - 1))}
+                      disabled={onboardingPage === 1}
+                      data-testid="button-onboarding-prev"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: Math.min(5, onboardingTotalPages) }, (_, i) => {
+                        let pageNumber: number;
+                        if (onboardingTotalPages <= 5) {
+                          pageNumber = i + 1;
+                        } else if (onboardingPage <= 3) {
+                          pageNumber = i + 1;
+                        } else if (onboardingPage >= onboardingTotalPages - 2) {
+                          pageNumber = onboardingTotalPages - 4 + i;
+                        } else {
+                          pageNumber = onboardingPage - 2 + i;
+                        }
+                        
+                        return (
+                          <Button
+                            key={pageNumber}
+                            variant={onboardingPage === pageNumber ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setOnboardingPage(pageNumber)}
+                            className="w-9 h-9"
+                            data-testid={`button-onboarding-page-${pageNumber}`}
+                          >
+                            {pageNumber}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setOnboardingPage(Math.min(onboardingTotalPages, onboardingPage + 1))}
+                      disabled={onboardingPage === onboardingTotalPages}
+                      data-testid="button-onboarding-next"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
