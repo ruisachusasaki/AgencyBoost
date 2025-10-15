@@ -79,6 +79,20 @@ export default function ApprovalBoard() {
     refetchOnWindowFocus: true,
   });
 
+  // Calculate pagination at top level (before any conditional returns)
+  const totalItems = pendingRequests.length;
+  const totalPages = Math.ceil(totalItems / approvalsPageSize);
+  const startIndex = (approvalsPage - 1) * approvalsPageSize;
+  const endIndex = startIndex + approvalsPageSize;
+  const paginatedRequests = pendingRequests.slice(startIndex, endIndex);
+
+  // Clamp page number when data changes (must be at top level)
+  useEffect(() => {
+    if (totalPages > 0 && approvalsPage > totalPages) {
+      setApprovalsPage(Math.max(1, totalPages));
+    }
+  }, [totalPages, approvalsPage]);
+
   // Delete mutation (ADMINS ONLY)
   const deleteMutation = useMutation({
     mutationFn: async (requestId: string) => {
@@ -218,20 +232,6 @@ export default function ApprovalBoard() {
       </Card>
     );
   }
-
-  // Calculate pagination
-  const totalItems = pendingRequests.length;
-  const totalPages = Math.ceil(totalItems / approvalsPageSize);
-  const startIndex = (approvalsPage - 1) * approvalsPageSize;
-  const endIndex = startIndex + approvalsPageSize;
-  const paginatedRequests = pendingRequests.slice(startIndex, endIndex);
-
-  // Clamp page number when data changes
-  useEffect(() => {
-    if (totalPages > 0 && approvalsPage > totalPages) {
-      setApprovalsPage(Math.max(1, totalPages));
-    }
-  }, [totalPages, approvalsPage]);
 
   return (
     <>
