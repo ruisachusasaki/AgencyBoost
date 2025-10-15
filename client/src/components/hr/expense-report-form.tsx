@@ -290,25 +290,28 @@ export default function ExpenseReportForm() {
                               <SelectValue placeholder={`Select ${field.label}`} />
                             </SelectTrigger>
                             <SelectContent>
-                              {field.id === 'department_team' ? (
+                              {field.options && field.options.length > 0 ? (
+                                // Use configured options from Settings
+                                field.options.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))
+                              ) : field.id === 'department_team' ? (
+                                // Fallback to teams data if no options configured
                                 teamsData.map((team: any) => (
                                   <SelectItem key={team.id} value={team.id}>
                                     {team.name}
                                   </SelectItem>
                                 ))
                               ) : field.id === 'client' ? (
+                                // Fallback to clients data if no options configured
                                 clients.map((client: any) => (
                                   <SelectItem key={client.id} value={client.id}>
                                     {client.name}
                                   </SelectItem>
                                 ))
-                              ) : (
-                                field.options?.map((option) => (
-                                  <SelectItem key={option} value={option}>
-                                    {option}
-                                  </SelectItem>
-                                ))
-                              )}
+                              ) : null}
                             </SelectContent>
                           </Select>
                         ) : (
