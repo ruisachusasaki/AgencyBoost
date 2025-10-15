@@ -18,7 +18,9 @@ import {
   User,
   Trash2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -45,6 +47,8 @@ export default function ApprovalBoard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [approvalsPage, setApprovalsPage] = useState(1);
   const [approvalsPageSize, setApprovalsPageSize] = useState(20);
+  const [sortField, setSortField] = useState<'employee' | 'type' | 'dates' | 'duration' | 'submitted' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -79,8 +83,47 @@ export default function ApprovalBoard() {
     refetchOnWindowFocus: true,
   });
 
+  // Apply sorting to requests
+  const sortedRequests = [...pendingRequests].sort((a, b) => {
+    if (!sortField) return 0;
+
+    let aValue: any;
+    let bValue: any;
+
+    switch (sortField) {
+      case 'employee':
+        aValue = `${a.staff?.firstName || ''} ${a.staff?.lastName || ''}`.toLowerCase();
+        bValue = `${b.staff?.firstName || ''} ${b.staff?.lastName || ''}`.toLowerCase();
+        break;
+      case 'type':
+        aValue = a.type?.toLowerCase() || '';
+        bValue = b.type?.toLowerCase() || '';
+        break;
+      case 'dates':
+        aValue = new Date(a.startDate).getTime();
+        bValue = new Date(b.startDate).getTime();
+        break;
+      case 'duration':
+        aValue = getTotalHours(a);
+        bValue = getTotalHours(b);
+        break;
+      case 'submitted':
+        aValue = new Date(a.createdAt).getTime();
+        bValue = new Date(b.createdAt).getTime();
+        break;
+      default:
+        return 0;
+    }
+
+    if (sortDirection === 'asc') {
+      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+    } else {
+      return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+    }
+  });
+
   // Calculate pagination at top level (before any conditional returns)
-  const totalItems = pendingRequests.length;
+  const totalItems = sortedRequests.length;
   const totalPages = Math.ceil(totalItems / approvalsPageSize);
   
   // Clamp page synchronously to prevent hooks order issues
@@ -90,7 +133,7 @@ export default function ApprovalBoard() {
   
   const startIndex = (currentPage - 1) * approvalsPageSize;
   const endIndex = startIndex + approvalsPageSize;
-  const paginatedRequests = pendingRequests.slice(startIndex, endIndex);
+  const paginatedRequests = sortedRequests.slice(startIndex, endIndex);
   
   // Update state if page was clamped
   useEffect(() => {
@@ -215,6 +258,45 @@ export default function ApprovalBoard() {
     return request.totalHours || 0;
   };
 
+  // Sort handler
+  const handleSort = (field: 'employee' | 'type' | 'dates' | 'duration' | 'submitted') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sortable Header Component
+  const SortableHeader = ({ field, children }: { field: 'employee' | 'type' | 'dates' | 'duration' | 'submitted'; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-gray-50 select-none"
+      onClick={() => handleSort(field)}
+      data-testid={`header-sort-${field}`}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        <div className="flex flex-col ml-1">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              sortField === field && sortDirection === 'asc' 
+                ? 'text-primary' 
+                : 'text-gray-400'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              sortField === field && sortDirection === 'desc' 
+                ? 'text-primary' 
+                : 'text-gray-400'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
+
   if (isLoading) {
     return (
       <Card>
@@ -252,11 +334,11 @@ export default function ApprovalBoard() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Dates</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Submitted</TableHead>
+                <SortableHeader field="employee">Employee</SortableHeader>
+                <SortableHeader field="type">Type</SortableHeader>
+                <SortableHeader field="dates">Dates</SortableHeader>
+                <SortableHeader field="duration">Duration</SortableHeader>
+                <SortableHeader field="submitted">Submitted</SortableHeader>
                 <TableHead className="w-[140px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
