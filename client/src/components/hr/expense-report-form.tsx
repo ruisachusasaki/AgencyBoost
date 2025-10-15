@@ -144,7 +144,7 @@ export default function ExpenseReportForm() {
         purpose: formData.purpose || '',
         expenseType: formData.expense_type || null,
         expenseDate: formData.expense_date ? new Date(formData.expense_date) : null,
-        expenseTotal: formData.expense_total ? parseFloat(formData.expense_total) : 0,
+        expenseTotal: formData.expense_total || null,
         departmentTeam: formData.department_team || null,
         client: formData.client || null,
         reimbursement: formData.reimbursement || null,
@@ -246,8 +246,7 @@ export default function ExpenseReportForm() {
                             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                               {...formField}
-                              type="number"
-                              step="0.01"
+                              type="text"
                               placeholder={field.placeholder}
                               className="pl-8"
                               data-testid={`input-${field.id}`}
