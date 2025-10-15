@@ -1513,6 +1513,7 @@ export default function HRPage() {
             // Use pre-calculated sorted time off data
             const sortedTimeOff = whosOffSortedTimeOff;
             const totalPages = whosOffTotalPages;
+            const totalItems = sortedTimeOff.length;
             const startIndex = (whosOffPage - 1) * whosOffPageSize;
             const endIndex = startIndex + whosOffPageSize;
             const paginatedTimeOff = sortedTimeOff.slice(startIndex, endIndex);
