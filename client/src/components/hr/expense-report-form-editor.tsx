@@ -146,6 +146,7 @@ export default function ExpenseReportFormEditor() {
     required: false,
     options: []
   });
+  const [optionsText, setOptionsText] = useState('');
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -201,18 +202,25 @@ export default function ExpenseReportFormEditor() {
   const handleAddField = () => {
     if (!fieldForm.label) return;
 
+    // Process options from text input
+    const processedOptions = optionsText
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
     const newField: FormField = {
       id: `custom_${Date.now()}`,
       label: fieldForm.label!,
       type: fieldForm.type!,
       placeholder: fieldForm.placeholder,
       required: fieldForm.required!,
-      options: fieldForm.options,
+      options: processedOptions.length > 0 ? processedOptions : undefined,
       order: fields.length
     };
 
     setFields([...fields, newField]);
     setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [] });
+    setOptionsText('');
     setIsFieldModalOpen(false);
   };
 
@@ -225,19 +233,27 @@ export default function ExpenseReportFormEditor() {
       required: field.required,
       options: field.options || []
     });
+    setOptionsText(field.options?.join(', ') || '');
     setIsFieldModalOpen(true);
   };
 
   const handleUpdateField = () => {
     if (!editingField || !fieldForm.label) return;
 
+    // Process options from text input
+    const processedOptions = optionsText
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
     setFields(fields.map(f => 
       f.id === editingField.id 
-        ? { ...editingField, ...fieldForm }
+        ? { ...editingField, ...fieldForm, options: processedOptions.length > 0 ? processedOptions : undefined }
         : f
     ));
     setEditingField(null);
     setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [] });
+    setOptionsText('');
     setIsFieldModalOpen(false);
   };
 
@@ -275,7 +291,11 @@ export default function ExpenseReportFormEditor() {
           </Button>
           <Dialog open={isFieldModalOpen} onOpenChange={setIsFieldModalOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => { setEditingField(null); setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [] }); }} data-testid="button-add-field">
+              <Button onClick={() => { 
+                setEditingField(null); 
+                setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [] }); 
+                setOptionsText('');
+              }} data-testid="button-add-field">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Field
               </Button>
@@ -332,11 +352,14 @@ export default function ExpenseReportFormEditor() {
                   <div>
                     <Label>Options (comma-separated)</Label>
                     <Textarea 
-                      value={fieldForm.options?.join(', ')} 
-                      onChange={(e) => setFieldForm({...fieldForm, options: e.target.value.split(',').map(s => s.trim())})}
+                      value={optionsText} 
+                      onChange={(e) => setOptionsText(e.target.value)}
                       placeholder="Option 1, Option 2, Option 3"
                       data-testid="textarea-field-options"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Separate options with commas. Spaces in option names are preserved.
+                    </p>
                   </div>
                 )}
                 <div className="flex items-center space-x-2">

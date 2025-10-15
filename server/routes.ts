@@ -16264,11 +16264,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user is admin OR has settings/hr management permission
       const isAdmin = await isCurrentUserAdmin(currentUserId);
-      const hasSettingsPermission = await hasPermission(currentUserId, 'settings', 'canManage');
-      const hasHRPermission = await hasPermission(currentUserId, 'hr', 'canManage');
       
-      if (!isAdmin && !hasSettingsPermission && !hasHRPermission) {
-        return res.status(403).json({ error: "You don't have permission to update form configuration" });
+      // Short-circuit if admin
+      if (!isAdmin) {
+        const hasSettingsPermission = await hasPermission(currentUserId, 'settings', 'canManage');
+        const hasHRPermission = await hasPermission(currentUserId, 'hr', 'canManage');
+        
+        if (!hasSettingsPermission && !hasHRPermission) {
+          return res.status(403).json({ error: "You don't have permission to update form configuration" });
+        }
       }
       
       const validatedData = insertExpenseReportFormConfigSchema.parse({
