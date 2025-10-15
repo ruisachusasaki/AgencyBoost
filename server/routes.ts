@@ -16257,10 +16257,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/expense-report-form-config", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
+  app.post("/api/expense-report-form-config", requireAuth(), async (req, res) => {
     try {
       const currentUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
+      
+      // Check if user is admin OR has settings/hr management permission
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      const hasSettingsPermission = await hasPermission(currentUserId, 'settings', 'canManage');
+      const hasHRPermission = await hasPermission(currentUserId, 'hr', 'canManage');
+      
+      if (!isAdmin && !hasSettingsPermission && !hasHRPermission) {
+        return res.status(403).json({ error: "You don't have permission to update form configuration" });
+      }
       
       const validatedData = insertExpenseReportFormConfigSchema.parse({
         ...req.body,
