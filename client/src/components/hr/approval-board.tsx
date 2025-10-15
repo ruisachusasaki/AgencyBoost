@@ -82,16 +82,22 @@ export default function ApprovalBoard() {
   // Calculate pagination at top level (before any conditional returns)
   const totalItems = pendingRequests.length;
   const totalPages = Math.ceil(totalItems / approvalsPageSize);
-  const startIndex = (approvalsPage - 1) * approvalsPageSize;
+  
+  // Clamp page synchronously to prevent hooks order issues
+  const currentPage = totalPages > 0 && approvalsPage > totalPages 
+    ? Math.max(1, totalPages) 
+    : approvalsPage;
+  
+  const startIndex = (currentPage - 1) * approvalsPageSize;
   const endIndex = startIndex + approvalsPageSize;
   const paginatedRequests = pendingRequests.slice(startIndex, endIndex);
-
-  // Clamp page number when data changes (must be at top level)
+  
+  // Update state if page was clamped
   useEffect(() => {
-    if (totalPages > 0 && approvalsPage > totalPages) {
-      setApprovalsPage(Math.max(1, totalPages));
+    if (currentPage !== approvalsPage) {
+      setApprovalsPage(currentPage);
     }
-  }, [totalPages, approvalsPage]);
+  }, [currentPage, approvalsPage]);
 
   // Delete mutation (ADMINS ONLY)
   const deleteMutation = useMutation({
