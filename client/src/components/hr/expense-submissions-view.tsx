@@ -33,6 +33,7 @@ export default function ExpenseSubmissionsView() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -48,6 +49,7 @@ export default function ExpenseSubmissionsView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expense-report-submissions'] });
+      setSelectedSubmissionId(null); // Close the dialog
       toast({
         title: "Success",
         description: "Status updated successfully",
@@ -243,12 +245,16 @@ export default function ExpenseSubmissionsView() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Dialog>
+                      <Dialog 
+                        open={selectedSubmissionId === submission.id} 
+                        onOpenChange={(open) => !open && setSelectedSubmissionId(null)}
+                      >
                         <DialogTrigger asChild>
                           <Button
                             variant="outline"
                             size="sm"
                             className="flex items-center gap-1"
+                            onClick={() => setSelectedSubmissionId(submission.id)}
                             data-testid={`button-view-expense-${submission.id}`}
                           >
                             <Eye className="h-4 w-4" />
