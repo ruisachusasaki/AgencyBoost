@@ -2845,7 +2845,7 @@ export type InsertNewHireOnboardingSubmission = z.infer<typeof insertNewHireOnbo
 export const expenseReportFormConfig = pgTable("expense_report_form_config", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   fields: jsonb("fields").notNull(), // Array of form field configurations
-  updatedBy: varchar("updated_by").notNull().references(() => users.id),
+  updatedBy: uuid("updated_by").notNull().references(() => staff.id),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
