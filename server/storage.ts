@@ -156,6 +156,12 @@ export interface IStorage {
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(id: string): Promise<boolean>;
+  updateTasksStatusForClient(clientId: string, targetStatus: string, filters?: {
+    includeStatuses?: string[];
+    excludeStatuses?: string[];
+    assignedTo?: string;
+    priorities?: string[];
+  }): Promise<{ count: number; taskIds: string[] }>;
   
   // Client Approval Operations
   updateTaskClientApproval(
@@ -1622,6 +1628,38 @@ export class MemStorage implements IStorage {
         },
         isActive: true,
         createdAt: new Date()
+      },
+      {
+        id: "action-48",
+        name: "Update Client Tasks Status",
+        type: "update_client_tasks_status",
+        description: "Bulk update status of all tasks for a specific client with optional filters",
+        category: "data_management",
+        configSchema: {
+          target_status: { 
+            type: "string", 
+            required: true,
+            options: ["To Do", "In Progress", "On Hold", "Completed", "Cancelled"]
+          },
+          include_statuses: { 
+            type: "array",
+            description: "Only update tasks with these statuses (empty = all tasks)"
+          },
+          exclude_statuses: { 
+            type: "array",
+            description: "Skip tasks with these statuses"
+          },
+          assigned_to: { 
+            type: "string",
+            description: "Only update tasks assigned to this staff member (optional)"
+          },
+          priorities: { 
+            type: "array",
+            description: "Only update tasks with these priorities (optional)"
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
       }
     ];
 
@@ -2225,6 +2263,47 @@ export class MemStorage implements IStorage {
     }
     
     return this.tasks.delete(id);
+  }
+
+  async updateTasksStatusForClient(
+    clientId: string, 
+    targetStatus: string, 
+    filters?: {
+      includeStatuses?: string[];
+      excludeStatuses?: string[];
+      assignedTo?: string;
+      priorities?: string[];
+    }
+  ): Promise<{ count: number; taskIds: string[] }> {
+    const clientTasks = Array.from(this.tasks.values()).filter(t => t.clientId === clientId);
+    const updatedTaskIds: string[] = [];
+
+    for (const task of clientTasks) {
+      // Apply filters
+      if (filters?.includeStatuses && filters.includeStatuses.length > 0) {
+        if (!filters.includeStatuses.includes(task.status)) continue;
+      }
+      
+      if (filters?.excludeStatuses && filters.excludeStatuses.length > 0) {
+        if (filters.excludeStatuses.includes(task.status)) continue;
+      }
+      
+      if (filters?.assignedTo && task.assignedTo !== filters.assignedTo) {
+        continue;
+      }
+      
+      if (filters?.priorities && filters.priorities.length > 0) {
+        if (!filters.priorities.includes(task.priority)) continue;
+      }
+
+      // Update the task status
+      task.status = targetStatus;
+      task.updatedAt = new Date();
+      this.tasks.set(task.id, task);
+      updatedTaskIds.push(task.id);
+    }
+
+    return { count: updatedTaskIds.length, taskIds: updatedTaskIds };
   }
 
   // Sub-task hierarchy methods (ClickUp-style up to 5 levels deep)
@@ -4872,6 +4951,55 @@ export class DbStorage implements IStorage {
   async createTask(task: InsertTask): Promise<Task> { return this.memStorage.createTask(task); }
   async updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined> { return this.memStorage.updateTask(id, task); }
   async deleteTask(id: string): Promise<boolean> { return this.memStorage.deleteTask(id); }
+  
+  async updateTasksStatusForClient(
+    clientId: string, 
+    targetStatus: string, 
+    filters?: {
+      includeStatuses?: string[];
+      excludeStatuses?: string[];
+      assignedTo?: string;
+      priorities?: string[];
+    }
+  ): Promise<{ count: number; taskIds: string[] }> {
+    const { db } = await import("./db");
+    const { tasks } = await import("@shared/schema");
+    const { eq, and, inArray, notInArray } = await import("drizzle-orm");
+    
+    // Build WHERE conditions
+    const conditions = [eq(tasks.clientId, clientId)];
+    
+    if (filters?.includeStatuses && filters.includeStatuses.length > 0) {
+      conditions.push(inArray(tasks.status, filters.includeStatuses));
+    }
+    
+    if (filters?.excludeStatuses && filters.excludeStatuses.length > 0) {
+      conditions.push(notInArray(tasks.status, filters.excludeStatuses));
+    }
+    
+    if (filters?.assignedTo) {
+      conditions.push(eq(tasks.assignedTo, filters.assignedTo));
+    }
+    
+    if (filters?.priorities && filters.priorities.length > 0) {
+      conditions.push(inArray(tasks.priority, filters.priorities));
+    }
+    
+    // Update all matching tasks
+    const result = await db
+      .update(tasks)
+      .set({ 
+        status: targetStatus,
+        updatedAt: new Date()
+      })
+      .where(and(...conditions))
+      .returning({ id: tasks.id });
+    
+    return {
+      count: result.length,
+      taskIds: result.map(r => r.id)
+    };
+  }
   
   // Client Approval Operations
   async updateTaskClientApproval(
