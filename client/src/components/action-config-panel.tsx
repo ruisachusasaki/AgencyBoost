@@ -427,6 +427,16 @@ export default function ActionConfigPanel({
       }
     }
     
+    // Validate notify task owners requirements
+    if (action.type === 'notify_task_owners') {
+      if (!settings.notification_type) {
+        errors.push('Notification type is required');
+      }
+      if (!settings.template_id) {
+        errors.push('Template selection is required');
+      }
+    }
+    
     return errors;
   };
 
@@ -3534,6 +3544,8 @@ export default function ActionConfigPanel({
         return LucideIcons.Hash;
       case "update_client_tasks_status":
         return LucideIcons.ListChecks;
+      case "notify_task_owners":
+        return LucideIcons.Bell;
       default:
         return FileText;
     }
