@@ -193,7 +193,7 @@ export default function WorkflowBuilder({ isOpen, onClose, onSave, editingWorkfl
       type: "action",
       name: action.name,
       description: action.description,
-      config: {},
+      config: action.configSchema || {},
       icon: action.icon
     };
     setWorkflowSteps([...workflowSteps, actionStep]);
