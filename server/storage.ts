@@ -1660,6 +1660,32 @@ export class MemStorage implements IStorage {
         },
         isActive: true,
         createdAt: new Date()
+      },
+      {
+        id: "action-49",
+        name: "Notify Task Owners",
+        type: "notify_task_owners",
+        description: "Send notifications to all staff members who own tasks affected by the previous action",
+        category: "communication",
+        configSchema: {
+          notification_type: {
+            type: "string",
+            required: true,
+            options: ["email", "sms"],
+            default: "email"
+          },
+          template_id: {
+            type: "string",
+            required: true,
+            description: "Email or SMS template to use for notifications"
+          },
+          subject: {
+            type: "string",
+            description: "Email subject line (for email notifications only)"
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
       }
     ];
 
