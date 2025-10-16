@@ -420,6 +420,13 @@ export default function ActionConfigPanel({
       }
     }
     
+    // Validate update client tasks status requirements
+    if (action.type === 'update_client_tasks_status') {
+      if (!settings.target_status) {
+        errors.push('Target status is required');
+      }
+    }
+    
     return errors;
   };
 
@@ -3153,6 +3160,202 @@ export default function ActionConfigPanel({
           </div>
         );
 
+      case "update_client_tasks_status":
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="target-status">Target Status *</Label>
+              <Select 
+                value={settings.target_status || ""} 
+                onValueChange={(value) => updateSetting("target_status", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select target status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {taskStatuses.map((status: any) => (
+                    <SelectItem key={status.id} value={status.name}>
+                      {status.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground mt-1">
+                All matching tasks will be updated to this status
+              </p>
+            </div>
+
+            <Separator />
+            
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">Optional Filters</h4>
+              <p className="text-sm text-muted-foreground">
+                Leave filters empty to update ALL tasks for the client
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="include-statuses">Include Only These Statuses</Label>
+              <Select 
+                value={settings.include_statuses?.[0] || ""} 
+                onValueChange={(value) => {
+                  const current = settings.include_statuses || [];
+                  if (value && !current.includes(value)) {
+                    updateSetting("include_statuses", [...current, value]);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Add status to include..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {taskStatuses
+                    .filter((s: any) => !settings.include_statuses?.includes(s.name))
+                    .map((status: any) => (
+                      <SelectItem key={status.id} value={status.name}>
+                        {status.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {settings.include_statuses && settings.include_statuses.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {settings.include_statuses.map((status: string) => (
+                    <Badge key={status} variant="secondary">
+                      {status}
+                      <X
+                        className="ml-1 h-3 w-3 cursor-pointer"
+                        onClick={() => {
+                          updateSetting(
+                            "include_statuses",
+                            settings.include_statuses.filter((s: string) => s !== status)
+                          );
+                        }}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground mt-1">
+                Only update tasks with these current statuses
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="exclude-statuses">Exclude These Statuses</Label>
+              <Select 
+                value={settings.exclude_statuses?.[0] || ""} 
+                onValueChange={(value) => {
+                  const current = settings.exclude_statuses || [];
+                  if (value && !current.includes(value)) {
+                    updateSetting("exclude_statuses", [...current, value]);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Add status to exclude..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {taskStatuses
+                    .filter((s: any) => !settings.exclude_statuses?.includes(s.name))
+                    .map((status: any) => (
+                      <SelectItem key={status.id} value={status.name}>
+                        {status.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {settings.exclude_statuses && settings.exclude_statuses.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {settings.exclude_statuses.map((status: string) => (
+                    <Badge key={status} variant="secondary">
+                      {status}
+                      <X
+                        className="ml-1 h-3 w-3 cursor-pointer"
+                        onClick={() => {
+                          updateSetting(
+                            "exclude_statuses",
+                            settings.exclude_statuses.filter((s: string) => s !== status)
+                          );
+                        }}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground mt-1">
+                Skip tasks with these statuses (e.g., don't touch Completed tasks)
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="assigned-to">Assigned To (Optional)</Label>
+              <Select 
+                value={settings.assigned_to || ""} 
+                onValueChange={(value) => updateSetting("assigned_to", value === "none" ? undefined : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Any staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Any staff member</SelectItem>
+                  {staff.map((member: any) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.firstName} {member.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground mt-1">
+                Only update tasks assigned to this staff member
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="priorities">Task Priorities (Optional)</Label>
+              <Select 
+                value={settings.priorities?.[0] || ""} 
+                onValueChange={(value) => {
+                  const current = settings.priorities || [];
+                  if (value && !current.includes(value)) {
+                    updateSetting("priorities", [...current, value]);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Add priority filter..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="High">High</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="Low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+              {settings.priorities && settings.priorities.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {settings.priorities.map((priority: string) => (
+                    <Badge key={priority} variant="secondary">
+                      {priority}
+                      <X
+                        className="ml-1 h-3 w-3 cursor-pointer"
+                        onClick={() => {
+                          updateSetting(
+                            "priorities",
+                            settings.priorities.filter((p: string) => p !== priority)
+                          );
+                        }}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground mt-1">
+                Only update tasks with these priorities
+              </p>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="space-y-4">
@@ -3196,6 +3399,8 @@ export default function ActionConfigPanel({
         return Tag;
       case "number_formatter":
         return LucideIcons.Hash;
+      case "update_client_tasks_status":
+        return LucideIcons.ListChecks;
       default:
         return FileText;
     }
