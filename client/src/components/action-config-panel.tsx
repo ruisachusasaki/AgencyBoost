@@ -3356,6 +3356,139 @@ export default function ActionConfigPanel({
           </div>
         );
 
+      case "notify_task_owners":
+        return (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-blue-50 p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <LucideIcons.Info className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-medium text-blue-900 mb-1">How This Works</h4>
+                  <p className="text-sm text-blue-700">
+                    This action automatically sends notifications to all staff members who own tasks affected by the previous "Update Client Tasks Status" action. Each task owner receives one notification.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="notification-type">Notification Type *</Label>
+              <Select 
+                value={settings.notification_type || "email"} 
+                onValueChange={(value) => {
+                  updateSetting("notification_type", value);
+                  // Clear template when switching types
+                  updateSetting("template_id", undefined);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select notification type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="email">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      <span>Email</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="sms">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>SMS</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground mt-1">
+                Choose how to notify task owners
+              </p>
+            </div>
+
+            {settings.notification_type === "email" && (
+              <>
+                <div>
+                  <Label htmlFor="email-template">Email Template *</Label>
+                  <Select 
+                    value={settings.template_id || ""} 
+                    onValueChange={(value) => updateSetting("template_id", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select email template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {emailTemplates.map((template: any) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Template supports merge tags: [Task Name], [Client Name], [Task Status], [Staff Name]
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="email-subject">Email Subject (Optional)</Label>
+                  <Input
+                    id="email-subject"
+                    value={settings.subject || ""}
+                    onChange={(e) => updateSetting("subject", e.target.value)}
+                    placeholder="e.g., Task Status Update - Action Required"
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Leave blank to use template's default subject
+                  </p>
+                </div>
+              </>
+            )}
+
+            {settings.notification_type === "sms" && (
+              <div>
+                <Label htmlFor="sms-template">SMS Template *</Label>
+                <Select 
+                  value={settings.template_id || ""} 
+                  onValueChange={(value) => updateSetting("template_id", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select SMS template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {smsTemplates.map((template: any) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Template supports merge tags: [Task Name], [Client Name], [Task Status], [Staff Name]
+                </p>
+              </div>
+            )}
+
+            <Separator />
+
+            <div className="rounded-lg bg-gray-50 p-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Example Workflow</h4>
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex items-start gap-2">
+                  <span className="text-gray-400">1.</span>
+                  <span>Client's "Billing Status" changes to "HOLD"</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-gray-400">2.</span>
+                  <span>All client tasks are updated to "On Hold" status</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-gray-400">3.</span>
+                  <span>Each task owner receives a notification about the change</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="space-y-4">
