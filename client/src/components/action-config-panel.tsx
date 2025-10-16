@@ -72,8 +72,9 @@ export default function ActionConfigPanel({
     queryKey: ["/api/email-templates"],
   });
 
-  const { data: smsTemplates = [] } = useQuery<any[]>({
+  const { data: smsTemplates = [], isLoading: smsTemplatesLoading, error: smsTemplatesError } = useQuery<any[]>({
     queryKey: ["/api/sms-templates"],
+    retry: false,
   });
 
   const { data: staff = [] } = useQuery<any[]>({
@@ -3456,24 +3457,43 @@ export default function ActionConfigPanel({
             {settings.notification_type === "sms" && (
               <div>
                 <Label htmlFor="sms-template">SMS Template *</Label>
-                <Select 
-                  value={settings.template_id || ""} 
-                  onValueChange={(value) => updateSetting("template_id", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select SMS template" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {smsTemplates.map((template: any) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Template supports merge tags: [Task Name], [Client Name], [Task Status], [Staff Name]
-                </p>
+                {smsTemplatesLoading ? (
+                  <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                    <LucideIcons.Loader2 className="h-4 w-4 animate-spin" />
+                    Loading SMS templates...
+                  </div>
+                ) : smsTemplatesError ? (
+                  <div className="text-sm text-red-600 py-2">
+                    Failed to load SMS templates. You may need admin permissions.
+                  </div>
+                ) : (
+                  <>
+                    <Select 
+                      value={settings.template_id || ""} 
+                      onValueChange={(value) => updateSetting("template_id", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select SMS template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {smsTemplates && smsTemplates.length > 0 ? (
+                          smsTemplates.map((template: any) => (
+                            <SelectItem key={template.id} value={template.id}>
+                              {template.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-templates" disabled>
+                            No SMS templates available
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Template supports merge tags: [Task Name], [Client Name], [Task Status], [Staff Name]
+                    </p>
+                  </>
+                )}
               </div>
             )}
 
