@@ -1516,7 +1516,7 @@ export const workflows = pgTable("workflows", {
   totalRuns: integer("total_runs").default(0),
   successfulRuns: integer("successful_runs").default(0),
   failedRuns: integer("failed_runs").default(0),
-  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
