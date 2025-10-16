@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { X, Settings, Check, Plus, Trash2, Filter, Tag, ChevronsUpDown, Mail, MessageSquare, Users, FileText, Bell, Search } from "lucide-react";
+import { X, Settings, Check, Plus, Trash2, Filter, Tag, ChevronsUpDown, Mail, MessageSquare, Users, FileText, Bell, Search, Loader2 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -3459,7 +3459,7 @@ export default function ActionConfigPanel({
                 <Label htmlFor="sms-template">SMS Template *</Label>
                 {smsTemplatesLoading ? (
                   <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                    <LucideIcons.Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Loading SMS templates...
                   </div>
                 ) : smsTemplatesError ? (
