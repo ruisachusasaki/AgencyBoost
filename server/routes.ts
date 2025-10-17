@@ -15256,7 +15256,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sales Settings Routes
   app.get("/api/sales-settings", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
     try {
-      const settings = await storage.getSalesSettings();
+      // Get or create sales settings
+      let [settings] = await db.select().from(salesSettings).limit(1);
+      
+      if (!settings) {
+        // Create default settings if none exist
+        [settings] = await db.insert(salesSettings)
+          .values({ minimumMarginThreshold: 35 })
+          .returning();
+      }
+      
       res.json(settings);
     } catch (error) {
       console.error("Error fetching sales settings:", error);
@@ -15269,28 +15278,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return;
 
-      const updates = {
-        ...req.body,
-        updatedBy: userId
-      };
-
-      const updatedSettings = await storage.updateSalesSettings(updates);
+      const validatedData = updateSalesSettingsSchema.parse(req.body);
+      
+      // Get the first (and only) settings record
+      let [settings] = await db.select().from(salesSettings).limit(1);
+      
+      if (!settings) {
+        // Create if doesn't exist
+        [settings] = await db.insert(salesSettings)
+          .values({ 
+            minimumMarginThreshold: validatedData.minimumMarginThreshold 
+          })
+          .returning();
+      } else {
+        // Update existing
+        [settings] = await db.update(salesSettings)
+          .set({ 
+            minimumMarginThreshold: validatedData.minimumMarginThreshold,
+            updatedAt: sql`now()`
+          })
+          .where(eq(salesSettings.id, settings.id))
+          .returning();
+      }
       
       // Log the update
       await createAuditLog(
         "updated",
         "sales_settings",
-        updatedSettings.id,
+        settings.id.toString(),
         "Sales Settings",
         userId,
-        `Sales settings updated - Minimum Margin Threshold: ${updatedSettings.minimumMarginThreshold}%`,
+        `Sales settings updated - Minimum Margin Threshold: ${settings.minimumMarginThreshold}%`,
         null,
-        { minimumMarginThreshold: updatedSettings.minimumMarginThreshold },
+        { minimumMarginThreshold: settings.minimumMarginThreshold },
         req
       );
 
-      res.json(updatedSettings);
+      res.json(settings);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
       console.error("Error updating sales settings:", error);
       res.status(500).json({ message: "Failed to update sales settings" });
     }
