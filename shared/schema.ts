@@ -275,6 +275,14 @@ export const quoteItems = pgTable("quote_items", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Sales Settings - global sales configuration
+export const salesSettings = pgTable("sales_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  minimumMarginThreshold: decimal("minimum_margin_threshold", { precision: 5, scale: 2 }).notNull().default('35.00'), // percentage - quotes below this require approval
+  updatedBy: uuid("updated_by").references(() => staff.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Notes
 export const notes = pgTable("notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3479,6 +3487,12 @@ export const insertQuoteItemSchema = createInsertSchema(quoteItems).omit({
   createdAt: true,
 });
 
+// Sales Settings insert schema
+export const insertSalesSettingsSchema = createInsertSchema(salesSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
 // Training Types
 export type TrainingCategory = typeof trainingCategories.$inferSelect;
 export type InsertTrainingCategory = z.infer<typeof insertTrainingCategorySchema>;
@@ -3532,6 +3546,10 @@ export type InsertQuote = z.infer<typeof insertQuoteSchema>;
 
 export type QuoteItem = typeof quoteItems.$inferSelect;
 export type InsertQuoteItem = z.infer<typeof insertQuoteItemSchema>;
+
+// Sales Settings Types
+export type SalesSettings = typeof salesSettings.$inferSelect;
+export type InsertSalesSettings = z.infer<typeof insertSalesSettingsSchema>;
 
 // Smart Lists schema exports - remove duplicate and use existing one
 
