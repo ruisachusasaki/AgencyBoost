@@ -41,7 +41,7 @@ export default function SalesSettings() {
 
   // Update sales settings mutation
   const updateSettingsMutation = useMutation({
-    mutationFn: async (data: { minimumMarginThreshold: string }) => {
+    mutationFn: async (data: { minimumMarginThreshold: number }) => {
       return await apiRequest('/api/sales-settings', {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -67,7 +67,7 @@ export default function SalesSettings() {
   // Initialize minimum margin from settings
   useEffect(() => {
     if (salesSettings?.minimumMarginThreshold) {
-      setMinimumMargin(salesSettings.minimumMarginThreshold);
+      setMinimumMargin(salesSettings.minimumMarginThreshold.toString());
     }
   }, [salesSettings]);
 
@@ -82,7 +82,7 @@ export default function SalesSettings() {
     }
     
     updateSettingsMutation.mutate({
-      minimumMarginThreshold: minimumMargin
+      minimumMarginThreshold: parseFloat(minimumMargin)
     });
   };
 
