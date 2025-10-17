@@ -15253,6 +15253,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sales Settings Routes
+  app.get("/api/sales-settings", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
+    try {
+      const settings = await storage.getSalesSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching sales settings:", error);
+      res.status(500).json({ message: "Failed to fetch sales settings" });
+    }
+  });
+
+  app.patch("/api/sales-settings", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const updates = {
+        ...req.body,
+        updatedBy: userId
+      };
+
+      const updatedSettings = await storage.updateSalesSettings(updates);
+      
+      // Log the update
+      await createAuditLog(
+        "updated",
+        "sales_settings",
+        updatedSettings.id,
+        "Sales Settings",
+        userId,
+        `Sales settings updated - Minimum Margin Threshold: ${updatedSettings.minimumMarginThreshold}%`,
+        null,
+        { minimumMarginThreshold: updatedSettings.minimumMarginThreshold },
+        req
+      );
+
+      res.json(updatedSettings);
+    } catch (error) {
+      console.error("Error updating sales settings:", error);
+      res.status(500).json({ message: "Failed to update sales settings" });
+    }
+  });
+
   // Team Workflows - Manage team-specific status workflows
   app.get("/api/team-workflows", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
     try {
