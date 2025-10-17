@@ -125,6 +125,15 @@ export default function Sales() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch sales settings for dynamic minimum margin threshold
+  const { data: salesSettings } = useQuery({
+    queryKey: ["/api/sales-settings"],
+    refetchOnWindowFocus: false,
+  });
+
+  // Get minimum margin threshold from settings (fallback to 35 if not loaded)
+  const minimumMarginThreshold = salesSettings?.minimumMarginThreshold ? parseFloat(salesSettings.minimumMarginThreshold) : 35;
+
   // Fetch Pipeline Report data
   const { data: pipelineReport, isLoading: pipelineReportLoading } = useQuery({
     queryKey: ["/api/sales/reports/pipeline", dateRange.startDate, dateRange.endDate, selectedSalesRep],
@@ -225,7 +234,7 @@ export default function Sales() {
       profit,
       actualMargin,
       targetRevenue,
-      isMarginValid: actualMargin >= SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD,
+      isMarginValid: actualMargin >= minimumMarginThreshold,
       isMarginAchievable: budget >= targetRevenue
     };
   };
@@ -348,7 +357,7 @@ export default function Sales() {
       setIsQuoteBuilderOpen(false);
       resetQuoteBuilder();
       
-      const isLowMargin = parseFloat(quoteData.margin) < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD;
+      const isLowMargin = parseFloat(quoteData.margin) < minimumMarginThreshold;
       if (isLowMargin) {
         toast({
           title: "Quote Requires Approval",
@@ -460,7 +469,7 @@ export default function Sales() {
   const handleSaveQuote = () => {
     const totals = calculateQuoteTotals();
     const desiredMargin = parseFloat(quoteData.margin) || 0;
-    const isLowMargin = desiredMargin < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD;
+    const isLowMargin = desiredMargin < minimumMarginThreshold;
     
     const quotePayload = {
       name: quoteData.name,
@@ -970,17 +979,17 @@ export default function Sales() {
                             <Input
                               id="quote-margin"
                               type="number"
-                              placeholder={`${SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD}.00`}
+                              placeholder={`${minimumMarginThreshold}.00`}
                               value={quoteData.margin}
                               onChange={(e) => setQuoteData(prev => ({ ...prev, margin: e.target.value }))}
-                              className={`pl-10 ${parseFloat(quoteData.margin) < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? 'border-red-300 focus:border-red-500' : ''}`}
+                              className={`pl-10 ${parseFloat(quoteData.margin) < minimumMarginThreshold ? 'border-red-300 focus:border-red-500' : ''}`}
                               data-testid="input-quote-margin"
                             />
                           </div>
-                          {parseFloat(quoteData.margin) < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD && quoteData.margin && (
+                          {parseFloat(quoteData.margin) < minimumMarginThreshold && quoteData.margin && (
                             <div className="flex items-center gap-2 text-sm text-red-600">
                               <AlertTriangle className="h-4 w-4" />
-                              <span>Margin below {SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD}% requires Sales Manager approval</span>
+                              <span>Margin below {minimumMarginThreshold}% requires Sales Manager approval</span>
                             </div>
                           )}
                         </div>
@@ -1027,7 +1036,7 @@ export default function Sales() {
                                   </div>
                                   <div>
                                     <span className="text-muted-foreground">Actual Margin:</span>
-                                    <p className={`font-medium ${totals.actualMargin < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? 'text-red-600' : 'text-green-600'}`} data-testid="quote-summary-margin">
+                                    <p className={`font-medium ${totals.actualMargin < minimumMarginThreshold ? 'text-red-600' : 'text-green-600'}`} data-testid="quote-summary-margin">
                                       {totals.actualMargin.toFixed(1)}%
                                     </p>
                                   </div>
@@ -1052,7 +1061,7 @@ export default function Sales() {
                                       <div className="mt-2 flex items-center gap-2 text-sm text-red-600">
                                         <AlertTriangle className="h-4 w-4" />
                                         <span>
-                                          Current margin ({totals.actualMargin.toFixed(1)}%) is below {SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD}% minimum
+                                          Current margin ({totals.actualMargin.toFixed(1)}%) is below {minimumMarginThreshold}% minimum
                                         </span>
                                       </div>
                                     )}
@@ -1355,7 +1364,7 @@ export default function Sales() {
                         className="w-4 h-4 rounded border-gray-300"
                         data-testid="checkbox-filter-low-margin"
                       />
-                      <span className="text-sm">Low Margin (&lt;35%)</span>
+                      <span className="text-sm">Low Margin (&lt;{minimumMarginThreshold}%)</span>
                     </label>
                   </div>
                 </div>
@@ -1385,7 +1394,7 @@ export default function Sales() {
                       const matchesDateTo = !quotesDateTo || quoteDate <= new Date(quotesDateTo + 'T23:59:59');
                       
                       // Low margin filter
-                      const matchesMargin = !quotesShowLowMarginOnly || parseFloat(quote.desiredMargin || 100) < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD;
+                      const matchesMargin = !quotesShowLowMarginOnly || parseFloat(quote.desiredMargin || 100) < minimumMarginThreshold;
                       
                       return matchesSearch && matchesStatus && matchesClient && matchesCreatedBy && 
                              matchesDateFrom && matchesDateTo && matchesMargin;
@@ -1502,7 +1511,7 @@ export default function Sales() {
                         </div>
                         <div>
                           <span className="text-muted-foreground">Desired Margin:</span>
-                          <p className={`font-medium ${parseFloat(quote.desiredMargin) < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? 'text-red-600' : 'text-green-600'}`} data-testid={`text-quote-margin-${quote.id}`}>
+                          <p className={`font-medium ${parseFloat(quote.desiredMargin) < minimumMarginThreshold ? 'text-red-600' : 'text-green-600'}`} data-testid={`text-quote-margin-${quote.id}`}>
                             {parseFloat(quote.desiredMargin || 0)}%
                           </p>
                         </div>
@@ -1699,7 +1708,7 @@ export default function Sales() {
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Desired Margin</Label>
-                    <p className={`font-medium ${parseFloat(quote.desiredMargin) < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? 'text-red-600' : 'text-green-600'}`} data-testid="text-view-quote-margin">
+                    <p className={`font-medium ${parseFloat(quote.desiredMargin) < minimumMarginThreshold ? 'text-red-600' : 'text-green-600'}`} data-testid="text-view-quote-margin">
                       {parseFloat(quote.desiredMargin || 0)}%
                     </p>
                   </div>
