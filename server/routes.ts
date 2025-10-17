@@ -21853,7 +21853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PUT /api/quotes/:id/approval - Approve or reject quote (Sales Manager only)
+  // PUT /api/quotes/:id/approval - Approve or reject quote (Sales Manager or Admin only)
   app.put("/api/quotes/:id/approval", requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
@@ -21864,7 +21864,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid action. Must be 'approve' or 'reject'" });
       }
 
-      // Verify user has Sales Manager role
+      // Verify user has Sales Manager role or is Admin
+      const isAdmin = await isCurrentUserAdmin(req);
       const userRole = await db
         .select({
           roleName: roles.name,
@@ -21874,8 +21875,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(and(eq(staff.id, userId), eq(roles.name, ROLE_NAMES.SALES_MANAGER)))
         .limit(1);
 
-      if (userRole.length === 0) {
-        return res.status(403).json({ message: "Only Sales Managers can approve or reject quotes" });
+      if (!isAdmin && userRole.length === 0) {
+        return res.status(403).json({ message: "Only Sales Managers or Admins can approve or reject quotes" });
       }
 
       // Check if quote exists and is pending approval
