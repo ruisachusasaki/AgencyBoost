@@ -1240,20 +1240,60 @@ export default function Sales() {
                 {/* Quotes List */}
                 <div className="space-y-4">
                   {(() => {
-                    const filteredQuotes = quotesData.filter((quote: any) => 
-                      quote.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      (quote.clientName || quote.leadName || '').toLowerCase().includes(searchTerm.toLowerCase())
-                    );
+                    // Apply all filters
+                    let filteredQuotes = quotesData.filter((quote: any) => {
+                      // Search filter
+                      const matchesSearch = !searchTerm || 
+                        quote.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (quote.clientName || quote.leadName || '').toLowerCase().includes(searchTerm.toLowerCase());
+                      
+                      // Status filter
+                      const matchesStatus = quotesStatusFilter === "all" || quote.status === quotesStatusFilter;
+                      
+                      // Client filter
+                      const matchesClient = quotesClientFilter === "all" || quote.clientId === quotesClientFilter;
+                      
+                      // Created by filter
+                      const matchesCreatedBy = quotesCreatedByFilter === "all" || quote.createdBy === quotesCreatedByFilter;
+                      
+                      // Date range filter
+                      const quoteDate = new Date(quote.createdAt);
+                      const matchesDateFrom = !quotesDateFrom || quoteDate >= new Date(quotesDateFrom);
+                      const matchesDateTo = !quotesDateTo || quoteDate <= new Date(quotesDateTo + 'T23:59:59');
+                      
+                      // Low margin filter
+                      const matchesMargin = !quotesShowLowMarginOnly || parseFloat(quote.desiredMargin || 100) < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD;
+                      
+                      return matchesSearch && matchesStatus && matchesClient && matchesCreatedBy && 
+                             matchesDateFrom && matchesDateTo && matchesMargin;
+                    });
+
+                    // Calculate pagination
+                    const totalQuotes = filteredQuotes.length;
+                    const totalPages = Math.ceil(totalQuotes / quotesPageSize);
+                    const startIndex = (quotesPage - 1) * quotesPageSize;
+                    const endIndex = startIndex + quotesPageSize;
+                    const paginatedQuotes = filteredQuotes.slice(startIndex, endIndex);
+
+                    // Ensure current page is valid
+                    if (quotesPage > totalPages && totalPages > 0) {
+                      setQuotesPage(1);
+                    }
 
                     if (filteredQuotes.length === 0) {
                       return (
                         <div className="text-center py-8 text-muted-foreground">
-                          {searchTerm ? 'No quotes found matching your search.' : 'No quotes found. Create your first quote to get started.'}
+                          {searchTerm || quotesStatusFilter !== "all" || quotesClientFilter !== "all" || quotesCreatedByFilter !== "all" || quotesDateFrom || quotesDateTo || quotesShowLowMarginOnly
+                            ? 'No quotes found matching your filters.' 
+                            : 'No quotes found. Create your first quote to get started.'}
                         </div>
                       );
                     }
 
-                    return filteredQuotes.map((quote: any) => (
+                    return (
+                      <>
+                        <div className="space-y-4">
+                          {paginatedQuotes.map((quote: any) => (
                     <div key={quote.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
@@ -1400,16 +1440,100 @@ export default function Sales() {
                         )}
                       </div>
                     </div>
-                  ));
+                          ))}
+                        </div>
+
+                        {/* Pagination Controls */}
+                        <div className="flex items-center justify-between border-t pt-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">Rows per page:</span>
+                            <Select
+                              value={quotesPageSize.toString()}
+                              onValueChange={(value) => {
+                                setQuotesPageSize(Number(value));
+                                setQuotesPage(1);
+                              }}
+                            >
+                              <SelectTrigger className="w-[70px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="10">10</SelectItem>
+                                <SelectItem value="20">20</SelectItem>
+                                <SelectItem value="50">50</SelectItem>
+                                <SelectItem value="100">100</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <span className="text-sm text-muted-foreground">
+                              {startIndex + 1}-{Math.min(endIndex, totalQuotes)} of {totalQuotes}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setQuotesPage(1)}
+                              disabled={quotesPage === 1}
+                            >
+                              First
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setQuotesPage(Math.max(1, quotesPage - 1))}
+                              disabled={quotesPage === 1}
+                            >
+                              Previous
+                            </Button>
+                            
+                            {/* Page numbers */}
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                              let pageNum;
+                              if (totalPages <= 5) {
+                                pageNum = i + 1;
+                              } else if (quotesPage <= 3) {
+                                pageNum = i + 1;
+                              } else if (quotesPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + i;
+                              } else {
+                                pageNum = quotesPage - 2 + i;
+                              }
+                              
+                              return (
+                                <Button
+                                  key={pageNum}
+                                  variant={quotesPage === pageNum ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => setQuotesPage(pageNum)}
+                                  className="w-8"
+                                >
+                                  {pageNum}
+                                </Button>
+                              );
+                            })}
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setQuotesPage(Math.min(totalPages, quotesPage + 1))}
+                              disabled={quotesPage === totalPages}
+                            >
+                              Next
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setQuotesPage(totalPages)}
+                              disabled={quotesPage === totalPages}
+                            >
+                              Last
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    );
                   })()}
-                  
-                  {/* Empty State - only show when no quotes match filter */}
-                  {window.currentFilteredQuotes && window.currentFilteredQuotes.length === 0 && (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <Quote className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No quotes found. Create your first quote to get started.</p>
-                    </div>
-                  )}
                 </div>
               </div>
             </CardContent>
