@@ -46,6 +46,17 @@ export default function Sales() {
     endDate: new Date().toISOString().split('T')[0] // Today
   });
   const [selectedSalesRep, setSelectedSalesRep] = useState<string>("all");
+  
+  // Quotes pagination and filters
+  const [quotesPage, setQuotesPage] = useState(1);
+  const [quotesPageSize, setQuotesPageSize] = useState(20);
+  const [quotesStatusFilter, setQuotesStatusFilter] = useState<string>("all");
+  const [quotesClientFilter, setQuotesClientFilter] = useState<string>("all");
+  const [quotesCreatedByFilter, setQuotesCreatedByFilter] = useState<string>("all");
+  const [quotesDateFrom, setQuotesDateFrom] = useState<string>("");
+  const [quotesDateTo, setQuotesDateTo] = useState<string>("");
+  const [quotesShowLowMarginOnly, setQuotesShowLowMarginOnly] = useState(false);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
