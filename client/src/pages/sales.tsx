@@ -1237,6 +1237,129 @@ export default function Sales() {
                   </div>
                 </div>
 
+                {/* Advanced Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 p-4 bg-muted/30 rounded-lg border">
+                  {/* Status Filter */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Status</Label>
+                    <Select
+                      value={quotesStatusFilter}
+                      onValueChange={(value) => {
+                        setQuotesStatusFilter(value);
+                        setQuotesPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="h-9" data-testid="select-filter-status">
+                        <SelectValue placeholder="All Statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="pending_approval">Pending Approval</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="sent">Sent</SelectItem>
+                        <SelectItem value="accepted">Accepted</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Client Filter */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Client</Label>
+                    <Select
+                      value={quotesClientFilter}
+                      onValueChange={(value) => {
+                        setQuotesClientFilter(value);
+                        setQuotesPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="h-9" data-testid="select-filter-client">
+                        <SelectValue placeholder="All Clients" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Clients</SelectItem>
+                        {clients.map((client: any) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Created By Filter */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Created By</Label>
+                    <Select
+                      value={quotesCreatedByFilter}
+                      onValueChange={(value) => {
+                        setQuotesCreatedByFilter(value);
+                        setQuotesPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="h-9" data-testid="select-filter-created-by">
+                        <SelectValue placeholder="All Staff" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Staff</SelectItem>
+                        {staffData.map((staff: any) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.firstName} {staff.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Date From Filter */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">From Date</Label>
+                    <Input
+                      type="date"
+                      value={quotesDateFrom}
+                      onChange={(e) => {
+                        setQuotesDateFrom(e.target.value);
+                        setQuotesPage(1);
+                      }}
+                      className="h-9"
+                      data-testid="input-filter-date-from"
+                    />
+                  </div>
+
+                  {/* Date To Filter */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">To Date</Label>
+                    <Input
+                      type="date"
+                      value={quotesDateTo}
+                      onChange={(e) => {
+                        setQuotesDateTo(e.target.value);
+                        setQuotesPage(1);
+                      }}
+                      className="h-9"
+                      data-testid="input-filter-date-to"
+                    />
+                  </div>
+
+                  {/* Low Margin Filter */}
+                  <div className="space-y-1 flex items-end">
+                    <label className="flex items-center space-x-2 cursor-pointer h-9">
+                      <input
+                        type="checkbox"
+                        checked={quotesShowLowMarginOnly}
+                        onChange={(e) => {
+                          setQuotesShowLowMarginOnly(e.target.checked);
+                          setQuotesPage(1);
+                        }}
+                        className="w-4 h-4 rounded border-gray-300"
+                        data-testid="checkbox-filter-low-margin"
+                      />
+                      <span className="text-sm">Low Margin (&lt;35%)</span>
+                    </label>
+                  </div>
+                </div>
+
                 {/* Quotes List */}
                 <div className="space-y-4">
                   {(() => {
