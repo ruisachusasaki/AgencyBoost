@@ -63,6 +63,7 @@ import {
   type TeamPosition, type InsertTeamPosition, teamPositions,
   type ClientTeamAssignment, type InsertClientTeamAssignment, clientTeamAssignments,
   type UserViewPreference, type InsertUserViewPreference, userViewPreferences,
+  type SalesSettings, type InsertSalesSettings, salesSettings,
   customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -417,6 +418,10 @@ export interface IStorage {
   
   // Notification Settings
   getNotificationSettings(userId: string): Promise<NotificationSettings | undefined>;
+  
+  // Sales Settings
+  getSalesSettings(): Promise<SalesSettings | undefined>;
+  updateSalesSettings(settings: Partial<InsertSalesSettings>): Promise<SalesSettings>;
   
   // Custom Field File Uploads
   getCustomFieldFileUploads(clientId: string, customFieldId: string): Promise<CustomFieldFileUpload[]>;
@@ -5968,6 +5973,50 @@ export class DbStorage implements IStorage {
   async createNotificationSettings(settings: InsertNotificationSettings): Promise<NotificationSettings> { return this.memStorage.createNotificationSettings(settings); }
   async updateNotificationSettings(id: string, settings: Partial<InsertNotificationSettings>): Promise<NotificationSettings | undefined> { return this.memStorage.updateNotificationSettings(id, settings); }
   async deleteNotificationSettings(id: string): Promise<boolean> { return this.memStorage.deleteNotificationSettings(id); }
+
+  // Sales Settings - Database Implementation
+  async getSalesSettings(): Promise<SalesSettings | undefined> {
+    try {
+      const result = await db.select().from(salesSettings).limit(1);
+      if (result.length === 0) {
+        // Create default settings if none exist
+        const [defaultSettings] = await db.insert(salesSettings).values({
+          id: randomUUID(),
+          minimumMarginThreshold: '35.00',
+          updatedAt: new Date()
+        }).returning();
+        return defaultSettings;
+      }
+      return result[0];
+    } catch (error) {
+      console.error("Error getting sales settings:", error);
+      return undefined;
+    }
+  }
+
+  async updateSalesSettings(settings: Partial<InsertSalesSettings>): Promise<SalesSettings> {
+    try {
+      // Get the existing settings (or create default)
+      const existing = await this.getSalesSettings();
+      
+      if (!existing) {
+        throw new Error("Sales settings not found");
+      }
+
+      const [updated] = await db.update(salesSettings)
+        .set({
+          ...settings,
+          updatedAt: new Date()
+        })
+        .where(eq(salesSettings.id, existing.id))
+        .returning();
+      
+      return updated;
+    } catch (error) {
+      console.error("Error updating sales settings:", error);
+      throw error;
+    }
+  }
 
   // Smart Lists - Database Implementation  
   async getSmartLists(userId: string, entityType?: string): Promise<SmartList[]> {
