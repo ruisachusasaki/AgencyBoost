@@ -42,11 +42,8 @@ export default function SalesSettings() {
   // Update sales settings mutation
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: { minimumMarginThreshold: number }) => {
-      return await apiRequest('/api/sales-settings', {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const res = await apiRequest('PATCH', '/api/sales-settings', data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sales-settings'] });
