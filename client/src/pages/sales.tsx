@@ -1264,9 +1264,9 @@ export default function Sales() {
                     </Select>
                   </div>
 
-                  {/* Client Filter */}
+                  {/* Client/Lead Filter */}
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Client</Label>
+                    <Label className="text-xs text-muted-foreground">Client/Lead</Label>
                     <Select
                       value={quotesClientFilter}
                       onValueChange={(value) => {
@@ -1275,10 +1275,10 @@ export default function Sales() {
                       }}
                     >
                       <SelectTrigger className="h-9" data-testid="select-filter-client">
-                        <SelectValue placeholder="All Clients" />
+                        <SelectValue placeholder="All Clients/Leads" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Clients</SelectItem>
+                        <SelectItem value="all">All Clients/Leads</SelectItem>
                         {clients.map((client: any) => (
                           <SelectItem key={client.id} value={client.id}>
                             {client.name}
