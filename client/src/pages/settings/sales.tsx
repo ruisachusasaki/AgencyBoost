@@ -66,7 +66,7 @@ export default function SalesSettings() {
 
   // Initialize minimum margin from settings
   useEffect(() => {
-    if (salesSettings?.minimumMarginThreshold) {
+    if (salesSettings && salesSettings.minimumMarginThreshold !== undefined && salesSettings.minimumMarginThreshold !== null) {
       setMinimumMargin(salesSettings.minimumMarginThreshold.toString());
     }
   }, [salesSettings]);

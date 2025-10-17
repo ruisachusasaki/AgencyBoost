@@ -3493,6 +3493,9 @@ export const insertSalesSettingsSchema = createInsertSchema(salesSettings).omit(
   updatedAt: true,
 });
 
+// Sales Settings update schema
+export const updateSalesSettingsSchema = insertSalesSettingsSchema.partial();
+
 // Training Types
 export type TrainingCategory = typeof trainingCategories.$inferSelect;
 export type InsertTrainingCategory = z.infer<typeof insertTrainingCategorySchema>;
