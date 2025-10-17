@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   ArrowLeft, 
   Calculator, 
@@ -12,11 +15,13 @@ import {
   DollarSign,
   Percent,
   Plus,
-  Minus
+  Minus,
+  Save
 } from "lucide-react";
 
 export default function SalesSettings() {
   const [activeTab, setActiveTab] = useState("calculator");
+  const { toast } = useToast();
   
   // Sales Calculator state
   const [calculatorData, setCalculatorData] = useState({
@@ -25,6 +30,61 @@ export default function SalesSettings() {
     bonusAmount: "",
     deductions: "",
   });
+
+  // Sales Settings state
+  const [minimumMargin, setMinimumMargin] = useState("");
+
+  // Fetch sales settings
+  const { data: salesSettings, isLoading: isLoadingSettings } = useQuery({
+    queryKey: ['/api/sales-settings'],
+  });
+
+  // Update sales settings mutation
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (data: { minimumMarginThreshold: string }) => {
+      return await apiRequest('/api/sales-settings', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sales-settings'] });
+      toast({
+        title: "Settings Updated",
+        description: "Sales settings have been successfully updated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update sales settings",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Initialize minimum margin from settings
+  useEffect(() => {
+    if (salesSettings?.minimumMarginThreshold) {
+      setMinimumMargin(salesSettings.minimumMarginThreshold);
+    }
+  }, [salesSettings]);
+
+  const handleSaveSettings = () => {
+    if (!minimumMargin || parseFloat(minimumMargin) < 0 || parseFloat(minimumMargin) > 100) {
+      toast({
+        title: "Invalid Value",
+        description: "Minimum margin must be between 0 and 100",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateSettingsMutation.mutate({
+      minimumMarginThreshold: minimumMargin
+    });
+  };
 
   const calculateCommission = () => {
     const deal = parseFloat(calculatorData.dealValue) || 0;
@@ -225,13 +285,60 @@ export default function SalesSettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
-                General Sales Settings
+                Quote Approval Settings
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                General sales configuration options will be implemented here.
-              </p>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="minimumMargin">
+                    Minimum Margin Threshold (%)
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Quotes with margins below this threshold will require approval from a Sales Manager or Admin before being sent to clients.
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <div className="relative max-w-xs">
+                      <Percent className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        id="minimumMargin"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        placeholder="35.00"
+                        value={minimumMargin}
+                        onChange={(e) => setMinimumMargin(e.target.value)}
+                        className="pl-10"
+                        data-testid="input-minimum-margin"
+                        disabled={isLoadingSettings}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleSaveSettings}
+                      disabled={updateSettingsMutation.isPending || isLoadingSettings}
+                      className="gap-2"
+                      data-testid="button-save-settings"
+                    >
+                      <Save className="h-4 w-4" />
+                      {updateSettingsMutation.isPending ? "Saving..." : "Save Settings"}
+                    </Button>
+                  </div>
+                </div>
+
+                {salesSettings && (
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Current Setting:</strong> Quotes with margins below {salesSettings.minimumMarginThreshold}% require approval.
+                    </p>
+                    {salesSettings.updatedAt && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Last updated: {new Date(salesSettings.updatedAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
