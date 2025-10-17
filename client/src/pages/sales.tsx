@@ -66,6 +66,15 @@ export default function Sales() {
     refetchOnWindowFocus: false,
   });
   
+  // Fetch sales settings for dynamic minimum margin threshold
+  const { data: salesSettings } = useQuery<{ minimumMarginThreshold: number }>({
+    queryKey: ["/api/sales-settings"],
+    refetchOnWindowFocus: false,
+  });
+  
+  // Use dynamic minimum margin threshold from settings, fallback to 35 if not loaded
+  const minimumMarginThreshold = salesSettings?.minimumMarginThreshold ?? 35;
+  
   // Check if current user is a Sales Manager or Admin
   const isSalesManager = currentUser?.roles?.includes(ROLE_NAMES.SALES_MANAGER) || currentUser?.roles?.includes('Admin');
   
@@ -124,15 +133,6 @@ export default function Sales() {
     queryKey: ["/api/staff"],
     refetchOnWindowFocus: false,
   });
-
-  // Fetch sales settings for dynamic minimum margin threshold
-  const { data: salesSettings } = useQuery({
-    queryKey: ["/api/sales-settings"],
-    refetchOnWindowFocus: false,
-  });
-
-  // Get minimum margin threshold from settings (fallback to 35 if not loaded)
-  const minimumMarginThreshold = salesSettings?.minimumMarginThreshold ? parseFloat(salesSettings.minimumMarginThreshold) : 35;
 
   // Fetch Pipeline Report data
   const { data: pipelineReport, isLoading: pipelineReportLoading } = useQuery({

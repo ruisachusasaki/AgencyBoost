@@ -39,6 +39,7 @@ import {
   insertSmartListSchema, insertTaskTemplateSchema,
   insertClientBriefSectionSchema, insertClientBriefValueSchema,
   insertQuoteSchema, insertQuoteItemSchema,
+  updateSalesSettingsSchema,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
@@ -51,7 +52,7 @@ import {
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
-  clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals
+  clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
