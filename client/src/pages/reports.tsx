@@ -3709,8 +3709,251 @@ export default function Reports() {
               )}
             </CardContent>
           </Card>
+
+          {/* Hiring Predictions Section */}
+          <HiringPredictionsSection />
         </div>
       )}
     </div>
+  );
+}
+
+// Hiring Predictions Component
+function HiringPredictionsSection() {
+  const { data: predictionsData, isLoading } = useQuery<{
+    predictions: Array<{
+      department: string;
+      role: string | null;
+      currentStaff: number;
+      currentClients: number;
+      maxCapacity: number;
+      currentCapacityPercent: number;
+      leadsInPipeline: number;
+      historicalCloseRate: number;
+      averagePipelineTime: number;
+      predictedNewClients: number;
+      projectedClients: number;
+      projectedCapacityPercent: number;
+      needsHiring: boolean;
+      alertThreshold: number;
+      daysUntilCapacity: number | null;
+    }>;
+  }>({
+    queryKey: ['/api/capacity-predictions'],
+  });
+
+  const predictions = predictionsData?.predictions || [];
+  const alertPredictions = predictions.filter(p => p.needsHiring);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Hiring Predictions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-32">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (predictions.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Hiring Predictions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <AlertTriangle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 mb-2">No capacity predictions available</p>
+            <p className="text-sm text-gray-400">
+              Configure capacity settings in Settings → Staff → Capacity Settings
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5" />
+          Hiring Predictions
+        </CardTitle>
+        <p className="text-sm text-muted-foreground mt-1">
+          Predictive capacity analysis based on pipeline data and historical close rates
+        </p>
+      </CardHeader>
+      <CardContent>
+        {/* Alert Summary */}
+        {alertPredictions.length > 0 && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-red-900 mb-1">
+                  {alertPredictions.length} Team{alertPredictions.length > 1 ? 's' : ''} Approaching Capacity
+                </h4>
+                <p className="text-sm text-red-800">
+                  The following teams are predicted to exceed their alert threshold. Consider hiring additional staff.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Predictions Grid */}
+        <div className="space-y-4">
+          {predictions.map((pred, index) => {
+            const capacityColor = 
+              pred.projectedCapacityPercent >= pred.alertThreshold ? 'red' :
+              pred.projectedCapacityPercent >= pred.alertThreshold * 0.8 ? 'yellow' :
+              'green';
+            
+            const capacityBgColor = 
+              capacityColor === 'red' ? 'bg-red-50 border-red-200' :
+              capacityColor === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
+              'bg-green-50 border-green-200';
+
+            const capacityTextColor = 
+              capacityColor === 'red' ? 'text-red-900' :
+              capacityColor === 'yellow' ? 'text-yellow-900' :
+              'text-green-900';
+
+            return (
+              <div 
+                key={`${pred.department}-${pred.role || 'all'}-${index}`}
+                className={`p-4 border rounded-lg ${capacityBgColor}`}
+                data-testid={`prediction-${pred.department}`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      <h4 className={`font-semibold ${capacityTextColor}`}>
+                        {pred.department}
+                        {pred.role && ` - ${pred.role}`}
+                      </h4>
+                      {pred.needsHiring && (
+                        <Badge variant="destructive" className="ml-2">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Action Needed
+                        </Badge>
+                      )}
+                    </div>
+                    {pred.daysUntilCapacity !== null && pred.daysUntilCapacity > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        Estimated {pred.daysUntilCapacity} days until capacity threshold reached
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Metrics Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-white p-3 rounded border">
+                    <p className="text-xs text-gray-500 mb-1">Current Staff</p>
+                    <p className="text-lg font-bold text-gray-900">{pred.currentStaff}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <p className="text-xs text-gray-500 mb-1">Current Clients</p>
+                    <p className="text-lg font-bold text-gray-900">{pred.currentClients}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <p className="text-xs text-gray-500 mb-1">Leads in Pipeline</p>
+                    <p className="text-lg font-bold text-blue-600">{pred.leadsInPipeline}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <p className="text-xs text-gray-500 mb-1">Predicted New Clients</p>
+                    <p className="text-lg font-bold text-purple-600">
+                      {pred.predictedNewClients}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      ({(pred.historicalCloseRate * 100).toFixed(0)}% close rate)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Capacity Bar */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Current Capacity</span>
+                    <span className={`font-bold ${
+                      pred.currentCapacityPercent >= pred.alertThreshold ? 'text-red-600' :
+                      pred.currentCapacityPercent >= pred.alertThreshold * 0.8 ? 'text-yellow-600' :
+                      'text-green-600'
+                    }`}>
+                      {pred.currentCapacityPercent.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div 
+                      className={`h-full transition-all ${
+                        pred.currentCapacityPercent >= pred.alertThreshold ? 'bg-red-500' :
+                        pred.currentCapacityPercent >= pred.alertThreshold * 0.8 ? 'bg-yellow-500' :
+                        'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(pred.currentCapacityPercent, 100)}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm mt-3">
+                    <span className="font-medium">Projected Capacity</span>
+                    <span className={`font-bold ${
+                      pred.projectedCapacityPercent >= pred.alertThreshold ? 'text-red-600' :
+                      pred.projectedCapacityPercent >= pred.alertThreshold * 0.8 ? 'text-yellow-600' :
+                      'text-green-600'
+                    }`}>
+                      {pred.projectedCapacityPercent.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden relative">
+                    <div 
+                      className={`h-full transition-all ${
+                        pred.projectedCapacityPercent >= pred.alertThreshold ? 'bg-red-500' :
+                        pred.projectedCapacityPercent >= pred.alertThreshold * 0.8 ? 'bg-yellow-500' :
+                        'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(pred.projectedCapacityPercent, 100)}%` }}
+                    />
+                    {/* Alert threshold line */}
+                    <div 
+                      className="absolute top-0 bottom-0 w-0.5 bg-red-600 border-l-2 border-red-600"
+                      style={{ left: `${pred.alertThreshold}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>{pred.currentClients} → {pred.projectedClients} clients</span>
+                    <span>Alert at {pred.alertThreshold}%</span>
+                  </div>
+                </div>
+
+                {/* Additional Metrics */}
+                {pred.averagePipelineTime > 0 && (
+                  <div className="mt-3 pt-3 border-t text-sm text-gray-600">
+                    <p>
+                      <span className="font-medium">Avg. Pipeline Time:</span>{' '}
+                      {pred.averagePipelineTime.toFixed(0)} days
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
