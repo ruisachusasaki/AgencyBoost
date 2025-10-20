@@ -51,6 +51,8 @@ import TimeOffRequestForm from "@/components/forms/time-off-request-form";
 import ApprovalBoard from "@/components/hr/approval-board";
 import ExpenseReportForm from "@/components/hr/expense-report-form";
 import ExpenseSubmissionsView from "@/components/hr/expense-submissions-view";
+import OffboardingForm from "@/components/hr/offboarding-form";
+import OffboardingSubmissionsView from "@/components/hr/offboarding-submissions-view";
 
 export default function HRPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -868,6 +870,8 @@ export default function HRPage() {
               ...(isManager || isAdmin ? [{ id: "onboarding-submissions", name: "Onboarding Submissions", icon: UserCheck, count: onboardingSubmissions?.length || 0 }] : []),
               { id: "expense-report", name: "Expense Report", icon: DollarSign, count: 0 },
               ...(isAdmin || isAccounting ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0 }] : []),
+              ...(isManager || isAdmin ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0 }] : []),
+              ...(isManager || isAdmin ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
             ];
             
@@ -3013,6 +3017,28 @@ export default function HRPage() {
           </div>
 
           <ExpenseSubmissionsView />
+        </div>
+      )}
+
+      {activeTab === "offboarding-form" && (isManager || isAdmin) && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold">Submit Offboarding Form</h2>
+            <p className="text-slate-600">Complete the offboarding process for departing employees</p>
+          </div>
+
+          <OffboardingForm />
+        </div>
+      )}
+
+      {activeTab === "offboarding-submissions" && (isManager || isAdmin) && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold">Offboarding Submissions</h2>
+            <p className="text-slate-600">Review and manage offboarding submissions</p>
+          </div>
+
+          <OffboardingSubmissionsView />
         </div>
       )}
 

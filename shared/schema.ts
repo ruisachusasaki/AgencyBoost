@@ -2912,6 +2912,47 @@ export const insertExpenseReportSubmissionSchema = createInsertSchema(expenseRep
 export type ExpenseReportSubmission = typeof expenseReportSubmissions.$inferSelect;
 export type InsertExpenseReportSubmission = z.infer<typeof insertExpenseReportSubmissionSchema>;
 
+// Offboarding Form Configuration - stores the customizable form field configuration
+export const offboardingFormConfig = pgTable("offboarding_form_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fields: jsonb("fields").notNull(), // Array of form field configurations
+  updatedBy: uuid("updated_by").notNull().references(() => staff.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOffboardingFormConfigSchema = createInsertSchema(offboardingFormConfig).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type OffboardingFormConfig = typeof offboardingFormConfig.$inferSelect;
+export type InsertOffboardingFormConfig = z.infer<typeof insertOffboardingFormConfigSchema>;
+
+// Offboarding Submissions - when someone submits an offboarding form
+export const offboardingSubmissions = pgTable("offboarding_submissions", {
+  id: serial("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  departmentTeam: text("department_team"),
+  position: text("position"),
+  employmentEndDate: date("employment_end_date"),
+  accountSuspensionDate: date("account_suspension_date"),
+  payOffRamp: text("pay_off_ramp"),
+  status: text("status").notNull().default("pending"), // pending, completed
+  submittedById: uuid("submitted_by_id").references(() => staff.id),
+  completedBy: uuid("completed_by").references(() => staff.id),
+  completedAt: timestamp("completed_at"),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  customFieldData: jsonb("custom_field_data"), // for storing custom form field values
+});
+
+export const insertOffboardingSubmissionSchema = createInsertSchema(offboardingSubmissions).omit({
+  id: true,
+  submittedAt: true,
+});
+
+export type OffboardingSubmission = typeof offboardingSubmissions.$inferSelect;
+export type InsertOffboardingSubmission = z.infer<typeof insertOffboardingSubmissionSchema>;
+
 export const insertFormFieldSchema = createInsertSchema(formFields).omit({
   id: true,
   createdAt: true,

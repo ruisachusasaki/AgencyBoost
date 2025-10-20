@@ -18,6 +18,7 @@ import {
   insertJobOpeningSchema, insertJobApplicationFormConfigSchema,
   insertNewHireOnboardingFormConfigSchema, insertNewHireOnboardingSubmissionSchema,
   insertExpenseReportFormConfigSchema, insertExpenseReportSubmissionSchema,
+  insertOffboardingFormConfigSchema, insertOffboardingSubmissionSchema,
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
   insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
   insertProductBundleSchema, insertBundleProductSchema,
@@ -49,7 +50,7 @@ import {
   socialMediaAccounts, socialMediaPosts, workflows, workflowTemplates, workflowExecutions, workflowActionAnalytics, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
   timeOffPolicies, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, jobApplicationWatchers, applicationStageHistory, timeOffBalances,
-  jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, expenseReportFormConfig, expenseReportSubmissions, teamPositions, clientTeamAssignments,
+  jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, expenseReportFormConfig, expenseReportSubmissions, offboardingFormConfig, offboardingSubmissions, teamPositions, clientTeamAssignments,
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
@@ -16769,6 +16770,167 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ error: "Failed to update submission" });
+    }
+  });
+
+  // Offboarding Form Configuration Routes
+  app.get("/api/offboarding-form-config", async (req, res) => {
+    try {
+      let config;
+      try {
+        [config] = await db.select()
+          .from(offboardingFormConfig)
+          .limit(1);
+      } catch (dbError) {
+        console.error("Database query error:", dbError);
+        config = null;
+      }
+      
+      if (!config) {
+        return res.json({ fields: [] });
+      }
+      
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching offboarding form config:", error);
+      res.status(500).json({ error: "Failed to fetch form configuration" });
+    }
+  });
+
+  app.post("/api/offboarding-form-config", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      
+      // Check if user is admin OR has settings/hr management permission
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      const hasSettingsManagePermission = await hasPermission(currentUserId, 'settings', 'canManage');
+      const hasHrManagePermission = await hasPermission(currentUserId, 'hr', 'canManage');
+      
+      if (!isAdmin && !hasSettingsManagePermission && !hasHrManagePermission) {
+        return res.status(403).json({ error: "You do not have permission to configure the offboarding form" });
+      }
+      
+      const validatedData = insertOffboardingFormConfigSchema.parse({
+        fields: req.body.fields,
+        updatedBy: currentUserId
+      });
+
+      // Check if a config already exists
+      const [existingConfig] = await db.select()
+        .from(offboardingFormConfig)
+        .limit(1);
+
+      let config;
+      if (existingConfig) {
+        [config] = await db.update(offboardingFormConfig)
+          .set({ ...validatedData, updatedAt: new Date() })
+          .where(eq(offboardingFormConfig.id, existingConfig.id))
+          .returning();
+      } else {
+        [config] = await db.insert(offboardingFormConfig).values(validatedData).returning();
+      }
+
+      res.json(config);
+    } catch (error) {
+      console.error("Error saving offboarding form config:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to save form configuration" });
+    }
+  });
+
+  // Offboarding Submission Routes
+  app.post("/api/offboarding-submissions", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      
+      const validatedData = insertOffboardingSubmissionSchema.parse({
+        ...req.body,
+        submittedById: currentUserId,
+        status: 'pending'
+      });
+
+      const [newSubmission] = await db.insert(offboardingSubmissions).values(validatedData).returning();
+      res.json(newSubmission);
+    } catch (error) {
+      console.error("Error creating offboarding submission:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create submission" });
+    }
+  });
+
+  app.get("/api/offboarding-submissions", requireAuth(), async (req, res) => {
+    try {
+      // Check if user has admin or manager role to view all submissions
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      const hasHrViewPermission = await hasPermission(currentUserId, 'hr', 'canView');
+      const hasHrManagePermission = await hasPermission(currentUserId, 'hr', 'canManage');
+      
+      if (!isAdmin && !hasHrViewPermission && !hasHrManagePermission) {
+        return res.status(403).json({ error: "You do not have permission to view offboarding submissions" });
+      }
+      
+      const submissions = await db.select()
+        .from(offboardingSubmissions)
+        .orderBy(desc(offboardingSubmissions.submittedAt));
+      
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching offboarding submissions:", error);
+      res.status(500).json({ error: "Failed to fetch submissions" });
+    }
+  });
+
+  app.patch("/api/offboarding-submissions/:id/status", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      
+      // Check if user has admin or manager permissions
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      const hasHrManagePermission = await hasPermission(currentUserId, 'hr', 'canManage');
+      
+      if (!isAdmin && !hasHrManagePermission) {
+        return res.status(403).json({ error: "You do not have permission to update submission status" });
+      }
+
+      // Validate status
+      const validStatuses = ['pending', 'completed'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: "Invalid status. Must be: pending or completed" });
+      }
+
+      const updateData: any = { 
+        status,
+        ...(status === 'completed' ? {
+          completedBy: currentUserId,
+          completedAt: new Date()
+        } : {})
+      };
+
+      const [updatedSubmission] = await db.update(offboardingSubmissions)
+        .set(updateData)
+        .where(eq(offboardingSubmissions.id, Number(id)))
+        .returning();
+
+      if (!updatedSubmission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+
+      res.json(updatedSubmission);
+    } catch (error) {
+      console.error("Error updating offboarding submission status:", error);
+      res.status(500).json({ error: "Failed to update submission status" });
     }
   });
 
