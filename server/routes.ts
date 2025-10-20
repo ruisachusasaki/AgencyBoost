@@ -20464,6 +20464,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check capacity alerts and notify managers
+  app.post("/api/capacity-alerts/check", requireAuth(), requirePermission('staff', 'canView'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      // Get capacity predictions
+      const capacityPredictionsData = await calculateCapacityPredictions();
+      const predictions = capacityPredictionsData.predictions;
+
+      // Filter predictions that need alerts
+      const alertPredictions = predictions.filter(p => p.needsHiring);
+
+      if (alertPredictions.length === 0) {
+        return res.json({
+          success: true,
+          alertsCreated: 0,
+          message: "No capacity alerts needed at this time"
+        });
+      }
+
+      // Get all managers and admins to notify
+      const managerRoles = await db.select()
+        .from(roles)
+        .where(or(
+          eq(roles.name, ROLE_NAMES.MANAGER),
+          eq(roles.name, ROLE_NAMES.ADMIN)
+        ));
+
+      const managerRoleIds = managerRoles.map(r => r.id);
+
+      // Get staff members with manager or admin roles
+      const managers = await db.select({
+        staffId: staff.id,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        email: staff.email,
+        department: staff.department,
+      })
+        .from(staff)
+        .innerJoin(userRoles, eq(staff.id, userRoles.userId))
+        .where(
+          and(
+            inArray(userRoles.roleId, managerRoleIds),
+            eq(staff.isActive, true)
+          )
+        )
+        .groupBy(staff.id, staff.firstName, staff.lastName, staff.email, staff.department);
+
+      let alertsCreated = 0;
+      const results: any[] = [];
+
+      // Create notifications for each alert
+      for (const prediction of alertPredictions) {
+        // Filter managers by department (if they have a department set)
+        const relevantManagers = managers.filter(m => 
+          !m.department || m.department === prediction.department || m.department === ''
+        );
+
+        for (const manager of relevantManagers) {
+          try {
+            await db.insert(notifications).values({
+              userId: manager.staffId,
+              type: "capacity_alert",
+              title: `Capacity Alert: ${prediction.department}`,
+              message: `The ${prediction.department} team is approaching capacity (${prediction.projectedCapacityPercent.toFixed(1)}% projected). Current: ${prediction.currentClients} clients, Predicted: ${prediction.predictedNewClients} new clients from pipeline. Consider hiring additional staff.`,
+              isRead: false,
+              entityType: "department",
+              entityId: prediction.department,
+              metadata: {
+                department: prediction.department,
+                role: prediction.role,
+                currentCapacity: prediction.currentCapacityPercent,
+                projectedCapacity: prediction.projectedCapacityPercent,
+                alertThreshold: prediction.alertThreshold,
+                leadsInPipeline: prediction.leadsInPipeline,
+                predictedNewClients: prediction.predictedNewClients,
+                daysUntilCapacity: prediction.daysUntilCapacity,
+              }
+            });
+
+            alertsCreated++;
+          } catch (error) {
+            console.error(`Failed to create notification for manager ${manager.email}:`, error);
+          }
+        }
+
+        results.push({
+          department: prediction.department,
+          role: prediction.role,
+          projectedCapacity: prediction.projectedCapacityPercent,
+          managersNotified: relevantManagers.length
+        });
+
+        // Create audit log
+        await createAuditLog(
+          "created",
+          "capacity_alert",
+          prediction.department,
+          `Capacity Alert for ${prediction.department}`,
+          userId,
+          `Created capacity alert - ${prediction.projectedCapacityPercent.toFixed(1)}% projected capacity (threshold: ${prediction.alertThreshold}%)`,
+          null,
+          {
+            currentCapacity: prediction.currentCapacityPercent,
+            projectedCapacity: prediction.projectedCapacityPercent,
+            managersNotified: relevantManagers.length,
+            managers: relevantManagers.map(m => `${m.firstName} ${m.lastName}`)
+          },
+          req
+        );
+      }
+
+      res.json({
+        success: true,
+        alertsCreated,
+        results,
+        message: `Created ${alertsCreated} capacity alert notifications for ${alertPredictions.length} departments`
+      });
+
+    } catch (error) {
+      console.error("Error checking capacity alerts:", error);
+      res.status(500).json({ 
+        error: "Failed to check capacity alerts",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get capacity alert notification history
+  app.get("/api/capacity-alerts/history", requireAuth(), requirePermission('staff', 'canView'), async (req, res) => {
+    try {
+      const capacityAlerts = await db.select()
+        .from(notifications)
+        .where(eq(notifications.type, "capacity_alert"))
+        .orderBy(desc(notifications.createdAt))
+        .limit(50);
+
+      res.json(capacityAlerts);
+    } catch (error) {
+      console.error("Error fetching capacity alert history:", error);
+      res.status(500).json({ error: "Failed to fetch capacity alert history" });
+    }
+  });
+
   // ===== TIME TRACKING REPORTS ===== 
   // MINIMAL CLEAN IMPLEMENTATION - NO DRIZZLE DEPENDENCIES
 

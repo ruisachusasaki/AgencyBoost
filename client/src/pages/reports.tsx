@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -36,6 +37,9 @@ import {
   EyeOff,
   FileSpreadsheet,
   Loader2,
+  Bell,
+  Building2,
+  AlertTriangle,
 } from "lucide-react";
 import { 
   exportTimeTrackingData,
@@ -3720,6 +3724,8 @@ export default function Reports() {
 
 // Hiring Predictions Component
 function HiringPredictionsSection() {
+  const { toast } = useToast();
+  
   const { data: predictionsData, isLoading } = useQuery<{
     predictions: Array<{
       department: string;
@@ -3740,6 +3746,27 @@ function HiringPredictionsSection() {
     }>;
   }>({
     queryKey: ['/api/capacity-predictions'],
+  });
+
+  // Mutation to trigger capacity alerts
+  const triggerAlertsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/capacity-alerts/check', undefined);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Alerts Sent",
+        description: data.message || `Successfully notified managers about ${data.alertsCreated} capacity alerts.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send capacity alerts",
+        variant: "destructive",
+      });
+    }
   });
 
   const predictions = predictionsData?.predictions || [];
@@ -3788,13 +3815,29 @@ function HiringPredictionsSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" />
-          Hiring Predictions
-        </CardTitle>
-        <p className="text-sm text-muted-foreground mt-1">
-          Predictive capacity analysis based on pipeline data and historical close rates
-        </p>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Hiring Predictions
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Predictive capacity analysis based on pipeline data and historical close rates
+            </p>
+          </div>
+          {alertPredictions.length > 0 && (
+            <Button
+              onClick={() => triggerAlertsMutation.mutate()}
+              disabled={triggerAlertsMutation.isPending}
+              variant="default"
+              className="flex items-center gap-2"
+              data-testid="button-notify-managers"
+            >
+              <Bell className="h-4 w-4" />
+              {triggerAlertsMutation.isPending ? "Sending..." : "Notify Managers"}
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {/* Alert Summary */}
