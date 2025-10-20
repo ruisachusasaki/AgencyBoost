@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -406,6 +406,49 @@ export default function Reports() {
     queryKey: ["/api/reports/team-workload"],
     enabled: activeTab === "team", // Only fetch when team tab is active
   });
+
+  // Team Workload filtering and pagination logic (at component top level to follow Hook rules)
+  const filteredStaffWorkload = useMemo(() => {
+    if (activeTab !== "team") return [];
+    const staffData = teamWorkloadData?.data?.staffWorkload || [];
+    
+    return staffData.filter((staff) => {
+      // Search filter
+      if (workloadSearchTerm && !staff.staffName.toLowerCase().includes(workloadSearchTerm.toLowerCase())) {
+        return false;
+      }
+      
+      // Department filter
+      if (workloadDepartmentFilter !== "all" && staff.department !== workloadDepartmentFilter) {
+        return false;
+      }
+      
+      // Role filter
+      if (workloadRoleFilter !== "all" && staff.staffRole !== workloadRoleFilter) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [activeTab, teamWorkloadData?.data?.staffWorkload, workloadSearchTerm, workloadDepartmentFilter, workloadRoleFilter]);
+
+  const workloadTotalPages = Math.ceil(filteredStaffWorkload.length / workloadPageSize);
+
+  // Auto-adjust page when filters change (prevents showing empty page)
+  useEffect(() => {
+    if (workloadTotalPages === 0 && workloadPage !== 1) {
+      setWorkloadPage(1);
+    } else if (workloadPage > workloadTotalPages && workloadTotalPages > 0) {
+      setWorkloadPage(workloadTotalPages);
+    }
+  }, [workloadPage, workloadTotalPages]);
+
+  const paginatedStaffWorkload = useMemo(() => {
+    if (activeTab !== "team") return [];
+    const startIndex = (workloadPage - 1) * workloadPageSize;
+    const endIndex = startIndex + workloadPageSize;
+    return filteredStaffWorkload.slice(startIndex, endIndex);
+  }, [activeTab, filteredStaffWorkload, workloadPage, workloadPageSize]);
 
   const isLoading = clientsLoading || campaignsLoading || leadsLoading || tasksLoading;
 
@@ -3509,47 +3552,7 @@ export default function Reports() {
       )}
 
       {/* Team Workload Report */}
-      {activeTab === "team" && (() => {
-        // Filter staff workload data
-        const filteredStaffWorkload = useMemo(() => {
-          const staffData = teamWorkloadData?.data?.staffWorkload || [];
-          
-          return staffData.filter((staff) => {
-            // Search filter
-            if (workloadSearchTerm && !staff.staffName.toLowerCase().includes(workloadSearchTerm.toLowerCase())) {
-              return false;
-            }
-            
-            // Department filter
-            if (workloadDepartmentFilter !== "all" && staff.department !== workloadDepartmentFilter) {
-              return false;
-            }
-            
-            // Role filter
-            if (workloadRoleFilter !== "all" && staff.staffRole !== workloadRoleFilter) {
-              return false;
-            }
-            
-            return true;
-          });
-        }, [teamWorkloadData?.data?.staffWorkload, workloadSearchTerm, workloadDepartmentFilter, workloadRoleFilter]);
-
-        // Calculate pagination
-        const totalPages = Math.ceil(filteredStaffWorkload.length / workloadPageSize);
-        
-        // Auto-adjust page if out of bounds
-        if (workloadPage > totalPages && totalPages > 0) {
-          setWorkloadPage(totalPages);
-        }
-
-        // Paginate filtered data
-        const paginatedStaffWorkload = useMemo(() => {
-          const startIndex = (workloadPage - 1) * workloadPageSize;
-          const endIndex = startIndex + workloadPageSize;
-          return filteredStaffWorkload.slice(startIndex, endIndex);
-        }, [filteredStaffWorkload, workloadPage, workloadPageSize]);
-
-        return (
+      {activeTab === "team" && (
         <div className="space-y-6">
           {/* Team Workload Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -3808,7 +3811,7 @@ export default function Reports() {
                   </Table>
 
                   {/* Pagination Controls */}
-                  {totalPages > 1 && (
+                  {workloadTotalPages > 1 && (
                     <div className="flex items-center justify-between px-4 py-3 border-t mt-4">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">Show:</span>
@@ -3839,14 +3842,14 @@ export default function Reports() {
                         </Button>
 
                         <div className="flex gap-1">
-                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          {Array.from({ length: Math.min(5, workloadTotalPages) }, (_, i) => {
                             let pageNum;
-                            if (totalPages <= 5) {
+                            if (workloadTotalPages <= 5) {
                               pageNum = i + 1;
                             } else if (workloadPage <= 3) {
                               pageNum = i + 1;
-                            } else if (workloadPage >= totalPages - 2) {
-                              pageNum = totalPages - 4 + i;
+                            } else if (workloadPage >= workloadTotalPages - 2) {
+                              pageNum = workloadTotalPages - 4 + i;
                             } else {
                               pageNum = workloadPage - 2 + i;
                             }
@@ -3868,8 +3871,8 @@ export default function Reports() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setWorkloadPage(Math.min(totalPages, workloadPage + 1))}
-                          disabled={workloadPage === totalPages}
+                          onClick={() => setWorkloadPage(Math.min(workloadTotalPages, workloadPage + 1))}
+                          disabled={workloadPage === workloadTotalPages}
                           data-testid="button-workload-next-page"
                         >
                           Next
@@ -3887,8 +3890,7 @@ export default function Reports() {
           {/* Hiring Predictions Section */}
           <HiringPredictionsSection />
         </div>
-        );
-      })()}
+      )}
     </div>
   );
 }
