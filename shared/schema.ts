@@ -3515,6 +3515,13 @@ export const insertCapacitySettingsSchema = createInsertSchema(capacitySettings)
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  alertThreshold: z.union([z.string(), z.number()]).transform((val) => {
+    if (typeof val === 'number') {
+      return val.toString();
+    }
+    return val;
+  }),
 });
 
 // Capacity Settings update schema
