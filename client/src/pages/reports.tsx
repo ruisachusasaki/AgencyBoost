@@ -3509,7 +3509,47 @@ export default function Reports() {
       )}
 
       {/* Team Workload Report */}
-      {activeTab === "team" && (
+      {activeTab === "team" && (() => {
+        // Filter staff workload data
+        const filteredStaffWorkload = useMemo(() => {
+          const staffData = teamWorkloadData?.data?.staffWorkload || [];
+          
+          return staffData.filter((staff) => {
+            // Search filter
+            if (workloadSearchTerm && !staff.staffName.toLowerCase().includes(workloadSearchTerm.toLowerCase())) {
+              return false;
+            }
+            
+            // Department filter
+            if (workloadDepartmentFilter !== "all" && staff.department !== workloadDepartmentFilter) {
+              return false;
+            }
+            
+            // Role filter
+            if (workloadRoleFilter !== "all" && staff.staffRole !== workloadRoleFilter) {
+              return false;
+            }
+            
+            return true;
+          });
+        }, [teamWorkloadData?.data?.staffWorkload, workloadSearchTerm, workloadDepartmentFilter, workloadRoleFilter]);
+
+        // Calculate pagination
+        const totalPages = Math.ceil(filteredStaffWorkload.length / workloadPageSize);
+        
+        // Auto-adjust page if out of bounds
+        if (workloadPage > totalPages && totalPages > 0) {
+          setWorkloadPage(totalPages);
+        }
+
+        // Paginate filtered data
+        const paginatedStaffWorkload = useMemo(() => {
+          const startIndex = (workloadPage - 1) * workloadPageSize;
+          const endIndex = startIndex + workloadPageSize;
+          return filteredStaffWorkload.slice(startIndex, endIndex);
+        }, [filteredStaffWorkload, workloadPage, workloadPageSize]);
+
+        return (
         <div className="space-y-6">
           {/* Team Workload Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -3674,7 +3714,49 @@ export default function Reports() {
                   <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <>
+                  {/* Filter Controls */}
+                  <div className="flex flex-wrap gap-4 mb-4">
+                    <div className="flex-1 min-w-[200px]">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search by staff name..."
+                          value={workloadSearchTerm}
+                          onChange={(e) => {
+                            setWorkloadSearchTerm(e.target.value);
+                            setWorkloadPage(1);
+                          }}
+                          className="pl-10"
+                          data-testid="input-workload-search"
+                        />
+                      </div>
+                    </div>
+                    <Select value={workloadDepartmentFilter} onValueChange={(value) => { setWorkloadDepartmentFilter(value); setWorkloadPage(1); }}>
+                      <SelectTrigger className="w-[200px]" data-testid="select-workload-department">
+                        <SelectValue placeholder="All Departments" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Departments</SelectItem>
+                        {Array.from(new Set((teamWorkloadData?.data?.staffWorkload || []).map(s => s.department).filter(Boolean))).sort().map(dept => (
+                          <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={workloadRoleFilter} onValueChange={(value) => { setWorkloadRoleFilter(value); setWorkloadPage(1); }}>
+                      <SelectTrigger className="w-[200px]" data-testid="select-workload-role">
+                        <SelectValue placeholder="All Roles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        {Array.from(new Set((teamWorkloadData?.data?.staffWorkload || []).map(s => s.staffRole).filter(Boolean))).sort().map(role => (
+                          <SelectItem key={role} value={role}>{role}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -3686,37 +3768,118 @@ export default function Reports() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(teamWorkloadData?.data?.staffWorkload || []).map((staff) => (
-                        <TableRow key={staff.staffId}>
-                          <TableCell className="font-medium">{staff.staffName}</TableCell>
-                          <TableCell>{staff.staffRole}</TableCell>
-                          <TableCell>{staff.department}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant={staff.clientCount === 0 ? "secondary" : staff.clientCount > 3 ? "destructive" : "default"}>
-                              {staff.clientCount}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {staff.clients.length > 0 ? (
-                              <div className="space-y-1">
-                                {staff.clients.map((client, index) => (
-                                  <div key={client.clientId} className="text-sm">
-                                    <span className="font-medium">{client.clientName}</span>
-                                    <span className="text-gray-500 ml-2">
-                                      ({client.positions.map(p => p.positionLabel).join(", ")})
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-gray-400 italic">No assignments</span>
-                            )}
+                      {paginatedStaffWorkload.length > 0 ? (
+                        paginatedStaffWorkload.map((staff) => (
+                          <TableRow key={staff.staffId} data-testid={`row-workload-${staff.staffId}`}>
+                            <TableCell className="font-medium">{staff.staffName}</TableCell>
+                            <TableCell>{staff.staffRole}</TableCell>
+                            <TableCell>{staff.department}</TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant={staff.clientCount === 0 ? "secondary" : staff.clientCount > 3 ? "destructive" : "default"}>
+                                {staff.clientCount}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {staff.clients.length > 0 ? (
+                                <div className="space-y-1">
+                                  {staff.clients.map((client, index) => (
+                                    <div key={client.clientId} className="text-sm">
+                                      <span className="font-medium">{client.clientName}</span>
+                                      <span className="text-gray-500 ml-2">
+                                        ({client.positions.map(p => p.positionLabel).join(", ")})
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 italic">No assignments</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                            No staff members match your filters
                           </TableCell>
                         </TableRow>
-                      ))}
+                      )}
                     </TableBody>
                   </Table>
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t mt-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Show:</span>
+                        <Select value={String(workloadPageSize)} onValueChange={(value) => { setWorkloadPageSize(Number(value)); setWorkloadPage(1); }}>
+                          <SelectTrigger className="w-20" data-testid="select-workload-page-size">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="20">20</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                            <SelectItem value="100">100</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <span className="text-sm text-muted-foreground">entries</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setWorkloadPage(Math.max(1, workloadPage - 1))}
+                          disabled={workloadPage === 1}
+                          data-testid="button-workload-prev-page"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Previous
+                        </Button>
+
+                        <div className="flex gap-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (workloadPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (workloadPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = workloadPage - 2 + i;
+                            }
+                            
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={workloadPage === pageNum ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setWorkloadPage(pageNum)}
+                                data-testid={`button-workload-page-${pageNum}`}
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setWorkloadPage(Math.min(totalPages, workloadPage + 1))}
+                          disabled={workloadPage === totalPages}
+                          data-testid="button-workload-next-page"
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -3724,7 +3887,8 @@ export default function Reports() {
           {/* Hiring Predictions Section */}
           <HiringPredictionsSection />
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
