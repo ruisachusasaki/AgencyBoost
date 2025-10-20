@@ -4,15 +4,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "wouter";
-import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft, Building2, UserCheck, Settings, UsersIcon } from "lucide-react";
+import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft, Building2, UserCheck, Settings, UsersIcon, Info } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { FormLabelWithTooltip } from "@/components/ui/form-label-with-tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
@@ -948,11 +950,18 @@ function CapacitySettingsTab() {
     queryKey: ['/api/departments'],
   });
 
+  // Fetch staff for notification recipients
+  const { data: allStaff = [] } = useQuery<any[]>({
+    queryKey: ['/api/staff'],
+  });
+
   const capacityFormSchema = z.object({
     department: z.string().min(1, "Department is required"),
     role: z.string().optional(),
     maxClientsPerStaff: z.number().min(1, "Must be at least 1").max(100, "Max 100 clients per staff"),
     alertThreshold: z.number().min(0, "Must be at least 0").max(100, "Must be at most 100"),
+    notifyUserIds: z.array(z.string()).optional(),
+    notificationMessage: z.string().optional(),
     isActive: z.boolean().default(true),
   });
 
@@ -965,6 +974,8 @@ function CapacitySettingsTab() {
       role: "",
       maxClientsPerStaff: 10,
       alertThreshold: 80,
+      notifyUserIds: [],
+      notificationMessage: "",
       isActive: true,
     }
   });
@@ -1054,6 +1065,8 @@ function CapacitySettingsTab() {
       role: setting.role || "",
       maxClientsPerStaff: setting.maxClientsPerStaff,
       alertThreshold: parseFloat(setting.alertThreshold),
+      notifyUserIds: setting.notifyUserIds || [],
+      notificationMessage: setting.notificationMessage || "",
       isActive: setting.isActive,
     });
     setIsAddDialogOpen(true);
@@ -1287,6 +1300,78 @@ function CapacitySettingsTab() {
                     <p className="text-xs text-muted-foreground">
                       Alert managers when capacity reaches this percentage
                     </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="notifyUserIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notify Specific Users (Optional)</FormLabel>
+                    <FormDescription className="text-xs">
+                      Select specific users to notify. If none selected, all managers and admins will be notified.
+                    </FormDescription>
+                    <div className="border rounded-md p-4 max-h-[200px] overflow-y-auto space-y-2">
+                      {allStaff.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-2">No staff members available</p>
+                      ) : (
+                        allStaff.map((staff: any) => (
+                          <div key={staff.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={field.value?.includes(staff.id)}
+                              onCheckedChange={(checked) => {
+                                const currentValue = field.value || [];
+                                if (checked) {
+                                  field.onChange([...currentValue, staff.id]);
+                                } else {
+                                  field.onChange(currentValue.filter((id: string) => id !== staff.id));
+                                }
+                              }}
+                              data-testid={`checkbox-staff-${staff.id}`}
+                            />
+                            <label className="text-sm cursor-pointer flex-1">
+                              {staff.firstName} {staff.lastName}
+                              {staff.email && (
+                                <span className="text-muted-foreground ml-2">({staff.email})</span>
+                              )}
+                            </label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="notificationMessage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Custom Notification Message (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Your {department} team is approaching capacity..."
+                        rows={4}
+                        {...field}
+                        data-testid="input-notification-message"
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs space-y-1">
+                      <div className="flex items-start gap-2">
+                        <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium">Available placeholders:</p>
+                          <p className="text-muted-foreground">
+                            {'{department}'}, {'{role}'}, {'{capacity_percentage}'}, {'{current_clients}'}, {'{predicted_clients}'}, {'{max_capacity}'}
+                          </p>
+                        </div>
+                      </div>
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
