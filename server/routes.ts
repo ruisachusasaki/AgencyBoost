@@ -40,6 +40,7 @@ import {
   insertClientBriefSectionSchema, insertClientBriefValueSchema,
   insertQuoteSchema, insertQuoteItemSchema,
   updateSalesSettingsSchema,
+  insertCapacitySettingsSchema, updateCapacitySettingsSchema,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
@@ -52,7 +53,7 @@ import {
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
-  clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings
+  clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, capacitySettings
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
@@ -15322,6 +15323,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating sales settings:", error);
       res.status(500).json({ message: "Failed to update sales settings" });
+    }
+  });
+
+  // Capacity Settings Routes - Predictive hiring alerts
+  app.get("/api/capacity-settings", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
+    try {
+      const settings = await db.select().from(capacitySettings).orderBy(asc(capacitySettings.department));
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching capacity settings:", error);
+      res.status(500).json({ message: "Failed to fetch capacity settings" });
+    }
+  });
+
+  app.post("/api/capacity-settings", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const validatedData = insertCapacitySettingsSchema.parse(req.body);
+      
+      const [newSetting] = await db.insert(capacitySettings)
+        .values({
+          ...validatedData,
+          createdBy: userId,
+          updatedBy: userId,
+        })
+        .returning();
+      
+      await createAuditLog(
+        "created",
+        "capacity_settings",
+        newSetting.id.toString(),
+        `Capacity Setting - ${newSetting.department}${newSetting.role ? ` (${newSetting.role})` : ''}`,
+        userId,
+        `Created capacity setting: ${newSetting.department} - Max ${newSetting.maxClientsPerStaff} clients/staff, Alert at ${newSetting.alertThreshold}%`,
+        null,
+        newSetting,
+        req
+      );
+
+      res.status(201).json(newSetting);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating capacity setting:", error);
+      res.status(500).json({ message: "Failed to create capacity setting" });
+    }
+  });
+
+  app.patch("/api/capacity-settings/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { id } = req.params;
+      const validatedData = updateCapacitySettingsSchema.parse(req.body);
+      
+      const [oldSetting] = await db.select().from(capacitySettings).where(eq(capacitySettings.id, id));
+      if (!oldSetting) {
+        return res.status(404).json({ message: "Capacity setting not found" });
+      }
+
+      const [updatedSetting] = await db.update(capacitySettings)
+        .set({ 
+          ...validatedData,
+          updatedBy: userId,
+          updatedAt: sql`now()`
+        })
+        .where(eq(capacitySettings.id, id))
+        .returning();
+      
+      await createAuditLog(
+        "updated",
+        "capacity_settings",
+        updatedSetting.id.toString(),
+        `Capacity Setting - ${updatedSetting.department}${updatedSetting.role ? ` (${updatedSetting.role})` : ''}`,
+        userId,
+        `Updated capacity setting`,
+        oldSetting,
+        updatedSetting,
+        req
+      );
+
+      res.json(updatedSetting);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating capacity setting:", error);
+      res.status(500).json({ message: "Failed to update capacity setting" });
+    }
+  });
+
+  app.delete("/api/capacity-settings/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { id } = req.params;
+      
+      const [setting] = await db.select().from(capacitySettings).where(eq(capacitySettings.id, id));
+      if (!setting) {
+        return res.status(404).json({ message: "Capacity setting not found" });
+      }
+
+      await db.delete(capacitySettings).where(eq(capacitySettings.id, id));
+      
+      await createAuditLog(
+        "deleted",
+        "capacity_settings",
+        setting.id.toString(),
+        `Capacity Setting - ${setting.department}${setting.role ? ` (${setting.role})` : ''}`,
+        userId,
+        `Deleted capacity setting`,
+        setting,
+        null,
+        req
+      );
+
+      res.json({ message: "Capacity setting deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting capacity setting:", error);
+      res.status(500).json({ message: "Failed to delete capacity setting" });
     }
   });
 

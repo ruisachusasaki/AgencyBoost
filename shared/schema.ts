@@ -283,6 +283,20 @@ export const salesSettings = pgTable("sales_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Capacity Settings - team capacity management for predictive hiring alerts
+export const capacitySettings = pgTable("capacity_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  department: text("department").notNull(), // Department name (e.g., "Sales", "Marketing")
+  role: text("role"), // Optional role filter (e.g., "Account Manager")
+  maxClientsPerStaff: integer("max_clients_per_staff").notNull().default(10),
+  alertThreshold: decimal("alert_threshold", { precision: 5, scale: 2 }).notNull().default('80.00'), // percentage - alert when team reaches this capacity
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: uuid("created_by").references(() => staff.id),
+  updatedBy: uuid("updated_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Notes
 export const notes = pgTable("notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3496,6 +3510,16 @@ export const insertSalesSettingsSchema = createInsertSchema(salesSettings).omit(
 // Sales Settings update schema
 export const updateSalesSettingsSchema = insertSalesSettingsSchema.partial();
 
+// Capacity Settings insert schema
+export const insertCapacitySettingsSchema = createInsertSchema(capacitySettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Capacity Settings update schema
+export const updateCapacitySettingsSchema = insertCapacitySettingsSchema.partial();
+
 // Training Types
 export type TrainingCategory = typeof trainingCategories.$inferSelect;
 export type InsertTrainingCategory = z.infer<typeof insertTrainingCategorySchema>;
@@ -3553,6 +3577,10 @@ export type InsertQuoteItem = z.infer<typeof insertQuoteItemSchema>;
 // Sales Settings Types
 export type SalesSettings = typeof salesSettings.$inferSelect;
 export type InsertSalesSettings = z.infer<typeof insertSalesSettingsSchema>;
+
+// Capacity Settings Types
+export type CapacitySettings = typeof capacitySettings.$inferSelect;
+export type InsertCapacitySettings = z.infer<typeof insertCapacitySettingsSchema>;
 
 // Smart Lists schema exports - remove duplicate and use existing one
 
