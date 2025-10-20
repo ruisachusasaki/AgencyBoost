@@ -115,6 +115,13 @@ export default function Reports() {
   const [clientBreakdownView, setClientBreakdownView] = useState("by-user-client");
   const [userIdFilter, setUserIdFilter] = useState("all");
   
+  // Detailed Staff Workload specific state
+  const [workloadSearchTerm, setWorkloadSearchTerm] = useState("");
+  const [workloadDepartmentFilter, setWorkloadDepartmentFilter] = useState("all");
+  const [workloadRoleFilter, setWorkloadRoleFilter] = useState("all");
+  const [workloadPage, setWorkloadPage] = useState(1);
+  const [workloadPageSize, setWorkloadPageSize] = useState(20);
+  
   // User authentication and role data
   const { data: currentUser } = useQuery<{ id: string; name: string; email: string; role: string }>({
     queryKey: ["/api/auth/current-user"],
