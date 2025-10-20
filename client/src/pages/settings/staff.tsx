@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "wouter";
-import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft, Building2, UserCheck, Settings, UsersIcon, Info, Tag } from "lucide-react";
+import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft, Building2, UserCheck, Settings, UsersIcon, Info, Tag, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +55,8 @@ export default function Staff() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   // Debounce search term to prevent rapid API calls
   useEffect(() => {
@@ -243,38 +245,56 @@ export default function Staff() {
     }
   };
 
-  const sortedStaffMembers = [...staffMembers].sort((a, b) => {
-    let aValue = '';
-    let bValue = '';
+  const sortedStaffMembers = useMemo(() => {
+    return [...staffMembers].sort((a, b) => {
+      let aValue = '';
+      let bValue = '';
 
-    switch (sortField) {
-      case 'name':
-        aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
-        bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
-        break;
-      case 'email':
-        aValue = a.email.toLowerCase();
-        bValue = b.email.toLowerCase();
-        break;
-      case 'phone':
-        aValue = a.phone || '';
-        bValue = b.phone || '';
-        break;
-      case 'role':
-        // Get role name from our roles data
-        const aRole = roles.find(r => r.id === a.roleId);
-        const bRole = roles.find(r => r.id === b.roleId);
-        aValue = aRole?.name?.toLowerCase() || '';
-        bValue = bRole?.name?.toLowerCase() || '';
-        break;
-    }
+      switch (sortField) {
+        case 'name':
+          aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
+          bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
+          break;
+        case 'email':
+          aValue = a.email.toLowerCase();
+          bValue = b.email.toLowerCase();
+          break;
+        case 'phone':
+          aValue = a.phone || '';
+          bValue = b.phone || '';
+          break;
+        case 'role':
+          // Get role name from our roles data
+          const aRole = roles.find(r => r.id === a.roleId);
+          const bRole = roles.find(r => r.id === b.roleId);
+          aValue = aRole?.name?.toLowerCase() || '';
+          bValue = bRole?.name?.toLowerCase() || '';
+          break;
+      }
 
-    if (sortOrder === 'asc') {
-      return aValue.localeCompare(bValue);
-    } else {
-      return bValue.localeCompare(aValue);
+      if (sortOrder === 'asc') {
+        return aValue.localeCompare(bValue);
+      } else {
+        return bValue.localeCompare(aValue);
+      }
+    });
+  }, [staffMembers, sortField, sortOrder, roles]);
+
+  // Paginated staff members
+  const paginatedStaffMembers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return sortedStaffMembers.slice(start, end);
+  }, [sortedStaffMembers, page, pageSize]);
+
+  const totalPages = Math.ceil(sortedStaffMembers.length / pageSize);
+
+  // Reset to last valid page when data changes
+  useEffect(() => {
+    if (page > totalPages && totalPages > 0) {
+      setPage(totalPages);
     }
-  });
+  }, [sortedStaffMembers.length, pageSize, totalPages, page]);
 
   const formatPhoneNumber = (phone?: string) => {
     if (!phone) return "—";
@@ -620,7 +640,7 @@ export default function Staff() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  sortedStaffMembers.map((staff) => (
+                  paginatedStaffMembers.map((staff) => (
                     <TableRow key={staff.id}>
                       {/* Profile Image + Name */}
                       <TableCell>
@@ -701,6 +721,78 @@ export default function Staff() {
                 )}
               </TableBody>
             </Table>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Show:</span>
+                  <Select value={String(pageSize)} onValueChange={(value) => { setPageSize(Number(value)); setPage(1); }}>
+                    <SelectTrigger className="w-20" data-testid="select-staff-page-size">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-muted-foreground">entries</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(Math.max(1, page - 1))}
+                    disabled={page === 1}
+                    data-testid="button-staff-prev-page"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+
+                  <div className="flex gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (page <= 3) {
+                        pageNum = i + 1;
+                      } else if (page >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = page - 2 + i;
+                      }
+                      
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPage(pageNum)}
+                          data-testid={`button-staff-page-${pageNum}`}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    disabled={page === totalPages}
+                    data-testid="button-staff-next-page"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
           </Card>
