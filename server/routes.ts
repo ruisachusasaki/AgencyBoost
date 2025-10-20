@@ -15451,6 +15451,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Predictive Capacity Analysis - Calculate hiring predictions based on pipeline
+  app.get("/api/capacity-predictions", requireAuth(), requirePermission('reports', 'canView'), async (req, res) => {
+    try {
+      // Step 1: Get capacity settings
+      const capacityConfigs = await db.select().from(capacitySettings).where(eq(capacitySettings.isActive, true));
+      
+      if (capacityConfigs.length === 0) {
+        return res.json({
+          predictions: [],
+          metrics: null,
+          message: "No active capacity settings configured. Please configure capacity settings in Settings > Staff."
+        });
+      }
+
+      // Step 2: Calculate historical metrics from closed deals
+      // Get all leads that were converted to clients (deals with status = won)
+      const closedDeals = await db.select({
+        id: leads.id,
+        createdAt: leads.createdAt,
+        department: staff.department,
+        closedDate: clients.createdAt,
+      })
+        .from(leads)
+        .innerJoin(clients, eq(leads.email, clients.email)) // Match by email
+        .innerJoin(staff, eq(leads.assignedTo, staff.id))
+        .where(sql`${leads.status} = 'won'`);
+
+      // Calculate average time to close (in days)
+      let totalDaysToClose = 0;
+      let validDeals = 0;
+      
+      for (const deal of closedDeals) {
+        if (deal.createdAt && deal.closedDate) {
+          const days = Math.floor((new Date(deal.closedDate).getTime() - new Date(deal.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+          if (days >= 0) {
+            totalDaysToClose += days;
+            validDeals++;
+          }
+        }
+      }
+      
+      const avgDaysToClose = validDeals > 0 ? totalDaysToClose / validDeals : 14; // Default 14 days if no data
+
+      // Calculate close rate
+      const totalLeads = await db.select({ count: sql<number>`count(*)::int` }).from(leads);
+      const totalClosed = closedDeals.length;
+      const closeRate = totalLeads[0].count > 0 ? (totalClosed / totalLeads[0].count) : 0.30; // Default 30%
+
+      // Step 3: Get active leads in pipeline by department
+      const pipelineLeads = await db.select({
+        id: leads.id,
+        status: leads.status,
+        department: staff.department,
+      })
+        .from(leads)
+        .leftJoin(staff, eq(leads.assignedTo, staff.id))
+        .where(and(
+          sql`${leads.status} NOT IN ('won', 'lost', 'disqualified')`,
+          isNotNull(staff.department)
+        ));
+
+      // Count leads by department
+      const leadsByDepartment: Record<string, number> = {};
+      for (const lead of pipelineLeads) {
+        const dept = lead.department || 'Unassigned';
+        leadsByDepartment[dept] = (leadsByDepartment[dept] || 0) + 1;
+      }
+
+      // Step 4: Get current client assignments by department
+      const currentAssignments = await db.select({
+        department: staff.department,
+        staffId: clientTeamAssignments.staffId,
+        staffName: staff.name,
+        clientCount: sql<number>`count(distinct ${clientTeamAssignments.clientId})::int`,
+      })
+        .from(clientTeamAssignments)
+        .innerJoin(staff, eq(clientTeamAssignments.staffId, staff.id))
+        .where(isNotNull(staff.department))
+        .groupBy(staff.department, clientTeamAssignments.staffId, staff.name);
+
+      // Calculate current capacity by department
+      const currentCapacity: Record<string, { totalStaff: number; totalClients: number; avgPerStaff: number }> = {};
+      for (const assignment of currentAssignments) {
+        const dept = assignment.department || 'Unassigned';
+        if (!currentCapacity[dept]) {
+          currentCapacity[dept] = { totalStaff: 0, totalClients: 0, avgPerStaff: 0 };
+        }
+        currentCapacity[dept].totalStaff++;
+        currentCapacity[dept].totalClients += assignment.clientCount;
+      }
+
+      // Calculate averages
+      for (const dept in currentCapacity) {
+        const data = currentCapacity[dept];
+        data.avgPerStaff = data.totalStaff > 0 ? data.totalClients / data.totalStaff : 0;
+      }
+
+      // Step 5: Generate predictions for each department with capacity settings
+      const predictions = [];
+      
+      for (const config of capacityConfigs) {
+        const dept = config.department;
+        const leadsInPipeline = leadsByDepartment[dept] || 0;
+        const predictedNewClients = Math.round(leadsInPipeline * closeRate);
+        const expectedCloseDays = Math.ceil(avgDaysToClose);
+        const expectedCloseDate = new Date();
+        expectedCloseDate.setDate(expectedCloseDate.getDate() + expectedCloseDays);
+
+        const current = currentCapacity[dept] || { totalStaff: 0, totalClients: 0, avgPerStaff: 0 };
+        const futureClients = current.totalClients + predictedNewClients;
+        const maxCapacity = current.totalStaff * config.maxClientsPerStaff;
+        const futureCapacityPercent = maxCapacity > 0 ? (futureClients / maxCapacity) * 100 : 0;
+        const currentCapacityPercent = maxCapacity > 0 ? (current.totalClients / maxCapacity) * 100 : 0;
+
+        const needsHiring = futureCapacityPercent >= parseFloat(config.alertThreshold.toString());
+        const staffNeeded = Math.ceil(Math.max(0, (futureClients - (current.totalStaff * config.maxClientsPerStaff)) / config.maxClientsPerStaff));
+
+        predictions.push({
+          department: dept,
+          role: config.role,
+          currentStaff: current.totalStaff,
+          currentClients: current.totalClients,
+          currentAvgPerStaff: parseFloat(current.avgPerStaff.toFixed(1)),
+          currentCapacityPercent: parseFloat(currentCapacityPercent.toFixed(1)),
+          leadsInPipeline,
+          predictedNewClients,
+          futureClients,
+          futureCapacityPercent: parseFloat(futureCapacityPercent.toFixed(1)),
+          maxClientsPerStaff: config.maxClientsPerStaff,
+          alertThreshold: parseFloat(config.alertThreshold.toString()),
+          needsHiring,
+          staffNeeded,
+          expectedCloseDate: expectedCloseDate.toISOString(),
+          expectedCloseDays,
+        });
+      }
+
+      res.json({
+        predictions,
+        metrics: {
+          avgDaysToClose: Math.round(avgDaysToClose),
+          closeRate: parseFloat((closeRate * 100).toFixed(1)),
+          totalLeadsInPipeline: Object.values(leadsByDepartment).reduce((sum, count) => sum + count, 0),
+          historicalDeals: validDeals,
+        }
+      });
+    } catch (error) {
+      console.error("Error calculating capacity predictions:", error);
+      res.status(500).json({ message: "Failed to calculate capacity predictions" });
+    }
+  });
+
   // Team Workflows - Manage team-specific status workflows
   app.get("/api/team-workflows", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
     try {
