@@ -1013,6 +1013,7 @@ function CapacitySettingsTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/capacity-settings'] });
+      setIsAddDialogOpen(false);
       setEditingSetting(null);
       form.reset();
       toast({
