@@ -3584,7 +3584,7 @@ export default function Reports() {
                             { name: "2-3 clients", value: teamWorkloadData?.data?.summary?.workloadDistribution?.['2-3_clients'] || 0, fill: "#eab308" },
                             { name: "4-5 clients", value: teamWorkloadData?.data?.summary?.workloadDistribution?.['4-5_clients'] || 0, fill: "#22c55e" },
                             { name: "6+ clients", value: teamWorkloadData?.data?.summary?.workloadDistribution?.['6_plus_clients'] || 0, fill: "#3b82f6" },
-                          ]}
+                          ].filter(item => item.value > 0)}
                           cx="50%"
                           cy="50%"
                           outerRadius={80}
