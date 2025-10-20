@@ -290,6 +290,8 @@ export const capacitySettings = pgTable("capacity_settings", {
   role: text("role"), // Optional role filter (e.g., "Account Manager")
   maxClientsPerStaff: integer("max_clients_per_staff").notNull().default(10),
   alertThreshold: decimal("alert_threshold", { precision: 5, scale: 2 }).notNull().default('80.00'), // percentage - alert when team reaches this capacity
+  notifyUserIds: text("notify_user_ids").array(), // Optional: specific staff IDs to notify. If empty, notifies all managers/admins
+  notificationMessage: text("notification_message"), // Optional: custom message template. Supports placeholders: {department}, {role}, {capacity_percentage}, {current_clients}, {predicted_clients}, {max_capacity}
   isActive: boolean("is_active").notNull().default(true),
   createdBy: uuid("created_by").references(() => staff.id),
   updatedBy: uuid("updated_by").references(() => staff.id),
