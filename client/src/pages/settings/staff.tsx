@@ -4,12 +4,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "wouter";
-import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft, Building2, UserCheck, Settings, UsersIcon, Info } from "lucide-react";
+import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft, Building2, UserCheck, Settings, UsersIcon, Info, Tag } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -1350,31 +1351,96 @@ function CapacitySettingsTab() {
               <FormField
                 control={form.control}
                 name="notificationMessage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Custom Notification Message (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Your {department} team is approaching capacity..."
-                        rows={4}
-                        {...field}
-                        data-testid="input-notification-message"
-                      />
-                    </FormControl>
-                    <FormDescription className="text-xs space-y-1">
-                      <div className="flex items-start gap-2">
-                        <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="font-medium">Available placeholders:</p>
-                          <p className="text-muted-foreground">
-                            {'{department}'}, {'{role}'}, {'{capacity_percentage}'}, {'{current_clients}'}, {'{predicted_clients}'}, {'{max_capacity}'}
-                          </p>
-                        </div>
+                render={({ field }) => {
+                  const mergeTagsForCapacityAlert = [
+                    { tag: '{department}', description: 'Department name' },
+                    { tag: '{role}', description: 'Role/position name' },
+                    { tag: '{capacity_percentage}', description: 'Projected capacity %' },
+                    { tag: '{current_clients}', description: 'Current client count' },
+                    { tag: '{predicted_clients}', description: 'Predicted new clients' },
+                    { tag: '{max_capacity}', description: 'Maximum capacity' },
+                  ];
+
+                  const insertMergeTag = (tag: string, textareaElement: HTMLTextAreaElement | null) => {
+                    if (!textareaElement) return;
+
+                    const start = textareaElement.selectionStart;
+                    const end = textareaElement.selectionEnd;
+                    const currentValue = field.value || '';
+                    
+                    const newValue = currentValue.substring(0, start) + tag + currentValue.substring(end);
+                    field.onChange(newValue);
+                    
+                    // Set cursor position after inserted tag
+                    setTimeout(() => {
+                      textareaElement.focus();
+                      textareaElement.setSelectionRange(start + tag.length, start + tag.length);
+                    }, 0);
+                  };
+
+                  return (
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Custom Notification Message (Optional)</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="sm"
+                              className="h-7 text-xs"
+                              data-testid="button-merge-tags"
+                            >
+                              <Tag className="h-3 w-3 mr-1" />
+                              Merge Tags
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80" align="end">
+                            <div className="space-y-2">
+                              <h4 className="font-medium text-sm">Available Merge Tags</h4>
+                              <p className="text-xs text-muted-foreground">Click a tag to insert it into your message</p>
+                              <div className="space-y-1 max-h-60 overflow-y-auto">
+                                {mergeTagsForCapacityAlert.map(({ tag, description }) => (
+                                  <button
+                                    key={tag}
+                                    type="button"
+                                    onClick={() => {
+                                      const textarea = document.querySelector('[data-testid="input-notification-message"]') as HTMLTextAreaElement;
+                                      insertMergeTag(tag, textarea);
+                                    }}
+                                    className="w-full text-left px-3 py-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+                                    data-testid={`merge-tag-${tag.replace(/[{}]/g, '')}`}
+                                  >
+                                    <div className="flex items-start justify-between gap-2">
+                                      <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded flex-shrink-0">
+                                        {tag}
+                                      </code>
+                                      <span className="text-xs text-muted-foreground flex-1">
+                                        {description}
+                                      </span>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                      <FormControl>
+                        <Textarea
+                          placeholder="Your {department} team is approaching capacity..."
+                          rows={4}
+                          {...field}
+                          data-testid="input-notification-message"
+                        />
+                      </FormControl>
+                      <div className="text-xs text-muted-foreground">
+                        Create a custom alert message using merge tags for dynamic content
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               <DialogFooter>
