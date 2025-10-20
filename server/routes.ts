@@ -20518,18 +20518,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create notifications for each alert
       for (const prediction of alertPredictions) {
-        // Filter managers by department (if they have a department set)
-        const relevantManagers = managers.filter(m => 
-          !m.department || m.department === prediction.department || m.department === ''
-        );
+        // Get the capacity setting for this prediction to check for custom recipients/message
+        const [capacitySetting] = await db.select()
+          .from(capacitySettings)
+          .where(
+            and(
+              eq(capacitySettings.department, prediction.department),
+              prediction.role ? eq(capacitySettings.role, prediction.role) : sql`${capacitySettings.role} IS NULL`
+            )
+          )
+          .limit(1);
 
-        for (const manager of relevantManagers) {
+        // Determine who to notify
+        let recipientsToNotify: typeof managers = [];
+        
+        if (capacitySetting?.notifyUserIds && capacitySetting.notifyUserIds.length > 0) {
+          // Use custom notification recipients
+          recipientsToNotify = await db.select({
+            staffId: staff.id,
+            firstName: staff.firstName,
+            lastName: staff.lastName,
+            email: staff.email,
+            department: staff.department,
+          })
+            .from(staff)
+            .where(
+              and(
+                inArray(staff.id, capacitySetting.notifyUserIds),
+                eq(staff.isActive, true)
+              )
+            );
+        } else {
+          // Use default: all managers/admins filtered by department
+          recipientsToNotify = managers.filter(m => 
+            !m.department || m.department === prediction.department || m.department === ''
+          );
+        }
+
+        // Prepare notification message with placeholder replacement
+        const defaultMessage = `The ${prediction.department}${prediction.role ? ` (${prediction.role})` : ''} team is approaching capacity (${prediction.projectedCapacityPercent.toFixed(1)}% projected). Current: ${prediction.currentClients} clients, Predicted: ${prediction.predictedNewClients} new clients from pipeline. Consider hiring additional staff.`;
+        
+        let notificationMessage = capacitySetting?.notificationMessage || defaultMessage;
+        
+        // Replace placeholders in custom message
+        if (capacitySetting?.notificationMessage) {
+          notificationMessage = notificationMessage
+            .replace(/{department}/g, prediction.department)
+            .replace(/{role}/g, prediction.role || '')
+            .replace(/{capacity_percentage}/g, prediction.projectedCapacityPercent.toFixed(1))
+            .replace(/{current_clients}/g, prediction.currentClients.toString())
+            .replace(/{predicted_clients}/g, prediction.predictedNewClients.toString())
+            .replace(/{max_capacity}/g, prediction.maxCapacity.toString());
+        }
+
+        for (const recipient of recipientsToNotify) {
           try {
             await db.insert(notifications).values({
-              userId: manager.staffId,
+              userId: recipient.staffId,
               type: "capacity_alert",
-              title: `Capacity Alert: ${prediction.department}`,
-              message: `The ${prediction.department} team is approaching capacity (${prediction.projectedCapacityPercent.toFixed(1)}% projected). Current: ${prediction.currentClients} clients, Predicted: ${prediction.predictedNewClients} new clients from pipeline. Consider hiring additional staff.`,
+              title: `Capacity Alert: ${prediction.department}${prediction.role ? ` (${prediction.role})` : ''}`,
+              message: notificationMessage,
               isRead: false,
               entityType: "department",
               entityId: prediction.department,
@@ -20547,7 +20595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             alertsCreated++;
           } catch (error) {
-            console.error(`Failed to create notification for manager ${manager.email}:`, error);
+            console.error(`Failed to create notification for ${recipient.email}:`, error);
           }
         }
 
@@ -20555,7 +20603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           department: prediction.department,
           role: prediction.role,
           projectedCapacity: prediction.projectedCapacityPercent,
-          managersNotified: relevantManagers.length
+          managersNotified: recipientsToNotify.length
         });
 
         // Create audit log
@@ -20563,15 +20611,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "created",
           "capacity_alert",
           prediction.department,
-          `Capacity Alert for ${prediction.department}`,
+          `Capacity Alert for ${prediction.department}${prediction.role ? ` (${prediction.role})` : ''}`,
           userId,
           `Created capacity alert - ${prediction.projectedCapacityPercent.toFixed(1)}% projected capacity (threshold: ${prediction.alertThreshold}%)`,
           null,
           {
             currentCapacity: prediction.currentCapacityPercent,
             projectedCapacity: prediction.projectedCapacityPercent,
-            managersNotified: relevantManagers.length,
-            managers: relevantManagers.map(m => `${m.firstName} ${m.lastName}`)
+            recipientsNotified: recipientsToNotify.length,
+            recipients: recipientsToNotify.map(r => `${r.firstName} ${r.lastName}`),
+            customRecipientsUsed: !!(capacitySetting?.notifyUserIds && capacitySetting.notifyUserIds.length > 0),
+            customMessageUsed: !!capacitySetting?.notificationMessage
           },
           req
         );
