@@ -354,7 +354,8 @@ export default function Staff() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: "staff", name: "Staff Members", icon: UserCheck, count: staffMembers.length },
-            { id: "teams", name: "Teams", icon: Building2, count: 0 }
+            { id: "teams", name: "Teams", icon: Building2, count: 0 },
+            { id: "capacity", name: "Capacity Settings", icon: Settings, count: 0 }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -923,6 +924,398 @@ export default function Staff() {
           </Dialog>
         </div>
       )}
+
+      {activeTab === "capacity" && (
+        <CapacitySettingsTab />
+      )}
+    </div>
+  );
+}
+
+// Capacity Settings Tab Component
+function CapacitySettingsTab() {
+  const { toast } = useToast();
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingSetting, setEditingSetting] = useState<any | null>(null);
+
+  // Fetch capacity settings
+  const { data: capacitySettings = [], isLoading } = useQuery({
+    queryKey: ['/api/capacity-settings'],
+  });
+
+  // Fetch departments for dropdown
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ['/api/departments'],
+  });
+
+  const capacityFormSchema = z.object({
+    department: z.string().min(1, "Department is required"),
+    role: z.string().optional(),
+    maxClientsPerStaff: z.number().min(1, "Must be at least 1").max(100, "Max 100 clients per staff"),
+    alertThreshold: z.number().min(0, "Must be at least 0").max(100, "Must be at most 100"),
+    isActive: z.boolean().default(true),
+  });
+
+  type CapacityFormData = z.infer<typeof capacityFormSchema>;
+
+  const form = useForm<CapacityFormData>({
+    resolver: zodResolver(capacityFormSchema),
+    defaultValues: {
+      department: "",
+      role: "",
+      maxClientsPerStaff: 10,
+      alertThreshold: 80,
+      isActive: true,
+    }
+  });
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: CapacityFormData) => {
+      const res = await apiRequest('POST', '/api/capacity-settings', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/capacity-settings'] });
+      setIsAddDialogOpen(false);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Capacity setting created successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create capacity setting",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CapacityFormData> }) => {
+      const res = await apiRequest('PATCH', `/api/capacity-settings/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/capacity-settings'] });
+      setEditingSetting(null);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Capacity setting updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update capacity setting",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest('DELETE', `/api/capacity-settings/${id}`, undefined);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/capacity-settings'] });
+      toast({
+        title: "Success",
+        description: "Capacity setting deleted successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete capacity setting",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const onSubmit = (data: CapacityFormData) => {
+    if (editingSetting) {
+      updateMutation.mutate({ id: editingSetting.id, data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleEdit = (setting: any) => {
+    setEditingSetting(setting);
+    form.reset({
+      department: setting.department,
+      role: setting.role || "",
+      maxClientsPerStaff: setting.maxClientsPerStaff,
+      alertThreshold: parseFloat(setting.alertThreshold),
+      isActive: setting.isActive,
+    });
+    setIsAddDialogOpen(true);
+  };
+
+  const handleDelete = (id: string, department: string) => {
+    if (window.confirm(`Are you sure you want to delete the capacity setting for ${department}?`)) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-semibold">Capacity Settings</h2>
+          <p className="text-sm text-muted-foreground">
+            Configure team capacity limits for predictive hiring alerts
+          </p>
+        </div>
+        <Button 
+          onClick={() => {
+            setEditingSetting(null);
+            form.reset();
+            setIsAddDialogOpen(true);
+          }}
+          className="flex items-center gap-2"
+          data-testid="button-add-capacity-setting"
+        >
+          <Plus className="h-4 w-4" />
+          Add Capacity Setting
+        </Button>
+      </div>
+
+      {/* Info Card */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-full bg-blue-100 p-2">
+              <Settings className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-blue-900 mb-1">Predictive Hiring Alerts</h3>
+              <p className="text-sm text-blue-800">
+                AgencyFlow uses your pipeline data to predict when teams will reach capacity and need additional staff. 
+                Configure maximum clients per staff member and alert thresholds for each department.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Capacity Settings List */}
+      <Card>
+        <CardContent className="p-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : capacitySettings.length === 0 ? (
+            <div className="text-center py-8">
+              <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-muted-foreground mb-2">No Capacity Settings</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Create your first capacity setting to enable predictive hiring alerts
+              </p>
+              <Button 
+                onClick={() => {
+                  setEditingSetting(null);
+                  form.reset();
+                  setIsAddDialogOpen(true);
+                }}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Create First Setting
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {capacitySettings.map((setting: any) => (
+                <div key={setting.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-primary" />
+                        <h4 className="font-semibold">{setting.department}</h4>
+                        {setting.role && (
+                          <Badge variant="outline">{setting.role}</Badge>
+                        )}
+                        {!setting.isActive && (
+                          <Badge variant="secondary">Inactive</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                      <div>
+                        <span className="font-medium">Max Clients/Staff:</span> {setting.maxClientsPerStaff}
+                      </div>
+                      <div>
+                        <span className="font-medium">Alert Threshold:</span> {setting.alertThreshold}%
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(setting)}
+                      data-testid={`button-edit-${setting.id}`}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(setting.id, setting.department)}
+                      disabled={deleteMutation.isPending}
+                      data-testid={`button-delete-${setting.id}`}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+        setIsAddDialogOpen(open);
+        if (!open) {
+          setEditingSetting(null);
+          form.reset();
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingSetting ? 'Edit' : 'Add'} Capacity Setting</DialogTitle>
+            <DialogDescription>
+              Configure maximum client load and alert thresholds for a department
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department *</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-department">
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {departments.map((dept: Department) => (
+                          <SelectItem key={dept.id} value={dept.name}>
+                            {dept.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Account Manager" {...field} data-testid="input-role" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="maxClientsPerStaff"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Max Clients per Staff *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="1"
+                        max="100"
+                        {...field} 
+                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        data-testid="input-max-clients"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Maximum number of clients each staff member can handle
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="alertThreshold"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Alert Threshold (%) *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        {...field} 
+                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        data-testid="input-alert-threshold"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Alert managers when capacity reaches this percentage
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsAddDialogOpen(false);
+                    setEditingSetting(null);
+                    form.reset();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  data-testid="button-save-capacity-setting"
+                >
+                  {(createMutation.isPending || updateMutation.isPending) ? "Saving..." : (editingSetting ? "Update" : "Create")}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
