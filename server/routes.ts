@@ -7283,6 +7283,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           },
           isActive: true
+        },
+        // ===== CLIENT LIFECYCLE TRIGGERS =====
+        {
+          name: "Client Updated",
+          type: "client_updated",
+          description: "Triggers when client details are modified",
+          category: "contact_management",
+          configSchema: {
+            changedFields: {
+              type: "array",
+              label: "Changed Fields",
+              options: ["name", "email", "phone", "company", "status", "address", "billing", "services"],
+              description: "Trigger only when specific fields change"
+            },
+            updatedBy: {
+              type: "staff_select",
+              label: "Updated By Staff Member"
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Client Deactivated/Reactivated",
+          type: "client_status_toggle",
+          description: "Triggers when a client is deactivated or reactivated",
+          category: "contact_management",
+          configSchema: {
+            action: {
+              type: "string",
+              options: ["deactivated", "reactivated"],
+              label: "Action",
+              required: true
+            },
+            reason: {
+              type: "string",
+              label: "Deactivation Reason",
+              options: ["completed", "cancelled", "non-payment", "other"]
+            },
+            minTenure: {
+              type: "number",
+              label: "Minimum Client Tenure (days)",
+              placeholder: "e.g., 30"
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Client Health Score Changed",
+          type: "client_health_score_changed",
+          description: "Triggers when client health score crosses a threshold",
+          category: "contact_management",
+          configSchema: {
+            threshold: {
+              type: "string",
+              options: ["red", "yellow", "green"],
+              label: "Health Score Threshold",
+              required: true
+            },
+            direction: {
+              type: "string",
+              options: ["improved", "declined", "any"],
+              label: "Direction of Change",
+              defaultValue: "any"
+            },
+            minScoreDelta: {
+              type: "number",
+              label: "Minimum Score Change",
+              placeholder: "e.g., 10",
+              min: 0
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Client Product/Bundle Added",
+          type: "client_product_added",
+          description: "Triggers when a new product or service bundle is sold to a client",
+          category: "contact_management",
+          configSchema: {
+            productType: {
+              type: "string",
+              label: "Product Type",
+              options: ["product", "bundle", "service"]
+            },
+            minValue: {
+              type: "number",
+              label: "Minimum Product Value ($)",
+              placeholder: "e.g., 1000"
+            },
+            soldBy: {
+              type: "staff_select",
+              label: "Sold By Staff Member"
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Client Approval Workflow Event",
+          type: "client_approval_event",
+          description: "Triggers when an asset is submitted, approved, rejected, or commented on in the approval workflow",
+          category: "contact_management",
+          configSchema: {
+            action: {
+              type: "string",
+              options: ["submitted", "approved", "rejected", "commented", "revision_requested"],
+              label: "Approval Action",
+              required: true
+            },
+            assetType: {
+              type: "string",
+              label: "Asset Type",
+              options: ["image", "video", "document", "design", "copy"]
+            },
+            approver: {
+              type: "staff_select",
+              label: "Approver (Optional)"
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Client Team Assignment Changed",
+          type: "client_team_changed",
+          description: "Triggers when staff members are assigned to or removed from a client",
+          category: "contact_management",
+          configSchema: {
+            action: {
+              type: "string",
+              options: ["assigned", "removed"],
+              label: "Assignment Action",
+              required: true
+            },
+            role: {
+              type: "string",
+              label: "Team Member Role",
+              options: ["account_manager", "project_manager", "creative", "analyst", "strategist"]
+            },
+            assignedStaff: {
+              type: "staff_select",
+              label: "Assigned Staff Member"
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Client Brief Updated",
+          type: "client_brief_updated",
+          description: "Triggers when a client brief section is modified",
+          category: "contact_management",
+          configSchema: {
+            section: {
+              type: "string",
+              label: "Brief Section",
+              options: ["background", "objectives", "brand_info", "audience", "products", "competitors", "marketing_tech", "miscellaneous"]
+            },
+            updatedBy: {
+              type: "staff_select",
+              label: "Updated By Staff Member"
+            },
+            notifyTeam: {
+              type: "boolean",
+              label: "Notify Client Team",
+              defaultValue: true
+            }
+          },
+          isActive: true
         }
       ];
 
