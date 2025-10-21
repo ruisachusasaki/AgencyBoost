@@ -493,6 +493,77 @@ export default function TriggerConfigPanel({
           options: customField.options || []
         });
       });
+    } else if (triggerDefinition?.type === 'client_updated' || triggerDefinition?.type === 'note_added') {
+      // For client-related triggers, add client-specific core fields FIRST
+      fields.push({
+        id: 'name',
+        name: 'Client Name',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'email',
+        name: 'Email',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'phone',
+        name: 'Phone',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'company',
+        name: 'Company',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'status',
+        name: 'Client Status',
+        type: 'dropdown',
+        options: ['active', 'inactive', 'pending', 'archived']
+      });
+      fields.push({
+        id: 'tag',
+        name: 'Has Tag',
+        type: 'tag_select',
+        options: []
+      });
+      fields.push({
+        id: 'assignee',
+        name: 'Account Manager',
+        type: 'staff_select',
+        options: []
+      });
+      fields.push({
+        id: 'city',
+        name: 'City',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'state',
+        name: 'State',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'country',
+        name: 'Country',
+        type: 'string',
+        options: []
+      });
+      // Also include custom fields for clients
+      customFields.forEach((customField: any) => {
+        fields.push({
+          id: customField.id,
+          name: customField.name,
+          type: customField.type,
+          options: customField.options || []
+        });
+      });
     } else {
       // For other non-form triggers, use custom fields directly
       customFields.forEach((customField: any) => {
@@ -1897,6 +1968,33 @@ export default function TriggerConfigPanel({
               </>
             )}
 
+            {/* For client updated triggers, show core fields first */}
+            {triggerDefinition.type === 'client_updated' && (
+              <>
+                {/* Changed Fields */}
+                {triggerDefinition.configSchema.changedFields && 
+                  renderConfigField("changedFields", triggerDefinition.configSchema.changedFields)
+                }
+                
+                {/* Updated By */}
+                {triggerDefinition.configSchema.updatedBy && 
+                  renderConfigField("updatedBy", triggerDefinition.configSchema.updatedBy)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.changedFields || 
+                  triggerDefinition.configSchema.updatedBy) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for client updated triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
             {/* For time off status change triggers, show core fields in specific order */}
             {triggerDefinition.type === 'time_off_status_changed' && (
               <>
@@ -1962,6 +2060,7 @@ export default function TriggerConfigPanel({
              !triggerDefinition.type?.includes('invoice') && 
              triggerDefinition.type !== 'field_change' &&
              triggerDefinition.type !== 'note_added' &&
+             triggerDefinition.type !== 'client_updated' &&
              triggerDefinition.type !== 'time_off_status_changed' &&
              triggerDefinition.type !== 'inbound_webhook' &&
              triggerDefinition.type !== 'appointment_booked' &&
