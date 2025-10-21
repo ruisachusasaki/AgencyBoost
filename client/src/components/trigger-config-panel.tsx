@@ -493,7 +493,14 @@ export default function TriggerConfigPanel({
           options: customField.options || []
         });
       });
-    } else if (triggerDefinition?.type === 'client_updated' || triggerDefinition?.type === 'client_status_toggle' || triggerDefinition?.type === 'note_added') {
+    } else if (triggerDefinition?.type === 'client_updated' || 
+               triggerDefinition?.type === 'client_status_toggle' || 
+               triggerDefinition?.type === 'client_health_score_changed' ||
+               triggerDefinition?.type === 'client_product_added' ||
+               triggerDefinition?.type === 'client_approval_event' ||
+               triggerDefinition?.type === 'client_team_changed' ||
+               triggerDefinition?.type === 'client_brief_updated' ||
+               triggerDefinition?.type === 'note_added') {
       // For client-related triggers, add client-specific core fields FIRST
       fields.push({
         id: 'name',
@@ -2028,6 +2035,153 @@ export default function TriggerConfigPanel({
               </>
             )}
 
+            {/* For client health score changed triggers, show core fields first */}
+            {triggerDefinition.type === 'client_health_score_changed' && (
+              <>
+                {/* From Color */}
+                {triggerDefinition.configSchema.fromColor && 
+                  renderConfigField("fromColor", triggerDefinition.configSchema.fromColor)
+                }
+                
+                {/* To Color */}
+                {triggerDefinition.configSchema.toColor && 
+                  renderConfigField("toColor", triggerDefinition.configSchema.toColor)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.fromColor || 
+                  triggerDefinition.configSchema.toColor) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for client health score triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
+            {/* For client product added triggers, show core fields first */}
+            {triggerDefinition.type === 'client_product_added' && (
+              <>
+                {/* Product Type */}
+                {triggerDefinition.configSchema.productType && 
+                  renderConfigField("productType", triggerDefinition.configSchema.productType)
+                }
+                
+                {/* Product ID */}
+                {triggerDefinition.configSchema.productId && 
+                  renderConfigField("productId", triggerDefinition.configSchema.productId)
+                }
+                
+                {/* Bundle ID */}
+                {triggerDefinition.configSchema.bundleId && 
+                  renderConfigField("bundleId", triggerDefinition.configSchema.bundleId)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.productType || 
+                  triggerDefinition.configSchema.productId || 
+                  triggerDefinition.configSchema.bundleId) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for client product added triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
+            {/* For client approval event triggers, show core fields first */}
+            {triggerDefinition.type === 'client_approval_event' && (
+              <>
+                {/* Event Type */}
+                {triggerDefinition.configSchema.eventType && 
+                  renderConfigField("eventType", triggerDefinition.configSchema.eventType)
+                }
+                
+                {/* Approval Status */}
+                {triggerDefinition.configSchema.approvalStatus && 
+                  renderConfigField("approvalStatus", triggerDefinition.configSchema.approvalStatus)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.eventType || 
+                  triggerDefinition.configSchema.approvalStatus) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for client approval event triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
+            {/* For client team changed triggers, show core fields first */}
+            {triggerDefinition.type === 'client_team_changed' && (
+              <>
+                {/* Change Type */}
+                {triggerDefinition.configSchema.changeType && 
+                  renderConfigField("changeType", triggerDefinition.configSchema.changeType)
+                }
+                
+                {/* Staff Member */}
+                {triggerDefinition.configSchema.staffMember && 
+                  renderConfigField("staffMember", triggerDefinition.configSchema.staffMember)
+                }
+                
+                {/* Role */}
+                {triggerDefinition.configSchema.role && 
+                  renderConfigField("role", triggerDefinition.configSchema.role)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.changeType || 
+                  triggerDefinition.configSchema.staffMember || 
+                  triggerDefinition.configSchema.role) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for client team changed triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
+            {/* For client brief updated triggers, show core fields first */}
+            {triggerDefinition.type === 'client_brief_updated' && (
+              <>
+                {/* Section */}
+                {triggerDefinition.configSchema.section && 
+                  renderConfigField("section", triggerDefinition.configSchema.section)
+                }
+                
+                {/* Updated By */}
+                {triggerDefinition.configSchema.updatedBy && 
+                  renderConfigField("updatedBy", triggerDefinition.configSchema.updatedBy)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.section || 
+                  triggerDefinition.configSchema.updatedBy) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for client brief updated triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
             {/* For time off status change triggers, show core fields in specific order */}
             {triggerDefinition.type === 'time_off_status_changed' && (
               <>
@@ -2095,6 +2249,11 @@ export default function TriggerConfigPanel({
              triggerDefinition.type !== 'note_added' &&
              triggerDefinition.type !== 'client_updated' &&
              triggerDefinition.type !== 'client_status_toggle' &&
+             triggerDefinition.type !== 'client_health_score_changed' &&
+             triggerDefinition.type !== 'client_product_added' &&
+             triggerDefinition.type !== 'client_approval_event' &&
+             triggerDefinition.type !== 'client_team_changed' &&
+             triggerDefinition.type !== 'client_brief_updated' &&
              triggerDefinition.type !== 'time_off_status_changed' &&
              triggerDefinition.type !== 'inbound_webhook' &&
              triggerDefinition.type !== 'appointment_booked' &&
