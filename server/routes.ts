@@ -707,6 +707,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== ADMIN CHECK ENDPOINT =====
+  
+  // GET /api/auth/is-admin - Check if current user is an admin
+  app.get("/api/auth/is-admin", requireAuth(), async (req, res) => {
+    try {
+      const isAdmin = await isCurrentUserAdmin(req);
+      res.json({ isAdmin });
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      res.status(500).json({ error: "Failed to check admin status" });
+    }
+  });
+
   // ===== ADMIN IMPERSONATION ROUTES (ADMIN ONLY) =====
   
   // GET /api/admin/impersonation/users - Get all users for impersonation dropdown (ADMIN ONLY)

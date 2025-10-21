@@ -220,18 +220,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
     retry: 1
   });
 
-  // Fetch user permissions to check if admin
-  const { data: permissions } = useQuery({
-    queryKey: ['/api/user-permissions'],
+  // Check if user is admin
+  const { data: adminCheck } = useQuery({
+    queryKey: ['/api/auth/is-admin'],
   });
 
-  const isAdmin = permissions && Object.values(permissions).every(
-    (modulePerm: any) => 
-      modulePerm.canView && 
-      modulePerm.canCreate && 
-      modulePerm.canEdit && 
-      modulePerm.canDelete
-  );
+  const isAdmin = adminCheck?.isAdmin === true;
 
   // Fetch full staff profile data including profile image
   const { data: currentUser } = useQuery<Staff>({
