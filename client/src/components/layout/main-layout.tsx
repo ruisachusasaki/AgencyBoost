@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Sidebar from "./sidebar";
 import Header from "./header";
+import ImpersonationBanner from "@/components/admin/impersonation-banner";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MainLayoutProps {
@@ -23,6 +24,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       
       <main className="flex-1 min-w-0 overflow-x-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} />
+        <ImpersonationBanner />
         <div className="p-6 pb-12 overflow-x-hidden">
           {children}
         </div>

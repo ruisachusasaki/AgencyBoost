@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User } from "lucide-react";
+import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import TimerIndicator from "@/components/timer-indicator";
+import LoginAsDropdown from "@/components/admin/login-as-dropdown";
 import type { Staff } from "@shared/schema";
 
 interface HeaderProps {
@@ -209,6 +210,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const [location] = useLocation();
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
+  const [showLoginAsDialog, setShowLoginAsDialog] = useState(false);
 
   const pageName = pageNames[location] || "Page";
 
@@ -217,6 +219,19 @@ export default function Header({ onMenuClick }: HeaderProps) {
     queryKey: ['/api/auth/current-user'],
     retry: 1
   });
+
+  // Fetch user permissions to check if admin
+  const { data: permissions } = useQuery({
+    queryKey: ['/api/user-permissions'],
+  });
+
+  const isAdmin = permissions && Object.values(permissions).every(
+    (modulePerm: any) => 
+      modulePerm.canView && 
+      modulePerm.canCreate && 
+      modulePerm.canEdit && 
+      modulePerm.canDelete
+  );
 
   // Fetch full staff profile data including profile image
   const { data: currentUser } = useQuery<Staff>({
@@ -293,6 +308,23 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   <span>Profile</span>
                 </Link>
               </DropdownMenuItem>
+              
+              {/* Admin Only: Login As */}
+              {isAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => setShowLoginAsDialog(true)}
+                    className="flex items-center cursor-pointer"
+                    data-testid="menu-item-login-as"
+                  >
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    <span>Login As</span>
+                  </DropdownMenuItem>
+                </>
+              )}
+              
+              <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={() => window.location.href = '/api/logout'}
                 className="flex items-center cursor-pointer text-red-600 focus:text-red-600"
@@ -305,6 +337,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </DropdownMenu>
         </div>
       </div>
+      
+      {/* Login As Dialog */}
+      <LoginAsDropdown 
+        isOpen={showLoginAsDialog} 
+        onClose={() => setShowLoginAsDialog(false)} 
+      />
     </header>
   );
 }
