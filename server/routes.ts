@@ -72,6 +72,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
 import { calculateHealthMetrics, analyzeHealthStatus } from "@shared/utils/healthAnalysis";
+import { emitTrigger } from "./workflow-engine";
 import { 
   requireAuth, 
   requirePermission, 
@@ -1695,6 +1696,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Continue execution - don't fail the request for audit issues
       }
       
+      // Emit automation trigger for client_updated
+      try {
+        // Determine which fields changed
+        const changedFields = Object.keys(filteredData);
+        
+        await emitTrigger({
+          type: "client_updated",
+          data: {
+            ...client,
+            changedFields,
+            oldValues: oldClient,
+          },
+          context: {
+            userId: currentUserId,
+            timestamp: new Date(),
+            metadata: { changes: changedFields },
+          },
+        });
+      } catch (triggerError) {
+        console.error("Automation trigger failed but update was successful:", triggerError);
+        // Continue execution - don't fail the request for trigger issues
+      }
+      
       res.json(client);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1735,6 +1759,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { isArchived: true },
         req
       );
+
+      // Emit automation trigger for client deactivated
+      try {
+        await emitTrigger({
+          type: "client_status_toggle",
+          data: {
+            ...archivedClient,
+            action: "deactivated",
+            reason: "archived",
+          },
+          context: {
+            userId,
+            timestamp: new Date(),
+            metadata: { action: "archive" },
+          },
+        });
+      } catch (triggerError) {
+        console.error("Automation trigger failed but archive was successful:", triggerError);
+      }
 
       res.json(archivedClient);
     } catch (error) {
@@ -2270,6 +2313,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req
       );
 
+      // Emit automation trigger for client brief updated
+      try {
+        // Get section details to include in trigger data
+        const section = await appStorage.getBriefSection(req.params.sectionId);
+        
+        await emitTrigger({
+          type: "client_brief_updated",
+          data: {
+            id: req.params.id,
+            clientId: req.params.id,
+            sectionId: req.params.sectionId,
+            section: section?.key || "unknown",
+            value,
+          },
+          context: {
+            userId,
+            timestamp: new Date(),
+            metadata: { sectionTitle: section?.title },
+          },
+        });
+      } catch (triggerError) {
+        console.error("Automation trigger failed but brief update was successful:", triggerError);
+      }
+
       res.status(204).send();
     } catch (error) {
       if (error instanceof Error && error.message.includes("Section not found")) {
@@ -2600,6 +2667,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { totalScore: healthScore.totalScore, averageScore: healthScore.averageScore, healthIndicator: healthScore.healthIndicator },
         req
       );
+      
+      // Emit automation trigger for health score changed
+      try {
+        if (oldHealthScore.healthIndicator !== healthScore.healthIndicator) {
+          const direction = (healthScore.totalScore || 0) > (oldHealthScore.totalScore || 0) ? "improved" : "declined";
+          const scoreDelta = Math.abs((healthScore.totalScore || 0) - (oldHealthScore.totalScore || 0));
+          
+          await emitTrigger({
+            type: "client_health_score_changed",
+            data: {
+              id: healthScore.clientId,
+              clientId: healthScore.clientId,
+              threshold: healthScore.healthIndicator,
+              direction,
+              scoreDelta,
+              oldScore: oldHealthScore.totalScore,
+              newScore: healthScore.totalScore,
+              oldIndicator: oldHealthScore.healthIndicator,
+              newIndicator: healthScore.healthIndicator,
+            },
+            context: {
+              userId,
+              timestamp: new Date(),
+              metadata: { weekStartDate: healthScore.weekStartDate },
+            },
+          });
+        }
+      } catch (triggerError) {
+        console.error("Automation trigger failed but health score update was successful:", triggerError);
+      }
       
       res.json(healthScore);
     } catch (error) {
@@ -8524,6 +8621,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req
       );
 
+      // Emit automation trigger for client team assignment changed
+      try {
+        await emitTrigger({
+          type: "client_team_changed",
+          data: {
+            id: req.params.clientId,
+            clientId: req.params.clientId,
+            action: "assigned",
+            staffId: insertData.staffId,
+            position: insertData.position,
+          },
+          context: {
+            userId,
+            timestamp: new Date(),
+            metadata: { auditAction },
+          },
+        });
+      } catch (triggerError) {
+        console.error("Automation trigger failed but team assignment was successful:", triggerError);
+      }
+
       res.json(assignment);
     } catch (error) {
       console.error('Error creating client team assignment:', error);
@@ -9448,6 +9566,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .returning();
 
+        // Emit automation trigger for client product added
+        try {
+          const userId = getAuthenticatedUserIdOrFail(req, res);
+          await emitTrigger({
+            type: "client_product_added",
+            data: {
+              id: clientId,
+              clientId,
+              productId,
+              productType: "product",
+              price: price || isProduct[0].cost,
+              productName: isProduct[0].name,
+            },
+            context: {
+              userId,
+              timestamp: new Date(),
+              metadata: { type: "product" },
+            },
+          });
+        } catch (triggerError) {
+          console.error("Automation trigger failed but product add was successful:", triggerError);
+        }
+
         res.status(201).json(newClientProduct);
       } else if (isBundle.length > 0) {
         // Handle bundle assignment
@@ -9475,6 +9616,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: "active"
           })
           .returning();
+
+        // Emit automation trigger for client bundle added
+        try {
+          const userId = getAuthenticatedUserIdOrFail(req, res);
+          await emitTrigger({
+            type: "client_product_added",
+            data: {
+              id: clientId,
+              clientId,
+              productId,
+              productType: "bundle",
+              price: price || null,
+              productName: isBundle[0].name,
+            },
+            context: {
+              userId,
+              timestamp: new Date(),
+              metadata: { type: "bundle" },
+            },
+          });
+        } catch (triggerError) {
+          console.error("Automation trigger failed but bundle add was successful:", triggerError);
+        }
 
         res.status(201).json(newClientBundle);
       } else {
