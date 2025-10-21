@@ -6874,6 +6874,194 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           },
           isActive: true
+        },
+        {
+          name: "Onboarding Form Submitted",
+          type: "onboarding_form_submitted",
+          description: "Triggers when a new employee onboarding form is submitted",
+          category: "hr_management",
+          configSchema: {
+            department: {
+              type: "string",
+              label: "Department (Optional)",
+              options: [
+                "Account Management",
+                "Accounting", 
+                "Creative",
+                "Data & Analytics",
+                "DevOps",
+                "Executive",
+                "Media Buying", 
+                "Project Management",
+                "SEO",
+                "Social Media",
+                "Venue Booking"
+              ]
+            },
+            position: {
+              type: "string",
+              label: "Position Title",
+              placeholder: "e.g., Marketing Manager"
+            },
+            assignedTo: {
+              type: "staff_select",
+              label: "Assigned HR Staff Member"
+            },
+            notifyManager: {
+              type: "boolean",
+              label: "Notify Hiring Manager",
+              defaultValue: true
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Expense Report Submitted",
+          type: "expense_report_submitted",
+          description: "Triggers when an employee submits an expense report for reimbursement",
+          category: "hr_management",
+          configSchema: {
+            department: {
+              type: "string",
+              label: "Department (Optional)",
+              options: [
+                "Account Management",
+                "Accounting", 
+                "Creative",
+                "Data & Analytics",
+                "DevOps",
+                "Executive",
+                "Media Buying", 
+                "Project Management",
+                "SEO",
+                "Social Media",
+                "Venue Booking"
+              ]
+            },
+            expenseType: {
+              type: "string",
+              label: "Expense Type",
+              options: ["Travel", "Meals", "Office Supplies", "Software", "Client Entertainment", "Other"]
+            },
+            minAmount: {
+              type: "number",
+              label: "Minimum Amount ($)",
+              placeholder: "e.g., 100",
+              min: 0
+            },
+            maxAmount: {
+              type: "number",
+              label: "Maximum Amount ($)",
+              placeholder: "e.g., 1000",
+              min: 0
+            },
+            assignedTo: {
+              type: "staff_select",
+              label: "Assigned to (Accounting/Manager)"
+            },
+            notifyAccounting: {
+              type: "boolean",
+              label: "Notify Accounting Team",
+              defaultValue: true
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Job Application Status Updated",
+          type: "job_application_status_updated",
+          description: "Triggers when a job application status changes (e.g., new → screening, screening → interview)",
+          category: "hr_management",
+          configSchema: {
+            from_status: {
+              type: "string",
+              label: "From Status",
+              options: ["new", "screening", "interview", "offer", "hired", "rejected"]
+            },
+            to_status: {
+              type: "string",
+              label: "To Status",
+              options: ["new", "screening", "interview", "offer", "hired", "rejected"],
+              required: true
+            },
+            positionTitle: {
+              type: "string",
+              label: "Position Title",
+              placeholder: "e.g., Software Developer"
+            },
+            department: {
+              type: "string",
+              label: "Department (Optional)",
+              options: [
+                "Account Management",
+                "Accounting", 
+                "Creative",
+                "Data & Analytics",
+                "DevOps",
+                "Executive",
+                "Media Buying", 
+                "Project Management",
+                "SEO",
+                "Social Media",
+                "Venue Booking"
+              ]
+            },
+            assignedTo: {
+              type: "staff_select",
+              label: "Assigned HR Staff Member"
+            },
+            notifyCandidate: {
+              type: "boolean",
+              label: "Notify Candidate",
+              defaultValue: false
+            }
+          },
+          isActive: true
+        },
+        {
+          name: "Offboarding Form Submitted",
+          type: "offboarding_form_submitted",
+          description: "Triggers when an employee offboarding form is submitted",
+          category: "hr_management",
+          configSchema: {
+            department: {
+              type: "string",
+              label: "Department (Optional)",
+              options: [
+                "Account Management",
+                "Accounting", 
+                "Creative",
+                "Data & Analytics",
+                "DevOps",
+                "Executive",
+                "Media Buying", 
+                "Project Management",
+                "SEO",
+                "Social Media",
+                "Venue Booking"
+              ]
+            },
+            position: {
+              type: "string",
+              label: "Position Title",
+              placeholder: "e.g., Marketing Manager"
+            },
+            assignedTo: {
+              type: "staff_select",
+              label: "Assigned HR Staff Member"
+            },
+            notifyIT: {
+              type: "boolean",
+              label: "Notify IT for Account Suspension",
+              defaultValue: true
+            },
+            notifyManager: {
+              type: "boolean",
+              label: "Notify Department Manager",
+              defaultValue: true
+            }
+          },
+          isActive: true
         }
       ];
 
