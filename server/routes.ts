@@ -6734,14 +6734,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Initialize default automation triggers (one-time setup) - SECURED
+  // Initialize default automation triggers (idempotent - can run multiple times) - SECURED
   app.post("/api/automation-triggers/initialize", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      // Check if triggers already exist
+      // Get existing triggers to check which ones are missing
       const existingTriggers = await appStorage.getAutomationTriggers();
-      if (existingTriggers.length > 0) {
-        return res.status(400).json({ message: "Triggers already initialized" });
-      }
+      const existingTypes = new Set(existingTriggers.map(t => t.type));
 
       // Default trigger definitions
       const defaultTriggers = [
@@ -7549,9 +7547,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       ];
 
-      // Create each trigger
+      // Only create triggers that don't already exist (by type)
       const createdTriggers = [];
+      const skippedTriggers = [];
+      
       for (const triggerData of defaultTriggers) {
+        // Skip if trigger type already exists
+        if (existingTypes.has(triggerData.type)) {
+          skippedTriggers.push(triggerData.type);
+          continue;
+        }
+        
         const trigger = await appStorage.createAutomationTrigger(triggerData);
         createdTriggers.push(trigger);
         
@@ -7573,9 +7579,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.status(201).json({ 
-        message: "Default automation triggers initialized successfully",
+        message: createdTriggers.length > 0 
+          ? `Added ${createdTriggers.length} new automation trigger(s)` 
+          : "All triggers already exist - no new triggers added",
         triggers: createdTriggers,
-        count: createdTriggers.length
+        created: createdTriggers.length,
+        skipped: skippedTriggers.length,
+        total: defaultTriggers.length
       });
     } catch (error) {
       console.error("Error initializing triggers:", error);
