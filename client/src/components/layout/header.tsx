@@ -226,10 +226,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
   });
 
   const isAdmin = adminCheck?.isAdmin === true;
-  
-  // Debug logging
-  console.log('Admin check data:', adminCheck);
-  console.log('Is admin?', isAdmin);
 
   // Fetch full staff profile data including profile image
   const { data: currentUser } = useQuery<Staff>({

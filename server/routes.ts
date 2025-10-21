@@ -713,7 +713,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/is-admin", requireAuth(), async (req, res) => {
     try {
       const isAdmin = await isCurrentUserAdmin(req);
-      console.log('🔍 /api/auth/is-admin - Returning:', { isAdmin });
       res.json({ isAdmin });
     } catch (error) {
       console.error("Error checking admin status:", error);
