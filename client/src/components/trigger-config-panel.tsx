@@ -493,7 +493,7 @@ export default function TriggerConfigPanel({
           options: customField.options || []
         });
       });
-    } else if (triggerDefinition?.type === 'client_updated' || triggerDefinition?.type === 'note_added') {
+    } else if (triggerDefinition?.type === 'client_updated' || triggerDefinition?.type === 'client_status_toggle' || triggerDefinition?.type === 'note_added') {
       // For client-related triggers, add client-specific core fields FIRST
       fields.push({
         id: 'name',
@@ -1995,6 +1995,39 @@ export default function TriggerConfigPanel({
               </>
             )}
 
+            {/* For client status toggle triggers, show core fields first */}
+            {triggerDefinition.type === 'client_status_toggle' && (
+              <>
+                {/* Action (required) */}
+                {triggerDefinition.configSchema.action && 
+                  renderConfigField("action", triggerDefinition.configSchema.action)
+                }
+                
+                {/* Reason */}
+                {triggerDefinition.configSchema.reason && 
+                  renderConfigField("reason", triggerDefinition.configSchema.reason)
+                }
+                
+                {/* Minimum Tenure */}
+                {triggerDefinition.configSchema.minTenure && 
+                  renderConfigField("minTenure", triggerDefinition.configSchema.minTenure)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.action || 
+                  triggerDefinition.configSchema.reason || 
+                  triggerDefinition.configSchema.minTenure) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for client status toggle triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
             {/* For time off status change triggers, show core fields in specific order */}
             {triggerDefinition.type === 'time_off_status_changed' && (
               <>
@@ -2061,6 +2094,7 @@ export default function TriggerConfigPanel({
              triggerDefinition.type !== 'field_change' &&
              triggerDefinition.type !== 'note_added' &&
              triggerDefinition.type !== 'client_updated' &&
+             triggerDefinition.type !== 'client_status_toggle' &&
              triggerDefinition.type !== 'time_off_status_changed' &&
              triggerDefinition.type !== 'inbound_webhook' &&
              triggerDefinition.type !== 'appointment_booked' &&
