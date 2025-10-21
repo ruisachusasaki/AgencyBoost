@@ -41,6 +41,9 @@ declare module 'express-session' {
       clientId: string;
       clientName: string;
     };
+    // Impersonation tracking
+    originalAdminUserId?: string; // The admin who is impersonating
+    impersonatedUserId?: string; // The user being impersonated
   }
 }
 
@@ -50,6 +53,33 @@ declare module 'express-session' {
  */
 export function getAuthenticatedUserId(req: Request): string | undefined {
   return req.session?.userId;
+}
+
+/**
+ * Check if the current session is impersonating another user.
+ */
+export function isImpersonating(req: Request): boolean {
+  return !!(req.session?.originalAdminUserId && req.session?.impersonatedUserId);
+}
+
+/**
+ * Get the original admin user ID if impersonating, otherwise undefined.
+ */
+export function getOriginalAdminUserId(req: Request): string | undefined {
+  return req.session?.originalAdminUserId;
+}
+
+/**
+ * Get the impersonation context (who is impersonating whom).
+ */
+export function getImpersonationContext(req: Request): { originalAdminId: string; impersonatedUserId: string } | null {
+  if (isImpersonating(req)) {
+    return {
+      originalAdminId: req.session!.originalAdminUserId!,
+      impersonatedUserId: req.session!.impersonatedUserId!
+    };
+  }
+  return null;
 }
 
 /**

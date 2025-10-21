@@ -80,6 +80,9 @@ import {
   getAuthenticatedUserId,
   getAuthenticatedUserIdOrFail,
   getAuthenticatedAuditContext,
+  getImpersonationContext,
+  isImpersonating,
+  getOriginalAdminUserId,
   getAuditContext,
   isCurrentUserAdmin,
   hasPermission,
@@ -701,6 +704,211 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       res.status(500).json({ error: "Failed to set initial password" });
+    }
+  });
+
+  // ===== ADMIN IMPERSONATION ROUTES (ADMIN ONLY) =====
+  
+  // GET /api/admin/impersonation/users - Get all users for impersonation dropdown (ADMIN ONLY)
+  app.get("/api/admin/impersonation/users", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      // Get all staff users with basic info
+      const users = await db
+        .select({
+          id: staff.id,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email,
+          department: staff.department,
+          position: staff.position
+        })
+        .from(staff)
+        .orderBy(staff.firstName, staff.lastName);
+      
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users for impersonation:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // POST /api/admin/impersonation/start - Start impersonating a user (ADMIN ONLY)
+  app.post("/api/admin/impersonation/start", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const currentAdminId = getAuthenticatedUserId(req);
+      if (!currentAdminId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+
+      // Get the target user info
+      const [targetUser] = await db
+        .select({
+          id: staff.id,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email
+        })
+        .from(staff)
+        .where(eq(staff.id, userId))
+        .limit(1);
+
+      if (!targetUser) {
+        return res.status(404).json({ error: "Target user not found" });
+      }
+
+      // Prevent impersonating yourself
+      if (targetUser.id === currentAdminId) {
+        return res.status(400).json({ error: "Cannot impersonate yourself" });
+      }
+
+      // Get admin info for audit log
+      const [adminUser] = await db
+        .select({
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email
+        })
+        .from(staff)
+        .where(eq(staff.id, currentAdminId))
+        .limit(1);
+
+      // Store original admin ID and set impersonated user
+      req.session!.originalAdminUserId = currentAdminId;
+      req.session!.impersonatedUserId = userId;
+      req.session!.userId = userId; // Switch to impersonated user
+
+      // Create audit log for impersonation start
+      await createAuditLog(
+        "created",
+        "impersonation",
+        `impersonation-${userId}`,
+        "Admin Impersonation Started",
+        currentAdminId,
+        `Admin ${adminUser?.firstName} ${adminUser?.lastName} (${adminUser?.email}) started impersonating ${targetUser.firstName} ${targetUser.lastName} (${targetUser.email})`,
+        null,
+        { 
+          adminId: currentAdminId,
+          adminEmail: adminUser?.email,
+          targetUserId: userId,
+          targetEmail: targetUser.email,
+          action: "start"
+        },
+        req
+      );
+
+      res.json({ 
+        success: true,
+        impersonatedUser: {
+          id: targetUser.id,
+          firstName: targetUser.firstName,
+          lastName: targetUser.lastName,
+          email: targetUser.email
+        }
+      });
+    } catch (error) {
+      console.error("Error starting impersonation:", error);
+      res.status(500).json({ error: "Failed to start impersonation" });
+    }
+  });
+
+  // POST /api/admin/impersonation/stop - Stop impersonating and return to admin account
+  app.post("/api/admin/impersonation/stop", requireAuth(), async (req, res) => {
+    try {
+      const impersonationContext = getImpersonationContext(req);
+      
+      if (!impersonationContext) {
+        return res.status(400).json({ error: "Not currently impersonating" });
+      }
+
+      const { originalAdminId, impersonatedUserId } = impersonationContext;
+
+      // Get user info for audit log
+      const [targetUser] = await db
+        .select({
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email
+        })
+        .from(staff)
+        .where(eq(staff.id, impersonatedUserId))
+        .limit(1);
+
+      const [adminUser] = await db
+        .select({
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email
+        })
+        .from(staff)
+        .where(eq(staff.id, originalAdminId))
+        .limit(1);
+
+      // Restore original admin session
+      req.session!.userId = originalAdminId;
+      delete req.session!.originalAdminUserId;
+      delete req.session!.impersonatedUserId;
+
+      // Create audit log for impersonation stop
+      await createAuditLog(
+        "updated",
+        "impersonation",
+        `impersonation-${impersonatedUserId}`,
+        "Admin Impersonation Stopped",
+        originalAdminId,
+        `Admin ${adminUser?.firstName} ${adminUser?.lastName} (${adminUser?.email}) stopped impersonating ${targetUser?.firstName} ${targetUser?.lastName} (${targetUser?.email})`,
+        { action: "impersonating" },
+        { action: "stopped" },
+        req
+      );
+
+      res.json({ 
+        success: true,
+        message: "Returned to admin account"
+      });
+    } catch (error) {
+      console.error("Error stopping impersonation:", error);
+      res.status(500).json({ error: "Failed to stop impersonation" });
+    }
+  });
+
+  // GET /api/admin/impersonation/status - Get current impersonation status
+  app.get("/api/admin/impersonation/status", requireAuth(), async (req, res) => {
+    try {
+      const impersonationContext = getImpersonationContext(req);
+      
+      if (!impersonationContext) {
+        return res.json({ 
+          isImpersonating: false 
+        });
+      }
+
+      const { originalAdminId, impersonatedUserId } = impersonationContext;
+
+      // Get impersonated user info
+      const [impersonatedUser] = await db
+        .select({
+          id: staff.id,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email
+        })
+        .from(staff)
+        .where(eq(staff.id, impersonatedUserId))
+        .limit(1);
+
+      res.json({
+        isImpersonating: true,
+        originalAdminId,
+        impersonatedUser
+      });
+    } catch (error) {
+      console.error("Error getting impersonation status:", error);
+      res.status(500).json({ error: "Failed to get impersonation status" });
     }
   });
 
