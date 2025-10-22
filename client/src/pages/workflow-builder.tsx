@@ -993,6 +993,39 @@ export default function WorkflowBuilderPage() {
               );
             })()}
 
+            {/* Sales */}
+            {(() => {
+              const salesTriggers = (availableTriggers as any[])?.filter((t: any) => t.category === "Sales") || [];
+              const filteredTriggers = filterItems(salesTriggers.map((t: any) => ({ type: t.type, name: t.name })), triggerSearch);
+              if (filteredTriggers.length === 0) return null;
+              
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="h-5 w-5 text-emerald-600" />
+                      Sales
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {filteredTriggers.map((trigger) => (
+                      <Button
+                        key={trigger.type}
+                        variant="outline"
+                        className="w-full justify-start text-left h-auto p-3"
+                        onClick={() => handleSelectTrigger({ ...trigger, category: "Sales" })}
+                        data-testid={`button-select-trigger-${trigger.type}`}
+                      >
+                        <div>
+                          <div className="font-medium">{trigger.name}</div>
+                        </div>
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
             {/* Integration */}
             {(() => {
               const integrationTriggers = (availableTriggers as any[])?.filter((t: any) => t.category === "integration") || [];
