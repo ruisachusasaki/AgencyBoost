@@ -4369,11 +4369,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (dependentTasks.length > 0) {
             // Emit trigger with information about completed task and unblocked tasks
             await emitTrigger('task_dependency_completed', {
-              completedTaskId: updatedTask.id,
-              completedTaskTitle: updatedTask.title,
-              completedTaskPriority: updatedTask.priority,
-              completedTaskStatus: updatedTask.status,
-              completedTaskAssignee: updatedTask.assignedTo,
+              taskId: updatedTask.id,
+              taskTitle: updatedTask.title,
+              taskPriority: updatedTask.priority,
+              taskStatus: updatedTask.status,
+              assignee: updatedTask.assignedTo,
               unblockedTaskCount: dependentTasks.length,
               unblockedTasks: dependentTasks.map((dt) => ({
                 taskId: dt.taskId,
@@ -14906,6 +14906,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // ========================================
+  // EMAIL RECEIVED TRIGGER - FUTURE INTEGRATION
+  // ========================================
+  // NOTE: The 'email_received' automation trigger exists in the database and UI,
+  // but requires incoming email integration (webhook or IMAP/POP3) to emit.
+  // When email receiving functionality is implemented, emit the trigger here:
+  // 
+  // await emitTrigger('email_received', {
+  //   sender: email.from.email,
+  //   subject: email.subject,
+  //   body: email.body,
+  //   receivedAt: new Date(),
+  //   hasAttachments: email.attachments.length > 0 ? 'yes' : 'no',
+  //   attachmentCount: email.attachments.length,
+  //   recipientAddress: email.to.email,
+  // });
 
   // POST MailGun Disconnect
   app.post("/api/integrations/mailgun/disconnect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
