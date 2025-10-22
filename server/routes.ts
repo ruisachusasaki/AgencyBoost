@@ -4349,6 +4349,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
         }
       }
+
+      // Emit task_dependency_completed trigger if this task was just completed and has dependent tasks
+      if (validatedData.status === 'completed' && currentTask.status !== 'completed') {
+        try {
+          // Find tasks that were depending on this task
+          const dependentTasks = await db
+            .select({
+              taskId: taskDependencies.taskId,
+              taskTitle: tasks.title,
+              taskPriority: tasks.priority,
+              taskStatus: tasks.status,
+              dependencyType: taskDependencies.dependencyType,
+            })
+            .from(taskDependencies)
+            .innerJoin(tasks, eq(taskDependencies.taskId, tasks.id))
+            .where(eq(taskDependencies.dependsOnTaskId, req.params.id));
+
+          if (dependentTasks.length > 0) {
+            // Emit trigger with information about completed task and unblocked tasks
+            await emitTrigger('task_dependency_completed', {
+              completedTaskId: updatedTask.id,
+              completedTaskTitle: updatedTask.title,
+              completedTaskPriority: updatedTask.priority,
+              completedTaskStatus: updatedTask.status,
+              completedTaskAssignee: updatedTask.assignedTo,
+              unblockedTaskCount: dependentTasks.length,
+              unblockedTasks: dependentTasks.map((dt) => ({
+                taskId: dt.taskId,
+                taskTitle: dt.taskTitle,
+                taskPriority: dt.taskPriority,
+                taskStatus: dt.taskStatus,
+                dependencyType: dt.dependencyType,
+              })),
+              completedAt: new Date(),
+            });
+          }
+        } catch (triggerError) {
+          console.error('Failed to emit task_dependency_completed trigger:', triggerError);
+          // Don't fail the task update if trigger fails
+        }
+      }
       
       res.json(updatedTask);
     } catch (error) {
@@ -12617,6 +12658,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         document,
         req
       );
+
+      // Emit file_uploaded trigger
+      try {
+        await emitTrigger('file_uploaded', {
+          fileName: sanitizedFileName,
+          fileType: documentData.fileType,
+          fileSize: documentData.fileSize,
+          uploadedBy: uploadedBy,
+          location: 'client_documents',
+          clientId: clientId,
+          documentId: document.id,
+          uploadedAt: new Date(),
+        });
+      } catch (triggerError) {
+        console.error('Failed to emit file_uploaded trigger:', triggerError);
+        // Don't fail the upload if trigger fails
+      }
 
       res.status(201).json(document);
     } catch (error) {
@@ -21957,6 +22015,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       } catch (auditError) {
         console.error("Failed to create audit log for successful client portal login:", auditError);
+      }
+
+      // Emit client_portal_activity trigger for login
+      try {
+        await emitTrigger('client_portal_activity', {
+          activityType: 'login',
+          clientId: clientPortalUser.clientId,
+          clientName: client?.name || "Unknown Client",
+          clientEmail: clientPortalUser.email,
+          portalUserId: clientPortalUser.id,
+          portalUserName: `${clientPortalUser.firstName} ${clientPortalUser.lastName}`,
+          timestamp: new Date(),
+        });
+      } catch (triggerError) {
+        console.error('Failed to emit client_portal_activity trigger:', triggerError);
+        // Don't fail the login if trigger fails
       }
 
       res.json({
