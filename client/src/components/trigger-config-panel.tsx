@@ -493,6 +493,62 @@ export default function TriggerConfigPanel({
           options: customField.options || []
         });
       });
+    } else if (triggerDefinition?.type === 'quote_created' || 
+               triggerDefinition?.type === 'quote_sent' || 
+               triggerDefinition?.type === 'quote_viewed' ||
+               triggerDefinition?.type === 'quote_accepted') {
+      // For quote-related triggers, add quote-specific core fields FIRST
+      fields.push({
+        id: 'name',
+        name: 'Quote Name',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'status',
+        name: 'Quote Status',
+        type: 'dropdown',
+        options: ['draft', 'pending_approval', 'approved', 'sent', 'accepted', 'rejected']
+      });
+      fields.push({
+        id: 'totalCost',
+        name: 'Total Cost',
+        type: 'number',
+        options: []
+      });
+      fields.push({
+        id: 'clientBudget',
+        name: 'Client Budget',
+        type: 'number',
+        options: []
+      });
+      fields.push({
+        id: 'desiredMargin',
+        name: 'Desired Margin (%)',
+        type: 'number',
+        options: []
+      });
+      fields.push({
+        id: 'tag',
+        name: 'Has Tag',
+        type: 'tag_select',
+        options: []
+      });
+      fields.push({
+        id: 'createdBy',
+        name: 'Created By',
+        type: 'staff_select',
+        options: []
+      });
+      // Also include custom fields for quotes
+      customFields.forEach((customField: any) => {
+        fields.push({
+          id: customField.id,
+          name: customField.name,
+          type: customField.type,
+          options: customField.options || []
+        });
+      });
     } else if (triggerDefinition?.type === 'client_updated' || 
                triggerDefinition?.type === 'client_status_toggle' || 
                triggerDefinition?.type === 'client_health_score_changed' ||
@@ -2182,6 +2238,156 @@ export default function TriggerConfigPanel({
               </>
             )}
 
+            {/* For quote created triggers, show core fields first */}
+            {triggerDefinition.type === 'quote_created' && (
+              <>
+                {/* Client */}
+                {triggerDefinition.configSchema.clientId && 
+                  renderConfigField("clientId", triggerDefinition.configSchema.clientId)
+                }
+                
+                {/* Lead */}
+                {triggerDefinition.configSchema.leadId && 
+                  renderConfigField("leadId", triggerDefinition.configSchema.leadId)
+                }
+                
+                {/* Created By */}
+                {triggerDefinition.configSchema.createdBy && 
+                  renderConfigField("createdBy", triggerDefinition.configSchema.createdBy)
+                }
+                
+                {/* Minimum Quote Total */}
+                {triggerDefinition.configSchema.minTotal && 
+                  renderConfigField("minTotal", triggerDefinition.configSchema.minTotal)
+                }
+                
+                {/* Maximum Quote Total */}
+                {triggerDefinition.configSchema.maxTotal && 
+                  renderConfigField("maxTotal", triggerDefinition.configSchema.maxTotal)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.clientId || 
+                  triggerDefinition.configSchema.leadId || 
+                  triggerDefinition.configSchema.createdBy || 
+                  triggerDefinition.configSchema.minTotal || 
+                  triggerDefinition.configSchema.maxTotal) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for quote created triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
+            {/* For quote sent triggers, show core fields first */}
+            {triggerDefinition.type === 'quote_sent' && (
+              <>
+                {/* Client */}
+                {triggerDefinition.configSchema.clientId && 
+                  renderConfigField("clientId", triggerDefinition.configSchema.clientId)
+                }
+                
+                {/* Lead */}
+                {triggerDefinition.configSchema.leadId && 
+                  renderConfigField("leadId", triggerDefinition.configSchema.leadId)
+                }
+                
+                {/* Sent By */}
+                {triggerDefinition.configSchema.sentBy && 
+                  renderConfigField("sentBy", triggerDefinition.configSchema.sentBy)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.clientId || 
+                  triggerDefinition.configSchema.leadId || 
+                  triggerDefinition.configSchema.sentBy) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for quote sent triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
+            {/* For quote viewed triggers, show core fields first */}
+            {triggerDefinition.type === 'quote_viewed' && (
+              <>
+                {/* Client */}
+                {triggerDefinition.configSchema.clientId && 
+                  renderConfigField("clientId", triggerDefinition.configSchema.clientId)
+                }
+                
+                {/* Lead */}
+                {triggerDefinition.configSchema.leadId && 
+                  renderConfigField("leadId", triggerDefinition.configSchema.leadId)
+                }
+                
+                {/* Minimum View Count */}
+                {triggerDefinition.configSchema.minViewCount && 
+                  renderConfigField("minViewCount", triggerDefinition.configSchema.minViewCount)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.clientId || 
+                  triggerDefinition.configSchema.leadId || 
+                  triggerDefinition.configSchema.minViewCount) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for quote viewed triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
+            {/* For quote accepted triggers, show core fields first */}
+            {triggerDefinition.type === 'quote_accepted' && (
+              <>
+                {/* Client */}
+                {triggerDefinition.configSchema.clientId && 
+                  renderConfigField("clientId", triggerDefinition.configSchema.clientId)
+                }
+                
+                {/* Lead */}
+                {triggerDefinition.configSchema.leadId && 
+                  renderConfigField("leadId", triggerDefinition.configSchema.leadId)
+                }
+                
+                {/* Minimum Quote Total */}
+                {triggerDefinition.configSchema.minTotal && 
+                  renderConfigField("minTotal", triggerDefinition.configSchema.minTotal)
+                }
+                
+                {/* Maximum Quote Total */}
+                {triggerDefinition.configSchema.maxTotal && 
+                  renderConfigField("maxTotal", triggerDefinition.configSchema.maxTotal)
+                }
+                
+                {/* Add separator if core fields exist and filters exist */}
+                {(triggerDefinition.configSchema.clientId || 
+                  triggerDefinition.configSchema.leadId || 
+                  triggerDefinition.configSchema.minTotal || 
+                  triggerDefinition.configSchema.maxTotal) && 
+                 triggerDefinition.configSchema.filters && (
+                  <Separator className="my-4" />
+                )}
+                
+                {/* Show filters for quote accepted triggers */}
+                {triggerDefinition.configSchema.filters && 
+                  renderConfigField("filters", triggerDefinition.configSchema.filters)
+                }
+              </>
+            )}
+
             {/* For time off status change triggers, show core fields in specific order */}
             {triggerDefinition.type === 'time_off_status_changed' && (
               <>
@@ -2254,6 +2460,10 @@ export default function TriggerConfigPanel({
              triggerDefinition.type !== 'client_approval_event' &&
              triggerDefinition.type !== 'client_team_changed' &&
              triggerDefinition.type !== 'client_brief_updated' &&
+             triggerDefinition.type !== 'quote_created' &&
+             triggerDefinition.type !== 'quote_sent' &&
+             triggerDefinition.type !== 'quote_viewed' &&
+             triggerDefinition.type !== 'quote_accepted' &&
              triggerDefinition.type !== 'time_off_status_changed' &&
              triggerDefinition.type !== 'inbound_webhook' &&
              triggerDefinition.type !== 'appointment_booked' &&
