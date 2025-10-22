@@ -627,6 +627,146 @@ export default function TriggerConfigPanel({
           options: customField.options || []
         });
       });
+    } else if (triggerDefinition?.type === 'task_dependency_completed') {
+      // For task dependency completed triggers, add task-specific core fields FIRST
+      fields.push({
+        id: 'taskTitle',
+        name: 'Completed Task Title',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'taskPriority',
+        name: 'Task Priority',
+        type: 'dropdown',
+        options: ['low', 'medium', 'high', 'urgent']
+      });
+      fields.push({
+        id: 'taskStatus',
+        name: 'Task Status',
+        type: 'dropdown',
+        options: ['completed', 'cancelled']
+      });
+      fields.push({
+        id: 'unblockedTaskCount',
+        name: 'Number of Unblocked Tasks',
+        type: 'number',
+        options: []
+      });
+      fields.push({
+        id: 'assignee',
+        name: 'Assigned To',
+        type: 'staff_select',
+        options: []
+      });
+      fields.push({
+        id: 'tag',
+        name: 'Has Tag',
+        type: 'tag_select',
+        options: []
+      });
+    } else if (triggerDefinition?.type === 'email_received') {
+      // For email received triggers, add email-specific core fields FIRST
+      fields.push({
+        id: 'sender',
+        name: 'Sender Email',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'subject',
+        name: 'Subject',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'body',
+        name: 'Body Content',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'hasAttachments',
+        name: 'Has Attachments',
+        type: 'dropdown',
+        options: ['yes', 'no']
+      });
+      fields.push({
+        id: 'recipientAddress',
+        name: 'Recipient Address',
+        type: 'string',
+        options: []
+      });
+    } else if (triggerDefinition?.type === 'client_portal_activity') {
+      // For client portal activity triggers, add portal-specific core fields FIRST
+      fields.push({
+        id: 'activityType',
+        name: 'Activity Type',
+        type: 'dropdown',
+        options: ['login', 'download', 'upload', 'view', 'comment']
+      });
+      fields.push({
+        id: 'clientName',
+        name: 'Client Name',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'clientEmail',
+        name: 'Client Email',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'fileName',
+        name: 'File Name',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'fileType',
+        name: 'File Type',
+        type: 'dropdown',
+        options: ['document', 'image', 'video', 'audio', 'other']
+      });
+    } else if (triggerDefinition?.type === 'file_uploaded') {
+      // For file uploaded triggers, add file-specific core fields FIRST
+      fields.push({
+        id: 'fileName',
+        name: 'File Name',
+        type: 'string',
+        options: []
+      });
+      fields.push({
+        id: 'fileType',
+        name: 'File Type',
+        type: 'dropdown',
+        options: ['document', 'image', 'video', 'audio', 'spreadsheet', 'other']
+      });
+      fields.push({
+        id: 'fileSize',
+        name: 'File Size (bytes)',
+        type: 'number',
+        options: []
+      });
+      fields.push({
+        id: 'uploadedBy',
+        name: 'Uploaded By',
+        type: 'staff_select',
+        options: []
+      });
+      fields.push({
+        id: 'location',
+        name: 'Upload Location',
+        type: 'dropdown',
+        options: ['client_documents', 'project_files', 'campaign_assets', 'general']
+      });
+      fields.push({
+        id: 'tag',
+        name: 'Has Tag',
+        type: 'tag_select',
+        options: []
+      });
     } else {
       // For other non-form triggers, use custom fields directly
       customFields.forEach((customField: any) => {
@@ -2388,6 +2528,78 @@ export default function TriggerConfigPanel({
               </>
             )}
 
+            {/* For task dependency completed triggers, show Additional Filters */}
+            {triggerDefinition.type === 'task_dependency_completed' && (
+              <>
+                {/* Additional Filters Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Separator className="flex-1" />
+                    <span className="font-medium">Additional Filters</span>
+                    <Separator className="flex-1" />
+                  </div>
+                  
+                  {triggerDefinition.configSchema.additionalFilters && 
+                    renderConfigField("additionalFilters", triggerDefinition.configSchema.additionalFilters)
+                  }
+                </div>
+              </>
+            )}
+
+            {/* For email received triggers, show Additional Filters */}
+            {triggerDefinition.type === 'email_received' && (
+              <>
+                {/* Additional Filters Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Separator className="flex-1" />
+                    <span className="font-medium">Additional Filters</span>
+                    <Separator className="flex-1" />
+                  </div>
+                  
+                  {triggerDefinition.configSchema.additionalFilters && 
+                    renderConfigField("additionalFilters", triggerDefinition.configSchema.additionalFilters)
+                  }
+                </div>
+              </>
+            )}
+
+            {/* For client portal activity triggers, show Additional Filters */}
+            {triggerDefinition.type === 'client_portal_activity' && (
+              <>
+                {/* Additional Filters Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Separator className="flex-1" />
+                    <span className="font-medium">Additional Filters</span>
+                    <Separator className="flex-1" />
+                  </div>
+                  
+                  {triggerDefinition.configSchema.additionalFilters && 
+                    renderConfigField("additionalFilters", triggerDefinition.configSchema.additionalFilters)
+                  }
+                </div>
+              </>
+            )}
+
+            {/* For file uploaded triggers, show Additional Filters */}
+            {triggerDefinition.type === 'file_uploaded' && (
+              <>
+                {/* Additional Filters Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Separator className="flex-1" />
+                    <span className="font-medium">Additional Filters</span>
+                    <Separator className="flex-1" />
+                  </div>
+                  
+                  {triggerDefinition.configSchema.additionalFilters && 
+                    renderConfigField("additionalFilters", triggerDefinition.configSchema.additionalFilters)
+                  }
+                </div>
+              </>
+            )}
+
             {/* For time off status change triggers, show core fields in specific order */}
             {triggerDefinition.type === 'time_off_status_changed' && (
               <>
@@ -2464,6 +2676,10 @@ export default function TriggerConfigPanel({
              triggerDefinition.type !== 'quote_sent' &&
              triggerDefinition.type !== 'quote_viewed' &&
              triggerDefinition.type !== 'quote_accepted' &&
+             triggerDefinition.type !== 'task_dependency_completed' &&
+             triggerDefinition.type !== 'email_received' &&
+             triggerDefinition.type !== 'client_portal_activity' &&
+             triggerDefinition.type !== 'file_uploaded' &&
              triggerDefinition.type !== 'time_off_status_changed' &&
              triggerDefinition.type !== 'inbound_webhook' &&
              triggerDefinition.type !== 'appointment_booked' &&
