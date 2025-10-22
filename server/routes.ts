@@ -22977,6 +22977,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await Promise.all(notificationPromises);
       }
 
+      // Emit quote_created trigger
+      try {
+        await emitTrigger('quote_created', {
+          quoteId: newQuote.id,
+          quoteName: newQuote.name,
+          clientId: newQuote.clientId,
+          leadId: newQuote.leadId,
+          totalCost: newQuote.totalCost,
+          clientBudget: newQuote.clientBudget,
+          desiredMargin: newQuote.desiredMargin,
+          status: newQuote.status,
+          createdBy: newQuote.createdBy,
+          createdAt: newQuote.createdAt,
+        });
+      } catch (triggerError) {
+        console.error('Failed to emit quote_created trigger:', triggerError);
+        // Don't fail the quote creation if trigger fails
+      }
+
       res.status(201).json(newQuote);
     } catch (error) {
       console.error("=== DETAILED QUOTE ERROR ===");
@@ -23058,6 +23077,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching quote:", error);
       res.status(500).json({ message: "Failed to fetch quote" });
+    }
+  });
+
+  // POST /api/quotes/:id/track-view - Track quote view and emit trigger
+  app.post("/api/quotes/:id/track-view", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Get quote details
+      const [quote] = await db
+        .select()
+        .from(quotes)
+        .where(eq(quotes.id, id))
+        .limit(1);
+
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+
+      // Increment view count
+      const [updatedQuote] = await db
+        .update(quotes)
+        .set({
+          viewCount: sql`${quotes.viewCount} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(quotes.id, id))
+        .returning();
+
+      // Emit quote_viewed trigger
+      try {
+        await emitTrigger('quote_viewed', {
+          quoteId: updatedQuote.id,
+          quoteName: updatedQuote.name,
+          clientId: updatedQuote.clientId,
+          leadId: updatedQuote.leadId,
+          totalCost: updatedQuote.totalCost,
+          clientBudget: updatedQuote.clientBudget,
+          desiredMargin: updatedQuote.desiredMargin,
+          status: updatedQuote.status,
+          viewCount: updatedQuote.viewCount,
+          viewedAt: new Date(),
+        });
+      } catch (triggerError) {
+        console.error('Failed to emit quote_viewed trigger:', triggerError);
+        // Don't fail the view tracking if trigger fails
+      }
+
+      res.json({
+        message: "Quote view tracked successfully",
+        viewCount: updatedQuote.viewCount
+      });
+    } catch (error) {
+      console.error("Error tracking quote view:", error);
+      res.status(500).json({ message: "Failed to track quote view" });
     }
   });
 
@@ -23535,6 +23609,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { status: updatedQuote.status },
         req
       );
+
+      // Emit quote_sent trigger when status changes to "sent"
+      if (status === "sent") {
+        try {
+          await emitTrigger('quote_sent', {
+            quoteId: updatedQuote.id,
+            quoteName: updatedQuote.name,
+            clientId: updatedQuote.clientId,
+            leadId: updatedQuote.leadId,
+            totalCost: updatedQuote.totalCost,
+            clientBudget: updatedQuote.clientBudget,
+            desiredMargin: updatedQuote.desiredMargin,
+            status: updatedQuote.status,
+            sentBy: userId,
+            sentAt: updatedQuote.updatedAt,
+          });
+        } catch (triggerError) {
+          console.error('Failed to emit quote_sent trigger:', triggerError);
+          // Don't fail the status update if trigger fails
+        }
+      }
+
+      // Emit quote_accepted trigger when status changes to "accepted"
+      if (status === "accepted") {
+        try {
+          await emitTrigger('quote_accepted', {
+            quoteId: updatedQuote.id,
+            quoteName: updatedQuote.name,
+            clientId: updatedQuote.clientId,
+            leadId: updatedQuote.leadId,
+            totalCost: updatedQuote.totalCost,
+            clientBudget: updatedQuote.clientBudget,
+            desiredMargin: updatedQuote.desiredMargin,
+            status: updatedQuote.status,
+            acceptedAt: updatedQuote.updatedAt,
+          });
+        } catch (triggerError) {
+          console.error('Failed to emit quote_accepted trigger:', triggerError);
+          // Don't fail the status update if trigger fails
+        }
+      }
 
       res.json({
         message: "Quote status updated successfully",

@@ -253,6 +253,7 @@ export const quotes = pgTable("quotes", {
   totalCost: decimal("total_cost", { precision: 10, scale: 2 }).default('0'),
   status: text("status").notNull().default("draft"), // draft, pending_approval, approved, sent, accepted, rejected
   notes: text("notes"),
+  viewCount: integer("view_count").default(0), // Track how many times quote has been viewed
   createdBy: uuid("created_by").notNull().references(() => staff.id),
   approvedBy: uuid("approved_by").references(() => staff.id),
   approvedAt: timestamp("approved_at"),
