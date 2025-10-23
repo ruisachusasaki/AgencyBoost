@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PieChart, Trash2 } from "lucide-react";
+import { PieChart, Trash2, GripVertical } from "lucide-react";
 
 interface WidgetProps {
   userWidget: any;
@@ -16,23 +16,26 @@ export default function ClientDistributionByVerticalWidget({ userWidget, onRemov
   const total = distribution.reduce((sum: number, item: any) => sum + item.count, 0);
 
   return (
-    <Card data-testid="widget-client-distribution-by-vertical">
+    <Card data-testid="widget-client-distribution-by-vertical" className="h-full flex flex-col">
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <div className="space-y-1">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <PieChart className="h-4 w-4 text-primary" />
-            Client Distribution
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Breakdown by vertical
-          </CardDescription>
+        <div className="flex items-start gap-2 flex-1">
+          <GripVertical className="h-5 w-5 text-muted-foreground cursor-move widget-drag-handle flex-shrink-0 mt-0.5" />
+          <div className="space-y-1 flex-1">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <PieChart className="h-4 w-4 text-primary" />
+              Client Distribution
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Breakdown by vertical
+            </CardDescription>
+          </div>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={onRemove}
           data-testid="button-remove-widget"
-          className="h-8 w-8 p-0"
+          className="h-8 w-8 p-0 flex-shrink-0"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
