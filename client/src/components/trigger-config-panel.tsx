@@ -167,15 +167,18 @@ export default function TriggerConfigPanel({
     setCustomName(trigger.customName || "");
   }, [trigger]);
 
-  // Initialize filters array if it doesn't exist
+  // Initialize filters and additionalFilters arrays if they don't exist
   useEffect(() => {
     if (conditions && !conditions.filters) {
       setConditions((prev: any) => ({ ...prev, filters: [] }));
     }
+    if (conditions && !conditions.additionalFilters) {
+      setConditions((prev: any) => ({ ...prev, additionalFilters: [] }));
+    }
   }, [conditions]);
 
-  // Add a new filter
-  const addFilter = () => {
+  // Add a new filter - generic for both filters and additionalFilters
+  const addFilter = (fieldName: string = "filters") => {
     const newFilter = {
       field_id: "",
       operator: "equals",
@@ -183,23 +186,23 @@ export default function TriggerConfigPanel({
     };
     setConditions((prev: any) => ({
       ...prev,
-      filters: [...(prev.filters || []), newFilter]
+      [fieldName]: [...(prev[fieldName] || []), newFilter]
     }));
   };
 
-  // Remove a filter
-  const removeFilter = (index: number) => {
+  // Remove a filter - generic for both filters and additionalFilters
+  const removeFilter = (index: number, fieldName: string = "filters") => {
     setConditions((prev: any) => ({
       ...prev,
-      filters: (prev.filters || []).filter((_: any, i: number) => i !== index)
+      [fieldName]: (prev[fieldName] || []).filter((_: any, i: number) => i !== index)
     }));
   };
 
-  // Update a specific filter
-  const updateFilter = (index: number, field: string, value: any) => {
+  // Update a specific filter - generic for both filters and additionalFilters
+  const updateFilter = (index: number, field: string, value: any, fieldName: string = "filters") => {
     setConditions((prev: any) => ({
       ...prev,
-      filters: (prev.filters || []).map((filter: any, i: number) => 
+      [fieldName]: (prev[fieldName] || []).map((filter: any, i: number) => 
         i === index ? { ...filter, [field]: value } : filter
       )
     }));
@@ -783,7 +786,7 @@ export default function TriggerConfigPanel({
   };
 
   // Render a single filter row
-  const renderFilterRow = (filter: any, index: number) => {
+  const renderFilterRow = (filter: any, index: number, fieldName: string = "filters") => {
     const availableFields = getAvailableFields();
     const selectedField = availableFields.find(f => f.id === filter.field_id);
     const operators = [
@@ -805,7 +808,7 @@ export default function TriggerConfigPanel({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => removeFilter(index)}
+            onClick={() => removeFilter(index, fieldName)}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
           >
             <Trash2 className="h-4 w-4" />
@@ -818,7 +821,7 @@ export default function TriggerConfigPanel({
             <Label>Field</Label>
             <Select
               value={filter.field_id}
-              onValueChange={(value) => updateFilter(index, "field_id", value)}
+              onValueChange={(value) => updateFilter(index, "field_id", value, fieldName)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Choose field" />
@@ -844,7 +847,7 @@ export default function TriggerConfigPanel({
             <Label>Condition</Label>
             <Select
               value={filter.operator}
-              onValueChange={(value) => updateFilter(index, "operator", value)}
+              onValueChange={(value) => updateFilter(index, "operator", value, fieldName)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Choose condition" />
@@ -865,7 +868,7 @@ export default function TriggerConfigPanel({
             {selectedField?.type === "client_select" ? (
               <Select
                 value={filter.value}
-                onValueChange={(value) => updateFilter(index, "value", value)}
+                onValueChange={(value) => updateFilter(index, "value", value, fieldName)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose client" />
@@ -892,7 +895,7 @@ export default function TriggerConfigPanel({
             ) : selectedField?.type === "project_select" ? (
               <Select
                 value={filter.value}
-                onValueChange={(value) => updateFilter(index, "value", value)}
+                onValueChange={(value) => updateFilter(index, "value", value, fieldName)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose project" />
@@ -919,7 +922,7 @@ export default function TriggerConfigPanel({
             ) : selectedField?.type === "staff_select" ? (
               <Select
                 value={filter.value}
-                onValueChange={(value) => updateFilter(index, "value", value)}
+                onValueChange={(value) => updateFilter(index, "value", value, fieldName)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose staff member" />
@@ -971,7 +974,7 @@ export default function TriggerConfigPanel({
                           key={task.id}
                           value={`${task.title} ${task.project?.name || ''}`}
                           onSelect={() => {
-                            updateFilter(index, "value", task.id);
+                            updateFilter(index, "value", task.id, fieldName);
                           }}
                         >
                           <div className="flex flex-col w-full">
@@ -994,7 +997,7 @@ export default function TriggerConfigPanel({
             ) : selectedField?.type === "dropdown" && selectedField?.options?.length > 0 ? (
               <Select
                 value={filter.value}
-                onValueChange={(value) => updateFilter(index, "value", value)}
+                onValueChange={(value) => updateFilter(index, "value", value, fieldName)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose value" />
@@ -1010,7 +1013,7 @@ export default function TriggerConfigPanel({
             ) : (
               <Input
                 value={filter.value}
-                onChange={(e) => updateFilter(index, "value", e.target.value)}
+                onChange={(e) => updateFilter(index, "value", e.target.value, fieldName)}
                 placeholder="Enter value"
                 disabled={filter.operator === "is_empty" || filter.operator === "is_not_empty"}
               />
@@ -1025,9 +1028,9 @@ export default function TriggerConfigPanel({
     const value = conditions[fieldName] || "";
     const label = fieldSchema.label || fieldName.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
 
-    // Special handling for filters array - show dynamic filter builder
-    if (fieldName === "filters" && (fieldSchema.type === "array" || fieldSchema.type === "filters")) {
-      const filters = conditions.filters || [];
+    // Special handling for filters and additionalFilters array - show dynamic filter builder
+    if ((fieldName === "filters" || fieldName === "additionalFilters") && (fieldSchema.type === "array" || fieldSchema.type === "filters")) {
+      const filters = conditions[fieldName] || [];
       return (
         <div key={fieldName} className="space-y-4">
           <div className="flex items-center justify-between">
@@ -1036,7 +1039,7 @@ export default function TriggerConfigPanel({
               type="button"
               variant="outline"
               size="sm"
-              onClick={addFilter}
+              onClick={() => addFilter(fieldName)}
               className="text-blue-600 border-blue-600 hover:bg-blue-50"
               disabled={triggerDefinition?.configSchema?.form_id && !conditions.form_id}
             >
@@ -1055,7 +1058,7 @@ export default function TriggerConfigPanel({
 
           {filters.length > 0 && (
             <div className="space-y-3">
-              {filters.map((filter: any, index: number) => renderFilterRow(filter, index))}
+              {filters.map((filter: any, index: number) => renderFilterRow(filter, index, fieldName))}
             </div>
           )}
 
