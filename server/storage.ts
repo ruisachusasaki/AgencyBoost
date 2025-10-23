@@ -6707,6 +6707,28 @@ export class DbStorage implements IStorage {
         case 'client_team_assignments':
           return await this.getClientTeamAssignmentsData();
         
+        // Sales & Revenue Widgets
+        case 'sales_pipeline_overview':
+          return await this.getSalesPipelineOverviewData(assignedClientIds);
+        
+        case 'quote_status_summary':
+          return await this.getQuoteStatusSummaryData(assignedClientIds);
+        
+        case 'revenue_this_month':
+          return await this.getRevenueThisMonthData(assignedClientIds);
+        
+        case 'mrr_tracker':
+          return await this.getMRRTrackerData(assignedClientIds);
+        
+        case 'win_rate':
+          return await this.getWinRateData(assignedClientIds);
+        
+        case 'top_performing_sales_reps':
+          return await this.getTopPerformingSalesRepsData();
+        
+        case 'recent_deals_won':
+          return await this.getRecentDealsWonData(assignedClientIds);
+        
         default:
           return { error: 'Unknown widget type' };
       }
@@ -6908,6 +6930,245 @@ export class DbStorage implements IStorage {
       return Object.values(grouped);
     } catch (error) {
       console.error("Error fetching client team assignments:", error);
+      return [];
+    }
+  }
+
+  // Sales & Revenue Widget Data Methods
+  private async getSalesPipelineOverviewData(assignedClientIds: string[]): Promise<any> {
+    try {
+      // Get all leads grouped by pipeline stage
+      const pipelineData = await db
+        .select({
+          stage: leads.pipelineStage,
+          count: sql<number>`count(*)::int`,
+          totalValue: sql<number>`sum(COALESCE(${leads.estimatedValue}, 0))::int`,
+        })
+        .from(leads)
+        .where(
+          and(
+            eq(leads.status, 'active'),
+            assignedClientIds.length > 0 ? sql`${leads.staffAssigned} = ANY(${assignedClientIds})` : undefined
+          )
+        )
+        .groupBy(leads.pipelineStage);
+
+      // Calculate conversion rate (won / total active leads)
+      const wonLeads = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(leads)
+        .where(eq(leads.status, 'won'));
+      
+      const totalLeads = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(leads)
+        .where(sql`${leads.status} IN ('active', 'won', 'lost')`);
+
+      const conversionRate = totalLeads[0]?.count > 0 
+        ? ((wonLeads[0]?.count || 0) / totalLeads[0].count * 100).toFixed(1)
+        : '0.0';
+
+      return {
+        stages: pipelineData,
+        conversionRate,
+        totalLeads: pipelineData.reduce((sum, s) => sum + s.count, 0),
+      };
+    } catch (error) {
+      console.error("Error fetching sales pipeline overview:", error);
+      return { stages: [], conversionRate: '0.0', totalLeads: 0 };
+    }
+  }
+
+  private async getQuoteStatusSummaryData(assignedClientIds: string[]): Promise<any> {
+    try {
+      const statusCounts = await db
+        .select({
+          status: quotes.status,
+          count: sql<number>`count(*)::int`,
+          totalValue: sql<number>`sum(COALESCE(${quotes.totalPrice}, 0))::int`,
+        })
+        .from(quotes)
+        .where(
+          assignedClientIds.length > 0 
+            ? inArray(quotes.clientId, assignedClientIds)
+            : undefined
+        )
+        .groupBy(quotes.status);
+
+      return statusCounts.map(s => ({
+        status: s.status,
+        count: s.count,
+        totalValue: s.totalValue,
+      }));
+    } catch (error) {
+      console.error("Error fetching quote status summary:", error);
+      return [];
+    }
+  }
+
+  private async getRevenueThisMonthData(assignedClientIds: string[]): Promise<any> {
+    try {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      
+      // Calculate revenue from accepted quotes this month
+      const revenue = await db
+        .select({
+          total: sql<number>`sum(COALESCE(${quotes.totalPrice}, 0))::int`,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(quotes)
+        .where(
+          and(
+            eq(quotes.status, 'accepted'),
+            sql`${quotes.updatedAt} >= ${startOfMonth}`,
+            assignedClientIds.length > 0 
+              ? inArray(quotes.clientId, assignedClientIds)
+              : undefined
+          )
+        );
+
+      // Mock target - could be stored in settings
+      const target = 100000;
+      const actual = revenue[0]?.total || 0;
+      const percentage = target > 0 ? ((actual / target) * 100).toFixed(1) : '0.0';
+
+      return {
+        actual,
+        target,
+        percentage,
+        deals: revenue[0]?.count || 0,
+      };
+    } catch (error) {
+      console.error("Error fetching revenue this month:", error);
+      return { actual: 0, target: 0, percentage: '0.0', deals: 0 };
+    }
+  }
+
+  private async getMRRTrackerData(assignedClientIds: string[]): Promise<any> {
+    try {
+      // Get accepted quotes with recurring revenue over last 6 months
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+      const monthlyData = await db
+        .select({
+          month: sql<string>`to_char(${quotes.updatedAt}, 'YYYY-MM')`,
+          mrr: sql<number>`sum(COALESCE(${quotes.totalPrice}, 0))::int`,
+        })
+        .from(quotes)
+        .where(
+          and(
+            eq(quotes.status, 'accepted'),
+            sql`${quotes.updatedAt} >= ${sixMonthsAgo}`,
+            assignedClientIds.length > 0 
+              ? inArray(quotes.clientId, assignedClientIds)
+              : undefined
+          )
+        )
+        .groupBy(sql`to_char(${quotes.updatedAt}, 'YYYY-MM')`)
+        .orderBy(sql`to_char(${quotes.updatedAt}, 'YYYY-MM')`);
+
+      return monthlyData;
+    } catch (error) {
+      console.error("Error fetching MRR tracker data:", error);
+      return [];
+    }
+  }
+
+  private async getWinRateData(assignedClientIds: string[]): Promise<any> {
+    try {
+      const wonCount = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(leads)
+        .where(
+          and(
+            eq(leads.status, 'won'),
+            assignedClientIds.length > 0 
+              ? sql`${leads.staffAssigned} = ANY(${assignedClientIds})`
+              : undefined
+          )
+        );
+
+      const totalCount = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(leads)
+        .where(
+          and(
+            sql`${leads.status} IN ('won', 'lost')`,
+            assignedClientIds.length > 0 
+              ? sql`${leads.staffAssigned} = ANY(${assignedClientIds})`
+              : undefined
+          )
+        );
+
+      const won = wonCount[0]?.count || 0;
+      const total = totalCount[0]?.count || 0;
+      const winRate = total > 0 ? ((won / total) * 100).toFixed(1) : '0.0';
+
+      return {
+        winRate,
+        won,
+        lost: total - won,
+        total,
+      };
+    } catch (error) {
+      console.error("Error fetching win rate data:", error);
+      return { winRate: '0.0', won: 0, lost: 0, total: 0 };
+    }
+  }
+
+  private async getTopPerformingSalesRepsData(): Promise<any> {
+    try {
+      // Get top 5 staff members by number of won deals
+      const topReps = await db
+        .select({
+          staffId: leads.staffAssigned,
+          staffName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
+          dealsWon: sql<number>`count(*)::int`,
+          totalRevenue: sql<number>`sum(COALESCE(${leads.estimatedValue}, 0))::int`,
+        })
+        .from(leads)
+        .leftJoin(staff, eq(leads.staffAssigned, staff.id))
+        .where(eq(leads.status, 'won'))
+        .groupBy(leads.staffAssigned, sql`${staff.firstName} || ' ' || ${staff.lastName}`)
+        .orderBy(desc(sql`count(*)`))
+        .limit(5);
+
+      return topReps;
+    } catch (error) {
+      console.error("Error fetching top performing sales reps:", error);
+      return [];
+    }
+  }
+
+  private async getRecentDealsWonData(assignedClientIds: string[]): Promise<any> {
+    try {
+      const recentDeals = await db
+        .select({
+          id: leads.id,
+          companyName: leads.companyName,
+          contactName: leads.contactName,
+          estimatedValue: leads.estimatedValue,
+          wonDate: leads.updatedAt,
+          staffName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
+        })
+        .from(leads)
+        .leftJoin(staff, eq(leads.staffAssigned, staff.id))
+        .where(
+          and(
+            eq(leads.status, 'won'),
+            assignedClientIds.length > 0 
+              ? sql`${leads.staffAssigned} = ANY(${assignedClientIds})`
+              : undefined
+          )
+        )
+        .orderBy(desc(leads.updatedAt))
+        .limit(10);
+
+      return recentDeals;
+    } catch (error) {
+      console.error("Error fetching recent deals won:", error);
       return [];
     }
   }
