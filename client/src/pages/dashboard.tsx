@@ -20,6 +20,13 @@ import ClientApprovalQueueWidget from "@/components/widgets/client-approval-queu
 import ClientDistributionByVerticalWidget from "@/components/widgets/client-distribution-by-vertical";
 import ClientPortalActivityWidget from "@/components/widgets/client-portal-activity";
 import ClientTeamAssignmentsWidget from "@/components/widgets/client-team-assignments";
+import SalesPipelineOverviewWidget from "@/components/widgets/sales-pipeline-overview";
+import QuoteStatusSummaryWidget from "@/components/widgets/quote-status-summary";
+import RevenueThisMonthWidget from "@/components/widgets/revenue-this-month";
+import MRRTrackerWidget from "@/components/widgets/mrr-tracker";
+import WinRateWidget from "@/components/widgets/win-rate";
+import TopPerformingSalesRepsWidget from "@/components/widgets/top-performing-sales-reps";
+import RecentDealsWonWidget from "@/components/widgets/recent-deals-won";
 
 interface DashboardWidget {
   id: string;
@@ -154,6 +161,20 @@ export default function Dashboard() {
         return <ClientPortalActivityWidget {...props} />;
       case "client_team_assignments":
         return <ClientTeamAssignmentsWidget {...props} />;
+      case "sales_pipeline_overview":
+        return <SalesPipelineOverviewWidget {...props} />;
+      case "quote_status_summary":
+        return <QuoteStatusSummaryWidget {...props} />;
+      case "revenue_this_month":
+        return <RevenueThisMonthWidget {...props} />;
+      case "mrr_tracker":
+        return <MRRTrackerWidget {...props} />;
+      case "win_rate":
+        return <WinRateWidget {...props} />;
+      case "top_performing_sales_reps":
+        return <TopPerformingSalesRepsWidget {...props} />;
+      case "recent_deals_won":
+        return <RecentDealsWonWidget {...props} />;
       default:
         return (
           <Card>
