@@ -8,9 +8,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Plus, Settings, Trash2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import GridLayout from "react-grid-layout";
+import GridLayout, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+
+const ResponsiveGridLayout = WidthProvider(GridLayout);
 
 import ClientHealthOverviewWidget from "@/components/widgets/client-health-overview";
 import RecentClientsWidget from "@/components/widgets/recent-clients";
@@ -329,12 +331,11 @@ export default function Dashboard() {
           </CardHeader>
         </Card>
       ) : (
-        <GridLayout
+        <ResponsiveGridLayout
           className="layout"
           layout={layout}
           cols={12}
           rowHeight={100}
-          width={1200}
           onDragStop={handleLayoutSave}
           onResizeStop={handleLayoutSave}
           draggableHandle=".widget-drag-handle"
@@ -348,7 +349,7 @@ export default function Dashboard() {
               {renderWidget(userWidget)}
             </div>
           ))}
-        </GridLayout>
+        </ResponsiveGridLayout>
       )}
     </div>
   );
