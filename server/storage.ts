@@ -64,11 +64,13 @@ import {
   type ClientTeamAssignment, type InsertClientTeamAssignment, clientTeamAssignments,
   type UserViewPreference, type InsertUserViewPreference, userViewPreferences,
   type SalesSettings, type InsertSalesSettings, salesSettings,
-  customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff
+  type DashboardWidget, type InsertDashboardWidget, dashboardWidgets,
+  type UserDashboardWidget, type InsertUserDashboardWidget, userDashboardWidgets,
+  customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff, clientPortalUsers
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, sql, asc, desc, and, or, max, isNull } from "drizzle-orm";
+import { eq, sql, asc, desc, and, or, max, isNull, inArray, isNotNull } from "drizzle-orm";
 
 export interface IStorage {
   // Clients
@@ -6582,6 +6584,331 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error("Error saving user view preference:", error);
       throw error;
+    }
+  }
+
+  // =============================================================================
+  // DASHBOARD WIDGETS METHODS
+  // =============================================================================
+
+  async getDashboardWidgets(): Promise<DashboardWidget[]> {
+    try {
+      const widgets = await db
+        .select()
+        .from(dashboardWidgets)
+        .where(eq(dashboardWidgets.isActive, true))
+        .orderBy(dashboardWidgets.category, dashboardWidgets.name);
+      return widgets;
+    } catch (error) {
+      console.error("Error fetching dashboard widgets:", error);
+      return [];
+    }
+  }
+
+  async getUserDashboardWidgets(userId: string): Promise<UserDashboardWidget[]> {
+    try {
+      const widgets = await db
+        .select()
+        .from(userDashboardWidgets)
+        .where(and(
+          eq(userDashboardWidgets.userId, userId),
+          eq(userDashboardWidgets.isVisible, true)
+        ))
+        .orderBy(userDashboardWidgets.order);
+      return widgets;
+    } catch (error) {
+      console.error("Error fetching user dashboard widgets:", error);
+      return [];
+    }
+  }
+
+  async getUserDashboardWidget(id: string): Promise<UserDashboardWidget | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(userDashboardWidgets)
+        .where(eq(userDashboardWidgets.id, id))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching user dashboard widget:", error);
+      return undefined;
+    }
+  }
+
+  async createUserDashboardWidget(data: InsertUserDashboardWidget): Promise<UserDashboardWidget> {
+    try {
+      const result = await db
+        .insert(userDashboardWidgets)
+        .values(data)
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating user dashboard widget:", error);
+      throw error;
+    }
+  }
+
+  async updateUserDashboardWidget(id: string, data: Partial<InsertUserDashboardWidget>): Promise<UserDashboardWidget | undefined> {
+    try {
+      const result = await db
+        .update(userDashboardWidgets)
+        .set({
+          ...data,
+          updatedAt: new Date(),
+        })
+        .where(eq(userDashboardWidgets.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating user dashboard widget:", error);
+      return undefined;
+    }
+  }
+
+  async deleteUserDashboardWidget(id: string): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(userDashboardWidgets)
+        .where(eq(userDashboardWidgets.id, id));
+      return result.rowCount! > 0;
+    } catch (error) {
+      console.error("Error deleting user dashboard widget:", error);
+      return false;
+    }
+  }
+
+  async getWidgetData(widgetType: string, userId: string): Promise<any> {
+    try {
+      // Get user's team assignments for filtering
+      const userAssignments = await db
+        .select({ clientId: clientTeamAssignments.clientId })
+        .from(clientTeamAssignments)
+        .where(eq(clientTeamAssignments.staffId, userId));
+      
+      const assignedClientIds = userAssignments.map(a => a.clientId);
+
+      switch (widgetType) {
+        case 'client_health_overview':
+          return await this.getClientHealthOverviewData();
+        
+        case 'recent_clients':
+          return await this.getRecentClientsData();
+        
+        case 'client_approval_queue':
+          return await this.getClientApprovalQueueData(assignedClientIds);
+        
+        case 'client_distribution_by_vertical':
+          return await this.getClientDistributionByVerticalData();
+        
+        case 'client_portal_activity':
+          return await this.getClientPortalActivityData(assignedClientIds);
+        
+        case 'client_team_assignments':
+          return await this.getClientTeamAssignmentsData();
+        
+        default:
+          return { error: 'Unknown widget type' };
+      }
+    } catch (error) {
+      console.error(`Error fetching widget data for ${widgetType}:`, error);
+      throw error;
+    }
+  }
+
+  // Widget-specific data fetching methods
+  private async getClientHealthOverviewData(): Promise<any> {
+    try {
+      // Get the most recent health score for each client
+      const healthScores = await db
+        .select({
+          clientId: clientHealthScores.clientId,
+          healthIndicator: clientHealthScores.healthIndicator,
+          averageScore: clientHealthScores.averageScore,
+          weekStartDate: clientHealthScores.weekStartDate,
+        })
+        .from(clientHealthScores)
+        .orderBy(desc(clientHealthScores.weekStartDate));
+
+      // Group by client and get the latest score
+      const latestScores = new Map();
+      healthScores.forEach(score => {
+        if (!latestScores.has(score.clientId)) {
+          latestScores.set(score.clientId, score);
+        }
+      });
+
+      // Count by health indicator
+      const counts = {
+        Green: 0,
+        Yellow: 0,
+        Red: 0,
+        total: latestScores.size,
+      };
+
+      latestScores.forEach(score => {
+        if (counts[score.healthIndicator] !== undefined) {
+          counts[score.healthIndicator]++;
+        }
+      });
+
+      return counts;
+    } catch (error) {
+      console.error("Error fetching client health overview:", error);
+      return { Green: 0, Yellow: 0, Red: 0, total: 0 };
+    }
+  }
+
+  private async getRecentClientsData(): Promise<any> {
+    try {
+      const recentClients = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.isArchived, false))
+        .orderBy(desc(clients.createdAt))
+        .limit(5);
+
+      return recentClients;
+    } catch (error) {
+      console.error("Error fetching recent clients:", error);
+      return [];
+    }
+  }
+
+  private async getClientApprovalQueueData(assignedClientIds: string[]): Promise<any> {
+    try {
+      if (assignedClientIds.length === 0) {
+        return [];
+      }
+
+      // Get tasks requiring client approval for assigned clients
+      const approvalQueue = await db
+        .select({
+          id: tasks.id,
+          title: tasks.title,
+          clientId: tasks.clientId,
+          clientName: clients.name,
+          status: tasks.clientApprovalStatus,
+          dueDate: tasks.dueDate,
+          createdAt: tasks.createdAt,
+        })
+        .from(tasks)
+        .leftJoin(clients, eq(tasks.clientId, clients.id))
+        .where(and(
+          eq(tasks.requiresClientApproval, true),
+          inArray(tasks.clientId, assignedClientIds),
+          eq(tasks.clientApprovalStatus, 'pending')
+        ))
+        .orderBy(desc(tasks.createdAt))
+        .limit(10);
+
+      return approvalQueue;
+    } catch (error) {
+      console.error("Error fetching client approval queue:", error);
+      return [];
+    }
+  }
+
+  private async getClientDistributionByVerticalData(): Promise<any> {
+    try {
+      const distribution = await db
+        .select({
+          vertical: clients.clientVertical,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(clients)
+        .where(eq(clients.isArchived, false))
+        .groupBy(clients.clientVertical)
+        .orderBy(desc(sql`count(*)`));
+
+      return distribution.map(d => ({
+        vertical: d.vertical || 'Uncategorized',
+        count: d.count,
+      }));
+    } catch (error) {
+      console.error("Error fetching client distribution by vertical:", error);
+      return [];
+    }
+  }
+
+  private async getClientPortalActivityData(assignedClientIds: string[]): Promise<any> {
+    try {
+      if (assignedClientIds.length === 0) {
+        return [];
+      }
+
+      // Get recent portal user logins for assigned clients
+      const recentActivity = await db
+        .select({
+          id: clientPortalUsers.id,
+          clientId: clientPortalUsers.clientId,
+          clientName: clients.name,
+          email: clientPortalUsers.email,
+          firstName: clientPortalUsers.firstName,
+          lastName: clientPortalUsers.lastName,
+          lastLogin: clientPortalUsers.lastLogin,
+        })
+        .from(clientPortalUsers)
+        .leftJoin(clients, eq(clientPortalUsers.clientId, clients.id))
+        .where(and(
+          inArray(clientPortalUsers.clientId, assignedClientIds),
+          eq(clientPortalUsers.isActive, true),
+          isNotNull(clientPortalUsers.lastLogin)
+        ))
+        .orderBy(desc(clientPortalUsers.lastLogin))
+        .limit(10);
+
+      return recentActivity;
+    } catch (error) {
+      console.error("Error fetching client portal activity:", error);
+      return [];
+    }
+  }
+
+  private async getClientTeamAssignmentsData(): Promise<any> {
+    try {
+      // Get all client team assignments with client and staff details
+      const assignments = await db
+        .select({
+          id: clientTeamAssignments.id,
+          clientId: clientTeamAssignments.clientId,
+          clientName: clients.name,
+          staffId: clientTeamAssignments.staffId,
+          staffName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
+          staffEmail: staff.email,
+          position: clientTeamAssignments.position,
+          isPrimary: clientTeamAssignments.isPrimary,
+        })
+        .from(clientTeamAssignments)
+        .leftJoin(clients, eq(clientTeamAssignments.clientId, clients.id))
+        .leftJoin(staff, eq(clientTeamAssignments.staffId, staff.id))
+        .where(eq(clients.isArchived, false))
+        .orderBy(clients.name, desc(clientTeamAssignments.isPrimary));
+
+      // Group by client
+      const grouped = assignments.reduce((acc: any, assignment) => {
+        const clientId = assignment.clientId;
+        if (!acc[clientId]) {
+          acc[clientId] = {
+            clientId,
+            clientName: assignment.clientName,
+            teamMembers: [],
+          };
+        }
+        acc[clientId].teamMembers.push({
+          staffId: assignment.staffId,
+          staffName: assignment.staffName,
+          staffEmail: assignment.staffEmail,
+          position: assignment.position,
+          isPrimary: assignment.isPrimary,
+        });
+        return acc;
+      }, {});
+
+      return Object.values(grouped);
+    } catch (error) {
+      console.error("Error fetching client team assignments:", error);
+      return [];
     }
   }
 }

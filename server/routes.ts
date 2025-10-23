@@ -24102,5 +24102,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =============================================================================
+  // DASHBOARD WIDGETS ROUTES
+  // =============================================================================
+
+  // Get all available dashboard widgets
+  app.get("/api/dashboard-widgets", requireAuth(), async (req, res) => {
+    try {
+      const widgets = await appStorage.getDashboardWidgets();
+      res.json(widgets);
+    } catch (error) {
+      console.error("Error fetching dashboard widgets:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard widgets" });
+    }
+  });
+
+  // Get user's dashboard widget layout
+  app.get("/api/user-dashboard-widgets", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const userWidgets = await appStorage.getUserDashboardWidgets(userId);
+      res.json(userWidgets);
+    } catch (error) {
+      console.error("Error fetching user dashboard widgets:", error);
+      res.status(500).json({ message: "Failed to fetch user dashboard widgets" });
+    }
+  });
+
+  // Add widget to user's dashboard
+  app.post("/api/user-dashboard-widgets", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const widgetData = {
+        ...req.body,
+        userId,
+      };
+
+      const newWidget = await appStorage.createUserDashboardWidget(widgetData);
+      res.json(newWidget);
+    } catch (error) {
+      console.error("Error creating user dashboard widget:", error);
+      res.status(500).json({ message: "Failed to add widget to dashboard" });
+    }
+  });
+
+  // Update user dashboard widget (position, size, settings)
+  app.put("/api/user-dashboard-widgets/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { id } = req.params;
+      
+      // Verify the widget belongs to the user
+      const existing = await appStorage.getUserDashboardWidget(id);
+      if (!existing || existing.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const updated = await appStorage.updateUserDashboardWidget(id, req.body);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating user dashboard widget:", error);
+      res.status(500).json({ message: "Failed to update widget" });
+    }
+  });
+
+  // Bulk update user dashboard widgets (for drag-and-drop repositioning)
+  app.post("/api/user-dashboard-widgets/bulk-update", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { widgets } = req.body;
+      
+      // Update all widgets
+      const updates = await Promise.all(
+        widgets.map((widget: any) => 
+          appStorage.updateUserDashboardWidget(widget.id, {
+            x: widget.x,
+            y: widget.y,
+            width: widget.width,
+            height: widget.height,
+            order: widget.order
+          })
+        )
+      );
+
+      res.json(updates);
+    } catch (error) {
+      console.error("Error bulk updating user dashboard widgets:", error);
+      res.status(500).json({ message: "Failed to update widget positions" });
+    }
+  });
+
+  // Delete widget from user's dashboard
+  app.delete("/api/user-dashboard-widgets/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { id } = req.params;
+      
+      // Verify the widget belongs to the user
+      const existing = await appStorage.getUserDashboardWidget(id);
+      if (!existing || existing.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      await appStorage.deleteUserDashboardWidget(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting user dashboard widget:", error);
+      res.status(500).json({ message: "Failed to delete widget" });
+    }
+  });
+
+  // Get widget data by type
+  app.get("/api/dashboard-widgets/:type/data", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { type } = req.params;
+      const data = await appStorage.getWidgetData(type, userId);
+      
+      res.json(data);
+    } catch (error) {
+      console.error(`Error fetching widget data for ${req.params.type}:`, error);
+      res.status(500).json({ message: "Failed to fetch widget data" });
+    }
+  });
+
   return httpServer;
 }
