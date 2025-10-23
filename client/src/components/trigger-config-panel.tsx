@@ -2542,8 +2542,8 @@ export default function TriggerConfigPanel({
                     <Separator className="flex-1" />
                   </div>
                   
-                  {triggerDefinition.configSchema.additionalFilters && 
-                    renderConfigField("additionalFilters", triggerDefinition.configSchema.additionalFilters)
+                  {triggerDefinition.configSchema.filters && 
+                    renderConfigField("filters", triggerDefinition.configSchema.filters)
                   }
                 </div>
               </>
@@ -2560,8 +2560,8 @@ export default function TriggerConfigPanel({
                     <Separator className="flex-1" />
                   </div>
                   
-                  {triggerDefinition.configSchema.additionalFilters && 
-                    renderConfigField("additionalFilters", triggerDefinition.configSchema.additionalFilters)
+                  {triggerDefinition.configSchema.filters && 
+                    renderConfigField("filters", triggerDefinition.configSchema.filters)
                   }
                 </div>
               </>
@@ -2578,8 +2578,8 @@ export default function TriggerConfigPanel({
                     <Separator className="flex-1" />
                   </div>
                   
-                  {triggerDefinition.configSchema.additionalFilters && 
-                    renderConfigField("additionalFilters", triggerDefinition.configSchema.additionalFilters)
+                  {triggerDefinition.configSchema.filters && 
+                    renderConfigField("filters", triggerDefinition.configSchema.filters)
                   }
                 </div>
               </>
@@ -2596,8 +2596,8 @@ export default function TriggerConfigPanel({
                     <Separator className="flex-1" />
                   </div>
                   
-                  {triggerDefinition.configSchema.additionalFilters && 
-                    renderConfigField("additionalFilters", triggerDefinition.configSchema.additionalFilters)
+                  {triggerDefinition.configSchema.filters && 
+                    renderConfigField("filters", triggerDefinition.configSchema.filters)
                   }
                 </div>
               </>
