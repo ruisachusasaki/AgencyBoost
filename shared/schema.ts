@@ -3439,6 +3439,45 @@ export const userViewPreferences = pgTable("user_view_preferences", {
   unique().on(table.userId, table.viewType), // One preference per user per view type
 ]);
 
+// Dashboard Widgets - Customizable dashboard system
+export const dashboardWidgets = pgTable("dashboard_widgets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull().unique(), // e.g., 'client_health_overview', 'recent_clients', 'client_approval_queue'
+  name: text("name").notNull(), // Display name
+  description: text("description"), // Widget description
+  category: text("category").notNull(), // 'client_management', 'sales', 'tasks', etc.
+  icon: text("icon").notNull().default("LayoutDashboard"), // lucide-react icon name
+  defaultWidth: integer("default_width").notNull().default(2), // Grid columns (1-4)
+  defaultHeight: integer("default_height").notNull().default(2), // Grid rows (1-4)
+  minWidth: integer("min_width").notNull().default(1),
+  minHeight: integer("min_height").notNull().default(1),
+  maxWidth: integer("max_width").notNull().default(4),
+  maxHeight: integer("max_height").notNull().default(4),
+  defaultSettings: jsonb("default_settings").default('{}'), // Default widget configuration
+  refreshInterval: integer("refresh_interval").default(300), // Refresh in seconds (300 = 5 min)
+  requiresAuth: boolean("requires_auth").default(true),
+  allowedRoles: text("allowed_roles").array(), // null = all roles, or specific roles
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User Dashboard Widgets - User's customized widget instances
+export const userDashboardWidgets = pgTable("user_dashboard_widgets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  widgetType: text("widget_type").notNull(), // References dashboardWidgets.type
+  x: integer("x").notNull().default(0), // Grid position X
+  y: integer("y").notNull().default(0), // Grid position Y
+  width: integer("width").notNull().default(2), // Grid width (1-4)
+  height: integer("height").notNull().default(2), // Grid height (1-4)
+  settings: jsonb("settings").default('{}'), // User-specific widget settings
+  isVisible: boolean("is_visible").default(true),
+  order: integer("order").default(0), // Display order for mobile/fallback
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // =============================================================================
 // TRAINING SYSTEM SCHEMAS & TYPES
 // =============================================================================
@@ -3525,6 +3564,19 @@ export const insertTrainingLessonResourceSchema = createInsertSchema(trainingLes
 
 // User View Preferences insert schema
 export const insertUserViewPreferenceSchema = createInsertSchema(userViewPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Dashboard Widgets insert schemas
+export const insertDashboardWidgetSchema = createInsertSchema(dashboardWidgets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserDashboardWidgetSchema = createInsertSchema(userDashboardWidgets).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -3617,6 +3669,13 @@ export type InsertTrainingLessonResource = z.infer<typeof insertTrainingLessonRe
 // User View Preferences Types
 export type UserViewPreference = typeof userViewPreferences.$inferSelect;
 export type InsertUserViewPreference = z.infer<typeof insertUserViewPreferenceSchema>;
+
+// Dashboard Widgets Types
+export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
+export type InsertDashboardWidget = z.infer<typeof insertDashboardWidgetSchema>;
+
+export type UserDashboardWidget = typeof userDashboardWidgets.$inferSelect;
+export type InsertUserDashboardWidget = z.infer<typeof insertUserDashboardWidgetSchema>;
 
 // Quotes Types
 export type Quote = typeof quotes.$inferSelect;
