@@ -335,7 +335,7 @@ export default function Dashboard() {
           className="layout"
           layout={layout}
           cols={12}
-          rowHeight={100}
+          rowHeight={60}
           onDragStop={handleLayoutSave}
           onResizeStop={handleLayoutSave}
           draggableHandle=".widget-drag-handle"
