@@ -59,18 +59,15 @@ export default function Dashboard() {
 
       const maxOrder = userWidgets.length > 0 ? Math.max(...userWidgets.map(w => w.order)) : -1;
 
-      return await apiRequest("/api/user-dashboard-widgets", {
-        method: "POST",
-        body: JSON.stringify({
-          widgetType: widget.type,
-          x: 0,
-          y: 0,
-          width: widget.defaultWidth,
-          height: widget.defaultHeight,
-          order: maxOrder + 1,
-          settings: {},
-          isVisible: true,
-        }),
+      return await apiRequest("POST", "/api/user-dashboard-widgets", {
+        widgetType: widget.type,
+        x: 0,
+        y: 0,
+        width: widget.defaultWidth,
+        height: widget.defaultHeight,
+        order: maxOrder + 1,
+        settings: {},
+        isVisible: true,
       });
     },
     onSuccess: () => {
@@ -92,9 +89,7 @@ export default function Dashboard() {
 
   const removeWidgetMutation = useMutation({
     mutationFn: async (widgetId: string) => {
-      return await apiRequest(`/api/user-dashboard-widgets/${widgetId}`, {
-        method: "DELETE",
-      });
+      return await apiRequest("DELETE", `/api/user-dashboard-widgets/${widgetId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user-dashboard-widgets"] });
