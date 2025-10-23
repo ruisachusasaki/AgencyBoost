@@ -1457,8 +1457,3 @@ input[type="date"][data-valid="true"]:focus {
   border-color: hsl(142, 76%, 36%);
   box-shadow: 0 0 0 2px hsl(142, 76%, 36% / 0.2);
 }
-
-/* Dashboard Grid Layout - Hide resize handle but keep functionality */
-.react-resizable-handle {
-  display: none !important;
-}
