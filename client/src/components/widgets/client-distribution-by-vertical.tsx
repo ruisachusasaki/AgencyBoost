@@ -10,7 +10,7 @@ interface WidgetProps {
 
 export default function ClientDistributionByVerticalWidget({ userWidget, onRemove }: WidgetProps) {
   const { data: distribution = [], isLoading } = useQuery({
-    queryKey: ["/api/dashboard-widgets", userWidget.widgetType, "data"],
+    queryKey: [`/api/dashboard-widgets/${userWidget.widgetType}/data`],
   });
 
   const total = distribution.reduce((sum: number, item: any) => sum + item.count, 0);

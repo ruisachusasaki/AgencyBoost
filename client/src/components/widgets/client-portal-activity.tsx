@@ -11,7 +11,7 @@ interface WidgetProps {
 
 export default function ClientPortalActivityWidget({ userWidget, onRemove }: WidgetProps) {
   const { data: activities = [], isLoading } = useQuery({
-    queryKey: ["/api/dashboard-widgets", userWidget.widgetType, "data"],
+    queryKey: [`/api/dashboard-widgets/${userWidget.widgetType}/data`],
   });
 
   return (

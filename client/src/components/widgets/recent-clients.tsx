@@ -12,7 +12,7 @@ interface WidgetProps {
 
 export default function RecentClientsWidget({ userWidget, onRemove }: WidgetProps) {
   const { data: clients = [], isLoading } = useQuery({
-    queryKey: ["/api/dashboard-widgets", userWidget.widgetType, "data"],
+    queryKey: [`/api/dashboard-widgets/${userWidget.widgetType}/data`],
   });
 
   return (

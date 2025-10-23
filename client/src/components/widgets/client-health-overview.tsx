@@ -10,7 +10,7 @@ interface WidgetProps {
 
 export default function ClientHealthOverviewWidget({ userWidget, onRemove }: WidgetProps) {
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/dashboard-widgets", userWidget.widgetType, "data"],
+    queryKey: [`/api/dashboard-widgets/${userWidget.widgetType}/data`],
   });
 
   return (

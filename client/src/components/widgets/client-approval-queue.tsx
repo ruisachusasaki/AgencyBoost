@@ -12,7 +12,7 @@ interface WidgetProps {
 
 export default function ClientApprovalQueueWidget({ userWidget, onRemove }: WidgetProps) {
   const { data: approvals = [], isLoading } = useQuery({
-    queryKey: ["/api/dashboard-widgets", userWidget.widgetType, "data"],
+    queryKey: [`/api/dashboard-widgets/${userWidget.widgetType}/data`],
   });
 
   return (

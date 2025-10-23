@@ -11,7 +11,7 @@ interface WidgetProps {
 
 export default function ClientTeamAssignmentsWidget({ userWidget, onRemove }: WidgetProps) {
   const { data: assignments = [], isLoading } = useQuery({
-    queryKey: ["/api/dashboard-widgets", userWidget.widgetType, "data"],
+    queryKey: [`/api/dashboard-widgets/${userWidget.widgetType}/data`],
   });
 
   return (
