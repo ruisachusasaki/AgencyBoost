@@ -2,7 +2,8 @@ import {
   type Client, type InsertClient, clients,
   // Projects removed from system
   type Campaign, type InsertCampaign, campaigns,
-  type Lead, type InsertLead,
+  type Lead, type InsertLead, leads,
+  type Quote, type InsertQuote, quotes,
   type Task, type InsertTask, tasks,
   type Invoice, type InsertInvoice, invoices,
   type User, type InsertUser,
@@ -6944,18 +6945,16 @@ export class DbStorage implements IStorage {
           clientId: clientTeamAssignments.clientId,
           clientName: clients.name,
           staffId: clientTeamAssignments.staffId,
-          staffName: sql<string>`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, 'Unknown')`,
-          staffEmail: sql<string>`COALESCE(${staff.email}, '')`,
+          staffFirstName: staff.firstName,
+          staffLastName: staff.lastName,
+          staffEmail: staff.email,
           position: clientTeamAssignments.position,
           isPrimary: clientTeamAssignments.isPrimary,
         })
         .from(clientTeamAssignments)
         .innerJoin(clients, eq(clientTeamAssignments.clientId, clients.id))
         .leftJoin(staff, eq(clientTeamAssignments.staffId, staff.id))
-        .where(and(
-          eq(clients.isArchived, false),
-          isNotNull(clientTeamAssignments.clientId)
-        ))
+        .where(eq(clients.isArchived, false))
         .orderBy(clients.name, desc(clientTeamAssignments.isPrimary));
 
       // Group by client and filter out any null assignments
@@ -6972,10 +6971,14 @@ export class DbStorage implements IStorage {
         }
         
         if (assignment.staffId) {
+          const staffName = assignment.staffFirstName && assignment.staffLastName
+            ? `${assignment.staffFirstName} ${assignment.staffLastName}`
+            : 'Unknown';
+          
           acc[clientId].teamMembers.push({
             staffId: assignment.staffId,
-            staffName: assignment.staffName,
-            staffEmail: assignment.staffEmail,
+            staffName,
+            staffEmail: assignment.staffEmail || '',
             position: assignment.position,
             isPrimary: assignment.isPrimary,
           });
@@ -7041,7 +7044,7 @@ export class DbStorage implements IStorage {
         .select({
           status: quotes.status,
           count: sql<number>`count(*)::int`,
-          totalValue: sql<number>`sum(COALESCE(${quotes.totalPrice}, 0))::int`,
+          totalValue: sql<number>`sum(COALESCE(CAST(${quotes.clientBudget} AS NUMERIC), 0))::int`,
         })
         .from(quotes)
         .where(
@@ -7070,7 +7073,7 @@ export class DbStorage implements IStorage {
       // Calculate revenue from accepted quotes this month
       const revenue = await db
         .select({
-          total: sql<number>`sum(COALESCE(${quotes.totalPrice}, 0))::int`,
+          total: sql<number>`sum(COALESCE(CAST(${quotes.clientBudget} AS NUMERIC), 0))::int`,
           count: sql<number>`count(*)::int`,
         })
         .from(quotes)
@@ -7205,18 +7208,26 @@ export class DbStorage implements IStorage {
       const topReps = await db
         .select({
           staffId: leads.staffAssigned,
-          staffName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
+          staffFirstName: staff.firstName,
+          staffLastName: staff.lastName,
           dealsWon: sql<number>`count(*)::int`,
           totalRevenue: sql<number>`sum(COALESCE(${leads.estimatedValue}, 0))::int`,
         })
         .from(leads)
         .leftJoin(staff, eq(leads.staffAssigned, staff.id))
         .where(eq(leads.status, 'won'))
-        .groupBy(leads.staffAssigned, sql`${staff.firstName} || ' ' || ${staff.lastName}`)
+        .groupBy(leads.staffAssigned, staff.firstName, staff.lastName)
         .orderBy(desc(sql`count(*)`))
         .limit(5);
 
-      return topReps;
+      return topReps.map(rep => ({
+        staffId: rep.staffId,
+        staffName: rep.staffFirstName && rep.staffLastName 
+          ? `${rep.staffFirstName} ${rep.staffLastName}` 
+          : 'Unknown',
+        dealsWon: rep.dealsWon,
+        totalRevenue: rep.totalRevenue,
+      }));
     } catch (error) {
       console.error("Error fetching top performing sales reps:", error);
       return [];
@@ -7232,7 +7243,8 @@ export class DbStorage implements IStorage {
           contactName: leads.contactName,
           estimatedValue: leads.estimatedValue,
           wonDate: leads.updatedAt,
-          staffName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
+          staffFirstName: staff.firstName,
+          staffLastName: staff.lastName,
         })
         .from(leads)
         .leftJoin(staff, eq(leads.staffAssigned, staff.id))
@@ -7247,7 +7259,16 @@ export class DbStorage implements IStorage {
         .orderBy(desc(leads.updatedAt))
         .limit(10);
 
-      return recentDeals;
+      return recentDeals.map(deal => ({
+        id: deal.id,
+        companyName: deal.companyName,
+        contactName: deal.contactName,
+        estimatedValue: deal.estimatedValue,
+        wonDate: deal.wonDate,
+        staffName: deal.staffFirstName && deal.staffLastName
+          ? `${deal.staffFirstName} ${deal.staffLastName}`
+          : 'Unknown',
+      }));
     } catch (error) {
       console.error("Error fetching recent deals won:", error);
       return [];
