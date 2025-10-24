@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Settings, Trash2, Search, MoreVertical, Star, Edit } from "lucide-react";
+import { Plus, Settings, Trash2, Search, MoreVertical, Star, Edit, LayoutDashboard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import GridLayout, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -535,8 +535,10 @@ export default function Dashboard() {
                           <CardHeader className="p-4">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                {dashboard.isDefault && (
+                                {dashboard.isDefault ? (
                                   <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" data-testid={`icon-default-${dashboard.id}`} />
+                                ) : (
+                                  <LayoutDashboard className="h-4 w-4 text-muted-foreground" data-testid={`icon-dashboard-${dashboard.id}`} />
                                 )}
                                 {editingDashboard?.id === dashboard.id ? (
                                   <Input
