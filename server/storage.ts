@@ -6854,7 +6854,7 @@ export class DbStorage implements IStorage {
         
         // Sales & Revenue Widgets
         case 'sales_pipeline_overview':
-          return await this.getSalesPipelineOverviewData(assignedClientIds);
+          return await this.getSalesPipelineOverviewData(userId, isAdminOrManager);
         
         case 'quote_status_summary':
           return await this.getQuoteStatusSummaryData(assignedClientIds);
@@ -7105,34 +7105,40 @@ export class DbStorage implements IStorage {
   }
 
   // Sales & Revenue Widget Data Methods
-  private async getSalesPipelineOverviewData(assignedClientIds: string[]): Promise<any> {
+  private async getSalesPipelineOverviewData(userId: string, isAdminOrManager: boolean): Promise<any> {
     try {
       // Get all leads grouped by pipeline stage
       const pipelineData = await db
         .select({
-          stage: leads.pipelineStage,
+          stage: leadPipelineStages.name,
           count: sql<number>`count(*)::int`,
-          totalValue: sql<number>`sum(COALESCE(${leads.estimatedValue}, 0))::int`,
+          totalValue: sql<number>`sum(COALESCE(CAST(${leads.value} AS NUMERIC), 0))::int`,
         })
         .from(leads)
+        .leftJoin(leadPipelineStages, eq(leads.stageId, leadPipelineStages.id))
         .where(
           and(
-            eq(leads.status, 'active'),
-            assignedClientIds.length > 0 ? sql`${leads.staffAssigned} = ANY(${assignedClientIds})` : undefined
+            eq(leads.status, 'Open'),
+            !isAdminOrManager ? eq(leads.assignedTo, userId) : undefined
           )
         )
-        .groupBy(leads.pipelineStage);
+        .groupBy(leadPipelineStages.name);
 
-      // Calculate conversion rate (won / total active leads)
+      // Calculate conversion rate (won / total leads)
       const wonLeads = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(leads)
-        .where(eq(leads.status, 'won'));
+        .where(
+          and(
+            eq(leads.status, 'Won'),
+            !isAdminOrManager ? eq(leads.assignedTo, userId) : undefined
+          )
+        );
       
       const totalLeads = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(leads)
-        .where(sql`${leads.status} IN ('active', 'won', 'lost')`);
+        .where(!isAdminOrManager ? eq(leads.assignedTo, userId) : undefined);
 
       const conversionRate = totalLeads[0]?.count > 0 
         ? ((wonLeads[0]?.count || 0) / totalLeads[0].count * 100).toFixed(1)
