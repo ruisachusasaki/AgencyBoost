@@ -284,6 +284,20 @@ export const salesSettings = pgTable("sales_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Sales Targets - monthly revenue targets
+export const salesTargets = pgTable("sales_targets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(), // 1-12
+  targetAmount: decimal("target_amount", { precision: 12, scale: 2 }).notNull(),
+  createdBy: uuid("created_by").references(() => staff.id),
+  updatedBy: uuid("updated_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique().on(table.year, table.month),
+]);
+
 // Capacity Settings - team capacity management for predictive hiring alerts
 export const capacitySettings = pgTable("capacity_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3622,6 +3636,25 @@ export const insertSalesSettingsSchema = createInsertSchema(salesSettings).omit(
 // Sales Settings update schema
 export const updateSalesSettingsSchema = insertSalesSettingsSchema.partial();
 
+// Sales Targets insert schema
+export const insertSalesTargetSchema = createInsertSchema(salesTargets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  year: z.number().int().min(2000).max(2100),
+  month: z.number().int().min(1).max(12),
+  targetAmount: z.union([z.string(), z.number()]).transform((val) => {
+    if (typeof val === 'number') {
+      return val.toString();
+    }
+    return val;
+  }),
+});
+
+// Sales Targets update schema
+export const updateSalesTargetSchema = insertSalesTargetSchema.partial();
+
 // Capacity Settings insert schema
 export const insertCapacitySettingsSchema = createInsertSchema(capacitySettings).omit({
   id: true,
@@ -3707,6 +3740,11 @@ export type InsertQuoteItem = z.infer<typeof insertQuoteItemSchema>;
 // Sales Settings Types
 export type SalesSettings = typeof salesSettings.$inferSelect;
 export type InsertSalesSettings = z.infer<typeof insertSalesSettingsSchema>;
+
+// Sales Targets Types
+export type SalesTarget = typeof salesTargets.$inferSelect;
+export type InsertSalesTarget = z.infer<typeof insertSalesTargetSchema>;
+export type UpdateSalesTarget = z.infer<typeof updateSalesTargetSchema>;
 
 // Capacity Settings Types
 export type CapacitySettings = typeof capacitySettings.$inferSelect;
