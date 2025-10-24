@@ -42,6 +42,7 @@ import {
   insertQuoteSchema, insertQuoteItemSchema,
   updateSalesSettingsSchema,
   insertCapacitySettingsSchema, updateCapacitySettingsSchema,
+  insertDashboardSchema,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
@@ -24103,6 +24104,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // =============================================================================
+  // DASHBOARDS ROUTES
+  // =============================================================================
+
+  // Get user's dashboards
+  app.get("/api/dashboards", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const dashboards = await appStorage.getUserDashboards(userId);
+      res.json(dashboards);
+    } catch (error) {
+      console.error("Error fetching dashboards:", error);
+      res.status(500).json({ message: "Failed to fetch dashboards" });
+    }
+  });
+
+  // Get single dashboard
+  app.get("/api/dashboards/:id", requireAuth(), async (req, res) => {
+    try {
+      const dashboard = await appStorage.getDashboard(req.params.id);
+      if (!dashboard) {
+        return res.status(404).json({ error: "Dashboard not found" });
+      }
+      res.json(dashboard);
+    } catch (error) {
+      console.error("Error fetching dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard" });
+    }
+  });
+
+  // Create new dashboard
+  app.post("/api/dashboards", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const validatedData = insertDashboardSchema.parse({
+        ...req.body,
+        userId,
+      });
+
+      const dashboard = await appStorage.createDashboard(validatedData);
+      res.json(dashboard);
+    } catch (error) {
+      console.error("Error creating dashboard:", error);
+      res.status(500).json({ message: "Failed to create dashboard" });
+    }
+  });
+
+  // Update dashboard
+  app.put("/api/dashboards/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      // Verify ownership
+      const existing = await appStorage.getDashboard(req.params.id);
+      if (!existing || existing.userId !== userId) {
+        return res.status(404).json({ error: "Dashboard not found" });
+      }
+
+      const dashboard = await appStorage.updateDashboard(req.params.id, req.body);
+      res.json(dashboard);
+    } catch (error) {
+      console.error("Error updating dashboard:", error);
+      res.status(500).json({ message: "Failed to update dashboard" });
+    }
+  });
+
+  // Delete dashboard
+  app.delete("/api/dashboards/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      // Verify ownership
+      const existing = await appStorage.getDashboard(req.params.id);
+      if (!existing || existing.userId !== userId) {
+        return res.status(404).json({ error: "Dashboard not found" });
+      }
+
+      // Don't allow deleting the default dashboard if it's the only one
+      if (existing.isDefault) {
+        const userDashboards = await appStorage.getUserDashboards(userId);
+        if (userDashboards.length === 1) {
+          return res.status(400).json({ error: "Cannot delete the only dashboard" });
+        }
+      }
+
+      await appStorage.deleteDashboard(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting dashboard:", error);
+      res.status(500).json({ message: "Failed to delete dashboard" });
+    }
+  });
+
+  // Set default dashboard
+  app.post("/api/dashboards/:id/set-default", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      // Verify ownership
+      const existing = await appStorage.getDashboard(req.params.id);
+      if (!existing || existing.userId !== userId) {
+        return res.status(404).json({ error: "Dashboard not found" });
+      }
+
+      await appStorage.setDefaultDashboard(userId, req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error setting default dashboard:", error);
+      res.status(500).json({ message: "Failed to set default dashboard" });
+    }
+  });
+
+  // =============================================================================
   // DASHBOARD WIDGETS ROUTES
   // =============================================================================
 
@@ -24125,7 +24255,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const userWidgets = await appStorage.getUserDashboardWidgets(userId);
+      const dashboardId = req.query.dashboardId as string;
+      if (!dashboardId) {
+        return res.status(400).json({ error: "Dashboard ID is required" });
+      }
+
+      const userWidgets = await appStorage.getUserDashboardWidgets(userId, dashboardId);
       res.json(userWidgets);
     } catch (error) {
       console.error("Error fetching user dashboard widgets:", error);

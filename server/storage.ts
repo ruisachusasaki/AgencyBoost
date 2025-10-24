@@ -65,6 +65,7 @@ import {
   type ClientTeamAssignment, type InsertClientTeamAssignment, clientTeamAssignments,
   type UserViewPreference, type InsertUserViewPreference, userViewPreferences,
   type SalesSettings, type InsertSalesSettings, salesSettings,
+  type Dashboard, type InsertDashboard, dashboards,
   type DashboardWidget, type InsertDashboardWidget, dashboardWidgets,
   type UserDashboardWidget, type InsertUserDashboardWidget, userDashboardWidgets,
   customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff, clientPortalUsers
@@ -567,6 +568,22 @@ export interface IStorage {
   // User View Preferences
   getUserViewPreference(userId: string, viewType: string): Promise<any>;
   saveUserViewPreference(userId: string, viewType: string, preferences: any): Promise<any>;
+  
+  // Dashboards
+  getUserDashboards(userId: string): Promise<Dashboard[]>;
+  getDashboard(id: string): Promise<Dashboard | undefined>;
+  createDashboard(data: InsertDashboard): Promise<Dashboard>;
+  updateDashboard(id: string, data: Partial<InsertDashboard>): Promise<Dashboard | undefined>;
+  deleteDashboard(id: string): Promise<boolean>;
+  setDefaultDashboard(userId: string, dashboardId: string): Promise<void>;
+  
+  // Dashboard Widgets
+  getDashboardWidgets(): Promise<DashboardWidget[]>;
+  getUserDashboardWidgets(userId: string, dashboardId: string): Promise<UserDashboardWidget[]>;
+  getUserDashboardWidget(id: string): Promise<UserDashboardWidget | undefined>;
+  createUserDashboardWidget(data: InsertUserDashboardWidget): Promise<UserDashboardWidget>;
+  updateUserDashboardWidget(id: string, data: Partial<InsertUserDashboardWidget>): Promise<UserDashboardWidget | undefined>;
+  deleteUserDashboardWidget(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -6604,6 +6621,99 @@ export class DbStorage implements IStorage {
   }
 
   // =============================================================================
+  // DASHBOARDS METHODS
+  // =============================================================================
+
+  async getUserDashboards(userId: string): Promise<Dashboard[]> {
+    try {
+      const result = await db
+        .select()
+        .from(dashboards)
+        .where(eq(dashboards.userId, userId))
+        .orderBy(desc(dashboards.isDefault), asc(dashboards.name));
+      return result;
+    } catch (error) {
+      console.error("Error fetching user dashboards:", error);
+      return [];
+    }
+  }
+
+  async getDashboard(id: string): Promise<Dashboard | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(dashboards)
+        .where(eq(dashboards.id, id))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching dashboard:", error);
+      return undefined;
+    }
+  }
+
+  async createDashboard(data: InsertDashboard): Promise<Dashboard> {
+    try {
+      const result = await db
+        .insert(dashboards)
+        .values(data)
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating dashboard:", error);
+      throw error;
+    }
+  }
+
+  async updateDashboard(id: string, data: Partial<InsertDashboard>): Promise<Dashboard | undefined> {
+    try {
+      const result = await db
+        .update(dashboards)
+        .set({
+          ...data,
+          updatedAt: new Date(),
+        })
+        .where(eq(dashboards.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating dashboard:", error);
+      return undefined;
+    }
+  }
+
+  async deleteDashboard(id: string): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(dashboards)
+        .where(eq(dashboards.id, id));
+      return result.rowCount! > 0;
+    } catch (error) {
+      console.error("Error deleting dashboard:", error);
+      return false;
+    }
+  }
+
+  async setDefaultDashboard(userId: string, dashboardId: string): Promise<void> {
+    try {
+      // First, unset all other dashboards as non-default
+      await db
+        .update(dashboards)
+        .set({ isDefault: false, updatedAt: new Date() })
+        .where(eq(dashboards.userId, userId));
+      
+      // Then set the specified dashboard as default
+      await db
+        .update(dashboards)
+        .set({ isDefault: true, updatedAt: new Date() })
+        .where(eq(dashboards.id, dashboardId));
+    } catch (error) {
+      console.error("Error setting default dashboard:", error);
+      throw error;
+    }
+  }
+
+  // =============================================================================
   // DASHBOARD WIDGETS METHODS
   // =============================================================================
 
@@ -6621,13 +6731,14 @@ export class DbStorage implements IStorage {
     }
   }
 
-  async getUserDashboardWidgets(userId: string): Promise<UserDashboardWidget[]> {
+  async getUserDashboardWidgets(userId: string, dashboardId: string): Promise<UserDashboardWidget[]> {
     try {
       const widgets = await db
         .select()
         .from(userDashboardWidgets)
         .where(and(
           eq(userDashboardWidgets.userId, userId),
+          eq(userDashboardWidgets.dashboardId, dashboardId),
           eq(userDashboardWidgets.isVisible, true)
         ))
         .orderBy(userDashboardWidgets.order);

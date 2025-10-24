@@ -3437,6 +3437,16 @@ export const userViewPreferences = pgTable("user_view_preferences", {
   unique().on(table.userId, table.viewType), // One preference per user per view type
 ]);
 
+// Dashboards - User-created dashboard containers
+export const dashboards = pgTable("dashboards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // Dashboard name e.g., "Sales Dashboard", "My Dashboard"
+  isDefault: boolean("is_default").default(false), // One default per user
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Dashboard Widgets - Customizable dashboard system
 export const dashboardWidgets = pgTable("dashboard_widgets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3464,6 +3474,7 @@ export const dashboardWidgets = pgTable("dashboard_widgets", {
 export const userDashboardWidgets = pgTable("user_dashboard_widgets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  dashboardId: varchar("dashboard_id").notNull().references(() => dashboards.id, { onDelete: "cascade" }),
   widgetType: text("widget_type").notNull(), // References dashboardWidgets.type
   x: integer("x").notNull().default(0), // Grid position X
   y: integer("y").notNull().default(0), // Grid position Y
@@ -3562,6 +3573,13 @@ export const insertTrainingLessonResourceSchema = createInsertSchema(trainingLes
 
 // User View Preferences insert schema
 export const insertUserViewPreferenceSchema = createInsertSchema(userViewPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Dashboards insert schema
+export const insertDashboardSchema = createInsertSchema(dashboards).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -3667,6 +3685,10 @@ export type InsertTrainingLessonResource = z.infer<typeof insertTrainingLessonRe
 // User View Preferences Types
 export type UserViewPreference = typeof userViewPreferences.$inferSelect;
 export type InsertUserViewPreference = z.infer<typeof insertUserViewPreferenceSchema>;
+
+// Dashboard Types
+export type Dashboard = typeof dashboards.$inferSelect;
+export type InsertDashboard = z.infer<typeof insertDashboardSchema>;
 
 // Dashboard Widgets Types
 export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
