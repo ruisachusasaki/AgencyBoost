@@ -34,7 +34,8 @@ import {
   X,
   AlertTriangle,
   ChevronDown,
-  CheckCircle
+  CheckCircle,
+  Target
 } from "lucide-react";
 
 export default function Sales() {
@@ -97,6 +98,14 @@ export default function Sales() {
   const [viewingQuoteId, setViewingQuoteId] = useState<string | null>(null);
   const [deleteConfirmQuoteId, setDeleteConfirmQuoteId] = useState<string | null>(null);
 
+  // Targets state
+  const [isTargetDialogOpen, setIsTargetDialogOpen] = useState(false);
+  const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
+  const [targetFormData, setTargetFormData] = useState({
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1,
+    targetAmount: "",
+  });
 
   // Fetch data for Quote Builder
   const { data: clientsData } = useQuery<{ clients: any[] }>({
@@ -167,6 +176,104 @@ export default function Sales() {
     enabled: activeTab === "reports" && reportType === "sales-reps",
     refetchOnWindowFocus: false,
   });
+
+  // Fetch Sales Targets
+  const { data: salesTargets = [] } = useQuery({
+    queryKey: ["/api/sales-targets"],
+    refetchOnWindowFocus: false,
+  });
+
+  // Create/Update Sales Target Mutation
+  const createTargetMutation = useMutation({
+    mutationFn: async (target: { year: number; month: number; targetAmount: string }) => {
+      return await apiRequest("/api/sales-targets", {
+        method: "POST",
+        body: JSON.stringify(target),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sales-targets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard-widgets/revenue_this_month/data"] });
+      toast({ title: "Target created successfully" });
+      setIsTargetDialogOpen(false);
+      setTargetFormData({ year: new Date().getFullYear(), month: new Date().getMonth() + 1, targetAmount: "" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error creating target", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateTargetMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; year?: number; month?: number; targetAmount?: string }) => {
+      return await apiRequest(`/api/sales-targets/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sales-targets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard-widgets/revenue_this_month/data"] });
+      toast({ title: "Target updated successfully" });
+      setIsTargetDialogOpen(false);
+      setEditingTargetId(null);
+      setTargetFormData({ year: new Date().getFullYear(), month: new Date().getMonth() + 1, targetAmount: "" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error updating target", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteTargetMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/sales-targets/${id}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sales-targets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard-widgets/revenue_this_month/data"] });
+      toast({ title: "Target deleted successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error deleting target", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleSubmitTarget = () => {
+    if (!targetFormData.targetAmount || parseFloat(targetFormData.targetAmount) <= 0) {
+      toast({ title: "Please enter a valid target amount", variant: "destructive" });
+      return;
+    }
+
+    if (editingTargetId) {
+      updateTargetMutation.mutate({
+        id: editingTargetId,
+        ...targetFormData,
+      });
+    } else {
+      createTargetMutation.mutate(targetFormData);
+    }
+  };
+
+  const handleEditTarget = (target: any) => {
+    setEditingTargetId(target.id);
+    setTargetFormData({
+      year: target.year,
+      month: target.month,
+      targetAmount: target.targetAmount,
+    });
+    setIsTargetDialogOpen(true);
+  };
+
+  const handleNewTarget = () => {
+    setEditingTargetId(null);
+    setTargetFormData({
+      year: new Date().getFullYear(),
+      month: new Date().getMonth() + 1,
+      targetAmount: "",
+    });
+    setIsTargetDialogOpen(true);
+  };
 
   // Fetch bundle products when a bundle is selected
   const fetchBundleProducts = async (bundleId: string) => {
@@ -558,7 +665,8 @@ export default function Sales() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: "quotes", name: "Quotes", icon: Quote },
-            { id: "reports", name: "Sales Reports", icon: BarChart3 }
+            { id: "reports", name: "Sales Reports", icon: BarChart3 },
+            { id: "targets", name: "Targets", icon: Target }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -570,6 +678,7 @@ export default function Sales() {
                     ? "border-primary text-primary"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
+                data-testid={`tab-${tab.id}`}
               >
                 <Icon className="h-4 w-4" />
                 {tab.name}
@@ -1759,6 +1868,167 @@ export default function Sales() {
               </div>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Targets Tab */}
+      {activeTab === "targets" && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Monthly Sales Targets
+                </CardTitle>
+                <Button 
+                  onClick={handleNewTarget}
+                  className="bg-primary hover:bg-primary/90"
+                  data-testid="button-create-target"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Set Target
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {salesTargets.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No sales targets set yet</p>
+                    <p className="text-sm">Set monthly targets to track your revenue progress</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {salesTargets.map((target: any) => {
+                      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                      const monthName = monthNames[target.month - 1];
+                      const isCurrentMonth = new Date().getMonth() + 1 === target.month && new Date().getFullYear() === target.year;
+                      
+                      return (
+                        <Card key={target.id} className={isCurrentMonth ? "border-primary" : ""} data-testid={`card-target-${target.id}`}>
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-lg font-semibold" data-testid={`text-month-${target.id}`}>
+                                    {monthName} {target.year}
+                                  </h4>
+                                  {isCurrentMonth && (
+                                    <Badge variant="default" className="bg-primary">Current Month</Badge>
+                                  )}
+                                </div>
+                                <p className="text-2xl font-bold text-primary" data-testid={`text-amount-${target.id}`}>
+                                  ${parseFloat(target.targetAmount).toLocaleString()}
+                                </p>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditTarget(target)}
+                                  data-testid={`button-edit-target-${target.id}`}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => deleteTargetMutation.mutate(target.id)}
+                                  data-testid={`button-delete-target-${target.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Target Dialog */}
+      <Dialog open={isTargetDialogOpen} onOpenChange={setIsTargetDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingTargetId ? "Edit" : "Create"} Sales Target</DialogTitle>
+            <DialogDescription>
+              Set a monthly revenue target to track your sales performance
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="target-year">Year</Label>
+                <Select
+                  value={targetFormData.year.toString()}
+                  onValueChange={(value) => setTargetFormData(prev => ({ ...prev, year: parseInt(value) }))}
+                >
+                  <SelectTrigger id="target-year" data-testid="select-target-year">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[...Array(5)].map((_, i) => {
+                      const year = new Date().getFullYear() + i;
+                      return (
+                        <SelectItem key={year} value={year.toString()} data-testid={`option-year-${year}`}>
+                          {year}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="target-month">Month</Label>
+                <Select
+                  value={targetFormData.month.toString()}
+                  onValueChange={(value) => setTargetFormData(prev => ({ ...prev, month: parseInt(value) }))}
+                >
+                  <SelectTrigger id="target-month" data-testid="select-target-month">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((month, idx) => (
+                      <SelectItem key={idx + 1} value={(idx + 1).toString()} data-testid={`option-month-${idx + 1}`}>
+                        {month}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="target-amount">Target Amount ($)</Label>
+              <Input
+                id="target-amount"
+                type="number"
+                placeholder="Enter target amount..."
+                value={targetFormData.targetAmount}
+                onChange={(e) => setTargetFormData(prev => ({ ...prev, targetAmount: e.target.value }))}
+                data-testid="input-target-amount"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setIsTargetDialogOpen(false)} data-testid="button-cancel-target">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSubmitTarget}
+                disabled={createTargetMutation.isPending || updateTargetMutation.isPending}
+                data-testid="button-save-target"
+              >
+                {(createTargetMutation.isPending || updateTargetMutation.isPending) ? "Saving..." : editingTargetId ? "Update" : "Create"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
