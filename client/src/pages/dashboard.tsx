@@ -727,7 +727,11 @@ export default function Dashboard() {
                 }`}
                 data-testid={`tab-dashboard-${dashboard.id}`}
               >
-                {dashboard.isDefault && <Star className="h-4 w-4" />}
+                {dashboard.isDefault ? (
+                  <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                ) : (
+                  <LayoutDashboard className="h-4 w-4" />
+                )}
                 {dashboard.name}
               </button>
             ))}
