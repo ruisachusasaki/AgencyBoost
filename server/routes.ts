@@ -41,6 +41,7 @@ import {
   insertClientBriefSectionSchema, insertClientBriefValueSchema,
   insertQuoteSchema, insertQuoteItemSchema,
   updateSalesSettingsSchema,
+  insertSalesTargetSchema, updateSalesTargetSchema,
   insertCapacitySettingsSchema, updateCapacitySettingsSchema,
   insertDashboardSchema,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
@@ -55,7 +56,7 @@ import {
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
-  clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, capacitySettings
+  clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
@@ -16149,6 +16150,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating sales settings:", error);
       res.status(500).json({ message: "Failed to update sales settings" });
+    }
+  });
+
+  // Sales Targets Routes
+  app.get("/api/sales-targets", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
+    try {
+      const targets = await appStorage.getSalesTargets();
+      res.json(targets);
+    } catch (error) {
+      console.error("Error fetching sales targets:", error);
+      res.status(500).json({ message: "Failed to fetch sales targets" });
+    }
+  });
+
+  app.get("/api/sales-targets/:id", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
+    try {
+      const target = await appStorage.getSalesTarget(req.params.id);
+      if (!target) {
+        return res.status(404).json({ message: "Sales target not found" });
+      }
+      res.json(target);
+    } catch (error) {
+      console.error("Error fetching sales target:", error);
+      res.status(500).json({ message: "Failed to fetch sales target" });
+    }
+  });
+
+  app.post("/api/sales-targets", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const validatedData = insertSalesTargetSchema.parse(req.body);
+      
+      // Check if target already exists for this month
+      const existing = await appStorage.getSalesTargetByMonth(validatedData.year, validatedData.month);
+      if (existing) {
+        return res.status(400).json({ message: "A target already exists for this month. Please update the existing target instead." });
+      }
+
+      const newTarget = await appStorage.createSalesTarget({
+        ...validatedData,
+        createdBy: userId,
+        updatedBy: userId,
+      });
+
+      await createAuditLog(
+        "created",
+        "sales_target",
+        newTarget.id,
+        `Sales Target ${validatedData.year}-${String(validatedData.month).padStart(2, '0')}`,
+        userId,
+        `Created sales target for ${validatedData.year}-${String(validatedData.month).padStart(2, '0')}: $${validatedData.targetAmount}`,
+        null,
+        newTarget,
+        req
+      );
+
+      res.status(201).json(newTarget);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating sales target:", error);
+      res.status(500).json({ message: "Failed to create sales target" });
+    }
+  });
+
+  app.patch("/api/sales-targets/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const validatedData = updateSalesTargetSchema.parse(req.body);
+      
+      const existing = await appStorage.getSalesTarget(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ message: "Sales target not found" });
+      }
+
+      // If year/month is being changed, check for duplicates
+      if ((validatedData.year || validatedData.month) && (validatedData.year !== existing.year || validatedData.month !== existing.month)) {
+        const checkYear = validatedData.year ?? existing.year;
+        const checkMonth = validatedData.month ?? existing.month;
+        const duplicate = await appStorage.getSalesTargetByMonth(checkYear, checkMonth);
+        if (duplicate && duplicate.id !== req.params.id) {
+          return res.status(400).json({ message: "A target already exists for this month" });
+        }
+      }
+
+      const updated = await appStorage.updateSalesTarget(req.params.id, {
+        ...validatedData,
+        updatedBy: userId,
+      });
+
+      if (!updated) {
+        return res.status(404).json({ message: "Sales target not found" });
+      }
+
+      await createAuditLog(
+        "updated",
+        "sales_target",
+        updated.id,
+        `Sales Target ${updated.year}-${String(updated.month).padStart(2, '0')}`,
+        userId,
+        `Updated sales target for ${updated.year}-${String(updated.month).padStart(2, '0')}: $${updated.targetAmount}`,
+        existing,
+        updated,
+        req
+      );
+
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating sales target:", error);
+      res.status(500).json({ message: "Failed to update sales target" });
+    }
+  });
+
+  app.delete("/api/sales-targets/:id", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const target = await appStorage.getSalesTarget(req.params.id);
+      if (!target) {
+        return res.status(404).json({ message: "Sales target not found" });
+      }
+
+      const deleted = await appStorage.deleteSalesTarget(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Sales target not found" });
+      }
+
+      await createAuditLog(
+        "deleted",
+        "sales_target",
+        req.params.id,
+        `Sales Target ${target.year}-${String(target.month).padStart(2, '0')}`,
+        userId,
+        `Deleted sales target for ${target.year}-${String(target.month).padStart(2, '0')}: $${target.targetAmount}`,
+        target,
+        null,
+        req
+      );
+
+      res.json({ message: "Sales target deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting sales target:", error);
+      res.status(500).json({ message: "Failed to delete sales target" });
     }
   });
 
