@@ -39,9 +39,9 @@ import {
   type Notification, type InsertNotification,
   type Tag, type InsertTag,
   type Staff, type InsertStaff,
-  type Role, type InsertRole,
-  type Permission, type InsertPermission,
-  type UserRole, type InsertUserRole,
+  type Role, type InsertRole, roles,
+  type Permission, type InsertPermission, permissions,
+  type UserRole, type InsertUserRole, userRoles,
   type NotificationSettings, type InsertNotificationSettings,
   type CustomFieldFileUpload, type InsertCustomFieldFileUpload,
   type Form, type InsertForm, type FormField, type InsertFormField,
@@ -6696,9 +6696,9 @@ export class DbStorage implements IStorage {
   async getWidgetData(widgetType: string, userId: string): Promise<any> {
     try {
       // Get user's roles to check if they're Admin or Manager
-      const userRoles = await this.getUserRolesByUser(userId);
+      const userRolesList = await this.getUserRolesByUser(userId);
       const roleNames = await Promise.all(
-        userRoles.map(async (ur) => {
+        userRolesList.map(async (ur) => {
           const role = await this.getRole(ur.roleId);
           return role?.name || '';
         })
