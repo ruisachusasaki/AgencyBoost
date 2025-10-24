@@ -74,7 +74,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, sql, asc, desc, and, or, max, isNull, inArray, isNotNull } from "drizzle-orm";
+import { eq, sql, asc, desc, and, or, max, isNull, inArray, isNotNull, ne, gte, lte, lt, gt } from "drizzle-orm";
 
 export interface IStorage {
   // Clients
@@ -7515,7 +7515,7 @@ export class DbStorage implements IStorage {
           status: tasks.status,
           priority: tasks.priority,
           dueDate: tasks.dueDate,
-          clientName: clients.companyName,
+          clientName: clients.name,
         })
         .from(tasks)
         .leftJoin(clients, eq(tasks.clientId, clients.id))
@@ -7546,7 +7546,7 @@ export class DbStorage implements IStorage {
           status: tasks.status,
           priority: tasks.priority,
           dueDate: tasks.dueDate,
-          clientName: clients.companyName,
+          clientName: clients.name,
           assignedToFirstName: staff.firstName,
           assignedToLastName: staff.lastName,
         })
@@ -7555,7 +7555,7 @@ export class DbStorage implements IStorage {
         .leftJoin(staff, eq(tasks.assignedTo, staff.id))
         .where(
           and(
-            sql`${tasks.dueDate} < ${now}`,
+            sql`${tasks.dueDate} < ${now.toISOString()}`,
             ne(tasks.status, 'completed'),
             ne(tasks.status, 'cancelled')
           )
@@ -7589,15 +7589,15 @@ export class DbStorage implements IStorage {
           status: tasks.status,
           priority: tasks.priority,
           dueDate: tasks.dueDate,
-          clientName: clients.companyName,
+          clientName: clients.name,
         })
         .from(tasks)
         .leftJoin(clients, eq(tasks.clientId, clients.id))
         .where(
           and(
             eq(tasks.assignedTo, userId),
-            sql`${tasks.dueDate} >= ${now}`,
-            sql`${tasks.dueDate} <= ${endOfWeek}`,
+            sql`${tasks.dueDate} >= ${now.toISOString()}`,
+            sql`${tasks.dueDate} <= ${endOfWeek.toISOString()}`,
             ne(tasks.status, 'completed'),
             ne(tasks.status, 'cancelled')
           )
@@ -7616,6 +7616,7 @@ export class DbStorage implements IStorage {
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
       const completedTasks = await db
         .select({ count: sql<number>`count(*)::int` })
@@ -7624,7 +7625,7 @@ export class DbStorage implements IStorage {
           and(
             eq(tasks.assignedTo, userId),
             eq(tasks.status, 'completed'),
-            sql`${tasks.updatedAt} >= ${thirtyDaysAgo}`
+            sql`${tasks.updatedAt} > ${thirtyDaysAgoISO}::timestamp OR ${tasks.updatedAt} = ${thirtyDaysAgoISO}::timestamp`
           )
         );
 
@@ -7634,7 +7635,7 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(tasks.assignedTo, userId),
-            sql`${tasks.createdAt} >= ${thirtyDaysAgo}`
+            sql`${tasks.createdAt} > ${thirtyDaysAgoISO}::timestamp OR ${tasks.createdAt} = ${thirtyDaysAgoISO}::timestamp`
           )
         );
 
@@ -7662,7 +7663,7 @@ export class DbStorage implements IStorage {
           status: tasks.status,
           priority: tasks.priority,
           dueDate: tasks.dueDate,
-          clientName: clients.companyName,
+          clientName: clients.name,
           assignedToFirstName: staff.firstName,
           assignedToLastName: staff.lastName,
         })
@@ -7727,6 +7728,7 @@ export class DbStorage implements IStorage {
       const startOfWeek = new Date();
       startOfWeek.setDate(now.getDate() - now.getDay()); // Start of this week (Sunday)
       startOfWeek.setHours(0, 0, 0, 0);
+      const startOfWeekISO = startOfWeek.toISOString();
 
       const timeTracked = await db
         .select({
@@ -7736,7 +7738,7 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(tasks.assignedTo, userId),
-            sql`${tasks.updatedAt} >= ${startOfWeek}`
+            sql`${tasks.updatedAt} > ${startOfWeekISO}::timestamp OR ${tasks.updatedAt} = ${startOfWeekISO}::timestamp`
           )
         );
 
