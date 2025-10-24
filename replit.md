@@ -43,6 +43,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, and search.
 - **User Preferences**: Per-user view customization system storing column visibility preferences in the database.
 - **Dashboard Widgets**: Customizable dashboard with drag-and-drop widget management, including 13 widgets across Client Management and Sales & Revenue categories. Features per-user widget layouts, team assignment filtering, add/remove UI, resizing, optimistic UI updates, and real-time data updates.
+- **Multi-Dashboard System**: Users can create multiple named dashboards for different purposes (similar to GoHighLevel). Features include tab-based navigation between dashboards, dashboard management dialog for creating/renaming/deleting dashboards, default dashboard settings, and automatic default dashboard initialization for new users. The system handles stale localStorage by validating stored dashboard IDs against the server and falling back to valid dashboards when needed.
 
 ## External Dependencies
 
