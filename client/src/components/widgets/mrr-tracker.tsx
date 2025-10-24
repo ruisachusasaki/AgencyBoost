@@ -13,12 +13,6 @@ export default function MRRTrackerWidget({ userWidget, onRemove }: WidgetProps) 
     queryKey: [`/api/dashboard-widgets/${userWidget.widgetType}/data`],
   });
 
-  const formatMonth = (monthStr: string) => {
-    const [year, month] = monthStr.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1);
-    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  };
-
   return (
     <Card data-testid="widget-mrr-tracker" className="h-full flex flex-col">
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
@@ -30,7 +24,7 @@ export default function MRRTrackerWidget({ userWidget, onRemove }: WidgetProps) 
               MRR Tracker
             </CardTitle>
             <CardDescription className="text-xs">
-              Monthly Recurring Revenue trends
+              From active client billing MRR
             </CardDescription>
           </div>
         </div>
@@ -50,26 +44,29 @@ export default function MRRTrackerWidget({ userWidget, onRemove }: WidgetProps) 
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
           </div>
         ) : (
-          <div className="space-y-2">
-            {data?.map((item: any, index: number) => (
-              <div key={item.month} className="flex items-center justify-between" data-testid={`mrr-month-${item.month}`}>
-                <span className="text-sm text-muted-foreground">{formatMonth(item.month)}</span>
-                <span className="font-semibold">${(item.mrr || 0).toLocaleString()}</span>
+          <div className="space-y-4">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-primary" data-testid="total-mrr">
+                ${(data?.totalMrr || 0).toLocaleString()}
               </div>
-            ))}
-            {(!data || data.length === 0) && (
-              <div className="text-center text-sm text-muted-foreground py-8">
-                No MRR data available
+              <div className="text-sm text-muted-foreground mt-1">
+                Total MRR from {data?.clientCount || 0} active clients
+              </div>
+            </div>
+            {data?.topClients && data.topClients.length > 0 && (
+              <div className="pt-3 border-t space-y-2">
+                <div className="text-xs font-medium text-muted-foreground">Top Contributors</div>
+                {data.topClients.slice(0, 5).map((client: any) => (
+                  <div key={client.clientId} className="flex items-center justify-between text-sm" data-testid={`mrr-client-${client.clientId}`}>
+                    <span className="truncate flex-1">{client.clientName}</span>
+                    <span className="font-semibold ml-2">${parseFloat(client.mrr || 0).toLocaleString()}</span>
+                  </div>
+                ))}
               </div>
             )}
-            {data && data.length > 0 && (
-              <div className="pt-3 border-t">
-                <div className="flex items-center justify-between font-medium">
-                  <span className="text-sm">Latest MRR</span>
-                  <span className="text-primary" data-testid="latest-mrr">
-                    ${(data[data.length - 1]?.mrr || 0).toLocaleString()}
-                  </span>
-                </div>
+            {(!data?.totalMrr || data.totalMrr === 0) && (
+              <div className="text-center text-sm text-muted-foreground py-4">
+                No MRR data available
               </div>
             )}
           </div>

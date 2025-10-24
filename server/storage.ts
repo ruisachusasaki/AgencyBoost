@@ -7047,32 +7047,51 @@ export class DbStorage implements IStorage {
 
   private async getMRRTrackerData(assignedClientIds: string[]): Promise<any> {
     try {
-      // Get accepted quotes with recurring revenue over last 6 months
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-      const monthlyData = await db
+      // Get total MRR from active clients' billing MRR field
+      const mrrResult = await db
         .select({
-          month: sql<string>`to_char(${quotes.updatedAt}, 'YYYY-MM')`,
-          mrr: sql<number>`sum(COALESCE(${quotes.totalPrice}, 0))::int`,
+          totalMrr: sql<number>`sum(COALESCE(${clients.mrr}, 0))::numeric`,
+          clientCount: sql<number>`count(*)::int`,
         })
-        .from(quotes)
+        .from(clients)
         .where(
           and(
-            eq(quotes.status, 'accepted'),
-            sql`${quotes.updatedAt} >= ${sixMonthsAgo}`,
+            eq(clients.status, 'active'),
+            isNotNull(clients.mrr),
             assignedClientIds.length > 0 
-              ? inArray(quotes.clientId, assignedClientIds)
+              ? inArray(clients.id, assignedClientIds)
+              : undefined
+          )
+        );
+
+      // Get breakdown by client for detailed view
+      const clientMrrBreakdown = await db
+        .select({
+          clientId: clients.id,
+          clientName: clients.name,
+          mrr: clients.mrr,
+        })
+        .from(clients)
+        .where(
+          and(
+            eq(clients.status, 'active'),
+            isNotNull(clients.mrr),
+            assignedClientIds.length > 0 
+              ? inArray(clients.id, assignedClientIds)
               : undefined
           )
         )
-        .groupBy(sql`to_char(${quotes.updatedAt}, 'YYYY-MM')`)
-        .orderBy(sql`to_char(${quotes.updatedAt}, 'YYYY-MM')`);
+        .orderBy(desc(clients.mrr))
+        .limit(10);
 
-      return monthlyData;
+      return {
+        totalMrr: parseFloat(mrrResult[0]?.totalMrr || '0'),
+        clientCount: mrrResult[0]?.clientCount || 0,
+        topClients: clientMrrBreakdown,
+      };
     } catch (error) {
       console.error("Error fetching MRR tracker data:", error);
-      return [];
+      return { totalMrr: 0, clientCount: 0, topClients: [] };
     }
   }
 

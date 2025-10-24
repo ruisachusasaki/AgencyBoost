@@ -122,6 +122,13 @@ export default function Reports() {
   const [workloadPage, setWorkloadPage] = useState(1);
   const [workloadPageSize, setWorkloadPageSize] = useState(20);
   
+  // MRR Report specific state
+  const [mrrSearchTerm, setMrrSearchTerm] = useState("");
+  const [mrrPage, setMrrPage] = useState(1);
+  const [mrrPageSize, setMrrPageSize] = useState(20);
+  const [mrrSortField, setMrrSortField] = useState("mrr");
+  const [mrrSortOrder, setMrrSortOrder] = useState<"asc" | "desc">("desc");
+  
   // User authentication and role data
   const { data: currentUser } = useQuery<{ id: string; name: string; email: string; role: string }>({
     queryKey: ["/api/auth/current-user"],
@@ -1251,7 +1258,8 @@ export default function Reports() {
             { id: "overview", name: "Business Overview", icon: BarChart3, count: null },
             { id: "health", name: "Client Health", icon: Heart, count: null },
             { id: "tasks", name: "Tasks", icon: Clock, count: null },
-            { id: "team", name: "Team Workload", icon: Users, count: null }
+            { id: "team", name: "Team Workload", icon: Users, count: null },
+            { id: "mrr", name: "MRR Report", icon: DollarSign, count: null }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -3891,10 +3899,215 @@ export default function Reports() {
           <HiringPredictionsSection />
         </div>
       )}
+      {/* MRR Report Tab */}
+      {activeTab === "mrr" && (
+        <div className="space-y-6">
+          {/* MRR Summary Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-primary" />
+                Monthly Recurring Revenue (MRR) Report
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <p className="text-sm text-muted-foreground">Total MRR</p>
+                  <p className="text-3xl font-bold text-primary mt-1" data-testid="total-mrr-value">
+                    ${((clientsData?.clients || []).filter((c: any) => c.status === 'active').reduce((sum: number, client: any) => sum + (parseFloat(client.mrr || 0)), 0)).toLocaleString()}
+                  </p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-lg border">
+                  <p className="text-sm text-muted-foreground">Active Clients with MRR</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1" data-testid="active-clients-mrr-count">
+                    {(clientsData?.clients || []).filter((c: any) => c.status === 'active' && c.mrr && parseFloat(c.mrr) > 0).length}
+                  </p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-lg border">
+                  <p className="text-sm text-muted-foreground">Average MRR per Client</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1" data-testid="average-mrr-value">
+                    ${(() => {
+                      const activeWithMrr = (clientsData?.clients || []).filter((c: any) => c.status === 'active' && c.mrr && parseFloat(c.mrr) > 0);
+                      if (activeWithMrr.length === 0) return '0';
+                      const totalMrr = activeWithMrr.reduce((sum: number, client: any) => sum + parseFloat(client.mrr || 0), 0);
+                      return (totalMrr / activeWithMrr.length).toLocaleString(undefined, { maximumFractionDigits: 0 });
+                    })()}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* MRR Client Table */}
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <CardTitle>Client MRR Breakdown</CardTitle>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:flex-initial">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search clients..."
+                      value={mrrSearchTerm}
+                      onChange={(e) => {
+                        setMrrSearchTerm(e.target.value);
+                        setMrrPage(1);
+                      }}
+                      className="pl-10 w-full sm:w-64"
+                      data-testid="input-mrr-search"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-slate-50"
+                      onClick={() => {
+                        if (mrrSortField === 'name') {
+                          setMrrSortOrder(mrrSortOrder === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setMrrSortField('name');
+                          setMrrSortOrder('asc');
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        Client Name
+                        {mrrSortField === 'name' && (
+                          mrrSortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-slate-50"
+                      onClick={() => {
+                        if (mrrSortField === 'mrr') {
+                          setMrrSortOrder(mrrSortOrder === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setMrrSortField('mrr');
+                          setMrrSortOrder('desc');
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        MRR
+                        {mrrSortField === 'mrr' && (
+                          mrrSortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(() => {
+                    let filteredClients = (clientsData?.clients || [])
+                      .filter((c: any) => c.status === 'active' && c.mrr && parseFloat(c.mrr) > 0);
+                    
+                    if (mrrSearchTerm) {
+                      filteredClients = filteredClients.filter((c: any) => 
+                        c.name?.toLowerCase().includes(mrrSearchTerm.toLowerCase()) ||
+                        c.email?.toLowerCase().includes(mrrSearchTerm.toLowerCase())
+                      );
+                    }
+                    
+                    filteredClients.sort((a: any, b: any) => {
+                      let aVal, bVal;
+                      if (mrrSortField === 'mrr') {
+                        aVal = parseFloat(a.mrr || 0);
+                        bVal = parseFloat(b.mrr || 0);
+                      } else {
+                        aVal = a[mrrSortField] || '';
+                        bVal = b[mrrSortField] || '';
+                      }
+                      
+                      if (mrrSortOrder === 'asc') {
+                        return aVal > bVal ? 1 : -1;
+                      } else {
+                        return aVal < bVal ? 1 : -1;
+                      }
+                    });
+                    
+                    const start = (mrrPage - 1) * mrrPageSize;
+                    const paginatedClients = filteredClients.slice(start, start + mrrPageSize);
+                    const totalPages = Math.ceil(filteredClients.length / mrrPageSize);
+                    
+                    if (paginatedClients.length === 0) {
+                      return (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            {mrrSearchTerm ? 'No clients found matching your search' : 'No active clients with MRR data'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+                    
+                    return (
+                      <>
+                        {paginatedClients.map((client: any) => (
+                          <TableRow key={client.id} data-testid={`mrr-client-${client.id}`}>
+                            <TableCell className="font-medium">{client.name}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{client.email}</TableCell>
+                            <TableCell>
+                              <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>
+                                {client.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-bold text-primary">
+                              ${parseFloat(client.mrr || 0).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow>
+                          <TableCell colSpan={4}>
+                            <div className="flex items-center justify-between py-2">
+                              <div className="text-sm text-muted-foreground">
+                                Showing {start + 1}-{Math.min(start + mrrPageSize, filteredClients.length)} of {filteredClients.length} clients
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setMrrPage(p => Math.max(1, p - 1))}
+                                  disabled={mrrPage === 1}
+                                  data-testid="button-mrr-prev-page"
+                                >
+                                  <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <span className="text-sm">
+                                  Page {mrrPage} of {totalPages}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setMrrPage(p => Math.min(totalPages, p + 1))}
+                                  disabled={mrrPage >= totalPages}
+                                  data-testid="button-mrr-next-page"
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </>
+                    );
+                  })()}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
-
 // Hiring Predictions Component
 function HiringPredictionsSection() {
   const { toast } = useToast();
