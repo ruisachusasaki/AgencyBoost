@@ -186,10 +186,7 @@ export default function Sales() {
   // Create/Update Sales Target Mutation
   const createTargetMutation = useMutation({
     mutationFn: async (target: { year: number; month: number; targetAmount: string }) => {
-      return await apiRequest("/api/sales-targets", {
-        method: "POST",
-        body: JSON.stringify(target),
-      });
+      return await apiRequest("POST", "/api/sales-targets", target);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sales-targets"] });
@@ -205,10 +202,7 @@ export default function Sales() {
 
   const updateTargetMutation = useMutation({
     mutationFn: async ({ id, ...data }: { id: string; year?: number; month?: number; targetAmount?: string }) => {
-      return await apiRequest(`/api/sales-targets/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("PATCH", `/api/sales-targets/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sales-targets"] });
@@ -225,9 +219,7 @@ export default function Sales() {
 
   const deleteTargetMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/sales-targets/${id}`, {
-        method: "DELETE",
-      });
+      return await apiRequest("DELETE", `/api/sales-targets/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sales-targets"] });
