@@ -6867,13 +6867,13 @@ export class DbStorage implements IStorage {
           return await this.getMRRTrackerData(assignedClientIds);
         
         case 'win_rate':
-          return await this.getWinRateData(assignedClientIds);
+          return await this.getWinRateData(userId, isAdminOrManager);
         
         case 'top_performing_sales_reps':
           return await this.getTopPerformingSalesRepsData();
         
         case 'recent_deals_won':
-          return await this.getRecentDealsWonData(assignedClientIds);
+          return await this.getRecentDealsWonData(userId, isAdminOrManager);
         
         default:
           return { error: 'Unknown widget type' };
@@ -7278,31 +7278,26 @@ export class DbStorage implements IStorage {
     }
   }
 
-  private async getWinRateData(assignedClientIds: string[]): Promise<any> {
+  private async getWinRateData(userId: string, isAdminOrManager: boolean): Promise<any> {
     try {
+      // Build where conditions
+      const wonWhere = isAdminOrManager
+        ? eq(leads.status, 'Won')
+        : and(eq(leads.status, 'Won'), eq(leads.assignedTo, userId));
+
+      const totalWhere = isAdminOrManager
+        ? sql`${leads.status} IN ('Won', 'Lost')`
+        : and(sql`${leads.status} IN ('Won', 'Lost')`, eq(leads.assignedTo, userId));
+
       const wonCount = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(leads)
-        .where(
-          and(
-            eq(leads.status, 'won'),
-            assignedClientIds.length > 0 
-              ? sql`${leads.staffAssigned} = ANY(${assignedClientIds})`
-              : undefined
-          )
-        );
+        .where(wonWhere);
 
       const totalCount = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(leads)
-        .where(
-          and(
-            sql`${leads.status} IN ('won', 'lost')`,
-            assignedClientIds.length > 0 
-              ? sql`${leads.staffAssigned} = ANY(${assignedClientIds})`
-              : undefined
-          )
-        );
+        .where(totalWhere);
 
       const won = wonCount[0]?.count || 0;
       const total = totalCount[0]?.count || 0;
@@ -7325,16 +7320,21 @@ export class DbStorage implements IStorage {
       // Get top 5 staff members by number of won deals
       const topReps = await db
         .select({
-          staffId: leads.staffAssigned,
+          staffId: leads.assignedTo,
           staffFirstName: staff.firstName,
           staffLastName: staff.lastName,
           dealsWon: sql<number>`count(*)::int`,
-          totalRevenue: sql<number>`sum(COALESCE(${leads.estimatedValue}, 0))::int`,
+          totalRevenue: sql<number>`sum(COALESCE(CAST(${leads.value} AS NUMERIC), 0))::int`,
         })
         .from(leads)
-        .leftJoin(staff, eq(leads.staffAssigned, staff.id))
-        .where(eq(leads.status, 'won'))
-        .groupBy(leads.staffAssigned, staff.firstName, staff.lastName)
+        .leftJoin(staff, eq(leads.assignedTo, staff.id))
+        .where(
+          and(
+            eq(leads.status, 'Won'),
+            isNotNull(leads.assignedTo)
+          )
+        )
+        .groupBy(leads.assignedTo, staff.firstName, staff.lastName)
         .orderBy(desc(sql`count(*)`))
         .limit(5);
 
@@ -7352,26 +7352,24 @@ export class DbStorage implements IStorage {
     }
   }
 
-  private async getRecentDealsWonData(assignedClientIds: string[]): Promise<any> {
+  private async getRecentDealsWonData(userId: string, isAdminOrManager: boolean): Promise<any> {
     try {
       const recentDeals = await db
         .select({
           id: leads.id,
-          companyName: leads.companyName,
-          contactName: leads.contactName,
-          estimatedValue: leads.estimatedValue,
+          companyName: leads.company,
+          contactName: leads.name,
+          estimatedValue: leads.value,
           wonDate: leads.updatedAt,
           staffFirstName: staff.firstName,
           staffLastName: staff.lastName,
         })
         .from(leads)
-        .leftJoin(staff, eq(leads.staffAssigned, staff.id))
+        .leftJoin(staff, eq(leads.assignedTo, staff.id))
         .where(
           and(
-            eq(leads.status, 'won'),
-            assignedClientIds.length > 0 
-              ? sql`${leads.staffAssigned} = ANY(${assignedClientIds})`
-              : undefined
+            eq(leads.status, 'Won'),
+            !isAdminOrManager ? eq(leads.assignedTo, userId) : undefined
           )
         )
         .orderBy(desc(leads.updatedAt))
