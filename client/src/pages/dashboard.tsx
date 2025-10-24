@@ -30,6 +30,14 @@ import MRRTrackerWidget from "@/components/widgets/mrr-tracker";
 import WinRateWidget from "@/components/widgets/win-rate";
 import TopPerformingSalesRepsWidget from "@/components/widgets/top-performing-sales-reps";
 import RecentDealsWonWidget from "@/components/widgets/recent-deals-won";
+import MyTasksWidget from "@/components/widgets/my-tasks";
+import OverdueTasksWidget from "@/components/widgets/overdue-tasks";
+import TasksDueThisWeekWidget from "@/components/widgets/tasks-due-this-week";
+import TaskCompletionRateWidget from "@/components/widgets/task-completion-rate";
+import TasksRequiringApprovalWidget from "@/components/widgets/tasks-requiring-approval";
+import TasksByStatusWidget from "@/components/widgets/tasks-by-status";
+import TimeTrackedThisWeekWidget from "@/components/widgets/time-tracked-this-week";
+import TeamWorkloadWidget from "@/components/widgets/team-workload";
 
 interface Dashboard {
   id: string;
@@ -344,6 +352,22 @@ export default function Dashboard() {
         return <TopPerformingSalesRepsWidget {...props} />;
       case "recent_deals_won":
         return <RecentDealsWonWidget {...props} />;
+      case "my_tasks":
+        return <MyTasksWidget {...props} />;
+      case "overdue_tasks":
+        return <OverdueTasksWidget {...props} />;
+      case "tasks_due_this_week":
+        return <TasksDueThisWeekWidget {...props} />;
+      case "task_completion_rate":
+        return <TaskCompletionRateWidget {...props} />;
+      case "tasks_requiring_approval":
+        return <TasksRequiringApprovalWidget {...props} />;
+      case "tasks_by_status":
+        return <TasksByStatusWidget {...props} />;
+      case "time_tracked_this_week":
+        return <TimeTrackedThisWeekWidget {...props} />;
+      case "team_workload":
+        return <TeamWorkloadWidget {...props} />;
       default:
         return (
           <Card>
