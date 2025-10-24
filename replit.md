@@ -42,7 +42,10 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **File & Media**: Advanced uploads, inline media display, voice recording, secure object storage, and collaborative annotation for various file types with completion tracking and activity logging.
 - **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, and search.
 - **User Preferences**: Per-user view customization system storing column visibility preferences in the database.
-- **Dashboard Widgets**: Customizable dashboard with drag-and-drop widget management, including 13 widgets across Client Management and Sales & Revenue categories. Features per-user widget layouts, team assignment filtering, add/remove UI, resizing, optimistic UI updates, and real-time data updates.
+- **Dashboard Widgets**: Customizable dashboard with drag-and-drop widget management, including 21 widgets across Client Management, Sales & Revenue, and Tasks categories. Features per-user widget layouts, team assignment filtering, add/remove UI, resizing, optimistic UI updates, and real-time data updates.
+  - **Client Management Widgets** (6): Client Health Overview, Recent Clients, Client Approval Queue, Client Distribution by Vertical, Client Portal Activity, Client Team Assignments
+  - **Sales & Revenue Widgets** (7): Sales Pipeline Overview, Quote Status Summary, Revenue This Month, MRR Tracker, Win Rate, Top Performing Sales Reps, Recent Deals Won
+  - **Tasks Widgets** (8): My Tasks, Overdue Tasks, Tasks Due This Week, Task Completion Rate, Tasks Requiring Client Approval, Tasks by Status, Time Tracked This Week, Team Workload
 - **Multi-Dashboard System**: Users can create multiple named dashboards for different purposes (similar to GoHighLevel). Features include tab-based navigation between dashboards, dashboard management dialog for creating/renaming/deleting dashboards, default dashboard settings, and automatic default dashboard initialization for new users. The system handles stale localStorage by validating stored dashboard IDs against the server and falling back to valid dashboards when needed.
 
 ## External Dependencies
