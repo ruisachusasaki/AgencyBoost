@@ -79,6 +79,22 @@ export default function Sales() {
   // Check if current user is a Sales Manager or Admin
   const isSalesManager = currentUser?.roles?.includes(ROLE_NAMES.SALES_MANAGER) || currentUser?.roles?.includes('Admin');
   
+  // Check if user has permission to manage sales targets (via Settings > Roles & Permissions)
+  const canManageTargets = () => {
+    // Admins always have access
+    if (currentUser?.role === 'Admin' || currentUser?.role === 'admin') {
+      return true;
+    }
+    
+    // Check if user has the 'settings' module 'canManage' permission
+    if (!currentUser?.permissions) {
+      return false;
+    }
+    
+    const settingsPermission = currentUser.permissions.find((p: any) => p.module === 'settings');
+    return settingsPermission?.canManage === true;
+  };
+  
 
   // Quote Builder state
   const [isQuoteBuilderOpen, setIsQuoteBuilderOpen] = useState(false);
@@ -1873,14 +1889,16 @@ export default function Sales() {
                   <Target className="h-5 w-5" />
                   Monthly Sales Targets
                 </CardTitle>
-                <Button 
-                  onClick={handleNewTarget}
-                  className="bg-primary hover:bg-primary/90"
-                  data-testid="button-create-target"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Set Target
-                </Button>
+                {canManageTargets() && (
+                  <Button 
+                    onClick={handleNewTarget}
+                    className="bg-primary hover:bg-primary/90"
+                    data-testid="button-create-target"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Set Target
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -1915,24 +1933,26 @@ export default function Sales() {
                                   ${parseFloat(target.targetAmount).toLocaleString()}
                                 </p>
                               </div>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEditTarget(target)}
-                                  data-testid={`button-edit-target-${target.id}`}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => deleteTargetMutation.mutate(target.id)}
-                                  data-testid={`button-delete-target-${target.id}`}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              {canManageTargets() && (
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEditTarget(target)}
+                                    data-testid={`button-edit-target-${target.id}`}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => deleteTargetMutation.mutate(target.id)}
+                                    data-testid={`button-delete-target-${target.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
