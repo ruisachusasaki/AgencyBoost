@@ -82,7 +82,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
 
   const createLeadMutation = useMutation({
     mutationFn: async (data: InsertLead & { customFields?: Record<string, any> }) => {
-      return await apiRequest("/api/leads", "POST", data);
+      return await apiRequest("POST", "/api/leads", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -136,7 +136,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
         leadId: lead.id // Track original lead
       };
       
-      const response = await apiRequest("/api/clients", "POST", clientData);
+      const response = await apiRequest("POST", "/api/clients", clientData);
       
       // Update lead status to "won" and mark as converted
       await apiRequest("PUT", `/api/leads/${lead.id}`, {
@@ -167,7 +167,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
 
   const deleteLeadMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/leads/${id}`, "DELETE");
+      return await apiRequest("DELETE", `/api/leads/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
