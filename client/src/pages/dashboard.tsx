@@ -78,6 +78,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [addWidgetDialogOpen, setAddWidgetDialogOpen] = useState(false);
   const [widgetSearchTerm, setWidgetSearchTerm] = useState("");
+  const [widgetCategoryFilter, setWidgetCategoryFilter] = useState<string>("all");
   const [manageDashboardsDialogOpen, setManageDashboardsDialogOpen] = useState(false);
   const [newDashboardName, setNewDashboardName] = useState("");
   const [editingDashboard, setEditingDashboard] = useState<Dashboard | null>(null);
@@ -384,6 +385,11 @@ export default function Dashboard() {
   const availableToAdd = availableWidgets
     .filter(w => !alreadyAddedTypes.includes(w.type))
     .filter(w => {
+      // Filter by category
+      if (widgetCategoryFilter !== "all" && w.category !== widgetCategoryFilter) {
+        return false;
+      }
+      // Filter by search term
       if (!widgetSearchTerm) return true;
       const searchLower = widgetSearchTerm.toLowerCase();
       return (
@@ -615,7 +621,10 @@ export default function Dashboard() {
           </Dialog>
           <Dialog open={addWidgetDialogOpen} onOpenChange={(open) => {
             setAddWidgetDialogOpen(open);
-            if (!open) setWidgetSearchTerm("");
+            if (!open) {
+              setWidgetSearchTerm("");
+              setWidgetCategoryFilter("all");
+            }
           }}>
             <DialogTrigger asChild>
               <Button disabled={!selectedDashboardId} data-testid="button-add-widget">
@@ -630,15 +639,54 @@ export default function Dashboard() {
                   Choose a widget to add to your dashboard
                 </DialogDescription>
               </DialogHeader>
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search widgets..."
-                  value={widgetSearchTerm}
-                  onChange={(e) => setWidgetSearchTerm(e.target.value)}
-                  className="pl-10"
-                  data-testid="input-search-widgets"
-                />
+              <div className="space-y-4 mb-4">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={widgetCategoryFilter === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setWidgetCategoryFilter("all")}
+                    data-testid="filter-category-all"
+                  >
+                    All
+                  </Button>
+                  <Button
+                    variant={widgetCategoryFilter === "client_management" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setWidgetCategoryFilter("client_management")}
+                    data-testid="filter-category-client-management"
+                    className={widgetCategoryFilter === "client_management" ? "bg-blue-600 hover:bg-blue-700" : ""}
+                  >
+                    Client Management
+                  </Button>
+                  <Button
+                    variant={widgetCategoryFilter === "sales" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setWidgetCategoryFilter("sales")}
+                    data-testid="filter-category-sales"
+                    className={widgetCategoryFilter === "sales" ? "bg-green-600 hover:bg-green-700" : ""}
+                  >
+                    Sales & Revenue
+                  </Button>
+                  <Button
+                    variant={widgetCategoryFilter === "tasks" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setWidgetCategoryFilter("tasks")}
+                    data-testid="filter-category-tasks"
+                    className={widgetCategoryFilter === "tasks" ? "bg-purple-600 hover:bg-purple-700" : ""}
+                  >
+                    Tasks
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search widgets..."
+                    value={widgetSearchTerm}
+                    onChange={(e) => setWidgetSearchTerm(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search-widgets"
+                  />
+                </div>
               </div>
               <ScrollArea className="max-h-[60vh]">
                 <div className="space-y-2 pr-4">
