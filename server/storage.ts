@@ -6695,13 +6695,31 @@ export class DbStorage implements IStorage {
 
   async getWidgetData(widgetType: string, userId: string): Promise<any> {
     try {
-      // Get user's team assignments for filtering
-      const userAssignments = await db
-        .select({ clientId: clientTeamAssignments.clientId })
-        .from(clientTeamAssignments)
-        .where(eq(clientTeamAssignments.staffId, userId));
+      // Get user's roles to check if they're Admin or Manager
+      const userRoles = await this.getUserRolesByUser(userId);
+      const roleNames = await Promise.all(
+        userRoles.map(async (ur) => {
+          const role = await this.getRole(ur.roleId);
+          return role?.name || '';
+        })
+      );
       
-      const assignedClientIds = userAssignments.map(a => a.clientId);
+      const isAdminOrManager = roleNames.some(name => 
+        name.toLowerCase() === 'admin' || name.toLowerCase() === 'manager'
+      );
+      
+      // Get user's team assignments for filtering
+      // For Admin/Manager, use empty array to show all clients
+      let assignedClientIds: string[] = [];
+      
+      if (!isAdminOrManager) {
+        const userAssignments = await db
+          .select({ clientId: clientTeamAssignments.clientId })
+          .from(clientTeamAssignments)
+          .where(eq(clientTeamAssignments.staffId, userId));
+        
+        assignedClientIds = userAssignments.map(a => a.clientId);
+      }
 
       switch (widgetType) {
         case 'client_health_overview':
