@@ -4293,34 +4293,6 @@ export default function EnhancedClientDetail() {
                 ))}
               </CardContent>
             </Card>
-            
-            {/* Billing Card - Separate from Contact Information */}
-            <Card className="mt-6">
-              <CardHeader>
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-primary" />
-                  Billing
-                </h2>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <EditableField
-                  fieldId="clientVertical"
-                  label="Client Vertical"
-                  value={client.clientVertical ?? ""}
-                  type="text"
-                  isCustomField={false}
-                  {...editableFieldProps}
-                />
-                <EditableField
-                  fieldId="mrr"
-                  label="Monthly Recurring Revenue (MRR)"
-                  value={client.mrr ?? ""}
-                  type="number"
-                  isCustomField={false}
-                  {...editableFieldProps}
-                />
-              </CardContent>
-            </Card>
 
             {/* Actions Section */}
             <Card className="mt-6">
