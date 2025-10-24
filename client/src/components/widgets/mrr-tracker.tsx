@@ -53,17 +53,6 @@ export default function MRRTrackerWidget({ userWidget, onRemove }: WidgetProps) 
                 Total MRR from {data?.clientCount || 0} active clients
               </div>
             </div>
-            {data?.topClients && data.topClients.length > 0 && (
-              <div className="pt-3 border-t space-y-2">
-                <div className="text-xs font-medium text-muted-foreground">Top Contributors</div>
-                {data.topClients.slice(0, 5).map((client: any) => (
-                  <div key={client.clientId} className="flex items-center justify-between text-sm" data-testid={`mrr-client-${client.clientId}`}>
-                    <span className="truncate flex-1">{client.clientName}</span>
-                    <span className="font-semibold ml-2">${parseFloat(client.mrr || 0).toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            )}
             {(!data?.totalMrr || data.totalMrr === 0) && (
               <div className="text-center text-sm text-muted-foreground py-4">
                 No MRR data available
