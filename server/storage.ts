@@ -6944,34 +6944,42 @@ export class DbStorage implements IStorage {
           clientId: clientTeamAssignments.clientId,
           clientName: clients.name,
           staffId: clientTeamAssignments.staffId,
-          staffName: sql<string>`${staff.firstName} || ' ' || ${staff.lastName}`,
-          staffEmail: staff.email,
+          staffName: sql<string>`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, 'Unknown')`,
+          staffEmail: sql<string>`COALESCE(${staff.email}, '')`,
           position: clientTeamAssignments.position,
           isPrimary: clientTeamAssignments.isPrimary,
         })
         .from(clientTeamAssignments)
-        .leftJoin(clients, eq(clientTeamAssignments.clientId, clients.id))
+        .innerJoin(clients, eq(clientTeamAssignments.clientId, clients.id))
         .leftJoin(staff, eq(clientTeamAssignments.staffId, staff.id))
-        .where(eq(clients.isArchived, false))
+        .where(and(
+          eq(clients.isArchived, false),
+          isNotNull(clientTeamAssignments.clientId)
+        ))
         .orderBy(clients.name, desc(clientTeamAssignments.isPrimary));
 
-      // Group by client
+      // Group by client and filter out any null assignments
       const grouped = assignments.reduce((acc: any, assignment) => {
         const clientId = assignment.clientId;
+        if (!clientId) return acc;
+        
         if (!acc[clientId]) {
           acc[clientId] = {
             clientId,
-            clientName: assignment.clientName,
+            clientName: assignment.clientName || 'Unknown Client',
             teamMembers: [],
           };
         }
-        acc[clientId].teamMembers.push({
-          staffId: assignment.staffId,
-          staffName: assignment.staffName,
-          staffEmail: assignment.staffEmail,
-          position: assignment.position,
-          isPrimary: assignment.isPrimary,
-        });
+        
+        if (assignment.staffId) {
+          acc[clientId].teamMembers.push({
+            staffId: assignment.staffId,
+            staffName: assignment.staffName,
+            staffEmail: assignment.staffEmail,
+            position: assignment.position,
+            isPrimary: assignment.isPrimary,
+          });
+        }
         return acc;
       }, {});
 
