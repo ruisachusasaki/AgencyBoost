@@ -3,6 +3,7 @@ import {
   // Projects removed from system
   type Campaign, type InsertCampaign, campaigns,
   type Lead, type InsertLead, leads,
+  type LeadPipelineStage, leadPipelineStages,
   type Quote, type InsertQuote, quotes,
   type Task, type InsertTask, tasks,
   type Invoice, type InsertInvoice, invoices,

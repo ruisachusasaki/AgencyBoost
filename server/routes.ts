@@ -24378,6 +24378,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { type } = req.params;
       const data = await appStorage.getWidgetData(type, userId);
       
+      // Disable caching to ensure fresh widget data
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       res.json(data);
     } catch (error) {
       console.error(`Error fetching widget data for ${req.params.type}:`, error);
