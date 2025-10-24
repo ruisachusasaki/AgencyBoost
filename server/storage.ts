@@ -6961,6 +6961,31 @@ export class DbStorage implements IStorage {
         case 'recent_deals_won':
           return await this.getRecentDealsWonData(userId, isAdminOrManager);
         
+        // Task Widgets
+        case 'my_tasks':
+          return await this.getMyTasksData(userId);
+        
+        case 'overdue_tasks':
+          return await this.getOverdueTasksData(userId);
+        
+        case 'tasks_due_this_week':
+          return await this.getTasksDueThisWeekData(userId);
+        
+        case 'task_completion_rate':
+          return await this.getTaskCompletionRateData(userId);
+        
+        case 'tasks_requiring_approval':
+          return await this.getTasksRequiringApprovalData(userId);
+        
+        case 'tasks_by_status':
+          return await this.getTasksByStatusData(userId);
+        
+        case 'time_tracked_this_week':
+          return await this.getTimeTrackedThisWeekData(userId);
+        
+        case 'team_workload':
+          return await this.getTeamWorkloadData();
+        
         default:
           return { error: 'Unknown widget type' };
       }
@@ -7476,6 +7501,292 @@ export class DbStorage implements IStorage {
       }));
     } catch (error) {
       console.error("Error fetching recent deals won:", error);
+      return [];
+    }
+  }
+
+  // Task Widget Data Methods
+  private async getMyTasksData(userId: string): Promise<any> {
+    try {
+      const myTasks = await db
+        .select({
+          id: tasks.id,
+          title: tasks.title,
+          status: tasks.status,
+          priority: tasks.priority,
+          dueDate: tasks.dueDate,
+          clientName: clients.companyName,
+        })
+        .from(tasks)
+        .leftJoin(clients, eq(tasks.clientId, clients.id))
+        .where(
+          and(
+            eq(tasks.assignedTo, userId),
+            ne(tasks.status, 'completed'),
+            ne(tasks.status, 'cancelled')
+          )
+        )
+        .orderBy(desc(tasks.priority), asc(tasks.dueDate))
+        .limit(10);
+
+      return myTasks;
+    } catch (error) {
+      console.error("Error fetching my tasks:", error);
+      return [];
+    }
+  }
+
+  private async getOverdueTasksData(userId: string): Promise<any> {
+    try {
+      const now = new Date();
+      const overdueTasks = await db
+        .select({
+          id: tasks.id,
+          title: tasks.title,
+          status: tasks.status,
+          priority: tasks.priority,
+          dueDate: tasks.dueDate,
+          clientName: clients.companyName,
+          assignedToFirstName: staff.firstName,
+          assignedToLastName: staff.lastName,
+        })
+        .from(tasks)
+        .leftJoin(clients, eq(tasks.clientId, clients.id))
+        .leftJoin(staff, eq(tasks.assignedTo, staff.id))
+        .where(
+          and(
+            sql`${tasks.dueDate} < ${now}`,
+            ne(tasks.status, 'completed'),
+            ne(tasks.status, 'cancelled')
+          )
+        )
+        .orderBy(asc(tasks.dueDate))
+        .limit(10);
+
+      return overdueTasks.map(task => ({
+        ...task,
+        assignedToName: task.assignedToFirstName && task.assignedToLastName
+          ? `${task.assignedToFirstName} ${task.assignedToLastName}`
+          : 'Unassigned',
+      }));
+    } catch (error) {
+      console.error("Error fetching overdue tasks:", error);
+      return [];
+    }
+  }
+
+  private async getTasksDueThisWeekData(userId: string): Promise<any> {
+    try {
+      const now = new Date();
+      const endOfWeek = new Date();
+      endOfWeek.setDate(now.getDate() + (7 - now.getDay())); // End of this week (Sunday)
+      endOfWeek.setHours(23, 59, 59, 999);
+
+      const tasksDueThisWeek = await db
+        .select({
+          id: tasks.id,
+          title: tasks.title,
+          status: tasks.status,
+          priority: tasks.priority,
+          dueDate: tasks.dueDate,
+          clientName: clients.companyName,
+        })
+        .from(tasks)
+        .leftJoin(clients, eq(tasks.clientId, clients.id))
+        .where(
+          and(
+            eq(tasks.assignedTo, userId),
+            sql`${tasks.dueDate} >= ${now}`,
+            sql`${tasks.dueDate} <= ${endOfWeek}`,
+            ne(tasks.status, 'completed'),
+            ne(tasks.status, 'cancelled')
+          )
+        )
+        .orderBy(asc(tasks.dueDate))
+        .limit(10);
+
+      return tasksDueThisWeek;
+    } catch (error) {
+      console.error("Error fetching tasks due this week:", error);
+      return [];
+    }
+  }
+
+  private async getTaskCompletionRateData(userId: string): Promise<any> {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const completedTasks = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.assignedTo, userId),
+            eq(tasks.status, 'completed'),
+            sql`${tasks.updatedAt} >= ${thirtyDaysAgo}`
+          )
+        );
+
+      const totalTasks = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.assignedTo, userId),
+            sql`${tasks.createdAt} >= ${thirtyDaysAgo}`
+          )
+        );
+
+      const completed = completedTasks[0]?.count || 0;
+      const total = totalTasks[0]?.count || 0;
+      const rate = total > 0 ? ((completed / total) * 100).toFixed(1) : '0.0';
+
+      return {
+        completed,
+        total,
+        rate,
+      };
+    } catch (error) {
+      console.error("Error fetching task completion rate:", error);
+      return { completed: 0, total: 0, rate: '0.0' };
+    }
+  }
+
+  private async getTasksRequiringApprovalData(userId: string): Promise<any> {
+    try {
+      const approvalTasks = await db
+        .select({
+          id: tasks.id,
+          title: tasks.title,
+          status: tasks.status,
+          priority: tasks.priority,
+          dueDate: tasks.dueDate,
+          clientName: clients.companyName,
+          assignedToFirstName: staff.firstName,
+          assignedToLastName: staff.lastName,
+        })
+        .from(tasks)
+        .leftJoin(clients, eq(tasks.clientId, clients.id))
+        .leftJoin(staff, eq(tasks.assignedTo, staff.id))
+        .where(
+          and(
+            sql`${tasks.description} ILIKE '%approval%' OR ${tasks.title} ILIKE '%approval%'`,
+            eq(tasks.status, 'in_progress')
+          )
+        )
+        .orderBy(asc(tasks.dueDate))
+        .limit(10);
+
+      return approvalTasks.map(task => ({
+        ...task,
+        assignedToName: task.assignedToFirstName && task.assignedToLastName
+          ? `${task.assignedToFirstName} ${task.assignedToLastName}`
+          : 'Unassigned',
+      }));
+    } catch (error) {
+      console.error("Error fetching tasks requiring approval:", error);
+      return [];
+    }
+  }
+
+  private async getTasksByStatusData(userId: string): Promise<any> {
+    try {
+      const statusCounts = await db
+        .select({
+          status: tasks.status,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(tasks)
+        .where(eq(tasks.assignedTo, userId))
+        .groupBy(tasks.status);
+
+      const counts = {
+        todo: 0,
+        in_progress: 0,
+        completed: 0,
+        cancelled: 0,
+      };
+
+      statusCounts.forEach(item => {
+        if (counts[item.status as keyof typeof counts] !== undefined) {
+          counts[item.status as keyof typeof counts] = item.count;
+        }
+      });
+
+      return counts;
+    } catch (error) {
+      console.error("Error fetching tasks by status:", error);
+      return { todo: 0, in_progress: 0, completed: 0, cancelled: 0 };
+    }
+  }
+
+  private async getTimeTrackedThisWeekData(userId: string): Promise<any> {
+    try {
+      const now = new Date();
+      const startOfWeek = new Date();
+      startOfWeek.setDate(now.getDate() - now.getDay()); // Start of this week (Sunday)
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const timeTracked = await db
+        .select({
+          totalMinutes: sql<number>`sum(COALESCE(${tasks.timeTracked}, 0))::int`,
+        })
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.assignedTo, userId),
+            sql`${tasks.updatedAt} >= ${startOfWeek}`
+          )
+        );
+
+      const totalMinutes = timeTracked[0]?.totalMinutes || 0;
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      return {
+        totalMinutes,
+        hours,
+        minutes,
+        formatted: `${hours}h ${minutes}m`,
+      };
+    } catch (error) {
+      console.error("Error fetching time tracked this week:", error);
+      return { totalMinutes: 0, hours: 0, minutes: 0, formatted: '0h 0m' };
+    }
+  }
+
+  private async getTeamWorkloadData(): Promise<any> {
+    try {
+      const teamWorkload = await db
+        .select({
+          staffId: staff.id,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          taskCount: sql<number>`count(${tasks.id})::int`,
+        })
+        .from(staff)
+        .leftJoin(
+          tasks,
+          and(
+            eq(tasks.assignedTo, staff.id),
+            ne(tasks.status, 'completed'),
+            ne(tasks.status, 'cancelled')
+          )
+        )
+        .where(eq(staff.isActive, true))
+        .groupBy(staff.id, staff.firstName, staff.lastName)
+        .orderBy(desc(sql<number>`count(${tasks.id})`))
+        .limit(10);
+
+      return teamWorkload.map(member => ({
+        staffId: member.staffId,
+        staffName: `${member.firstName} ${member.lastName}`,
+        taskCount: member.taskCount,
+        capacity: member.taskCount > 10 ? 'high' : member.taskCount > 5 ? 'medium' : 'low',
+      }));
+    } catch (error) {
+      console.error("Error fetching team workload:", error);
       return [];
     }
   }
