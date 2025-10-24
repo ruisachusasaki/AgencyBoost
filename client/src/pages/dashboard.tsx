@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -620,36 +621,64 @@ export default function Dashboard() {
                       {widgetSearchTerm ? "No widgets match your search" : "All available widgets have been added to your dashboard"}
                     </p>
                   ) : (
-                    availableToAdd.map((widget) => (
-                      <Card
-                        key={widget.id}
-                        className="cursor-pointer hover:bg-accent transition-colors"
-                        onClick={() => addWidgetMutation.mutate(widget.type)}
-                        data-testid={`card-available-widget-${widget.type}`}
-                      >
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <CardTitle className="text-base">{widget.name}</CardTitle>
-                              <CardDescription className="text-sm mt-1">
-                                {widget.description}
-                              </CardDescription>
+                    availableToAdd.map((widget) => {
+                      // Format category for display
+                      const categoryDisplay = widget.category
+                        ?.split('_')
+                        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ') || 'General';
+                      
+                      // Color mapping for categories
+                      const categoryColors: Record<string, string> = {
+                        'client_management': 'bg-blue-100 text-blue-800 border-blue-200',
+                        'sales_revenue': 'bg-green-100 text-green-800 border-green-200',
+                        'sales': 'bg-green-100 text-green-800 border-green-200',
+                        'tasks': 'bg-purple-100 text-purple-800 border-purple-200',
+                        'analytics': 'bg-orange-100 text-orange-800 border-orange-200',
+                      };
+                      
+                      const categoryColor = categoryColors[widget.category] || 'bg-gray-100 text-gray-800 border-gray-200';
+                      
+                      return (
+                        <Card
+                          key={widget.id}
+                          className="cursor-pointer hover:bg-accent transition-colors"
+                          onClick={() => addWidgetMutation.mutate(widget.type)}
+                          data-testid={`card-available-widget-${widget.type}`}
+                        >
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <CardTitle className="text-base">{widget.name}</CardTitle>
+                                  <Badge 
+                                    variant="outline" 
+                                    className={`text-xs ${categoryColor}`}
+                                    data-testid={`badge-category-${widget.type}`}
+                                  >
+                                    {categoryDisplay}
+                                  </Badge>
+                                </div>
+                                <CardDescription className="text-sm mt-1">
+                                  {widget.description}
+                                </CardDescription>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addWidgetMutation.mutate(widget.type);
+                                }}
+                                data-testid={`button-add-${widget.type}`}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                addWidgetMutation.mutate(widget.type);
-                              }}
-                              data-testid={`button-add-${widget.type}`}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    ))
+                          </CardHeader>
+                        </Card>
+                      );
+                    })
                   )}
                 </div>
               </ScrollArea>
