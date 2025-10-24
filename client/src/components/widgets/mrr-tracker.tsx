@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LineChart, Trash2, GripVertical } from "lucide-react";
+import { LineChart, Trash2, GripVertical, ExternalLink } from "lucide-react";
+import { Link } from "wouter";
 
 interface WidgetProps {
   userWidget: any;
@@ -28,15 +29,27 @@ export default function MRRTrackerWidget({ userWidget, onRemove }: WidgetProps) 
             </CardDescription>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onRemove}
-          data-testid="button-remove-widget"
-          className="h-8 w-8 p-0 flex-shrink-0"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Link href="/reports">
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="button-link-mrr-report"
+              className="h-8 w-8 p-0 flex-shrink-0"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            data-testid="button-remove-widget"
+            className="h-8 w-8 p-0 flex-shrink-0"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
