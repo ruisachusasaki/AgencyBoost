@@ -66,6 +66,7 @@ import {
   type ClientTeamAssignment, type InsertClientTeamAssignment, clientTeamAssignments,
   type UserViewPreference, type InsertUserViewPreference, userViewPreferences,
   type SalesSettings, type InsertSalesSettings, salesSettings,
+  type SalesTarget, type InsertSalesTarget, type UpdateSalesTarget, salesTargets,
   type Dashboard, type InsertDashboard, dashboards,
   type DashboardWidget, type InsertDashboardWidget, dashboardWidgets,
   type UserDashboardWidget, type InsertUserDashboardWidget, userDashboardWidgets,
@@ -427,6 +428,14 @@ export interface IStorage {
   // Sales Settings
   getSalesSettings(): Promise<SalesSettings | undefined>;
   updateSalesSettings(settings: Partial<InsertSalesSettings>): Promise<SalesSettings>;
+  
+  // Sales Targets
+  getSalesTargets(): Promise<SalesTarget[]>;
+  getSalesTarget(id: string): Promise<SalesTarget | undefined>;
+  getSalesTargetByMonth(year: number, month: number): Promise<SalesTarget | undefined>;
+  createSalesTarget(target: InsertSalesTarget): Promise<SalesTarget>;
+  updateSalesTarget(id: string, target: Partial<UpdateSalesTarget>): Promise<SalesTarget | undefined>;
+  deleteSalesTarget(id: string): Promise<boolean>;
   
   // Custom Field File Uploads
   getCustomFieldFileUploads(clientId: string, customFieldId: string): Promise<CustomFieldFileUpload[]>;
@@ -6036,6 +6045,83 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error("Error updating sales settings:", error);
       throw error;
+    }
+  }
+
+  // Sales Targets - Database Implementation
+  async getSalesTargets(): Promise<SalesTarget[]> {
+    try {
+      const result = await db.select().from(salesTargets).orderBy(desc(salesTargets.year), desc(salesTargets.month));
+      return result;
+    } catch (error) {
+      console.error("Error getting sales targets:", error);
+      return [];
+    }
+  }
+
+  async getSalesTarget(id: string): Promise<SalesTarget | undefined> {
+    try {
+      const result = await db.select().from(salesTargets).where(eq(salesTargets.id, id)).limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error getting sales target:", error);
+      return undefined;
+    }
+  }
+
+  async getSalesTargetByMonth(year: number, month: number): Promise<SalesTarget | undefined> {
+    try {
+      const result = await db.select()
+        .from(salesTargets)
+        .where(and(eq(salesTargets.year, year), eq(salesTargets.month, month)))
+        .limit(1);
+      return result[0];
+    } catch (error) {
+      console.error("Error getting sales target by month:", error);
+      return undefined;
+    }
+  }
+
+  async createSalesTarget(target: InsertSalesTarget): Promise<SalesTarget> {
+    try {
+      const [created] = await db.insert(salesTargets)
+        .values({
+          id: randomUUID(),
+          ...target,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      return created;
+    } catch (error) {
+      console.error("Error creating sales target:", error);
+      throw error;
+    }
+  }
+
+  async updateSalesTarget(id: string, target: Partial<UpdateSalesTarget>): Promise<SalesTarget | undefined> {
+    try {
+      const [updated] = await db.update(salesTargets)
+        .set({
+          ...target,
+          updatedAt: new Date()
+        })
+        .where(eq(salesTargets.id, id))
+        .returning();
+      return updated;
+    } catch (error) {
+      console.error("Error updating sales target:", error);
+      return undefined;
+    }
+  }
+
+  async deleteSalesTarget(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(salesTargets).where(eq(salesTargets.id, id));
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      console.error("Error deleting sales target:", error);
+      return false;
     }
   }
 
