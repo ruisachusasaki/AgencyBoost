@@ -20,7 +20,7 @@ export default function TasksByStatusWidget({ userWidget, onRemove }: WidgetProp
     cancelled: { label: 'Cancelled', color: 'bg-gray-400' },
   };
 
-  const total = data ? data.todo + data.in_progress + data.completed + data.cancelled : 0;
+  const total = data ? (data.todo || 0) + (data.in_progress || 0) + (data.completed || 0) + (data.cancelled || 0) : 0;
 
   const getPercentage = (value: number) => {
     return total > 0 ? ((value / total) * 100).toFixed(0) : '0';
