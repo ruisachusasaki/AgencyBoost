@@ -7,9 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Settings, Trash2, Search, MoreVertical, Star, Edit, Home } from "lucide-react";
+import { Plus, Settings, Trash2, Search, MoreVertical, Star, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import GridLayout, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -660,20 +659,25 @@ export default function Dashboard() {
       </div>
 
       {dashboards.length > 1 && (
-        <Tabs value={selectedDashboardId || ""} onValueChange={handleDashboardSwitch}>
-          <TabsList data-testid="tabs-dashboards">
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="-mb-px flex space-x-8" data-testid="tabs-dashboards">
             {dashboards.map((dashboard) => (
-              <TabsTrigger
+              <button
                 key={dashboard.id}
-                value={dashboard.id}
+                onClick={() => handleDashboardSwitch(dashboard.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                  selectedDashboardId === dashboard.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
                 data-testid={`tab-dashboard-${dashboard.id}`}
               >
-                {dashboard.isDefault && <Home className="h-3 w-3 mr-1" />}
+                {dashboard.isDefault && <Star className="h-4 w-4" />}
                 {dashboard.name}
-              </TabsTrigger>
+              </button>
             ))}
-          </TabsList>
-        </Tabs>
+          </nav>
+        </div>
       )}
 
       {!selectedDashboardId ? (
