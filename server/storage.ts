@@ -7273,6 +7273,8 @@ export class DbStorage implements IStorage {
     try {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
       
       // Calculate revenue from accepted quotes this month
       const revenue = await db
@@ -7291,8 +7293,9 @@ export class DbStorage implements IStorage {
           )
         );
 
-      // Mock target - could be stored in settings
-      const target = 100000;
+      // Fetch target for current month from database
+      const targetRecord = await this.getSalesTargetByMonth(currentYear, currentMonth);
+      const target = targetRecord ? parseFloat(targetRecord.targetAmount as string) : 0;
       const actual = revenue[0]?.total || 0;
       const percentage = target > 0 ? ((actual / target) * 100).toFixed(1) : '0.0';
 
