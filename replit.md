@@ -31,7 +31,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Task Management**: Hierarchical sub-tasks, dependencies, recurring tasks, bulk actions, and dynamic project progress.
 - **Communication**: Smart Lists, Email/SMS with DND, document management, notes, calendar management with dynamic merge tags, and unified templating. Calendar views support filtering by selected calendars.
 - **Automation System**: GoHighLevel-style, API-driven, database-backed workflow engine with 25+ trigger definitions across various categories (Contact, Form, HR, Client Lifecycle) and 7 action types. Features conditional evaluation, trigger emission system, execution logging, variable interpolation, and non-blocking execution.
-- **Client Management**: Client team assignment, health scoring, and an asset approval workflow with annotation capabilities. Includes per-user customizable and saveable column views for client tables.
+- **Client Management**: Client team assignment, health scoring, and an asset approval workflow with annotation capabilities. Includes per-user customizable and saveable column views for client tables. Client detail page includes Billing Information section with inline-editable MRR (Monthly Recurring Revenue) and Client Vertical fields for categorization and revenue tracking.
 - **HR Features**: Time off requests with pagination, job application form configuration, job application watchers, and expense report management with configurable fields and submission tracking.
 - **Sales Reports**: Pipeline and Sales Rep Reports with date range filtering and optimized data aggregation.
 - **Sales Settings**: Dynamic minimum margin threshold configuration for quotes, applied to validations and indicators.
