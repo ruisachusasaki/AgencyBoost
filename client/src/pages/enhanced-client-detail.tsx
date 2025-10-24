@@ -1786,8 +1786,7 @@ export default function EnhancedClientDetail() {
 
   // State management
   const [sections, setSections] = useState<Section[]>([
-    { id: "contact-details", name: "Contact Details", isOpen: true },
-    { id: "billing-info", name: "Billing Information", isOpen: true }
+    { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
   const [activeRightSection, setActiveRightSection] = useState<"notes">("notes");
   const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team" | "health">("notes");
@@ -4292,42 +4291,34 @@ export default function EnhancedClientDetail() {
                     )}
                   </div>
                 ))}
-                
-                {/* Billing Information Section */}
-                <div className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
-                  <button
-                    onClick={() => toggleSection('billing-info')}
-                    className="flex items-center justify-between w-full text-left mb-3"
-                  >
-                    <span className="font-medium text-gray-900">Billing Information</span>
-                    {isSectionOpen('billing-info') ? (
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-gray-500" />
-                    )}
-                  </button>
-                  
-                  {isSectionOpen('billing-info') && (
-                    <div className="space-y-4">
-                      <EditableField
-                        fieldId="clientVertical"
-                        label="Client Vertical"
-                        value={client.clientVertical ?? ""}
-                        type="text"
-                        isCustomField={false}
-                        {...editableFieldProps}
-                      />
-                      <EditableField
-                        fieldId="mrr"
-                        label="Monthly Recurring Revenue (MRR)"
-                        value={client.mrr ?? ""}
-                        type="number"
-                        isCustomField={false}
-                        {...editableFieldProps}
-                      />
-                    </div>
-                  )}
-                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Billing Card - Separate from Contact Information */}
+            <Card className="mt-6">
+              <CardHeader>
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-primary" />
+                  Billing
+                </h2>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <EditableField
+                  fieldId="clientVertical"
+                  label="Client Vertical"
+                  value={client.clientVertical ?? ""}
+                  type="text"
+                  isCustomField={false}
+                  {...editableFieldProps}
+                />
+                <EditableField
+                  fieldId="mrr"
+                  label="Monthly Recurring Revenue (MRR)"
+                  value={client.mrr ?? ""}
+                  type="number"
+                  isCustomField={false}
+                  {...editableFieldProps}
+                />
               </CardContent>
             </Card>
 
