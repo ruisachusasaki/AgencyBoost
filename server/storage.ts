@@ -6389,10 +6389,8 @@ export class DbStorage implements IStorage {
         website: clients.website,
         notes: clients.notes,
         tags: clients.tags,
-        clientVertical: clients.clientVertical,
         contactOwner: clients.contactOwner,
         profileImage: clients.profileImage,
-        mrr: clients.mrr,
         invoicingContact: clients.invoicingContact,
         invoicingEmail: clients.invoicingEmail,
         paymentTerms: clients.paymentTerms,
@@ -6453,8 +6451,25 @@ export class DbStorage implements IStorage {
       
       const clientsResult = await query;
       
+      // Custom field IDs for MRR and Client Vertical
+      const MRR_FIELD_ID = '4e8e946b-1744-4d7c-a417-cdcb2713c6ca';
+      const CLIENT_VERTICAL_FIELD_ID = 'cac6e6ee-bdf9-48bd-81a7-48672d2453ae';
+      
+      // Add MRR and Client Vertical from custom fields
+      const clientsWithCustomFields = clientsResult.map(client => {
+        const customFields = (client.customFieldValues as Record<string, any>) || {};
+        const mrrValue = customFields[MRR_FIELD_ID];
+        const clientVerticalValue = customFields[CLIENT_VERTICAL_FIELD_ID];
+        
+        return {
+          ...client,
+          mrr: mrrValue ? String(mrrValue) : null,
+          clientVertical: clientVerticalValue ? String(clientVerticalValue) : null,
+        };
+      });
+      
       return {
-        clients: clientsResult,
+        clients: clientsWithCustomFields as any,
         total
       };
     } catch (error) {
@@ -6833,20 +6848,35 @@ export class DbStorage implements IStorage {
 
   private async getClientDistributionByVerticalData(): Promise<any> {
     try {
-      const distribution = await db
+      const CLIENT_VERTICAL_FIELD_ID = 'cac6e6ee-bdf9-48bd-81a7-48672d2453ae';
+      
+      // Get all non-archived clients with their custom field values
+      const allClients = await db
         .select({
-          vertical: clients.clientVertical,
-          count: sql<number>`count(*)::int`,
+          id: clients.id,
+          customFieldValues: clients.customFieldValues,
         })
         .from(clients)
-        .where(eq(clients.isArchived, false))
-        .groupBy(clients.clientVertical)
-        .orderBy(desc(sql`count(*)`));
+        .where(eq(clients.isArchived, false));
 
-      return distribution.map(d => ({
-        vertical: d.vertical || 'Uncategorized',
-        count: d.count,
-      }));
+      // Extract verticals and count them
+      const verticalCounts: Record<string, number> = {};
+      
+      allClients.forEach(client => {
+        const customFields = (client.customFieldValues as Record<string, any>) || {};
+        const vertical = customFields[CLIENT_VERTICAL_FIELD_ID] || 'Uncategorized';
+        verticalCounts[vertical] = (verticalCounts[vertical] || 0) + 1;
+      });
+
+      // Convert to array and sort by count descending
+      const distribution = Object.entries(verticalCounts)
+        .map(([vertical, count]) => ({
+          vertical,
+          count,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      return distribution;
     } catch (error) {
       console.error("Error fetching client distribution by vertical:", error);
       return [];
@@ -7047,47 +7077,53 @@ export class DbStorage implements IStorage {
 
   private async getMRRTrackerData(assignedClientIds: string[]): Promise<any> {
     try {
-      // Get total MRR from active clients' billing MRR field
-      const mrrResult = await db
+      // MRR custom field ID
+      const MRR_FIELD_ID = '4e8e946b-1744-4d7c-a417-cdcb2713c6ca';
+      
+      // Get all active clients with their custom field values
+      const activeClients = await db
         .select({
-          totalMrr: sql<number>`sum(COALESCE(${clients.mrr}, 0))::numeric`,
-          clientCount: sql<number>`count(*)::int`,
+          id: clients.id,
+          name: clients.name,
+          customFieldValues: clients.customFieldValues,
         })
         .from(clients)
         .where(
           and(
             eq(clients.status, 'active'),
-            isNotNull(clients.mrr),
             assignedClientIds.length > 0 
               ? inArray(clients.id, assignedClientIds)
               : undefined
           )
         );
 
-      // Get breakdown by client for detailed view
-      const clientMrrBreakdown = await db
-        .select({
-          clientId: clients.id,
-          clientName: clients.name,
-          mrr: clients.mrr,
+      // Extract MRR values from custom fields and calculate totals
+      const clientsWithMrr = activeClients
+        .map(client => {
+          const customFields = (client.customFieldValues as Record<string, any>) || {};
+          const mrrValue = customFields[MRR_FIELD_ID];
+          const mrr = mrrValue ? parseFloat(String(mrrValue)) : 0;
+          
+          return {
+            clientId: client.id,
+            clientName: client.name,
+            mrr: mrr,
+          };
         })
-        .from(clients)
-        .where(
-          and(
-            eq(clients.status, 'active'),
-            isNotNull(clients.mrr),
-            assignedClientIds.length > 0 
-              ? inArray(clients.id, assignedClientIds)
-              : undefined
-          )
-        )
-        .orderBy(desc(clients.mrr))
-        .limit(10);
+        .filter(client => client.mrr > 0); // Only include clients with MRR > 0
+
+      // Calculate total MRR
+      const totalMrr = clientsWithMrr.reduce((sum, client) => sum + client.mrr, 0);
+      
+      // Sort by MRR descending and get top 10
+      const topClients = clientsWithMrr
+        .sort((a, b) => b.mrr - a.mrr)
+        .slice(0, 10);
 
       return {
-        totalMrr: parseFloat(mrrResult[0]?.totalMrr || '0'),
-        clientCount: mrrResult[0]?.clientCount || 0,
-        topClients: clientMrrBreakdown,
+        totalMrr: totalMrr,
+        clientCount: clientsWithMrr.length,
+        topClients: topClients,
       };
     } catch (error) {
       console.error("Error fetching MRR tracker data:", error);

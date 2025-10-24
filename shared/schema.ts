@@ -370,12 +370,10 @@ export const clients = pgTable("clients", {
   website: text("website"),
   notes: text("notes"),
   tags: text("tags").array(),
-  clientVertical: text("client_vertical"), // Live Events, Financial Lead Gen
   contactOwner: uuid("contact_owner").references(() => staff.id),
   profileImage: text("profile_image"),
   
   // Billing information
-  mrr: decimal("mrr", { precision: 10, scale: 2 }),
   invoicingContact: text("invoicing_contact"),
   invoicingEmail: text("invoicing_email"),
   paymentTerms: text("payment_terms"), // due_upon_receipt, net_7, net_30
