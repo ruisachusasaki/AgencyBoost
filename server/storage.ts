@@ -7582,8 +7582,8 @@ export class DbStorage implements IStorage {
       startOfToday.setHours(0, 0, 0, 0);
       
       // End of this week (Saturday at 11:59:59 PM)
-      const endOfWeek = new Date();
-      endOfWeek.setDate(startOfToday.getDate() + (6 - startOfToday.getDay())); // End of Saturday
+      const endOfWeek = new Date(startOfToday);
+      endOfWeek.setDate(endOfWeek.getDate() + (6 - startOfToday.getDay())); // End of Saturday
       endOfWeek.setHours(23, 59, 59, 999);
 
       const tasksDueThisWeek = await db
