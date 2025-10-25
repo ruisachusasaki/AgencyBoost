@@ -7596,8 +7596,8 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(tasks.assignedTo, userId),
-            gt(tasks.dueDate, now),
-            lt(tasks.dueDate, endOfWeek),
+            sql`${tasks.dueDate} > ${now.toISOString()}`,
+            sql`${tasks.dueDate} < ${endOfWeek.toISOString()}`,
             ne(tasks.status, 'completed'),
             ne(tasks.status, 'cancelled')
           )
@@ -7624,7 +7624,7 @@ export class DbStorage implements IStorage {
           and(
             eq(tasks.assignedTo, userId),
             eq(tasks.status, 'completed'),
-            gt(tasks.updatedAt, thirtyDaysAgo)
+            sql`${tasks.completedAt} > ${thirtyDaysAgo.toISOString()}`
           )
         );
 
@@ -7634,7 +7634,7 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(tasks.assignedTo, userId),
-            gt(tasks.createdAt, thirtyDaysAgo)
+            sql`${tasks.createdAt} > ${thirtyDaysAgo.toISOString()}`
           )
         );
 
@@ -7736,7 +7736,7 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(tasks.assignedTo, userId),
-            gt(tasks.updatedAt, startOfWeek)
+            sql`${tasks.createdAt} >= ${startOfWeek.toISOString()}`
           )
         );
 
