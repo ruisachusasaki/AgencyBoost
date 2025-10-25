@@ -7728,19 +7728,17 @@ export class DbStorage implements IStorage {
       startOfWeek.setDate(now.getDate() - now.getDay()); // Start of this week (Sunday)
       startOfWeek.setHours(0, 0, 0, 0);
 
-      const timeTracked = await db
-        .select({
-          totalMinutes: sql<number>`sum(COALESCE(${tasks.timeTracked}, 0))::int`,
-        })
-        .from(tasks)
-        .where(
-          and(
-            eq(tasks.assignedTo, userId),
-            sql`${tasks.createdAt} >= ${startOfWeek.toISOString()}`
-          )
-        );
+      // Use SQL to filter and sum time entries from this week
+      // This is more reliable than parsing JSONB in TypeScript
+      const result = await db.execute(sql`
+        SELECT COALESCE(SUM((entry->>'duration')::int), 0) as total_minutes
+        FROM ${tasks} t,
+        jsonb_array_elements(t.time_entries) AS entry
+        WHERE t.assigned_to = ${userId}
+        AND (entry->>'endTime')::timestamp >= ${startOfWeek}::timestamp
+      `);
 
-      const totalMinutes = timeTracked[0]?.totalMinutes || 0;
+      const totalMinutes = Number(result.rows[0]?.total_minutes || 0);
       const hours = Math.floor(totalMinutes / 60);
       const minutes = totalMinutes % 60;
 

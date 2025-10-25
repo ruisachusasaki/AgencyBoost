@@ -84,7 +84,12 @@ export default function OverdueTasksWidget({ userWidget, onRemove }: WidgetProps
                   </div>
                   {task.dueDate && (
                     <p className="text-xs text-destructive mt-1 font-medium">
-                      Due: {format(new Date(task.dueDate), 'MMM d, yyyy')}
+                      Due: {(() => {
+                        const dateStr = task.dueDate.includes('T') ? task.dueDate.split('T')[0] : task.dueDate.split(' ')[0];
+                        const [year, month, day] = dateStr.split('-').map(Number);
+                        const date = new Date(year, month - 1, day, 12, 0, 0);
+                        return format(date, 'MMM d, yyyy');
+                      })()}
                     </p>
                   )}
                 </div>
