@@ -7577,9 +7577,13 @@ export class DbStorage implements IStorage {
 
   private async getTasksDueThisWeekData(userId: string): Promise<any> {
     try {
-      const now = new Date();
+      // Start of today (midnight)
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      
+      // End of this week (Saturday at 11:59:59 PM)
       const endOfWeek = new Date();
-      endOfWeek.setDate(now.getDate() + (7 - now.getDay())); // End of this week (Sunday)
+      endOfWeek.setDate(startOfToday.getDate() + (6 - startOfToday.getDay())); // End of Saturday
       endOfWeek.setHours(23, 59, 59, 999);
 
       const tasksDueThisWeek = await db
@@ -7596,8 +7600,8 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(tasks.assignedTo, userId),
-            sql`${tasks.dueDate} > ${now.toISOString()}`,
-            sql`${tasks.dueDate} < ${endOfWeek.toISOString()}`,
+            sql`${tasks.dueDate} >= ${startOfToday.toISOString()}`,
+            sql`${tasks.dueDate} <= ${endOfWeek.toISOString()}`,
             ne(tasks.status, 'completed'),
             ne(tasks.status, 'cancelled')
           )
