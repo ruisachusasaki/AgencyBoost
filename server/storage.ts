@@ -7596,8 +7596,8 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(tasks.assignedTo, userId),
-            sql`${tasks.dueDate} >= ${now.toISOString()}`,
-            sql`${tasks.dueDate} <= ${endOfWeek.toISOString()}`,
+            gt(tasks.dueDate, now),
+            lt(tasks.dueDate, endOfWeek),
             ne(tasks.status, 'completed'),
             ne(tasks.status, 'cancelled')
           )
@@ -7616,7 +7616,6 @@ export class DbStorage implements IStorage {
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
       const completedTasks = await db
         .select({ count: sql<number>`count(*)::int` })
@@ -7625,7 +7624,7 @@ export class DbStorage implements IStorage {
           and(
             eq(tasks.assignedTo, userId),
             eq(tasks.status, 'completed'),
-            sql`${tasks.updatedAt} > ${thirtyDaysAgoISO}::timestamp OR ${tasks.updatedAt} = ${thirtyDaysAgoISO}::timestamp`
+            gt(tasks.updatedAt, thirtyDaysAgo)
           )
         );
 
@@ -7635,7 +7634,7 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(tasks.assignedTo, userId),
-            sql`${tasks.createdAt} > ${thirtyDaysAgoISO}::timestamp OR ${tasks.createdAt} = ${thirtyDaysAgoISO}::timestamp`
+            gt(tasks.createdAt, thirtyDaysAgo)
           )
         );
 
@@ -7728,7 +7727,6 @@ export class DbStorage implements IStorage {
       const startOfWeek = new Date();
       startOfWeek.setDate(now.getDate() - now.getDay()); // Start of this week (Sunday)
       startOfWeek.setHours(0, 0, 0, 0);
-      const startOfWeekISO = startOfWeek.toISOString();
 
       const timeTracked = await db
         .select({
@@ -7738,7 +7736,7 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(tasks.assignedTo, userId),
-            sql`${tasks.updatedAt} > ${startOfWeekISO}::timestamp OR ${tasks.updatedAt} = ${startOfWeekISO}::timestamp`
+            gt(tasks.updatedAt, startOfWeek)
           )
         );
 
