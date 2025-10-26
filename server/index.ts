@@ -4,7 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./replitAuth";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users } from "@shared/schema";
+import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets } from "@shared/schema";
 
 /**
  * Startup migration to ensure client brief columns exist
@@ -613,6 +613,157 @@ async function initializeDefaultExpenseReportFormFields() {
   }
 }
 
+/**
+ * Initialize HR & Team Dashboard Widgets
+ * Creates widget definitions for HR features with proper permission controls
+ */
+async function initializeHRTeamWidgets() {
+  try {
+    log("Running startup migration: initializeHRTeamWidgets");
+    
+    // Define the HR & Team widgets with proper permissions
+    const hrTeamWidgets = [
+      {
+        type: 'pending_time_off_requests',
+        name: 'Pending Time Off Requests',
+        description: 'Requests awaiting approval',
+        category: 'hr_team',
+        icon: 'Calendar',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: ['Admin', 'Manager'], // Only HR managers can see
+        isActive: true
+      },
+      {
+        type: 'whos_off_today_week',
+        name: "Who's Off Today/This Week",
+        description: 'Team members on PTO',
+        category: 'hr_team',
+        icon: 'Users',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: null, // All staff can see who's off
+        isActive: true
+      },
+      {
+        type: 'new_job_applications',
+        name: 'New Job Applications',
+        description: 'Recent applications by position',
+        category: 'hr_team',
+        icon: 'Briefcase',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: ['Admin', 'Manager'], // Only HR managers can see
+        isActive: true
+      },
+      {
+        type: 'onboarding_queue',
+        name: 'Onboarding Queue',
+        description: 'New hire submissions pending review',
+        category: 'hr_team',
+        icon: 'UserPlus',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: ['Admin', 'Manager'], // Only HR managers can see
+        isActive: true
+      },
+      {
+        type: 'pending_expense_reports',
+        name: 'Pending Expense Reports',
+        description: 'Expense submissions awaiting approval',
+        category: 'hr_team',
+        icon: 'DollarSign',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: ['Admin', 'Manager', 'Accounting'], // Managers and accounting can see
+        isActive: true
+      },
+      {
+        type: 'team_capacity_alerts',
+        name: 'Team Capacity Alerts',
+        description: 'Predictive hiring notifications',
+        category: 'hr_team',
+        icon: 'AlertTriangle',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: ['Admin', 'Manager'], // Only managers can see
+        isActive: true
+      },
+      {
+        type: 'team_birthday_anniversary',
+        name: 'Team Birthday/Anniversary Calendar',
+        description: 'Upcoming celebrations',
+        category: 'hr_team',
+        icon: 'Gift',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: null, // All staff can see celebrations
+        isActive: true
+      },
+      {
+        type: 'training_completion_status',
+        name: 'Training Completion Status',
+        description: 'Course completion rates',
+        category: 'hr_team',
+        icon: 'GraduationCap',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: ['Admin', 'Manager'], // Only managers can see
+        isActive: true
+      }
+    ];
+
+    // Check if widgets already exist and insert only new ones
+    for (const widget of hrTeamWidgets) {
+      const existing = await db.select().from(dashboardWidgets).where(eq(dashboardWidgets.type, widget.type)).limit(1);
+      
+      if (existing.length === 0) {
+        await db.insert(dashboardWidgets).values(widget);
+        log(`Created widget: ${widget.name}`);
+      } else {
+        log(`Widget already exists: ${widget.name} - skipping`);
+      }
+    }
+
+    log("HR & Team widgets initialization completed successfully");
+  } catch (error: any) {
+    log(`HR & Team widgets initialization error: ${error.message}`);
+    log("WARNING: HR & Team widgets initialization failed - widgets may not be available");
+  }
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -658,6 +809,7 @@ app.use((req, res, next) => {
   await generateAnniversaryAndBirthdayEvents();
   await initializeDefaultTeamPositions();
   await initializeDefaultExpenseReportFormFields();
+  await initializeHRTeamWidgets();
   
   // Setup Replit Auth
   await setupAuth(app);
