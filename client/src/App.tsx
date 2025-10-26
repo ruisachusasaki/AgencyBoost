@@ -44,6 +44,7 @@ import PermissionAudit from "@/pages/settings/permission-audit";
 import TasksSettings from "@/pages/settings/tasks";
 import AutomationTriggers from "@/pages/settings/automation-triggers";
 import SalesSettings from "@/pages/settings/sales";
+import LeadsSettings from "@/pages/settings/leads";
 import MainLayout from "@/components/layout/main-layout";
 import FormBuilder from "@/pages/form-builder";
 import FormsTest from "@/pages/forms-test";
@@ -473,6 +474,16 @@ function Router() {
           <AuthGate>
             <MainLayout>
               <SalesSettings />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/leads">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <LeadsSettings />
             </MainLayout>
           </AuthGate>
         )}
