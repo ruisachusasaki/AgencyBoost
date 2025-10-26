@@ -432,7 +432,6 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                                   {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                                 </div>
                                 {user.firstName} {user.lastName}
-                                <span className="text-xs text-muted-foreground">({user.role})</span>
                               </div>
                             </SelectItem>
                           ))}
