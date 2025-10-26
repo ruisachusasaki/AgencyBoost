@@ -44,6 +44,14 @@ import MyAssignedLeadsWidget from "@/components/widgets/my-assigned-leads";
 import StaleLeadsWidget from "@/components/widgets/stale-leads";
 import LeadConversionRateWidget from "@/components/widgets/lead-conversion-rate";
 import LeadSourceBreakdownWidget from "@/components/widgets/lead-source-breakdown";
+import PendingTimeOffWidget from "@/components/widgets/pending-time-off";
+import WhosOffTodayWeekWidget from "@/components/widgets/whos-off-today-week";
+import NewJobApplicationsWidget from "@/components/widgets/new-job-applications";
+import OnboardingQueueWidget from "@/components/widgets/onboarding-queue";
+import PendingExpenseReportsWidget from "@/components/widgets/pending-expense-reports";
+import TeamCapacityAlertsWidget from "@/components/widgets/team-capacity-alerts";
+import TeamBirthdayAnniversaryWidget from "@/components/widgets/team-birthday-anniversary";
+import TrainingCompletionWidget from "@/components/widgets/training-completion";
 
 interface Dashboard {
   id: string;
@@ -404,6 +412,22 @@ export default function Dashboard() {
         return <LeadConversionRateWidget {...props} />;
       case "lead_source_breakdown":
         return <LeadSourceBreakdownWidget {...props} />;
+      case "pending_time_off_requests":
+        return <PendingTimeOffWidget {...props} />;
+      case "whos_off_today_week":
+        return <WhosOffTodayWeekWidget {...props} />;
+      case "new_job_applications":
+        return <NewJobApplicationsWidget {...props} />;
+      case "onboarding_queue":
+        return <OnboardingQueueWidget {...props} />;
+      case "pending_expense_reports":
+        return <PendingExpenseReportsWidget {...props} />;
+      case "team_capacity_alerts":
+        return <TeamCapacityAlertsWidget {...props} />;
+      case "team_birthday_anniversary":
+        return <TeamBirthdayAnniversaryWidget {...props} />;
+      case "training_completion_status":
+        return <TrainingCompletionWidget {...props} />;
       default:
         return (
           <Card>
