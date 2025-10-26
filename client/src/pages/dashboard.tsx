@@ -821,6 +821,15 @@ export default function Dashboard() {
                   >
                     Leads
                   </Button>
+                  <Button
+                    variant={widgetCategoryFilter === "hr_team" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setWidgetCategoryFilter("hr_team")}
+                    data-testid="filter-category-hr-team"
+                    className={widgetCategoryFilter === "hr_team" ? "bg-orange-600 hover:bg-orange-700" : ""}
+                  >
+                    HR & Team
+                  </Button>
                 </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -854,6 +863,7 @@ export default function Dashboard() {
                         'sales': 'bg-green-100 text-green-800 border-green-200',
                         'tasks': 'bg-purple-100 text-purple-800 border-purple-200',
                         'lead_management': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                        'hr_team': 'bg-orange-100 text-orange-800 border-orange-200',
                         'analytics': 'bg-orange-100 text-orange-800 border-orange-200',
                       };
                       
