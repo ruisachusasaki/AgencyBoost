@@ -35,6 +35,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **HR Features**: Time off requests with pagination, job application form configuration, job application watchers, and expense report management with configurable fields and submission tracking.
 - **Sales Reports**: Pipeline and Sales Rep Reports with date range filtering and optimized data aggregation.
 - **Sales Settings**: Dynamic minimum margin threshold configuration for quotes, applied to validations and indicators.
+- **Lead Management**: Customizable lead source options managed through Settings > Leads page. Admins can add, edit, reorder, and toggle active/inactive status of lead sources. The lead creation/edit form dynamically loads active sources from the database. Default sources include Website, Referral, Social Media, Advertising, and Cold Outreach.
 - **Quote to Client Products Transfer**: Automatic transfer of accepted quote products/bundles to client's profile with duplicate prevention.
 - **Predictive Hiring Alerts**: Staffing capacity prediction based on pipeline data and close rates, with configurable alerts, visual predictions, and manual notification triggers.
 - **Team Workload Reports**: Comprehensive analytics with filtering, search, and pagination for detailed staff workload tables.
