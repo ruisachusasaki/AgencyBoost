@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Trash2, GripVertical } from "lucide-react";
+import { TrendingUp, Trash2, GripVertical, BarChart3 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Link } from "wouter";
 
 interface WidgetProps {
   userWidget: any;
@@ -29,15 +30,28 @@ export default function TaskCompletionRateWidget({ userWidget, onRemove }: Widge
             </CardDescription>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onRemove}
-          data-testid="button-remove-widget"
-          className="h-8 w-8 p-0 flex-shrink-0"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Link href="/reports">
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="button-view-reports"
+              className="h-8 w-8 p-0"
+              title="View detailed task reports"
+            >
+              <BarChart3 className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            data-testid="button-remove-widget"
+            className="h-8 w-8 p-0"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
