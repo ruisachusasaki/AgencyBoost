@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Trash2, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { Link } from "wouter";
 
 interface WidgetProps {
   userWidget: any;
@@ -59,32 +60,37 @@ export default function TasksDueThisWeekWidget({ userWidget, onRemove }: WidgetP
           <div className="space-y-2 max-h-[400px] overflow-y-auto">
             {data && data.length > 0 ? (
               data.map((task: any) => (
-                <div
+                <Link
                   key={task.id}
-                  data-testid={`week-task-item-${task.id}`}
-                  className="p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  href={`/tasks/${task.id}`}
+                  className="block mb-2"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate" data-testid={`task-title-${task.id}`}>
-                        {task.title}
-                      </p>
-                      {task.clientName && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {task.clientName}
+                  <div
+                    data-testid={`week-task-item-${task.id}`}
+                    className="p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate" data-testid={`task-title-${task.id}`}>
+                          {task.title}
                         </p>
-                      )}
+                        {task.clientName && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {task.clientName}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant={getPriorityColor(task.priority)} className="text-xs flex-shrink-0">
+                        {task.priority}
+                      </Badge>
                     </div>
-                    <Badge variant={getPriorityColor(task.priority)} className="text-xs flex-shrink-0">
-                      {task.priority}
-                    </Badge>
+                    {task.dueDate && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Due: {format(new Date(task.dueDate), 'EEE, MMM d')}
+                      </p>
+                    )}
                   </div>
-                  {task.dueDate && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Due: {format(new Date(task.dueDate), 'EEE, MMM d')}
-                    </p>
-                  )}
-                </div>
+                </Link>
               ))
             ) : (
               <div className="text-center py-8 text-muted-foreground">
