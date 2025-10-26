@@ -24385,6 +24385,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update dashboard order
+  app.post("/api/dashboards/reorder", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const updates = req.body.updates as Array<{ id: string; displayOrder: number }>;
+      if (!updates || !Array.isArray(updates)) {
+        return res.status(400).json({ error: "Invalid updates format" });
+      }
+
+      // Verify ownership of all dashboards
+      const userDashboards = await appStorage.getUserDashboards(userId);
+      const userDashboardIds = userDashboards.map(d => d.id);
+      
+      for (const update of updates) {
+        if (!userDashboardIds.includes(update.id)) {
+          return res.status(403).json({ error: "Unauthorized to update dashboard order" });
+        }
+      }
+
+      await appStorage.updateDashboardsOrder(updates);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating dashboard order:", error);
+      res.status(500).json({ message: "Failed to update dashboard order" });
+    }
+  });
+
   // =============================================================================
   // DASHBOARD WIDGETS ROUTES
   // =============================================================================

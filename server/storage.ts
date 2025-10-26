@@ -6717,7 +6717,7 @@ export class DbStorage implements IStorage {
         .select()
         .from(dashboards)
         .where(eq(dashboards.userId, userId))
-        .orderBy(desc(dashboards.isDefault), asc(dashboards.name));
+        .orderBy(asc(dashboards.displayOrder), desc(dashboards.isDefault), asc(dashboards.name));
       return result;
     } catch (error) {
       console.error("Error fetching user dashboards:", error);
@@ -6796,6 +6796,24 @@ export class DbStorage implements IStorage {
         .where(eq(dashboards.id, dashboardId));
     } catch (error) {
       console.error("Error setting default dashboard:", error);
+      throw error;
+    }
+  }
+
+  async updateDashboardsOrder(updates: Array<{ id: string; displayOrder: number }>): Promise<void> {
+    try {
+      // Update each dashboard's displayOrder
+      for (const update of updates) {
+        await db
+          .update(dashboards)
+          .set({ 
+            displayOrder: update.displayOrder,
+            updatedAt: new Date() 
+          })
+          .where(eq(dashboards.id, update.id));
+      }
+    } catch (error) {
+      console.error("Error updating dashboards order:", error);
       throw error;
     }
   }
