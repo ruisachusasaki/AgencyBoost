@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CustomFieldRenderer from "@/components/CustomFieldRenderer";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertLeadSchema, type Lead, type InsertLead, type CustomField, type CustomFieldFolder, type LeadPipelineStage, type Tag, type User } from "@shared/schema";
+import { insertLeadSchema, type Lead, type InsertLead, type CustomField, type CustomFieldFolder, type LeadPipelineStage, type Tag, type User, type LeadSource } from "@shared/schema";
 import { ArrowRight, UserPlus, X, Trash2, User as UserIcon, Calendar, NotebookPen, CheckSquare } from "lucide-react";
 import LeadAppointmentBooking from "@/components/forms/lead-appointment-booking";
 import LeadAppointmentsDisplay from "@/components/forms/lead-appointments-display";
@@ -52,6 +52,10 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
 
   const { data: staff = [] } = useQuery<User[]>({
     queryKey: ["/api/staff"],
+  });
+
+  const { data: leadSources = [] } = useQuery<LeadSource[]>({
+    queryKey: ["/api/lead-sources"],
   });
 
   // Initialize custom field values from existing lead data
@@ -338,11 +342,11 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="website">Website</SelectItem>
-                          <SelectItem value="referral">Referral</SelectItem>
-                          <SelectItem value="social_media">Social Media</SelectItem>
-                          <SelectItem value="advertising">Advertising</SelectItem>
-                          <SelectItem value="cold_outreach">Cold Outreach</SelectItem>
+                          {leadSources.filter(source => source.isActive).map((source) => (
+                            <SelectItem key={source.id} value={source.name} data-testid={`option-source-${source.name}`}>
+                              {source.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
