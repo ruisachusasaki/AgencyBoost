@@ -6984,7 +6984,7 @@ export class DbStorage implements IStorage {
           return await this.getTimeTrackedThisWeekData(userId);
         
         case 'team_workload':
-          return await this.getTeamWorkloadData();
+          return await this.getTeamWorkloadData(userId);
         
         default:
           return { error: 'Unknown widget type' };
@@ -7758,13 +7758,23 @@ export class DbStorage implements IStorage {
     }
   }
 
-  private async getTeamWorkloadData(): Promise<any> {
+  private async getTeamWorkloadData(userId: string): Promise<any> {
     try {
+      // Get the current user's department
+      const currentUser = await this.getStaffByUserId(userId);
+      if (!currentUser) {
+        return [];
+      }
+
+      const userDepartment = currentUser.department;
+
+      // Get team workload for staff in the same department
       const teamWorkload = await db
         .select({
           staffId: staff.id,
           firstName: staff.firstName,
           lastName: staff.lastName,
+          department: staff.department,
           taskCount: sql<number>`count(${tasks.id})::int`,
         })
         .from(staff)
@@ -7776,8 +7786,13 @@ export class DbStorage implements IStorage {
             ne(tasks.status, 'cancelled')
           )
         )
-        .where(eq(staff.isActive, true))
-        .groupBy(staff.id, staff.firstName, staff.lastName)
+        .where(
+          and(
+            eq(staff.isActive, true),
+            eq(staff.department, userDepartment)
+          )
+        )
+        .groupBy(staff.id, staff.firstName, staff.lastName, staff.department)
         .orderBy(desc(sql<number>`count(${tasks.id})`))
         .limit(10);
 
