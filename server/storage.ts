@@ -7780,12 +7780,17 @@ export class DbStorage implements IStorage {
   private async getTeamWorkloadData(userId: string): Promise<any> {
     try {
       // Get the current user's department
-      const currentUser = await this.getStaffByUserId(userId);
-      if (!currentUser) {
+      const currentUserResult = await db
+        .select()
+        .from(staff)
+        .where(eq(staff.id, userId))
+        .limit(1);
+      
+      if (!currentUserResult || currentUserResult.length === 0) {
         return [];
       }
 
-      const userDepartment = currentUser.department;
+      const userDepartment = currentUserResult[0].department;
 
       // Get team workload for staff in the same department
       const teamWorkload = await db

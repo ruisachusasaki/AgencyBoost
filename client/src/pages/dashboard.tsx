@@ -38,6 +38,12 @@ import TasksRequiringApprovalWidget from "@/components/widgets/tasks-requiring-a
 import TasksByStatusWidget from "@/components/widgets/tasks-by-status";
 import TimeTrackedThisWeekWidget from "@/components/widgets/time-tracked-this-week";
 import TeamWorkloadWidget from "@/components/widgets/team-workload";
+import NewLeadsTodayWeekWidget from "@/components/widgets/new-leads-today-week";
+import LeadsByPipelineStageWidget from "@/components/widgets/leads-by-pipeline-stage";
+import MyAssignedLeadsWidget from "@/components/widgets/my-assigned-leads";
+import StaleLeadsWidget from "@/components/widgets/stale-leads";
+import LeadConversionRateWidget from "@/components/widgets/lead-conversion-rate";
+import LeadSourceBreakdownWidget from "@/components/widgets/lead-source-breakdown";
 
 interface Dashboard {
   id: string;
@@ -369,6 +375,18 @@ export default function Dashboard() {
         return <TimeTrackedThisWeekWidget {...props} />;
       case "team_workload":
         return <TeamWorkloadWidget {...props} />;
+      case "new_leads_today_week":
+        return <NewLeadsTodayWeekWidget {...props} />;
+      case "leads_by_pipeline_stage":
+        return <LeadsByPipelineStageWidget {...props} />;
+      case "my_assigned_leads":
+        return <MyAssignedLeadsWidget {...props} />;
+      case "stale_leads":
+        return <StaleLeadsWidget {...props} />;
+      case "lead_conversion_rate":
+        return <LeadConversionRateWidget {...props} />;
+      case "lead_source_breakdown":
+        return <LeadSourceBreakdownWidget {...props} />;
       default:
         return (
           <Card>
