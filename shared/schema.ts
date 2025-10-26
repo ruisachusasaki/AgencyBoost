@@ -3457,6 +3457,7 @@ export const dashboards = pgTable("dashboards", {
   userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
   name: text("name").notNull(), // Dashboard name e.g., "Sales Dashboard", "My Dashboard"
   isDefault: boolean("is_default").default(false), // One default per user
+  displayOrder: integer("display_order").default(0), // Order for display in tabs/lists
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
