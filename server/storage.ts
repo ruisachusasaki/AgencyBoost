@@ -4,6 +4,7 @@ import {
   type Campaign, type InsertCampaign, campaigns,
   type Lead, type InsertLead, leads,
   type LeadPipelineStage, leadPipelineStages,
+  type LeadSource, type InsertLeadSource, leadSources,
   type Quote, type InsertQuote, quotes,
   type Task, type InsertTask, tasks,
   type Invoice, type InsertInvoice, invoices,
@@ -148,6 +149,14 @@ export interface IStorage {
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, lead: Partial<InsertLead>): Promise<Lead | undefined>;
   deleteLead(id: string): Promise<boolean>;
+  
+  // Lead Sources
+  getLeadSources(): Promise<LeadSource[]>;
+  getLeadSource(id: string): Promise<LeadSource | undefined>;
+  createLeadSource(source: InsertLeadSource): Promise<LeadSource>;
+  updateLeadSource(id: string, source: Partial<InsertLeadSource>): Promise<LeadSource | undefined>;
+  deleteLeadSource(id: string): Promise<boolean>;
+  reorderLeadSources(sourceIds: string[]): Promise<void>;
   
   // Smart Lists
   getSmartLists(userId: string, entityType?: string): Promise<SmartList[]>;
@@ -600,6 +609,7 @@ export class MemStorage implements IStorage {
   private clients: Map<string, Client> = new Map();
   private campaigns: Map<string, Campaign> = new Map();
   private leads: Map<string, Lead> = new Map();
+  private leadSources: Map<string, LeadSource> = new Map();
   private tasks: Map<string, Task> = new Map();
   private invoices: Map<string, Invoice> = new Map();
   private socialMediaAccounts: Map<string, SocialMediaAccount> = new Map();
@@ -2182,6 +2192,52 @@ export class MemStorage implements IStorage {
 
   async deleteLead(id: string): Promise<boolean> {
     return this.leads.delete(id);
+  }
+
+  // Lead Sources
+  async getLeadSources(): Promise<LeadSource[]> {
+    return Array.from(this.leadSources.values()).sort((a, b) => a.order - b.order);
+  }
+
+  async getLeadSource(id: string): Promise<LeadSource | undefined> {
+    return this.leadSources.get(id);
+  }
+
+  async createLeadSource(insertSource: InsertLeadSource): Promise<LeadSource> {
+    const id = randomUUID();
+    const now = new Date();
+    const source: LeadSource = {
+      id,
+      name: insertSource.name,
+      isActive: insertSource.isActive ?? true,
+      order: insertSource.order ?? 0,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.leadSources.set(id, source);
+    return source;
+  }
+
+  async updateLeadSource(id: string, sourceUpdate: Partial<InsertLeadSource>): Promise<LeadSource | undefined> {
+    const source = this.leadSources.get(id);
+    if (!source) return undefined;
+    
+    const updatedSource = { ...source, ...sourceUpdate, updatedAt: new Date() };
+    this.leadSources.set(id, updatedSource);
+    return updatedSource;
+  }
+
+  async deleteLeadSource(id: string): Promise<boolean> {
+    return this.leadSources.delete(id);
+  }
+
+  async reorderLeadSources(sourceIds: string[]): Promise<void> {
+    sourceIds.forEach((id, index) => {
+      const source = this.leadSources.get(id);
+      if (source) {
+        this.leadSources.set(id, { ...source, order: index });
+      }
+    });
   }
 
   // Tasks
@@ -5000,6 +5056,78 @@ export class DbStorage implements IStorage {
   async createLead(lead: InsertLead): Promise<Lead> { return this.memStorage.createLead(lead); }
   async updateLead(id: string, lead: Partial<InsertLead>): Promise<Lead | undefined> { return this.memStorage.updateLead(id, lead); }
   async deleteLead(id: string): Promise<boolean> { return this.memStorage.deleteLead(id); }
+
+  // Lead Sources
+  async getLeadSources(): Promise<LeadSource[]> {
+    try {
+      const sources = await db.select().from(leadSources).orderBy(asc(leadSources.order));
+      return sources;
+    } catch (error) {
+      console.error("Error fetching lead sources:", error);
+      return [];
+    }
+  }
+
+  async getLeadSource(id: string): Promise<LeadSource | undefined> {
+    try {
+      const result = await db.select().from(leadSources).where(eq(leadSources.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching lead source:", error);
+      return undefined;
+    }
+  }
+
+  async createLeadSource(source: InsertLeadSource): Promise<LeadSource> {
+    try {
+      const result = await db.insert(leadSources).values({
+        ...source,
+        id: sql`gen_random_uuid()`,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating lead source:", error);
+      throw error;
+    }
+  }
+
+  async updateLeadSource(id: string, source: Partial<InsertLeadSource>): Promise<LeadSource | undefined> {
+    try {
+      const result = await db.update(leadSources)
+        .set({ ...source, updatedAt: new Date() })
+        .where(eq(leadSources.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating lead source:", error);
+      return undefined;
+    }
+  }
+
+  async deleteLeadSource(id: string): Promise<boolean> {
+    try {
+      await db.delete(leadSources).where(eq(leadSources.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting lead source:", error);
+      return false;
+    }
+  }
+
+  async reorderLeadSources(sourceIds: string[]): Promise<void> {
+    try {
+      for (let i = 0; i < sourceIds.length; i++) {
+        await db.update(leadSources)
+          .set({ order: i })
+          .where(eq(leadSources.id, sourceIds[i]));
+      }
+    } catch (error) {
+      console.error("Error reordering lead sources:", error);
+      throw error;
+    }
+  }
 
   // Tasks
   async getTasks(): Promise<Task[]> { return this.memStorage.getTasks(); }

@@ -27,7 +27,7 @@ import {
   insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
   insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema, insertFormFolderSchema,
   insertCalendarIntegrationSchema, insertSmsIntegrationSchema,
-  insertLeadPipelineStagSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
+  insertLeadPipelineStagSchema, insertLeadSourceSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
   insertTaskDependencySchema, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema,
   insertScheduledEmailSchema,
   insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema,
@@ -3321,6 +3321,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error reordering stages:", error);
       res.status(500).json({ message: "Failed to reorder stages" });
+    }
+  });
+
+  // Lead Sources API routes
+  app.get("/api/lead-sources", requireAuth(), async (req, res) => {
+    try {
+      const sources = await appStorage.getLeadSources();
+      res.json(sources);
+    } catch (error) {
+      console.error("Error fetching lead sources:", error);
+      res.status(500).json({ message: "Failed to fetch lead sources" });
+    }
+  });
+
+  app.get("/api/lead-sources/:id", requireAuth(), async (req, res) => {
+    try {
+      const source = await appStorage.getLeadSource(req.params.id);
+      if (!source) {
+        return res.status(404).json({ message: "Lead source not found" });
+      }
+      res.json(source);
+    } catch (error) {
+      console.error("Error fetching lead source:", error);
+      res.status(500).json({ message: "Failed to fetch lead source" });
+    }
+  });
+
+  app.post("/api/lead-sources", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
+    try {
+      const validatedData = insertLeadSourceSchema.parse(req.body);
+      const newSource = await appStorage.createLeadSource(validatedData);
+      res.status(201).json(newSource);
+    } catch (error) {
+      console.error("Error creating lead source:", error);
+      res.status(500).json({ message: "Failed to create lead source" });
+    }
+  });
+
+  app.put("/api/lead-sources/:id", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
+    try {
+      const validatedData = insertLeadSourceSchema.partial().parse(req.body);
+      const updatedSource = await appStorage.updateLeadSource(req.params.id, validatedData);
+      
+      if (!updatedSource) {
+        return res.status(404).json({ message: "Lead source not found" });
+      }
+      res.json(updatedSource);
+    } catch (error) {
+      console.error("Error updating lead source:", error);
+      res.status(500).json({ message: "Failed to update lead source" });
+    }
+  });
+
+  app.delete("/api/lead-sources/:id", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
+    try {
+      const success = await appStorage.deleteLeadSource(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Lead source not found" });
+      }
+      res.json({ message: "Lead source deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting lead source:", error);
+      res.status(500).json({ message: "Failed to delete lead source" });
+    }
+  });
+
+  app.put("/api/lead-sources/reorder", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
+    try {
+      const { sourceIds } = req.body;
+      
+      if (!Array.isArray(sourceIds)) {
+        return res.status(400).json({ message: "sourceIds must be an array" });
+      }
+      
+      await appStorage.reorderLeadSources(sourceIds);
+      res.json({ message: "Lead sources reordered successfully" });
+    } catch (error) {
+      console.error("Error reordering lead sources:", error);
+      res.status(500).json({ message: "Failed to reorder lead sources" });
     }
   });
 
