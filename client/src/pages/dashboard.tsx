@@ -789,11 +789,11 @@ export default function Dashboard() {
                     Tasks
                   </Button>
                   <Button
-                    variant={widgetCategoryFilter === "leads" ? "default" : "outline"}
+                    variant={widgetCategoryFilter === "lead_management" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setWidgetCategoryFilter("leads")}
+                    onClick={() => setWidgetCategoryFilter("lead_management")}
                     data-testid="filter-category-leads"
-                    className={widgetCategoryFilter === "leads" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+                    className={widgetCategoryFilter === "lead_management" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
                   >
                     Leads
                   </Button>
@@ -829,7 +829,7 @@ export default function Dashboard() {
                         'sales_revenue': 'bg-green-100 text-green-800 border-green-200',
                         'sales': 'bg-green-100 text-green-800 border-green-200',
                         'tasks': 'bg-purple-100 text-purple-800 border-purple-200',
-                        'leads': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                        'lead_management': 'bg-yellow-100 text-yellow-800 border-yellow-200',
                         'analytics': 'bg-orange-100 text-orange-800 border-orange-200',
                       };
                       
