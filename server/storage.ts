@@ -71,6 +71,14 @@ import {
   type Dashboard, type InsertDashboard, dashboards,
   type DashboardWidget, type InsertDashboardWidget, dashboardWidgets,
   type UserDashboardWidget, type InsertUserDashboardWidget, userDashboardWidgets,
+  type TimeOffRequest, type InsertTimeOffRequest, timeOffRequests,
+  type NewHireOnboardingSubmission, type InsertNewHireOnboardingSubmission, newHireOnboardingSubmissions,
+  type ExpenseReportSubmission, type InsertExpenseReportSubmission, expenseReportSubmissions,
+  type TrainingEnrollment, type InsertTrainingEnrollment, trainingEnrollments,
+  type TrainingProgress, trainingProgress,
+  type TrainingCourse, trainingCourses,
+  type CapacitySetting, capacitySettings,
+  calendars, calendarAppointments,
   customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff, clientPortalUsers
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -7151,6 +7159,31 @@ export class DbStorage implements IStorage {
         case 'lead_source_breakdown':
           return await this.getLeadSourceBreakdownData(userId, isAdminOrManager);
         
+        // HR & Team Widgets
+        case 'pending_time_off_requests':
+          return await this.getPendingTimeOffRequestsData(userId, isAdminOrManager);
+        
+        case 'whos_off_today_week':
+          return await this.getWhosOffTodayWeekData(userId);
+        
+        case 'new_job_applications':
+          return await this.getNewJobApplicationsData(userId, isAdminOrManager);
+        
+        case 'onboarding_queue':
+          return await this.getOnboardingQueueData(userId, isAdminOrManager);
+        
+        case 'pending_expense_reports':
+          return await this.getPendingExpenseReportsData(userId, isAdminOrManager);
+        
+        case 'team_capacity_alerts':
+          return await this.getTeamCapacityAlertsData(userId, isAdminOrManager);
+        
+        case 'team_birthday_anniversary':
+          return await this.getTeamBirthdayAnniversaryData(userId);
+        
+        case 'training_completion_status':
+          return await this.getTrainingCompletionStatusData(userId, isAdminOrManager);
+        
         default:
           return { error: 'Unknown widget type' };
       }
@@ -8176,6 +8209,311 @@ export class DbStorage implements IStorage {
       }));
     } catch (error) {
       console.error("Error fetching lead source breakdown:", error);
+      return [];
+    }
+  }
+
+  // ========== HR & TEAM WIDGET DATA METHODS ==========
+  
+  private async getPendingTimeOffRequestsData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      // Only managers/admins can see pending time off requests
+      if (!isAdminOrManager) {
+        return [];
+      }
+
+      const pendingRequests = await db
+        .select({
+          id: timeOffRequests.id,
+          staffId: timeOffRequests.staffId,
+          staffName: staff.fullName,
+          startDate: timeOffRequests.startDate,
+          endDate: timeOffRequests.endDate,
+          type: timeOffRequests.type,
+          reason: timeOffRequests.reason,
+          status: timeOffRequests.status,
+          submittedAt: timeOffRequests.submittedAt,
+        })
+        .from(timeOffRequests)
+        .leftJoin(staff, eq(timeOffRequests.staffId, staff.id))
+        .where(eq(timeOffRequests.status, 'pending'))
+        .orderBy(asc(timeOffRequests.submittedAt))
+        .limit(10);
+
+      return pendingRequests;
+    } catch (error) {
+      console.error("Error fetching pending time off requests:", error);
+      return [];
+    }
+  }
+
+  private async getWhosOffTodayWeekData(userId: string): Promise<any> {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const endOfWeek = new Date(today);
+      endOfWeek.setDate(today.getDate() + 7);
+
+      const offToday = await db
+        .select({
+          id: timeOffRequests.id,
+          staffId: timeOffRequests.staffId,
+          staffName: staff.fullName,
+          type: timeOffRequests.type,
+          startDate: timeOffRequests.startDate,
+          endDate: timeOffRequests.endDate,
+        })
+        .from(timeOffRequests)
+        .leftJoin(staff, eq(timeOffRequests.staffId, staff.id))
+        .where(
+          and(
+            eq(timeOffRequests.status, 'approved'),
+            sql`${timeOffRequests.startDate} <= ${today}`,
+            sql`${timeOffRequests.endDate} >= ${today}`
+          )
+        )
+        .orderBy(asc(staff.fullName));
+
+      const offThisWeek = await db
+        .select({
+          id: timeOffRequests.id,
+          staffId: timeOffRequests.staffId,
+          staffName: staff.fullName,
+          type: timeOffRequests.type,
+          startDate: timeOffRequests.startDate,
+          endDate: timeOffRequests.endDate,
+        })
+        .from(timeOffRequests)
+        .leftJoin(staff, eq(timeOffRequests.staffId, staff.id))
+        .where(
+          and(
+            eq(timeOffRequests.status, 'approved'),
+            sql`${timeOffRequests.startDate} <= ${endOfWeek}`,
+            sql`${timeOffRequests.endDate} >= ${today}`
+          )
+        )
+        .orderBy(asc(timeOffRequests.startDate));
+
+      return {
+        today: offToday,
+        thisWeek: offThisWeek,
+      };
+    } catch (error) {
+      console.error("Error fetching who's off today/week:", error);
+      return { today: [], thisWeek: [] };
+    }
+  }
+
+  private async getNewJobApplicationsData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      // Only managers/admins can see job applications
+      if (!isAdminOrManager) {
+        return [];
+      }
+
+      const recentApplications = await db
+        .select({
+          id: jobApplications.id,
+          firstName: jobApplications.firstName,
+          lastName: jobApplications.lastName,
+          email: jobApplications.email,
+          phone: jobApplications.phone,
+          positionId: jobApplications.positionId,
+          positionName: positions.name,
+          status: jobApplications.status,
+          submittedAt: jobApplications.submittedAt,
+        })
+        .from(jobApplications)
+        .leftJoin(positions, eq(jobApplications.positionId, positions.id))
+        .orderBy(desc(jobApplications.submittedAt))
+        .limit(10);
+
+      return recentApplications;
+    } catch (error) {
+      console.error("Error fetching new job applications:", error);
+      return [];
+    }
+  }
+
+  private async getOnboardingQueueData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      // Only managers/admins can see onboarding queue
+      if (!isAdminOrManager) {
+        return [];
+      }
+
+      const pendingOnboarding = await db
+        .select({
+          id: newHireOnboardingSubmissions.id,
+          firstName: newHireOnboardingSubmissions.firstName,
+          lastName: newHireOnboardingSubmissions.lastName,
+          email: newHireOnboardingSubmissions.email,
+          startDate: newHireOnboardingSubmissions.startDate,
+          department: newHireOnboardingSubmissions.department,
+          position: newHireOnboardingSubmissions.position,
+          status: newHireOnboardingSubmissions.status,
+          submittedAt: newHireOnboardingSubmissions.submittedAt,
+        })
+        .from(newHireOnboardingSubmissions)
+        .where(eq(newHireOnboardingSubmissions.status, 'pending'))
+        .orderBy(asc(newHireOnboardingSubmissions.submittedAt))
+        .limit(10);
+
+      return pendingOnboarding;
+    } catch (error) {
+      console.error("Error fetching onboarding queue:", error);
+      return [];
+    }
+  }
+
+  private async getPendingExpenseReportsData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      // Check if user has permission to view expense reports (Admin, Manager, or Accounting)
+      const userRolesList = await this.getUserRolesByUser(userId);
+      const roleNames = await Promise.all(
+        userRolesList.map(async (ur) => {
+          const role = await db.select().from(roles).where(eq(roles.id, ur.roleId)).limit(1);
+          return role[0]?.name;
+        })
+      );
+
+      const hasPermission = roleNames.some(role => 
+        role === 'Admin' || role === 'Manager' || role === 'Accounting'
+      );
+
+      if (!hasPermission) {
+        return [];
+      }
+
+      const pendingExpenses = await db
+        .select({
+          id: expenseReportSubmissions.id,
+          submitterId: expenseReportSubmissions.submitterId,
+          submitterName: staff.fullName,
+          formData: expenseReportSubmissions.formData,
+          status: expenseReportSubmissions.status,
+          submittedAt: expenseReportSubmissions.submittedAt,
+        })
+        .from(expenseReportSubmissions)
+        .leftJoin(staff, eq(expenseReportSubmissions.submitterId, staff.id))
+        .where(eq(expenseReportSubmissions.status, 'pending'))
+        .orderBy(asc(expenseReportSubmissions.submittedAt))
+        .limit(10);
+
+      return pendingExpenses;
+    } catch (error) {
+      console.error("Error fetching pending expense reports:", error);
+      return [];
+    }
+  }
+
+  private async getTeamCapacityAlertsData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      // Only managers/admins can see capacity alerts
+      if (!isAdminOrManager) {
+        return [];
+      }
+
+      // Get active capacity settings with alerts enabled
+      const activeAlerts = await db
+        .select({
+          id: capacitySettings.id,
+          position: capacitySettings.position,
+          currentCapacity: capacitySettings.currentCapacity,
+          maxCapacity: capacitySettings.maxCapacity,
+          alertThreshold: capacitySettings.alertThreshold,
+          predictedDate: capacitySettings.predictedHiringDate,
+          alertsEnabled: capacitySettings.alertsEnabled,
+        })
+        .from(capacitySettings)
+        .where(
+          and(
+            eq(capacitySettings.alertsEnabled, true),
+            isNotNull(capacitySettings.predictedHiringDate)
+          )
+        )
+        .orderBy(asc(capacitySettings.predictedHiringDate))
+        .limit(10);
+
+      return activeAlerts;
+    } catch (error) {
+      console.error("Error fetching team capacity alerts:", error);
+      return [];
+    }
+  }
+
+  private async getTeamBirthdayAnniversaryData(userId: string): Promise<any> {
+    try {
+      const today = new Date();
+      const thirtyDaysFromNow = new Date(today);
+      thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+      // Get calendar events for birthdays and anniversaries
+      const upcomingEvents = await db
+        .select({
+          id: calendarAppointments.id,
+          calendarId: calendarAppointments.calendarId,
+          calendarName: calendars.name,
+          title: calendarAppointments.title,
+          startTime: calendarAppointments.startTime,
+          description: calendarAppointments.description,
+        })
+        .from(calendarAppointments)
+        .leftJoin(calendars, eq(calendarAppointments.calendarId, calendars.id))
+        .where(
+          and(
+            or(
+              eq(calendars.name, 'Birthdays'),
+              eq(calendars.name, 'Anniversaries')
+            ),
+            sql`${calendarAppointments.startTime} >= ${today}`,
+            sql`${calendarAppointments.startTime} <= ${thirtyDaysFromNow}`
+          )
+        )
+        .orderBy(asc(calendarAppointments.startTime))
+        .limit(10);
+
+      return upcomingEvents;
+    } catch (error) {
+      console.error("Error fetching team birthday/anniversary data:", error);
+      return [];
+    }
+  }
+
+  private async getTrainingCompletionStatusData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      // Only managers/admins can see training completion status
+      if (!isAdminOrManager) {
+        return [];
+      }
+
+      // Get all active courses with enrollment and completion data
+      const courseStats = await db
+        .select({
+          courseId: trainingCourses.id,
+          courseName: trainingCourses.title,
+          totalEnrollments: sql<number>`count(DISTINCT ${trainingEnrollments.id})::int`,
+          completedEnrollments: sql<number>`count(DISTINCT CASE WHEN ${trainingEnrollments.status} = 'completed' THEN ${trainingEnrollments.id} END)::int`,
+        })
+        .from(trainingCourses)
+        .leftJoin(trainingEnrollments, eq(trainingEnrollments.courseId, trainingCourses.id))
+        .where(eq(trainingCourses.isActive, true))
+        .groupBy(trainingCourses.id, trainingCourses.title)
+        .orderBy(desc(sql<number>`count(DISTINCT ${trainingEnrollments.id})`))
+        .limit(10);
+
+      return courseStats.map(stat => ({
+        courseId: stat.courseId,
+        courseName: stat.courseName,
+        totalEnrollments: stat.totalEnrollments,
+        completedEnrollments: stat.completedEnrollments,
+        completionRate: stat.totalEnrollments > 0 
+          ? ((stat.completedEnrollments / stat.totalEnrollments) * 100).toFixed(1)
+          : '0.0',
+      }));
+    } catch (error) {
+      console.error("Error fetching training completion status:", error);
       return [];
     }
   }
