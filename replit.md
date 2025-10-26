@@ -46,7 +46,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
   - **Client Management Widgets** (6): Client Health Overview, Recent Clients, Client Approval Queue, Client Distribution by Vertical, Client Portal Activity, Client Team Assignments
   - **Sales & Revenue Widgets** (7): Sales Pipeline Overview, Quote Status Summary, Revenue This Month, MRR Tracker, Win Rate, Top Performing Sales Reps, Recent Deals Won
   - **Tasks Widgets** (8): My Tasks, Overdue Tasks, Tasks Due This Week, Task Completion Rate, Tasks Requiring Client Approval, Tasks by Status, Time Tracked This Week, Team Workload
-- **Multi-Dashboard System**: Users can create multiple named dashboards for different purposes (similar to GoHighLevel). Features include tab-based navigation between dashboards, dashboard management dialog for creating/renaming/deleting dashboards, default dashboard settings, and automatic default dashboard initialization for new users. The system handles stale localStorage by validating stored dashboard IDs against the server and falling back to valid dashboards when needed.
+- **Multi-Dashboard System**: Users can create multiple named dashboards for different purposes (similar to GoHighLevel). Features include tab-based navigation between dashboards, dashboard management dialog for creating/renaming/deleting dashboards with up/down arrow button reordering (default dashboard always locked in position 1), default dashboard settings, and automatic default dashboard initialization for new users. The system handles stale localStorage by validating stored dashboard IDs against the server and falling back to valid dashboards when needed.
 
 ## External Dependencies
 
