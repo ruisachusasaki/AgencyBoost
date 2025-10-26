@@ -331,16 +331,13 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Source</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger data-testid="select-lead-source">
-                            <SelectValue placeholder="Select lead source" />
+                            <SelectValue placeholder="Select lead source (optional)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">
-                            <span className="text-muted-foreground">Not specified</span>
-                          </SelectItem>
                           <SelectItem value="website">Website</SelectItem>
                           <SelectItem value="referral">Referral</SelectItem>
                           <SelectItem value="social_media">Social Media</SelectItem>
