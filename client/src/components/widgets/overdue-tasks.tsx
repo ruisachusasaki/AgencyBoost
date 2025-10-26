@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, Trash2, GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { Link } from "wouter";
 
 interface WidgetProps {
   userWidget: any;
@@ -59,11 +60,11 @@ export default function OverdueTasksWidget({ userWidget, onRemove }: WidgetProps
           <div className="space-y-2 max-h-[400px] overflow-y-auto">
             {data && data.length > 0 ? (
               data.map((task: any) => (
-                <div
-                  key={task.id}
-                  data-testid={`overdue-task-item-${task.id}`}
-                  className="p-3 border border-destructive/20 rounded-lg hover:bg-destructive/5 transition-colors"
-                >
+                <Link key={task.id} href={`/tasks/${task.id}`} className="block">
+                  <div
+                    data-testid={`overdue-task-item-${task.id}`}
+                    className="p-3 border border-destructive/20 rounded-lg hover:bg-destructive/5 transition-colors cursor-pointer mb-2"
+                  >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate" data-testid={`task-title-${task.id}`}>
@@ -93,6 +94,7 @@ export default function OverdueTasksWidget({ userWidget, onRemove }: WidgetProps
                     </p>
                   )}
                 </div>
+                </Link>
               ))
             ) : (
               <div className="text-center py-8 text-muted-foreground">
