@@ -6986,6 +6986,25 @@ export class DbStorage implements IStorage {
         case 'team_workload':
           return await this.getTeamWorkloadData(userId);
         
+        // Lead Management Widgets
+        case 'new_leads_today_week':
+          return await this.getNewLeadsTodayWeekData(userId, isAdminOrManager);
+        
+        case 'leads_by_pipeline_stage':
+          return await this.getLeadsByPipelineStageData(userId, isAdminOrManager);
+        
+        case 'my_assigned_leads':
+          return await this.getMyAssignedLeadsData(userId);
+        
+        case 'stale_leads':
+          return await this.getStaleLeadsData(userId, isAdminOrManager);
+        
+        case 'lead_conversion_rate':
+          return await this.getLeadConversionRateData(userId, isAdminOrManager);
+        
+        case 'lead_source_breakdown':
+          return await this.getLeadSourceBreakdownData(userId, isAdminOrManager);
+        
         default:
           return { error: 'Unknown widget type' };
       }
@@ -7804,6 +7823,209 @@ export class DbStorage implements IStorage {
       }));
     } catch (error) {
       console.error("Error fetching team workload:", error);
+      return [];
+    }
+  }
+
+  // Lead Management Widget Data Methods
+  private async getNewLeadsTodayWeekData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfWeek = new Date();
+      startOfWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      // Get leads created today
+      const leadsToday = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(leads)
+        .where(
+          and(
+            sql`${leads.createdAt} >= ${startOfToday}`,
+            !isAdminOrManager ? eq(leads.assignedTo, userId) : undefined
+          )
+        );
+
+      // Get leads created this week
+      const leadsThisWeek = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(leads)
+        .where(
+          and(
+            sql`${leads.createdAt} >= ${startOfWeek}`,
+            !isAdminOrManager ? eq(leads.assignedTo, userId) : undefined
+          )
+        );
+
+      return {
+        today: leadsToday[0]?.count || 0,
+        thisWeek: leadsThisWeek[0]?.count || 0,
+      };
+    } catch (error) {
+      console.error("Error fetching new leads today/week:", error);
+      return { today: 0, thisWeek: 0 };
+    }
+  }
+
+  private async getLeadsByPipelineStageData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      const stageData = await db
+        .select({
+          stageId: leadPipelineStages.id,
+          stageName: leadPipelineStages.name,
+          stageColor: leadPipelineStages.color,
+          stageOrder: leadPipelineStages.order,
+          count: sql<number>`count(${leads.id})::int`,
+        })
+        .from(leadPipelineStages)
+        .leftJoin(
+          leads,
+          and(
+            eq(leads.stageId, leadPipelineStages.id),
+            eq(leads.status, 'Open'),
+            !isAdminOrManager ? eq(leads.assignedTo, userId) : undefined
+          )
+        )
+        .where(eq(leadPipelineStages.isActive, true))
+        .groupBy(leadPipelineStages.id, leadPipelineStages.name, leadPipelineStages.color, leadPipelineStages.order)
+        .orderBy(leadPipelineStages.order);
+
+      return stageData.map(stage => ({
+        stageId: stage.stageId,
+        stageName: stage.stageName,
+        color: stage.stageColor,
+        count: stage.count,
+      }));
+    } catch (error) {
+      console.error("Error fetching leads by pipeline stage:", error);
+      return [];
+    }
+  }
+
+  private async getMyAssignedLeadsData(userId: string): Promise<any> {
+    try {
+      const assignedLeads = await db
+        .select({
+          id: leads.id,
+          name: leads.name,
+          email: leads.email,
+          company: leads.company,
+          status: leads.status,
+          stageName: leadPipelineStages.name,
+          value: leads.value,
+          lastContactDate: leads.lastContactDate,
+        })
+        .from(leads)
+        .leftJoin(leadPipelineStages, eq(leads.stageId, leadPipelineStages.id))
+        .where(
+          and(
+            eq(leads.assignedTo, userId),
+            eq(leads.status, 'Open')
+          )
+        )
+        .orderBy(desc(leads.createdAt))
+        .limit(10);
+
+      return assignedLeads;
+    } catch (error) {
+      console.error("Error fetching my assigned leads:", error);
+      return [];
+    }
+  }
+
+  private async getStaleLeadsData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const staleLeads = await db
+        .select({
+          id: leads.id,
+          name: leads.name,
+          email: leads.email,
+          company: leads.company,
+          lastContactDate: leads.lastContactDate,
+          createdAt: leads.createdAt,
+          stageName: leadPipelineStages.name,
+        })
+        .from(leads)
+        .leftJoin(leadPipelineStages, eq(leads.stageId, leadPipelineStages.id))
+        .where(
+          and(
+            eq(leads.status, 'Open'),
+            or(
+              sql`${leads.lastContactDate} < ${thirtyDaysAgo}`,
+              and(
+                isNull(leads.lastContactDate),
+                sql`${leads.createdAt} < ${thirtyDaysAgo}`
+              )
+            ),
+            !isAdminOrManager ? eq(leads.assignedTo, userId) : undefined
+          )
+        )
+        .orderBy(asc(leads.lastContactDate))
+        .limit(10);
+
+      return staleLeads;
+    } catch (error) {
+      console.error("Error fetching stale leads:", error);
+      return [];
+    }
+  }
+
+  private async getLeadConversionRateData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      // Get total leads
+      const totalLeads = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(leads)
+        .where(!isAdminOrManager ? eq(leads.assignedTo, userId) : undefined);
+
+      // Get converted leads (status = 'Won')
+      const convertedLeads = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(leads)
+        .where(
+          and(
+            eq(leads.status, 'Won'),
+            !isAdminOrManager ? eq(leads.assignedTo, userId) : undefined
+          )
+        );
+
+      const total = totalLeads[0]?.count || 0;
+      const converted = convertedLeads[0]?.count || 0;
+      const rate = total > 0 ? ((converted / total) * 100).toFixed(1) : '0.0';
+
+      return {
+        total,
+        converted,
+        rate,
+      };
+    } catch (error) {
+      console.error("Error fetching lead conversion rate:", error);
+      return { total: 0, converted: 0, rate: '0.0' };
+    }
+  }
+
+  private async getLeadSourceBreakdownData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      const sourceData = await db
+        .select({
+          source: leads.source,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(leads)
+        .where(!isAdminOrManager ? eq(leads.assignedTo, userId) : undefined)
+        .groupBy(leads.source)
+        .orderBy(desc(sql<number>`count(*)`));
+
+      return sourceData.map(item => ({
+        source: item.source || 'Unknown',
+        count: item.count,
+      }));
+    } catch (error) {
+      console.error("Error fetching lead source breakdown:", error);
       return [];
     }
   }
