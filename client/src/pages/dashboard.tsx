@@ -620,15 +620,14 @@ export default function Dashboard() {
                 </div>
                 <div className="space-y-2">
                   <Label>Your Dashboards</Label>
-                  <ScrollArea className="max-h-[300px]">
-                    <DragDropContext onDragEnd={handleDashboardDragEnd}>
-                      <Droppable droppableId="dashboards-list">
-                        {(provided) => (
-                          <div
-                            {...provided.droppableProps}
-                            ref={provided.innerRef}
-                            className="space-y-2 pr-4"
-                          >
+                  <DragDropContext onDragEnd={handleDashboardDragEnd}>
+                    <Droppable droppableId="dashboards-list">
+                      {(provided) => (
+                        <div
+                          {...provided.droppableProps}
+                          ref={provided.innerRef}
+                          className="space-y-2 max-h-[300px] overflow-y-auto pr-4"
+                        >
                             {dashboards.map((dashboard, index) => (
                               <Draggable
                                 key={dashboard.id}
@@ -734,7 +733,6 @@ export default function Dashboard() {
                         )}
                       </Droppable>
                     </DragDropContext>
-                  </ScrollArea>
                 </div>
               </div>
             </DialogContent>
