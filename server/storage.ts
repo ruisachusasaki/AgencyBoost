@@ -8034,7 +8034,6 @@ export class DbStorage implements IStorage {
           leads,
           and(
             eq(leads.stageId, leadPipelineStages.id),
-            eq(leads.status, 'Open'),
             !isAdminOrManager ? eq(leads.assignedTo, userId) : undefined
           )
         )
