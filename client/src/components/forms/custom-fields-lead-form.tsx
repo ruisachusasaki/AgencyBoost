@@ -327,6 +327,34 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
 
                 <FormField
                   control={form.control}
+                  name="source"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Source</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-lead-source">
+                            <SelectValue placeholder="Select lead source" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">
+                            <span className="text-muted-foreground">Not specified</span>
+                          </SelectItem>
+                          <SelectItem value="website">Website</SelectItem>
+                          <SelectItem value="referral">Referral</SelectItem>
+                          <SelectItem value="social_media">Social Media</SelectItem>
+                          <SelectItem value="advertising">Advertising</SelectItem>
+                          <SelectItem value="cold_outreach">Cold Outreach</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="stageId"
                   render={({ field }) => (
                     <FormItem>
