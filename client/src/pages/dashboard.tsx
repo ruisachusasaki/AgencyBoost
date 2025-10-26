@@ -9,11 +9,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Settings, Trash2, Search, MoreVertical, Star, Edit, LayoutDashboard } from "lucide-react";
+import { Plus, Settings, Trash2, Search, MoreVertical, Star, Edit, LayoutDashboard, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import GridLayout, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 
 const ResponsiveGridLayout = WidthProvider(GridLayout);
 
@@ -50,6 +51,7 @@ interface Dashboard {
   userId: string;
   name: string;
   isDefault: boolean;
+  displayOrder: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -243,6 +245,22 @@ export default function Dashboard() {
       toast({
         title: "Error",
         description: error.message || "Failed to set default dashboard",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const reorderDashboardsMutation = useMutation({
+    mutationFn: async (updates: Array<{ id: string; displayOrder: number }>) => {
+      return await apiRequest("POST", "/api/dashboards/reorder", { updates });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboards"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reorder dashboards",
         variant: "destructive",
       });
     },
@@ -487,6 +505,56 @@ export default function Dashboard() {
     });
   };
 
+  const handleDashboardDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+    
+    if (sourceIndex === destinationIndex) return;
+    
+    // Prevent moving the default dashboard
+    const sourceDashboard = dashboards[sourceIndex];
+    if (sourceDashboard.isDefault) {
+      toast({
+        title: "Cannot move default dashboard",
+        description: "The default dashboard must remain in the first position",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Prevent moving any dashboard before the default dashboard
+    if (destinationIndex === 0) {
+      toast({
+        title: "Cannot move before default dashboard",
+        description: "The default dashboard must remain in the first position",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Reorder dashboards
+    const reorderedDashboards = Array.from(dashboards);
+    const [removed] = reorderedDashboards.splice(sourceIndex, 1);
+    reorderedDashboards.splice(destinationIndex, 0, removed);
+    
+    // Create updates with new display orders
+    const updates = reorderedDashboards.map((dashboard, index) => ({
+      id: dashboard.id,
+      displayOrder: index,
+    }));
+    
+    // Optimistically update the UI
+    queryClient.setQueryData(["/api/dashboards"], reorderedDashboards.map((d, i) => ({
+      ...d,
+      displayOrder: i,
+    })));
+    
+    // Save to backend
+    reorderDashboardsMutation.mutate(updates);
+  };
+
   if (loadingDashboards || loadingAvailableWidgets || (loadingUserWidgets && selectedDashboardId)) {
     return (
       <div className="space-y-4">
@@ -553,85 +621,119 @@ export default function Dashboard() {
                 <div className="space-y-2">
                   <Label>Your Dashboards</Label>
                   <ScrollArea className="max-h-[300px]">
-                    <div className="space-y-2 pr-4">
-                      {dashboards.map((dashboard) => (
-                        <Card key={dashboard.id} data-testid={`card-dashboard-${dashboard.id}`}>
-                          <CardHeader className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                {dashboard.isDefault ? (
-                                  <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" data-testid={`icon-default-${dashboard.id}`} />
-                                ) : (
-                                  <LayoutDashboard className="h-4 w-4 text-muted-foreground" data-testid={`icon-dashboard-${dashboard.id}`} />
-                                )}
-                                {editingDashboard?.id === dashboard.id ? (
-                                  <Input
-                                    value={editDashboardName}
-                                    onChange={(e) => setEditDashboardName(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") handleUpdateDashboard();
-                                      if (e.key === "Escape") {
-                                        setEditingDashboard(null);
-                                        setEditDashboardName("");
-                                      }
-                                    }}
-                                    className="h-8"
-                                    autoFocus
-                                    data-testid={`input-edit-dashboard-${dashboard.id}`}
-                                  />
-                                ) : (
-                                  <CardTitle className="text-base">{dashboard.name}</CardTitle>
-                                )}
-                              </div>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" data-testid={`button-dashboard-menu-${dashboard.id}`}>
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  {editingDashboard?.id === dashboard.id ? (
-                                    <DropdownMenuItem onClick={handleUpdateDashboard} data-testid={`button-save-rename-${dashboard.id}`}>
-                                      Save
-                                    </DropdownMenuItem>
-                                  ) : (
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setEditingDashboard(dashboard);
-                                        setEditDashboardName(dashboard.name);
-                                      }}
-                                      data-testid={`button-rename-${dashboard.id}`}
-                                    >
-                                      <Edit className="h-4 w-4 mr-2" />
-                                      Rename
-                                    </DropdownMenuItem>
-                                  )}
-                                  {!dashboard.isDefault && (
-                                    <DropdownMenuItem
-                                      onClick={() => setDefaultDashboardMutation.mutate(dashboard.id)}
-                                      data-testid={`button-set-default-${dashboard.id}`}
-                                    >
-                                      <Star className="h-4 w-4 mr-2" />
-                                      Set as Default
-                                    </DropdownMenuItem>
-                                  )}
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onClick={() => deleteDashboardMutation.mutate(dashboard.id)}
-                                    className="text-destructive"
-                                    disabled={dashboards.length === 1}
-                                    data-testid={`button-delete-${dashboard.id}`}
+                    <DragDropContext onDragEnd={handleDashboardDragEnd}>
+                      <Droppable droppableId="dashboards-list">
+                        {(provided) => (
+                          <div
+                            {...provided.droppableProps}
+                            ref={provided.innerRef}
+                            className="space-y-2 pr-4"
+                          >
+                            {dashboards.map((dashboard, index) => (
+                              <Draggable
+                                key={dashboard.id}
+                                draggableId={dashboard.id}
+                                index={index}
+                                isDragDisabled={dashboard.isDefault}
+                              >
+                                {(provided, snapshot) => (
+                                  <Card
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    data-testid={`card-dashboard-${dashboard.id}`}
+                                    className={snapshot.isDragging ? "shadow-lg" : ""}
                                   >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </CardHeader>
-                        </Card>
-                      ))}
-                    </div>
+                                    <CardHeader className="p-4">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 flex-1">
+                                          {!dashboard.isDefault && (
+                                            <div
+                                              {...provided.dragHandleProps}
+                                              className="cursor-grab active:cursor-grabbing"
+                                              data-testid={`drag-handle-${dashboard.id}`}
+                                            >
+                                              <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                            </div>
+                                          )}
+                                          {dashboard.isDefault ? (
+                                            <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" data-testid={`icon-default-${dashboard.id}`} />
+                                          ) : (
+                                            <LayoutDashboard className="h-4 w-4 text-muted-foreground" data-testid={`icon-dashboard-${dashboard.id}`} />
+                                          )}
+                                          {editingDashboard?.id === dashboard.id ? (
+                                            <Input
+                                              value={editDashboardName}
+                                              onChange={(e) => setEditDashboardName(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Enter") handleUpdateDashboard();
+                                                if (e.key === "Escape") {
+                                                  setEditingDashboard(null);
+                                                  setEditDashboardName("");
+                                                }
+                                              }}
+                                              className="h-8"
+                                              autoFocus
+                                              data-testid={`input-edit-dashboard-${dashboard.id}`}
+                                            />
+                                          ) : (
+                                            <CardTitle className="text-base">{dashboard.name}</CardTitle>
+                                          )}
+                                        </div>
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="sm" data-testid={`button-dashboard-menu-${dashboard.id}`}>
+                                              <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            {editingDashboard?.id === dashboard.id ? (
+                                              <DropdownMenuItem onClick={handleUpdateDashboard} data-testid={`button-save-rename-${dashboard.id}`}>
+                                                Save
+                                              </DropdownMenuItem>
+                                            ) : (
+                                              <DropdownMenuItem
+                                                onClick={() => {
+                                                  setEditingDashboard(dashboard);
+                                                  setEditDashboardName(dashboard.name);
+                                                }}
+                                                data-testid={`button-rename-${dashboard.id}`}
+                                              >
+                                                <Edit className="h-4 w-4 mr-2" />
+                                                Rename
+                                              </DropdownMenuItem>
+                                            )}
+                                            {!dashboard.isDefault && (
+                                              <DropdownMenuItem
+                                                onClick={() => setDefaultDashboardMutation.mutate(dashboard.id)}
+                                                data-testid={`button-set-default-${dashboard.id}`}
+                                              >
+                                                <Star className="h-4 w-4 mr-2" />
+                                                Set as Default
+                                              </DropdownMenuItem>
+                                            )}
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                              onClick={() => deleteDashboardMutation.mutate(dashboard.id)}
+                                              className="text-destructive"
+                                              disabled={dashboards.length === 1}
+                                              data-testid={`button-delete-${dashboard.id}`}
+                                            >
+                                              <Trash2 className="h-4 w-4 mr-2" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
+                                    </CardHeader>
+                                  </Card>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                    </DragDropContext>
                   </ScrollArea>
                 </div>
               </div>
