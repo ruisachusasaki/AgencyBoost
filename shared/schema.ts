@@ -609,6 +609,16 @@ export const leadPipelineStages = pgTable("lead_pipeline_stages", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Lead Sources - Customizable source options for lead tracking
+export const leadSources = pgTable("lead_sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  isActive: boolean("is_active").default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const leads = pgTable("leads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -1217,6 +1227,12 @@ export const insertLeadPipelineStagSchema = createInsertSchema(leadPipelineStage
   updatedAt: true,
 });
 
+export const insertLeadSourceSchema = createInsertSchema(leadSources).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
@@ -1499,6 +1515,9 @@ export type InsertSmartList = z.infer<typeof insertSmartListSchema>;
 
 export type LeadPipelineStage = typeof leadPipelineStages.$inferSelect;
 export type InsertLeadPipelineStage = z.infer<typeof insertLeadPipelineStagSchema>;
+
+export type LeadSource = typeof leadSources.$inferSelect;
+export type InsertLeadSource = z.infer<typeof insertLeadSourceSchema>;
 
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
