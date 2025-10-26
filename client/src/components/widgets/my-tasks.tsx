@@ -68,10 +68,10 @@ export default function MyTasksWidget({ userWidget, onRemove }: WidgetProps) {
           <div className="space-y-2 max-h-[400px] overflow-y-auto">
             {data && data.length > 0 ? (
               data.map((task: any) => (
-                <Link key={task.id} href={`/tasks/${task.id}`}>
+                <Link key={task.id} href={`/tasks/${task.id}`} className="block">
                   <div
                     data-testid={`task-item-${task.id}`}
-                    className="p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                    className="p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer mb-2"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
