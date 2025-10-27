@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Trash2, GripVertical } from "lucide-react";
+import { GraduationCap, Trash2, GripVertical, BookOpen } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Link } from "wouter";
 
 interface WidgetProps {
   userWidget: any;
@@ -29,15 +30,28 @@ export default function TrainingCompletionWidget({ userWidget, onRemove }: Widge
             </CardDescription>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onRemove}
-          data-testid="button-remove-widget"
-          className="h-8 w-8 p-0 flex-shrink-0"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Link href="/training">
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="button-view-training"
+              className="h-8 w-8 p-0 flex-shrink-0"
+              title="View Training"
+            >
+              <BookOpen className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            data-testid="button-remove-widget"
+            className="h-8 w-8 p-0 flex-shrink-0"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
