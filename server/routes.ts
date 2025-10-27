@@ -17634,6 +17634,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/new-hire-onboarding-submissions/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // Authentication failed
+
+      const [deletedSubmission] = await db.delete(newHireOnboardingSubmissions)
+        .where(eq(newHireOnboardingSubmissions.id, Number(id)))
+        .returning();
+
+      if (!deletedSubmission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+
+      res.json({ success: true, message: "Submission deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting new hire onboarding submission:", error);
+      res.status(500).json({ error: "Failed to delete submission" });
+    }
+  });
+
   // Expense Report Form Configuration Routes
   app.get("/api/expense-report-form-config", async (req, res) => {
     try {
