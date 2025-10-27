@@ -842,6 +842,15 @@ export default function Dashboard() {
                   >
                     HR & Team
                   </Button>
+                  <Button
+                    variant={widgetCategoryFilter === "calendar_appointments" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setWidgetCategoryFilter("calendar_appointments")}
+                    data-testid="filter-category-calendar"
+                    className={widgetCategoryFilter === "calendar_appointments" ? "bg-cyan-600 hover:bg-cyan-700" : ""}
+                  >
+                    Calendar & Appointments
+                  </Button>
                 </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -877,6 +886,7 @@ export default function Dashboard() {
                         'lead_management': 'bg-yellow-100 text-yellow-800 border-yellow-200',
                         'hr_team': 'bg-orange-100 text-orange-800 border-orange-200',
                         'analytics': 'bg-orange-100 text-orange-800 border-orange-200',
+                        'calendar_appointments': 'bg-cyan-100 text-cyan-800 border-cyan-200',
                       };
                       
                       const categoryColor = categoryColors[widget.category] || 'bg-gray-100 text-gray-800 border-gray-200';
