@@ -7,17 +7,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Plus, Edit, Trash2, Users, Eye, Settings, ArrowLeft, AlertTriangle, Lock } from "lucide-react";
+import { Shield, Plus, Edit, Trash2, Users, Eye, Settings, ArrowLeft, AlertTriangle, Lock, ChevronDown, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import type { Role, Permission, InsertRole } from "@shared/schema";
+import type { Role, Permission, InsertRole, GranularPermission } from "@shared/schema";
+import { PERMISSION_TEMPLATES, type PermissionModule, type SubPermission } from "@shared/permission-templates";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface RoleWithPermissions extends Role {
   userCount: number;
   permissions: Permission[];
+  granularPermissions?: GranularPermission[];
 }
 
 interface EditablePermission {
@@ -38,16 +42,243 @@ interface PermissionFormData {
   canManage: boolean;
 }
 
+interface GranularPermissionState {
+  [module: string]: {
+    enabled: boolean;
+    subPermissions: {
+      [key: string]: boolean;
+    };
+  };
+}
+
+// Helper component for granular permissions editing
+const GranularPermissionsEditor = ({ 
+  granularPermissions,
+  setGranularPermissions 
+}: { 
+  granularPermissions: GranularPermissionState;
+  setGranularPermissions: (perms: GranularPermissionState) => void;
+}) => {
+  const [expandedModules, setExpandedModules] = useState<string[]>([]);
+
+  const toggleModule = (module: string, enabled: boolean) => {
+    const existingModule = granularPermissions[module];
+    const moduleTemplate = PERMISSION_TEMPLATES.find(t => t.module === module);
+    
+    // Preserve existing sub-permissions or initialize all to false if this is the first time
+    const subPermissions = existingModule?.subPermissions 
+      ? existingModule.subPermissions
+      : moduleTemplate?.subPermissions.reduce((acc, sp) => ({
+          ...acc,
+          [sp.key]: false,
+        }), {}) || {};
+    
+    setGranularPermissions({
+      ...granularPermissions,
+      [module]: {
+        enabled,
+        subPermissions,
+      },
+    });
+  };
+
+  const toggleSubPermission = (module: string, permissionKey: string, enabled: boolean) => {
+    const modulePerms = granularPermissions[module] || { enabled: false, subPermissions: {} };
+    setGranularPermissions({
+      ...granularPermissions,
+      [module]: {
+        ...modulePerms,
+        subPermissions: {
+          ...modulePerms.subPermissions,
+          [permissionKey]: enabled,
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="font-medium">Granular Permissions</h4>
+        <Badge variant="secondary" className="text-xs">
+          GoHighLevel-style
+        </Badge>
+      </div>
+      
+      <div className="border rounded-lg divide-y">
+        {PERMISSION_TEMPLATES.map((moduleTemplate) => {
+          const moduleState = granularPermissions[moduleTemplate.module] || { enabled: false, subPermissions: {} };
+          const isExpanded = expandedModules.includes(moduleTemplate.module);
+          const enabledSubPermissions = Object.values(moduleState.subPermissions).filter(Boolean).length;
+          const totalSubPermissions = moduleTemplate.subPermissions.length;
+
+          return (
+            <div key={moduleTemplate.module} className="p-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <Switch
+                    checked={moduleState.enabled}
+                    onCheckedChange={(checked) => toggleModule(moduleTemplate.module, checked)}
+                    data-testid={`toggle-module-${moduleTemplate.module}`}
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{moduleTemplate.label}</span>
+                      {enabledSubPermissions > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          {enabledSubPermissions}/{totalSubPermissions}
+                        </Badge>
+                      )}
+                    </div>
+                    {moduleTemplate.description && (
+                      <p className="text-xs text-muted-foreground">{moduleTemplate.description}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (isExpanded) {
+                      setExpandedModules(expandedModules.filter(m => m !== moduleTemplate.module));
+                    } else {
+                      setExpandedModules([...expandedModules, moduleTemplate.module]);
+                    }
+                  }}
+                  data-testid={`expand-module-${moduleTemplate.module}`}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+
+              {isExpanded && (
+                <div className="mt-3 pl-11 space-y-2 border-l-2 border-muted ml-2">
+                  {moduleTemplate.subPermissions.map((subPerm) => (
+                    <div key={subPerm.key} className="flex items-start gap-3 py-1.5">
+                      <Checkbox
+                        id={subPerm.key}
+                        checked={moduleState.subPermissions[subPerm.key] || false}
+                        onCheckedChange={(checked) => toggleSubPermission(moduleTemplate.module, subPerm.key, checked as boolean)}
+                        disabled={!moduleState.enabled}
+                        data-testid={`checkbox-${subPerm.key}`}
+                      />
+                      <Label
+                        htmlFor={subPerm.key}
+                        className={`text-sm cursor-pointer flex-1 ${!moduleState.enabled ? 'opacity-50' : ''}`}
+                      >
+                        {subPerm.label}
+                        {subPerm.description && (
+                          <span className="block text-xs text-muted-foreground font-normal mt-0.5">
+                            {subPerm.description}
+                          </span>
+                        )}
+                      </Label>
+                      <Badge 
+                        variant={
+                          subPerm.type === 'delete' ? 'destructive' :
+                          subPerm.type === 'view_manage' ? 'default' :
+                          'secondary'
+                        }
+                        className="text-xs"
+                      >
+                        {subPerm.type.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Helper component for role form
+const RoleForm = ({ 
+  role, 
+  isEdit = false, 
+  onSubmit, 
+  onCancel 
+}: { 
+  role: { name: string; description: string; permissions?: PermissionFormData[]; granularPermissions?: GranularPermissionState },
+  isEdit?: boolean,
+  onSubmit: (e: React.FormEvent, roleData: { name: string; description: string; permissions?: PermissionFormData[]; granularPermissions?: GranularPermissionState }) => void,
+  onCancel: () => void 
+}) => {
+  const [localRole, setLocalRole] = useState(role);
+
+  return (
+    <form onSubmit={(e) => onSubmit(e, localRole)} className="space-y-6">
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="name">Role Name</Label>
+          <Input
+            id="name"
+            value={localRole.name}
+            onChange={(e) => {
+              setLocalRole(prev => ({ ...prev, name: e.target.value }));
+            }}
+            placeholder="Enter role name"
+            required
+            data-testid="input-role-name"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={localRole.description || ""}
+            onChange={(e) => {
+              setLocalRole(prev => ({ ...prev, description: e.target.value }));
+            }}
+            placeholder="Enter role description"
+            rows={3}
+            data-testid="input-role-description"
+          />
+        </div>
+      </div>
+
+      <GranularPermissionsEditor
+        granularPermissions={localRole.granularPermissions || {}}
+        setGranularPermissions={(perms) => setLocalRole(prev => ({ ...prev, granularPermissions: perms }))}
+      />
+
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel} data-testid="button-cancel">
+          Cancel
+        </Button>
+        <Button 
+          type="submit" 
+          data-testid="button-submit"
+        >
+          {isEdit ? 'Update Role' : 'Create Role'}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
 export default function RolesPermissions() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAddRoleDialogOpen, setIsAddRoleDialogOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<(Omit<RoleWithPermissions, 'permissions'> & { permissions: EditablePermission[] }) | null>(null);
+  const [editingRole, setEditingRole] = useState<(Omit<RoleWithPermissions, 'permissions'> & { permissions: EditablePermission[]; granularPermissions?: GranularPermission[] }) | null>(null);
   const [newRole, setNewRole] = useState({
     name: "",
     description: "",
-    permissions: [] as PermissionFormData[]
+    permissions: [] as PermissionFormData[],
+    granularPermissions: {} as GranularPermissionState,
   });
+  const [useGranularPermissions, setUseGranularPermissions] = useState(true);
 
   // Fetch current user data for admin check
   const { data: currentUser, isLoading: loadingUser, error: userError } = useQuery({
@@ -70,12 +301,6 @@ export default function RolesPermissions() {
   // Check if user is admin - only admins can manage roles
   const isAdmin = currentUser && ['Admin', 'admin'].includes(currentUser.role);
 
-  // Available modules for permissions
-  const modules = [
-    "clients", "projects", "sales", "tasks", "invoices", 
-    "leads", "workflows", "reports", "settings", "staff", "roles"
-  ];
-
   // Fetch roles - only if user is admin
   const { data: roles = [], isLoading } = useQuery<RoleWithPermissions[]>({
     queryKey: ["/api/roles"],
@@ -85,7 +310,7 @@ export default function RolesPermissions() {
 
   // Create role mutation
   const createRoleMutation = useMutation({
-    mutationFn: async (roleData: InsertRole & { permissions: PermissionFormData[] }) => {
+    mutationFn: async (roleData: InsertRole & { permissions?: PermissionFormData[]; granularPermissions?: GranularPermissionState }) => {
       const response = await apiRequest("POST", "/api/roles", roleData);
       return response.json();
     },
@@ -96,7 +321,7 @@ export default function RolesPermissions() {
         description: "Role created successfully.",
       });
       setIsAddRoleDialogOpen(false);
-      setNewRole({ name: "", description: "", permissions: [] });
+      setNewRole({ name: "", description: "", permissions: [], granularPermissions: {} });
     },
     onError: (error: any) => {
       toast({
@@ -109,7 +334,7 @@ export default function RolesPermissions() {
 
   // Update role mutation
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ id, ...roleData }: { id: string } & InsertRole & { permissions: PermissionFormData[] }) => {
+    mutationFn: async ({ id, ...roleData }: { id: string } & InsertRole & { permissions?: PermissionFormData[]; granularPermissions?: GranularPermissionState }) => {
       const response = await apiRequest("PUT", `/api/roles/${id}`, roleData);
       return response.json();
     },
@@ -152,30 +377,21 @@ export default function RolesPermissions() {
     },
   });
 
-  const handleAddRole = (e: React.FormEvent, roleData: { name: string; description: string; permissions: PermissionFormData[] }) => {
+  const handleAddRole = (e: React.FormEvent, roleData: { name: string; description: string; permissions?: PermissionFormData[]; granularPermissions?: GranularPermissionState }) => {
     e.preventDefault();
     createRoleMutation.mutate(roleData);
   };
 
-  const handleUpdateRole = (e: React.FormEvent, roleData: { name: string; description: string; permissions: PermissionFormData[] }) => {
+  const handleUpdateRole = (e: React.FormEvent, roleData: { name: string; description: string; permissions?: PermissionFormData[]; granularPermissions?: GranularPermissionState }) => {
     e.preventDefault();
     if (editingRole) {
-      const { id, userCount, createdAt, updatedAt, ...existingRoleData } = editingRole;
-      
-      const permissionsPayload = roleData.permissions.map(p => ({
-        module: p.module,
-        canView: p.canView ?? false,
-        canCreate: p.canCreate ?? false,
-        canEdit: p.canEdit ?? false,
-        canDelete: p.canDelete ?? false,
-        canManage: p.canManage ?? false,
-      }));
-      
+      const { id } = editingRole;
       updateRoleMutation.mutate({ 
         id, 
         name: roleData.name,
         description: roleData.description,
-        permissions: permissionsPayload
+        permissions: roleData.permissions,
+        granularPermissions: roleData.granularPermissions,
       });
     }
   };
@@ -185,162 +401,9 @@ export default function RolesPermissions() {
     deleteRoleMutation.mutate(roleId);
   };
 
-  const initializePermissions = () => {
-    return modules.map(module => ({
-      module,
-      canView: false,
-      canCreate: false,
-      canEdit: false,
-      canDelete: false,
-      canManage: false,
-    }));
-  };
-
-  const updatePermission = (
-    permissions: PermissionFormData[], 
-    setPermissions: (perms: PermissionFormData[]) => void,
-    module: string, 
-    action: keyof Omit<PermissionFormData, 'module'>, 
-    value: boolean
-  ) => {
-    const updated = permissions.map(perm => 
-      perm.module === module ? { ...perm, [action]: value } : perm
-    );
-    setPermissions(updated);
-  };
-
-  const getPermissionIcon = (action: string) => {
-    switch (action) {
-      case "canView": return <Eye className="h-3 w-3" />;
-      case "canCreate": return <Plus className="h-3 w-3" />;
-      case "canEdit": return <Edit className="h-3 w-3" />;
-      case "canDelete": return <Trash2 className="h-3 w-3" />;
-      case "canManage": return <Settings className="h-3 w-3" />;
-      default: return null;
-    }
-  };
-
   const formatModuleName = (module: string) => {
-    return module.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
-
-  const RoleForm = ({ 
-    role, 
-    isEdit = false, 
-    onSubmit, 
-    onCancel 
-  }: { 
-    role: { name: string; description: string; permissions: PermissionFormData[] },
-    isEdit?: boolean,
-    onSubmit: (e: React.FormEvent, roleData: { name: string; description: string; permissions: PermissionFormData[] }) => void,
-    onCancel: () => void 
-  }) => {
-    const [localRole, setLocalRole] = useState(role);
-
-    // Initialize permissions if empty on mount or when role changes
-    useEffect(() => {
-      if (role.permissions.length === 0) {
-        const initialPermissions = initializePermissions();
-        setLocalRole(prev => ({ ...prev, permissions: initialPermissions }));
-      } else {
-        // Filter existing permissions to only show current modules
-        const filteredPermissions = role.permissions.filter(perm => 
-          modules.includes(perm.module)
-        );
-        
-        // Add any missing modules with default permissions
-        const existingModules = filteredPermissions.map(p => p.module);
-        const missingModules = modules.filter(module => !existingModules.includes(module));
-        const missingPermissions = missingModules.map(module => ({
-          module,
-          canView: false,
-          canCreate: false,
-          canEdit: false,
-          canDelete: false,
-          canManage: false,
-        }));
-        
-        const allPermissions = [...filteredPermissions, ...missingPermissions];
-        setLocalRole(prev => ({ ...prev, ...role, permissions: allPermissions }));
-      }
-    }, [role]);
-
-
-    return (
-      <form onSubmit={(e) => onSubmit(e, localRole)} className="space-y-6">
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="name">Role Name</Label>
-            <Input
-              id="name"
-              value={localRole.name}
-              onChange={(e) => {
-                setLocalRole(prev => ({ ...prev, name: e.target.value }));
-              }}
-              placeholder="Enter role name"
-              required
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={localRole.description || ""}
-              onChange={(e) => {
-                setLocalRole(prev => ({ ...prev, description: e.target.value }));
-              }}
-              placeholder="Enter role description"
-              rows={3}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h4 className="font-medium">Permissions</h4>
-          <div className="border rounded-lg">
-            <div className="grid grid-cols-6 gap-2 p-3 border-b bg-muted/50 text-sm font-medium">
-              <div>Module</div>
-              <div className="text-center">View</div>
-              <div className="text-center">Create</div>
-              <div className="text-center">Edit</div>
-              <div className="text-center">Delete</div>
-              <div className="text-center">Manage</div>
-            </div>
-            {localRole.permissions.map((perm) => (
-              <div key={perm.module} className="grid grid-cols-6 gap-2 p-3 border-b last:border-b-0">
-                <div className="font-medium">{formatModuleName(perm.module)}</div>
-                {(['canView', 'canCreate', 'canEdit', 'canDelete', 'canManage'] as const).map((action) => (
-                  <div key={action} className="flex justify-center">
-                    <Switch
-                      checked={perm[action]}
-                      onCheckedChange={(checked) => {
-                        const updatedPermissions = localRole.permissions.map(p => 
-                          p.module === perm.module ? { ...p, [action]: checked } : p
-                        );
-                        setLocalRole(prev => ({ ...prev, permissions: updatedPermissions }));
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={createRoleMutation.isPending || updateRoleMutation.isPending}
-          >
-            {isEdit ? 'Update Role' : 'Create Role'}
-          </Button>
-        </div>
-      </form>
-    );
+    const moduleTemplate = PERMISSION_TEMPLATES.find(t => t.module === module);
+    return moduleTemplate?.label || module.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
   // Show loading state while checking authentication
@@ -348,7 +411,7 @@ export default function RolesPermissions() {
     return (
       <div className="space-y-6">
         <Link to="/settings">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" data-testid="button-back">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Settings
           </Button>
@@ -369,7 +432,7 @@ export default function RolesPermissions() {
     return (
       <div className="space-y-6">
         <Link to="/settings">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" data-testid="button-back">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Settings
           </Button>
@@ -398,7 +461,7 @@ export default function RolesPermissions() {
     return (
       <div className="space-y-6">
         <Link to="/settings">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" data-testid="button-back">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Settings
           </Button>
@@ -426,7 +489,7 @@ export default function RolesPermissions() {
     return (
       <div className="space-y-6">
         <Link to="/settings">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" data-testid="button-back">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Settings
           </Button>
@@ -447,7 +510,7 @@ export default function RolesPermissions() {
       {/* Header */}
       <div className="space-y-4">
         <Link to="/settings">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" data-testid="button-back">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Settings
           </Button>
@@ -459,14 +522,14 @@ export default function RolesPermissions() {
             <div>
               <h1 className="text-2xl font-bold">Roles & Permissions</h1>
               <p className="text-muted-foreground">
-                Manage user roles and their permissions
+                Manage user roles with granular permissions
               </p>
             </div>
           </div>
 
           <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button data-testid="button-add-role">
               <Plus className="h-4 w-4 mr-2" />
               Add Role
             </Button>
@@ -475,7 +538,7 @@ export default function RolesPermissions() {
             <DialogHeader>
               <DialogTitle>Create New Role</DialogTitle>
               <DialogDescription>
-                Create a new role and set specific permissions for different modules.
+                Create a new role with granular permissions for different modules and features.
               </DialogDescription>
             </DialogHeader>
             <RoleForm
@@ -490,8 +553,14 @@ export default function RolesPermissions() {
 
       {/* Roles Grid */}
       <div className="grid gap-6 md:grid-cols-2">
-        {roles.map((role) => (
-          <Card key={role.id} className="relative">
+        {roles.map((role) => {
+          // Count enabled modules and sub-permissions
+          const granularPerms = role.granularPermissions || [];
+          const enabledModules = new Set(granularPerms.map(gp => gp.module)).size;
+          const enabledSubPermissions = granularPerms.filter(gp => gp.enabled).length;
+
+          return (
+          <Card key={role.id} className="relative" data-testid={`card-role-${role.id}`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -508,26 +577,10 @@ export default function RolesPermissions() {
                     open={editingRole?.id === role.id} 
                     onOpenChange={(open) => {
                       if (open) {
-                        // Initialize permissions for current modules only, filtering out old modules
-                        const filteredPermissions = role.permissions.filter(perm => 
-                          modules.includes(perm.module)
-                        );
-                        
-                        const fullPermissions = modules.map(module => {
-                          const existingPerm = filteredPermissions.find(p => p.module === module);
-                          return {
-                            module,
-                            canView: existingPerm?.canView ?? false,
-                            canCreate: existingPerm?.canCreate ?? false,
-                            canEdit: existingPerm?.canEdit ?? false,
-                            canDelete: existingPerm?.canDelete ?? false,
-                            canManage: existingPerm?.canManage ?? false,
-                          };
-                        });
-                        
                         setEditingRole({
                           ...role,
-                          permissions: fullPermissions
+                          permissions: [],
+                          granularPermissions: role.granularPermissions || [],
                         });
                       } else {
                         setEditingRole(null);
@@ -535,7 +588,7 @@ export default function RolesPermissions() {
                     }}
                   >
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" data-testid={`button-edit-${role.id}`}>
                         <Edit className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
@@ -543,7 +596,7 @@ export default function RolesPermissions() {
                       <DialogHeader>
                         <DialogTitle>Edit Role: {role.name}</DialogTitle>
                         <DialogDescription>
-                          Modify the role name, description, and permissions for different modules.
+                          Modify the role name, description, and granular permissions.
                         </DialogDescription>
                       </DialogHeader>
                       {editingRole && (
@@ -551,14 +604,13 @@ export default function RolesPermissions() {
                           role={{
                             name: editingRole.name,
                             description: editingRole.description || "",
-                            permissions: editingRole.permissions.map(p => ({
-                              module: p.module,
-                              canView: p.canView ?? false,
-                              canCreate: p.canCreate ?? false,
-                              canEdit: p.canEdit ?? false,
-                              canDelete: p.canDelete ?? false,
-                              canManage: p.canManage ?? false,
-                            }))
+                            granularPermissions: (editingRole.granularPermissions || []).reduce((acc, gp) => {
+                              if (!acc[gp.module]) {
+                                acc[gp.module] = { enabled: true, subPermissions: {} };
+                              }
+                              acc[gp.module].subPermissions[gp.permissionKey] = gp.enabled;
+                              return acc;
+                            }, {} as GranularPermissionState),
                           }}
                           isEdit={true}
                           onSubmit={handleUpdateRole}
@@ -574,6 +626,7 @@ export default function RolesPermissions() {
                       size="sm"
                       onClick={() => handleDeleteRole(role.id, role.name)}
                       disabled={deleteRoleMutation.isPending}
+                      data-testid={`button-delete-${role.id}`}
                     >
                       <Trash2 className="h-4 w-4 text-red-600" />
                     </Button>
@@ -590,32 +643,29 @@ export default function RolesPermissions() {
               
               <div>
                 <h4 className="text-sm font-medium mb-2">Permissions Summary</h4>
-                <div className="space-y-1">
-                  {role.permissions
-                    .filter(perm => modules.includes(perm.module))
-                    .map((perm) => {
-                    const actions = [];
-                    if (perm.canView) actions.push("View");
-                    if (perm.canCreate) actions.push("Create");
-                    if (perm.canEdit) actions.push("Edit");
-                    if (perm.canDelete) actions.push("Delete");
-                    if (perm.canManage) actions.push("Manage");
-                    
-                    if (actions.length > 0) {
-                      return (
-                        <div key={perm.module} className="flex justify-between text-xs">
-                          <span className="font-medium">{formatModuleName(perm.module)}:</span>
-                          <span className="text-muted-foreground">{actions.join(", ")}</span>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }).filter(Boolean)}
+                <div className="space-y-1.5">
+                  {enabledModules > 0 ? (
+                    <>
+                      <div className="flex items-center gap-2 text-xs">
+                        <Badge variant="outline">{enabledModules} modules</Badge>
+                        <Badge variant="outline">{enabledSubPermissions} permissions</Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {Array.from(new Set(granularPerms.map(gp => gp.module)))
+                          .slice(0, 5)
+                          .map(module => formatModuleName(module))
+                          .join(', ')}
+                        {enabledModules > 5 && `, +${enabledModules - 5} more`}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No permissions configured</p>
+                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
-        ))}
+        )})}
       </div>
     </div>
   );

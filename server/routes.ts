@@ -20,7 +20,7 @@ import {
   insertExpenseReportFormConfigSchema, insertExpenseReportSubmissionSchema,
   insertOffboardingFormConfigSchema, insertOffboardingSubmissionSchema,
   insertTagSchema, insertProductSchema, insertProductCategorySchema, insertAuditLogSchema,
-  insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertNotificationSettingsSchema,
+  insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertGranularPermissionSchema, insertNotificationSettingsSchema,
   insertProductBundleSchema, insertBundleProductSchema,
   insertClientNoteSchema, insertClientTaskSchema, insertClientAppointmentSchema,
   insertClientDocumentSchema, insertDocumentSchema, insertClientTransactionSchema,
@@ -45,7 +45,7 @@ import {
   insertCapacitySettingsSchema, updateCapacitySettingsSchema,
   insertDashboardSchema,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
-  roles, permissions, userRoles, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
+  roles, permissions, userRoles, granularPermissions, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments,
@@ -10534,7 +10534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .groupBy(roles.id, roles.name, roles.description, roles.isSystem, roles.createdAt, roles.updatedAt)
         .orderBy(asc(roles.name));
 
-      // Get permissions for each role
+      // Get permissions and granular permissions for each role
       const rolesWithPermissionsData = await Promise.all(
         rolesWithPermissions.map(async (role) => {
           const rolePermissions = await db
@@ -10542,9 +10542,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .from(permissions)
             .where(eq(permissions.roleId, role.id));
           
+          const roleGranularPermissions = await db
+            .select()
+            .from(granularPermissions)
+            .where(eq(granularPermissions.roleId, role.id));
+          
           return {
             ...role,
-            permissions: rolePermissions
+            permissions: rolePermissions,
+            granularPermissions: roleGranularPermissions
           };
         })
       );
@@ -10588,7 +10594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
-      const { permissions: rolePermissions, ...roleData } = req.body;
+      const { permissions: rolePermissions, granularPermissions: roleGranularPermissions, ...roleData } = req.body;
       const validatedRoleData = insertRoleSchema.parse(roleData);
       
       // Create role
@@ -10614,6 +10620,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const insertedPermissions = await db.insert(permissions).values(permissionsToInsert).returning();
         createdPermissions.push(...insertedPermissions);
+      }
+      
+      // Create granular permissions for the role
+      if (roleGranularPermissions && typeof roleGranularPermissions === 'object') {
+        const granularPermsToInsert = [];
+        for (const [module, modulePerms] of Object.entries(roleGranularPermissions)) {
+          if (modulePerms && typeof modulePerms === 'object' && 'subPermissions' in modulePerms) {
+            const subPermissions = (modulePerms as any).subPermissions;
+            for (const [permissionKey, enabled] of Object.entries(subPermissions)) {
+              if (enabled) {
+                granularPermsToInsert.push({
+                  roleId: newRole.id,
+                  module,
+                  permissionKey,
+                  enabled: Boolean(enabled),
+                });
+              }
+            }
+          }
+        }
+        
+        if (granularPermsToInsert.length > 0) {
+          await db.insert(granularPermissions).values(granularPermsToInsert);
+        }
       }
 
       // Create permission audit log
@@ -10661,7 +10691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
-      const { permissions: rolePermissions, ...roleData } = req.body;
+      const { permissions: rolePermissions, granularPermissions: roleGranularPermissions, ...roleData } = req.body;
       
       // Get existing role and permissions for audit log
       const existingRole = await db
@@ -10703,6 +10733,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const insertedPermissions = await db.insert(permissions).values(permissionsToInsert).returning();
         newPermissions.push(...insertedPermissions);
+      }
+      
+      // Update granular permissions - delete existing and insert new ones
+      await db.delete(granularPermissions).where(eq(granularPermissions.roleId, req.params.id));
+      
+      if (roleGranularPermissions && typeof roleGranularPermissions === 'object') {
+        const granularPermsToInsert = [];
+        for (const [module, modulePerms] of Object.entries(roleGranularPermissions)) {
+          if (modulePerms && typeof modulePerms === 'object' && 'subPermissions' in modulePerms) {
+            const subPermissions = (modulePerms as any).subPermissions;
+            for (const [permissionKey, enabled] of Object.entries(subPermissions)) {
+              if (enabled) {
+                granularPermsToInsert.push({
+                  roleId: req.params.id,
+                  module,
+                  permissionKey,
+                  enabled: Boolean(enabled),
+                });
+              }
+            }
+          }
+        }
+        
+        if (granularPermsToInsert.length > 0) {
+          await db.insert(granularPermissions).values(granularPermsToInsert);
+        }
       }
 
       // Create permission audit log

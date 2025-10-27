@@ -1808,6 +1808,20 @@ export const userRoles = pgTable("user_roles", {
   assignedAt: timestamp("assigned_at").defaultNow(),
 });
 
+// Granular Permissions - Sub-permissions within modules
+export const granularPermissions = pgTable("granular_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roleId: varchar("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+  module: text("module").notNull(), // clients, campaigns, tasks, etc.
+  permissionKey: text("permission_key").notNull(), // unique identifier like "clients.view_contacts"
+  enabled: boolean("enabled").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate permissions per role
+  uniqueRolePermission: unique().on(table.roleId, table.permissionKey),
+}));
+
 // Permission Audit Trail - Specialized audit logging for permission changes
 export const permissionAuditLogs = pgTable("permission_audit_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2251,6 +2265,12 @@ export const insertUserRoleSchema = createInsertSchema(userRoles).omit({
   assignedAt: true,
 });
 
+export const insertGranularPermissionSchema = createInsertSchema(granularPermissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertPermissionAuditLogSchema = createInsertSchema(permissionAuditLogs).omit({
   id: true,
   timestamp: true,
@@ -2269,6 +2289,9 @@ export type InsertPermission = z.infer<typeof insertPermissionSchema>;
 
 export type UserRole = typeof userRoles.$inferSelect;
 export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
+
+export type GranularPermission = typeof granularPermissions.$inferSelect;
+export type InsertGranularPermission = z.infer<typeof insertGranularPermissionSchema>;
 
 export type PermissionAuditLog = typeof permissionAuditLogs.$inferSelect;
 export type InsertPermissionAuditLog = z.infer<typeof insertPermissionAuditLogSchema>;
