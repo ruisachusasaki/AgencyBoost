@@ -56,7 +56,10 @@ import OffboardingForm from "@/components/hr/offboarding-form";
 import OffboardingSubmissionsView from "@/components/hr/offboarding-submissions-view";
 
 export default function HRPage() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  // Check for URL parameter to set initial tab
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabParam = urlParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam || "dashboard");
   const queryClient = useQueryClient();
   const { toast } = useToast();
   

@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { DollarSign, Trash2, GripVertical } from "lucide-react";
 import { format } from "date-fns";
+import { Link } from "wouter";
 
 interface WidgetProps {
   userWidget: any;
@@ -48,33 +49,35 @@ export default function PendingExpenseReportsWidget({ userWidget, onRemove }: Wi
           <div className="space-y-2 max-h-[400px] overflow-y-auto">
             {data && data.length > 0 ? (
               data.map((expense: any) => (
-                <div
+                <Link 
                   key={expense.id}
+                  href="/hr?tab=expense-submissions"
                   data-testid={`expense-report-${expense.id}`}
-                  className="p-3 border rounded-lg hover:bg-accent transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate" data-testid={`expense-submitter-${expense.id}`}>
-                        {expense.fullName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {expense.expenseType || 'Expense Type Not Specified'}
-                      </p>
-                      {expense.expenseTotal && (
-                        <p className="text-xs font-medium text-primary mt-1">
-                          ${parseFloat(expense.expenseTotal).toFixed(2)}
+                  <div className="p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate" data-testid={`expense-submitter-${expense.id}`}>
+                          {expense.fullName}
                         </p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(expense.submittedAt), 'MMM d, yyyy')}
-                      </p>
+                        <p className="text-xs text-muted-foreground">
+                          {expense.expenseType || 'Expense Type Not Specified'}
+                        </p>
+                        {expense.expenseTotal && (
+                          <p className="text-xs font-medium text-primary mt-1">
+                            ${parseFloat(expense.expenseTotal).toFixed(2)}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(expense.submittedAt), 'MMM d, yyyy')}
+                        </p>
+                      </div>
+                      <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                        Pending
+                      </span>
                     </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                      Pending
-                    </span>
                   </div>
-                </div>
+                </Link>
               ))
             ) : (
               <div className="text-center py-8 text-muted-foreground">
