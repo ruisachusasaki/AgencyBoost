@@ -12962,6 +12962,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get user's permissions from their role
       let userPermissions: any[] = [];
+      let userGranularPermissions: any[] = [];
+      
       if (user.roleId) {
         userPermissions = await db.select({
           module: permissions.module,
@@ -12975,12 +12977,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dataAccessLevel: permissions.dataAccessLevel,
         }).from(permissions)
         .where(eq(permissions.roleId, user.roleId));
+        
+        // Also get granular permissions
+        userGranularPermissions = await db.select({
+          module: granularPermissions.module,
+          permissionKey: granularPermissions.permissionKey,
+          enabled: granularPermissions.enabled,
+        }).from(granularPermissions)
+        .where(eq(granularPermissions.roleId, user.roleId));
       }
       
-      // Return user data with permissions array
+      // Return user data with both permissions arrays
       res.json({
         ...user,
-        permissions: userPermissions
+        permissions: userPermissions,
+        granularPermissions: userGranularPermissions
       });
     } catch (error) {
       console.error('Error getting current user:', error);

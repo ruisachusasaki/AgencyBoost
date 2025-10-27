@@ -100,9 +100,6 @@ const GranularPermissionsEditor = ({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="font-medium">Granular Permissions</h4>
-        <Badge variant="secondary" className="text-xs">
-          GoHighLevel-style
-        </Badge>
       </div>
       
       <div className="border rounded-lg divide-y">

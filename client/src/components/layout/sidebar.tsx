@@ -80,14 +80,28 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       return true;
     }
     
-    if (!currentUser?.permissions) {
-      // DENY by default if no permissions data - only admins get fallback access
-      return false;
+    // Check granular permissions first (new system)
+    if (currentUser?.granularPermissions && currentUser.granularPermissions.length > 0) {
+      // Check if any granular permission for this module is enabled
+      const hasGranularPermission = currentUser.granularPermissions.some(
+        (gp: any) => gp.module === module && gp.enabled === true
+      );
+      
+      if (hasGranularPermission) {
+        return true;
+      }
     }
     
-    // Check if user has view permission for the module
-    const permission = currentUser.permissions.find((p: any) => p.module === module);
-    return permission?.canView === true;
+    // Fallback to legacy permissions
+    if (currentUser?.permissions) {
+      const permission = currentUser.permissions.find((p: any) => p.module === module);
+      if (permission?.canView === true) {
+        return true;
+      }
+    }
+    
+    // DENY by default if no permissions found
+    return false;
   };
 
   // Filter navigation based on permissions
