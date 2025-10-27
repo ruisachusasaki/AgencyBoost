@@ -7184,6 +7184,19 @@ export class DbStorage implements IStorage {
         case 'training_completion_status':
           return await this.getTrainingCompletionStatusData(userId, isAdminOrManager);
         
+        // Calendar & Appointments Widgets
+        case 'todays_appointments':
+          return await this.getTodaysAppointmentsData(userId);
+        
+        case 'upcoming_appointments':
+          return await this.getUpcomingAppointmentsData(userId);
+        
+        case 'appointment_no_shows':
+          return await this.getAppointmentNoShowsData(userId, isAdminOrManager);
+        
+        case 'overdue_appointments':
+          return await this.getOverdueAppointmentsData(userId, isAdminOrManager);
+        
         default:
           return { error: 'Unknown widget type' };
       }
@@ -8478,6 +8491,176 @@ export class DbStorage implements IStorage {
       }));
     } catch (error) {
       console.error("Error fetching training completion status:", error);
+      return [];
+    }
+  }
+
+  // ========== CALENDAR & APPOINTMENTS WIDGET DATA METHODS ==========
+  
+  private async getTodaysAppointmentsData(userId: string): Promise<any> {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      const appointments = await db
+        .select({
+          id: calendarAppointments.id,
+          title: calendarAppointments.title,
+          startTime: calendarAppointments.startTime,
+          endTime: calendarAppointments.endTime,
+          status: calendarAppointments.status,
+          location: calendarAppointments.location,
+          bookerName: calendarAppointments.bookerName,
+          bookerEmail: calendarAppointments.bookerEmail,
+          clientId: calendarAppointments.clientId,
+          clientName: sql<string>`clients.name`,
+          assignedTo: calendarAppointments.assignedTo,
+          assignedToName: sql<string>`CONCAT(staff.first_name, ' ', staff.last_name)`,
+        })
+        .from(calendarAppointments)
+        .leftJoin(clients, eq(calendarAppointments.clientId, clients.id))
+        .leftJoin(staff, eq(calendarAppointments.assignedTo, staff.id))
+        .where(
+          and(
+            eq(calendarAppointments.assignedTo, userId),
+            sql`${calendarAppointments.startTime} >= ${today}`,
+            sql`${calendarAppointments.startTime} < ${tomorrow}`
+          )
+        )
+        .orderBy(asc(calendarAppointments.startTime))
+        .limit(20);
+
+      return appointments;
+    } catch (error) {
+      console.error("Error fetching today's appointments:", error);
+      return [];
+    }
+  }
+
+  private async getUpcomingAppointmentsData(userId: string): Promise<any> {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const sevenDaysFromNow = new Date(today);
+      sevenDaysFromNow.setDate(today.getDate() + 7);
+
+      const appointments = await db
+        .select({
+          id: calendarAppointments.id,
+          title: calendarAppointments.title,
+          startTime: calendarAppointments.startTime,
+          endTime: calendarAppointments.endTime,
+          status: calendarAppointments.status,
+          location: calendarAppointments.location,
+          bookerName: calendarAppointments.bookerName,
+          bookerEmail: calendarAppointments.bookerEmail,
+          clientId: calendarAppointments.clientId,
+          clientName: sql<string>`clients.name`,
+          assignedTo: calendarAppointments.assignedTo,
+          assignedToName: sql<string>`CONCAT(staff.first_name, ' ', staff.last_name)`,
+        })
+        .from(calendarAppointments)
+        .leftJoin(clients, eq(calendarAppointments.clientId, clients.id))
+        .leftJoin(staff, eq(calendarAppointments.assignedTo, staff.id))
+        .where(
+          and(
+            eq(calendarAppointments.assignedTo, userId),
+            ne(calendarAppointments.status, 'cancelled'),
+            sql`${calendarAppointments.startTime} > ${today}`,
+            sql`${calendarAppointments.startTime} <= ${sevenDaysFromNow}`
+          )
+        )
+        .orderBy(asc(calendarAppointments.startTime))
+        .limit(20);
+
+      return appointments;
+    } catch (error) {
+      console.error("Error fetching upcoming appointments:", error);
+      return [];
+    }
+  }
+
+  private async getAppointmentNoShowsData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const noShows = await db
+        .select({
+          id: calendarAppointments.id,
+          title: calendarAppointments.title,
+          startTime: calendarAppointments.startTime,
+          endTime: calendarAppointments.endTime,
+          status: calendarAppointments.status,
+          location: calendarAppointments.location,
+          bookerName: calendarAppointments.bookerName,
+          bookerEmail: calendarAppointments.bookerEmail,
+          clientId: calendarAppointments.clientId,
+          clientName: sql<string>`clients.name`,
+          assignedTo: calendarAppointments.assignedTo,
+          assignedToName: sql<string>`CONCAT(staff.first_name, ' ', staff.last_name)`,
+        })
+        .from(calendarAppointments)
+        .leftJoin(clients, eq(calendarAppointments.clientId, clients.id))
+        .leftJoin(staff, eq(calendarAppointments.assignedTo, staff.id))
+        .where(
+          and(
+            isAdminOrManager ? undefined : eq(calendarAppointments.assignedTo, userId),
+            eq(calendarAppointments.status, 'no_show'),
+            sql`${calendarAppointments.startTime} >= ${thirtyDaysAgo}`
+          )
+        )
+        .orderBy(desc(calendarAppointments.startTime))
+        .limit(15);
+
+      return noShows;
+    } catch (error) {
+      console.error("Error fetching appointment no-shows:", error);
+      return [];
+    }
+  }
+
+  private async getOverdueAppointmentsData(userId: string, isAdminOrManager: boolean): Promise<any> {
+    try {
+      const now = new Date();
+
+      // Get appointments that are past their end time but still have 'confirmed' status
+      // These need to be updated to 'showed' or 'no_show'
+      const overdueAppointments = await db
+        .select({
+          id: calendarAppointments.id,
+          title: calendarAppointments.title,
+          startTime: calendarAppointments.startTime,
+          endTime: calendarAppointments.endTime,
+          status: calendarAppointments.status,
+          location: calendarAppointments.location,
+          bookerName: calendarAppointments.bookerName,
+          bookerEmail: calendarAppointments.bookerEmail,
+          clientId: calendarAppointments.clientId,
+          clientName: sql<string>`clients.name`,
+          assignedTo: calendarAppointments.assignedTo,
+          assignedToName: sql<string>`CONCAT(staff.first_name, ' ', staff.last_name)`,
+        })
+        .from(calendarAppointments)
+        .leftJoin(clients, eq(calendarAppointments.clientId, clients.id))
+        .leftJoin(staff, eq(calendarAppointments.assignedTo, staff.id))
+        .where(
+          and(
+            isAdminOrManager ? undefined : eq(calendarAppointments.assignedTo, userId),
+            eq(calendarAppointments.status, 'confirmed'),
+            sql`${calendarAppointments.endTime} < ${now}`
+          )
+        )
+        .orderBy(desc(calendarAppointments.startTime))
+        .limit(15);
+
+      return overdueAppointments;
+    } catch (error) {
+      console.error("Error fetching overdue appointments:", error);
       return [];
     }
   }

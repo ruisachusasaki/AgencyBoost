@@ -764,6 +764,97 @@ async function initializeHRTeamWidgets() {
   }
 }
 
+/**
+ * Initialize Calendar & Appointments Dashboard Widgets
+ * Creates widget definitions for calendar and appointment tracking features
+ */
+async function initializeCalendarAppointmentWidgets() {
+  try {
+    log("Running startup migration: initializeCalendarAppointmentWidgets");
+    
+    // Define the Calendar & Appointments widgets
+    const calendarWidgets = [
+      {
+        type: 'todays_appointments',
+        name: "Today's Appointments",
+        description: 'Scheduled for today',
+        category: 'calendar_appointments',
+        icon: 'Calendar',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: null, // All staff can see their own appointments
+        isActive: true
+      },
+      {
+        type: 'upcoming_appointments',
+        name: 'Upcoming Appointments',
+        description: 'Next 7 days',
+        category: 'calendar_appointments',
+        icon: 'CalendarDays',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: null, // All staff can see their own appointments
+        isActive: true
+      },
+      {
+        type: 'appointment_no_shows',
+        name: 'Appointment No-Shows',
+        description: 'Recent missed appointments',
+        category: 'calendar_appointments',
+        icon: 'UserX',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: null, // All staff can see, filtered by role in backend
+        isActive: true
+      },
+      {
+        type: 'overdue_appointments',
+        name: 'Overdue Appointments',
+        description: 'Past appointments needing status update',
+        category: 'calendar_appointments',
+        icon: 'AlertCircle',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: null, // All staff can see, filtered by role in backend
+        isActive: true
+      }
+    ];
+
+    // Check if widgets already exist and insert only new ones
+    for (const widget of calendarWidgets) {
+      const existing = await db.select().from(dashboardWidgets).where(eq(dashboardWidgets.type, widget.type)).limit(1);
+      
+      if (existing.length === 0) {
+        await db.insert(dashboardWidgets).values(widget);
+        log(`Widget created: ${widget.name}`);
+      } else {
+        log(`Widget already exists: ${widget.name} - skipping`);
+      }
+    }
+
+    log("Calendar & Appointments widgets initialization completed successfully");
+  } catch (error: any) {
+    log(`Calendar & Appointments widgets initialization error: ${error.message}`);
+    log("WARNING: Calendar & Appointments widgets initialization failed - widgets may not be available");
+  }
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -810,6 +901,7 @@ app.use((req, res, next) => {
   await initializeDefaultTeamPositions();
   await initializeDefaultExpenseReportFormFields();
   await initializeHRTeamWidgets();
+  await initializeCalendarAppointmentWidgets();
   
   // Setup Replit Auth
   await setupAuth(app);

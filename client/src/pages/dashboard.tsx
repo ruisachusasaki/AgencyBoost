@@ -52,6 +52,10 @@ import PendingExpenseReportsWidget from "@/components/widgets/pending-expense-re
 import TeamCapacityAlertsWidget from "@/components/widgets/team-capacity-alerts";
 import TeamBirthdayAnniversaryWidget from "@/components/widgets/team-birthday-anniversary";
 import TrainingCompletionWidget from "@/components/widgets/training-completion";
+import TodaysAppointmentsWidget from "@/components/widgets/todays-appointments";
+import UpcomingAppointmentsWidget from "@/components/widgets/upcoming-appointments";
+import AppointmentNoShowsWidget from "@/components/widgets/appointment-no-shows";
+import OverdueAppointmentsWidget from "@/components/widgets/overdue-appointments";
 
 interface Dashboard {
   id: string;
@@ -428,6 +432,14 @@ export default function Dashboard() {
         return <TeamBirthdayAnniversaryWidget {...props} />;
       case "training_completion_status":
         return <TrainingCompletionWidget {...props} />;
+      case "todays_appointments":
+        return <TodaysAppointmentsWidget {...props} />;
+      case "upcoming_appointments":
+        return <UpcomingAppointmentsWidget {...props} />;
+      case "appointment_no_shows":
+        return <AppointmentNoShowsWidget {...props} />;
+      case "overdue_appointments":
+        return <OverdueAppointmentsWidget {...props} />;
       default:
         return (
           <Card>
