@@ -7197,6 +7197,13 @@ export class DbStorage implements IStorage {
         case 'overdue_appointments':
           return await this.getOverdueAppointmentsData(userId, isAdminOrManager);
         
+        // Activity & Alerts Widgets
+        case 'my_mentions':
+          return await this.getMyMentionsData(userId);
+        
+        case 'system_alerts':
+          return await this.getSystemAlertsData(userId);
+        
         default:
           return { error: 'Unknown widget type' };
       }
@@ -8661,6 +8668,183 @@ export class DbStorage implements IStorage {
       return overdueAppointments;
     } catch (error) {
       console.error("Error fetching overdue appointments:", error);
+      return [];
+    }
+  }
+
+  // ========== ACTIVITY & ALERTS WIDGET DATA METHODS ==========
+
+  private async getMyMentionsData(userId: string): Promise<any> {
+    try {
+      const mentions: any[] = [];
+
+      // Get task comment mentions
+      const taskCommentMentions = await db
+        .select({
+          id: taskComments.id,
+          content: taskComments.content,
+          createdAt: taskComments.createdAt,
+          authorId: taskComments.authorId,
+          authorName: sql<string>`CONCAT(staff.first_name, ' ', staff.last_name)`,
+          taskId: taskComments.taskId,
+          taskTitle: sql<string>`tasks.title`,
+        })
+        .from(taskComments)
+        .leftJoin(staff, eq(taskComments.authorId, staff.id))
+        .leftJoin(tasks, eq(taskComments.taskId, tasks.id))
+        .where(sql`${userId} = ANY(${taskComments.mentions})`)
+        .orderBy(desc(taskComments.createdAt))
+        .limit(10);
+
+      taskCommentMentions.forEach(comment => {
+        mentions.push({
+          id: comment.id,
+          type: 'task_comment',
+          content: comment.content,
+          authorName: comment.authorName || 'Unknown',
+          createdAt: comment.createdAt,
+          entityId: comment.id,
+          entityTitle: comment.taskTitle,
+          taskId: comment.taskId,
+        });
+      });
+
+      // Get file annotation mentions
+      // File annotations can reference either task attachments or comment files
+      // We need to join both to get the task information
+      const annotationMentions = await db
+        .select({
+          id: fileAnnotations.id,
+          content: fileAnnotations.content,
+          createdAt: fileAnnotations.createdAt,
+          authorId: fileAnnotations.authorId,
+          authorName: sql<string>`CONCAT(staff.first_name, ' ', staff.last_name)`,
+          fileId: fileAnnotations.fileId,
+          // Try to get task ID from task attachments first
+          taskIdFromAttachment: taskAttachments.taskId,
+          taskTitleFromAttachment: tasks.title,
+          // Also try to get task ID from comment files
+          commentId: commentFiles.commentId,
+        })
+        .from(fileAnnotations)
+        .leftJoin(staff, eq(fileAnnotations.authorId, staff.id))
+        .leftJoin(taskAttachments, eq(taskAttachments.id, fileAnnotations.fileId))
+        .leftJoin(tasks, eq(taskAttachments.taskId, tasks.id))
+        .leftJoin(commentFiles, eq(commentFiles.id, fileAnnotations.fileId))
+        .where(sql`${userId} = ANY(${fileAnnotations.mentions})`)
+        .orderBy(desc(fileAnnotations.createdAt))
+        .limit(10);
+
+      // For annotations on comment files, we need to get the task from the comment
+      for (const annotation of annotationMentions) {
+        let taskId = annotation.taskIdFromAttachment;
+        let taskTitle = annotation.taskTitleFromAttachment || 'File Annotation';
+
+        // If not from task attachment, try to get from comment file
+        if (!taskId && annotation.commentId) {
+          const commentTask = await db
+            .select({
+              taskId: taskComments.taskId,
+              taskTitle: sql<string>`tasks.title`,
+            })
+            .from(taskComments)
+            .leftJoin(tasks, eq(taskComments.taskId, tasks.id))
+            .where(eq(taskComments.id, annotation.commentId))
+            .limit(1);
+
+          if (commentTask.length > 0) {
+            taskId = commentTask[0].taskId;
+            taskTitle = commentTask[0].taskTitle || 'File Annotation';
+          }
+        }
+
+        mentions.push({
+          id: annotation.id,
+          type: 'file_annotation',
+          content: annotation.content,
+          authorName: annotation.authorName || 'Unknown',
+          createdAt: annotation.createdAt,
+          entityId: annotation.id,
+          entityTitle: taskTitle,
+          taskId: taskId || null,
+        });
+      }
+
+      // Get knowledge base comment mentions
+      const kbCommentMentions = await db
+        .select({
+          id: knowledgeBaseComments.id,
+          content: knowledgeBaseComments.content,
+          createdAt: knowledgeBaseComments.createdAt,
+          authorId: knowledgeBaseComments.authorId,
+          authorName: sql<string>`CONCAT(staff.first_name, ' ', staff.last_name)`,
+          articleId: knowledgeBaseComments.articleId,
+          articleTitle: sql<string>`knowledge_base_articles.title`,
+        })
+        .from(knowledgeBaseComments)
+        .leftJoin(staff, eq(knowledgeBaseComments.authorId, staff.id))
+        .leftJoin(knowledgeBaseArticles, eq(knowledgeBaseComments.articleId, knowledgeBaseArticles.id))
+        .where(sql`${userId} = ANY(${knowledgeBaseComments.mentions})`)
+        .orderBy(desc(knowledgeBaseComments.createdAt))
+        .limit(10);
+
+      kbCommentMentions.forEach(comment => {
+        mentions.push({
+          id: comment.id,
+          type: 'kb_comment',
+          content: comment.content,
+          authorName: comment.authorName || 'Unknown',
+          createdAt: comment.createdAt,
+          entityId: comment.articleId,
+          entityTitle: comment.articleTitle,
+          taskId: null,
+        });
+      });
+
+      // Sort all mentions by date and limit to 15 most recent
+      mentions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return mentions.slice(0, 15);
+    } catch (error) {
+      console.error("Error fetching my mentions:", error);
+      return [];
+    }
+  }
+
+  private async getSystemAlertsData(userId: string): Promise<any> {
+    try {
+      // Get system alerts and high/urgent priority notifications
+      const alerts = await db
+        .select({
+          id: notifications.id,
+          type: notifications.type,
+          title: notifications.title,
+          message: notifications.message,
+          priority: notifications.priority,
+          isRead: notifications.isRead,
+          actionUrl: notifications.actionUrl,
+          actionText: notifications.actionText,
+          createdAt: notifications.createdAt,
+        })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, userId),
+            or(
+              eq(notifications.type, 'system'),
+              eq(notifications.priority, 'high'),
+              eq(notifications.priority, 'urgent')
+            )
+          )
+        )
+        .orderBy(
+          desc(sql`CASE WHEN ${notifications.isRead} = false THEN 1 ELSE 0 END`),
+          desc(notifications.createdAt)
+        )
+        .limit(20);
+
+      return alerts;
+    } catch (error) {
+      console.error("Error fetching system alerts:", error);
       return [];
     }
   }

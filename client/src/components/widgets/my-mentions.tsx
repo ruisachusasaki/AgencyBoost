@@ -47,9 +47,9 @@ export default function MyMentionsWidget({ userWidget, onRemove }: MyMentionsWid
   const getMentionLink = (mention: Mention) => {
     switch (mention.type) {
       case 'task_comment':
-        return `/tasks?taskId=${mention.taskId}`;
+        return mention.taskId ? `/tasks?taskId=${mention.taskId}` : '#';
       case 'file_annotation':
-        return `/tasks?taskId=${mention.taskId}`; // Annotations are on task files
+        return mention.taskId ? `/tasks?taskId=${mention.taskId}` : '#'; // Annotations are on task files
       case 'kb_comment':
         return `/knowledge-base/articles/${mention.entityId}`;
       default:

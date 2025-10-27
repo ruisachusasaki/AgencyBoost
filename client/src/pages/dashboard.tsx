@@ -56,6 +56,8 @@ import TodaysAppointmentsWidget from "@/components/widgets/todays-appointments";
 import UpcomingAppointmentsWidget from "@/components/widgets/upcoming-appointments";
 import AppointmentNoShowsWidget from "@/components/widgets/appointment-no-shows";
 import OverdueAppointmentsWidget from "@/components/widgets/overdue-appointments";
+import MyMentionsWidget from "@/components/widgets/my-mentions";
+import SystemAlertsWidget from "@/components/widgets/system-alerts";
 
 interface Dashboard {
   id: string;
@@ -440,6 +442,10 @@ export default function Dashboard() {
         return <AppointmentNoShowsWidget {...props} />;
       case "overdue_appointments":
         return <OverdueAppointmentsWidget {...props} />;
+      case "my_mentions":
+        return <MyMentionsWidget {...props} />;
+      case "system_alerts":
+        return <SystemAlertsWidget {...props} />;
       default:
         return (
           <Card>
@@ -851,6 +857,15 @@ export default function Dashboard() {
                   >
                     Calendar & Appointments
                   </Button>
+                  <Button
+                    variant={widgetCategoryFilter === "activity_alerts" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setWidgetCategoryFilter("activity_alerts")}
+                    data-testid="filter-category-activity-alerts"
+                    className={widgetCategoryFilter === "activity_alerts" ? "bg-red-600 hover:bg-red-700" : ""}
+                  >
+                    Activity & Alerts
+                  </Button>
                 </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -887,6 +902,7 @@ export default function Dashboard() {
                         'hr_team': 'bg-orange-100 text-orange-800 border-orange-200',
                         'analytics': 'bg-orange-100 text-orange-800 border-orange-200',
                         'calendar_appointments': 'bg-cyan-100 text-cyan-800 border-cyan-200',
+                        'activity_alerts': 'bg-red-100 text-red-800 border-red-200',
                       };
                       
                       const categoryColor = categoryColors[widget.category] || 'bg-gray-100 text-gray-800 border-gray-200';

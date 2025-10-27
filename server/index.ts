@@ -855,6 +855,67 @@ async function initializeCalendarAppointmentWidgets() {
   }
 }
 
+/**
+ * Initialize Activity & Alerts Dashboard Widgets
+ * Creates widget definitions for mentions and system notifications
+ */
+async function initializeActivityAlertsWidgets() {
+  try {
+    log("Running startup migration: initializeActivityAlertsWidgets");
+    
+    // Define the Activity & Alerts widgets
+    const activityWidgets = [
+      {
+        type: 'my_mentions',
+        name: 'My Mentions',
+        description: 'Comments and tasks where you\'re mentioned',
+        category: 'activity_alerts',
+        icon: 'AtSign',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: null, // All staff can see their own mentions
+        isActive: true
+      },
+      {
+        type: 'system_alerts',
+        name: 'System Alerts',
+        description: 'Important notifications and warnings',
+        category: 'activity_alerts',
+        icon: 'Bell',
+        defaultWidth: 2,
+        defaultHeight: 2,
+        minWidth: 2,
+        minHeight: 2,
+        maxWidth: 4,
+        maxHeight: 4,
+        allowedRoles: null, // All staff can see their own alerts
+        isActive: true
+      }
+    ];
+
+    // Check if widgets already exist and insert only new ones
+    for (const widget of activityWidgets) {
+      const existing = await db.select().from(dashboardWidgets).where(eq(dashboardWidgets.type, widget.type)).limit(1);
+      
+      if (existing.length === 0) {
+        await db.insert(dashboardWidgets).values(widget);
+        log(`Widget created: ${widget.name}`);
+      } else {
+        log(`Widget already exists: ${widget.name} - skipping`);
+      }
+    }
+
+    log("Activity & Alerts widgets initialization completed successfully");
+  } catch (error: any) {
+    log(`Activity & Alerts widgets initialization error: ${error.message}`);
+    log("WARNING: Activity & Alerts widgets initialization failed - widgets may not be available");
+  }
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -902,6 +963,7 @@ app.use((req, res, next) => {
   await initializeDefaultExpenseReportFormFields();
   await initializeHRTeamWidgets();
   await initializeCalendarAppointmentWidgets();
+  await initializeActivityAlertsWidgets();
   
   // Setup Replit Auth
   await setupAuth(app);
