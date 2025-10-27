@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Trash2, GripVertical } from "lucide-react";
+import { AlertTriangle, Trash2, GripVertical, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
+import { Link } from "wouter";
 
 interface WidgetProps {
   userWidget: any;
@@ -29,15 +30,28 @@ export default function TeamCapacityAlertsWidget({ userWidget, onRemove }: Widge
             </CardDescription>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onRemove}
-          data-testid="button-remove-widget"
-          className="h-8 w-8 p-0 flex-shrink-0"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Link href="/reports?tab=team">
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="button-view-capacity-report"
+              className="h-8 w-8 p-0 flex-shrink-0"
+              title="View Team Workload Report"
+            >
+              <BarChart3 className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            data-testid="button-remove-widget"
+            className="h-8 w-8 p-0 flex-shrink-0"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
