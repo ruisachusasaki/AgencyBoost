@@ -95,6 +95,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
     // Map navigation items to permission modules
     const moduleMap: Record<string, string> = {
       "/clients": "clients",
+      "/marketing": "campaigns",
       "/sales": "sales",
       "/leads": "leads",
       "/tasks": "tasks",
