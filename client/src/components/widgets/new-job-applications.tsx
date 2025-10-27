@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Briefcase, Trash2, GripVertical } from "lucide-react";
@@ -48,33 +49,35 @@ export default function NewJobApplicationsWidget({ userWidget, onRemove }: Widge
           <div className="space-y-2 max-h-[400px] overflow-y-auto">
             {data && data.length > 0 ? (
               data.map((application: any) => (
-                <div
+                <Link
                   key={application.id}
+                  href={`/hr/applicant/${application.id}`}
                   data-testid={`job-application-${application.id}`}
-                  className="p-3 border rounded-lg hover:bg-accent transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate" data-testid={`applicant-name-${application.id}`}>
-                        {application.firstName} {application.lastName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {application.positionName || 'Position Not Found'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(application.submittedAt), 'MMM d, yyyy')}
-                      </p>
+                  <div className="p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate" data-testid={`applicant-name-${application.id}`}>
+                          {application.applicantName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {application.positionTitle || 'Position Not Found'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(application.appliedAt), 'MMM d, yyyy')}
+                        </p>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        application.applicationStatus === 'new' ? 'bg-blue-100 text-blue-800' :
+                        application.applicationStatus === 'reviewed' ? 'bg-yellow-100 text-yellow-800' :
+                        application.applicationStatus === 'interviewing' ? 'bg-purple-100 text-purple-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {application.applicationStatus}
+                      </span>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      application.status === 'new' ? 'bg-blue-100 text-blue-800' :
-                      application.status === 'reviewed' ? 'bg-yellow-100 text-yellow-800' :
-                      application.status === 'interviewing' ? 'bg-purple-100 text-purple-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {application.status}
-                    </span>
                   </div>
-                </div>
+                </Link>
               ))
             ) : (
               <div className="text-center py-8 text-muted-foreground">

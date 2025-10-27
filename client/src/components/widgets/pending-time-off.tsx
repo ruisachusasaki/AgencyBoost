@@ -61,9 +61,11 @@ export default function PendingTimeOffWidget({ userWidget, onRemove }: WidgetPro
                       <p className="text-xs text-muted-foreground">
                         {request.type}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(request.startDate), 'MMM d')} - {format(new Date(request.endDate), 'MMM d, yyyy')}
-                      </p>
+                      {request.startDate && request.endDate && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(request.startDate), 'MMM d')} - {format(new Date(request.endDate), 'MMM d, yyyy')}
+                        </p>
+                      )}
                     </div>
                     <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
                       Pending

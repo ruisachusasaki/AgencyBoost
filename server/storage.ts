@@ -8224,20 +8224,20 @@ export class DbStorage implements IStorage {
 
       const pendingRequests = await db
         .select({
-          id: timeOffRequests.id,
-          staffId: timeOffRequests.staffId,
-          staffName: staff.fullName,
-          startDate: timeOffRequests.startDate,
-          endDate: timeOffRequests.endDate,
-          type: timeOffRequests.type,
-          reason: timeOffRequests.reason,
-          status: timeOffRequests.status,
-          submittedAt: timeOffRequests.submittedAt,
+          id: sql<string>`time_off_requests.id`,
+          staffId: sql<string>`time_off_requests.staff_id`,
+          staffName: sql<string>`CONCAT(staff.first_name, ' ', staff.last_name)`,
+          startDate: sql<Date>`time_off_requests.start_date`,
+          endDate: sql<Date>`time_off_requests.end_date`,
+          type: sql<string>`time_off_requests.type`,
+          reason: sql<string>`time_off_requests.reason`,
+          status: sql<string>`time_off_requests.status`,
+          createdAt: sql<Date>`time_off_requests.created_at`,
         })
         .from(timeOffRequests)
-        .leftJoin(staff, eq(timeOffRequests.staffId, staff.id))
-        .where(eq(timeOffRequests.status, 'pending'))
-        .orderBy(asc(timeOffRequests.submittedAt))
+        .leftJoin(staff, sql`time_off_requests.staff_id = staff.id`)
+        .where(sql`time_off_requests.status = 'pending'`)
+        .orderBy(sql`time_off_requests.created_at ASC`)
         .limit(10);
 
       return pendingRequests;
@@ -8257,43 +8257,31 @@ export class DbStorage implements IStorage {
 
       const offToday = await db
         .select({
-          id: timeOffRequests.id,
-          staffId: timeOffRequests.staffId,
-          staffName: staff.fullName,
-          type: timeOffRequests.type,
-          startDate: timeOffRequests.startDate,
-          endDate: timeOffRequests.endDate,
+          id: sql<string>`time_off_requests.id`,
+          staffId: sql<string>`time_off_requests.staff_id`,
+          staffName: sql<string>`CONCAT(staff.first_name, ' ', staff.last_name)`,
+          type: sql<string>`time_off_requests.type`,
+          startDate: sql<Date>`time_off_requests.start_date`,
+          endDate: sql<Date>`time_off_requests.end_date`,
         })
         .from(timeOffRequests)
-        .leftJoin(staff, eq(timeOffRequests.staffId, staff.id))
-        .where(
-          and(
-            eq(timeOffRequests.status, 'approved'),
-            sql`${timeOffRequests.startDate} <= ${today}`,
-            sql`${timeOffRequests.endDate} >= ${today}`
-          )
-        )
-        .orderBy(asc(staff.fullName));
+        .leftJoin(staff, sql`time_off_requests.staff_id = staff.id`)
+        .where(sql`time_off_requests.status = 'approved' AND time_off_requests.start_date <= ${today} AND time_off_requests.end_date >= ${today}`)
+        .orderBy(sql`staff.first_name ASC`);
 
       const offThisWeek = await db
         .select({
-          id: timeOffRequests.id,
-          staffId: timeOffRequests.staffId,
-          staffName: staff.fullName,
-          type: timeOffRequests.type,
-          startDate: timeOffRequests.startDate,
-          endDate: timeOffRequests.endDate,
+          id: sql<string>`time_off_requests.id`,
+          staffId: sql<string>`time_off_requests.staff_id`,
+          staffName: sql<string>`CONCAT(staff.first_name, ' ', staff.last_name)`,
+          type: sql<string>`time_off_requests.type`,
+          startDate: sql<Date>`time_off_requests.start_date`,
+          endDate: sql<Date>`time_off_requests.end_date`,
         })
         .from(timeOffRequests)
-        .leftJoin(staff, eq(timeOffRequests.staffId, staff.id))
-        .where(
-          and(
-            eq(timeOffRequests.status, 'approved'),
-            sql`${timeOffRequests.startDate} <= ${endOfWeek}`,
-            sql`${timeOffRequests.endDate} >= ${today}`
-          )
-        )
-        .orderBy(asc(timeOffRequests.startDate));
+        .leftJoin(staff, sql`time_off_requests.staff_id = staff.id`)
+        .where(sql`time_off_requests.status = 'approved' AND time_off_requests.start_date <= ${endOfWeek} AND time_off_requests.end_date >= ${today}`)
+        .orderBy(sql`time_off_requests.start_date ASC`);
 
       return {
         today: offToday,
@@ -8315,18 +8303,16 @@ export class DbStorage implements IStorage {
       const recentApplications = await db
         .select({
           id: jobApplications.id,
-          firstName: jobApplications.firstName,
-          lastName: jobApplications.lastName,
-          email: jobApplications.email,
-          phone: jobApplications.phone,
-          positionId: jobApplications.positionId,
-          positionName: positions.name,
-          status: jobApplications.status,
-          submittedAt: jobApplications.submittedAt,
+          applicantName: sql<string>`applicant_name`,
+          applicantEmail: sql<string>`applicant_email`,
+          applicantPhone: sql<string>`applicant_phone`,
+          positionId: sql<string>`position_id`,
+          positionTitle: sql<string>`position_title`,
+          applicationStatus: sql<string>`application_status`,
+          appliedAt: sql<Date>`applied_at`,
         })
         .from(jobApplications)
-        .leftJoin(positions, eq(jobApplications.positionId, positions.id))
-        .orderBy(desc(jobApplications.submittedAt))
+        .orderBy(desc(sql`applied_at`))
         .limit(10);
 
       return recentApplications;
@@ -8346,14 +8332,11 @@ export class DbStorage implements IStorage {
       const pendingOnboarding = await db
         .select({
           id: newHireOnboardingSubmissions.id,
-          firstName: newHireOnboardingSubmissions.firstName,
-          lastName: newHireOnboardingSubmissions.lastName,
-          email: newHireOnboardingSubmissions.email,
+          name: newHireOnboardingSubmissions.name,
           startDate: newHireOnboardingSubmissions.startDate,
-          department: newHireOnboardingSubmissions.department,
-          position: newHireOnboardingSubmissions.position,
           status: newHireOnboardingSubmissions.status,
           submittedAt: newHireOnboardingSubmissions.submittedAt,
+          customFieldData: newHireOnboardingSubmissions.customFieldData,
         })
         .from(newHireOnboardingSubmissions)
         .where(eq(newHireOnboardingSubmissions.status, 'pending'))
@@ -8389,14 +8372,14 @@ export class DbStorage implements IStorage {
       const pendingExpenses = await db
         .select({
           id: expenseReportSubmissions.id,
-          submitterId: expenseReportSubmissions.submitterId,
-          submitterName: staff.fullName,
-          formData: expenseReportSubmissions.formData,
+          submittedById: expenseReportSubmissions.submittedById,
+          fullName: expenseReportSubmissions.fullName,
+          expenseType: expenseReportSubmissions.expenseType,
+          expenseTotal: expenseReportSubmissions.expenseTotal,
           status: expenseReportSubmissions.status,
           submittedAt: expenseReportSubmissions.submittedAt,
         })
         .from(expenseReportSubmissions)
-        .leftJoin(staff, eq(expenseReportSubmissions.submitterId, staff.id))
         .where(eq(expenseReportSubmissions.status, 'pending'))
         .orderBy(asc(expenseReportSubmissions.submittedAt))
         .limit(10);
@@ -8415,28 +8398,9 @@ export class DbStorage implements IStorage {
         return [];
       }
 
-      // Get active capacity settings with alerts enabled
-      const activeAlerts = await db
-        .select({
-          id: capacitySettings.id,
-          position: capacitySettings.position,
-          currentCapacity: capacitySettings.currentCapacity,
-          maxCapacity: capacitySettings.maxCapacity,
-          alertThreshold: capacitySettings.alertThreshold,
-          predictedDate: capacitySettings.predictedHiringDate,
-          alertsEnabled: capacitySettings.alertsEnabled,
-        })
-        .from(capacitySettings)
-        .where(
-          and(
-            eq(capacitySettings.alertsEnabled, true),
-            isNotNull(capacitySettings.predictedHiringDate)
-          )
-        )
-        .orderBy(asc(capacitySettings.predictedHiringDate))
-        .limit(10);
-
-      return activeAlerts;
+      // Get active capacity settings - note: predictive hiring fields don't exist in DB yet
+      // For now, return empty array as this feature needs DB schema updates
+      return [];
     } catch (error) {
       console.error("Error fetching team capacity alerts:", error);
       return [];
@@ -8488,7 +8452,7 @@ export class DbStorage implements IStorage {
         return [];
       }
 
-      // Get all active courses with enrollment and completion data
+      // Get all published courses with enrollment and completion data
       const courseStats = await db
         .select({
           courseId: trainingCourses.id,
@@ -8498,7 +8462,7 @@ export class DbStorage implements IStorage {
         })
         .from(trainingCourses)
         .leftJoin(trainingEnrollments, eq(trainingEnrollments.courseId, trainingCourses.id))
-        .where(eq(trainingCourses.isActive, true))
+        .where(eq(trainingCourses.isPublished, true))
         .groupBy(trainingCourses.id, trainingCourses.title)
         .orderBy(desc(sql<number>`count(DISTINCT ${trainingEnrollments.id})`))
         .limit(10);

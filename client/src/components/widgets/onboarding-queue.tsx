@@ -56,14 +56,13 @@ export default function OnboardingQueueWidget({ userWidget, onRemove }: WidgetPr
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate" data-testid={`new-hire-name-${submission.id}`}>
-                        {submission.firstName} {submission.lastName}
+                        {submission.name}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {submission.position} - {submission.department}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Start: {format(new Date(submission.startDate), 'MMM d, yyyy')}
-                      </p>
+                      {submission.startDate && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Start: {format(new Date(submission.startDate), 'MMM d, yyyy')}
+                        </p>
+                      )}
                     </div>
                     <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
                       Pending

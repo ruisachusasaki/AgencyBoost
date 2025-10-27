@@ -56,14 +56,14 @@ export default function PendingExpenseReportsWidget({ userWidget, onRemove }: Wi
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate" data-testid={`expense-submitter-${expense.id}`}>
-                        {expense.submitterName}
+                        {expense.fullName}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {expense.formData?.expense_type || 'Expense Type Not Specified'}
+                        {expense.expenseType || 'Expense Type Not Specified'}
                       </p>
-                      {expense.formData?.expense_total && (
+                      {expense.expenseTotal && (
                         <p className="text-xs font-medium text-primary mt-1">
-                          ${parseFloat(expense.formData.expense_total).toFixed(2)}
+                          ${parseFloat(expense.expenseTotal).toFixed(2)}
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground mt-1">
