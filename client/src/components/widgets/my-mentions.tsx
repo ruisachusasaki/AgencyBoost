@@ -107,7 +107,7 @@ export default function MyMentionsWidget({ userWidget, onRemove }: MyMentionsWid
             </div>
           </div>
         ) : (
-          <div className="space-y-2 overflow-y-auto pr-2">
+          <div className="space-y-3 overflow-y-auto pr-2">
             {mentions.map((mention) => (
               <Link key={mention.id} href={getMentionLink(mention)}>
                 <div
