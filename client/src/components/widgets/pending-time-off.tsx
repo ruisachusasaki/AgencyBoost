@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Calendar, Trash2, GripVertical } from "lucide-react";
 import { format } from "date-fns";
+import { Link } from "wouter";
 
 interface WidgetProps {
   userWidget: any;
@@ -48,30 +49,32 @@ export default function PendingTimeOffWidget({ userWidget, onRemove }: WidgetPro
           <div className="space-y-2 max-h-[400px] overflow-y-auto">
             {data && data.length > 0 ? (
               data.map((request: any) => (
-                <div
+                <Link
                   key={request.id}
+                  href="/hr?tab=time-off"
                   data-testid={`time-off-request-${request.id}`}
-                  className="p-3 border rounded-lg hover:bg-accent transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate" data-testid={`request-staff-${request.id}`}>
-                        {request.staffName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {request.type}
-                      </p>
-                      {request.startDate && request.endDate && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(request.startDate), 'MMM d')} - {format(new Date(request.endDate), 'MMM d, yyyy')}
+                  <div className="p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate" data-testid={`request-staff-${request.id}`}>
+                          {request.staffName}
                         </p>
-                      )}
+                        <p className="text-xs text-muted-foreground">
+                          {request.type}
+                        </p>
+                        {request.startDate && request.endDate && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(request.startDate), 'MMM d')} - {format(new Date(request.endDate), 'MMM d, yyyy')}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                        Pending
+                      </span>
                     </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                      Pending
-                    </span>
                   </div>
-                </div>
+                </Link>
               ))
             ) : (
               <div className="text-center py-8 text-muted-foreground">
