@@ -26,7 +26,14 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - Responsive tab navigation with intelligent overflow menus for sections like HR, adapting to screen size breakpoints.
 
 ### Technical Implementations
-- **Authentication & Authorization**: Replit Auth OIDC, session management, role-based access control (Admin, Manager, User, Accounting), and granular permissions. Includes admin impersonation with audit logging.
+- **Authentication & Authorization**: Replit Auth OIDC, session management, role-based access control (Admin, Manager, User, Accounting), and granular permissions system. Includes admin impersonation with audit logging.
+  - **Granular Permissions System**: GoHighLevel-style fine-grained permission control with module-level toggles and hierarchical sub-permissions. Features include:
+    - Permission templates defining sub-permissions for all modules (Clients, Marketing, Sales, Tasks, HR, Calendar, Automation, etc.)
+    - Expandable UI with module toggles and individual sub-permission checkboxes
+    - Database schema with unique constraint on (roleId, permissionKey) to prevent duplicates
+    - Backward compatibility with existing legacy permissions
+    - Sub-permission state preservation when toggling modules on/off
+    - API endpoints support both legacy and granular permissions simultaneously
 - **Data Management**: Relational schema, CRUD, audit logs, sorting, pagination, CSV import/export, custom fields.
 - **Task Management**: Hierarchical sub-tasks, dependencies, recurring tasks, bulk actions, and dynamic project progress.
 - **Communication**: Smart Lists, Email/SMS with DND, document management, notes, calendar management with dynamic merge tags, and unified templating. Calendar views support filtering by selected calendars.
