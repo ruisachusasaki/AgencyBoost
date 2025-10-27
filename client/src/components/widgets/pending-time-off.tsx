@@ -46,7 +46,7 @@ export default function PendingTimeOffWidget({ userWidget, onRemove }: WidgetPro
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
           </div>
         ) : (
-          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {data && data.length > 0 ? (
               data.map((request: any) => (
                 <Link
