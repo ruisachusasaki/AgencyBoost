@@ -44,6 +44,8 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, and search.
 - **User Preferences**: Per-user view customization system storing column visibility preferences in the database.
 - **Multi-Dashboard System**: Users can create multiple named dashboards for different purposes (similar to GoHighLevel). Features include tab-based navigation between dashboards, dashboard management dialog for creating/renaming/deleting dashboards with up/down arrow button reordering (default dashboard always locked in position 1), default dashboard settings, and automatic default dashboard initialization for new users. The system handles stale localStorage by validating stored dashboard IDs against the server and falling back to valid dashboards when needed.
+- **Dashboard Widgets**: Customizable dashboard with drag-and-drop widget management, including widgets across Client Management, Sales & Revenue, Tasks, Lead Management, HR & Team, Calendar & Appointments, and Activity & Alerts categories. Features per-user widget layouts, team assignment filtering, add/remove UI, resizing, optimistic UI updates, real-time data updates, category-based filtering with color-coded badges (blue=Client Management, green=Sales, purple=Tasks, yellow=Leads, orange=HR & Team, cyan=Calendar & Appointments, red=Activity & Alerts), and search functionality.
+  - **Activity & Alerts Widgets** (2): My Mentions (aggregates @mentions from task comments, file annotations, and knowledge base comments with dual-path resolution for task attachments and comment files), System Alerts (high-priority and system notifications)
 
 ## External Dependencies
 
