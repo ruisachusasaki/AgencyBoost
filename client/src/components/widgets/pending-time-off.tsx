@@ -53,6 +53,7 @@ export default function PendingTimeOffWidget({ userWidget, onRemove }: WidgetPro
                   key={request.id}
                   href="/hr?tab=time-off"
                   data-testid={`time-off-request-${request.id}`}
+                  className="block"
                 >
                   <div className="p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer">
                     <div className="flex items-start justify-between gap-2">
