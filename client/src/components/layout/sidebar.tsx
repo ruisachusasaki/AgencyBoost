@@ -117,7 +117,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       "/workflows": "workflows",
       "/hr": "hr",
       "/training": "training",
-      "/resources": "resources",
+      "/resources": "knowledge_base",
       "/reports": "reports",
     };
     

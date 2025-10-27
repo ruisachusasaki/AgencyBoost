@@ -5736,7 +5736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Template Folder routes
-  app.get("/api/template-folders", requireAuth(), requirePermission('templates', 'canView'), async (req, res) => {
+  app.get("/api/template-folders", requireAuth(), requirePermission('campaigns', 'canView'), async (req, res) => {
     try {
       const folders = await appStorage.getTemplateFolders();
       res.json(folders);
@@ -5745,7 +5745,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/template-folders", requireAuth(), requirePermission('templates', 'canCreate'), async (req, res) => {
+  app.post("/api/template-folders", requireAuth(), requirePermission('campaigns', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertTemplateFolderSchema.parse(req.body);
       const folder = await appStorage.createTemplateFolder(validatedData);
@@ -5758,7 +5758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/template-folders/:id", requireAuth(), requirePermission('templates', 'canDelete'), async (req, res) => {
+  app.delete("/api/template-folders/:id", requireAuth(), requirePermission('campaigns', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -15374,7 +15374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Test route to bypass storage
-  app.get("/api/forms/test", requireAuth(), requirePermission('forms', 'canView'), async (req, res) => {
+  app.get("/api/forms/test", requireAuth(), requirePermission('campaigns', 'canView'), async (req, res) => {
     try {
       res.json({ success: true, storageType: appStorage.constructor.name });
     } catch (error) {
@@ -15384,7 +15384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Form folders endpoints
-  app.get("/api/form-folders", requireAuth(), requirePermission('forms', 'canView'), async (req, res) => {
+  app.get("/api/form-folders", requireAuth(), requirePermission('campaigns', 'canView'), async (req, res) => {
     try {
       const foldersResult = await db.select().from(formFolders).orderBy(asc(formFolders.order));
       res.json(foldersResult);
@@ -15394,7 +15394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/form-folders", requireAuth(), requirePermission('forms', 'canCreate'), async (req, res) => {
+  app.post("/api/form-folders", requireAuth(), requirePermission('campaigns', 'canCreate'), async (req, res) => {
     try {
       const folderData = insertFormFolderSchema.parse(req.body);
       const result = await db.insert(formFolders).values(folderData).returning();
@@ -15405,7 +15405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/form-folders/:id", requireAuth(), requirePermission('forms', 'canEdit'), async (req, res) => {
+  app.put("/api/form-folders/:id", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
     try {
       const { id } = req.params;
       const folderData = insertFormFolderSchema.parse(req.body);
@@ -15425,7 +15425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/form-folders/:id", requireAuth(), requirePermission('forms', 'canDelete'), async (req, res) => {
+  app.delete("/api/form-folders/:id", requireAuth(), requirePermission('campaigns', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -15451,7 +15451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Form Routes - Direct database operations (workaround for storage class compilation issue)
-  app.get("/api/forms", requireAuth(), requirePermission('forms', 'canView'), async (req, res) => {
+  app.get("/api/forms", requireAuth(), requirePermission('campaigns', 'canView'), async (req, res) => {
     try {
       const formsResult = await db.select().from(forms).orderBy(desc(forms.createdAt));
       res.json(formsResult);
@@ -15461,7 +15461,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/forms/:id", requireAuth(), requirePermission('forms', 'canView'), async (req, res) => {
+  app.get("/api/forms/:id", requireAuth(), requirePermission('campaigns', 'canView'), async (req, res) => {
     try {
       const formResult = await db.select().from(forms).where(eq(forms.id, req.params.id)).limit(1);
       if (!formResult[0]) {
@@ -15481,7 +15481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get form fields for a specific form
-  app.get("/api/form-fields", requireAuth(), requirePermission('forms', 'canView'), async (req, res) => {
+  app.get("/api/form-fields", requireAuth(), requirePermission('campaigns', 'canView'), async (req, res) => {
     try {
       const formId = req.query.formId as string;
       if (!formId) {
@@ -15507,7 +15507,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/forms", requireAuth(), requirePermission('forms', 'canCreate'), async (req, res) => {
+  app.post("/api/forms", requireAuth(), requirePermission('campaigns', 'canCreate'), async (req, res) => {
     try {
       const { fields, ...formData } = req.body;
       
@@ -15542,7 +15542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/forms/:id", requireAuth(), requirePermission('forms', 'canEdit'), async (req, res) => {
+  app.put("/api/forms/:id", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
     try {
       const { fields, ...formData } = req.body;
       
@@ -15620,7 +15620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/forms/:id", requireAuth(), requirePermission('forms', 'canDelete'), async (req, res) => {
+  app.delete("/api/forms/:id", requireAuth(), requirePermission('campaigns', 'canDelete'), async (req, res) => {
     try {
       // Delete form fields first (cascade delete)
       await db.delete(formFields).where(eq(formFields.formId, req.params.id));
@@ -15640,7 +15640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Duplicate form
-  app.post("/api/forms/:id/duplicate", requireAuth(), requirePermission('forms', 'canCreate'), async (req, res) => {
+  app.post("/api/forms/:id/duplicate", requireAuth(), requirePermission('campaigns', 'canCreate'), async (req, res) => {
     try {
       // Get the original form
       const originalForm = await db.select().from(forms).where(eq(forms.id, req.params.id)).limit(1);
@@ -15685,7 +15685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Move form to folder
-  app.put("/api/forms/:id/move", requireAuth(), requirePermission('forms', 'canEdit'), async (req, res) => {
+  app.put("/api/forms/:id/move", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
     try {
       const { folderId } = req.body;
       
