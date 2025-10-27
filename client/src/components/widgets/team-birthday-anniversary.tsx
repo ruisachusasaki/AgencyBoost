@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Gift, Trash2, GripVertical } from "lucide-react";
+import { Gift, Trash2, GripVertical, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { Link } from "wouter";
 
 interface WidgetProps {
   userWidget: any;
@@ -29,15 +30,28 @@ export default function TeamBirthdayAnniversaryWidget({ userWidget, onRemove }: 
             </CardDescription>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onRemove}
-          data-testid="button-remove-widget"
-          className="h-8 w-8 p-0 flex-shrink-0"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Link href="/calendar">
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="button-view-calendar"
+              className="h-8 w-8 p-0 flex-shrink-0"
+              title="View Calendar"
+            >
+              <Calendar className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            data-testid="button-remove-widget"
+            className="h-8 w-8 p-0 flex-shrink-0"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
