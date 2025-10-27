@@ -55,6 +55,9 @@ import {
   type ImageAnnotation, type InsertImageAnnotation, imageAnnotations,
   type TaskActivity, type InsertTaskActivity, taskActivities,
   type TaskDependency, type InsertTaskDependency, taskDependencies,
+  taskAttachments,
+  knowledgeBaseComments, knowledgeBaseArticles,
+  notifications,
   type Department, type InsertDepartment, departments,
   type Position, type InsertPosition, positions,
   type JobApplication, type InsertJobApplication, jobApplications,
@@ -8714,25 +8717,25 @@ export class DbStorage implements IStorage {
       // We need to join both to get the task information
       const annotationMentions = await db
         .select({
-          id: fileAnnotations.id,
-          content: fileAnnotations.content,
-          createdAt: fileAnnotations.createdAt,
-          authorId: fileAnnotations.authorId,
+          id: imageAnnotations.id,
+          content: imageAnnotations.content,
+          createdAt: imageAnnotations.createdAt,
+          authorId: imageAnnotations.authorId,
           authorName: sql<string>`CONCAT(staff.first_name, ' ', staff.last_name)`,
-          fileId: fileAnnotations.fileId,
+          fileId: imageAnnotations.fileId,
           // Try to get task ID from task attachments first
           taskIdFromAttachment: taskAttachments.taskId,
           taskTitleFromAttachment: tasks.title,
           // Also try to get task ID from comment files
           commentId: commentFiles.commentId,
         })
-        .from(fileAnnotations)
-        .leftJoin(staff, eq(fileAnnotations.authorId, staff.id))
-        .leftJoin(taskAttachments, eq(taskAttachments.id, fileAnnotations.fileId))
+        .from(imageAnnotations)
+        .leftJoin(staff, eq(imageAnnotations.authorId, staff.id))
+        .leftJoin(taskAttachments, eq(taskAttachments.id, imageAnnotations.fileId))
         .leftJoin(tasks, eq(taskAttachments.taskId, tasks.id))
-        .leftJoin(commentFiles, eq(commentFiles.id, fileAnnotations.fileId))
-        .where(sql`${userId} = ANY(${fileAnnotations.mentions})`)
-        .orderBy(desc(fileAnnotations.createdAt))
+        .leftJoin(commentFiles, eq(commentFiles.id, imageAnnotations.fileId))
+        .where(sql`${userId} = ANY(${imageAnnotations.mentions})`)
+        .orderBy(desc(imageAnnotations.createdAt))
         .limit(10);
 
       // For annotations on comment files, we need to get the task from the comment
