@@ -107,11 +107,11 @@ export default function MyMentionsWidget({ userWidget, onRemove }: MyMentionsWid
             </div>
           </div>
         ) : (
-          <div className="space-y-3 overflow-y-auto pr-2">
+          <div className="space-y-4 overflow-y-auto pr-2">
             {mentions.map((mention) => (
               <Link key={mention.id} href={getMentionLink(mention)}>
                 <div
-                  className="block p-3 rounded-lg border bg-card hover:bg-accent transition-colors cursor-pointer"
+                  className="block p-3 rounded-lg border bg-card hover:bg-accent transition-colors cursor-pointer mb-4"
                   data-testid={`mention-${mention.id}`}
                 >
                   <div className="flex items-start gap-2">
