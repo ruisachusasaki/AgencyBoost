@@ -8325,8 +8325,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Staff/Users Management API - SECURED
-  app.get("/api/staff", requireAuth(), requirePermission('staff', 'canView'), async (req, res) => {
+  // Staff/Users Management API - Everyone can view staff directory
+  app.get("/api/staff", requireAuth(), async (req, res) => {
     try {
       const { search, departmentId } = req.query;
       let whereConditions = [eq(staff.isActive, true)];
@@ -8358,7 +8358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/staff/:id", requireAuth(), requirePermission('staff', 'canView'), async (req, res) => {
+  app.get("/api/staff/:id", requireAuth(), async (req, res) => {
     try {
       const [staffMember] = await db.select().from(staff).where(eq(staff.id, req.params.id));
       
@@ -18270,8 +18270,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Job Application Routes
-  app.get("/api/hr/job-applications", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+  // Job Application Routes - Accessible to admins, hiring managers, and watchers
+  app.get("/api/hr/job-applications", requireAuth(), async (req, res) => {
     try {
       const currentUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // Authentication failed
