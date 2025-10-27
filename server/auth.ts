@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from './db';
-import { staff, userRoles, roles, permissions } from '@shared/schema';
+import { staff, userRoles, roles, permissions, granularPermissions } from '@shared/schema';
 import { eq, and, or } from 'drizzle-orm';
 
 /**
@@ -146,7 +146,30 @@ export async function hasPermission(
       return false; // User has no roles
     }
     
-    // 2. Check if any role has the required permission
+    // 2. Check granular permissions first (new system)
+    for (const userRole of userRolesList) {
+      const granularPerms = await db
+        .select({
+          module: granularPermissions.module,
+          permissionKey: granularPermissions.permissionKey,
+          enabled: granularPermissions.enabled
+        })
+        .from(granularPermissions)
+        .where(
+          and(
+            eq(granularPermissions.roleId, userRole.roleId),
+            eq(granularPermissions.module, module),
+            eq(granularPermissions.enabled, true)
+          )
+        );
+      
+      // If any granular permission is enabled for this module, grant access
+      if (granularPerms.length > 0) {
+        return true;
+      }
+    }
+    
+    // 3. Fallback to legacy permissions if no granular permissions found
     for (const userRole of userRolesList) {
       const rolePermissions = await db
         .select({
