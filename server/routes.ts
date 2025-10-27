@@ -5988,8 +5988,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // SMS Template routes - SECURED (Admin Only)
-  app.get("/api/sms-templates", requireAuth(), requireAdmin(), async (req, res) => {
+  // SMS Template routes - SECURED
+  app.get("/api/sms-templates", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const templates = await appStorage.getSmsTemplates();
       res.json(templates);
