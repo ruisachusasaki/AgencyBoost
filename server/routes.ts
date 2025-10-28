@@ -44,7 +44,8 @@ import {
   insertSalesTargetSchema, updateSalesTargetSchema,
   insertCapacitySettingsSchema, updateCapacitySettingsSchema,
   insertDashboardSchema,
-  insertOneOnOneMeetingSchema, insertOneOnOneTalkingPointSchema, insertOneOnOneActionItemSchema, insertOneOnOneGoalSchema, insertOneOnOneCommentSchema,
+  insertOneOnOneMeetingSchema, insertOneOnOneTalkingPointSchema, insertOneOnOneActionItemSchema, insertOneOnOneGoalSchema, insertOneOnOneCommentSchema, insertOneOnOneProgressionStatusSchema,
+  oneOnOneProgressionStatuses,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, granularPermissions, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
@@ -18397,6 +18398,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting comment:", error);
       res.status(500).json({ error: "Failed to delete comment" });
+    }
+  });
+
+  // Progression Status Management Routes
+  app.get("/api/hr/one-on-one/progression-statuses", requireAuth(), async (req, res) => {
+    try {
+      const statuses = await db.select()
+        .from(oneOnOneProgressionStatuses)
+        .orderBy(oneOnOneProgressionStatuses.orderIndex);
+      
+      res.json(statuses);
+    } catch (error) {
+      console.error("Error fetching progression statuses:", error);
+      res.status(500).json({ error: "Failed to fetch progression statuses" });
+    }
+  });
+
+  app.post("/api/hr/one-on-one/progression-statuses", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+
+      // Check if user is admin
+      const isAdmin = await isCurrentUserAdmin(req);
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Only administrators can create progression statuses" });
+      }
+
+      const validatedData = insertOneOnOneProgressionStatusSchema.parse(req.body);
+      
+      const [newStatus] = await db.insert(oneOnOneProgressionStatuses)
+        .values(validatedData)
+        .returning();
+
+      res.json(newStatus);
+    } catch (error) {
+      console.error("Error creating progression status:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create progression status" });
+    }
+  });
+
+  app.put("/api/hr/one-on-one/progression-statuses/:id", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      const { id } = req.params;
+
+      // Check if user is admin
+      const isAdmin = await isCurrentUserAdmin(req);
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Only administrators can update progression statuses" });
+      }
+
+      const validatedData = insertOneOnOneProgressionStatusSchema.partial().parse(req.body);
+      
+      const [updated] = await db.update(oneOnOneProgressionStatuses)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(oneOnOneProgressionStatuses.id, id))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ error: "Progression status not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating progression status:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update progression status" });
+    }
+  });
+
+  app.delete("/api/hr/one-on-one/progression-statuses/:id", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      const { id } = req.params;
+
+      // Check if user is admin
+      const isAdmin = await isCurrentUserAdmin(req);
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Only administrators can delete progression statuses" });
+      }
+
+      await db.delete(oneOnOneProgressionStatuses)
+        .where(eq(oneOnOneProgressionStatuses.id, id));
+
+      res.json({ message: "Progression status deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting progression status:", error);
+      res.status(500).json({ error: "Failed to delete progression status" });
     }
   });
 
