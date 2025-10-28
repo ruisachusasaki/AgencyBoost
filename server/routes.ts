@@ -18579,7 +18579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Count goals
         const meetingGoals = goals.filter(g => g.meetingId === meeting.id);
         userData.goalsTotal += meetingGoals.length;
-        userData.goalsCompleted += meetingGoals.filter(g => g.isCompleted).length;
+        userData.goalsCompleted += meetingGoals.filter(g => g.status === 'complete').length;
 
         userData.meetings.push({
           id: meeting.id,
