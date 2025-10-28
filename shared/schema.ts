@@ -3860,3 +3860,119 @@ export const timeTrackingReportFiltersSchema = z.object({
   taskStatus: z.array(z.string()).optional(),
   reportType: z.enum(['detailed', 'summary']).optional().default('detailed'),
 });
+
+// ===============================================
+// 1-on-1 Meeting Tracker System
+// ===============================================
+
+// Main 1-on-1 meeting records
+export const oneOnOneMeetings = pgTable("one_on_one_meetings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  managerId: uuid("manager_id").notNull().references(() => staff.id),
+  directReportId: uuid("direct_report_id").notNull().references(() => staff.id),
+  meetingDate: date("meeting_date").notNull(),
+  weekOf: date("week_of").notNull(), // Week identifier (e.g., Monday of that week)
+  
+  // Feeling rating (emoji picker)
+  feeling: text("feeling"), // terrible, bad, okay, good, excellent
+  
+  // Performance feedback
+  performanceFeedback: text("performance_feedback"), // on_target, below_expectations, far_below_expectations
+  performancePoints: integer("performance_points"), // 3, 2, or 1
+  bonusPoints: integer("bonus_points").default(0), // 0, 1, or 2
+  
+  // Manager/Admin only fields
+  progressionStatus: text("progression_status"), // retention_risk, performance_issues, ready_for_promotion
+  hobbies: text("hobbies"),
+  family: text("family"),
+  privateNotes: text("private_notes"), // Only visible to manager and admins
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOneOnOneMeetingSchema = createInsertSchema(oneOnOneMeetings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type OneOnOneMeeting = typeof oneOnOneMeetings.$inferSelect;
+export type InsertOneOnOneMeeting = z.infer<typeof insertOneOnOneMeetingSchema>;
+
+// Talking points for meetings
+export const oneOnOneTalkingPoints = pgTable("one_on_one_talking_points", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  meetingId: varchar("meeting_id").notNull().references(() => oneOnOneMeetings.id, { onDelete: 'cascade' }),
+  content: text("content").notNull(),
+  addedBy: uuid("added_by").notNull().references(() => staff.id), // Who added this point
+  orderIndex: integer("order_index").default(0),
+  isCompleted: boolean("is_completed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOneOnOneTalkingPointSchema = createInsertSchema(oneOnOneTalkingPoints).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type OneOnOneTalkingPoint = typeof oneOnOneTalkingPoints.$inferSelect;
+export type InsertOneOnOneTalkingPoint = z.infer<typeof insertOneOnOneTalkingPointSchema>;
+
+// Action items from meetings
+export const oneOnOneActionItems = pgTable("one_on_one_action_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  meetingId: varchar("meeting_id").notNull().references(() => oneOnOneMeetings.id, { onDelete: 'cascade' }),
+  content: text("content").notNull(),
+  assignedTo: uuid("assigned_to").references(() => staff.id),
+  dueDate: date("due_date"),
+  isCompleted: boolean("is_completed").default(false),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOneOnOneActionItemSchema = createInsertSchema(oneOnOneActionItems).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+export type OneOnOneActionItem = typeof oneOnOneActionItems.$inferSelect;
+export type InsertOneOnOneActionItem = z.infer<typeof insertOneOnOneActionItemSchema>;
+
+// Goals with status tracking
+export const oneOnOneGoals = pgTable("one_on_one_goals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  meetingId: varchar("meeting_id").references(() => oneOnOneMeetings.id, { onDelete: 'set null' }),
+  directReportId: uuid("direct_report_id").notNull().references(() => staff.id),
+  content: text("content").notNull(),
+  status: text("status").notNull().default("pending"), // pending, on_track, off_track, complete
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOneOnOneGoalSchema = createInsertSchema(oneOnOneGoals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type OneOnOneGoal = typeof oneOnOneGoals.$inferSelect;
+export type InsertOneOnOneGoal = z.infer<typeof insertOneOnOneGoalSchema>;
+
+// Comments visible to both manager and direct report
+export const oneOnOneComments = pgTable("one_on_one_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  meetingId: varchar("meeting_id").notNull().references(() => oneOnOneMeetings.id, { onDelete: 'cascade' }),
+  authorId: uuid("author_id").notNull().references(() => staff.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOneOnOneCommentSchema = createInsertSchema(oneOnOneComments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type OneOnOneComment = typeof oneOnOneComments.$inferSelect;
+export type InsertOneOnOneComment = z.infer<typeof insertOneOnOneCommentSchema>;
