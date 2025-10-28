@@ -433,20 +433,107 @@ function MeetingEditor({
   const [newGoal, setNewGoal] = useState("");
   const [newComment, setNewComment] = useState("");
 
+  // Mutations for individual items
+  const createTalkingPointMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/hr/one-on-one/talking-points", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
+    },
+  });
+
+  const createActionItemMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/hr/one-on-one/action-items", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
+    },
+  });
+
+  const createGoalMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/hr/one-on-one/goals", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
+    },
+  });
+
+  const createCommentMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/hr/one-on-one/comments", data);
+    },
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
+      const newCommentWithAuthor = response.json();
+      newCommentWithAuthor.then((comment: any) => {
+        setComments([...comments, comment]);
+      });
+    },
+  });
+
+  const updateGoalStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      return await apiRequest("PUT", `/api/hr/one-on-one/goals/${id}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
+    },
+  });
+
   // Save meeting mutation
   const saveMeetingMutation = useMutation({
     mutationFn: async (data: any) => {
       if (meeting) {
-        return await apiRequest("PUT", `/api/hr/one-on-one/meetings/${meeting.id}`, data);
+        const response = await apiRequest("PUT", `/api/hr/one-on-one/meetings/${meeting.id}`, data);
+        return { isNew: false, meeting: await response.json() };
       } else {
-        return await apiRequest("POST", "/api/hr/one-on-one/meetings", data);
+        const response = await apiRequest("POST", "/api/hr/one-on-one/meetings", data);
+        return { isNew: true, meeting: await response.json() };
       }
     },
-    onSuccess: () => {
+    onSuccess: async (result: any) => {
+      const { isNew, meeting: savedMeeting } = result;
+      
+      // If this was a new meeting and we have items to save, save them now
+      if (isNew && savedMeeting.id) {
+        // Save all talking points
+        for (const point of talkingPoints) {
+          await apiRequest("POST", "/api/hr/one-on-one/talking-points", {
+            meetingId: savedMeeting.id,
+            content: point.content,
+            orderIndex: point.orderIndex,
+          });
+        }
+        
+        // Save all action items
+        for (const item of actionItems) {
+          await apiRequest("POST", "/api/hr/one-on-one/action-items", {
+            meetingId: savedMeeting.id,
+            content: item.content,
+            assignedTo: item.assignedTo,
+            dueDate: item.dueDate,
+          });
+        }
+        
+        // Save all goals
+        for (const goal of goals) {
+          await apiRequest("POST", "/api/hr/one-on-one/goals", {
+            meetingId: savedMeeting.id,
+            directReportId: directReport.id,
+            content: goal.content,
+            status: goal.status,
+          });
+        }
+      }
+      
       toast({
         title: "Success",
         description: meeting ? "Meeting updated successfully" : "Meeting created successfully",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });
       onSave();
     },
     onError: (error: any) => {
@@ -476,6 +563,100 @@ function MeetingEditor({
       family: family || null,
       privateNotes: privateNotes || null,
     });
+  };
+
+  // Handlers for adding items
+  const handleAddTalkingPoint = () => {
+    if (!newTalkingPoint.trim()) return;
+    
+    if (meeting) {
+      // Existing meeting - save to API
+      createTalkingPointMutation.mutate({
+        meetingId: meeting.id,
+        content: newTalkingPoint.trim(),
+        orderIndex: talkingPoints.length,
+      });
+      setNewTalkingPoint("");
+    } else {
+      // New meeting - add to local state
+      const tempId = `temp-${Date.now()}`;
+      setTalkingPoints([...talkingPoints, {
+        id: tempId,
+        meetingId: "",
+        content: newTalkingPoint.trim(),
+        addedBy: "",
+        orderIndex: talkingPoints.length,
+        isCompleted: false,
+      }]);
+      setNewTalkingPoint("");
+    }
+  };
+
+  const handleAddActionItem = () => {
+    if (!newActionItem.trim()) return;
+    
+    if (meeting) {
+      // Existing meeting - save to API
+      createActionItemMutation.mutate({
+        meetingId: meeting.id,
+        content: newActionItem.trim(),
+      });
+      setNewActionItem("");
+    } else {
+      // New meeting - add to local state
+      const tempId = `temp-${Date.now()}`;
+      setActionItems([...actionItems, {
+        id: tempId,
+        meetingId: "",
+        content: newActionItem.trim(),
+        isCompleted: false,
+      }]);
+      setNewActionItem("");
+    }
+  };
+
+  const handleAddGoal = () => {
+    if (!newGoal.trim()) return;
+    
+    if (meeting) {
+      // Existing meeting - save to API
+      createGoalMutation.mutate({
+        meetingId: meeting.id,
+        directReportId: directReport.id,
+        content: newGoal.trim(),
+        status: "pending",
+      });
+      setNewGoal("");
+    } else {
+      // New meeting - add to local state
+      const tempId = `temp-${Date.now()}`;
+      setGoals([...goals, {
+        id: tempId,
+        meetingId: "",
+        directReportId: directReport.id,
+        content: newGoal.trim(),
+        status: "pending",
+      }]);
+      setNewGoal("");
+    }
+  };
+
+  const handleAddComment = () => {
+    if (!newComment.trim() || !meeting) return;
+    
+    createCommentMutation.mutate({
+      meetingId: meeting.id,
+      content: newComment.trim(),
+    });
+    setNewComment("");
+  };
+
+  const handleUpdateGoalStatus = (goalId: string, newStatus: string) => {
+    if (meeting) {
+      updateGoalStatusMutation.mutate({ id: goalId, status: newStatus });
+    }
+    // Update local state
+    setGoals(goals.map(g => g.id === goalId ? { ...g, status: newStatus } : g));
   };
 
   return (
@@ -599,11 +780,7 @@ function MeetingEditor({
                     />
                     <Button
                       size="sm"
-                      onClick={() => {
-                        if (newTalkingPoint.trim()) {
-                          setNewTalkingPoint("");
-                        }
-                      }}
+                      onClick={handleAddTalkingPoint}
                       data-testid="button-add-talking-point"
                     >
                       <Plus className="h-4 w-4" />
@@ -643,11 +820,7 @@ function MeetingEditor({
                     />
                     <Button
                       size="sm"
-                      onClick={() => {
-                        if (newActionItem.trim()) {
-                          setNewActionItem("");
-                        }
-                      }}
+                      onClick={handleAddActionItem}
                       data-testid="button-add-action-item"
                     >
                       <Plus className="h-4 w-4" />
@@ -670,9 +843,7 @@ function MeetingEditor({
                       <span>{goal.content}</span>
                       <Select
                         value={goal.status}
-                        onValueChange={(value) => {
-                          setGoals(goals.map(g => g.id === goal.id ? { ...g, status: value } : g));
-                        }}
+                        onValueChange={(value) => handleUpdateGoalStatus(goal.id, value)}
                       >
                         <SelectTrigger className="w-[140px]" data-testid={`select-goal-status-${goal.id}`}>
                           <SelectValue />
@@ -696,11 +867,7 @@ function MeetingEditor({
                     />
                     <Button
                       size="sm"
-                      onClick={() => {
-                        if (newGoal.trim()) {
-                          setNewGoal("");
-                        }
-                      }}
+                      onClick={handleAddGoal}
                       data-testid="button-add-goal"
                     >
                       <Plus className="h-4 w-4" />
@@ -800,12 +967,9 @@ function MeetingEditor({
                     />
                     <Button
                       size="sm"
-                      onClick={() => {
-                        if (newComment.trim()) {
-                          setNewComment("");
-                        }
-                      }}
+                      onClick={handleAddComment}
                       data-testid="button-add-comment"
+                      disabled={!meeting}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
