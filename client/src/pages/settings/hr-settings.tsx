@@ -308,9 +308,9 @@ export default function HRSettingsPage() {
         {/* 1v1 Settings Tab */}
         <TabsContent value="one-on-one-settings" className="space-y-6">
           <div>
-            <h3 className="text-lg font-medium">1-on-1 Meeting Settings</h3>
+            <h3 className="text-lg font-medium">1v1 Meeting Settings</h3>
             <p className="text-muted-foreground">
-              Configure settings for 1-on-1 meetings between managers and direct reports.
+              Configure settings for 1v1 meetings between managers and direct reports.
             </p>
           </div>
 
@@ -318,12 +318,12 @@ export default function HRSettingsPage() {
             <CardHeader>
               <CardTitle>Meeting Configuration</CardTitle>
               <CardDescription>
-                Customize how 1-on-1 meetings are scheduled and tracked
+                Customize how 1v1 meetings are scheduled and tracked
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Settings for 1-on-1 meetings will be configured here.
+                Settings for 1v1 meetings will be configured here.
               </p>
             </CardContent>
           </Card>
