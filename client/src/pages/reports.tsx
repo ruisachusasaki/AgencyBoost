@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -4135,9 +4136,503 @@ export default function Reports() {
   );
 }
 
+// Individual Analysis View Component
+interface IndividualAnalysisViewProps {
+  report: {
+    userId: string;
+    userName: string;
+    totalMeetings: number;
+    avgPerformancePoints: number | null;
+    talkingPointsCompletionRate: number | null;
+    actionItemsCompletionRate: number | null;
+    goalsCompletionRate: number | null;
+    mostCommonFeeling: string | null;
+    mostCommonProgressionStatus: string | null;
+    meetings: Array<{
+      id: string;
+      meetingDate: string;
+      weekOf: string;
+      feeling: string | null;
+      performancePoints: number | null;
+      progressionStatus: string | null;
+    }>;
+  };
+  onBack: () => void;
+}
+
+function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps) {
+  const [activeTab, setActiveTab] = useState<'analysis' | 'history'>('analysis');
+
+  const getFeelingEmoji = (feeling: string | null) => {
+    if (!feeling) return null;
+    const emojiMap: Record<string, string> = {
+      'great': '😊',
+      'good': '🙂',
+      'okay': '😐',
+      'stressed': '😰',
+      'overwhelmed': '😫'
+    };
+    return emojiMap[feeling] || null;
+  };
+
+  const getFeelingLabel = (feeling: string | null) => {
+    if (!feeling) return 'Unknown';
+    const labelMap: Record<string, string> = {
+      'great': 'Great',
+      'good': 'Good',
+      'okay': 'Okay',
+      'stressed': 'Stressed',
+      'overwhelmed': 'Overwhelmed'
+    };
+    return labelMap[feeling] || feeling;
+  };
+
+  // Prepare chart data
+  const chartData = useMemo(() => {
+    return report.meetings
+      .filter(m => m.meetingDate && m.weekOf) // Filter out meetings without dates
+      .map(m => ({
+        date: m.meetingDate,
+        weekOf: m.weekOf,
+        feeling: m.feeling,
+        performancePoints: m.performancePoints,
+        progressionStatus: m.progressionStatus,
+        feelingValue: m.feeling ? 
+          ({ 'great': 5, 'good': 4, 'okay': 3, 'stressed': 2, 'overwhelmed': 1 }[m.feeling] || 3) : null
+      }))
+      .sort((a, b) => (a.date || '').localeCompare(b.date || '')); // Safe null handling
+  }, [report.meetings]);
+
+  // Calculate score distribution
+  const scoreDistribution = useMemo(() => {
+    const statusCounts: Record<string, number> = {};
+    report.meetings.forEach(m => {
+      if (m.progressionStatus) {
+        statusCounts[m.progressionStatus] = (statusCounts[m.progressionStatus] || 0) + 1;
+      }
+    });
+
+    const total = Object.values(statusCounts).reduce((sum, count) => sum + count, 0);
+    
+    return Object.entries(statusCounts).map(([status, count]) => ({
+      name: status.replace(/-|_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      value: count,
+      percentage: ((count / total) * 100).toFixed(1)
+    }));
+  }, [report.meetings]);
+
+  // Calculate feeling distribution
+  const feelingDistribution = useMemo(() => {
+    const feelingCounts: Record<string, number> = {};
+    report.meetings.forEach(m => {
+      if (m.feeling) {
+        feelingCounts[m.feeling] = (feelingCounts[m.feeling] || 0) + 1;
+      }
+    });
+
+    const total = Object.values(feelingCounts).reduce((sum, count) => sum + count, 0);
+    
+    return Object.entries(feelingCounts).map(([feeling, count]) => ({
+      name: getFeelingLabel(feeling),
+      emoji: getFeelingEmoji(feeling),
+      value: count,
+      percentage: ((count / total) * 100).toFixed(1)
+    }));
+  }, [report.meetings]);
+
+  // Get color for score distribution
+  const getStatusColor = (status: string) => {
+    const normalizedStatus = status.toLowerCase().replace(/\s+/g, '_');
+    const colorMap: Record<string, string> = {
+      'ready_for_promotion': 'hsl(142, 76%, 36%)', // green
+      'excelling': 'hsl(142, 76%, 36%)', // green
+      'on_track': 'hsl(179, 100%, 39%)', // teal/cyan
+      'needs_support': 'hsl(32, 95%, 44%)', // orange
+      'struggling': 'hsl(0, 72%, 51%)', // red
+      'below_expectations': 'hsl(0, 72%, 51%)', // red
+    };
+    return colorMap[normalizedStatus] || 'hsl(215, 20%, 65%)';
+  };
+
+  // Get color for feeling distribution
+  const getFeelingColor = (feeling: string) => {
+    const normalizedFeeling = feeling.toLowerCase();
+    const colorMap: Record<string, string> = {
+      'great': 'hsl(142, 76%, 36%)', // green
+      'good': 'hsl(179, 100%, 39%)', // teal
+      'okay': 'hsl(48, 96%, 53%)', // yellow
+      'stressed': 'hsl(32, 95%, 44%)', // orange
+      'overwhelmed': 'hsl(0, 72%, 51%)', // red
+    };
+    return colorMap[normalizedFeeling] || 'hsl(215, 20%, 65%)';
+  };
+
+  // Calculate average score and trend
+  const previousAverage = useMemo(() => {
+    if (report.meetings.length < 2) return null;
+    const sortedMeetings = [...report.meetings].sort((a, b) => a.meetingDate.localeCompare(b.meetingDate));
+    const lastMeeting = sortedMeetings[sortedMeetings.length - 1];
+    const previousMeetings = sortedMeetings.slice(0, -1).filter(m => m.performancePoints !== null);
+    if (previousMeetings.length === 0) return null;
+    const prevAvg = previousMeetings.reduce((sum, m) => sum + (m.performancePoints || 0), 0) / previousMeetings.length;
+    return { lastScore: lastMeeting.performancePoints, prevAvg };
+  }, [report.meetings]);
+
+  const scoreTrend = useMemo(() => {
+    if (!previousAverage || !previousAverage.lastScore) return null;
+    const diff = previousAverage.lastScore - previousAverage.prevAvg;
+    const percentChange = (diff / previousAverage.prevAvg) * 100;
+    return { diff, percentChange };
+  }, [previousAverage]);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onBack}
+              data-testid="button-back-to-list"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+            <div className="flex-1">
+              <CardTitle className="text-2xl">{report.userName}</CardTitle>
+              <CardDescription>{report.totalMeetings} 1-on-1 meetings</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'analysis' | 'history')}>
+        <TabsList className="w-full justify-start" data-testid="tabs-individual-analysis">
+          <TabsTrigger value="analysis" data-testid="tab-analysis">Analysis</TabsTrigger>
+          <TabsTrigger value="history" data-testid="tab-history">History</TabsTrigger>
+        </TabsList>
+
+        {/* Analysis Tab */}
+        <TabsContent value="analysis" className="space-y-6">
+          {/* Line Chart - Mood and Performance Over Time */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Mood & Score Timeline</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsLineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="weekOf" 
+                      stroke="hsl(var(--muted-foreground))"
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))"
+                      tick={{ fontSize: 12 }}
+                      domain={[0, 5]}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--background))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="feelingValue" 
+                      stroke="hsl(142, 76%, 36%)" 
+                      strokeWidth={2}
+                      name="Mood"
+                      dot={{ fill: 'hsl(142, 76%, 36%)' }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="performancePoints" 
+                      stroke="hsl(262, 83%, 58%)" 
+                      strokeWidth={2}
+                      name="1-on-1 Score"
+                      dot={{ fill: 'hsl(262, 83%, 58%)' }}
+                    />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Average Score Gauge */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Average score</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center">
+                  <div className="relative w-40 h-20">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPieChart>
+                        <Pie
+                          data={[
+                            { value: (report.avgPerformancePoints || 0) },
+                            { value: Math.max(0, 5 - (report.avgPerformancePoints || 0)) }
+                          ]}
+                          cx="50%"
+                          cy="100%"
+                          startAngle={180}
+                          endAngle={0}
+                          innerRadius="60%"
+                          outerRadius="100%"
+                          paddingAngle={0}
+                          dataKey="value"
+                        >
+                          <Cell fill={`hsl(${((report.avgPerformancePoints || 0) / 5) * 120}, 70%, 50%)`} />
+                          <Cell fill="hsl(var(--muted))" />
+                        </Pie>
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-center">
+                      <div className="text-3xl font-bold">{report.avgPerformancePoints?.toFixed(2) || 'N/A'}</div>
+                      <div className="text-xs text-muted-foreground">/5</div>
+                    </div>
+                  </div>
+                  {scoreTrend && (
+                    <div className={`text-sm mt-4 ${scoreTrend.diff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {scoreTrend.diff >= 0 ? '↑' : '↓'} {Math.abs(scoreTrend.percentChange).toFixed(0)}% since last event
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Score Distribution */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Score distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center">
+                  <div className="w-40 h-40">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPieChart>
+                        <Pie
+                          data={scoreDistribution}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius="50%"
+                          outerRadius="80%"
+                          paddingAngle={2}
+                          dataKey="value"
+                        >
+                          {scoreDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={getStatusColor(entry.name)} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--background))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                        />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 space-y-2 text-xs w-full">
+                    {scoreDistribution.map((entry, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: getStatusColor(entry.name) }}
+                          />
+                          <span>{entry.name}</span>
+                        </div>
+                        <span className="font-medium">{entry.percentage}%, {entry.value} events</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Feeling Distribution */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Feeling distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center">
+                  <div className="w-40 h-40">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPieChart>
+                        <Pie
+                          data={feelingDistribution}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius="50%"
+                          outerRadius="80%"
+                          paddingAngle={2}
+                          dataKey="value"
+                        >
+                          {feelingDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={getFeelingColor(entry.name)} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--background))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                        />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 space-y-2 text-xs w-full">
+                    {feelingDistribution.map((entry, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: getFeelingColor(entry.name) }}
+                          />
+                          <span>{entry.emoji} {entry.name}</span>
+                        </div>
+                        <span className="font-medium">{entry.percentage}%, {entry.value} events</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Completion Rates */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Completion Rates</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Talking Points</span>
+                    <span className="text-sm text-muted-foreground">
+                      {report.talkingPointsCompletionRate !== null 
+                        ? `${report.talkingPointsCompletionRate.toFixed(0)}%` 
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all"
+                      style={{ width: `${report.talkingPointsCompletionRate || 0}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Action Items</span>
+                    <span className="text-sm text-muted-foreground">
+                      {report.actionItemsCompletionRate !== null 
+                        ? `${report.actionItemsCompletionRate.toFixed(0)}%` 
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all"
+                      style={{ width: `${report.actionItemsCompletionRate || 0}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Goals</span>
+                    <span className="text-sm text-muted-foreground">
+                      {report.goalsCompletionRate !== null 
+                        ? `${report.goalsCompletionRate.toFixed(0)}%` 
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all"
+                      style={{ width: `${report.goalsCompletionRate || 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Meeting History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Week Of</TableHead>
+                    <TableHead>Feeling</TableHead>
+                    <TableHead>Score</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {chartData.reverse().map((meeting, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{format(new Date(meeting.date), 'MMM d, yyyy')}</TableCell>
+                      <TableCell>{format(new Date(meeting.weekOf), 'MMM d, yyyy')}</TableCell>
+                      <TableCell>
+                        {meeting.feeling && (
+                          <span className="text-lg">{getFeelingEmoji(meeting.feeling)} {getFeelingLabel(meeting.feeling)}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {meeting.performancePoints !== null ? (
+                          <span className="font-semibold">{meeting.performancePoints}/5</span>
+                        ) : (
+                          <span className="text-muted-foreground">N/A</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {meeting.progressionStatus && (
+                          <Badge variant="outline">
+                            {meeting.progressionStatus.replace(/-|_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
 // 1-on-1 Performance Report Component
 function OneOnOnePerformanceReport() {
   const { toast } = useToast();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<string>("totalMeetings");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -4307,6 +4802,19 @@ function OneOnOnePerformanceReport() {
   const avgPerformanceAll = performanceData.filter(r => r.avgPerformancePoints !== null).length > 0
     ? performanceData.filter(r => r.avgPerformancePoints !== null).reduce((sum, r) => sum + (r.avgPerformancePoints || 0), 0) / performanceData.filter(r => r.avgPerformancePoints !== null).length
     : null;
+
+  // Show individual detail view if a user is selected
+  if (selectedUserId) {
+    const selectedReport = performanceData.find(r => r.userId === selectedUserId);
+    if (selectedReport) {
+      return (
+        <IndividualAnalysisView 
+          report={selectedReport} 
+          onBack={() => setSelectedUserId(null)}
+        />
+      );
+    }
+  }
 
   return (
     <>
@@ -4516,7 +5024,12 @@ function OneOnOnePerformanceReport() {
             </TableHeader>
             <TableBody>
               {filteredAndSortedData.map((report) => (
-                <TableRow key={report.userId} data-testid={`performance-row-${report.userId}`}>
+                <TableRow 
+                  key={report.userId} 
+                  data-testid={`performance-row-${report.userId}`}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => setSelectedUserId(report.userId)}
+                >
                   <TableCell className="font-medium">
                     {report.userName || 'Unknown'}
                   </TableCell>
