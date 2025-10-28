@@ -4218,6 +4218,37 @@ function OneOnOnePerformanceReport() {
     }
   };
 
+  const SortableHeader = ({ 
+    field, 
+    children, 
+  }: { 
+    field: string; 
+    children: React.ReactNode; 
+  }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center justify-between">
+        {children}
+        <div className="flex items-center gap-1 ml-2">
+          {sortField === field && sortOrder === "asc" && (
+            <ChevronUp className="h-4 w-4 text-primary" />
+          )}
+          {sortField === field && sortOrder === "desc" && (
+            <ChevronDown className="h-4 w-4 text-primary" />
+          )}
+          {sortField !== field && (
+            <div className="flex flex-col -space-y-1">
+              <ChevronUp className="h-3 w-3 text-muted-foreground" />
+              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+      </div>
+    </TableHead>
+  );
+
   const getFeelingEmoji = (feeling: string | null) => {
     if (!feeling) return null;
     const emojiMap: Record<string, string> = {
@@ -4470,28 +4501,13 @@ function OneOnOnePerformanceReport() {
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHeader 
-                  field="userName"
-                  sortField={sortField}
-                  sortOrder={sortOrder}
-                  onSort={handleSort}
-                >
+                <SortableHeader field="userName">
                   Team Member
                 </SortableHeader>
-                <SortableHeader 
-                  field="totalMeetings"
-                  sortField={sortField}
-                  sortOrder={sortOrder}
-                  onSort={handleSort}
-                >
+                <SortableHeader field="totalMeetings">
                   Meetings
                 </SortableHeader>
-                <SortableHeader 
-                  field="avgPerformancePoints"
-                  sortField={sortField}
-                  sortOrder={sortOrder}
-                  onSort={handleSort}
-                >
+                <SortableHeader field="avgPerformancePoints">
                   Avg Performance
                 </SortableHeader>
                 <TableHead>Completion Rates</TableHead>
