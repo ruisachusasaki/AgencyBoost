@@ -885,23 +885,34 @@ function MeetingEditor({
                   Performance Feedback
                 </Label>
                 <div className="space-y-3">
-                  {PERFORMANCE_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => setPerformanceFeedback(option.value)}
-                      className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
-                        performanceFeedback === option.value
-                          ? "border-primary bg-primary/10"
-                          : "border-gray-200 hover:border-primary/50"
-                      }`}
-                      data-testid={`button-performance-${option.value}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{option.label}</span>
-                        <Badge className={option.color}>{option.points} points</Badge>
-                      </div>
-                    </button>
-                  ))}
+                  {PERFORMANCE_OPTIONS.map((option) => {
+                    const descriptions: Record<string, string> = {
+                      'on_target': 'Performance is on track and met all the expectations.',
+                      'below_expectations': 'Performance has been below expectations since the last 1-on-1.',
+                      'far_below_expectations': 'Performance has been significantly below expectations since the last 1-on-1.'
+                    };
+                    
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => setPerformanceFeedback(option.value)}
+                        className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                          performanceFeedback === option.value
+                            ? "border-primary bg-primary/10"
+                            : "border-gray-200 hover:border-primary/50"
+                        }`}
+                        data-testid={`button-performance-${option.value}`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium">{option.label}</span>
+                          <Badge className={option.color}>{option.points} points</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {descriptions[option.value]}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
