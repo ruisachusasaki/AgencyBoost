@@ -174,45 +174,36 @@ export default function HRSettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div className="overflow-x-auto">
-          <TabsList className="inline-flex w-auto min-w-full">
-            <TabsTrigger value="categories" className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4" />
-              <span className="hidden sm:inline">Time Off Categories</span>
-              <span className="sm:hidden">Categories</span>
-            </TabsTrigger>
-            <TabsTrigger value="policies" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              <span className="hidden sm:inline">Policies</span>
-              <span className="sm:hidden">Policies</span>
-            </TabsTrigger>
-            <TabsTrigger value="job-application-form" className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4" />
-              <span className="hidden md:inline">Job Application Form</span>
-              <span className="md:hidden">Job App</span>
-            </TabsTrigger>
-            <TabsTrigger value="new-hire-onboarding-form" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span className="hidden md:inline">New Hire Onboarding Form</span>
-              <span className="md:hidden">Onboarding</span>
-            </TabsTrigger>
-            <TabsTrigger value="expense-report-form" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              <span className="hidden md:inline">Expense Report Form</span>
-              <span className="md:hidden">Expenses</span>
-            </TabsTrigger>
-            <TabsTrigger value="offboarding-form" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span className="hidden md:inline">Offboarding Form</span>
-              <span className="md:hidden">Offboarding</span>
-            </TabsTrigger>
-            <TabsTrigger value="one-on-one-settings" className="flex items-center gap-2">
-              <MessageCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">1v1 Settings</span>
-              <span className="sm:hidden">1v1</span>
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList className="grid w-full grid-cols-7">
+          <TabsTrigger value="categories" className="flex items-center gap-1.5 px-2">
+            <CalendarDays className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">Time Off Categories</span>
+          </TabsTrigger>
+          <TabsTrigger value="policies" className="flex items-center gap-1.5 px-2">
+            <Clock className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">Policies</span>
+          </TabsTrigger>
+          <TabsTrigger value="job-application-form" className="flex items-center gap-1.5 px-2">
+            <Briefcase className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">Job Application Form</span>
+          </TabsTrigger>
+          <TabsTrigger value="new-hire-onboarding-form" className="flex items-center gap-1.5 px-2">
+            <Users className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">New Hire Onboarding Form</span>
+          </TabsTrigger>
+          <TabsTrigger value="expense-report-form" className="flex items-center gap-1.5 px-2">
+            <Settings className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">Expense Report Form</span>
+          </TabsTrigger>
+          <TabsTrigger value="offboarding-form" className="flex items-center gap-1.5 px-2">
+            <Users className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">Offboarding Form</span>
+          </TabsTrigger>
+          <TabsTrigger value="one-on-one-settings" className="flex items-center gap-1.5 px-2">
+            <MessageCircle className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">1v1 Settings</span>
+          </TabsTrigger>
+        </TabsList>
 
         {/* Time Off Categories Tab */}
         <TabsContent value="categories" className="space-y-6">
