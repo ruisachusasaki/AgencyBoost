@@ -3976,3 +3976,24 @@ export const insertOneOnOneCommentSchema = createInsertSchema(oneOnOneComments).
 
 export type OneOnOneComment = typeof oneOnOneComments.$inferSelect;
 export type InsertOneOnOneComment = z.infer<typeof insertOneOnOneCommentSchema>;
+
+// Progression status options for 1-on-1 meetings
+export const oneOnOneProgressionStatuses = pgTable("one_on_one_progression_statuses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  value: varchar("value", { length: 100 }).notNull().unique(),
+  label: varchar("label", { length: 100 }).notNull(),
+  color: varchar("color", { length: 100 }).notNull(), // Tailwind color classes
+  orderIndex: integer("order_index").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOneOnOneProgressionStatusSchema = createInsertSchema(oneOnOneProgressionStatuses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type OneOnOneProgressionStatus = typeof oneOnOneProgressionStatuses.$inferSelect;
+export type InsertOneOnOneProgressionStatus = z.infer<typeof insertOneOnOneProgressionStatusSchema>;

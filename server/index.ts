@@ -4,7 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./replitAuth";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets } from "@shared/schema";
+import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses } from "@shared/schema";
 
 /**
  * Startup migration to ensure client brief columns exist
@@ -916,6 +916,71 @@ async function initializeActivityAlertsWidgets() {
   }
 }
 
+/**
+ * Initialize default 1-on-1 progression statuses
+ * Creates the standard progression status options for 1-on-1 meetings
+ */
+async function initializeDefaultProgressionStatuses() {
+  try {
+    log("Running startup migration: initializeDefaultProgressionStatuses");
+    
+    // Create table if it doesn't exist
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS one_on_one_progression_statuses (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        value varchar(100) NOT NULL UNIQUE,
+        label varchar(100) NOT NULL,
+        color varchar(100) NOT NULL,
+        order_index integer DEFAULT 0,
+        is_active boolean DEFAULT true,
+        created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now()
+      );
+    `);
+    
+    // Check if statuses already exist
+    const existingStatuses = await db.select().from(oneOnOneProgressionStatuses).limit(1);
+    
+    if (existingStatuses.length > 0) {
+      log("Progression statuses already exist - skipping initialization");
+      return;
+    }
+    
+    // Default progression statuses
+    const defaultStatuses = [
+      {
+        value: "retention_risk",
+        label: "Retention Risk",
+        color: "bg-red-100 text-red-800",
+        orderIndex: 1,
+        isActive: true
+      },
+      {
+        value: "performance_issues",
+        label: "Performance Issues",
+        color: "bg-orange-100 text-orange-800",
+        orderIndex: 2,
+        isActive: true
+      },
+      {
+        value: "ready_for_promotion",
+        label: "Ready for Promotion",
+        color: "bg-green-100 text-green-800",
+        orderIndex: 3,
+        isActive: true
+      }
+    ];
+    
+    await db.insert(oneOnOneProgressionStatuses).values(defaultStatuses);
+    log(`Default progression statuses created: ${defaultStatuses.length} statuses`);
+    
+    log("Progression statuses initialization completed successfully");
+  } catch (error: any) {
+    log(`Progression statuses initialization error: ${error.message}`);
+    log("WARNING: Progression statuses initialization failed - statuses may not be available");
+  }
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -964,6 +1029,7 @@ app.use((req, res, next) => {
   await initializeHRTeamWidgets();
   await initializeCalendarAppointmentWidgets();
   await initializeActivityAlertsWidgets();
+  await initializeDefaultProgressionStatuses();
   
   // Setup Replit Auth
   await setupAuth(app);
