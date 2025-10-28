@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
@@ -21,7 +22,8 @@ import {
   Clock,
   Briefcase,
   ArrowLeft,
-  MessageCircle
+  MessageCircle,
+  MoreHorizontal
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -55,8 +57,35 @@ export default function HRSettingsPage() {
   const [activeTab, setActiveTab] = useState("categories");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<TimeOffCategory | null>(null);
+  const [visibleTabsCount, setVisibleTabsCount] = useState(7);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Responsive tab visibility
+  useEffect(() => {
+    const calculateVisibleTabs = () => {
+      const width = window.innerWidth;
+      
+      if (width >= 1400) {
+        setVisibleTabsCount(7); // Show all tabs
+      } else if (width >= 1200) {
+        setVisibleTabsCount(6);
+      } else if (width >= 1000) {
+        setVisibleTabsCount(5);
+      } else if (width >= 800) {
+        setVisibleTabsCount(4);
+      } else if (width >= 600) {
+        setVisibleTabsCount(3);
+      } else {
+        setVisibleTabsCount(2);
+      }
+    };
+    
+    calculateVisibleTabs();
+    window.addEventListener('resize', calculateVisibleTabs);
+    
+    return () => window.removeEventListener('resize', calculateVisibleTabs);
+  }, []);
 
   // Default time off categories if none exist
   const defaultCategories: Omit<TimeOffCategory, 'id' | 'createdAt'>[] = [
@@ -174,36 +203,82 @@ export default function HRSettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="categories" className="flex items-center gap-1.5 px-2">
-            <CalendarDays className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">Time Off Categories</span>
-          </TabsTrigger>
-          <TabsTrigger value="policies" className="flex items-center gap-1.5 px-2">
-            <Clock className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">Policies</span>
-          </TabsTrigger>
-          <TabsTrigger value="job-application-form" className="flex items-center gap-1.5 px-2">
-            <Briefcase className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">Job Application Form</span>
-          </TabsTrigger>
-          <TabsTrigger value="new-hire-onboarding-form" className="flex items-center gap-1.5 px-2">
-            <Users className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">New Hire Onboarding Form</span>
-          </TabsTrigger>
-          <TabsTrigger value="expense-report-form" className="flex items-center gap-1.5 px-2">
-            <Settings className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">Expense Report Form</span>
-          </TabsTrigger>
-          <TabsTrigger value="offboarding-form" className="flex items-center gap-1.5 px-2">
-            <Users className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">Offboarding Form</span>
-          </TabsTrigger>
-          <TabsTrigger value="one-on-one-settings" className="flex items-center gap-1.5 px-2">
-            <MessageCircle className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">1v1 Settings</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-2">
+            {(() => {
+              const allTabs = [
+                { id: "categories", name: "Time Off Categories", icon: CalendarDays },
+                { id: "policies", name: "Policies", icon: Clock },
+                { id: "job-application-form", name: "Job Application Form", icon: Briefcase },
+                { id: "new-hire-onboarding-form", name: "New Hire Onboarding Form", icon: Users },
+                { id: "expense-report-form", name: "Expense Report Form", icon: Settings },
+                { id: "offboarding-form", name: "Offboarding Form", icon: Users },
+                { id: "one-on-one-settings", name: "1v1 Settings", icon: MessageCircle }
+              ];
+              
+              const visibleTabs = allTabs.slice(0, visibleTabsCount);
+              const overflowTabs = allTabs.slice(visibleTabsCount);
+              
+              return (
+                <>
+                  {visibleTabs.map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`py-2 px-4 border-b-2 font-medium text-sm flex items-center justify-center gap-2 whitespace-nowrap ${
+                          activeTab === tab.id
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        }`}
+                        data-testid={`tab-${tab.id}`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {tab.name}
+                      </button>
+                    );
+                  })}
+                  
+                  {overflowTabs.length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className={`py-2 px-3 border-b-2 font-medium text-sm flex items-center justify-center gap-2 whitespace-nowrap ${
+                            overflowTabs.some(tab => tab.id === activeTab)
+                              ? "border-primary text-primary"
+                              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                          }`}
+                          data-testid="tab-overflow-menu"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        {overflowTabs.map((tab) => {
+                          const Icon = tab.icon;
+                          return (
+                            <DropdownMenuItem
+                              key={tab.id}
+                              onClick={() => setActiveTab(tab.id)}
+                              className={`flex items-center gap-2 ${
+                                activeTab === tab.id ? "bg-primary/10 text-primary" : ""
+                              }`}
+                              data-testid={`dropdown-tab-${tab.id}`}
+                            >
+                              <Icon className="h-4 w-4" />
+                              {tab.name}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </>
+              );
+            })()}
+          </nav>
+        </div>
 
         {/* Time Off Categories Tab */}
         <TabsContent value="categories" className="space-y-6">
