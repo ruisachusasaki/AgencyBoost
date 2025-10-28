@@ -63,11 +63,7 @@ function ProgressionStatusManager() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: ProgressionStatusFormData) => {
-      return await apiRequest("/api/hr/one-on-one/progression-statuses", {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("POST", "/api/hr/one-on-one/progression-statuses", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/progression-statuses"] });
@@ -90,11 +86,7 @@ function ProgressionStatusManager() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<ProgressionStatusFormData> }) => {
-      return await apiRequest(`/api/hr/one-on-one/progression-statuses/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("PUT", `/api/hr/one-on-one/progression-statuses/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/progression-statuses"] });
@@ -118,9 +110,7 @@ function ProgressionStatusManager() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/hr/one-on-one/progression-statuses/${id}`, {
-        method: "DELETE",
-      });
+      return await apiRequest("DELETE", `/api/hr/one-on-one/progression-statuses/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/progression-statuses"] });
@@ -143,11 +133,7 @@ function ProgressionStatusManager() {
     mutationFn: async (reorderedStatuses: any[]) => {
       // Update each status with new orderIndex
       const promises = reorderedStatuses.map((status, index) =>
-        apiRequest(`/api/hr/one-on-one/progression-statuses/${status.id}`, {
-          method: "PUT",
-          body: JSON.stringify({ orderIndex: index }),
-          headers: { "Content-Type": "application/json" },
-        })
+        apiRequest("PUT", `/api/hr/one-on-one/progression-statuses/${status.id}`, { orderIndex: index })
       );
       return await Promise.all(promises);
     },
