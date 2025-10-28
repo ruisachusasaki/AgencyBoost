@@ -697,37 +697,37 @@ function MeetingEditor({
   };
 
   const handleToggleTalkingPoint = (pointId: string) => {
-    if (!meeting) return; // Only allow toggling for saved meetings
-    
     const point = talkingPoints.find(p => p.id === pointId);
     if (!point) return;
     
     const newStatus = !point.isCompleted;
     
-    // Optimistic update
+    // Update local state
     setTalkingPoints(talkingPoints.map(p => 
       p.id === pointId ? { ...p, isCompleted: newStatus } : p
     ));
     
-    // Update in database
-    updateTalkingPointMutation.mutate({ id: pointId, isCompleted: newStatus });
+    // Update in database if meeting is saved
+    if (meeting) {
+      updateTalkingPointMutation.mutate({ id: pointId, isCompleted: newStatus });
+    }
   };
 
   const handleToggleActionItem = (itemId: string) => {
-    if (!meeting) return; // Only allow toggling for saved meetings
-    
     const item = actionItems.find(i => i.id === itemId);
     if (!item) return;
     
     const newStatus = !item.isCompleted;
     
-    // Optimistic update
+    // Update local state
     setActionItems(actionItems.map(i => 
       i.id === itemId ? { ...i, isCompleted: newStatus } : i
     ));
     
-    // Update in database
-    updateActionItemMutation.mutate({ id: itemId, isCompleted: newStatus });
+    // Update in database if meeting is saved
+    if (meeting) {
+      updateActionItemMutation.mutate({ id: itemId, isCompleted: newStatus });
+    }
   };
 
   return (
