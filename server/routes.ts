@@ -18409,11 +18409,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const isAdmin = await isCurrentUserAdmin(currentUserId);
-      const userRole = await db.select({ role: users.role })
-        .from(users)
-        .where(eq(users.id, currentUserId))
+      
+      // Get user info from staff table
+      const staffUser = await db.select({ 
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        roleId: staff.roleId
+      })
+        .from(staff)
+        .where(eq(staff.id, currentUserId))
         .limit(1);
-      const isManager = userRole[0]?.role?.toLowerCase() === 'manager';
+      
+      if (!staffUser.length) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Check if user is a manager (roleId corresponds to Manager role)
+      const isManager = staffUser[0].roleId ? (await db.select({ name: roles.name })
+        .from(roles)
+        .where(eq(roles.id, staffUser[0].roleId))
+        .limit(1)
+      )[0]?.name?.toLowerCase() === 'manager' : false;
 
       // Build the query based on role
       let meetingsQuery;
@@ -18428,11 +18444,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           feeling: oneOnOneMeetings.feeling,
           performancePoints: oneOnOneMeetings.performancePoints,
           progressionStatus: oneOnOneMeetings.progressionStatus,
-          directReportFirstName: users.firstName,
-          directReportLastName: users.lastName,
+          directReportFirstName: staff.firstName,
+          directReportLastName: staff.lastName,
         })
         .from(oneOnOneMeetings)
-        .leftJoin(users, eq(oneOnOneMeetings.directReportId, users.id))
+        .leftJoin(staff, eq(oneOnOneMeetings.directReportId, staff.id))
         .orderBy(desc(oneOnOneMeetings.meetingDate));
       } else if (isManager) {
         // Managers see their direct reports' meetings
@@ -18445,11 +18461,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           feeling: oneOnOneMeetings.feeling,
           performancePoints: oneOnOneMeetings.performancePoints,
           progressionStatus: oneOnOneMeetings.progressionStatus,
-          directReportFirstName: users.firstName,
-          directReportLastName: users.lastName,
+          directReportFirstName: staff.firstName,
+          directReportLastName: staff.lastName,
         })
         .from(oneOnOneMeetings)
-        .leftJoin(users, eq(oneOnOneMeetings.directReportId, users.id))
+        .leftJoin(staff, eq(oneOnOneMeetings.directReportId, staff.id))
         .where(eq(oneOnOneMeetings.managerId, currentUserId))
         .orderBy(desc(oneOnOneMeetings.meetingDate));
       } else {
@@ -18463,11 +18479,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           feeling: oneOnOneMeetings.feeling,
           performancePoints: oneOnOneMeetings.performancePoints,
           progressionStatus: oneOnOneMeetings.progressionStatus,
-          directReportFirstName: users.firstName,
-          directReportLastName: users.lastName,
+          directReportFirstName: staff.firstName,
+          directReportLastName: staff.lastName,
         })
         .from(oneOnOneMeetings)
-        .leftJoin(users, eq(oneOnOneMeetings.directReportId, users.id))
+        .leftJoin(staff, eq(oneOnOneMeetings.directReportId, staff.id))
         .where(eq(oneOnOneMeetings.directReportId, currentUserId))
         .orderBy(desc(oneOnOneMeetings.meetingDate));
       }
