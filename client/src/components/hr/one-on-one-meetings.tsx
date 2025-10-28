@@ -124,11 +124,7 @@ const BONUS_OPTIONS = [
   { value: 2, label: "Add Bonus (+2)", points: 2 },
 ];
 
-const PROGRESSION_OPTIONS = [
-  { value: "retention_risk", label: "Retention Risk", color: "bg-red-100 text-red-800" },
-  { value: "performance_issues", label: "Performance Issues", color: "bg-orange-100 text-orange-800" },
-  { value: "ready_for_promotion", label: "Ready for Promotion", color: "bg-green-100 text-green-800" },
-];
+// Progression options are now fetched from the API instead of being hard-coded
 
 const GOAL_STATUS_OPTIONS = [
   { value: "pending", label: "Pending", color: "bg-gray-100 text-gray-800" },
@@ -143,6 +139,11 @@ export default function OneOnOneMeetings() {
   const [selectedReport, setSelectedReport] = useState<DirectReport | null>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
+
+  // Fetch progression statuses
+  const { data: progressionStatuses = [] } = useQuery<any[]>({
+    queryKey: ["/api/hr/one-on-one/progression-statuses"],
+  });
 
   // Fetch direct reports
   const { data: directReports = [], isLoading: loadingReports } = useQuery<DirectReport[]>({
@@ -1108,11 +1109,14 @@ function MeetingEditor({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  {PROGRESSION_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      <Badge className={option.color}>{option.label}</Badge>
-                    </SelectItem>
-                  ))}
+                  {progressionStatuses
+                    .filter((status) => status.isActive)
+                    .sort((a, b) => a.orderIndex - b.orderIndex)
+                    .map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <Badge className={option.color}>{option.label}</Badge>
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </CardContent>

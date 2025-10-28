@@ -18404,6 +18404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Progression Status Management Routes
   app.get("/api/hr/one-on-one/progression-statuses", requireAuth(), async (req, res) => {
     try {
+      // All authenticated users can view progression statuses
       const statuses = await db.select()
         .from(oneOnOneProgressionStatuses)
         .orderBy(oneOnOneProgressionStatuses.orderIndex);

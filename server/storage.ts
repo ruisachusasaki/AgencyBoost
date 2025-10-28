@@ -614,6 +614,13 @@ export interface IStorage {
   createUserDashboardWidget(data: InsertUserDashboardWidget): Promise<UserDashboardWidget>;
   updateUserDashboardWidget(id: string, data: Partial<InsertUserDashboardWidget>): Promise<UserDashboardWidget | undefined>;
   deleteUserDashboardWidget(id: string): Promise<boolean>;
+  
+  // 1v1 Progression Statuses
+  getProgressionStatuses(): Promise<OneOnOneProgressionStatus[]>;
+  getProgressionStatus(id: string): Promise<OneOnOneProgressionStatus | undefined>;
+  createProgressionStatus(data: InsertOneOnOneProgressionStatus): Promise<OneOnOneProgressionStatus>;
+  updateProgressionStatus(id: string, data: Partial<InsertOneOnOneProgressionStatus>): Promise<OneOnOneProgressionStatus | undefined>;
+  deleteProgressionStatus(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
