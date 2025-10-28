@@ -56,7 +56,8 @@ import {
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
-  clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings
+  clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings,
+  knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseLikes, knowledgeBaseBookmarks, knowledgeBasePermissions
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
