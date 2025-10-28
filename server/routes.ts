@@ -17033,9 +17033,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/hr/time-off-requests", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
     try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      
       // Convert totalHours from number to string for decimal field
       const cleanedBody = {
         ...req.body,
+        staffId: req.body.staffId || currentUserId, // Auto-set to current user if not provided
         totalHours: req.body.totalHours?.toString() || "0"
       };
       
