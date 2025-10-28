@@ -18404,11 +18404,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/one-on-one-performance", requireAuth(), async (req, res) => {
     try {
       const currentUserId = getAuthenticatedUserId(req);
+      console.log("📊 1-on-1 Performance Report - currentUserId:", currentUserId);
       if (!currentUserId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
       const isAdmin = await isCurrentUserAdmin(currentUserId);
+      console.log("📊 1-on-1 Performance Report - isAdmin:", isAdmin);
       
       // Get user info from staff table
       const staffUser = await db.select({ 
@@ -18434,6 +18436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build the query based on role
       let meetingsQuery;
       if (isAdmin) {
+        console.log("📊 Using ADMIN query path - will return all meetings");
         // Admins see all meetings
         meetingsQuery = db.select({
           id: oneOnOneMeetings.id,
@@ -18489,6 +18492,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const meetings = await meetingsQuery;
+      console.log("📊 Meetings query returned:", meetings.length, "meetings");
+      if (meetings.length > 0) {
+        console.log("📊 First meeting:", meetings[0]);
+      }
 
       // Fetch talking points, action items, and goals for all meetings
       const meetingIds = meetings.map(m => m.id);
