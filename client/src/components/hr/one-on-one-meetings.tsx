@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -434,10 +434,20 @@ function MeetingEditor({
   const [privateNotes, setPrivateNotes] = useState(meeting?.privateNotes || "");
   
   // Lists
-  const [talkingPoints, setTalkingPoints] = useState<TalkingPoint[]>(meetingDetails?.talkingPoints || []);
-  const [actionItems, setActionItems] = useState<ActionItem[]>(meetingDetails?.actionItems || []);
-  const [goals, setGoals] = useState<Goal[]>(meetingDetails?.goals || []);
-  const [comments, setComments] = useState<Comment[]>(meetingDetails?.comments || []);
+  const [talkingPoints, setTalkingPoints] = useState<TalkingPoint[]>([]);
+  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  
+  // Update lists when meetingDetails loads
+  useEffect(() => {
+    if (meetingDetails) {
+      setTalkingPoints(meetingDetails.talkingPoints || []);
+      setActionItems(meetingDetails.actionItems || []);
+      setGoals(meetingDetails.goals || []);
+      setComments(meetingDetails.comments || []);
+    }
+  }, [meetingDetails]);
   
   // New item inputs
   const [newTalkingPoint, setNewTalkingPoint] = useState("");
