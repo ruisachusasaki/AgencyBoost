@@ -419,6 +419,11 @@ function MeetingEditor({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch progression statuses
+  const { data: progressionStatuses = [] } = useQuery<any[]>({
+    queryKey: ["/api/hr/one-on-one/progression-statuses"],
+  });
+
   // Form states
   const [meetingDate, setMeetingDate] = useState(
     meeting?.meetingDate || format(new Date(), "yyyy-MM-dd")
