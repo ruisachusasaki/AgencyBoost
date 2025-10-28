@@ -23,7 +23,8 @@ import {
   Briefcase,
   ArrowLeft,
   MessageCircle,
-  MoreHorizontal
+  MoreHorizontal,
+  GripVertical
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +35,7 @@ import ExpenseReportFormEditor from "@/components/hr/expense-report-form-editor"
 import OffboardingFormEditor from "@/components/hr/offboarding-form-editor";
 import { Link } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 
 // Progression Status Manager Component
 function ProgressionStatusManager() {
@@ -136,6 +138,35 @@ function ProgressionStatusManager() {
     },
   });
 
+  // Reorder mutation
+  const reorderMutation = useMutation({
+    mutationFn: async (reorderedStatuses: any[]) => {
+      // Update each status with new orderIndex
+      const promises = reorderedStatuses.map((status, index) =>
+        apiRequest(`/api/hr/one-on-one/progression-statuses/${status.id}`, {
+          method: "PUT",
+          body: JSON.stringify({ orderIndex: index }),
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+      return await Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/progression-statuses"] });
+      toast({
+        title: "Success",
+        description: "Progression statuses reordered successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reorder progression statuses",
+        variant: "destructive",
+      });
+    },
+  });
+
   const form = useForm<ProgressionStatusFormData>({
     resolver: zodResolver(progressionStatusSchema),
     defaultValues: {
@@ -190,6 +221,26 @@ function ProgressionStatusManager() {
     }
   };
 
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = Array.from(statuses);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Update orderIndex for all items
+    const reorderedStatuses = items.map((item, index) => ({
+      ...item,
+      orderIndex: index,
+    }));
+
+    // Optimistically update UI
+    queryClient.setQueryData(["/api/hr/one-on-one/progression-statuses"], reorderedStatuses);
+
+    // Persist to backend
+    reorderMutation.mutate(reorderedStatuses);
+  };
+
   const colorOptions = [
     { value: "bg-red-100 text-red-800", label: "Red" },
     { value: "bg-orange-100 text-orange-800", label: "Orange" },
@@ -227,53 +278,73 @@ function ProgressionStatusManager() {
               No progression statuses configured. Add one to get started.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Label</TableHead>
-                  <TableHead>Value</TableHead>
-                  <TableHead>Color</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {statuses.map((status: any) => (
-                  <TableRow key={status.id} data-testid={`row-status-${status.id}`}>
-                    <TableCell className="font-medium">{status.label}</TableCell>
-                    <TableCell className="font-mono text-sm">{status.value}</TableCell>
-                    <TableCell>
-                      <Badge className={status.color}>{status.label}</Badge>
-                    </TableCell>
-                    <TableCell>{status.orderIndex}</TableCell>
-                    <TableCell>
-                      <Badge variant={status.isActive ? "default" : "secondary"}>
-                        {status.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleOpenDialog(status)}
-                        data-testid={`button-edit-${status.id}`}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(status.id)}
-                        data-testid={`button-delete-${status.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12"></TableHead>
+                    <TableHead>Label</TableHead>
+                    <TableHead>Value</TableHead>
+                    <TableHead>Color</TableHead>
+                    <TableHead>Order</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <Droppable droppableId="progression-statuses">
+                  {(provided) => (
+                    <TableBody {...provided.droppableProps} ref={provided.innerRef}>
+                      {statuses.map((status: any, index: number) => (
+                        <Draggable key={status.id} draggableId={status.id} index={index}>
+                          {(provided, snapshot) => (
+                            <TableRow
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              data-testid={`row-status-${status.id}`}
+                              className={snapshot.isDragging ? "bg-muted/50" : ""}
+                            >
+                              <TableCell {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                              </TableCell>
+                              <TableCell className="font-medium">{status.label}</TableCell>
+                              <TableCell className="font-mono text-sm">{status.value}</TableCell>
+                              <TableCell>
+                                <Badge className={status.color}>{status.label}</Badge>
+                              </TableCell>
+                              <TableCell>{status.orderIndex}</TableCell>
+                              <TableCell>
+                                <Badge variant={status.isActive ? "default" : "secondary"}>
+                                  {status.isActive ? "Active" : "Inactive"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenDialog(status)}
+                                  data-testid={`button-edit-${status.id}`}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDelete(status.id)}
+                                  data-testid={`button-delete-${status.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </TableBody>
+                  )}
+                </Droppable>
+              </Table>
+            </DragDropContext>
           )}
         </CardContent>
       </Card>
