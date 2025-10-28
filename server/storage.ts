@@ -5033,15 +5033,20 @@ export class DbStorage implements IStorage {
       conditions.push(eq(tasks.clientId, clientId));
     }
     
-    // Query tasks
+    // Query tasks with client information
     const tasksData = await db
-      .select()
+      .select({
+        task: tasks,
+        clientName: clients.name
+      })
       .from(tasks)
+      .leftJoin(clients, eq(tasks.clientId, clients.id))
       .where(and(...conditions));
     
     // Filter time entries to only include those in the date range
-    return tasksData.map(task => ({
+    return tasksData.map(({ task, clientName }) => ({
       ...task,
+      clientName: clientName || undefined,
       timeEntries: task.timeEntries && Array.isArray(task.timeEntries) 
         ? (task.timeEntries as any[]).filter((entry: any) => {
             if (!entry.startTime) return false;
