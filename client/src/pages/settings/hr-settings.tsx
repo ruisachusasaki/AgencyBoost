@@ -20,7 +20,8 @@ import {
   CalendarDays,
   Clock,
   Briefcase,
-  ArrowLeft
+  ArrowLeft,
+  MessageCircle
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -173,7 +174,7 @@ export default function HRSettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="categories" className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4" />
             Time Off Categories
@@ -197,6 +198,10 @@ export default function HRSettingsPage() {
           <TabsTrigger value="offboarding-form" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Offboarding Form
+          </TabsTrigger>
+          <TabsTrigger value="one-on-one-settings" className="flex items-center gap-2">
+            <MessageCircle className="h-4 w-4" />
+            1v1 Settings
           </TabsTrigger>
         </TabsList>
 
@@ -298,6 +303,30 @@ export default function HRSettingsPage() {
         {/* Offboarding Form Tab */}
         <TabsContent value="offboarding-form" className="space-y-6">
           <OffboardingFormEditor />
+        </TabsContent>
+
+        {/* 1v1 Settings Tab */}
+        <TabsContent value="one-on-one-settings" className="space-y-6">
+          <div>
+            <h3 className="text-lg font-medium">1-on-1 Meeting Settings</h3>
+            <p className="text-muted-foreground">
+              Configure settings for 1-on-1 meetings between managers and direct reports.
+            </p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Meeting Configuration</CardTitle>
+              <CardDescription>
+                Customize how 1-on-1 meetings are scheduled and tracked
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Settings for 1-on-1 meetings will be configured here.
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
 
       </Tabs>
