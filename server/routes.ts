@@ -956,9 +956,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Fix for dev-admin users - treat them as "All Users"
+      // Check if user is admin - non-admins can only see their own data
+      const userIsAdmin = await isCurrentUserAdmin(authenticatedUserId);
+      
+      // Enforce user-level filtering for non-admins
       let effectiveUserId = userId;
-      if (IS_DEVELOPMENT && userId === authenticatedUserId) {
+      if (!userIsAdmin) {
+        // Non-admins can ONLY see their own data
+        effectiveUserId = authenticatedUserId;
+      } else if (IS_DEVELOPMENT && userId === authenticatedUserId) {
+        // Fix for dev-admin users - treat them as "All Users"
         effectiveUserId = undefined; // Show all data for dev-admin
       }
       

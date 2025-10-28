@@ -163,6 +163,16 @@ export default function Reports() {
   const [exportFormat, setExportFormat] = useState<"detailed" | "user-summary" | "client-breakdown" | "admin-summary">("detailed");
   const { toast } = useToast();
 
+  // Auto-filter timesheet to current user for non-admins
+  useEffect(() => {
+    if (currentUser && !isAdmin && taskReportType === "timesheet") {
+      // Only set if not already set to a specific user
+      if (userIdFilter === "all") {
+        setUserIdFilter(currentUser.id);
+      }
+    }
+  }, [currentUser, isAdmin, taskReportType, userIdFilter]);
+
   // CSV Export Handler
   const handleCsvExport = async () => {
     if (!timeTrackingData || isExporting) return;
@@ -2083,16 +2093,18 @@ export default function Reports() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {/* Filter by User - show for timesheet view */}
+                  {/* Filter by User - show for timesheet view, disabled for non-admins */}
                   {taskReportType === "timesheet" && (
                     <div className="flex items-center gap-2">
-                      <label className="text-sm text-slate-600">Filter by User:</label>
-                      <Select value={userIdFilter} onValueChange={setUserIdFilter}>
+                      <label className="text-sm text-slate-600">
+                        {isAdmin ? 'Filter by User:' : 'Your Timesheet:'}
+                      </label>
+                      <Select value={userIdFilter} onValueChange={setUserIdFilter} disabled={!isAdmin}>
                         <SelectTrigger className="w-48" data-testid="select-user-filter">
                           <SelectValue placeholder="All Users" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Users</SelectItem>
+                          {isAdmin && <SelectItem value="all">All Users</SelectItem>}
                           {(timeTrackingData?.userSummaries || []).map((user) => (
                             <SelectItem key={user.userId} value={user.userId}>
                               {user.userName || 'Unknown User'}
