@@ -170,6 +170,12 @@ export default function OneOnOneMeetings() {
     comments: Comment[];
   }>({
     queryKey: ["/api/hr/one-on-one/meetings", selectedMeeting?.id, "details"],
+    queryFn: async () => {
+      if (!selectedMeeting?.id) return null;
+      const response = await fetch(`/api/hr/one-on-one/meetings/${selectedMeeting.id}/details`);
+      if (!response.ok) throw new Error("Failed to fetch meeting details");
+      return response.json();
+    },
     enabled: !!selectedMeeting,
   });
 
