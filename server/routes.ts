@@ -937,14 +937,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("🚀🚀🚀 SELF-CONTAINED TIME TRACKING ENDPOINT CALLED! 🚀🚀🚀");
       console.log("SELF-CONTAINED TIME TRACKING ENDPOINT: Request received:", req.body);
       
-      // Simple authentication - no external dependencies
-      const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
-      let authenticatedUserId = '00000000-0000-4000-8000-000000000000';
-      
-      if (!IS_DEVELOPMENT && (!req.session || !req.session.userId)) {
-        return res.status(401).json({ error: "Authentication required" });
-      }
-      if (!IS_DEVELOPMENT) authenticatedUserId = req.session.userId;
+      // Use proper authentication that respects impersonation
+      const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!authenticatedUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Simple inline validation
       const { dateFrom, dateTo, userId, clientId, taskStatus, reportType } = req.body;
@@ -964,9 +959,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userIsAdmin) {
         // Non-admins can ONLY see their own data
         effectiveUserId = authenticatedUserId;
-      } else if (IS_DEVELOPMENT && userId === authenticatedUserId) {
-        // Fix for dev-admin users - treat them as "All Users"
-        effectiveUserId = undefined; // Show all data for dev-admin
+      } else if (!userId || userId === "all") {
+        // Admin selected "All Users" - show all data
+        effectiveUserId = undefined;
       }
       
       // Get actual time entries from the database
