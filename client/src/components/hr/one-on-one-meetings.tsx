@@ -152,6 +152,12 @@ export default function OneOnOneMeetings() {
   // Fetch meetings for selected report
   const { data: meetings = [], isLoading: loadingMeetings } = useQuery<Meeting[]>({
     queryKey: ["/api/hr/one-on-one/meetings", selectedReport?.id],
+    queryFn: async () => {
+      if (!selectedReport?.id) return [];
+      const response = await fetch(`/api/hr/one-on-one/meetings/${selectedReport.id}`);
+      if (!response.ok) throw new Error("Failed to fetch meetings");
+      return response.json();
+    },
     enabled: !!selectedReport,
   });
 
