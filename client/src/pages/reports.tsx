@@ -1269,7 +1269,8 @@ export default function Reports() {
             { id: "health", name: "Client Health", icon: Heart, count: null },
             { id: "tasks", name: "Tasks", icon: Clock, count: null },
             { id: "team", name: "Team Workload", icon: Users, count: null },
-            { id: "mrr", name: "MRR Report", icon: DollarSign, count: null }
+            { id: "mrr", name: "MRR Report", icon: DollarSign, count: null },
+            { id: "one-on-one", name: "1-on-1 Performance", icon: Target, count: null }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -4117,7 +4118,313 @@ export default function Reports() {
           </Card>
         </div>
       )}
+
+      {/* 1-on-1 Performance Report Tab */}
+      {activeTab === "one-on-one" && (
+        <div className="space-y-6">
+          <OneOnOnePerformanceReport />
+        </div>
+      )}
     </div>
+  );
+}
+
+// 1-on-1 Performance Report Component
+function OneOnOnePerformanceReport() {
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<string>("totalMeetings");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const { data: performanceData, isLoading } = useQuery<Array<{
+    userId: string;
+    userName: string;
+    totalMeetings: number;
+    avgPerformancePoints: number | null;
+    talkingPointsCompletionRate: number | null;
+    actionItemsCompletionRate: number | null;
+    goalsCompletionRate: number | null;
+    mostCommonFeeling: string | null;
+    mostCommonProgressionStatus: string | null;
+    meetings: Array<{
+      id: string;
+      meetingDate: string;
+      weekOf: string;
+      feeling: string | null;
+      performancePoints: number | null;
+      progressionStatus: string | null;
+    }>;
+  }>>({
+    queryKey: ['/api/reports/one-on-one-performance'],
+  });
+
+  const filteredAndSortedData = useMemo(() => {
+    if (!performanceData) return [];
+
+    let filtered = performanceData.filter(report =>
+      report.userName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    filtered.sort((a, b) => {
+      let aVal: any = a[sortField as keyof typeof a];
+      let bVal: any = b[sortField as keyof typeof b];
+
+      if (aVal === null) aVal = sortOrder === "asc" ? Infinity : -Infinity;
+      if (bVal === null) bVal = sortOrder === "asc" ? Infinity : -Infinity;
+
+      if (sortOrder === "asc") {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+
+    return filtered;
+  }, [performanceData, searchTerm, sortField, sortOrder]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("desc");
+    }
+  };
+
+  const getFeelingEmoji = (feeling: string | null) => {
+    if (!feeling) return null;
+    const emojiMap: Record<string, string> = {
+      'great': '😊',
+      'good': '🙂',
+      'okay': '😐',
+      'stressed': '😰',
+      'overwhelmed': '😫'
+    };
+    return emojiMap[feeling] || null;
+  };
+
+  const getProgressionBadgeColor = (status: string | null) => {
+    if (!status) return 'secondary';
+    const colorMap: Record<string, string> = {
+      'excelling': 'default',
+      'on-track': 'default',
+      'needs-support': 'secondary',
+      'struggling': 'destructive'
+    };
+    return colorMap[status] || 'secondary';
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-8">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-muted-foreground">Loading performance reports...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!performanceData || performanceData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-primary" />
+            1-on-1 Performance Reports
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            No performance data available. Start conducting 1-on-1 meetings to see reports here.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const totalMeetingsAll = performanceData.reduce((sum, r) => sum + r.totalMeetings, 0);
+  const avgPerformanceAll = performanceData.filter(r => r.avgPerformancePoints !== null).length > 0
+    ? performanceData.filter(r => r.avgPerformancePoints !== null).reduce((sum, r) => sum + (r.avgPerformancePoints || 0), 0) / performanceData.filter(r => r.avgPerformancePoints !== null).length
+    : null;
+
+  return (
+    <>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Team Members</p>
+                <p className="text-2xl font-bold" data-testid="total-team-members">
+                  {performanceData.length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <Calendar className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Meetings</p>
+                <p className="text-2xl font-bold" data-testid="total-meetings">
+                  {totalMeetingsAll}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <Target className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Avg Performance</p>
+                <p className="text-2xl font-bold" data-testid="avg-performance">
+                  {avgPerformanceAll !== null ? avgPerformanceAll.toFixed(1) : 'N/A'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Performance Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Individual Performance Metrics
+            </CardTitle>
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search team members..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full sm:w-64"
+                data-testid="input-performance-search"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead
+                  className="cursor-pointer hover:bg-slate-50"
+                  onClick={() => handleSort('userName')}
+                  data-testid="sort-name"
+                >
+                  Team Member
+                  {sortField === 'userName' && (
+                    sortOrder === 'asc' ? <ChevronUp className="inline h-4 w-4 ml-1" /> : <ChevronDown className="inline h-4 w-4 ml-1" />
+                  )}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-slate-50"
+                  onClick={() => handleSort('totalMeetings')}
+                  data-testid="sort-meetings"
+                >
+                  Meetings
+                  {sortField === 'totalMeetings' && (
+                    sortOrder === 'asc' ? <ChevronUp className="inline h-4 w-4 ml-1" /> : <ChevronDown className="inline h-4 w-4 ml-1" />
+                  )}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-slate-50"
+                  onClick={() => handleSort('avgPerformancePoints')}
+                  data-testid="sort-performance"
+                >
+                  Avg Performance
+                  {sortField === 'avgPerformancePoints' && (
+                    sortOrder === 'asc' ? <ChevronUp className="inline h-4 w-4 ml-1" /> : <ChevronDown className="inline h-4 w-4 ml-1" />
+                  )}
+                </TableHead>
+                <TableHead>Completion Rates</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredAndSortedData.map((report) => (
+                <TableRow key={report.userId} data-testid={`performance-row-${report.userId}`}>
+                  <TableCell className="font-medium">
+                    {report.userName || 'Unknown'}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      {report.totalMeetings}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {report.avgPerformancePoints !== null ? (
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-primary">
+                          {report.avgPerformancePoints.toFixed(1)}
+                        </span>
+                        {report.mostCommonFeeling && (
+                          <span className="text-lg">
+                            {getFeelingEmoji(report.mostCommonFeeling)}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">N/A</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1 text-xs">
+                      {report.talkingPointsCompletionRate !== null && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground w-20">Talking:</span>
+                          <span className="font-medium">{report.talkingPointsCompletionRate.toFixed(0)}%</span>
+                        </div>
+                      )}
+                      {report.actionItemsCompletionRate !== null && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground w-20">Actions:</span>
+                          <span className="font-medium">{report.actionItemsCompletionRate.toFixed(0)}%</span>
+                        </div>
+                      )}
+                      {report.goalsCompletionRate !== null && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground w-20">Goals:</span>
+                          <span className="font-medium">{report.goalsCompletionRate.toFixed(0)}%</span>
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {report.mostCommonProgressionStatus && (
+                      <Badge variant={getProgressionBadgeColor(report.mostCommonProgressionStatus) as any}>
+                        {report.mostCommonProgressionStatus.replace('-', ' ')}
+                      </Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </>
   );
 }
 // Hiring Predictions Component

@@ -18400,6 +18400,193 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 1-on-1 Performance Reports
+  app.get("/api/reports/one-on-one-performance", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      const userRole = await db.select({ role: users.role })
+        .from(users)
+        .where(eq(users.id, currentUserId))
+        .limit(1);
+      const isManager = userRole[0]?.role?.toLowerCase() === 'manager';
+
+      // Build the query based on role
+      let meetingsQuery;
+      if (isAdmin) {
+        // Admins see all meetings
+        meetingsQuery = db.select({
+          id: oneOnOneMeetings.id,
+          directReportId: oneOnOneMeetings.directReportId,
+          managerId: oneOnOneMeetings.managerId,
+          meetingDate: oneOnOneMeetings.meetingDate,
+          weekOf: oneOnOneMeetings.weekOf,
+          feeling: oneOnOneMeetings.feeling,
+          performancePoints: oneOnOneMeetings.performancePoints,
+          progressionStatus: oneOnOneMeetings.progressionStatus,
+          directReportFirstName: users.firstName,
+          directReportLastName: users.lastName,
+        })
+        .from(oneOnOneMeetings)
+        .leftJoin(users, eq(oneOnOneMeetings.directReportId, users.id))
+        .orderBy(desc(oneOnOneMeetings.meetingDate));
+      } else if (isManager) {
+        // Managers see their direct reports' meetings
+        meetingsQuery = db.select({
+          id: oneOnOneMeetings.id,
+          directReportId: oneOnOneMeetings.directReportId,
+          managerId: oneOnOneMeetings.managerId,
+          meetingDate: oneOnOneMeetings.meetingDate,
+          weekOf: oneOnOneMeetings.weekOf,
+          feeling: oneOnOneMeetings.feeling,
+          performancePoints: oneOnOneMeetings.performancePoints,
+          progressionStatus: oneOnOneMeetings.progressionStatus,
+          directReportFirstName: users.firstName,
+          directReportLastName: users.lastName,
+        })
+        .from(oneOnOneMeetings)
+        .leftJoin(users, eq(oneOnOneMeetings.directReportId, users.id))
+        .where(eq(oneOnOneMeetings.managerId, currentUserId))
+        .orderBy(desc(oneOnOneMeetings.meetingDate));
+      } else {
+        // Regular users see only their own meetings
+        meetingsQuery = db.select({
+          id: oneOnOneMeetings.id,
+          directReportId: oneOnOneMeetings.directReportId,
+          managerId: oneOnOneMeetings.managerId,
+          meetingDate: oneOnOneMeetings.meetingDate,
+          weekOf: oneOnOneMeetings.weekOf,
+          feeling: oneOnOneMeetings.feeling,
+          performancePoints: oneOnOneMeetings.performancePoints,
+          progressionStatus: oneOnOneMeetings.progressionStatus,
+          directReportFirstName: users.firstName,
+          directReportLastName: users.lastName,
+        })
+        .from(oneOnOneMeetings)
+        .leftJoin(users, eq(oneOnOneMeetings.directReportId, users.id))
+        .where(eq(oneOnOneMeetings.directReportId, currentUserId))
+        .orderBy(desc(oneOnOneMeetings.meetingDate));
+      }
+
+      const meetings = await meetingsQuery;
+
+      // Fetch talking points, action items, and goals for all meetings
+      const meetingIds = meetings.map(m => m.id);
+      
+      const talkingPoints = meetingIds.length > 0 
+        ? await db.select().from(oneOnOneTalkingPoints).where(inArray(oneOnOneTalkingPoints.meetingId, meetingIds))
+        : [];
+      
+      const actionItems = meetingIds.length > 0
+        ? await db.select().from(oneOnOneActionItems).where(inArray(oneOnOneActionItems.meetingId, meetingIds))
+        : [];
+      
+      const goals = meetingIds.length > 0
+        ? await db.select().from(oneOnOneGoals).where(inArray(oneOnOneGoals.meetingId, meetingIds))
+        : [];
+
+      // Group meetings by direct report
+      const performanceByUser = new Map();
+
+      for (const meeting of meetings) {
+        const userId = meeting.directReportId;
+        const userName = `${meeting.directReportFirstName || ''} ${meeting.directReportLastName || ''}`.trim();
+        
+        if (!performanceByUser.has(userId)) {
+          performanceByUser.set(userId, {
+            userId,
+            userName,
+            totalMeetings: 0,
+            performancePoints: [],
+            feelings: [],
+            progressionStatuses: [],
+            talkingPointsTotal: 0,
+            talkingPointsCompleted: 0,
+            actionItemsTotal: 0,
+            actionItemsCompleted: 0,
+            goalsTotal: 0,
+            goalsCompleted: 0,
+            meetings: [],
+          });
+        }
+
+        const userData = performanceByUser.get(userId);
+        userData.totalMeetings++;
+        
+        if (meeting.performancePoints !== null) {
+          userData.performancePoints.push(meeting.performancePoints);
+        }
+        if (meeting.feeling) {
+          userData.feelings.push(meeting.feeling);
+        }
+        if (meeting.progressionStatus) {
+          userData.progressionStatuses.push(meeting.progressionStatus);
+        }
+
+        // Count talking points
+        const meetingTalkingPoints = talkingPoints.filter(tp => tp.meetingId === meeting.id);
+        userData.talkingPointsTotal += meetingTalkingPoints.length;
+        userData.talkingPointsCompleted += meetingTalkingPoints.filter(tp => tp.isCompleted).length;
+
+        // Count action items
+        const meetingActionItems = actionItems.filter(ai => ai.meetingId === meeting.id);
+        userData.actionItemsTotal += meetingActionItems.length;
+        userData.actionItemsCompleted += meetingActionItems.filter(ai => ai.isCompleted).length;
+
+        // Count goals
+        const meetingGoals = goals.filter(g => g.meetingId === meeting.id);
+        userData.goalsTotal += meetingGoals.length;
+        userData.goalsCompleted += meetingGoals.filter(g => g.isCompleted).length;
+
+        userData.meetings.push({
+          id: meeting.id,
+          meetingDate: meeting.meetingDate,
+          weekOf: meeting.weekOf,
+          feeling: meeting.feeling,
+          performancePoints: meeting.performancePoints,
+          progressionStatus: meeting.progressionStatus,
+        });
+      }
+
+      // Calculate averages and percentages
+      const performanceReports = Array.from(performanceByUser.values()).map(userData => ({
+        userId: userData.userId,
+        userName: userData.userName,
+        totalMeetings: userData.totalMeetings,
+        avgPerformancePoints: userData.performancePoints.length > 0
+          ? userData.performancePoints.reduce((a, b) => a + b, 0) / userData.performancePoints.length
+          : null,
+        talkingPointsCompletionRate: userData.talkingPointsTotal > 0
+          ? (userData.talkingPointsCompleted / userData.talkingPointsTotal) * 100
+          : null,
+        actionItemsCompletionRate: userData.actionItemsTotal > 0
+          ? (userData.actionItemsCompleted / userData.actionItemsTotal) * 100
+          : null,
+        goalsCompletionRate: userData.goalsTotal > 0
+          ? (userData.goalsCompleted / userData.goalsTotal) * 100
+          : null,
+        mostCommonFeeling: userData.feelings.length > 0
+          ? userData.feelings.sort((a, b) =>
+              userData.feelings.filter(f => f === a).length - userData.feelings.filter(f => f === b).length
+            ).pop()
+          : null,
+        mostCommonProgressionStatus: userData.progressionStatuses.length > 0
+          ? userData.progressionStatuses.sort((a, b) =>
+              userData.progressionStatuses.filter(s => s === a).length - userData.progressionStatuses.filter(s => s === b).length
+            ).pop()
+          : null,
+        meetings: userData.meetings,
+      }));
+
+      res.json(performanceReports);
+    } catch (error) {
+      console.error("Error fetching 1-on-1 performance reports:", error);
+      res.status(500).json({ error: "Failed to fetch performance reports" });
+    }
+  });
+
   // Offboarding Form Configuration Routes
   app.get("/api/offboarding-form-config", async (req, res) => {
     try {
