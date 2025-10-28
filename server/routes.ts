@@ -1100,6 +1100,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return; // Skip this entry if it doesn't match the user filter
           }
           
+          console.log("⏱️ Processing time entry:", { 
+            taskId: task.id, 
+            userId: resolvedEntryUserId,
+            userName: entry.userName,
+            duration: entry.duration,
+            entryDate 
+          });
+          
           if (!userMap.has(resolvedEntryUserId)) {
             userMap.set(resolvedEntryUserId, {
               userId: resolvedEntryUserId,
@@ -1115,6 +1123,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user.totalTime += entry.duration || 0;
           user.tasksWorked.add(task.id);
           user.dailyTotals[entryDate] = (user.dailyTotals[entryDate] || 0) + (entry.duration || 0);
+          
+          console.log("⏱️ User total time updated:", {
+            userId: resolvedEntryUserId,
+            totalTime: user.totalTime
+          });
         });
       });
       
