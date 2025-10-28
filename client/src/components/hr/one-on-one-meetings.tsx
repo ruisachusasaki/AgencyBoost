@@ -244,7 +244,7 @@ export default function OneOnOneMeetings() {
               My Direct Reports
             </CardTitle>
             <CardDescription>
-              Select a team member to view and manage their 1-on-1 meetings
+              Select a team member to view and manage their 1v1 meetings
             </CardDescription>
           </CardHeader>
           <CardContent>
