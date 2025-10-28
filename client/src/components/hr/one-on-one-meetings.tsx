@@ -416,7 +416,7 @@ function MeetingEditor({
   const [feeling, setFeeling] = useState(meeting?.feeling || "");
   const [performanceFeedback, setPerformanceFeedback] = useState(meeting?.performanceFeedback || "");
   const [bonusPoints, setBonusPoints] = useState(meeting?.bonusPoints || 0);
-  const [progressionStatus, setProgressionStatus] = useState(meeting?.progressionStatus || "");
+  const [progressionStatus, setProgressionStatus] = useState(meeting?.progressionStatus || "none");
   const [hobbies, setHobbies] = useState(meeting?.hobbies || "");
   const [family, setFamily] = useState(meeting?.family || "");
   const [privateNotes, setPrivateNotes] = useState(meeting?.privateNotes || "");
@@ -467,11 +467,11 @@ function MeetingEditor({
       directReportId: directReport.id,
       meetingDate,
       weekOf,
-      feeling,
-      performanceFeedback,
+      feeling: feeling || null,
+      performanceFeedback: performanceFeedback || null,
       performancePoints,
       bonusPoints,
-      progressionStatus: progressionStatus || null,
+      progressionStatus: progressionStatus === "none" ? null : progressionStatus,
       hobbies: hobbies || null,
       family: family || null,
       privateNotes: privateNotes || null,
@@ -833,7 +833,7 @@ function MeetingEditor({
                   <SelectValue placeholder="Set progression status..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {PROGRESSION_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       <Badge className={option.color}>{option.label}</Badge>
