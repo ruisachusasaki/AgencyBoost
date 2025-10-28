@@ -878,7 +878,7 @@ export default function HRPage() {
               ...(isAdmin || isAccounting ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0 }] : []),
-              ...(isManager || isAdmin ? [{ id: "one-on-one", name: "1-on-1 Meetings", icon: MessageCircle, count: 0 }] : []),
+              ...(isManager || isAdmin ? [{ id: "one-on-one", name: "1v1 Meetings", icon: MessageCircle, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
             ];
             
