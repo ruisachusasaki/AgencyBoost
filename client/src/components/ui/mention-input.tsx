@@ -117,6 +117,9 @@ export function MentionInput({
 
   // Re-run conversion when staff data loads to catch any unresolved mentions
   useEffect(() => {
+    // Skip if value is empty (e.g., after clearing the form)
+    if (!value || !displayValue) return;
+    
     if (staff.length > 0 && displayValue) {
       const existingMentions = parseMentions(value);
       const newStorageValue = convertToStorage(displayValue, existingMentions);
