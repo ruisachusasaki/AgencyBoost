@@ -18554,7 +18554,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userData.totalMeetings++;
         
         if (meeting.performancePoints !== null) {
-          userData.performancePoints.push(meeting.performancePoints);
+          // Push total score (base + bonus)
+          const totalScore = (meeting.performancePoints || 0) + (meeting.bonusPoints || 0);
+          userData.performancePoints.push(totalScore);
         }
         if (meeting.feeling) {
           userData.feelings.push(meeting.feeling);
@@ -18584,6 +18586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           weekOf: meeting.weekOf,
           feeling: meeting.feeling,
           performancePoints: meeting.performancePoints,
+          bonusPoints: meeting.bonusPoints,
           progressionStatus: meeting.progressionStatus,
         });
       }

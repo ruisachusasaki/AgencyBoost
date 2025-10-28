@@ -4221,7 +4221,7 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
         date: m.meetingDate,
         weekOf: m.weekOf,
         feeling: m.feeling,
-        performancePoints: m.performancePoints,
+        performancePoints: (m.performancePoints || 0) + (m.bonusPoints || 0), // Total score = base + bonus
         progressionStatus: m.progressionStatus,
         feelingValue: getFeelingValue(m.feeling)
       }))
@@ -4300,8 +4300,8 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
     const lastMeeting = sortedMeetings[sortedMeetings.length - 1];
     const previousMeetings = sortedMeetings.slice(0, -1).filter(m => m.performancePoints !== null);
     if (previousMeetings.length === 0) return null;
-    const prevAvg = previousMeetings.reduce((sum, m) => sum + (m.performancePoints || 0), 0) / previousMeetings.length;
-    return { lastScore: lastMeeting.performancePoints, prevAvg };
+    const prevAvg = previousMeetings.reduce((sum, m) => sum + ((m.performancePoints || 0) + (m.bonusPoints || 0)), 0) / previousMeetings.length;
+    return { lastScore: (lastMeeting.performancePoints || 0) + (lastMeeting.bonusPoints || 0), prevAvg };
   }, [report.meetings]);
 
   const scoreTrend = useMemo(() => {
