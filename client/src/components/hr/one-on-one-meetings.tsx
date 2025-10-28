@@ -848,6 +848,12 @@ function MeetingEditor({
                       placeholder="Add a talking point..."
                       value={newTalkingPoint}
                       onChange={(e) => setNewTalkingPoint(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddTalkingPoint();
+                        }
+                      }}
                       data-testid="input-new-talking-point"
                     />
                     <Button
@@ -889,6 +895,12 @@ function MeetingEditor({
                       placeholder="Add an action item..."
                       value={newActionItem}
                       onChange={(e) => setNewActionItem(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddActionItem();
+                        }
+                      }}
                       data-testid="input-new-action-item"
                     />
                     <Button
@@ -936,6 +948,12 @@ function MeetingEditor({
                       placeholder="Add a goal..."
                       value={newGoal}
                       onChange={(e) => setNewGoal(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddGoal();
+                        }
+                      }}
                       data-testid="input-new-goal"
                     />
                     <Button
@@ -1046,6 +1064,12 @@ function MeetingEditor({
                       placeholder="Add a comment..."
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleAddComment();
+                        }
+                      }}
                       rows={2}
                       data-testid="textarea-new-comment"
                     />
