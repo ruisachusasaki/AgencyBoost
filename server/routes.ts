@@ -18472,6 +18472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weekOf: oneOnOneMeetings.weekOf,
         feeling: oneOnOneMeetings.feeling,
         performancePoints: oneOnOneMeetings.performancePoints,
+        bonusPoints: oneOnOneMeetings.bonusPoints,
         progressionStatus: oneOnOneMeetings.progressionStatus,
         directReportFirstName: staff.firstName,
         directReportLastName: staff.lastName,

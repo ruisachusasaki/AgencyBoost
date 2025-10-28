@@ -4547,6 +4547,8 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
                             border: '1px solid hsl(var(--border))',
                             borderRadius: '8px'
                           }}
+                          offset={25}
+                          wrapperStyle={{ zIndex: 1000 }}
                         />
                       </RechartsPieChart>
                     </ResponsiveContainer>
@@ -4598,6 +4600,8 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
                             border: '1px solid hsl(var(--border))',
                             borderRadius: '8px'
                           }}
+                          offset={25}
+                          wrapperStyle={{ zIndex: 1000 }}
                         />
                       </RechartsPieChart>
                     </ResponsiveContainer>
