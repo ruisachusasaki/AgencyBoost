@@ -4470,36 +4470,30 @@ function OneOnOnePerformanceReport() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead
-                  className="cursor-pointer hover:bg-slate-50"
-                  onClick={() => handleSort('userName')}
-                  data-testid="sort-name"
+                <SortableHeader 
+                  field="userName"
+                  sortField={sortField}
+                  sortOrder={sortOrder}
+                  onSort={handleSort}
                 >
                   Team Member
-                  {sortField === 'userName' && (
-                    sortOrder === 'asc' ? <ChevronUp className="inline h-4 w-4 ml-1" /> : <ChevronDown className="inline h-4 w-4 ml-1" />
-                  )}
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer hover:bg-slate-50"
-                  onClick={() => handleSort('totalMeetings')}
-                  data-testid="sort-meetings"
+                </SortableHeader>
+                <SortableHeader 
+                  field="totalMeetings"
+                  sortField={sortField}
+                  sortOrder={sortOrder}
+                  onSort={handleSort}
                 >
                   Meetings
-                  {sortField === 'totalMeetings' && (
-                    sortOrder === 'asc' ? <ChevronUp className="inline h-4 w-4 ml-1" /> : <ChevronDown className="inline h-4 w-4 ml-1" />
-                  )}
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer hover:bg-slate-50"
-                  onClick={() => handleSort('avgPerformancePoints')}
-                  data-testid="sort-performance"
+                </SortableHeader>
+                <SortableHeader 
+                  field="avgPerformancePoints"
+                  sortField={sortField}
+                  sortOrder={sortOrder}
+                  onSort={handleSort}
                 >
                   Avg Performance
-                  {sortField === 'avgPerformancePoints' && (
-                    sortOrder === 'asc' ? <ChevronUp className="inline h-4 w-4 ml-1" /> : <ChevronDown className="inline h-4 w-4 ml-1" />
-                  )}
-                </TableHead>
+                </SortableHeader>
                 <TableHead>Completion Rates</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
