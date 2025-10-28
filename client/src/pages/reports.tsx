@@ -8,8 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -18,6 +22,7 @@ import {
   FolderOpen, 
   DollarSign, 
   Calendar,
+  Calendar as CalendarIcon,
   Download,
   Filter,
   Heart,
@@ -40,6 +45,7 @@ import {
   Bell,
   Building2,
   AlertTriangle,
+  X,
 } from "lucide-react";
 import { 
   exportTimeTrackingData,
@@ -4135,6 +4141,27 @@ function OneOnOnePerformanceReport() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<string>("totalMeetings");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [feelingFilter, setFeelingFilter] = useState<string>("all");
+  const [progressionFilter, setProgressionFilter] = useState<string>("all");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+
+  const buildQueryParams = () => {
+    const params = new URLSearchParams();
+    if (dateFrom) params.append('dateFrom', dateFrom.toISOString().split('T')[0]);
+    if (dateTo) params.append('dateTo', dateTo.toISOString().split('T')[0]);
+    if (feelingFilter && feelingFilter !== 'all') params.append('feeling', feelingFilter);
+    if (progressionFilter && progressionFilter !== 'all') params.append('progression', progressionFilter);
+    if (departmentFilter && departmentFilter !== 'all') params.append('department', departmentFilter);
+    return params.toString();
+  };
+
+  const queryParams = buildQueryParams();
+  const queryKey = queryParams 
+    ? `/api/reports/one-on-one-performance?${queryParams}`
+    : '/api/reports/one-on-one-performance';
 
   const { data: performanceData, isLoading } = useQuery<Array<{
     userId: string;
@@ -4155,7 +4182,7 @@ function OneOnOnePerformanceReport() {
       progressionStatus: string | null;
     }>;
   }>>({
-    queryKey: ['/api/reports/one-on-one-performance'],
+    queryKey: [queryKey],
   });
 
   const filteredAndSortedData = useMemo(() => {
@@ -4306,20 +4333,136 @@ function OneOnOnePerformanceReport() {
       {/* Performance Table */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Individual Performance Metrics
-            </CardTitle>
-            <div className="relative w-full sm:w-auto">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search team members..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full sm:w-64"
-                data-testid="input-performance-search"
-              />
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Individual Performance Metrics
+          </CardTitle>
+          
+          {/* Filters Section */}
+          <div className="flex flex-col gap-4 mt-4">
+            <div className="flex flex-col lg:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search team members..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                  data-testid="input-performance-search"
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "justify-start text-left font-normal",
+                        !dateFrom && "text-muted-foreground"
+                      )}
+                      data-testid="button-date-from"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFrom ? format(dateFrom, "PPP") : <span>From Date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={setDateFrom}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "justify-start text-left font-normal",
+                        !dateTo && "text-muted-foreground"
+                      )}
+                      data-testid="button-date-to"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateTo ? format(dateTo, "PPP") : <span>To Date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={setDateTo}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select value={feelingFilter} onValueChange={setFeelingFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-feeling">
+                  <SelectValue placeholder="Feeling" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Feelings</SelectItem>
+                  <SelectItem value="great">😊 Great</SelectItem>
+                  <SelectItem value="good">🙂 Good</SelectItem>
+                  <SelectItem value="okay">😐 Okay</SelectItem>
+                  <SelectItem value="stressed">😰 Stressed</SelectItem>
+                  <SelectItem value="overwhelmed">😫 Overwhelmed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={progressionFilter} onValueChange={setProgressionFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-progression">
+                  <SelectValue placeholder="Progression Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="excelling">Excelling</SelectItem>
+                  <SelectItem value="on-track">On Track</SelectItem>
+                  <SelectItem value="needs-support">Needs Support</SelectItem>
+                  <SelectItem value="struggling">Struggling</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-department">
+                  <SelectValue placeholder="Department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  <SelectItem value="Design">Design</SelectItem>
+                  <SelectItem value="Development">Development</SelectItem>
+                  <SelectItem value="Marketing">Marketing</SelectItem>
+                  <SelectItem value="Sales">Sales</SelectItem>
+                  <SelectItem value="Support">Support</SelectItem>
+                  <SelectItem value="Management">Management</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {(dateFrom || dateTo || feelingFilter !== 'all' || progressionFilter !== 'all' || departmentFilter !== 'all') && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setDateFrom(undefined);
+                    setDateTo(undefined);
+                    setFeelingFilter('all');
+                    setProgressionFilter('all');
+                    setDepartmentFilter('all');
+                  }}
+                  className="w-full sm:w-auto"
+                  data-testid="button-clear-filters"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear Filters
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>

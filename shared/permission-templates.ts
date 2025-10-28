@@ -671,6 +671,12 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
         type: 'view',
       },
       {
+        key: 'reports.view_1on1_performance',
+        label: 'View 1-on-1 performance reports',
+        description: 'Access 1-on-1 meeting performance analytics',
+        type: 'view',
+      },
+      {
         key: 'reports.export_reports',
         label: 'Export report data',
         description: 'Download reports as CSV or PDF',

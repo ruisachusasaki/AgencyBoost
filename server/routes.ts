@@ -18433,62 +18433,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1)
       )[0]?.name?.toLowerCase() === 'manager' : false;
 
+      // Extract filter parameters
+      const { dateFrom, dateTo, feeling, progression, department } = req.query;
+      
+      // Build filter conditions
+      const filters: any[] = [];
+      
+      // Date range filters
+      if (dateFrom && typeof dateFrom === 'string') {
+        filters.push(gte(oneOnOneMeetings.meetingDate, dateFrom));
+      }
+      if (dateTo && typeof dateTo === 'string') {
+        filters.push(lte(oneOnOneMeetings.meetingDate, dateTo));
+      }
+      
+      // Feeling filter
+      if (feeling && typeof feeling === 'string' && feeling !== 'all') {
+        filters.push(eq(oneOnOneMeetings.feeling, feeling));
+      }
+      
+      // Progression status filter
+      if (progression && typeof progression === 'string' && progression !== 'all') {
+        filters.push(eq(oneOnOneMeetings.progressionStatus, progression));
+      }
+      
+      // Department filter (applied via staff table)
+      if (department && typeof department === 'string' && department !== 'all') {
+        filters.push(eq(staff.department, department));
+      }
+
       // Build the query based on role
       let meetingsQuery;
+      const baseSelect = {
+        id: oneOnOneMeetings.id,
+        directReportId: oneOnOneMeetings.directReportId,
+        managerId: oneOnOneMeetings.managerId,
+        meetingDate: oneOnOneMeetings.meetingDate,
+        weekOf: oneOnOneMeetings.weekOf,
+        feeling: oneOnOneMeetings.feeling,
+        performancePoints: oneOnOneMeetings.performancePoints,
+        progressionStatus: oneOnOneMeetings.progressionStatus,
+        directReportFirstName: staff.firstName,
+        directReportLastName: staff.lastName,
+      };
+      
       if (isAdmin) {
         console.log("📊 Using ADMIN query path - will return all meetings");
         // Admins see all meetings
-        meetingsQuery = db.select({
-          id: oneOnOneMeetings.id,
-          directReportId: oneOnOneMeetings.directReportId,
-          managerId: oneOnOneMeetings.managerId,
-          meetingDate: oneOnOneMeetings.meetingDate,
-          weekOf: oneOnOneMeetings.weekOf,
-          feeling: oneOnOneMeetings.feeling,
-          performancePoints: oneOnOneMeetings.performancePoints,
-          progressionStatus: oneOnOneMeetings.progressionStatus,
-          directReportFirstName: staff.firstName,
-          directReportLastName: staff.lastName,
-        })
-        .from(oneOnOneMeetings)
-        .leftJoin(staff, eq(oneOnOneMeetings.directReportId, staff.id))
-        .orderBy(desc(oneOnOneMeetings.meetingDate));
+        const adminConditions = filters.length > 0 ? and(...filters) : undefined;
+        meetingsQuery = db.select(baseSelect)
+          .from(oneOnOneMeetings)
+          .leftJoin(staff, eq(oneOnOneMeetings.directReportId, staff.id))
+          .where(adminConditions)
+          .orderBy(desc(oneOnOneMeetings.meetingDate));
       } else if (isManager) {
         // Managers see their direct reports' meetings
-        meetingsQuery = db.select({
-          id: oneOnOneMeetings.id,
-          directReportId: oneOnOneMeetings.directReportId,
-          managerId: oneOnOneMeetings.managerId,
-          meetingDate: oneOnOneMeetings.meetingDate,
-          weekOf: oneOnOneMeetings.weekOf,
-          feeling: oneOnOneMeetings.feeling,
-          performancePoints: oneOnOneMeetings.performancePoints,
-          progressionStatus: oneOnOneMeetings.progressionStatus,
-          directReportFirstName: staff.firstName,
-          directReportLastName: staff.lastName,
-        })
-        .from(oneOnOneMeetings)
-        .leftJoin(staff, eq(oneOnOneMeetings.directReportId, staff.id))
-        .where(eq(oneOnOneMeetings.managerId, currentUserId))
-        .orderBy(desc(oneOnOneMeetings.meetingDate));
+        const managerConditions = [eq(oneOnOneMeetings.managerId, currentUserId), ...filters];
+        meetingsQuery = db.select(baseSelect)
+          .from(oneOnOneMeetings)
+          .leftJoin(staff, eq(oneOnOneMeetings.directReportId, staff.id))
+          .where(and(...managerConditions))
+          .orderBy(desc(oneOnOneMeetings.meetingDate));
       } else {
         // Regular users see only their own meetings
-        meetingsQuery = db.select({
-          id: oneOnOneMeetings.id,
-          directReportId: oneOnOneMeetings.directReportId,
-          managerId: oneOnOneMeetings.managerId,
-          meetingDate: oneOnOneMeetings.meetingDate,
-          weekOf: oneOnOneMeetings.weekOf,
-          feeling: oneOnOneMeetings.feeling,
-          performancePoints: oneOnOneMeetings.performancePoints,
-          progressionStatus: oneOnOneMeetings.progressionStatus,
-          directReportFirstName: staff.firstName,
-          directReportLastName: staff.lastName,
-        })
-        .from(oneOnOneMeetings)
-        .leftJoin(staff, eq(oneOnOneMeetings.directReportId, staff.id))
-        .where(eq(oneOnOneMeetings.directReportId, currentUserId))
-        .orderBy(desc(oneOnOneMeetings.meetingDate));
+        const userConditions = [eq(oneOnOneMeetings.directReportId, currentUserId), ...filters];
+        meetingsQuery = db.select(baseSelect)
+          .from(oneOnOneMeetings)
+          .leftJoin(staff, eq(oneOnOneMeetings.directReportId, staff.id))
+          .where(and(...userConditions))
+          .orderBy(desc(oneOnOneMeetings.meetingDate));
       }
 
       const meetings = await meetingsQuery;
