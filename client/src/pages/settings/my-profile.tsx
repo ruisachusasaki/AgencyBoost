@@ -75,9 +75,11 @@ export default function MyProfile() {
   });
 
   // Fetch time off requests for HR tab
-  const { data: timeOffRequests = [] } = useQuery<TimeOffRequest[]>({
+  const { data: timeOffResponse } = useQuery<{ requests: TimeOffRequest[] }>({
     queryKey: ["/api/hr/time-off-requests"],
   });
+  
+  const timeOffRequests = timeOffResponse?.requests || [];
 
   // Fetch time off policies to get current allocations
   const { data: policies = [] } = useQuery<any[]>({
