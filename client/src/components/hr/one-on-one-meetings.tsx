@@ -542,6 +542,7 @@ function MeetingEditor({
             meetingId: savedMeeting.id,
             content: point.content,
             orderIndex: point.orderIndex,
+            isCompleted: point.isCompleted || false,
           });
         }
         
@@ -552,6 +553,7 @@ function MeetingEditor({
             content: item.content,
             assignedTo: item.assignedTo,
             dueDate: item.dueDate,
+            isCompleted: item.isCompleted || false,
           });
         }
         
