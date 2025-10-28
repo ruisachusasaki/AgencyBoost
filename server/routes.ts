@@ -44,6 +44,7 @@ import {
   insertSalesTargetSchema, updateSalesTargetSchema,
   insertCapacitySettingsSchema, updateCapacitySettingsSchema,
   insertDashboardSchema,
+  insertOneOnOneMeetingSchema, insertOneOnOneTalkingPointSchema, insertOneOnOneActionItemSchema, insertOneOnOneGoalSchema, insertOneOnOneCommentSchema,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, granularPermissions, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
@@ -57,7 +58,8 @@ import {
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
   clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings,
-  knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseLikes, knowledgeBaseBookmarks, knowledgeBasePermissions
+  knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseLikes, knowledgeBaseBookmarks, knowledgeBasePermissions,
+  oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
@@ -17935,6 +17937,466 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ error: "Failed to update submission" });
+    }
+  });
+
+  // ===========================================
+  // 1-on-1 Meeting Tracker Routes
+  // ===========================================
+
+  // Get manager's direct reports for 1-on-1 meetings
+  app.get("/api/hr/one-on-one/direct-reports", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+
+      // Get direct reports
+      const directReports = await db.select({
+        id: staff.id,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        email: staff.email,
+        profileImagePath: staff.profileImagePath,
+        position: staff.position,
+        department: staff.department,
+        hireDate: staff.hireDate,
+        birthdate: staff.birthdate,
+      })
+        .from(staff)
+        .where(eq(staff.managerId, currentUserId));
+
+      res.json(directReports);
+    } catch (error) {
+      console.error("Error fetching direct reports for 1-on-1:", error);
+      res.status(500).json({ error: "Failed to fetch direct reports" });
+    }
+  });
+
+  // Get all meetings for a direct report
+  app.get("/api/hr/one-on-one/meetings/:directReportId", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      const { directReportId } = req.params;
+
+      // Check if user is manager of this direct report or admin
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      const [directReport] = await db.select()
+        .from(staff)
+        .where(eq(staff.id, directReportId));
+
+      if (!isAdmin && directReport?.managerId !== currentUserId && currentUserId !== directReportId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      // Get all meetings
+      const meetings = await db.select()
+        .from(oneOnOneMeetings)
+        .where(eq(oneOnOneMeetings.directReportId, directReportId))
+        .orderBy(desc(oneOnOneMeetings.weekOf));
+
+      res.json(meetings);
+    } catch (error) {
+      console.error("Error fetching 1-on-1 meetings:", error);
+      res.status(500).json({ error: "Failed to fetch meetings" });
+    }
+  });
+
+  // Get full meeting details with all related data
+  app.get("/api/hr/one-on-one/meetings/:meetingId/details", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      const { meetingId } = req.params;
+
+      // Get meeting
+      const [meeting] = await db.select()
+        .from(oneOnOneMeetings)
+        .where(eq(oneOnOneMeetings.id, meetingId));
+
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+
+      // Check authorization
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      if (!isAdmin && meeting.managerId !== currentUserId && meeting.directReportId !== currentUserId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      // Get all related data
+      const talkingPoints = await db.select()
+        .from(oneOnOneTalkingPoints)
+        .where(eq(oneOnOneTalkingPoints.meetingId, meetingId))
+        .orderBy(oneOnOneTalkingPoints.orderIndex);
+
+      const actionItems = await db.select()
+        .from(oneOnOneActionItems)
+        .where(eq(oneOnOneActionItems.meetingId, meetingId));
+
+      const goals = await db.select()
+        .from(oneOnOneGoals)
+        .where(eq(oneOnOneGoals.meetingId, meetingId));
+
+      const comments = await db.select({
+        id: oneOnOneComments.id,
+        meetingId: oneOnOneComments.meetingId,
+        authorId: oneOnOneComments.authorId,
+        content: oneOnOneComments.content,
+        createdAt: oneOnOneComments.createdAt,
+        authorFirstName: staff.firstName,
+        authorLastName: staff.lastName,
+        authorProfileImagePath: staff.profileImagePath,
+      })
+        .from(oneOnOneComments)
+        .innerJoin(staff, eq(oneOnOneComments.authorId, staff.id))
+        .where(eq(oneOnOneComments.meetingId, meetingId))
+        .orderBy(oneOnOneComments.createdAt);
+
+      // If user is direct report, filter out private notes
+      const sanitizedMeeting = meeting.directReportId === currentUserId && meeting.managerId !== currentUserId
+        ? { ...meeting, privateNotes: null, progressionStatus: null }
+        : meeting;
+
+      res.json({
+        meeting: sanitizedMeeting,
+        talkingPoints,
+        actionItems,
+        goals,
+        comments,
+      });
+    } catch (error) {
+      console.error("Error fetching meeting details:", error);
+      res.status(500).json({ error: "Failed to fetch meeting details" });
+    }
+  });
+
+  // Create a new 1-on-1 meeting
+  app.post("/api/hr/one-on-one/meetings", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+
+      const validatedData = insertOneOnOneMeetingSchema.parse({
+        ...req.body,
+        managerId: currentUserId,
+      });
+
+      // Check if user is manager of this direct report
+      const [directReport] = await db.select()
+        .from(staff)
+        .where(eq(staff.id, validatedData.directReportId));
+
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      if (!isAdmin && directReport?.managerId !== currentUserId) {
+        return res.status(403).json({ error: "You can only create meetings for your direct reports" });
+      }
+
+      const [newMeeting] = await db.insert(oneOnOneMeetings)
+        .values(validatedData)
+        .returning();
+
+      res.json(newMeeting);
+    } catch (error) {
+      console.error("Error creating 1-on-1 meeting:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create meeting" });
+    }
+  });
+
+  // Update a 1-on-1 meeting
+  app.put("/api/hr/one-on-one/meetings/:meetingId", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      const { meetingId } = req.params;
+
+      // Get existing meeting
+      const [existingMeeting] = await db.select()
+        .from(oneOnOneMeetings)
+        .where(eq(oneOnOneMeetings.id, meetingId));
+
+      if (!existingMeeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+
+      // Check authorization - only manager can update
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      if (!isAdmin && existingMeeting.managerId !== currentUserId) {
+        return res.status(403).json({ error: "Only managers can update meetings" });
+      }
+
+      const validatedData = insertOneOnOneMeetingSchema.partial().parse(req.body);
+
+      const [updatedMeeting] = await db.update(oneOnOneMeetings)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(oneOnOneMeetings.id, meetingId))
+        .returning();
+
+      res.json(updatedMeeting);
+    } catch (error) {
+      console.error("Error updating 1-on-1 meeting:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update meeting" });
+    }
+  });
+
+  // Delete a 1-on-1 meeting
+  app.delete("/api/hr/one-on-one/meetings/:meetingId", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      const { meetingId } = req.params;
+
+      // Get existing meeting
+      const [existingMeeting] = await db.select()
+        .from(oneOnOneMeetings)
+        .where(eq(oneOnOneMeetings.id, meetingId));
+
+      if (!existingMeeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+
+      // Check authorization
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      if (!isAdmin && existingMeeting.managerId !== currentUserId) {
+        return res.status(403).json({ error: "Only managers can delete meetings" });
+      }
+
+      await db.delete(oneOnOneMeetings)
+        .where(eq(oneOnOneMeetings.id, meetingId));
+
+      res.json({ message: "Meeting deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting 1-on-1 meeting:", error);
+      res.status(500).json({ error: "Failed to delete meeting" });
+    }
+  });
+
+  // Talking Points Routes
+  app.post("/api/hr/one-on-one/talking-points", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+
+      const validatedData = insertOneOnOneTalkingPointSchema.parse({
+        ...req.body,
+        addedBy: currentUserId,
+      });
+
+      const [newPoint] = await db.insert(oneOnOneTalkingPoints)
+        .values(validatedData)
+        .returning();
+
+      res.json(newPoint);
+    } catch (error) {
+      console.error("Error creating talking point:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create talking point" });
+    }
+  });
+
+  app.put("/api/hr/one-on-one/talking-points/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertOneOnOneTalkingPointSchema.partial().parse(req.body);
+
+      const [updated] = await db.update(oneOnOneTalkingPoints)
+        .set(validatedData)
+        .where(eq(oneOnOneTalkingPoints.id, id))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ error: "Talking point not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating talking point:", error);
+      res.status(500).json({ error: "Failed to update talking point" });
+    }
+  });
+
+  app.delete("/api/hr/one-on-one/talking-points/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(oneOnOneTalkingPoints).where(eq(oneOnOneTalkingPoints.id, id));
+      res.json({ message: "Talking point deleted" });
+    } catch (error) {
+      console.error("Error deleting talking point:", error);
+      res.status(500).json({ error: "Failed to delete talking point" });
+    }
+  });
+
+  // Action Items Routes
+  app.post("/api/hr/one-on-one/action-items", requireAuth(), async (req, res) => {
+    try {
+      const validatedData = insertOneOnOneActionItemSchema.parse(req.body);
+      const [newItem] = await db.insert(oneOnOneActionItems)
+        .values(validatedData)
+        .returning();
+      res.json(newItem);
+    } catch (error) {
+      console.error("Error creating action item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create action item" });
+    }
+  });
+
+  app.put("/api/hr/one-on-one/action-items/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertOneOnOneActionItemSchema.partial().parse(req.body);
+
+      const [updated] = await db.update(oneOnOneActionItems)
+        .set(validatedData)
+        .where(eq(oneOnOneActionItems.id, id))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ error: "Action item not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating action item:", error);
+      res.status(500).json({ error: "Failed to update action item" });
+    }
+  });
+
+  app.delete("/api/hr/one-on-one/action-items/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(oneOnOneActionItems).where(eq(oneOnOneActionItems.id, id));
+      res.json({ message: "Action item deleted" });
+    } catch (error) {
+      console.error("Error deleting action item:", error);
+      res.status(500).json({ error: "Failed to delete action item" });
+    }
+  });
+
+  // Goals Routes
+  app.post("/api/hr/one-on-one/goals", requireAuth(), async (req, res) => {
+    try {
+      const validatedData = insertOneOnOneGoalSchema.parse(req.body);
+      const [newGoal] = await db.insert(oneOnOneGoals)
+        .values(validatedData)
+        .returning();
+      res.json(newGoal);
+    } catch (error) {
+      console.error("Error creating goal:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create goal" });
+    }
+  });
+
+  app.put("/api/hr/one-on-one/goals/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertOneOnOneGoalSchema.partial().parse(req.body);
+
+      const [updated] = await db.update(oneOnOneGoals)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(oneOnOneGoals.id, id))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ error: "Goal not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating goal:", error);
+      res.status(500).json({ error: "Failed to update goal" });
+    }
+  });
+
+  app.delete("/api/hr/one-on-one/goals/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(oneOnOneGoals).where(eq(oneOnOneGoals.id, id));
+      res.json({ message: "Goal deleted" });
+    } catch (error) {
+      console.error("Error deleting goal:", error);
+      res.status(500).json({ error: "Failed to delete goal" });
+    }
+  });
+
+  // Comments Routes
+  app.post("/api/hr/one-on-one/comments", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+
+      const validatedData = insertOneOnOneCommentSchema.parse({
+        ...req.body,
+        authorId: currentUserId,
+      });
+
+      const [newComment] = await db.insert(oneOnOneComments)
+        .values(validatedData)
+        .returning();
+
+      // Get comment with author info
+      const [commentWithAuthor] = await db.select({
+        id: oneOnOneComments.id,
+        meetingId: oneOnOneComments.meetingId,
+        authorId: oneOnOneComments.authorId,
+        content: oneOnOneComments.content,
+        createdAt: oneOnOneComments.createdAt,
+        authorFirstName: staff.firstName,
+        authorLastName: staff.lastName,
+        authorProfileImagePath: staff.profileImagePath,
+      })
+        .from(oneOnOneComments)
+        .innerJoin(staff, eq(oneOnOneComments.authorId, staff.id))
+        .where(eq(oneOnOneComments.id, newComment.id));
+
+      res.json(commentWithAuthor);
+    } catch (error) {
+      console.error("Error creating comment:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create comment" });
+    }
+  });
+
+  app.delete("/api/hr/one-on-one/comments/:id", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+      const { id } = req.params;
+
+      // Check if user is the author or admin
+      const [comment] = await db.select()
+        .from(oneOnOneComments)
+        .where(eq(oneOnOneComments.id, id));
+
+      if (!comment) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
+
+      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      if (!isAdmin && comment.authorId !== currentUserId) {
+        return res.status(403).json({ error: "You can only delete your own comments" });
+      }
+
+      await db.delete(oneOnOneComments).where(eq(oneOnOneComments.id, id));
+      res.json({ message: "Comment deleted" });
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      res.status(500).json({ error: "Failed to delete comment" });
     }
   });
 
