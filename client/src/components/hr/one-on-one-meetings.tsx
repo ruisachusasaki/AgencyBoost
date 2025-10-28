@@ -465,12 +465,9 @@ function MeetingEditor({
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/hr/one-on-one/comments", data);
     },
-    onSuccess: (response) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
-      const newCommentWithAuthor = response.json();
-      newCommentWithAuthor.then((comment: any) => {
-        setComments([...comments, comment]);
-      });
+      toast({ title: "Comment added successfully" });
     },
   });
 
