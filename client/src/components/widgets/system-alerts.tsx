@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, X, AlertTriangle, AlertCircle, Info, Bell } from "lucide-react";
+import { GripVertical, Trash2, AlertTriangle, AlertCircle, Info, Bell } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "wouter";
 
@@ -87,7 +87,7 @@ export default function SystemAlertsWidget({ userWidget, onRemove }: SystemAlert
             className="h-8 w-8 p-0 flex-shrink-0"
             data-testid="button-remove-widget"
           >
-            <X className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </CardHeader>
