@@ -18403,8 +18403,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // 1-on-1 Performance Reports
   app.get("/api/reports/one-on-one-performance", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      const currentUserId = getAuthenticatedUserId(req);
+      if (!currentUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
 
       const isAdmin = await isCurrentUserAdmin(currentUserId);
       const userRole = await db.select({ role: users.role })
