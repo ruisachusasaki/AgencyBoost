@@ -42,7 +42,8 @@ import {
   ExternalLink,
   MoreHorizontal,
   DollarSign,
-  Receipt
+  Receipt,
+  MessageCircle
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -54,6 +55,7 @@ import ExpenseReportForm from "@/components/hr/expense-report-form";
 import ExpenseSubmissionsView from "@/components/hr/expense-submissions-view";
 import OffboardingForm from "@/components/hr/offboarding-form";
 import OffboardingSubmissionsView from "@/components/hr/offboarding-submissions-view";
+import OneOnOneMeetings from "@/components/hr/one-on-one-meetings";
 
 export default function HRPage() {
   // Check for URL parameter to set initial tab
@@ -876,6 +878,7 @@ export default function HRPage() {
               ...(isAdmin || isAccounting ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0 }] : []),
+              ...(isManager || isAdmin ? [{ id: "one-on-one", name: "1-on-1 Meetings", icon: MessageCircle, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
             ];
             
@@ -3090,6 +3093,10 @@ export default function HRPage() {
 
           <OffboardingSubmissionsView />
         </div>
+      )}
+
+      {activeTab === "one-on-one" && (isManager || isAdmin) && (
+        <OneOnOneMeetings />
       )}
 
       {/* Time Off Request Dialog */}
