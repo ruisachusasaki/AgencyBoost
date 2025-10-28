@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -4162,10 +4161,13 @@ interface IndividualAnalysisViewProps {
 
 function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps) {
   const [activeTab, setActiveTab] = useState<'analysis' | 'history'>('analysis');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
   const getFeelingEmoji = (feeling: string | null) => {
     if (!feeling) return null;
     const emojiMap: Record<string, string> = {
+      'excellent': '😊',
       'great': '😊',
       'good': '🙂',
       'okay': '😐',
@@ -4178,6 +4180,7 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
   const getFeelingLabel = (feeling: string | null) => {
     if (!feeling) return 'Unknown';
     const labelMap: Record<string, string> = {
+      'excellent': 'Excellent',
       'great': 'Great',
       'good': 'Good',
       'okay': 'Okay',
@@ -4187,21 +4190,43 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
     return labelMap[feeling] || feeling;
   };
 
-  // Prepare chart data
+  // Map feeling to numeric value (1-5 scale)
+  const getFeelingValue = (feeling: string | null): number | null => {
+    if (!feeling) return null;
+    const valueMap: Record<string, number> = {
+      'excellent': 5,
+      'great': 5,
+      'good': 4,
+      'okay': 3,
+      'stressed': 2,
+      'overwhelmed': 1
+    };
+    return valueMap[feeling] ?? null;
+  };
+
+  // Prepare chart data with date filtering
   const chartData = useMemo(() => {
-    return report.meetings
-      .filter(m => m.meetingDate && m.weekOf) // Filter out meetings without dates
+    let filteredMeetings = report.meetings.filter(m => m.meetingDate && m.weekOf);
+    
+    // Apply date range filter if set
+    if (dateFrom) {
+      filteredMeetings = filteredMeetings.filter(m => new Date(m.meetingDate) >= dateFrom);
+    }
+    if (dateTo) {
+      filteredMeetings = filteredMeetings.filter(m => new Date(m.meetingDate) <= dateTo);
+    }
+    
+    return filteredMeetings
       .map(m => ({
         date: m.meetingDate,
         weekOf: m.weekOf,
         feeling: m.feeling,
         performancePoints: m.performancePoints,
         progressionStatus: m.progressionStatus,
-        feelingValue: m.feeling ? 
-          ({ 'great': 5, 'good': 4, 'okay': 3, 'stressed': 2, 'overwhelmed': 1 }[m.feeling] || 3) : null
+        feelingValue: getFeelingValue(m.feeling)
       }))
       .sort((a, b) => (a.date || '').localeCompare(b.date || '')); // Safe null handling
-  }, [report.meetings]);
+  }, [report.meetings, dateFrom, dateTo]);
 
   // Calculate score distribution
   const scoreDistribution = useMemo(() => {
@@ -4258,11 +4283,12 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
   const getFeelingColor = (feeling: string) => {
     const normalizedFeeling = feeling.toLowerCase();
     const colorMap: Record<string, string> = {
-      'great': 'hsl(142, 76%, 36%)', // green
-      'good': 'hsl(179, 100%, 39%)', // teal
-      'okay': 'hsl(48, 96%, 53%)', // yellow
-      'stressed': 'hsl(32, 95%, 44%)', // orange
-      'overwhelmed': 'hsl(0, 72%, 51%)', // red
+      'excellent': 'hsl(142, 71%, 45%)', // vibrant green
+      'great': 'hsl(142, 71%, 45%)', // vibrant green  
+      'good': 'hsl(160, 60%, 45%)', // teal-green
+      'okay': 'hsl(45, 93%, 47%)', // amber
+      'stressed': 'hsl(25, 95%, 53%)', // orange
+      'overwhelmed': 'hsl(0, 84%, 60%)', // coral red
     };
     return colorMap[normalizedFeeling] || 'hsl(215, 20%, 65%)';
   };
@@ -4308,15 +4334,94 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
         </CardHeader>
       </Card>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'analysis' | 'history')}>
-        <TabsList className="w-full justify-start" data-testid="tabs-individual-analysis">
-          <TabsTrigger value="analysis" data-testid="tab-analysis">Analysis</TabsTrigger>
-          <TabsTrigger value="history" data-testid="tab-history">History</TabsTrigger>
-        </TabsList>
+      {/* Tabs - Marketing Style */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('analysis')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              activeTab === 'analysis'
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+            data-testid="tab-analysis"
+          >
+            <BarChart className="h-4 w-4" />
+            Analysis
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              activeTab === 'history'
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+            data-testid="tab-history"
+          >
+            <Clock className="h-4 w-4" />
+            History
+          </button>
+        </nav>
+      </div>
 
-        {/* Analysis Tab */}
-        <TabsContent value="analysis" className="space-y-6">
+      {/* Analysis Tab */}
+      {activeTab === 'analysis' && (
+        <div className="space-y-6">
+          {/* Date Filter */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">From:</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" data-testid="button-date-from">
+                        <CalendarIcon className="h-4 w-4 mr-2" />
+                        {dateFrom ? format(dateFrom, "MMM dd, yyyy") : "Select date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={dateFrom}
+                        onSelect={setDateFrom}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">To:</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" data-testid="button-date-to">
+                        <CalendarIcon className="h-4 w-4 mr-2" />
+                        {dateTo ? format(dateTo, "MMM dd, yyyy") : "Select date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={dateTo}
+                        onSelect={setDateTo}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                {(dateFrom || dateTo) && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}
+                    data-testid="button-clear-filters"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
           {/* Line Chart - Mood and Performance Over Time */}
           <Card>
             <CardHeader>
@@ -4349,18 +4454,18 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
                     <Line 
                       type="monotone" 
                       dataKey="feelingValue" 
-                      stroke="hsl(142, 76%, 36%)" 
-                      strokeWidth={2}
+                      stroke="hsl(160, 84%, 39%)" 
+                      strokeWidth={2.5}
                       name="Mood"
-                      dot={{ fill: 'hsl(142, 76%, 36%)' }}
+                      dot={{ fill: 'hsl(160, 84%, 39%)', r: 4 }}
                     />
                     <Line 
                       type="monotone" 
                       dataKey="performancePoints" 
-                      stroke="hsl(262, 83%, 58%)" 
-                      strokeWidth={2}
+                      stroke="hsl(271, 91%, 65%)" 
+                      strokeWidth={2.5}
                       name="1-on-1 Score"
-                      dot={{ fill: 'hsl(262, 83%, 58%)' }}
+                      dot={{ fill: 'hsl(271, 91%, 65%)', r: 4 }}
                     />
                   </RechartsLineChart>
                 </ResponsiveContainer>
@@ -4377,7 +4482,7 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col items-center">
-                  <div className="relative w-40 h-20">
+                  <div className="relative w-40 h-24 mb-2">
                     <ResponsiveContainer width="100%" height="100%">
                       <RechartsPieChart>
                         <Pie
@@ -4386,11 +4491,11 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
                             { value: Math.max(0, 5 - (report.avgPerformancePoints || 0)) }
                           ]}
                           cx="50%"
-                          cy="100%"
+                          cy="90%"
                           startAngle={180}
                           endAngle={0}
                           innerRadius="60%"
-                          outerRadius="100%"
+                          outerRadius="90%"
                           paddingAngle={0}
                           dataKey="value"
                         >
@@ -4399,10 +4504,10 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
                         </Pie>
                       </RechartsPieChart>
                     </ResponsiveContainer>
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-center">
-                      <div className="text-3xl font-bold">{report.avgPerformancePoints?.toFixed(2) || 'N/A'}</div>
-                      <div className="text-xs text-muted-foreground">/5</div>
-                    </div>
+                  </div>
+                  <div className="text-center -mt-2">
+                    <div className="text-3xl font-bold">{report.avgPerformancePoints?.toFixed(2) || 'N/A'}</div>
+                    <div className="text-xs text-muted-foreground">/5</div>
                   </div>
                   {scoreTrend && (
                     <div className={`text-sm mt-4 ${scoreTrend.diff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -4574,10 +4679,12 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+      )}
 
-        {/* History Tab */}
-        <TabsContent value="history">
+      {/* History Tab */}
+      {activeTab === 'history' && (
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Meeting History</CardTitle>
@@ -4623,8 +4730,8 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
               </Table>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 }
