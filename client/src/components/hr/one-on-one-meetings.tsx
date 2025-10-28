@@ -502,6 +502,24 @@ function MeetingEditor({
     },
   });
 
+  const updateTalkingPointMutation = useMutation({
+    mutationFn: async ({ id, isCompleted }: { id: string; isCompleted: boolean }) => {
+      return await apiRequest("PUT", `/api/hr/one-on-one/talking-points/${id}`, { isCompleted });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
+    },
+  });
+
+  const updateActionItemMutation = useMutation({
+    mutationFn: async ({ id, isCompleted }: { id: string; isCompleted: boolean }) => {
+      return await apiRequest("PUT", `/api/hr/one-on-one/action-items/${id}`, { isCompleted });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
+    },
+  });
+
   // Save meeting mutation
   const saveMeetingMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -678,6 +696,40 @@ function MeetingEditor({
     setGoals(goals.map(g => g.id === goalId ? { ...g, status: newStatus } : g));
   };
 
+  const handleToggleTalkingPoint = (pointId: string) => {
+    if (!meeting) return; // Only allow toggling for saved meetings
+    
+    const point = talkingPoints.find(p => p.id === pointId);
+    if (!point) return;
+    
+    const newStatus = !point.isCompleted;
+    
+    // Optimistic update
+    setTalkingPoints(talkingPoints.map(p => 
+      p.id === pointId ? { ...p, isCompleted: newStatus } : p
+    ));
+    
+    // Update in database
+    updateTalkingPointMutation.mutate({ id: pointId, isCompleted: newStatus });
+  };
+
+  const handleToggleActionItem = (itemId: string) => {
+    if (!meeting) return; // Only allow toggling for saved meetings
+    
+    const item = actionItems.find(i => i.id === itemId);
+    if (!item) return;
+    
+    const newStatus = !item.isCompleted;
+    
+    // Optimistic update
+    setActionItems(actionItems.map(i => 
+      i.id === itemId ? { ...i, isCompleted: newStatus } : i
+    ));
+    
+    // Update in database
+    updateActionItemMutation.mutate({ id: itemId, isCompleted: newStatus });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -782,7 +834,8 @@ function MeetingEditor({
                       <input
                         type="checkbox"
                         checked={point.isCompleted}
-                        className="h-4 w-4"
+                        onChange={() => handleToggleTalkingPoint(point.id)}
+                        className="h-4 w-4 cursor-pointer"
                         data-testid={`checkbox-talking-point-${point.id}`}
                       />
                       <span className={point.isCompleted ? "line-through text-muted-foreground" : ""}>
@@ -822,7 +875,8 @@ function MeetingEditor({
                       <input
                         type="checkbox"
                         checked={item.isCompleted}
-                        className="h-4 w-4 rounded-full"
+                        onChange={() => handleToggleActionItem(item.id)}
+                        className="h-4 w-4 rounded-full cursor-pointer"
                         data-testid={`checkbox-action-item-${item.id}`}
                       />
                       <span className={item.isCompleted ? "line-through text-muted-foreground" : ""}>
