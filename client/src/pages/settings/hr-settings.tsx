@@ -33,6 +33,375 @@ import NewHireOnboardingFormEditor from "@/components/hr/new-hire-onboarding-for
 import ExpenseReportFormEditor from "@/components/hr/expense-report-form-editor";
 import OffboardingFormEditor from "@/components/hr/offboarding-form-editor";
 import { Link } from "wouter";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Progression Status Manager Component
+function ProgressionStatusManager() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingStatus, setEditingStatus] = useState<any | null>(null);
+
+  // Schema for progression status
+  const progressionStatusSchema = z.object({
+    value: z.string().min(1, "Value is required"),
+    label: z.string().min(1, "Label is required"),
+    color: z.string().min(1, "Color is required"),
+    orderIndex: z.number().min(0).default(0),
+    isActive: z.boolean().default(true),
+  });
+
+  type ProgressionStatusFormData = z.infer<typeof progressionStatusSchema>;
+
+  // Fetch progression statuses
+  const { data: statuses = [], isLoading } = useQuery({
+    queryKey: ["/api/hr/one-on-one/progression-statuses"],
+  });
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: ProgressionStatusFormData) => {
+      return await apiRequest("/api/hr/one-on-one/progression-statuses", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/progression-statuses"] });
+      toast({
+        title: "Success",
+        description: "Progression status created successfully",
+      });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create progression status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<ProgressionStatusFormData> }) => {
+      return await apiRequest(`/api/hr/one-on-one/progression-statuses/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/progression-statuses"] });
+      toast({
+        title: "Success",
+        description: "Progression status updated successfully",
+      });
+      setIsDialogOpen(false);
+      setEditingStatus(null);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update progression status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/hr/one-on-one/progression-statuses/${id}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/progression-statuses"] });
+      toast({
+        title: "Success",
+        description: "Progression status deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete progression status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const form = useForm<ProgressionStatusFormData>({
+    resolver: zodResolver(progressionStatusSchema),
+    defaultValues: {
+      value: "",
+      label: "",
+      color: "bg-gray-100 text-gray-800",
+      orderIndex: 0,
+      isActive: true,
+    },
+  });
+
+  const handleOpenDialog = (status?: any) => {
+    if (status) {
+      setEditingStatus(status);
+      form.reset({
+        value: status.value,
+        label: status.label,
+        color: status.color,
+        orderIndex: status.orderIndex,
+        isActive: status.isActive,
+      });
+    } else {
+      setEditingStatus(null);
+      form.reset({
+        value: "",
+        label: "",
+        color: "bg-gray-100 text-gray-800",
+        orderIndex: statuses.length,
+        isActive: true,
+      });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingStatus(null);
+    form.reset();
+  };
+
+  const onSubmit = (data: ProgressionStatusFormData) => {
+    if (editingStatus) {
+      updateMutation.mutate({ id: editingStatus.id, data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Are you sure you want to delete this progression status? This cannot be undone.")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const colorOptions = [
+    { value: "bg-red-100 text-red-800", label: "Red" },
+    { value: "bg-orange-100 text-orange-800", label: "Orange" },
+    { value: "bg-yellow-100 text-yellow-800", label: "Yellow" },
+    { value: "bg-green-100 text-green-800", label: "Green" },
+    { value: "bg-blue-100 text-blue-800", label: "Blue" },
+    { value: "bg-purple-100 text-purple-800", label: "Purple" },
+    { value: "bg-pink-100 text-pink-800", label: "Pink" },
+    { value: "bg-gray-100 text-gray-800", label: "Gray" },
+  ];
+
+  if (isLoading) {
+    return <div className="text-center py-8">Loading progression statuses...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-medium">Progression Status Options</h3>
+          <p className="text-muted-foreground">
+            Manage the progression status options available for 1v1 meetings
+          </p>
+        </div>
+        <Button onClick={() => handleOpenDialog()} data-testid="button-add-status">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Status
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {statuses.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No progression statuses configured. Add one to get started.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Label</TableHead>
+                  <TableHead>Value</TableHead>
+                  <TableHead>Color</TableHead>
+                  <TableHead>Order</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {statuses.map((status: any) => (
+                  <TableRow key={status.id} data-testid={`row-status-${status.id}`}>
+                    <TableCell className="font-medium">{status.label}</TableCell>
+                    <TableCell className="font-mono text-sm">{status.value}</TableCell>
+                    <TableCell>
+                      <Badge className={status.color}>{status.label}</Badge>
+                    </TableCell>
+                    <TableCell>{status.orderIndex}</TableCell>
+                    <TableCell>
+                      <Badge variant={status.isActive ? "default" : "secondary"}>
+                        {status.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenDialog(status)}
+                        data-testid={`button-edit-${status.id}`}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(status.id)}
+                        data-testid={`button-delete-${status.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingStatus ? "Edit Progression Status" : "Create Progression Status"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingStatus
+                ? "Update the progression status details."
+                : "Create a new progression status option for 1v1 meetings."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Label</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., Ready for Promotion"
+                        data-testid="input-label"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="value"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Value</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., ready_for_promotion"
+                        data-testid="input-value"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Color</FormLabel>
+                    <FormControl>
+                      <select
+                        {...field}
+                        className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                        data-testid="select-color"
+                      >
+                        {colorOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="orderIndex"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Order</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        data-testid="input-order"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex items-center justify-end space-x-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCloseDialog}
+                  data-testid="button-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  data-testid="button-submit"
+                >
+                  {createMutation.isPending || updateMutation.isPending
+                    ? "Saving..."
+                    : editingStatus
+                    ? "Update"
+                    : "Create"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 // Schema for time off categories
 const timeOffCategorySchema = z.object({
@@ -382,26 +751,7 @@ export default function HRSettingsPage() {
 
         {/* 1v1 Settings Tab */}
         <TabsContent value="one-on-one-settings" className="space-y-6">
-          <div>
-            <h3 className="text-lg font-medium">1v1 Meeting Settings</h3>
-            <p className="text-muted-foreground">
-              Configure settings for 1v1 meetings between managers and direct reports.
-            </p>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Meeting Configuration</CardTitle>
-              <CardDescription>
-                Customize how 1v1 meetings are scheduled and tracked
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Settings for 1v1 meetings will be configured here.
-              </p>
-            </CardContent>
-          </Card>
+          <ProgressionStatusManager />
         </TabsContent>
 
       </Tabs>
