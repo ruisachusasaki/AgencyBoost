@@ -236,9 +236,16 @@ export default function Staff() {
 
   const handleDeleteStaff = (staffId: string, staffName: string) => {
     console.log('Delete button clicked for:', { staffId, staffName });
-    setStaffToDelete({ id: staffId, name: staffName });
-    setDeleteDialogOpen(true);
-    console.log('Dialog should now be open');
+    
+    // Force immediate confirmation using native dialog for now
+    const confirmed = window.confirm(`Are you sure you want to delete ${staffName}? This action will deactivate the staff member and cannot be undone.`);
+    
+    if (confirmed) {
+      console.log('User confirmed deletion, calling mutation');
+      deleteStaffMutation.mutate(staffId);
+    } else {
+      console.log('User cancelled deletion');
+    }
   };
 
   const confirmDeleteStaff = () => {
@@ -1575,38 +1582,6 @@ function CapacitySettingsTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Debug indicator */}
-      {deleteDialogOpen && (
-        <div className="fixed top-0 left-0 bg-red-500 text-white p-2 z-[9999]">
-          Dialog state is OPEN - Dialog should be visible
-        </div>
-      )}
-
-      {/* Delete Staff Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
-        console.log('AlertDialog onOpenChange called with:', open);
-        setDeleteDialogOpen(open);
-        if (!open) setStaffToDelete(null); // Clear stale state on dialog close
-      }}>
-        <AlertDialogContent data-testid="dialog-delete-staff-confirmation">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Staff Member</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {staffToDelete?.name}? This action will deactivate the staff member and cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete-staff">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteStaff}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              data-testid="button-confirm-delete-staff"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
