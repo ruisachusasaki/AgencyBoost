@@ -1575,8 +1575,16 @@ function CapacitySettingsTab() {
         </DialogContent>
       </Dialog>
 
+      {/* Debug indicator */}
+      {deleteDialogOpen && (
+        <div className="fixed top-0 left-0 bg-red-500 text-white p-2 z-[9999]">
+          Dialog state is OPEN - Dialog should be visible
+        </div>
+      )}
+
       {/* Delete Staff Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+        console.log('AlertDialog onOpenChange called with:', open);
         setDeleteDialogOpen(open);
         if (!open) setStaffToDelete(null); // Clear stale state on dialog close
       }}>
