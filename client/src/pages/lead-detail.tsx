@@ -613,7 +613,7 @@ export default function LeadDetail() {
                         <SelectValue placeholder="Select source..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {leadSources.filter(s => s.active).map((source) => (
+                        {leadSources.filter(s => s.isActive).map((source) => (
                           <SelectItem key={source.id} value={source.name}>
                             {source.name}
                           </SelectItem>
