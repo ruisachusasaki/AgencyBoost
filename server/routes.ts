@@ -966,15 +966,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Search leads
         db.select({
           id: leads.id,
-          firstName: leads.firstName,
-          lastName: leads.lastName,
+          name: leads.name,
           company: leads.company,
         })
         .from(leads)
         .where(
           or(
-            like(leads.firstName, searchPattern),
-            like(leads.lastName, searchPattern),
+            like(leads.name, searchPattern),
             like(leads.company, searchPattern),
             like(leads.email, searchPattern)
           )
@@ -1007,9 +1005,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
         ...leadData.map(l => ({
           id: l.id,
-          name: `${l.firstName} ${l.lastName}`,
+          name: l.name,
           type: 'lead',
-          description: l.company,
+          description: l.company || '',
         })),
         ...taskData.map(t => ({
           id: t.id,
