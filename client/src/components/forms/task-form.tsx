@@ -687,47 +687,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
-          {/* 8. Start Date */}
-          <FormField
-            control={form.control}
-            name="startDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Start Date</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field} 
-                    type="date"
-                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
-                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* 9. Due Date */}
-          <FormField
-            control={form.control}
-            name="dueDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Due Date</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field} 
-                    type="date"
-                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
-                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* 10. Client/Lead Combined */}
+          {/* 8. Client/Lead Combined */}
           <FormField
             control={form.control}
             name="clientId"
@@ -796,6 +756,46 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                 </FormItem>
               );
             }}
+          />
+
+          {/* 9. Start Date */}
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Start Date</FormLabel>
+                <FormControl>
+                  <Input 
+                    {...field} 
+                    type="date"
+                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
+                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* 10. Due Date */}
+          <FormField
+            control={form.control}
+            name="dueDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Due Date</FormLabel>
+                <FormControl>
+                  <Input 
+                    {...field} 
+                    type="date"
+                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
+                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
 
           {/* 12. Project */}
