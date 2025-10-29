@@ -571,7 +571,7 @@ export default function ApplicantDetailPage() {
                       <div key={watcher.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
                         <div className="flex items-center gap-2">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={watcher.profileImagePath} />
+                            <AvatarImage src={watcher.profileImagePath ? `/objects${watcher.profileImagePath}` : undefined} />
                             <AvatarFallback className="text-xs">
                               {watcher.firstName?.[0] || '?'}{watcher.lastName?.[0] || '?'}
                             </AvatarFallback>
@@ -626,7 +626,7 @@ export default function ApplicantDetailPage() {
                               >
                                 <div className="flex items-center gap-2">
                                   <Avatar className="h-6 w-6">
-                                    <AvatarImage src={member.profileImagePath} />
+                                    <AvatarImage src={member.profileImagePath ? `/objects${member.profileImagePath}` : undefined} />
                                     <AvatarFallback className="text-xs">
                                       {member.firstName?.[0] || '?'}{member.lastName?.[0] || '?'}
                                     </AvatarFallback>
@@ -683,7 +683,7 @@ export default function ApplicantDetailPage() {
                             }`}
                           >
                             <Avatar className="h-6 w-6">
-                              <AvatarImage src={member.profileImagePath} />
+                              <AvatarImage src={member.profileImagePath ? `/objects${member.profileImagePath}` : undefined} />
                               <AvatarFallback className="text-xs">
                                 {member.firstName[0]}{member.lastName[0]}
                               </AvatarFallback>

@@ -1014,7 +1014,7 @@ export default function HRPage() {
                         <div key={request.id} className="flex items-center justify-between p-4 border rounded-lg">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={staff?.profileImagePath || undefined} />
+                              <AvatarImage src={staff?.profileImagePath ? `/objects${staff.profileImagePath}` : undefined} />
                               <AvatarFallback>
                                 {staff?.firstName?.[0]}{staff?.lastName?.[0]}
                               </AvatarFallback>
@@ -1202,7 +1202,7 @@ export default function HRPage() {
                       <div key={request.id} className={cardClasses}>
                         <div className="flex items-center gap-4">
                           <Avatar>
-                            <AvatarImage src={staff?.profileImagePath || undefined} />
+                            <AvatarImage src={staff?.profileImagePath ? `/objects${staff.profileImagePath}` : undefined} />
                             <AvatarFallback>
                               {staff?.firstName?.[0]}{staff?.lastName?.[0]}
                             </AvatarFallback>

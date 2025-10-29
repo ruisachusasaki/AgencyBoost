@@ -264,7 +264,7 @@ export default function OneOnOneMeetings() {
                   <CardContent className="p-6">
                     <div className="flex items-center gap-4">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={report.profileImagePath} />
+                        <AvatarImage src={report.profileImagePath ? `/objects${report.profileImagePath}` : undefined} />
                         <AvatarFallback>
                           {report.firstName[0]}{report.lastName[0]}
                         </AvatarFallback>
@@ -306,7 +306,7 @@ export default function OneOnOneMeetings() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={selectedReport.profileImagePath} />
+                  <AvatarImage src={selectedReport.profileImagePath ? `/objects${selectedReport.profileImagePath}` : undefined} />
                   <AvatarFallback>
                     {selectedReport.firstName[0]}{selectedReport.lastName[0]}
                   </AvatarFallback>
@@ -832,7 +832,7 @@ function MeetingEditor({
             <CardHeader>
               <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={directReport.profileImagePath} />
+                  <AvatarImage src={directReport.profileImagePath ? `/objects${directReport.profileImagePath}` : undefined} />
                   <AvatarFallback>
                     {directReport.firstName[0]}{directReport.lastName[0]}
                   </AvatarFallback>
@@ -1118,7 +1118,7 @@ function MeetingEditor({
                     <div key={comment.id} className="p-3 bg-gray-50 rounded">
                       <div className="flex items-center gap-2 mb-2">
                         <Avatar className="h-6 w-6">
-                          <AvatarImage src={comment.authorProfileImagePath} />
+                          <AvatarImage src={comment.authorProfileImagePath ? `/objects${comment.authorProfileImagePath}` : undefined} />
                           <AvatarFallback className="text-xs">
                             {comment.authorFirstName?.[0]}{comment.authorLastName?.[0]}
                           </AvatarFallback>
