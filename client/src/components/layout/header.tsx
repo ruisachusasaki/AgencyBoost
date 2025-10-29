@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle, FileText, Briefcase, Users, CheckSquare, Megaphone } from "lucide-react";
+import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle, FileText, Users, CheckSquare } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -213,13 +213,16 @@ function GlobalSearch() {
   }, [searchQuery]);
 
   // Fetch search results
-  const { data: searchResults, isLoading } = useQuery({
+  const { data: searchResults, isLoading, isError } = useQuery({
     queryKey: ['/api/search', debouncedQuery],
     queryFn: async () => {
       if (!debouncedQuery || debouncedQuery.length < 2) {
         return { results: [] };
       }
       const response = await apiRequest('GET', `/api/search?q=${encodeURIComponent(debouncedQuery)}`);
+      if (!response.ok) {
+        throw new Error('Search failed');
+      }
       return await response.json();
     },
     enabled: debouncedQuery.length >= 2,
@@ -231,14 +234,10 @@ function GlobalSearch() {
     switch (type) {
       case 'client':
         return <Users className="h-4 w-4 text-blue-600" />;
-      case 'project':
-        return <Briefcase className="h-4 w-4 text-green-600" />;
       case 'lead':
         return <User className="h-4 w-4 text-purple-600" />;
       case 'task':
         return <CheckSquare className="h-4 w-4 text-orange-600" />;
-      case 'campaign':
-        return <Megaphone className="h-4 w-4 text-pink-600" />;
       default:
         return <FileText className="h-4 w-4 text-gray-600" />;
     }
@@ -248,14 +247,10 @@ function GlobalSearch() {
     switch (type) {
       case 'client':
         return 'bg-blue-100 text-blue-700';
-      case 'project':
-        return 'bg-green-100 text-green-700';
       case 'lead':
         return 'bg-purple-100 text-purple-700';
       case 'task':
         return 'bg-orange-100 text-orange-700';
-      case 'campaign':
-        return 'bg-pink-100 text-pink-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }
@@ -265,16 +260,12 @@ function GlobalSearch() {
     switch (type) {
       case 'client':
         return `/clients/${id}`;
-      case 'project':
-        return `/projects/${id}`;
       case 'lead':
         return `/leads/${id}`;
       case 'task':
-        return `/tasks`;
-      case 'campaign':
-        return `/campaigns`;
+        return `/tasks/${id}`;
       default:
-        return '#';
+        return '/';
     }
   };
 
@@ -291,7 +282,7 @@ function GlobalSearch() {
         <div className="relative hidden md:block">
           <Input
             type="search"
-            placeholder="Search clients, projects..."
+            placeholder="Search clients, leads, tasks..."
             className="w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm"
             value={searchQuery}
             onChange={(e) => {
@@ -317,6 +308,13 @@ function GlobalSearch() {
           {isLoading ? (
             <div className="p-4 text-center text-sm text-gray-500">
               Searching...
+            </div>
+          ) : isError ? (
+            <div className="p-8 text-center">
+              <X className="h-8 w-8 text-red-300 mx-auto mb-2" />
+              <p className="text-sm text-red-600">
+                Search failed. Please try again.
+              </p>
             </div>
           ) : results.length === 0 ? (
             <div className="p-8 text-center">

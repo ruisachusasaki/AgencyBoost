@@ -946,7 +946,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return;
 
       // Search across different entities in parallel
-      const [clientResults, projectResults, leadResults, taskResults, campaignResults] = await Promise.all([
+      // Only search entities with detail pages (clients, leads, tasks)
+      const [clientResults, leadResults, taskResults] = await Promise.all([
         // Search clients
         db.select({
           id: clients.id,
@@ -961,17 +962,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             like(clients.industry, searchPattern)
           )
         )
-        .limit(5),
-
-        // Search projects (from workflows table)
-        db.select({
-          id: workflows.id,
-          name: workflows.name,
-          type: sql<string>`'project'`.as('type'),
-          description: workflows.description,
-        })
-        .from(workflows)
-        .where(like(workflows.name, searchPattern))
         .limit(5),
 
         // Search leads
@@ -1007,26 +997,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         )
         .limit(5),
-
-        // Search campaigns (from socialMediaPosts table)
-        db.select({
-          id: socialMediaPosts.id,
-          name: sql<string>`SUBSTRING(${socialMediaPosts.content}, 1, 50)`.as('name'),
-          type: sql<string>`'campaign'`.as('type'),
-          description: socialMediaPosts.platform,
-        })
-        .from(socialMediaPosts)
-        .where(like(socialMediaPosts.content, searchPattern))
-        .limit(5),
       ]);
 
       // Combine and format results
       const results = [
         ...clientResults,
-        ...projectResults,
         ...leadResults,
         ...taskResults,
-        ...campaignResults,
       ];
 
       res.json({ results });
