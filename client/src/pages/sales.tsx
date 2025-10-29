@@ -81,28 +81,22 @@ export default function Sales() {
   
   // Check if user has permission to manage sales targets (via Settings > Roles & Permissions)
   const canManageTargets = () => {
-    console.log('canManageTargets check - currentUser:', currentUser);
-    
-    // Admins always have access
-    if (currentUser?.role === 'Admin' || currentUser?.role === 'admin') {
-      console.log('User is Admin via role field');
+    // Admins always have access (check roles array)
+    if (currentUser?.roles?.includes('Admin')) {
       return true;
     }
     
     // Sales Managers can manage targets
     if (currentUser?.roles?.includes(ROLE_NAMES.SALES_MANAGER)) {
-      console.log('User is Sales Manager');
       return true;
     }
     
     // Check if user has the 'settings' module 'canManage' permission
     if (!currentUser?.permissions) {
-      console.log('No permissions found');
       return false;
     }
     
     const settingsPermission = currentUser.permissions.find((p: any) => p.module === 'settings');
-    console.log('Settings permission:', settingsPermission);
     return settingsPermission?.canManage === true;
   };
   
