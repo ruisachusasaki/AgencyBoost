@@ -322,7 +322,7 @@ export default function OneOnOneMeetings() {
                 data-testid="button-create-meeting"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                New 1-on-1 Meeting
+                New 1v1 Meeting
               </Button>
             </div>
           </CardHeader>
