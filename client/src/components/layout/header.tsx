@@ -282,7 +282,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 </span>
                 <Avatar className="w-8 h-8" data-testid="img-avatar">
                   <AvatarImage 
-                    src={currentUser?.profileImagePath ? `/api/objects/${currentUser.profileImagePath}` : undefined} 
+                    src={currentUser?.profileImagePath ? `/objects${currentUser.profileImagePath}` : undefined} 
                     alt={currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'} 
                   />
                   <AvatarFallback className="bg-slate-300 text-slate-600 text-sm font-medium">

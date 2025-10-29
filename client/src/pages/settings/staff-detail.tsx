@@ -281,7 +281,7 @@ export default function StaffDetail() {
           <div className="flex items-center space-x-3">
             <Avatar className="h-10 w-10">
               <AvatarImage 
-                src={staffMember.profileImagePath ? staffMember.profileImagePath : undefined} 
+                src={staffMember.profileImagePath ? `/objects${staffMember.profileImagePath}` : undefined} 
               />
               <AvatarFallback>
                 {(staffMember.firstName || '').charAt(0) || 'U'}{(staffMember.lastName || '').charAt(0) || 'S'}

@@ -467,7 +467,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                     <Avatar className="h-8 w-8">
                       {comment.author.profileImage && (
                         <AvatarImage 
-                          src={comment.author.profileImage} 
+                          src={`/objects${comment.author.profileImage}`} 
                           alt={`${comment.author.firstName} ${comment.author.lastName}`}
                         />
                       )}
@@ -752,7 +752,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                           <Avatar className="h-6 w-6">
                             {reply.author.profileImage && (
                               <AvatarImage 
-                                src={reply.author.profileImage} 
+                                src={`/objects${reply.author.profileImage}`} 
                                 alt={`${reply.author.firstName} ${reply.author.lastName}`}
                               />
                             )}

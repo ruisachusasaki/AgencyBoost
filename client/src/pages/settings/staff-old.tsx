@@ -394,7 +394,7 @@ export default function Staff() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={staff.profileImage} alt={`${staff.firstName} ${staff.lastName}`} />
+                      <AvatarImage src={staff.profileImage ? `/objects${staff.profileImage}` : undefined} alt={`${staff.firstName} ${staff.lastName}`} />
                       <AvatarFallback className="bg-primary/10 text-primary">
                         {staff.firstName.charAt(0)}{staff.lastName.charAt(0)}
                       </AvatarFallback>

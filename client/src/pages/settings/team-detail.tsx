@@ -556,7 +556,7 @@ export default function TeamDetail() {
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={member.profileImagePath || undefined} />
+                            <AvatarImage src={member.profileImagePath ? `/objects${member.profileImagePath}` : undefined} />
                             <AvatarFallback>
                               {member.firstName?.[0]}{member.lastName?.[0]}
                             </AvatarFallback>
