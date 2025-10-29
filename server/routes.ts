@@ -947,13 +947,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Search across different entities in parallel
       // Only search entities with detail pages (clients, leads, tasks)
-      const [clientResults, leadResults, taskResults] = await Promise.all([
+      const [clientData, leadData, taskData] = await Promise.all([
         // Search clients
         db.select({
           id: clients.id,
           name: clients.name,
-          type: sql<string>`'client'`.as('type'),
-          description: clients.industry,
+          industry: clients.industry,
         })
         .from(clients)
         .where(
@@ -967,9 +966,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Search leads
         db.select({
           id: leads.id,
-          name: sql<string>`CONCAT(${leads.firstName}, ' ', ${leads.lastName})`.as('name'),
-          type: sql<string>`'lead'`.as('type'),
-          description: leads.company,
+          firstName: leads.firstName,
+          lastName: leads.lastName,
+          company: leads.company,
         })
         .from(leads)
         .where(
@@ -985,8 +984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Search tasks
         db.select({
           id: tasks.id,
-          name: tasks.title,
-          type: sql<string>`'task'`.as('type'),
+          title: tasks.title,
           description: tasks.description,
         })
         .from(tasks)
@@ -999,11 +997,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(5),
       ]);
 
-      // Combine and format results
+      // Format results with type labels
       const results = [
-        ...clientResults,
-        ...leadResults,
-        ...taskResults,
+        ...clientData.map(c => ({
+          id: c.id,
+          name: c.name,
+          type: 'client',
+          description: c.industry,
+        })),
+        ...leadData.map(l => ({
+          id: l.id,
+          name: `${l.firstName} ${l.lastName}`,
+          type: 'lead',
+          description: l.company,
+        })),
+        ...taskData.map(t => ({
+          id: t.id,
+          name: t.title,
+          type: 'task',
+          description: t.description,
+        })),
       ];
 
       res.json({ results });
