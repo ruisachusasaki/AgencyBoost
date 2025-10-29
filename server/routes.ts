@@ -952,13 +952,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         db.select({
           id: clients.id,
           name: clients.name,
-          industry: clients.industry,
+          company: clients.company,
         })
         .from(clients)
         .where(
           or(
             like(clients.name, searchPattern),
-            like(clients.industry, searchPattern)
+            like(clients.company, searchPattern),
+            like(clients.email, searchPattern)
           )
         )
         .limit(5),
@@ -1001,7 +1002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: c.id,
           name: c.name,
           type: 'client',
-          description: c.industry,
+          description: c.company || '',
         })),
         ...leadData.map(l => ({
           id: l.id,
