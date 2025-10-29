@@ -1683,8 +1683,8 @@ export default function Tasks() {
         <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
           <label className="text-sm font-medium text-slate-700">Workflow:</label>
           <Select 
-            value={selectedWorkflowId} 
-            onValueChange={setSelectedWorkflowId}
+            value={workflowFilter} 
+            onValueChange={setWorkflowFilter}
           >
             <SelectTrigger className="w-64">
               <SelectValue placeholder="Select a workflow" />
