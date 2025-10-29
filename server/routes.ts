@@ -932,6 +932,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Global search endpoint
+  app.get("/api/search", requireAuth(), async (req, res) => {
+    try {
+      const query = (req.query.q as string || '').trim();
+      
+      if (!query || query.length < 2) {
+        return res.json({ results: [] });
+      }
+
+      const searchPattern = `%${query}%`;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      // Search across different entities in parallel
+      const [clientResults, projectResults, leadResults, taskResults, campaignResults] = await Promise.all([
+        // Search clients
+        db.select({
+          id: clients.id,
+          name: clients.name,
+          type: sql<string>`'client'`.as('type'),
+          description: clients.industry,
+        })
+        .from(clients)
+        .where(
+          or(
+            like(clients.name, searchPattern),
+            like(clients.industry, searchPattern)
+          )
+        )
+        .limit(5),
+
+        // Search projects (from workflows table)
+        db.select({
+          id: workflows.id,
+          name: workflows.name,
+          type: sql<string>`'project'`.as('type'),
+          description: workflows.description,
+        })
+        .from(workflows)
+        .where(like(workflows.name, searchPattern))
+        .limit(5),
+
+        // Search leads
+        db.select({
+          id: leads.id,
+          name: sql<string>`CONCAT(${leads.firstName}, ' ', ${leads.lastName})`.as('name'),
+          type: sql<string>`'lead'`.as('type'),
+          description: leads.company,
+        })
+        .from(leads)
+        .where(
+          or(
+            like(leads.firstName, searchPattern),
+            like(leads.lastName, searchPattern),
+            like(leads.company, searchPattern),
+            like(leads.email, searchPattern)
+          )
+        )
+        .limit(5),
+
+        // Search tasks
+        db.select({
+          id: tasks.id,
+          name: tasks.title,
+          type: sql<string>`'task'`.as('type'),
+          description: tasks.description,
+        })
+        .from(tasks)
+        .where(
+          or(
+            like(tasks.title, searchPattern),
+            like(tasks.description, searchPattern)
+          )
+        )
+        .limit(5),
+
+        // Search campaigns (from socialMediaPosts table)
+        db.select({
+          id: socialMediaPosts.id,
+          name: sql<string>`SUBSTRING(${socialMediaPosts.content}, 1, 50)`.as('name'),
+          type: sql<string>`'campaign'`.as('type'),
+          description: socialMediaPosts.platform,
+        })
+        .from(socialMediaPosts)
+        .where(like(socialMediaPosts.content, searchPattern))
+        .limit(5),
+      ]);
+
+      // Combine and format results
+      const results = [
+        ...clientResults,
+        ...projectResults,
+        ...leadResults,
+        ...taskResults,
+        ...campaignResults,
+      ];
+
+      res.json({ results });
+    } catch (error) {
+      console.error("Error in global search:", error);
+      res.status(500).json({ error: "Search failed" });
+    }
+  });
+
   // ===== CRITICAL FIX: TIME TRACKING API ENDPOINT =====
   // COMPLETELY SELF-CONTAINED - NO IMPORTS TO AVOID ALL DRIZZLE CONFLICTS
   // This is a minimal, working endpoint with all logic inline
