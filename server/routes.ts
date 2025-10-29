@@ -25087,7 +25087,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const leadDateFilter = leadFilters.length > 0 ? and(...leadFilters) : undefined;
 
-      // Get staff members (filtered if specific rep selected)
+      // Get Sales Representative and Sales Manager role IDs
+      const salesRoles = await db
+        .select({ id: roles.id })
+        .from(roles)
+        .where(or(
+          eq(roles.name, 'Sales Representative'),
+          eq(roles.name, 'Sales Manager')
+        ));
+      
+      const salesRoleIds = salesRoles.map(r => r.id);
+
+      // Get staff members with sales roles (filtered if specific rep selected)
+      const staffFilters = [
+        eq(staff.isActive, true),
+        salesRoleIds.length > 0 ? inArray(userRoles.roleId, salesRoleIds) : sql`1=0`
+      ];
+      
+      if (salesRepId && salesRepId !== 'all') {
+        staffFilters.push(eq(staff.id, salesRepId as string));
+      }
+
       const staffMembers = await db
         .select({
           id: staff.id,
@@ -25097,7 +25117,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           department: staff.department
         })
         .from(staff)
-        .where(salesRepId && salesRepId !== 'all' ? eq(staff.id, salesRepId as string) : undefined);
+        .innerJoin(userRoles, eq(userRoles.userId, staff.id))
+        .where(and(...staffFilters));
 
       // Get appointment counts by rep
       const appointmentCounts = await db
