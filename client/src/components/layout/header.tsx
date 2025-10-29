@@ -202,6 +202,7 @@ function GlobalSearch() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Debounce search query
   useEffect(() => {
@@ -277,33 +278,35 @@ function GlobalSearch() {
   };
 
   return (
-    <Popover open={isOpen && searchQuery.length >= 2} onOpenChange={setIsOpen}>
+    <div className="relative hidden md:block">
+      <Input
+        ref={inputRef}
+        type="search"
+        placeholder="Search clients, leads, tasks..."
+        className="w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm"
+        value={searchQuery}
+        onChange={(e) => {
+          setSearchQuery(e.target.value);
+          if (e.target.value.length >= 2) {
+            setIsOpen(true);
+          } else {
+            setIsOpen(false);
+          }
+        }}
+        onFocus={() => {
+          if (searchQuery.length >= 2) {
+            setIsOpen(true);
+          }
+        }}
+        data-testid="input-global-search"
+      />
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+      
+      <Popover open={isOpen && searchQuery.length >= 2} onOpenChange={setIsOpen} modal={false}>
       <PopoverTrigger asChild>
-        <div className="relative hidden md:block">
-          <Input
-            type="search"
-            placeholder="Search clients, leads, tasks..."
-            className="w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              if (e.target.value.length >= 2) {
-                setIsOpen(true);
-              } else {
-                setIsOpen(false);
-              }
-            }}
-            onFocus={() => {
-              if (searchQuery.length >= 2) {
-                setIsOpen(true);
-              }
-            }}
-            data-testid="input-global-search"
-          />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-        </div>
+        <div className="absolute inset-0 pointer-events-none" />
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
+      <PopoverContent className="w-80 p-0" align="end" onOpenAutoFocus={(e) => e.preventDefault()}>
         <div className="max-h-96 overflow-y-auto">
           {isLoading ? (
             <div className="p-4 text-center text-sm text-gray-500">
@@ -359,6 +362,7 @@ function GlobalSearch() {
         </div>
       </PopoverContent>
     </Popover>
+    </div>
   );
 }
 
