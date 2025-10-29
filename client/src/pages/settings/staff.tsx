@@ -235,8 +235,10 @@ export default function Staff() {
   };
 
   const handleDeleteStaff = (staffId: string, staffName: string) => {
+    console.log('Delete button clicked for:', { staffId, staffName });
     setStaffToDelete({ id: staffId, name: staffName });
     setDeleteDialogOpen(true);
+    console.log('Dialog should now be open');
   };
 
   const confirmDeleteStaff = () => {
@@ -721,6 +723,7 @@ export default function Staff() {
                             size="sm"
                             onClick={() => handleDeleteStaff(staff.id, `${staff.firstName} ${staff.lastName}`)}
                             disabled={deleteStaffMutation.isPending}
+                            data-testid={`button-delete-staff-${staff.id}`}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
