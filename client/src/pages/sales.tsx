@@ -127,6 +127,7 @@ export default function Sales() {
     month: new Date().getMonth() + 1,
     targetAmount: "",
   });
+  const [targetTimeFilter, setTargetTimeFilter] = useState<string>("this-year");
 
   // Fetch data for Quote Builder
   const { data: clientsData } = useQuery<{ clients: any[] }>({
@@ -286,6 +287,52 @@ export default function Sales() {
       targetAmount: "",
     });
     setIsTargetDialogOpen(true);
+  };
+
+  // Filter targets based on selected time period
+  const getFilteredTargets = () => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-12
+    const currentQuarter = Math.ceil(currentMonth / 3); // 1-4
+
+    return salesTargets.filter((target: any) => {
+      switch (targetTimeFilter) {
+        case "all":
+          return true;
+        
+        case "this-year":
+          return target.year === currentYear;
+        
+        case "last-year":
+          return target.year === currentYear - 1;
+        
+        case "next-year":
+          return target.year === currentYear + 1;
+        
+        case "this-quarter":
+          const quarterStartMonth = (currentQuarter - 1) * 3 + 1;
+          const quarterEndMonth = currentQuarter * 3;
+          return target.year === currentYear && 
+                 target.month >= quarterStartMonth && 
+                 target.month <= quarterEndMonth;
+        
+        case "next-quarter":
+          const nextQuarter = currentQuarter === 4 ? 1 : currentQuarter + 1;
+          const nextQuarterYear = currentQuarter === 4 ? currentYear + 1 : currentYear;
+          const nextQuarterStartMonth = (nextQuarter - 1) * 3 + 1;
+          const nextQuarterEndMonth = nextQuarter * 3;
+          return target.year === nextQuarterYear && 
+                 target.month >= nextQuarterStartMonth && 
+                 target.month <= nextQuarterEndMonth;
+        
+        case "this-month":
+          return target.year === currentYear && target.month === currentMonth;
+        
+        default:
+          return true;
+      }
+    });
   };
 
   // Fetch bundle products when a bundle is selected
@@ -1894,29 +1941,50 @@ export default function Sales() {
                   <Target className="h-5 w-5" />
                   Monthly Sales Targets
                 </CardTitle>
-                {canManageTargets() && (
-                  <Button 
-                    onClick={handleNewTarget}
-                    className="bg-primary hover:bg-primary/90"
-                    data-testid="button-create-target"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Set Target
-                  </Button>
-                )}
+                <div className="flex items-center gap-3">
+                  <Select value={targetTimeFilter} onValueChange={setTargetTimeFilter}>
+                    <SelectTrigger className="w-[180px]" data-testid="select-target-filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Time</SelectItem>
+                      <SelectItem value="this-month">This Month</SelectItem>
+                      <SelectItem value="this-quarter">This Quarter</SelectItem>
+                      <SelectItem value="next-quarter">Next Quarter</SelectItem>
+                      <SelectItem value="this-year">This Year</SelectItem>
+                      <SelectItem value="last-year">Last Year</SelectItem>
+                      <SelectItem value="next-year">Next Year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {canManageTargets() && (
+                    <Button 
+                      onClick={handleNewTarget}
+                      className="bg-primary hover:bg-primary/90"
+                      data-testid="button-create-target"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Set Target
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {salesTargets.length === 0 ? (
+                {getFilteredTargets().length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No sales targets set yet</p>
-                    <p className="text-sm">Set monthly targets to track your revenue progress</p>
+                    <p>No sales targets found</p>
+                    <p className="text-sm">
+                      {salesTargets.length === 0 
+                        ? "Set monthly targets to track your revenue progress"
+                        : "Try adjusting the time filter to see more targets"
+                      }
+                    </p>
                   </div>
                 ) : (
                   <div className="grid gap-4">
-                    {salesTargets.map((target: any) => {
+                    {getFilteredTargets().map((target: any) => {
                       const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                       const monthName = monthNames[target.month - 1];
                       const isCurrentMonth = new Date().getMonth() + 1 === target.month && new Date().getFullYear() === target.year;
