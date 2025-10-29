@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Mail, Phone, Building2, Calendar, DollarSign, User, CheckCircle2, Tag as TagIcon, FileText, Percent, MessageSquare, StickyNote, ListTodo, CalendarCheck, Trash2, ArrowRight, X, Plus } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, Mail, Phone, Building2, Calendar, DollarSign, User, CheckCircle2, Tag as TagIcon, FileText, Percent, MessageSquare, StickyNote, ListTodo, CalendarCheck, Trash2, ArrowRight, X, Plus, ChevronDown, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
-import type { Lead, Task, User as StaffUser, LeadPipelineStage, CustomField, Tag } from "@shared/schema";
+import type { Lead, Task, User as StaffUser, LeadPipelineStage, CustomField, Tag, LeadSource } from "@shared/schema";
 import LeadNotesSection from "@/components/forms/lead-notes-section";
 import CustomFieldRenderer from "@/components/CustomFieldRenderer";
 import LeadAppointmentsDisplay from "@/components/forms/lead-appointments-display";
@@ -31,9 +32,12 @@ export default function LeadDetail() {
   const [activeTab, setActiveTab] = useState<"notes" | "tasks" | "appointments">("notes");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editingCustomField, setEditingCustomField] = useState<string | null>(null);
+  const [editingLeadField, setEditingLeadField] = useState<string | null>(null);
   const [editingTags, setEditingTags] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customFieldEditValue, setCustomFieldEditValue] = useState<any>(null);
+  const [leadFieldEditValue, setLeadFieldEditValue] = useState<any>(null);
+  const [isCustomFieldsOpen, setIsCustomFieldsOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -81,6 +85,17 @@ export default function LeadDetail() {
   const { data: customFields = [] } = useQuery<CustomField[]>({
     queryKey: ["/api/custom-fields"],
   });
+
+  // Fetch lead sources
+  const { data: leadSources = [] } = useQuery<LeadSource[]>({
+    queryKey: ["/api/lead-sources"],
+  });
+
+  // Filter out custom fields that duplicate core lead fields
+  const coreFieldNames = ['name', 'email', 'phone', 'company', 'pipeline stage', 'status', 'potential value', 'value', 'probability', 'assigned to', 'source', 'last contact', 'created'];
+  const filteredCustomFields = customFields.filter(field => 
+    !coreFieldNames.includes(field.name.toLowerCase())
+  );
 
   // Convert to Client mutation
   const convertToClientMutation = useMutation({
@@ -171,6 +186,31 @@ export default function LeadDetail() {
     },
   });
 
+  // Update lead field mutation
+  const updateLeadFieldMutation = useMutation({
+    mutationFn: async ({ fieldName, value }: { fieldName: string; value: any }) => {
+      return await apiRequest("PUT", `/api/leads/${leadId}`, {
+        [fieldName]: value,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/leads/${leadId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      setEditingLeadField(null);
+      toast({
+        title: "Lead updated",
+        description: "The lead has been successfully updated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update lead.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Update tags mutation
   const updateTagsMutation = useMutation({
     mutationFn: async (newTags: string[]) => {
@@ -225,6 +265,52 @@ export default function LeadDetail() {
     setCustomFieldEditValue(currentValue ?? '');
   };
 
+  const handleSaveLeadField = (fieldName: string, fieldType?: string) => {
+    let valueToSave = leadFieldEditValue;
+    
+    // Handle "unassigned" sentinel for assignedTo field
+    if (fieldName === 'assignedTo' && valueToSave === 'unassigned') {
+      valueToSave = null;
+    }
+    // Handle empty strings - convert to null for cleaner data
+    else if (valueToSave === '') {
+      valueToSave = null;
+    }
+    // Handle number fields
+    else if (fieldType === 'number' && valueToSave !== null && valueToSave !== '') {
+      const numValue = Number(valueToSave);
+      // Guard against NaN
+      valueToSave = isNaN(numValue) ? null : numValue;
+    }
+    // Handle date fields
+    else if (fieldType === 'date' && valueToSave) {
+      valueToSave = new Date(valueToSave).toISOString();
+    }
+    
+    updateLeadFieldMutation.mutate({ fieldName, value: valueToSave });
+  };
+
+  const handleCancelLeadFieldEdit = () => {
+    setEditingLeadField(null);
+    setLeadFieldEditValue(null);
+  };
+
+  const handleStartEditLeadField = (fieldName: string, currentValue: any) => {
+    setEditingLeadField(fieldName);
+    // Handle date formatting for date inputs
+    if (fieldName === 'lastContactDate' && currentValue) {
+      const date = new Date(currentValue);
+      setLeadFieldEditValue(date.toISOString().split('T')[0]);
+    }
+    // Handle assignedTo field - convert null to "unassigned"
+    else if (fieldName === 'assignedTo' && !currentValue) {
+      setLeadFieldEditValue('unassigned');
+    }
+    else {
+      setLeadFieldEditValue(currentValue ?? '');
+    }
+  };
+
   const handleStartEditTags = () => {
     setEditingTags(true);
     setSelectedTags(lead?.tags || []);
@@ -265,6 +351,81 @@ export default function LeadDetail() {
 
   const currentStage = pipelineStages.find(stage => stage.id === lead.pipelineStageId);
   const assignedStaff = staff.find(s => s.id === lead.assignedTo);
+
+  // Helper function to render editable field
+  const renderEditableField = (
+    fieldName: string,
+    label: string,
+    value: any,
+    icon: any,
+    fieldType: 'text' | 'number' | 'date' | 'select' = 'text',
+    options?: { value: string; label: string }[]
+  ) => {
+    const Icon = icon;
+    const isEditing = editingLeadField === fieldName;
+    
+    return (
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-gray-500" />
+        <div className="flex-1">
+          <div className="text-sm text-gray-500">{label}</div>
+          {isEditing ? (
+            <div className="flex items-center gap-2 mt-1">
+              {fieldType === 'select' && options ? (
+                <Select
+                  value={leadFieldEditValue ?? ''}
+                  onValueChange={setLeadFieldEditValue}
+                >
+                  <SelectTrigger className="flex-1" data-testid={`select-lead-${fieldName}`}>
+                    <SelectValue placeholder="Select..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  type={fieldType}
+                  value={leadFieldEditValue ?? ''}
+                  onChange={(e) => setLeadFieldEditValue(e.target.value)}
+                  className="flex-1"
+                  data-testid={`input-lead-${fieldName}`}
+                />
+              )}
+              <Button
+                size="sm"
+                onClick={() => handleSaveLeadField(fieldName, fieldType)}
+                disabled={updateLeadFieldMutation.isPending}
+                data-testid={`button-save-lead-${fieldName}`}
+              >
+                Save
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleCancelLeadFieldEdit}
+                data-testid={`button-cancel-lead-${fieldName}`}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div
+              className="font-medium cursor-pointer hover:bg-gray-50 p-2 rounded border border-transparent hover:border-gray-200 transition-colors"
+              onClick={() => handleStartEditLeadField(fieldName, value)}
+              data-testid={`text-lead-${fieldName}`}
+            >
+              {value !== null && value !== undefined ? String(value) : <span className="text-gray-400">Click to add...</span>}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -320,7 +481,7 @@ export default function LeadDetail() {
         </div>
       </div>
 
-      {/* Lead Details Card */}
+      {/* Lead Details Card - Now Editable */}
       <Card>
         <CardHeader>
           <CardTitle>Lead Details</CardTitle>
@@ -328,48 +489,18 @@ export default function LeadDetail() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Name */}
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-gray-500" />
-              <div>
-                <div className="text-sm text-gray-500">Name</div>
-                <div className="font-medium" data-testid="text-lead-detail-name">{lead.name}</div>
-              </div>
-            </div>
+            {renderEditableField('name', 'Name', lead.name, User)}
 
             {/* Email */}
-            {lead.email && (
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-gray-500" />
-                <div>
-                  <div className="text-sm text-gray-500">Email</div>
-                  <div className="font-medium" data-testid="text-lead-email">{lead.email}</div>
-                </div>
-              </div>
-            )}
+            {renderEditableField('email', 'Email', lead.email, Mail)}
             
             {/* Phone */}
-            {lead.phone && (
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-gray-500" />
-                <div>
-                  <div className="text-sm text-gray-500">Phone</div>
-                  <div className="font-medium" data-testid="text-lead-phone">{lead.phone}</div>
-                </div>
-              </div>
-            )}
+            {renderEditableField('phone', 'Phone', lead.phone, Phone)}
             
             {/* Company */}
-            {lead.company && (
-              <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-gray-500" />
-                <div>
-                  <div className="text-sm text-gray-500">Company</div>
-                  <div className="font-medium" data-testid="text-lead-company">{lead.company}</div>
-                </div>
-              </div>
-            )}
+            {renderEditableField('company', 'Company', lead.company, Building2)}
 
-            {/* Pipeline Stage */}
+            {/* Pipeline Stage - Non-editable for now (requires dropdown with stages) */}
             {currentStage && (
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-gray-500" />
@@ -385,7 +516,7 @@ export default function LeadDetail() {
               </div>
             )}
             
-            {/* Status */}
+            {/* Status - Non-editable (system field) */}
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-gray-500" />
               <div>
@@ -404,69 +535,130 @@ export default function LeadDetail() {
             </div>
             
             {/* Potential Value */}
-            {lead.value && (
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-gray-500" />
-                <div>
-                  <div className="text-sm text-gray-500">Potential Value</div>
-                  <div className="font-medium" data-testid="text-lead-value">
-                    ${lead.value.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            )}
+            {renderEditableField('value', 'Potential Value', lead.value, DollarSign, 'number')}
             
             {/* Probability */}
-            {lead.probability !== null && lead.probability !== undefined && (
-              <div className="flex items-center gap-2">
-                <Percent className="h-4 w-4 text-gray-500" />
-                <div>
-                  <div className="text-sm text-gray-500">Probability</div>
-                  <div className="font-medium" data-testid="text-lead-probability">
-                    {lead.probability}%
-                  </div>
-                </div>
-              </div>
-            )}
+            {renderEditableField('probability', 'Probability (%)', lead.probability, Percent, 'number')}
             
-            {/* Assigned To */}
-            {assignedStaff && (
+            {/* Assigned To - Select dropdown */}
+            {editingLeadField === 'assignedTo' ? (
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-gray-500" />
-                <div>
+                <div className="flex-1">
                   <div className="text-sm text-gray-500">Assigned To</div>
-                  <div className="font-medium" data-testid="text-lead-assigned-to">
-                    {assignedStaff.firstName} {assignedStaff.lastName}
+                  <div className="flex items-center gap-2 mt-1">
+                    <Select
+                      value={leadFieldEditValue ?? ''}
+                      onValueChange={setLeadFieldEditValue}
+                    >
+                      <SelectTrigger className="flex-1" data-testid="select-lead-assignedTo">
+                        <SelectValue placeholder="Select staff..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {staff.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.firstName} {s.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveLeadField('assignedTo')}
+                      disabled={updateLeadFieldMutation.isPending}
+                      data-testid="button-save-lead-assignedTo"
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleCancelLeadFieldEdit}
+                      data-testid="button-cancel-lead-assignedTo"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-gray-500" />
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500">Assigned To</div>
+                  <div
+                    className="font-medium cursor-pointer hover:bg-gray-50 p-2 rounded border border-transparent hover:border-gray-200 transition-colors"
+                    onClick={() => handleStartEditLeadField('assignedTo', lead.assignedTo)}
+                    data-testid="text-lead-assignedTo"
+                  >
+                    {assignedStaff ? `${assignedStaff.firstName} ${assignedStaff.lastName}` : <span className="text-gray-400">Click to assign...</span>}
                   </div>
                 </div>
               </div>
             )}
             
-            {/* Source */}
-            {lead.source && (
+            {/* Source - Select dropdown */}
+            {editingLeadField === 'source' ? (
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-gray-500" />
-                <div>
+                <div className="flex-1">
                   <div className="text-sm text-gray-500">Source</div>
-                  <div className="font-medium" data-testid="text-lead-source">{lead.source}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Select
+                      value={leadFieldEditValue ?? ''}
+                      onValueChange={setLeadFieldEditValue}
+                    >
+                      <SelectTrigger className="flex-1" data-testid="select-lead-source">
+                        <SelectValue placeholder="Select source..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leadSources.filter(s => s.active).map((source) => (
+                          <SelectItem key={source.id} value={source.name}>
+                            {source.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveLeadField('source')}
+                      disabled={updateLeadFieldMutation.isPending}
+                      data-testid="button-save-lead-source"
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleCancelLeadFieldEdit}
+                      data-testid="button-cancel-lead-source"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-gray-500" />
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500">Source</div>
+                  <div
+                    className="font-medium cursor-pointer hover:bg-gray-50 p-2 rounded border border-transparent hover:border-gray-200 transition-colors"
+                    onClick={() => handleStartEditLeadField('source', lead.source)}
+                    data-testid="text-lead-source"
+                  >
+                    {lead.source || <span className="text-gray-400">Click to add...</span>}
+                  </div>
                 </div>
               </div>
             )}
             
             {/* Last Contact Date */}
-            {lead.lastContactDate && (
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-500" />
-                <div>
-                  <div className="text-sm text-gray-500">Last Contact</div>
-                  <div className="font-medium" data-testid="text-lead-last-contact">
-                    {format(new Date(lead.lastContactDate), "MMM d, yyyy")}
-                  </div>
-                </div>
-              </div>
-            )}
+            {renderEditableField('lastContactDate', 'Last Contact', lead.lastContactDate ? format(new Date(lead.lastContactDate), "MMM d, yyyy") : null, Calendar, 'date')}
             
-            {/* Created Date */}
+            {/* Created Date - Non-editable (system field) */}
             {lead.createdAt && (
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-gray-500" />
@@ -482,86 +674,100 @@ export default function LeadDetail() {
         </CardContent>
       </Card>
 
-      {/* Custom Fields Card - Inline Editable */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Custom Fields</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {customFields.length === 0 ? (
-            <div className="text-center py-8 text-gray-500" data-testid="text-no-custom-fields">
-              No custom fields configured.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {customFields.map(field => {
-                const customFieldData = lead.customFieldData as Record<string, any> || {};
-                const value = customFieldData[field.name];
-                const isEditing = editingCustomField === field.name;
-                
-                return (
-                  <div key={field.id} className="space-y-1">
-                    <div className="text-sm font-medium text-gray-700">{field.name}</div>
-                    {isEditing ? (
-                      <div className="flex items-center gap-2">
-                        {field.type === 'select' && field.options ? (
-                          <Select
-                            value={customFieldEditValue ?? ''}
-                            onValueChange={setCustomFieldEditValue}
-                          >
-                            <SelectTrigger className="flex-1" data-testid={`select-custom-field-${field.id}`}>
-                              <SelectValue placeholder="Select..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {field.options.map((option: string) => (
-                                <SelectItem key={option} value={option}>
-                                  {option}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+      {/* Custom Fields Card - Collapsible and Collapsed by Default */}
+      {filteredCustomFields.length > 0 && (
+        <Card>
+          <Collapsible open={isCustomFieldsOpen} onOpenChange={setIsCustomFieldsOpen}>
+            <CardHeader className="cursor-pointer" onClick={() => setIsCustomFieldsOpen(!isCustomFieldsOpen)}>
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between w-full">
+                  <CardTitle className="flex items-center gap-2">
+                    Custom Fields
+                    <span className="text-sm font-normal text-gray-500">
+                      ({filteredCustomFields.length} {filteredCustomFields.length === 1 ? 'field' : 'fields'})
+                    </span>
+                  </CardTitle>
+                  {isCustomFieldsOpen ? (
+                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
+              </CollapsibleTrigger>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredCustomFields.map(field => {
+                    const customFieldData = lead.customFieldData as Record<string, any> || {};
+                    const value = customFieldData[field.name];
+                    const isEditing = editingCustomField === field.name;
+                    
+                    return (
+                      <div key={field.id} className="space-y-1">
+                        <div className="text-sm font-medium text-gray-700">{field.name}</div>
+                        {isEditing ? (
+                          <div className="flex items-center gap-2">
+                            {field.type === 'select' && field.options ? (
+                              <Select
+                                value={customFieldEditValue ?? ''}
+                                onValueChange={setCustomFieldEditValue}
+                              >
+                                <SelectTrigger className="flex-1" data-testid={`select-custom-field-${field.id}`}>
+                                  <SelectValue placeholder="Select..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {field.options.map((option: string) => (
+                                    <SelectItem key={option} value={option}>
+                                      {option}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input
+                                type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                                value={customFieldEditValue ?? ''}
+                                onChange={(e) => setCustomFieldEditValue(e.target.value)}
+                                className="flex-1"
+                                data-testid={`input-custom-field-${field.id}`}
+                              />
+                            )}
+                            <Button
+                              size="sm"
+                              onClick={() => handleSaveCustomField(field.name, field.type)}
+                              disabled={updateCustomFieldMutation.isPending}
+                              data-testid={`button-save-custom-field-${field.id}`}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={handleCancelCustomFieldEdit}
+                              data-testid={`button-cancel-custom-field-${field.id}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
                         ) : (
-                          <Input
-                            type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                            value={customFieldEditValue ?? ''}
-                            onChange={(e) => setCustomFieldEditValue(e.target.value)}
-                            className="flex-1"
-                            data-testid={`input-custom-field-${field.id}`}
-                          />
+                          <div
+                            className="text-sm text-gray-600 cursor-pointer hover:bg-gray-50 p-2 rounded border border-transparent hover:border-gray-200 transition-colors"
+                            onClick={() => handleStartEditCustomField(field.name, value)}
+                            data-testid={`custom-field-${field.id}`}
+                          >
+                            {value !== null && value !== undefined ? String(value) : <span className="text-gray-400">Click to add...</span>}
+                          </div>
                         )}
-                        <Button
-                          size="sm"
-                          onClick={() => handleSaveCustomField(field.name, field.type)}
-                          disabled={updateCustomFieldMutation.isPending}
-                          data-testid={`button-save-custom-field-${field.id}`}
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={handleCancelCustomFieldEdit}
-                          data-testid={`button-cancel-custom-field-${field.id}`}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
                       </div>
-                    ) : (
-                      <div
-                        className="text-sm text-gray-600 cursor-pointer hover:bg-gray-50 p-2 rounded border border-transparent hover:border-gray-200 transition-colors"
-                        onClick={() => handleStartEditCustomField(field.name, value)}
-                        data-testid={`custom-field-${field.id}`}
-                      >
-                        {value !== null && value !== undefined ? String(value) : <span className="text-gray-400">Click to add...</span>}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+      )}
 
       {/* Tags Card - Inline Editable */}
       <Card>
