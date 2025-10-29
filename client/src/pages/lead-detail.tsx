@@ -1,25 +1,52 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation, Link, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Mail, Phone, Building2, Calendar, DollarSign, User, CheckCircle2, Edit, Tag as TagIcon, FileText, Percent, MessageSquare, StickyNote, ListTodo, CalendarCheck } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Mail, Phone, Building2, Calendar, DollarSign, User, CheckCircle2, Tag as TagIcon, FileText, Percent, MessageSquare, StickyNote, ListTodo, CalendarCheck, Trash2, ArrowRight, X, Plus } from "lucide-react";
 import { format } from "date-fns";
 import type { Lead, Task, User as StaffUser, LeadPipelineStage, CustomField, Tag } from "@shared/schema";
 import LeadNotesSection from "@/components/forms/lead-notes-section";
-import CustomFieldsLeadForm from "@/components/forms/custom-fields-lead-form";
 import CustomFieldRenderer from "@/components/CustomFieldRenderer";
 import LeadAppointmentsDisplay from "@/components/forms/lead-appointments-display";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function LeadDetail() {
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/leads/:id");
-  const [isEditMode, setIsEditMode] = useState(false);
   const [activeTab, setActiveTab] = useState<"notes" | "tasks" | "appointments">("notes");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [editingCustomField, setEditingCustomField] = useState<string | null>(null);
+  const [editingTags, setEditingTags] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [customFieldEditValue, setCustomFieldEditValue] = useState<any>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Extract lead ID from route params
   const leadId = params?.id;
+
+  // Fetch current user for role checking
+  const { data: currentUser } = useQuery<StaffUser>({
+    queryKey: ["/api/auth/current-user"],
+  });
+
+  // Check if user is admin or manager
+  const isAdminOrManager = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
 
   // Fetch lead data - using the specific lead endpoint
   const { data: lead, isLoading: leadLoading } = useQuery<Lead>({
@@ -54,6 +81,171 @@ export default function LeadDetail() {
   const { data: customFields = [] } = useQuery<CustomField[]>({
     queryKey: ["/api/custom-fields"],
   });
+
+  // Convert to Client mutation
+  const convertToClientMutation = useMutation({
+    mutationFn: async () => {
+      if (!lead) throw new Error("Lead data not available");
+      
+      // Create a client from the lead data
+      const clientData = {
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        company: lead.company,
+        industry: lead.industry,
+        website: lead.website,
+        address: lead.address,
+        city: lead.city,
+        state: lead.state,
+        zip: lead.zip,
+        country: lead.country,
+        tags: lead.tags,
+        assignedTeam: lead.assignedTo ? [lead.assignedTo] : [],
+        leadId: lead.id, // This triggers automatic deal creation in the backend
+      };
+      
+      return await apiRequest("POST", "/api/clients", clientData);
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Lead converted to client",
+        description: "The lead has been successfully converted to a client.",
+      });
+      // Redirect to the client detail page
+      setLocation(`/clients/${data.id}`);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to convert lead to client.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("DELETE", `/api/leads/${leadId}`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Lead deleted",
+        description: "The lead has been successfully deleted.",
+      });
+      setLocation("/leads");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete lead.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update custom field mutation
+  const updateCustomFieldMutation = useMutation({
+    mutationFn: async ({ fieldName, value }: { fieldName: string; value: any }) => {
+      const customFieldData = { ...(lead?.customFieldData as Record<string, any> || {}), [fieldName]: value };
+      return await apiRequest("PUT", `/api/leads/${leadId}`, {
+        customFields: customFieldData,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/leads/${leadId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      setEditingCustomField(null);
+      toast({
+        title: "Custom field updated",
+        description: "The custom field has been successfully updated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update custom field.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update tags mutation
+  const updateTagsMutation = useMutation({
+    mutationFn: async (newTags: string[]) => {
+      return await apiRequest("PUT", `/api/leads/${leadId}`, {
+        tags: newTags,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/leads/${leadId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      setEditingTags(false);
+      toast({
+        title: "Tags updated",
+        description: "The tags have been successfully updated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update tags.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteLead = () => {
+    deleteMutation.mutate();
+    setShowDeleteDialog(false);
+  };
+
+  const handleSaveCustomField = (fieldName: string, fieldType: string) => {
+    // Convert value based on field type before saving
+    let valueToSave = customFieldEditValue;
+    
+    if (fieldType === 'number' && customFieldEditValue !== null && customFieldEditValue !== '') {
+      valueToSave = Number(customFieldEditValue);
+    } else if (fieldType === 'date' && customFieldEditValue) {
+      valueToSave = customFieldEditValue; // Date inputs already return proper format
+    }
+    
+    updateCustomFieldMutation.mutate({ fieldName, value: valueToSave });
+  };
+
+  const handleCancelCustomFieldEdit = () => {
+    setEditingCustomField(null);
+    setCustomFieldEditValue(null);
+  };
+
+  const handleStartEditCustomField = (fieldName: string, currentValue: any) => {
+    setEditingCustomField(fieldName);
+    // Use nullish coalescing to preserve falsy values like 0, false, empty string
+    setCustomFieldEditValue(currentValue ?? '');
+  };
+
+  const handleStartEditTags = () => {
+    setEditingTags(true);
+    setSelectedTags(lead?.tags || []);
+  };
+
+  const handleSaveTags = () => {
+    updateTagsMutation.mutate(selectedTags);
+  };
+
+  const handleCancelTagsEdit = () => {
+    setEditingTags(false);
+    setSelectedTags([]);
+  };
+
+  const handleToggleTag = (tagName: string) => {
+    if (selectedTags.includes(tagName)) {
+      setSelectedTags(selectedTags.filter(t => t !== tagName));
+    } else {
+      setSelectedTags([...selectedTags, tagName]);
+    }
+  };
 
   if (leadLoading) {
     return (
@@ -92,7 +284,7 @@ export default function LeadDetail() {
             <h1 className="text-3xl font-bold" data-testid="text-lead-name">
               {lead.name}
             </h1>
-            {currentStage && !isEditMode && (
+            {currentStage && (
               <Badge 
                 className="mt-2"
                 style={{ backgroundColor: currentStage.color }}
@@ -103,52 +295,38 @@ export default function LeadDetail() {
             )}
           </div>
         </div>
-        {!isEditMode ? (
-          <Button
-            onClick={() => setIsEditMode(true)}
-            className="flex items-center gap-2"
-            data-testid="button-edit-lead"
-          >
-            <Edit className="h-4 w-4" />
-            Edit Lead
-          </Button>
-        ) : (
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={() => setIsEditMode(false)}
             className="flex items-center gap-2"
-            data-testid="button-cancel-edit"
+            onClick={() => convertToClientMutation.mutate()}
+            disabled={convertToClientMutation.isPending}
+            data-testid="button-convert-to-client"
           >
-            Cancel
+            <ArrowRight className="h-4 w-4" />
+            {convertToClientMutation.isPending ? "Converting..." : "Convert to Client"}
           </Button>
-        )}
+          {isAdminOrManager && (
+            <Button
+              variant="destructive"
+              onClick={() => setShowDeleteDialog(true)}
+              className="flex items-center gap-2"
+              data-testid="button-delete-lead"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Lead
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Edit Mode - Show Form Inline */}
-      {isEditMode && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Edit Lead</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CustomFieldsLeadForm
-              lead={lead}
-              onSuccess={() => setIsEditMode(false)}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* View Mode - Show Lead Details */}
-      {!isEditMode && (
-        <>
-          {/* Lead Details Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Lead Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Lead Details Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lead Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Name */}
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-gray-500" />
@@ -304,65 +482,167 @@ export default function LeadDetail() {
         </CardContent>
       </Card>
 
-      {/* Tags Card */}
-      {lead.tags && lead.tags.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TagIcon className="h-5 w-5" />
-              Tags
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {lead.tags.map((tagName: string, index: number) => {
-                const tag = tags.find(t => t.name === tagName);
+      {/* Custom Fields Card - Inline Editable */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Custom Fields</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {customFields.length === 0 ? (
+            <div className="text-center py-8 text-gray-500" data-testid="text-no-custom-fields">
+              No custom fields configured.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {customFields.map(field => {
+                const customFieldData = lead.customFieldData as Record<string, any> || {};
+                const value = customFieldData[field.name];
+                const isEditing = editingCustomField === field.name;
+                
                 return (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    style={{ backgroundColor: tag?.color ? `${tag.color}20` : undefined }}
-                    data-testid={`badge-tag-${index}`}
-                  >
-                    {tagName}
-                  </Badge>
+                  <div key={field.id} className="space-y-1">
+                    <div className="text-sm font-medium text-gray-700">{field.name}</div>
+                    {isEditing ? (
+                      <div className="flex items-center gap-2">
+                        {field.type === 'select' && field.options ? (
+                          <Select
+                            value={customFieldEditValue ?? ''}
+                            onValueChange={setCustomFieldEditValue}
+                          >
+                            <SelectTrigger className="flex-1" data-testid={`select-custom-field-${field.id}`}>
+                              <SelectValue placeholder="Select..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {field.options.map((option: string) => (
+                                <SelectItem key={option} value={option}>
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                            value={customFieldEditValue ?? ''}
+                            onChange={(e) => setCustomFieldEditValue(e.target.value)}
+                            className="flex-1"
+                            data-testid={`input-custom-field-${field.id}`}
+                          />
+                        )}
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveCustomField(field.name, field.type)}
+                          disabled={updateCustomFieldMutation.isPending}
+                          data-testid={`button-save-custom-field-${field.id}`}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleCancelCustomFieldEdit}
+                          data-testid={`button-cancel-custom-field-${field.id}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div
+                        className="text-sm text-gray-600 cursor-pointer hover:bg-gray-50 p-2 rounded border border-transparent hover:border-gray-200 transition-colors"
+                        onClick={() => handleStartEditCustomField(field.name, value)}
+                        data-testid={`custom-field-${field.id}`}
+                      >
+                        {value !== null && value !== undefined ? String(value) : <span className="text-gray-400">Click to add...</span>}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Custom Fields Card */}
-      {lead.customFieldData && Object.keys(lead.customFieldData as Record<string, any>).length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Custom Fields</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {customFields
-                .filter(field => {
-                  const customFieldData = lead.customFieldData as Record<string, any>;
-                  return customFieldData && customFieldData[field.name];
-                })
-                .map(field => {
-                  const customFieldData = lead.customFieldData as Record<string, any>;
-                  const value = customFieldData?.[field.name];
-                  
+      {/* Tags Card - Inline Editable */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TagIcon className="h-5 w-5" />
+            Tags
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {editingTags ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => {
+                  const isSelected = selectedTags.includes(tag.name);
                   return (
-                    <div key={field.id} className="space-y-1">
-                      <div className="text-sm font-medium text-gray-700">{field.name}</div>
-                      <div className="text-sm text-gray-600" data-testid={`custom-field-${field.id}`}>
-                        {value ? String(value) : '-'}
-                      </div>
-                    </div>
+                    <Badge
+                      key={tag.id}
+                      variant={isSelected ? "default" : "outline"}
+                      className="cursor-pointer"
+                      style={isSelected ? { backgroundColor: tag.color } : undefined}
+                      onClick={() => handleToggleTag(tag.name)}
+                      data-testid={`badge-tag-select-${tag.id}`}
+                    >
+                      {tag.name}
+                      {isSelected && <X className="h-3 w-3 ml-1" />}
+                    </Badge>
                   );
                 })}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleSaveTags}
+                  disabled={updateTagsMutation.isPending}
+                  data-testid="button-save-tags"
+                >
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCancelTagsEdit}
+                  data-testid="button-cancel-tags"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <div
+              className="cursor-pointer hover:bg-gray-50 p-4 rounded border border-transparent hover:border-gray-200 transition-colors min-h-[60px]"
+              onClick={handleStartEditTags}
+              data-testid="tags-display"
+            >
+              {lead.tags && lead.tags.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {lead.tags.map((tagName: string, index: number) => {
+                    const tag = tags.find(t => t.name === tagName);
+                    return (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        style={{ backgroundColor: tag?.color ? `${tag.color}20` : undefined }}
+                        data-testid={`badge-tag-${index}`}
+                      >
+                        {tagName}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-gray-400 flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Click to add tags...
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Tabs Section - Marketing Page Style */}
       <div className="border-b border-gray-200 mb-6">
@@ -491,8 +771,28 @@ export default function LeadDetail() {
           </Card>
         </div>
       )}
-        </>
-      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent data-testid="dialog-delete-lead">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Lead</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{lead.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteLead}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
