@@ -86,6 +86,11 @@ export default function Sales() {
       return true;
     }
     
+    // Sales Managers can manage targets
+    if (currentUser?.roles?.includes(ROLE_NAMES.SALES_MANAGER)) {
+      return true;
+    }
+    
     // Check if user has the 'settings' module 'canManage' permission
     if (!currentUser?.permissions) {
       return false;
