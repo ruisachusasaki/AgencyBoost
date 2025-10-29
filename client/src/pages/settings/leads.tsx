@@ -42,7 +42,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertLeadSourceSchema, type LeadSource, type InsertLeadSource } from "@shared/schema";
 import { Link } from "wouter";
-import { ArrowLeft, Plus, Edit, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, ChevronUp, ChevronDown, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LeadsSettingsPage() {
@@ -230,30 +230,36 @@ export default function LeadsSettingsPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/settings">
-            <Button variant="ghost" size="icon" data-testid="button-back-to-settings">
-              <ArrowLeft className="h-4 w-4" />
+    <div className="container mx-auto p-6">
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <Link to="/settings">
+            <Button variant="outline" size="sm" data-testid="button-back-to-settings">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
             </Button>
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Lead Sources</h1>
-            <p className="text-muted-foreground" data-testid="text-page-description">
-              Manage customizable source options for tracking where leads come from
-            </p>
-          </div>
         </div>
-        <Button 
-          onClick={() => setShowAddDialog(true)}
-          className="bg-primary hover:bg-primary/90"
-          data-testid="button-add-source"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Source
-        </Button>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Target className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold" data-testid="text-page-title">Lead Sources</h1>
+              <p className="text-muted-foreground" data-testid="text-page-description">
+                Manage customizable source options for tracking where leads come from
+              </p>
+            </div>
+          </div>
+          <Button 
+            onClick={() => setShowAddDialog(true)}
+            className="bg-primary hover:bg-primary/90"
+            data-testid="button-add-source"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Source
+          </Button>
+        </div>
       </div>
 
       {/* Lead Sources List */}
