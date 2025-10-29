@@ -4,7 +4,6 @@ import { useLocation, Link, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, Mail, Phone, Building2, Calendar, DollarSign, User, CheckCircle2, Edit, Tag as TagIcon, FileText, Percent, MessageSquare, StickyNote, ListTodo, CalendarCheck } from "lucide-react";
 import { format } from "date-fns";
 import type { Lead, Task, User as StaffUser, LeadPipelineStage, CustomField, Tag } from "@shared/schema";
@@ -16,7 +15,7 @@ import LeadAppointmentsDisplay from "@/components/forms/lead-appointments-displa
 export default function LeadDetail() {
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/leads/:id");
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [activeTab, setActiveTab] = useState<"notes" | "tasks" | "appointments">("notes");
   
   // Extract lead ID from route params
@@ -93,7 +92,7 @@ export default function LeadDetail() {
             <h1 className="text-3xl font-bold" data-testid="text-lead-name">
               {lead.name}
             </h1>
-            {currentStage && (
+            {currentStage && !isEditMode && (
               <Badge 
                 className="mt-2"
                 style={{ backgroundColor: currentStage.color }}
@@ -104,23 +103,52 @@ export default function LeadDetail() {
             )}
           </div>
         </div>
-        <Button
-          onClick={() => setIsEditDialogOpen(true)}
-          className="flex items-center gap-2"
-          data-testid="button-edit-lead"
-        >
-          <Edit className="h-4 w-4" />
-          Edit Lead
-        </Button>
+        {!isEditMode ? (
+          <Button
+            onClick={() => setIsEditMode(true)}
+            className="flex items-center gap-2"
+            data-testid="button-edit-lead"
+          >
+            <Edit className="h-4 w-4" />
+            Edit Lead
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            onClick={() => setIsEditMode(false)}
+            className="flex items-center gap-2"
+            data-testid="button-cancel-edit"
+          >
+            Cancel
+          </Button>
+        )}
       </div>
 
-      {/* Lead Details Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lead Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Edit Mode - Show Form Inline */}
+      {isEditMode && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Edit Lead</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CustomFieldsLeadForm
+              lead={lead}
+              onSuccess={() => setIsEditMode(false)}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* View Mode - Show Lead Details */}
+      {!isEditMode && (
+        <>
+          {/* Lead Details Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Lead Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Name */}
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-gray-500" />
@@ -463,19 +491,8 @@ export default function LeadDetail() {
           </Card>
         </div>
       )}
-
-      {/* Edit Lead Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Lead</DialogTitle>
-          </DialogHeader>
-          <CustomFieldsLeadForm
-            lead={lead}
-            onSuccess={() => setIsEditDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
+        </>
+      )}
     </div>
   );
 }
