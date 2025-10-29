@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -58,8 +57,6 @@ export default function Staff() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [staffToDelete, setStaffToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Debounce search term to prevent rapid API calls
   useEffect(() => {
@@ -235,24 +232,10 @@ export default function Staff() {
   };
 
   const handleDeleteStaff = (staffId: string, staffName: string) => {
-    console.log('Delete button clicked for:', { staffId, staffName });
-    
-    // Force immediate confirmation using native dialog for now
     const confirmed = window.confirm(`Are you sure you want to delete ${staffName}? This action will deactivate the staff member and cannot be undone.`);
     
     if (confirmed) {
-      console.log('User confirmed deletion, calling mutation');
       deleteStaffMutation.mutate(staffId);
-    } else {
-      console.log('User cancelled deletion');
-    }
-  };
-
-  const confirmDeleteStaff = () => {
-    if (staffToDelete) {
-      deleteStaffMutation.mutate(staffToDelete.id);
-      setDeleteDialogOpen(false);
-      setStaffToDelete(null);
     }
   };
 
