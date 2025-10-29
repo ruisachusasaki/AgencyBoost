@@ -26,16 +26,6 @@ interface HeaderProps {
   onMenuClick: () => void;
 }
 
-const pageNames: Record<string, string> = {
-  "/": "Dashboard",
-  "/clients": "Clients",
-  "/projects": "Projects", 
-  "/campaigns": "Campaigns",
-  "/leads": "Leads",
-  "/tasks": "Tasks",
-  "/reports": "Reports"
-};
-
 // Notification Component
 function NotificationButton() {
   const queryClient = useQueryClient();
@@ -207,12 +197,9 @@ function NotificationButton() {
 }
 
 export default function Header({ onMenuClick }: HeaderProps) {
-  const [location] = useLocation();
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [showLoginAsDialog, setShowLoginAsDialog] = useState(false);
-
-  const pageName = pageNames[location] || "Page";
 
   // Fetch current user data with authentication info
   const { data: authUser } = useQuery({
@@ -251,7 +238,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
               <Menu className="h-5 w-5 text-slate-600" />
             </Button>
           )}
-          <h2 className="text-2xl font-bold text-slate-900">{pageName}</h2>
         </div>
         
         <div className="flex items-center gap-4">
