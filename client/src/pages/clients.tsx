@@ -298,6 +298,85 @@ export default function Clients() {
     }
   }, [smartListsData]);
 
+  // Save Smart List mutation
+  const saveSmartListMutation = useMutation({
+    mutationFn: async (data: { name: string; description?: string; filters: ClientFilter; visibility: 'personal' | 'shared' | 'universal'; sharedWith?: string[] }) => {
+      return await apiRequest("POST", "/api/smart-lists", {
+        name: data.name,
+        description: data.description,
+        entityType: "clients",
+        filters: data.filters,
+        visibility: data.visibility,
+        sharedWith: data.sharedWith,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
+      toast({
+        title: "Success",
+        description: "Smart List saved successfully."
+      });
+      setSmartListName('');
+      setSmartListDescription('');
+      setShareVisibility('personal');
+      setShareWithUsers([]);
+      setIsSaveSmartListOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save Smart List.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete Smart List mutation
+  const deleteSmartListMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/smart-lists/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
+      toast({
+        title: "Smart List Deleted",
+        description: "Smart List removed successfully."
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete Smart List.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update Smart List mutation
+  const updateSmartListMutation = useMutation({
+    mutationFn: async (data: { id: string; visibility: 'personal' | 'shared' | 'universal'; sharedWith?: string[] }) => {
+      return await apiRequest("PUT", `/api/smart-lists/${data.id}`, {
+        visibility: data.visibility,
+        sharedWith: data.sharedWith
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
+      toast({
+        title: "Sharing Updated",
+        description: "Smart List sharing settings updated successfully."
+      });
+      setIsShareSmartListOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update sharing settings.",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Helper function to get contact owner display name
   const getContactOwnerName = (contactOwnerId: string | null) => {
     if (!contactOwnerId || !staff) return '-';
@@ -712,122 +791,79 @@ export default function Clients() {
   // Update Smart List sharing
   const handleUpdateSharing = () => {
     if (!shareListId) return;
-    try {
-      const updatedLists = savedSmartLists.map(list => {
-        if (list.id === shareListId) {
-          return {
-            ...list,
-            visibility: shareVisibility,
-            sharedWith: shareVisibility === 'shared' ? shareWithUsers : undefined,
-            updatedAt: new Date()
-          };
-        }
-        return list;
-      });
-      
-      setSavedSmartLists(updatedLists);
-      localStorage.setItem('smartLists', JSON.stringify(updatedLists));
-      
-      toast({
-        title: "Sharing Updated",
-        description: "Smart List sharing settings updated successfully."
-      });
-      
-      setIsShareSmartListOpen(false);
-      setShareListId(null);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update sharing settings.",
-        variant: "destructive"
-      });
-    }
+    handleUpdateSmartList(shareListId);
+    setShareListId(null);
   };
 
   // Delete a Smart List
   const handleDeleteSmartList = (smartListId: string) => {
-    try {
-      const smartList = savedSmartLists.find(list => list.id === smartListId);
-      const currentUserId = currentUser?.id || 'current-user';
-      
-      // Only allow deletion if user is the creator
-      // Handle legacy Smart Lists that might not have proper user IDs
-      const canDelete = !smartList?.createdBy || 
-                       smartList.createdBy === currentUserId || 
-                       smartList.createdBy === 'current-user';
-      
-      if (!canDelete) {
-        toast({
-          title: "Permission Denied",
-          description: "You can only delete Smart Lists you created.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const updatedLists = savedSmartLists.filter(list => list.id !== smartListId);
-      setSavedSmartLists(updatedLists);
-      localStorage.setItem('smartLists', JSON.stringify(updatedLists));
-      
-      if (activeSmartList === smartListId) {
-        setActiveSmartList(null);
-        setActiveTab("all-clients");
-        setCurrentFilter({ conditions: [], logic: 'AND' });
-      }
-
-      toast({
-        title: "Smart List Deleted",
-        description: "Smart List removed successfully."
-      });
-    } catch (error) {
+    const listToDelete = savedSmartLists.find(list => list.id === smartListId);
+    
+    if (!listToDelete) {
       toast({
         title: "Error",
-        description: "Failed to delete Smart List.",
+        description: "Smart List not found.",
         variant: "destructive"
       });
+      return;
     }
+
+    if (listToDelete.createdBy !== currentUser?.id && !isAdmin) {
+      toast({
+        title: "Permission Denied",
+        description: "You can only delete Smart Lists you created.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Clear active smart list if it's being deleted
+    if (activeSmartList === smartListId) {
+      setActiveSmartList(null);
+      setActiveTab("all-clients");
+      setCurrentFilter({ conditions: [], logic: 'AND' });
+    }
+
+    deleteSmartListMutation.mutate(smartListId);
+  };
+
+  const handleUpdateSmartList = (smartListId: string) => {
+    if (!shareVisibility) return;
+
+    updateSmartListMutation.mutate({
+      id: smartListId,
+      visibility: shareVisibility,
+      sharedWith: shareVisibility === 'shared' ? shareWithUsers : undefined,
+    });
   };
 
   // Save Smart List
   const handleSaveSmartList = async () => {
-    try {
-      console.log('Saving Smart List with currentFilter:', currentFilter);
-      console.log('Current filter conditions:', currentFilter.conditions);
-      
-      const smartList: SmartList = {
-        id: `smart-list-${Date.now()}`,
-        name: smartListName,
-        description: smartListDescription,
-        filters: currentFilter,
-        createdBy: currentUser?.id || 'current-user',
-        visibility: shareVisibility,
-        sharedWith: shareVisibility === 'shared' ? shareWithUsers : undefined,
-        isDefault: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      const updatedLists = [...savedSmartLists, smartList];
-      setSavedSmartLists(updatedLists);
-      localStorage.setItem('smartLists', JSON.stringify(updatedLists));
-
+    if (!smartListName.trim()) {
       toast({
-        title: "Success",
-        description: "Smart List saved successfully."
-      });
-
-      setSmartListName('');
-      setSmartListDescription('');
-      setShareVisibility('personal');
-      setShareWithUsers([]);
-      setIsSaveSmartListOpen(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save Smart List.",
+        title: "Validation Error",
+        description: "Smart List name is required.",
         variant: "destructive"
       });
+      return;
     }
+
+    if (shareVisibility === 'shared' && (!shareWithUsers || shareWithUsers.length === 0)) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one user to share with.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    saveSmartListMutation.mutate({
+      name: smartListName,
+      description: smartListDescription,
+      filters: currentFilter,
+      visibility: shareVisibility,
+      sharedWith: shareVisibility === 'shared' ? shareWithUsers : undefined,
+    });
   };
 
   const getStatusColor = (status: string) => {
