@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,8 @@ import {
   AlertTriangle,
   ChevronDown,
   CheckCircle,
-  Target
+  Target,
+  ChevronUp
 } from "lucide-react";
 
 export default function Sales() {
@@ -128,6 +129,12 @@ export default function Sales() {
     targetAmount: "",
   });
   const [targetTimeFilter, setTargetTimeFilter] = useState<string>("this-year");
+
+  // Sales Rep Report sorting state
+  type SalesRepSortField = 'name' | 'department' | 'appointments' | 'pitches' | 'closedDeals' | 'totalLeads' | 'closeRate' | 'avgMRR' | 'totalValue';
+  type SortOrder = 'asc' | 'desc';
+  const [salesRepSortField, setSalesRepSortField] = useState<SalesRepSortField>('name');
+  const [salesRepSortOrder, setSalesRepSortOrder] = useState<SortOrder>('asc');
 
   // Fetch data for Quote Builder
   const { data: clientsData } = useQuery<{ clients: any[] }>({
@@ -334,6 +341,102 @@ export default function Sales() {
       }
     });
   };
+
+  // Sales Rep Report Sorting
+  const handleSalesRepSort = (field: SalesRepSortField) => {
+    if (salesRepSortField === field) {
+      setSalesRepSortOrder(salesRepSortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSalesRepSortField(field);
+      setSalesRepSortOrder('asc');
+    }
+  };
+
+  const sortedSalesReps = useMemo(() => {
+    if (!salesRepReport?.salesReps) return [];
+    
+    return [...salesRepReport.salesReps].sort((a: any, b: any) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (salesRepSortField) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'department':
+          aValue = (a.department || '').toLowerCase();
+          bValue = (b.department || '').toLowerCase();
+          break;
+        case 'appointments':
+          aValue = a.metrics.appointments;
+          bValue = b.metrics.appointments;
+          break;
+        case 'pitches':
+          aValue = a.metrics.pitches;
+          bValue = b.metrics.pitches;
+          break;
+        case 'closedDeals':
+          aValue = a.metrics.closedDeals;
+          bValue = b.metrics.closedDeals;
+          break;
+        case 'totalLeads':
+          aValue = a.metrics.totalLeads;
+          bValue = b.metrics.totalLeads;
+          break;
+        case 'closeRate':
+          aValue = a.metrics.closeRate;
+          bValue = b.metrics.closeRate;
+          break;
+        case 'avgMRR':
+          aValue = a.metrics.avgMRR;
+          bValue = b.metrics.avgMRR;
+          break;
+        case 'totalValue':
+          aValue = a.metrics.totalValue;
+          bValue = b.metrics.totalValue;
+          break;
+      }
+
+      if (typeof aValue === 'string') {
+        return salesRepSortOrder === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      } else {
+        return salesRepSortOrder === 'asc'
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+    });
+  }, [salesRepReport, salesRepSortField, salesRepSortOrder]);
+
+  // Sortable Header Component for Sales Rep Table
+  const SalesRepSortableHeader = ({ field, children, align = 'left' }: { field: SalesRepSortField; children: React.ReactNode; align?: 'left' | 'right' }) => (
+    <th 
+      className={`px-4 py-3 text-sm font-medium cursor-pointer hover:bg-muted transition-colors ${align === 'right' ? 'text-right' : 'text-left'}`}
+      onClick={() => handleSalesRepSort(field)}
+    >
+      <div className={`flex items-center ${align === 'right' ? 'justify-end' : 'justify-between'}`}>
+        {children}
+        <div className="flex flex-col ml-2">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              salesRepSortField === field && salesRepSortOrder === 'asc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              salesRepSortField === field && salesRepSortOrder === 'desc' 
+                ? 'text-primary' 
+                : 'text-muted-foreground/40'
+            }`} 
+          />
+        </div>
+      </div>
+    </th>
+  );
 
   // Fetch bundle products when a bundle is selected
   const fetchBundleProducts = async (bundleId: string) => {
@@ -994,20 +1097,20 @@ export default function Sales() {
                           <table className="w-full">
                             <thead className="bg-muted">
                               <tr>
-                                <th className="px-4 py-3 text-left text-sm font-medium">Rep Name</th>
-                                <th className="px-4 py-3 text-left text-sm font-medium">Department</th>
-                                <th className="px-4 py-3 text-right text-sm font-medium">Appointments</th>
-                                <th className="px-4 py-3 text-right text-sm font-medium">Pitches</th>
-                                <th className="px-4 py-3 text-right text-sm font-medium">Closed</th>
-                                <th className="px-4 py-3 text-right text-sm font-medium">Total Leads</th>
-                                <th className="px-4 py-3 text-right text-sm font-medium">Close Rate</th>
-                                <th className="px-4 py-3 text-right text-sm font-medium">Avg MRR</th>
-                                <th className="px-4 py-3 text-right text-sm font-medium">Total Value</th>
+                                <SalesRepSortableHeader field="name">Rep Name</SalesRepSortableHeader>
+                                <SalesRepSortableHeader field="department">Department</SalesRepSortableHeader>
+                                <SalesRepSortableHeader field="appointments" align="right">Appointments</SalesRepSortableHeader>
+                                <SalesRepSortableHeader field="pitches" align="right">Pitches</SalesRepSortableHeader>
+                                <SalesRepSortableHeader field="closedDeals" align="right">Closed</SalesRepSortableHeader>
+                                <SalesRepSortableHeader field="totalLeads" align="right">Total Leads</SalesRepSortableHeader>
+                                <SalesRepSortableHeader field="closeRate" align="right">Close Rate</SalesRepSortableHeader>
+                                <SalesRepSortableHeader field="avgMRR" align="right">Avg MRR</SalesRepSortableHeader>
+                                <SalesRepSortableHeader field="totalValue" align="right">Total Value</SalesRepSortableHeader>
                               </tr>
                             </thead>
                             <tbody className="divide-y">
-                              {salesRepReport.salesReps && salesRepReport.salesReps.length > 0 ? (
-                                salesRepReport.salesReps.map((rep: any) => (
+                              {sortedSalesReps && sortedSalesReps.length > 0 ? (
+                                sortedSalesReps.map((rep: any) => (
                                   <tr key={rep.id} className="hover:bg-muted/50" data-testid={`row-sales-rep-${rep.id}`}>
                                     <td className="px-4 py-3 text-sm font-medium">{rep.name}</td>
                                     <td className="px-4 py-3 text-sm text-muted-foreground">{rep.department || '-'}</td>
