@@ -727,58 +727,75 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
-          {/* 10. Client */}
+          {/* 10. Client/Lead Combined */}
           <FormField
             control={form.control}
             name="clientId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Client (Optional)</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger data-testid="select-client">
-                      <SelectValue placeholder="Select client" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">No Client</SelectItem>
-                    {clients.map((client: Client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* 11. Lead */}
-          <FormField
-            control={form.control}
-            name="leadId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Lead (Optional)</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger data-testid="select-lead">
-                      <SelectValue placeholder="Select lead" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">No Lead</SelectItem>
-                    {leads.map((lead: any) => (
-                      <SelectItem key={lead.id} value={lead.id}>
-                        {lead.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              // Determine current value - check both clientId and leadId
+              const clientId = form.watch("clientId");
+              const leadId = form.watch("leadId");
+              const currentValue = clientId ? `client:${clientId}` : leadId ? `lead:${leadId}` : "";
+              
+              return (
+                <FormItem>
+                  <FormLabel>Client/Lead (Optional)</FormLabel>
+                  <Select 
+                    onValueChange={(value) => {
+                      if (value === "none" || !value) {
+                        form.setValue("clientId", "");
+                        form.setValue("leadId", "");
+                      } else if (value.startsWith("client:")) {
+                        form.setValue("clientId", value.replace("client:", ""));
+                        form.setValue("leadId", "");
+                      } else if (value.startsWith("lead:")) {
+                        form.setValue("leadId", value.replace("lead:", ""));
+                        form.setValue("clientId", "");
+                      }
+                    }} 
+                    value={currentValue}
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-client-lead">
+                        <SelectValue placeholder="Select client or lead" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      
+                      {/* Clients Section */}
+                      {clients.length > 0 && (
+                        <>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                            Clients
+                          </div>
+                          {clients.map((client: Client) => (
+                            <SelectItem key={`client-${client.id}`} value={`client:${client.id}`}>
+                              {client.name}
+                            </SelectItem>
+                          ))}
+                        </>
+                      )}
+                      
+                      {/* Leads Section */}
+                      {leads.length > 0 && (
+                        <>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1 pt-2">
+                            Leads
+                          </div>
+                          {leads.map((lead: any) => (
+                            <SelectItem key={`lead-${lead.id}`} value={`lead:${lead.id}`}>
+                              {lead.name}
+                            </SelectItem>
+                          ))}
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           {/* 12. Project */}
