@@ -34,7 +34,8 @@ import {
   StickyNote,
   ChevronLeft,
   Trash2,
-  BarChart3
+  BarChart3,
+  ChevronRight
 } from "lucide-react";
 
 interface DirectReport {
@@ -139,6 +140,8 @@ export default function OneOnOneMeetings() {
   const [selectedReport, setSelectedReport] = useState<DirectReport | null>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const meetingsPerPage = 10;
 
   // Fetch progression statuses
   const { data: progressionStatuses = [] } = useQuery<any[]>({
@@ -184,6 +187,7 @@ export default function OneOnOneMeetings() {
     setSelectedReport(report);
     setSelectedMeeting(null);
     setIsCreatingMeeting(false);
+    setCurrentPage(1); // Reset to first page
   };
 
   const handleBackToReports = () => {
@@ -332,44 +336,106 @@ export default function OneOnOneMeetings() {
                 <p className="text-sm mt-2">Create your first 1-on-1 meeting to get started.</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {meetings.map((meeting) => (
-                  <Card
-                    key={meeting.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleSelectMeeting(meeting)}
-                    data-testid={`card-meeting-${meeting.id}`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <Calendar className="h-5 w-5 text-primary" />
-                          <div>
-                            <p className="font-medium">
-                              Week of {format(new Date(meeting.weekOf), "MMM d, yyyy")}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              Meeting date: {format(new Date(meeting.meetingDate), "MMM d, yyyy")}
-                            </p>
+              <>
+                <div className="space-y-3">
+                  {meetings
+                    .slice((currentPage - 1) * meetingsPerPage, currentPage * meetingsPerPage)
+                    .map((meeting) => (
+                      <Card
+                        key={meeting.id}
+                        className="cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => handleSelectMeeting(meeting)}
+                        data-testid={`card-meeting-${meeting.id}`}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <Calendar className="h-5 w-5 text-primary" />
+                              <div>
+                                <p className="font-medium">
+                                  Week of {format(new Date(meeting.weekOf), "MMM d, yyyy")}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Meeting date: {format(new Date(meeting.meetingDate), "MMM d, yyyy")}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {meeting.feeling && (
+                                <Badge variant="outline" className="text-lg">
+                                  {FEELING_OPTIONS.find(f => f.value === meeting.feeling)?.emoji}
+                                </Badge>
+                              )}
+                              {meeting.performancePoints && (
+                                <Badge variant="secondary">
+                                  {meeting.performancePoints + (meeting.bonusPoints || 0)} pts
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {meeting.feeling && (
-                            <Badge variant="outline" className="text-lg">
-                              {FEELING_OPTIONS.find(f => f.value === meeting.feeling)?.emoji}
-                            </Badge>
-                          )}
-                          {meeting.performancePoints && (
-                            <Badge variant="secondary">
-                              {meeting.performancePoints + (meeting.bonusPoints || 0)} pts
-                            </Badge>
-                          )}
-                        </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+
+                {/* Pagination Controls */}
+                {meetings.length > meetingsPerPage && (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {((currentPage - 1) * meetingsPerPage) + 1} to {Math.min(currentPage * meetingsPerPage, meetings.length)} of {meetings.length} meetings
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        data-testid="button-prev-page"
+                      >
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.ceil(meetings.length / meetingsPerPage) }, (_, i) => i + 1)
+                          .filter(page => {
+                            // Show first page, last page, current page, and pages around current
+                            const totalPages = Math.ceil(meetings.length / meetingsPerPage);
+                            return page === 1 || 
+                                   page === totalPages || 
+                                   Math.abs(page - currentPage) <= 1;
+                          })
+                          .map((page, index, array) => (
+                            <>
+                              {index > 0 && array[index - 1] !== page - 1 && (
+                                <span key={`ellipsis-${page}`} className="px-2">...</span>
+                              )}
+                              <Button
+                                key={page}
+                                variant={currentPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentPage(page)}
+                                className="w-8 h-8 p-0"
+                                data-testid={`button-page-${page}`}
+                              >
+                                {page}
+                              </Button>
+                            </>
+                          ))}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(Math.ceil(meetings.length / meetingsPerPage), prev + 1))}
+                        disabled={currentPage >= Math.ceil(meetings.length / meetingsPerPage)}
+                        data-testid="button-next-page"
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
