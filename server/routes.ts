@@ -8538,7 +8538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         department: staff.department,
         position: staff.position,
         managerId: staff.managerId,
-        status: staff.status,
+        isActive: staff.isActive,
         createdAt: staff.createdAt,
         updatedAt: staff.updatedAt
       }).from(staff).where(eq(staff.id, req.params.id));
