@@ -29,6 +29,7 @@ const appointmentFormSchema = z.object({
   leadId: z.string().min(1, "Lead ID is required"),
   calendarId: z.string().min(1, "Calendar selection is required"),
   assignedTo: z.string().min(1, "Team member assignment is required"),
+  activityType: z.string().min(1, "Activity type is required"),
   title: z.string().min(1, "Meeting title is required"),
   description: z.string().optional(),
   location: z.string().optional(),
@@ -93,6 +94,7 @@ export default function LeadAppointmentBooking({ leadId, editingAppointment, onS
       leadId: leadId || "",
       calendarId: "",
       assignedTo: "",
+      activityType: "appointment",
       title: "",
       description: "",
       location: "",
@@ -119,6 +121,7 @@ export default function LeadAppointmentBooking({ leadId, editingAppointment, onS
         leadId: leadId || "",
         calendarId: editingAppointment.calendarId || "",
         assignedTo: editingAppointment.assignedTo || "",
+        activityType: editingAppointment.activityType || "appointment",
         title: editingAppointment.title || "",
         description: editingAppointment.description || "",
         location: editingAppointment.location || "",
@@ -153,6 +156,7 @@ export default function LeadAppointmentBooking({ leadId, editingAppointment, onS
         leadId: data.leadId,
         calendarId: data.calendarId,
         assignedTo: data.assignedTo,
+        activityType: data.activityType,
         title: data.title,
         description: data.description || undefined,
         location: data.location || undefined,
@@ -422,6 +426,35 @@ export default function LeadAppointmentBooking({ leadId, editingAppointment, onS
                           {member.firstName} {member.lastName}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Activity Type */}
+            <FormField
+              control={form.control}
+              name="activityType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Activity Type *
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-activity-type">
+                        <SelectValue placeholder="Select activity type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="appointment">Appointment (General Meeting)</SelectItem>
+                      <SelectItem value="pitch">Pitch (Sales Presentation)</SelectItem>
+                      <SelectItem value="demo">Demo (Product Demonstration)</SelectItem>
+                      <SelectItem value="follow_up">Follow-up Call/Meeting</SelectItem>
+                      <SelectItem value="proposal_sent">Proposal Sent</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

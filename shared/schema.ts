@@ -2473,6 +2473,7 @@ export const leadAppointments = pgTable("lead_appointments", {
   endTime: timestamp("end_time").notNull(),
   location: text("location"),
   status: text("status").notNull().default("confirmed"), // confirmed, showed, no_show, cancelled
+  activityType: text("activity_type").notNull().default("appointment"), // appointment, pitch, demo, follow_up, proposal_sent
   createdBy: uuid("created_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
