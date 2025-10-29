@@ -1479,42 +1479,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If this client was converted from a lead, create a deal from the accepted quote
       if (req.body.leadId) {
         try {
-          // Find the lead
-          const lead = await db
+          // Check if a deal already exists for this lead (idempotency check)
+          const existingDeal = await db
             .select()
-            .from(leads)
-            .where(eq(leads.id, req.body.leadId))
+            .from(deals)
+            .where(eq(deals.leadId, req.body.leadId))
             .limit(1);
 
-          if (lead && lead.length > 0) {
-            // Find any accepted quotes for this lead
-            const acceptedQuotes = await db
+          if (existingDeal && existingDeal.length > 0) {
+            console.log(`ℹ️ Deal already exists for lead ${req.body.leadId}, skipping creation`);
+          } else {
+            // Find the lead
+            const lead = await db
               .select()
-              .from(quotes)
-              .where(and(
-                sql`${quotes.leadId} = ${req.body.leadId}`,
-                eq(quotes.status, 'accepted')
-              ))
-              .orderBy(desc(quotes.createdAt))
+              .from(leads)
+              .where(eq(leads.id, req.body.leadId))
               .limit(1);
 
-            if (acceptedQuotes && acceptedQuotes.length > 0) {
-              const quote = acceptedQuotes[0];
-              
-              // Create a deal from the accepted quote
-              const dealData = {
-                leadId: req.body.leadId,
-                clientId: client.id,
-                name: `${client.name || lead[0].name} - ${lead[0].company || 'Deal'}`,
-                assignedTo: lead[0].assignedTo,
-                value: quote.total,
-                mrr: quote.mrr || 0, // Monthly recurring revenue if available
-                wonDate: new Date(),
-                notes: `Deal created from accepted quote #${quote.id}. Total value: $${quote.total}`,
-              };
+            if (lead && lead.length > 0) {
+              // Find any accepted quotes for this lead
+              const acceptedQuotes = await db
+                .select()
+                .from(quotes)
+                .where(and(
+                  sql`${quotes.leadId} = ${req.body.leadId}`,
+                  eq(quotes.status, 'accepted')
+                ))
+                .orderBy(desc(quotes.createdAt))
+                .limit(1);
 
-              await db.insert(deals).values(dealData);
-              console.log(`✅ Created deal for client ${client.id} from quote ${quote.id}`);
+              if (acceptedQuotes && acceptedQuotes.length > 0) {
+                const quote = acceptedQuotes[0];
+                
+                // Create a deal from the accepted quote
+                const dealData = {
+                  leadId: req.body.leadId,
+                  clientId: client.id,
+                  name: `${client.name || lead[0].name} - ${lead[0].company || 'Deal'}`,
+                  assignedTo: lead[0].assignedTo,
+                  value: quote.total,
+                  mrr: quote.mrr || 0, // Monthly recurring revenue if available
+                  wonDate: new Date(),
+                  notes: `Deal created from accepted quote #${quote.id}. Total value: $${quote.total}`,
+                };
+
+                await db.insert(deals).values(dealData);
+                console.log(`✅ Created deal for client ${client.id} from quote ${quote.id}`);
+              } else {
+                console.warn(`⚠️ No accepted quote found for lead ${req.body.leadId} - deal not created`);
+              }
             }
           }
         } catch (dealError) {
@@ -11731,6 +11744,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'pending': 'scheduled'
       };
 
+      // Validate and map activity type to allowed sales activity types
+      const validActivityTypes = ['appointment', 'pitch', 'demo', 'follow-up'];
+      let activityType = 'appointment'; // default
+      
+      if (appointment.activityType) {
+        const normalized = appointment.activityType.toLowerCase().trim();
+        if (validActivityTypes.includes(normalized)) {
+          activityType = normalized;
+        } else {
+          console.warn(`Invalid activity type "${appointment.activityType}" - using default "appointment"`);
+        }
+      }
+
       const outcome = statusToOutcomeMap[appointment.status] || 'scheduled';
       const completedAt = appointment.status === 'showed' ? new Date() : null;
 
@@ -11743,7 +11769,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const salesActivityData = {
         leadId: appointment.leadId,
-        type: appointment.activityType || 'appointment',
+        type: activityType,
         outcome,
         notes: `${appointment.title || ''}\n${appointment.description || ''}\n[appointment_id:${appointment.id}]`,
         assignedTo: appointment.assignedTo,
