@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle } from "lucide-react";
+import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle, FileText, Briefcase, Users, CheckSquare, Megaphone } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -196,9 +196,176 @@ function NotificationButton() {
   );
 }
 
+// Search Component
+function GlobalSearch() {
+  const [, setLocation] = useLocation();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch search results
+  const { data: searchResults, isLoading } = useQuery({
+    queryKey: ['/api/search', debouncedQuery],
+    queryFn: async () => {
+      if (!debouncedQuery || debouncedQuery.length < 2) {
+        return { results: [] };
+      }
+      const response = await apiRequest('GET', `/api/search?q=${encodeURIComponent(debouncedQuery)}`);
+      return await response.json();
+    },
+    enabled: debouncedQuery.length >= 2,
+  });
+
+  const results = searchResults?.results || [];
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'client':
+        return <Users className="h-4 w-4 text-blue-600" />;
+      case 'project':
+        return <Briefcase className="h-4 w-4 text-green-600" />;
+      case 'lead':
+        return <User className="h-4 w-4 text-purple-600" />;
+      case 'task':
+        return <CheckSquare className="h-4 w-4 text-orange-600" />;
+      case 'campaign':
+        return <Megaphone className="h-4 w-4 text-pink-600" />;
+      default:
+        return <FileText className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const getTypeBadgeColor = (type: string) => {
+    switch (type) {
+      case 'client':
+        return 'bg-blue-100 text-blue-700';
+      case 'project':
+        return 'bg-green-100 text-green-700';
+      case 'lead':
+        return 'bg-purple-100 text-purple-700';
+      case 'task':
+        return 'bg-orange-100 text-orange-700';
+      case 'campaign':
+        return 'bg-pink-100 text-pink-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getNavigationPath = (type: string, id: string) => {
+    switch (type) {
+      case 'client':
+        return `/clients/${id}`;
+      case 'project':
+        return `/projects/${id}`;
+      case 'lead':
+        return `/leads/${id}`;
+      case 'task':
+        return `/tasks`;
+      case 'campaign':
+        return `/campaigns`;
+      default:
+        return '#';
+    }
+  };
+
+  const handleResultClick = (result: any) => {
+    const path = getNavigationPath(result.type, result.id);
+    setLocation(path);
+    setSearchQuery("");
+    setIsOpen(false);
+  };
+
+  return (
+    <Popover open={isOpen && searchQuery.length >= 2} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <div className="relative hidden md:block">
+          <Input
+            type="search"
+            placeholder="Search clients, projects..."
+            className="w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              if (e.target.value.length >= 2) {
+                setIsOpen(true);
+              } else {
+                setIsOpen(false);
+              }
+            }}
+            onFocus={() => {
+              if (searchQuery.length >= 2) {
+                setIsOpen(true);
+              }
+            }}
+            data-testid="input-global-search"
+          />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+        </div>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="end">
+        <div className="max-h-96 overflow-y-auto">
+          {isLoading ? (
+            <div className="p-4 text-center text-sm text-gray-500">
+              Searching...
+            </div>
+          ) : results.length === 0 ? (
+            <div className="p-8 text-center">
+              <Search className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">
+                {debouncedQuery.length >= 2 ? "No results found" : "Start typing to search..."}
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {results.map((result: any) => (
+                <button
+                  key={`${result.type}-${result.id}`}
+                  onClick={() => handleResultClick(result)}
+                  className="w-full p-3 hover:bg-gray-50 transition-colors text-left"
+                  data-testid={`search-result-${result.type}-${result.id}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      {getTypeIcon(result.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {result.name}
+                        </p>
+                        <Badge className={`text-xs ${getTypeBadgeColor(result.type)}`}>
+                          {result.type}
+                        </Badge>
+                      </div>
+                      {result.description && (
+                        <p className="text-xs text-gray-500 mt-1 truncate">
+                          {result.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function Header({ onMenuClick }: HeaderProps) {
   const isMobile = useIsMobile();
-  const [searchQuery, setSearchQuery] = useState("");
   const [showLoginAsDialog, setShowLoginAsDialog] = useState(false);
 
   // Fetch current user data with authentication info
@@ -244,16 +411,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
           {/* Timer indicator */}
           <TimerIndicator />
           
-          <div className="relative hidden md:block">
-            <Input
-              type="search"
-              placeholder="Search clients, projects..."
-              className="w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-          </div>
+          {/* Global search */}
+          <GlobalSearch />
           
           <NotificationButton />
           
