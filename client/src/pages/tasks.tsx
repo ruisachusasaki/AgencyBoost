@@ -78,7 +78,7 @@ export default function Tasks() {
     { id: "priority", label: "Priority", width: "w-1/10" },
     { id: "category", label: "Category", width: "w-1/10" },
     { id: "approval", label: "Approval", width: "w-1/10" },
-    { id: "client", label: "Client", width: "w-1/8" },
+    { id: "client", label: "Client/Lead", width: "w-1/8" },
   ]);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
@@ -124,6 +124,9 @@ export default function Tasks() {
   
   const clients = clientsData?.clients || [];
 
+  const { data: leads = [] } = useQuery<any[]>({
+    queryKey: ["/api/leads"],
+  });
 
   const { data: campaigns = [] } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
@@ -246,6 +249,21 @@ export default function Tasks() {
   });
 
   // Helper functions - moved above sorting logic
+  const getClientOrLeadName = (task: Task) => {
+    // Check if task has a client
+    if (task.clientId) {
+      const client = clients.find((c: Client) => c.id === task.clientId);
+      return client?.name || "Unknown Client";
+    }
+    // Check if task has a lead
+    if (task.leadId) {
+      const lead = leads.find((l: any) => l.id === task.leadId);
+      return lead?.name || "Unknown Lead";
+    }
+    return null;
+  };
+
+  // Keep old function for backward compatibility
   const getClientName = (clientId: string | null) => {
     if (!clientId) return null;
     const client = clients.find((c: Client) => c.id === clientId);
@@ -287,7 +305,7 @@ export default function Tasks() {
           case 'status': return task.status;
           case 'priority': return task.priority;
           case 'assignedTo': return getStaffName(task.assignedTo);
-          case 'clientId': return getClientName(task.clientId);
+          case 'clientId': return getClientOrLeadName(task);
           case 'categoryId': return getCategoryName(task.categoryId);
           default: return null;
         }
@@ -740,7 +758,7 @@ export default function Tasks() {
         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         getStaffName(task.assignedTo)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getClientName(task.clientId)?.toLowerCase().includes(searchTerm.toLowerCase())
+        getClientOrLeadName(task)?.toLowerCase().includes(searchTerm.toLowerCase())
       );
       
       const matchesStatus = statusFilter === "all" || task.status === statusFilter;
@@ -991,10 +1009,10 @@ export default function Tasks() {
         );
       
       case "client":
-        return task.clientId ? (
-          <span className="text-sm">{getClientName(task.clientId)}</span>
+        return task.clientId || task.leadId ? (
+          <span className="text-sm">{getClientOrLeadName(task)}</span>
         ) : (
-          <span className="text-slate-400 text-sm">No client</span>
+          <span className="text-slate-400 text-sm">No client/lead</span>
         );
       
       case "project":
