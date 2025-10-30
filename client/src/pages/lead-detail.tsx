@@ -110,6 +110,11 @@ export default function LeadDetail() {
     mutationFn: async () => {
       if (!lead) throw new Error("Lead data not available");
       
+      // Wait for quotes to finish loading before validation
+      if (quotesLoading) {
+        throw new Error("Loading quotes data. Please wait a moment and try again.");
+      }
+      
       // Validate quotes before conversion
       if (leadQuotes.length === 0) {
         throw new Error(`${lead.name} has no quotes associated to them. Please create a quote first and ensure it has been accepted.`);
@@ -487,11 +492,11 @@ export default function LeadDetail() {
             variant="outline"
             className="flex items-center gap-2"
             onClick={() => convertToClientMutation.mutate()}
-            disabled={convertToClientMutation.isPending}
+            disabled={convertToClientMutation.isPending || quotesLoading}
             data-testid="button-convert-to-client"
           >
             <ArrowRight className="h-4 w-4" />
-            {convertToClientMutation.isPending ? "Converting..." : "Convert to Client"}
+            {convertToClientMutation.isPending ? "Converting..." : quotesLoading ? "Loading quotes..." : "Convert to Client"}
           </Button>
           {isAdminOrManager && (
             <Button
