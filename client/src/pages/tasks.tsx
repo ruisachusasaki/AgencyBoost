@@ -1284,9 +1284,25 @@ export default function Tasks() {
 
     const handleBulkClient = () => {
       if (!tempClient) return;
+      
+      // Parse the client/lead selection
+      let updates: any = {};
+      if (tempClient === "none") {
+        updates.clientId = null;
+        updates.leadId = null;
+      } else if (tempClient.startsWith("client-")) {
+        const clientId = tempClient.replace("client-", "");
+        updates.clientId = clientId;
+        updates.leadId = null;
+      } else if (tempClient.startsWith("lead-")) {
+        const leadId = tempClient.replace("lead-", "");
+        updates.clientId = null;
+        updates.leadId = leadId;
+      }
+      
       bulkUpdateMutation.mutate({
         taskIds: Array.from(selectedTasks),
-        updates: { clientId: tempClient === "none" ? null : tempClient }
+        updates
       });
       setBulkClientDialogOpen(false);
       setTempClient("");
@@ -1449,23 +1465,28 @@ export default function Tasks() {
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" data-testid="button-bulk-client">
                 <Building2 className="h-4 w-4 mr-1" />
-                Client
+                Client/Lead
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Change Client for {selectedTasks.size} tasks</DialogTitle>
+                <DialogTitle>Change Client/Lead for {selectedTasks.size} tasks</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <Select value={tempClient} onValueChange={setTempClient}>
                   <SelectTrigger data-testid="select-bulk-client">
-                    <SelectValue placeholder="Select client" />
+                    <SelectValue placeholder="Select client or lead" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none" data-testid="option-no-client">No Client</SelectItem>
+                    <SelectItem value="none" data-testid="option-no-client">No Client/Lead</SelectItem>
                     {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id} data-testid={`option-client-${client.id}`}>
-                        {client.name}
+                      <SelectItem key={`client-${client.id}`} value={`client-${client.id}`} data-testid={`option-client-${client.id}`}>
+                        {client.name} (Client)
+                      </SelectItem>
+                    ))}
+                    {leads.map((lead) => (
+                      <SelectItem key={`lead-${lead.id}`} value={`lead-${lead.id}`} data-testid={`option-lead-${lead.id}`}>
+                        {lead.name || lead.email} (Lead)
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1475,7 +1496,7 @@ export default function Tasks() {
                     Cancel
                   </Button>
                   <Button onClick={handleBulkClient} disabled={!tempClient} data-testid="button-update-bulk-client">
-                    Update Client
+                    Update Client/Lead
                   </Button>
                 </div>
               </div>
