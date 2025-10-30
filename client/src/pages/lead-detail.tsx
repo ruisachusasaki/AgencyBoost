@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ArrowLeft, Mail, Phone, Building2, Calendar, DollarSign, User, CheckCircle2, Tag as TagIcon, FileText, Percent, MessageSquare, StickyNote, ListTodo, CalendarCheck, Trash2, ArrowRight, X, Plus, ChevronDown, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
-import type { Lead, Task, User as StaffUser, LeadPipelineStage, CustomField, Tag, LeadSource } from "@shared/schema";
+import type { Lead, Task, User as StaffUser, LeadPipelineStage, CustomField, Tag, LeadSource, Quote } from "@shared/schema";
 import LeadNotesSection from "@/components/forms/lead-notes-section";
 import CustomFieldRenderer from "@/components/CustomFieldRenderer";
 import LeadAppointmentsDisplay from "@/components/forms/lead-appointments-display";
@@ -29,7 +29,7 @@ import {
 export default function LeadDetail() {
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/leads/:id");
-  const [activeTab, setActiveTab] = useState<"notes" | "tasks" | "appointments">("notes");
+  const [activeTab, setActiveTab] = useState<"notes" | "tasks" | "appointments" | "quotes">("notes");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editingCustomField, setEditingCustomField] = useState<string | null>(null);
   const [editingLeadField, setEditingLeadField] = useState<string | null>(null);
@@ -90,6 +90,14 @@ export default function LeadDetail() {
   const { data: leadSources = [] } = useQuery<LeadSource[]>({
     queryKey: ["/api/lead-sources"],
   });
+
+  // Fetch quotes for this lead
+  const { data: allQuotes = [], isLoading: quotesLoading } = useQuery<Quote[]>({
+    queryKey: ["/api/quotes"],
+  });
+
+  // Filter quotes for this lead
+  const leadQuotes = allQuotes.filter(quote => quote.leadId === leadId);
 
   // Filter out custom fields that duplicate core lead fields
   const coreFieldNames = ['name', 'email', 'phone', 'company', 'pipeline stage', 'status', 'potential value', 'value', 'probability', 'assigned to', 'source', 'last contact', 'created'];
@@ -856,7 +864,8 @@ export default function LeadDetail() {
           {[
             { id: "notes" as const, name: "Notes", icon: StickyNote, count: 0 },
             { id: "tasks" as const, name: "Tasks", icon: ListTodo, count: leadTasks.length },
-            { id: "appointments" as const, name: "Appointments", icon: CalendarCheck, count: 0 }
+            { id: "appointments" as const, name: "Appointments", icon: CalendarCheck, count: 0 },
+            { id: "quotes" as const, name: "Quotes", icon: FileText, count: leadQuotes.length }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -962,6 +971,90 @@ export default function LeadDetail() {
                                 {task.dueDate && (
                                   <span data-testid={`text-task-due-date-${task.id}`}>
                                     Due: {format(new Date(task.dueDate), "MMM d, yyyy")}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === "quotes" && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Quotes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {quotesLoading ? (
+                <div className="text-center py-8 text-gray-500">Loading quotes...</div>
+              ) : leadQuotes.length === 0 ? (
+                <div className="text-center py-8 text-gray-500" data-testid="text-no-quotes">
+                  No quotes associated with this lead yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {leadQuotes.map((quote) => {
+                    const quoteCreator = staff.find(s => s.id === quote.createdBy);
+                    
+                    return (
+                      <Link 
+                        key={quote.id} 
+                        href={`/sales/quotes/${quote.id}`}
+                        data-testid={`link-quote-${quote.id}`}
+                      >
+                        <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-medium" data-testid={`text-quote-name-${quote.id}`}>
+                                  {quote.name}
+                                </h3>
+                                {quote.status === 'accepted' && (
+                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                                <Badge 
+                                  variant={
+                                    quote.status === 'accepted' ? 'default' : 
+                                    quote.status === 'rejected' ? 'destructive' : 
+                                    quote.status === 'sent' ? 'secondary' :
+                                    'outline'
+                                  }
+                                  data-testid={`badge-quote-status-${quote.id}`}
+                                >
+                                  {quote.status}
+                                </Badge>
+                                
+                                <span className="flex items-center gap-1" data-testid={`text-quote-budget-${quote.id}`}>
+                                  <DollarSign className="h-3 w-3" />
+                                  {parseFloat(quote.clientBudget || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                
+                                <span className="flex items-center gap-1" data-testid={`text-quote-margin-${quote.id}`}>
+                                  <Percent className="h-3 w-3" />
+                                  {parseFloat(quote.desiredMargin || '0').toFixed(2)}% margin
+                                </span>
+                                
+                                {quoteCreator && (
+                                  <span data-testid={`text-quote-creator-${quote.id}`}>
+                                    Created by: {quoteCreator.firstName} {quoteCreator.lastName}
+                                  </span>
+                                )}
+                                
+                                {quote.createdAt && (
+                                  <span data-testid={`text-quote-created-${quote.id}`}>
+                                    Created: {format(new Date(quote.createdAt), "MMM d, yyyy")}
                                   </span>
                                 )}
                               </div>
