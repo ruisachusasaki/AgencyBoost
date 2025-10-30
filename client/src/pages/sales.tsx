@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -36,7 +37,8 @@ import {
   ChevronDown,
   CheckCircle,
   Target,
-  ChevronUp
+  ChevronUp,
+  Info
 } from "lucide-react";
 
 export default function Sales() {
@@ -811,17 +813,18 @@ export default function Sales() {
 
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Banknote className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">Sales</h1>
-          <p className="text-muted-foreground">
-            Manage quotes and sales reports
-          </p>
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <Banknote className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">Sales</h1>
+            <p className="text-muted-foreground">
+              Manage quotes and sales reports
+            </p>
+          </div>
         </div>
-      </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6 mt-6">
@@ -1229,7 +1232,17 @@ export default function Sales() {
                       {/* Budget and Margin */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="quote-budget">Client Budget ($)</Label>
+                          <div className="flex items-center gap-2">
+                            <Label htmlFor="quote-budget">Client Budget ($)</Label>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>What is their MONTHLY budget?</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
                           <div className="relative">
                             <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                             <Input
@@ -1245,7 +1258,17 @@ export default function Sales() {
                         </div>
                         
                         <div className="space-y-2">
-                          <Label htmlFor="quote-margin">Desired Margin (%)</Label>
+                          <div className="flex items-center gap-2">
+                            <Label htmlFor="quote-margin">Desired Margin (%)</Label>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>The MINIMUM margin is {minimumMarginThreshold}% by default. If you go BELOW that margin, it will require manager approval.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
                           <div className="relative">
                             <Percent className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                             <Input
@@ -2251,5 +2274,6 @@ export default function Sales() {
         </DialogContent>
       </Dialog>
     </div>
+    </TooltipProvider>
   );
 }
