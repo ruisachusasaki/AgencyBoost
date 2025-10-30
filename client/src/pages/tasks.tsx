@@ -519,16 +519,30 @@ export default function Tasks() {
     
     if (clientFilter !== "all") {
       if (clientFilter === "none") {
+        // Check that task has neither client nor lead
         conditions.push({
           field: 'clientId',
           operator: 'is_empty',
           value: ''
         });
-      } else {
+        conditions.push({
+          field: 'leadId',
+          operator: 'is_empty',
+          value: ''
+        });
+      } else if (clientFilter.startsWith("client-")) {
+        const clientId = clientFilter.replace("client-", "");
         conditions.push({
           field: 'clientId',
           operator: 'equals',
-          value: clientFilter
+          value: clientId
+        });
+      } else if (clientFilter.startsWith("lead-")) {
+        const leadId = clientFilter.replace("lead-", "");
+        conditions.push({
+          field: 'leadId',
+          operator: 'equals',
+          value: leadId
         });
       }
     }
@@ -766,9 +780,20 @@ export default function Tasks() {
         (assigneeFilter === "unassigned" && !task.assignedTo) ||
         task.assignedTo === assigneeFilter;
       const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
-      const matchesClient = clientFilter === "all" || 
-        (clientFilter === "none" && !task.clientId) ||
-        task.clientId === clientFilter;
+      
+      // Handle client/lead filter with new format: "client-{id}" or "lead-{id}"
+      let matchesClient = false;
+      if (clientFilter === "all") {
+        matchesClient = true;
+      } else if (clientFilter === "none") {
+        matchesClient = !task.clientId && !task.leadId;
+      } else if (clientFilter.startsWith("client-")) {
+        const clientId = clientFilter.replace("client-", "");
+        matchesClient = task.clientId === clientId;
+      } else if (clientFilter.startsWith("lead-")) {
+        const leadId = clientFilter.replace("lead-", "");
+        matchesClient = task.leadId === leadId;
+      }
       const matchesProject = true; // Projects removed - all tasks match
       const matchesCategory = categoryFilter === "all" || 
         (categoryFilter === "none" && !task.categoryId) ||
@@ -2031,17 +2056,22 @@ export default function Tasks() {
                 </SelectContent>
               </Select>
               
-              {/* Client Filter */}
+              {/* Client/Lead Filter */}
               <Select value={clientFilter} onValueChange={setClientFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Clients" />
+                  <SelectValue placeholder="All Clients/Leads" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Clients</SelectItem>
-                  <SelectItem value="none">No Client</SelectItem>
+                  <SelectItem value="all">All Clients/Leads</SelectItem>
+                  <SelectItem value="none">No Client/Lead</SelectItem>
                   {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
+                    <SelectItem key={`client-${client.id}`} value={`client-${client.id}`}>
+                      {client.name} (Client)
+                    </SelectItem>
+                  ))}
+                  {leads.map((lead) => (
+                    <SelectItem key={`lead-${lead.id}`} value={`lead-${lead.id}`}>
+                      {lead.name || lead.email} (Lead)
                     </SelectItem>
                   ))}
                 </SelectContent>
