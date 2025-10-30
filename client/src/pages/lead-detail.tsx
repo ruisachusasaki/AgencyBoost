@@ -51,11 +51,6 @@ export default function LeadDetail() {
 
   // Check if user is admin or manager
   const isAdminOrManager = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
-  
-  // Debug logging for role check
-  console.log('Lead Detail - Current User:', currentUser);
-  console.log('Lead Detail - User Role:', currentUser?.role);
-  console.log('Lead Detail - isAdminOrManager:', isAdminOrManager);
 
   // Fetch lead data - using the specific lead endpoint
   const { data: lead, isLoading: leadLoading } = useQuery<Lead>({
@@ -556,12 +551,12 @@ export default function LeadDetail() {
               </div>
             )}
             
-            {/* Status - Select dropdown */}
-            {editingLeadField === 'status' ? (
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-gray-500" />
-                <div className="flex-1">
-                  <div className="text-sm text-gray-500">Status</div>
+            {/* Status - Inline editable dropdown */}
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-gray-500" />
+              <div className="flex-1">
+                <div className="text-sm text-gray-500">Status</div>
+                {editingLeadField === 'status' ? (
                   <div className="flex items-center gap-2 mt-1">
                     <Select
                       value={leadFieldEditValue ?? ''}
@@ -593,36 +588,26 @@ export default function LeadDetail() {
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-gray-500" />
-                <div className="flex-1">
-                  <div className="text-sm text-gray-500">Status</div>
-                  <Badge 
-                    variant={
-                      lead.status === 'Won' ? 'default' : 
-                      lead.status === 'Lost' ? 'destructive' : 
-                      'secondary'
-                    }
-                    data-testid="badge-lead-status"
+                ) : (
+                  <div
+                    className="cursor-pointer hover:bg-gray-50 p-2 rounded border border-transparent hover:border-gray-200 transition-colors w-fit"
+                    onClick={() => isAdminOrManager && handleStartEditLeadField('status', lead.status || 'Open')}
+                    data-testid="text-lead-status"
                   >
-                    {lead.status || 'Open'}
-                  </Badge>
-                </div>
-                {isAdminOrManager && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleStartEditLeadField('status', lead.status || 'Open')}
-                    data-testid="button-edit-lead-status"
-                  >
-                    Edit
-                  </Button>
+                    <Badge 
+                      variant={
+                        lead.status === 'Won' ? 'default' : 
+                        lead.status === 'Lost' ? 'destructive' : 
+                        'secondary'
+                      }
+                      data-testid="badge-lead-status"
+                    >
+                      {lead.status || 'Open'}
+                    </Badge>
+                  </div>
                 )}
               </div>
-            )}
+            </div>
             
             {/* Potential Value */}
             {renderEditableField('value', 'Potential Value', lead.value, DollarSign, 'number')}
