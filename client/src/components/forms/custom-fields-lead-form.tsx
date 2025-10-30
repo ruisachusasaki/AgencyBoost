@@ -455,7 +455,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                             <TooltipTrigger asChild>
                               <Info className="h-4 w-4 text-gray-400 cursor-help" />
                             </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
+                            <TooltipContent className="max-w-xs whitespace-normal">
                               <p>Input the MONTHLY value of this client (MRR).</p>
                             </TooltipContent>
                           </Tooltip>
