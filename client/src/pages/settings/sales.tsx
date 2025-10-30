@@ -29,7 +29,7 @@ export default function SalesSettings() {
 
   // Update sales settings mutation
   const updateSettingsMutation = useMutation({
-    mutationFn: async (data: { minimumMarginThreshold: number }) => {
+    mutationFn: async (data: { minimumMarginThreshold: string }) => {
       const res = await apiRequest('PATCH', '/api/sales-settings', data);
       return res.json();
     },
@@ -67,7 +67,7 @@ export default function SalesSettings() {
     }
     
     updateSettingsMutation.mutate({
-      minimumMarginThreshold: parseFloat(minimumMargin)
+      minimumMarginThreshold: minimumMargin
     });
   };
 
