@@ -1006,62 +1006,60 @@ export default function LeadDetail() {
                     const quoteCreator = staff.find(s => s.id === quote.createdBy);
                     
                     return (
-                      <Link 
+                      <div 
                         key={quote.id} 
-                        href={`/sales/quotes/${quote.id}`}
-                        data-testid={`link-quote-${quote.id}`}
+                        className="p-4 border rounded-lg"
+                        data-testid={`card-quote-${quote.id}`}
                       >
-                        <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-medium" data-testid={`text-quote-name-${quote.id}`}>
-                                  {quote.name}
-                                </h3>
-                                {quote.status === 'accepted' && (
-                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                )}
-                              </div>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium" data-testid={`text-quote-name-${quote.id}`}>
+                                {quote.name}
+                              </h3>
+                              {quote.status === 'accepted' && (
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                              <Badge 
+                                variant={
+                                  quote.status === 'accepted' ? 'default' : 
+                                  quote.status === 'rejected' ? 'destructive' : 
+                                  quote.status === 'sent' ? 'secondary' :
+                                  'outline'
+                                }
+                                data-testid={`badge-quote-status-${quote.id}`}
+                              >
+                                {quote.status}
+                              </Badge>
                               
-                              <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                                <Badge 
-                                  variant={
-                                    quote.status === 'accepted' ? 'default' : 
-                                    quote.status === 'rejected' ? 'destructive' : 
-                                    quote.status === 'sent' ? 'secondary' :
-                                    'outline'
-                                  }
-                                  data-testid={`badge-quote-status-${quote.id}`}
-                                >
-                                  {quote.status}
-                                </Badge>
-                                
-                                <span className="flex items-center gap-1" data-testid={`text-quote-budget-${quote.id}`}>
-                                  <DollarSign className="h-3 w-3" />
-                                  {parseFloat(quote.clientBudget || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              <span className="flex items-center gap-1" data-testid={`text-quote-budget-${quote.id}`}>
+                                <DollarSign className="h-3 w-3" />
+                                {parseFloat(quote.clientBudget || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                              
+                              <span className="flex items-center gap-1" data-testid={`text-quote-margin-${quote.id}`}>
+                                <Percent className="h-3 w-3" />
+                                {parseFloat(quote.desiredMargin || '0').toFixed(2)}% margin
+                              </span>
+                              
+                              {quoteCreator && (
+                                <span data-testid={`text-quote-creator-${quote.id}`}>
+                                  Created by: {quoteCreator.firstName} {quoteCreator.lastName}
                                 </span>
-                                
-                                <span className="flex items-center gap-1" data-testid={`text-quote-margin-${quote.id}`}>
-                                  <Percent className="h-3 w-3" />
-                                  {parseFloat(quote.desiredMargin || '0').toFixed(2)}% margin
+                              )}
+                              
+                              {quote.createdAt && (
+                                <span data-testid={`text-quote-created-${quote.id}`}>
+                                  Created: {format(new Date(quote.createdAt), "MMM d, yyyy")}
                                 </span>
-                                
-                                {quoteCreator && (
-                                  <span data-testid={`text-quote-creator-${quote.id}`}>
-                                    Created by: {quoteCreator.firstName} {quoteCreator.lastName}
-                                  </span>
-                                )}
-                                
-                                {quote.createdAt && (
-                                  <span data-testid={`text-quote-created-${quote.id}`}>
-                                    Created: {format(new Date(quote.createdAt), "MMM d, yyyy")}
-                                  </span>
-                                )}
-                              </div>
+                              )}
                             </div>
                           </div>
                         </div>
-                      </Link>
+                      </div>
                     );
                   })}
                 </div>
