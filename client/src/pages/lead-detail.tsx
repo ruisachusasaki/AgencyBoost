@@ -154,6 +154,10 @@ export default function LeadDetail() {
       return await apiRequest("POST", "/api/clients", clientData);
     },
     onSuccess: (data: any) => {
+      // Invalidate leads cache to refresh the pipeline view
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/leads/${leadId}`] });
+      
       toast({
         title: "Lead converted to client",
         description: "The lead has been successfully converted to a client.",
