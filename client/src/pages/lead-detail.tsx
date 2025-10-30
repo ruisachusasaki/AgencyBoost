@@ -51,6 +51,11 @@ export default function LeadDetail() {
 
   // Check if user is admin or manager
   const isAdminOrManager = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
+  
+  // Debug logging for role check
+  console.log('Lead Detail - Current User:', currentUser);
+  console.log('Lead Detail - User Role:', currentUser?.role);
+  console.log('Lead Detail - isAdminOrManager:', isAdminOrManager);
 
   // Fetch lead data - using the specific lead endpoint
   const { data: lead, isLoading: leadLoading } = useQuery<Lead>({
