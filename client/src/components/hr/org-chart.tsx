@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -133,8 +133,8 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
 
   // Build hierarchy tree
   const hierarchyData = useMemo(() => {
-    // Find CEO (person with no manager)
-    const ceo = staffData.find(s => !s.managerId && s.isActive);
+    // Find all top-level leaders (people with no manager)
+    const topLevelLeaders = staffData.filter(s => !s.managerId && s.isActive);
     
     // Build a map of manager -> direct reports
     const reportsByManager: Record<string, Staff[]> = {};
@@ -160,7 +160,7 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
       if (s.isActive) countChildren(s.id);
     });
 
-    return { ceo, reportsByManager, childCounts };
+    return { topLevelLeaders, reportsByManager, childCounts };
   }, [staffData]);
 
   // Convert to ReactFlow nodes and edges
@@ -168,7 +168,7 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    if (!hierarchyData.ceo) {
+    if (hierarchyData.topLevelLeaders.length === 0) {
       return { nodes, edges };
     }
 
@@ -186,10 +186,9 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
     const layoutNodes: LayoutNode[] = [];
     const processedIds = new Set<string>();
 
-    // BFS to assign positions
-    const queue: Array<{ staff: Staff; level: number; parentX?: number }> = [
-      { staff: hierarchyData.ceo, level: 0 }
-    ];
+    // BFS to assign positions - start with all top-level leaders
+    const queue: Array<{ staff: Staff; level: number; parentX?: number }> = 
+      hierarchyData.topLevelLeaders.map(leader => ({ staff: leader, level: 0 }));
 
     // Track nodes at each level for proper spacing
     const nodesByLevel: Record<number, LayoutNode[]> = {};
@@ -251,7 +250,14 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
 
     // Create nodes
     layoutNodes.forEach(({ staff, x, y }) => {
-      const initials = `${staff.firstName[0]}${staff.lastName[0]}`.toUpperCase();
+      // Defensive guards for incomplete staff records
+      const firstName = staff.firstName || '';
+      const lastName = staff.lastName || '';
+      const initials = firstName && lastName 
+        ? `${firstName[0]}${lastName[0]}`.toUpperCase() 
+        : firstName 
+          ? firstName.substring(0, 2).toUpperCase() 
+          : 'NA';
       
       nodes.push({
         id: staff.id,
@@ -259,7 +265,7 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
         position: { x, y },
         data: {
           id: staff.id,
-          name: `${staff.firstName} ${staff.lastName}`,
+          name: `${firstName} ${lastName}`.trim() || 'Unknown',
           position: staff.position,
           department: staff.department,
           profileImagePath: staff.profileImagePath,
@@ -303,13 +309,13 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Update nodes and edges when data changes
-  useMemo(() => {
+  // Update nodes and edges when data changes - using useEffect instead of useMemo for state updates
+  useEffect(() => {
     setNodes(initialNodes);
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
-  if (!hierarchyData.ceo) {
+  if (hierarchyData.topLevelLeaders.length === 0) {
     return (
       <Card className="p-12 text-center">
         <div className="text-gray-500">
