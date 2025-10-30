@@ -43,7 +43,8 @@ import {
   MoreHorizontal,
   DollarSign,
   Receipt,
-  MessageCircle
+  MessageCircle,
+  Network
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -56,6 +57,7 @@ import ExpenseSubmissionsView from "@/components/hr/expense-submissions-view";
 import OffboardingForm from "@/components/hr/offboarding-form";
 import OffboardingSubmissionsView from "@/components/hr/offboarding-submissions-view";
 import OneOnOneMeetings from "@/components/hr/one-on-one-meetings";
+import OrgChart from "@/components/hr/org-chart";
 
 export default function HRPage() {
   // Check for URL parameter to set initial tab
@@ -181,6 +183,11 @@ export default function HRPage() {
   // Fetch staff data
   const { data: staffData = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
+  });
+
+  // Fetch client team assignments for org chart
+  const { data: clientTeamAssignments = [] } = useQuery({
+    queryKey: ["/api/client-team-assignments"],
   });
   
   // Filtered staff for hiring manager search
@@ -868,6 +875,7 @@ export default function HRPage() {
             const allTabs = [
               ...(isManager || isAdmin ? [{ id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 }] : []),
               { id: "staff-directory", name: "Staff Directory", icon: Users, count: filteredStaffData.length },
+              { id: "org-chart", name: "Org Chart", icon: Network, count: 0 },
               { id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length },
               { id: "time-off-calendar", name: "Who's Off", icon: Calendar, count: 0 },
               ...(isManager ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length }] : []),
@@ -1429,6 +1437,17 @@ export default function HRPage() {
               </Card>
             ))}
           </div>
+        </div>
+      )}
+
+      {activeTab === "org-chart" && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold">Organization Chart</h2>
+            <p className="text-slate-600">View team hierarchy and reporting structure</p>
+          </div>
+
+          <OrgChart staffData={staffData} clientTeamAssignments={clientTeamAssignments} />
         </div>
       )}
 
