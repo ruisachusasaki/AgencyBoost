@@ -1264,7 +1264,7 @@ export default function Sales() {
                               <TooltipTrigger asChild>
                                 <Info className="h-4 w-4 text-gray-400 cursor-help" />
                               </TooltipTrigger>
-                              <TooltipContent>
+                              <TooltipContent className="max-w-xs">
                                 <p>The MINIMUM margin is {minimumMarginThreshold}% by default. If you go BELOW that margin, it will require manager approval.</p>
                               </TooltipContent>
                             </Tooltip>
