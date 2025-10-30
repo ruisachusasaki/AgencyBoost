@@ -13675,8 +13675,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const leadAppointmentsData = await leadQuery.orderBy(asc(leadAppointments.startTime));
         
+        // Apply merge tag interpolation to lead appointments
+        const interpolatedLeadAppointments = leadAppointmentsData.map(apt => ({
+          ...apt,
+          title: interpolateAppointmentMergeTags(apt.title, apt),
+          description: interpolateAppointmentMergeTags(apt.description, apt),
+        }));
+        
         // Combine both types of appointments
-        allAppointments = [...regularAppointments, ...leadAppointmentsData];
+        allAppointments = [...regularAppointments, ...interpolatedLeadAppointments];
         
         // Sort by start time
         allAppointments.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
