@@ -12,6 +12,7 @@ import {
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
   insertStaffSchema, insertDepartmentSchema, insertPositionSchema, insertTeamPositionSchema, insertClientTeamAssignmentSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
+  insertOrgChartStructureSchema, insertOrgChartNodeSchema, insertOrgChartNodeAssignmentSchema,
   insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema,
   insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertTimeOffBalanceSchema,
   insertJobApplicationWatcherSchema,
@@ -9370,6 +9371,438 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting position:', error);
       res.status(500).json({ message: "Failed to delete position" });
+    }
+  });
+
+  // Organization Chart Structure API
+  app.get("/api/org-chart-structures", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+    try {
+      const structures = await appStorage.getOrgChartStructures();
+      res.json(structures);
+    } catch (error) {
+      console.error('Error fetching org chart structures:', error);
+      res.status(500).json({ message: "Failed to fetch org chart structures" });
+    }
+  });
+
+  app.get("/api/org-chart-structures/active", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+    try {
+      const structure = await appStorage.getActiveOrgChartStructure();
+      res.json(structure || null);
+    } catch (error) {
+      console.error('Error fetching active org chart structure:', error);
+      res.status(500).json({ message: "Failed to fetch active org chart structure" });
+    }
+  });
+
+  app.get("/api/org-chart-structures/:id", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+    try {
+      const structure = await appStorage.getOrgChartStructure(req.params.id);
+      if (!structure) {
+        return res.status(404).json({ message: "Org chart structure not found" });
+      }
+      res.json(structure);
+    } catch (error) {
+      console.error('Error fetching org chart structure:', error);
+      res.status(500).json({ message: "Failed to fetch org chart structure" });
+    }
+  });
+
+  app.post("/api/org-chart-structures", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const insertData = insertOrgChartStructureSchema.parse({
+        ...req.body,
+        createdById: userId
+      });
+      const structure = await appStorage.createOrgChartStructure(insertData);
+      
+      await createAuditLog(
+        "created",
+        "org_chart_structure",
+        structure.id,
+        structure.name,
+        userId,
+        `New org chart structure created: ${structure.name}`,
+        null,
+        { name: structure.name, description: structure.description },
+        req
+      );
+      
+      res.status(201).json(structure);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating org chart structure:', error);
+      res.status(500).json({ message: "Failed to create org chart structure" });
+    }
+  });
+
+  app.put("/api/org-chart-structures/:id", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
+    try {
+      const insertData = insertOrgChartStructureSchema.partial().parse(req.body);
+      const structure = await appStorage.updateOrgChartStructure(req.params.id, insertData);
+      
+      if (!structure) {
+        return res.status(404).json({ message: "Org chart structure not found" });
+      }
+      
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      await createAuditLog(
+        "updated",
+        "org_chart_structure",
+        structure.id,
+        structure.name,
+        userId,
+        `Org chart structure updated: ${structure.name}`,
+        null,
+        insertData,
+        req
+      );
+      
+      res.json(structure);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating org chart structure:', error);
+      res.status(500).json({ message: "Failed to update org chart structure" });
+    }
+  });
+
+  app.put("/api/org-chart-structures/:id/activate", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
+    try {
+      const structure = await appStorage.setActiveOrgChartStructure(req.params.id);
+      
+      if (!structure) {
+        return res.status(404).json({ message: "Org chart structure not found" });
+      }
+      
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      await createAuditLog(
+        "updated",
+        "org_chart_structure",
+        structure.id,
+        structure.name,
+        userId,
+        `Org chart structure activated: ${structure.name}`,
+        null,
+        { isActive: true },
+        req
+      );
+      
+      res.json(structure);
+    } catch (error) {
+      console.error('Error activating org chart structure:', error);
+      res.status(500).json({ message: "Failed to activate org chart structure" });
+    }
+  });
+
+  app.delete("/api/org-chart-structures/:id", requireAuth(), requirePermission('hr', 'canDelete'), async (req, res) => {
+    try {
+      const structure = await appStorage.getOrgChartStructure(req.params.id);
+      if (!structure) {
+        return res.status(404).json({ message: "Org chart structure not found" });
+      }
+      
+      const success = await appStorage.deleteOrgChartStructure(req.params.id);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete org chart structure" });
+      }
+      
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      await createAuditLog(
+        "deleted",
+        "org_chart_structure",
+        req.params.id,
+        structure.name,
+        userId,
+        `Org chart structure deleted: ${structure.name}`,
+        { name: structure.name },
+        null,
+        req
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting org chart structure:', error);
+      res.status(500).json({ message: "Failed to delete org chart structure" });
+    }
+  });
+
+  // Organization Chart Nodes API
+  app.get("/api/org-chart-structures/:structureId/nodes", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+    try {
+      const nodes = await appStorage.getOrgChartNodes(req.params.structureId);
+      res.json(nodes);
+    } catch (error) {
+      console.error('Error fetching org chart nodes:', error);
+      res.status(500).json({ message: "Failed to fetch org chart nodes" });
+    }
+  });
+
+  app.get("/api/org-chart-nodes/:id", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+    try {
+      const node = await appStorage.getOrgChartNode(req.params.id);
+      if (!node) {
+        return res.status(404).json({ message: "Org chart node not found" });
+      }
+      res.json(node);
+    } catch (error) {
+      console.error('Error fetching org chart node:', error);
+      res.status(500).json({ message: "Failed to fetch org chart node" });
+    }
+  });
+
+  app.post("/api/org-chart-nodes", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
+    try {
+      const insertData = insertOrgChartNodeSchema.parse(req.body);
+      const node = await appStorage.createOrgChartNode(insertData);
+      
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      await createAuditLog(
+        "created",
+        "org_chart_node",
+        node.id,
+        node.title,
+        userId,
+        `New org chart node created: ${node.title}`,
+        null,
+        { title: node.title, department: node.department, position: node.position },
+        req
+      );
+      
+      res.status(201).json(node);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating org chart node:', error);
+      res.status(500).json({ message: "Failed to create org chart node" });
+    }
+  });
+
+  app.put("/api/org-chart-nodes/:id", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
+    try {
+      const insertData = insertOrgChartNodeSchema.partial().parse(req.body);
+      const node = await appStorage.updateOrgChartNode(req.params.id, insertData);
+      
+      if (!node) {
+        return res.status(404).json({ message: "Org chart node not found" });
+      }
+      
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      await createAuditLog(
+        "updated",
+        "org_chart_node",
+        node.id,
+        node.title,
+        userId,
+        `Org chart node updated: ${node.title}`,
+        null,
+        insertData,
+        req
+      );
+      
+      res.json(node);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating org chart node:', error);
+      res.status(500).json({ message: "Failed to update org chart node" });
+    }
+  });
+
+  app.put("/api/org-chart-nodes/reorder", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
+    try {
+      const { updates } = req.body;
+      if (!Array.isArray(updates)) {
+        return res.status(400).json({ message: "Updates must be an array" });
+      }
+      
+      await appStorage.reorderOrgChartNodes(updates);
+      
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      await createAuditLog(
+        "updated",
+        "org_chart_node",
+        "bulk",
+        "Reorder",
+        userId,
+        `Org chart nodes reordered`,
+        null,
+        { updateCount: updates.length },
+        req
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error reordering org chart nodes:', error);
+      res.status(500).json({ message: "Failed to reorder org chart nodes" });
+    }
+  });
+
+  app.delete("/api/org-chart-nodes/:id", requireAuth(), requirePermission('hr', 'canDelete'), async (req, res) => {
+    try {
+      const node = await appStorage.getOrgChartNode(req.params.id);
+      if (!node) {
+        return res.status(404).json({ message: "Org chart node not found" });
+      }
+      
+      const success = await appStorage.deleteOrgChartNode(req.params.id);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete org chart node" });
+      }
+      
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      await createAuditLog(
+        "deleted",
+        "org_chart_node",
+        req.params.id,
+        node.title,
+        userId,
+        `Org chart node deleted: ${node.title}`,
+        { title: node.title },
+        null,
+        req
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting org chart node:', error);
+      res.status(500).json({ message: "Failed to delete org chart node" });
+    }
+  });
+
+  // Organization Chart Node Assignments API
+  app.get("/api/org-chart-nodes/:nodeId/assignments", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+    try {
+      const assignments = await appStorage.getOrgChartNodeAssignments(req.params.nodeId);
+      res.json(assignments);
+    } catch (error) {
+      console.error('Error fetching org chart node assignments:', error);
+      res.status(500).json({ message: "Failed to fetch org chart node assignments" });
+    }
+  });
+
+  app.get("/api/org-chart-structures/:structureId/assignments", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+    try {
+      const assignments = await appStorage.getAllOrgChartAssignments(req.params.structureId);
+      res.json(assignments);
+    } catch (error) {
+      console.error('Error fetching all org chart assignments:', error);
+      res.status(500).json({ message: "Failed to fetch org chart assignments" });
+    }
+  });
+
+  app.post("/api/org-chart-node-assignments", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
+    try {
+      const insertData = insertOrgChartNodeAssignmentSchema.parse(req.body);
+      const assignment = await appStorage.createOrgChartNodeAssignment(insertData);
+      
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      await createAuditLog(
+        "created",
+        "org_chart_node_assignment",
+        assignment.id,
+        "Assignment",
+        userId,
+        `New org chart assignment created`,
+        null,
+        { nodeId: assignment.nodeId, staffId: assignment.staffId, assignmentType: assignment.assignmentType },
+        req
+      );
+      
+      res.status(201).json(assignment);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating org chart node assignment:', error);
+      res.status(500).json({ message: "Failed to create org chart node assignment" });
+    }
+  });
+
+  app.put("/api/org-chart-node-assignments/:id", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
+    try {
+      const insertData = insertOrgChartNodeAssignmentSchema.partial().parse(req.body);
+      const assignment = await appStorage.updateOrgChartNodeAssignment(req.params.id, insertData);
+      
+      if (!assignment) {
+        return res.status(404).json({ message: "Org chart node assignment not found" });
+      }
+      
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      await createAuditLog(
+        "updated",
+        "org_chart_node_assignment",
+        assignment.id,
+        "Assignment",
+        userId,
+        `Org chart assignment updated`,
+        null,
+        insertData,
+        req
+      );
+      
+      res.json(assignment);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating org chart node assignment:', error);
+      res.status(500).json({ message: "Failed to update org chart node assignment" });
+    }
+  });
+
+  app.delete("/api/org-chart-node-assignments/:id", requireAuth(), requirePermission('hr', 'canDelete'), async (req, res) => {
+    try {
+      const success = await appStorage.deleteOrgChartNodeAssignment(req.params.id);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete org chart node assignment" });
+      }
+      
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      await createAuditLog(
+        "deleted",
+        "org_chart_node_assignment",
+        req.params.id,
+        "Assignment",
+        userId,
+        `Org chart assignment deleted`,
+        null,
+        null,
+        req
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting org chart node assignment:', error);
+      res.status(500).json({ message: "Failed to delete org chart node assignment" });
     }
   });
 

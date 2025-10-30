@@ -82,7 +82,10 @@ import {
   type TrainingCourse, trainingCourses,
   type CapacitySetting, capacitySettings,
   calendars, calendarAppointments,
-  customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff, clientPortalUsers
+  customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff, clientPortalUsers,
+  type OrgChartStructure, type InsertOrgChartStructure, orgChartStructures,
+  type OrgChartNode, type InsertOrgChartNode, orgChartNodes,
+  type OrgChartNodeAssignment, type InsertOrgChartNodeAssignment, orgChartNodeAssignments
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -424,6 +427,30 @@ export interface IStorage {
   createPosition(position: InsertPosition): Promise<Position>;
   updatePosition(id: string, position: Partial<InsertPosition>): Promise<Position | undefined>;
   deletePosition(id: string): Promise<boolean>;
+
+  // Organization Chart Structures
+  getOrgChartStructures(): Promise<import("@shared/schema").OrgChartStructure[]>;
+  getOrgChartStructure(id: string): Promise<import("@shared/schema").OrgChartStructure | undefined>;
+  getActiveOrgChartStructure(): Promise<import("@shared/schema").OrgChartStructure | undefined>;
+  createOrgChartStructure(structure: import("@shared/schema").InsertOrgChartStructure): Promise<import("@shared/schema").OrgChartStructure>;
+  updateOrgChartStructure(id: string, structure: Partial<import("@shared/schema").InsertOrgChartStructure>): Promise<import("@shared/schema").OrgChartStructure | undefined>;
+  deleteOrgChartStructure(id: string): Promise<boolean>;
+  setActiveOrgChartStructure(id: string): Promise<import("@shared/schema").OrgChartStructure | undefined>;
+
+  // Organization Chart Nodes
+  getOrgChartNodes(structureId: string): Promise<import("@shared/schema").OrgChartNode[]>;
+  getOrgChartNode(id: string): Promise<import("@shared/schema").OrgChartNode | undefined>;
+  createOrgChartNode(node: import("@shared/schema").InsertOrgChartNode): Promise<import("@shared/schema").OrgChartNode>;
+  updateOrgChartNode(id: string, node: Partial<import("@shared/schema").InsertOrgChartNode>): Promise<import("@shared/schema").OrgChartNode | undefined>;
+  deleteOrgChartNode(id: string): Promise<boolean>;
+  reorderOrgChartNodes(updates: Array<{ id: string; orderIndex: number; parentId?: string | null }>): Promise<void>;
+
+  // Organization Chart Node Assignments
+  getOrgChartNodeAssignments(nodeId: string): Promise<(import("@shared/schema").OrgChartNodeAssignment & { staff: Staff })[]>;
+  getAllOrgChartAssignments(structureId: string): Promise<(import("@shared/schema").OrgChartNodeAssignment & { staff: Staff; node: import("@shared/schema").OrgChartNode })[]>;
+  createOrgChartNodeAssignment(assignment: import("@shared/schema").InsertOrgChartNodeAssignment): Promise<import("@shared/schema").OrgChartNodeAssignment>;
+  updateOrgChartNodeAssignment(id: string, assignment: Partial<import("@shared/schema").InsertOrgChartNodeAssignment>): Promise<import("@shared/schema").OrgChartNodeAssignment | undefined>;
+  deleteOrgChartNodeAssignment(id: string): Promise<boolean>;
 
   // Job Openings
   getJobOpenings(): Promise<JobOpening[]>;
@@ -5986,6 +6013,176 @@ export class DbStorage implements IStorage {
       return true;
     } catch (error) {
       console.error("Error deleting position:", error);
+      return false;
+    }
+  }
+
+  // Organization Chart Structures
+  async getOrgChartStructures(): Promise<OrgChartStructure[]> {
+    const result = await db.select().from(orgChartStructures).orderBy(desc(orgChartStructures.createdAt));
+    return result;
+  }
+
+  async getOrgChartStructure(id: string): Promise<OrgChartStructure | undefined> {
+    const result = await db.select().from(orgChartStructures).where(eq(orgChartStructures.id, id));
+    return result[0];
+  }
+
+  async getActiveOrgChartStructure(): Promise<OrgChartStructure | undefined> {
+    const result = await db.select().from(orgChartStructures).where(eq(orgChartStructures.isActive, true));
+    return result[0];
+  }
+
+  async createOrgChartStructure(structure: InsertOrgChartStructure): Promise<OrgChartStructure> {
+    const result = await db.insert(orgChartStructures).values(structure).returning();
+    return result[0];
+  }
+
+  async updateOrgChartStructure(id: string, structure: Partial<InsertOrgChartStructure>): Promise<OrgChartStructure | undefined> {
+    const result = await db
+      .update(orgChartStructures)
+      .set({ ...structure, updatedAt: new Date() })
+      .where(eq(orgChartStructures.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteOrgChartStructure(id: string): Promise<boolean> {
+    try {
+      await db.delete(orgChartStructures).where(eq(orgChartStructures.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting org chart structure:", error);
+      return false;
+    }
+  }
+
+  async setActiveOrgChartStructure(id: string): Promise<OrgChartStructure | undefined> {
+    // First, deactivate all structures
+    await db.update(orgChartStructures).set({ isActive: false, updatedAt: new Date() });
+    
+    // Then activate the specified one
+    const result = await db
+      .update(orgChartStructures)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(eq(orgChartStructures.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Organization Chart Nodes
+  async getOrgChartNodes(structureId: string): Promise<OrgChartNode[]> {
+    const result = await db
+      .select()
+      .from(orgChartNodes)
+      .where(eq(orgChartNodes.structureId, structureId))
+      .orderBy(asc(orgChartNodes.orderIndex));
+    return result;
+  }
+
+  async getOrgChartNode(id: string): Promise<OrgChartNode | undefined> {
+    const result = await db.select().from(orgChartNodes).where(eq(orgChartNodes.id, id));
+    return result[0];
+  }
+
+  async createOrgChartNode(node: InsertOrgChartNode): Promise<OrgChartNode> {
+    const result = await db.insert(orgChartNodes).values(node).returning();
+    return result[0];
+  }
+
+  async updateOrgChartNode(id: string, node: Partial<InsertOrgChartNode>): Promise<OrgChartNode | undefined> {
+    const result = await db
+      .update(orgChartNodes)
+      .set({ ...node, updatedAt: new Date() })
+      .where(eq(orgChartNodes.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteOrgChartNode(id: string): Promise<boolean> {
+    try {
+      await db.delete(orgChartNodes).where(eq(orgChartNodes.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting org chart node:", error);
+      return false;
+    }
+  }
+
+  async reorderOrgChartNodes(updates: Array<{ id: string; orderIndex: number; parentId?: string | null }>): Promise<void> {
+    for (const update of updates) {
+      await db
+        .update(orgChartNodes)
+        .set({ 
+          orderIndex: update.orderIndex, 
+          parentId: update.parentId !== undefined ? update.parentId : undefined,
+          updatedAt: new Date() 
+        })
+        .where(eq(orgChartNodes.id, update.id));
+    }
+  }
+
+  // Organization Chart Node Assignments
+  async getOrgChartNodeAssignments(nodeId: string): Promise<(OrgChartNodeAssignment & { staff: Staff })[]> {
+    const result = await db
+      .select({
+        id: orgChartNodeAssignments.id,
+        nodeId: orgChartNodeAssignments.nodeId,
+        staffId: orgChartNodeAssignments.staffId,
+        assignmentType: orgChartNodeAssignments.assignmentType,
+        effectiveDate: orgChartNodeAssignments.effectiveDate,
+        notes: orgChartNodeAssignments.notes,
+        createdAt: orgChartNodeAssignments.createdAt,
+        updatedAt: orgChartNodeAssignments.updatedAt,
+        staff: staff,
+      })
+      .from(orgChartNodeAssignments)
+      .leftJoin(staff, eq(orgChartNodeAssignments.staffId, staff.id))
+      .where(eq(orgChartNodeAssignments.nodeId, nodeId));
+    return result;
+  }
+
+  async getAllOrgChartAssignments(structureId: string): Promise<(OrgChartNodeAssignment & { staff: Staff; node: OrgChartNode })[]> {
+    const result = await db
+      .select({
+        id: orgChartNodeAssignments.id,
+        nodeId: orgChartNodeAssignments.nodeId,
+        staffId: orgChartNodeAssignments.staffId,
+        assignmentType: orgChartNodeAssignments.assignmentType,
+        effectiveDate: orgChartNodeAssignments.effectiveDate,
+        notes: orgChartNodeAssignments.notes,
+        createdAt: orgChartNodeAssignments.createdAt,
+        updatedAt: orgChartNodeAssignments.updatedAt,
+        staff: staff,
+        node: orgChartNodes,
+      })
+      .from(orgChartNodeAssignments)
+      .leftJoin(staff, eq(orgChartNodeAssignments.staffId, staff.id))
+      .leftJoin(orgChartNodes, eq(orgChartNodeAssignments.nodeId, orgChartNodes.id))
+      .where(eq(orgChartNodes.structureId, structureId));
+    return result;
+  }
+
+  async createOrgChartNodeAssignment(assignment: InsertOrgChartNodeAssignment): Promise<OrgChartNodeAssignment> {
+    const result = await db.insert(orgChartNodeAssignments).values(assignment).returning();
+    return result[0];
+  }
+
+  async updateOrgChartNodeAssignment(id: string, assignment: Partial<InsertOrgChartNodeAssignment>): Promise<OrgChartNodeAssignment | undefined> {
+    const result = await db
+      .update(orgChartNodeAssignments)
+      .set({ ...assignment, updatedAt: new Date() })
+      .where(eq(orgChartNodeAssignments.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteOrgChartNodeAssignment(id: string): Promise<boolean> {
+    try {
+      await db.delete(orgChartNodeAssignments).where(eq(orgChartNodeAssignments.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting org chart node assignment:", error);
       return false;
     }
   }
