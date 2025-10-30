@@ -3998,3 +3998,71 @@ export const insertOneOnOneProgressionStatusSchema = createInsertSchema(oneOnOne
 
 export type OneOnOneProgressionStatus = typeof oneOnOneProgressionStatuses.$inferSelect;
 export type InsertOneOnOneProgressionStatus = z.infer<typeof insertOneOnOneProgressionStatusSchema>;
+
+// Organization Chart Structure Tables
+export const orgChartStructures = pgTable("org_chart_structures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(false), // Only one can be active at a time
+  createdById: uuid("created_by_id").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOrgChartStructureSchema = createInsertSchema(orgChartStructures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type OrgChartStructure = typeof orgChartStructures.$inferSelect;
+export type InsertOrgChartStructure = z.infer<typeof insertOrgChartStructureSchema>;
+
+// Organization Chart Nodes (positions/roles in the hierarchy)
+export const orgChartNodes = pgTable("org_chart_nodes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  structureId: varchar("structure_id").notNull().references(() => orgChartStructures.id, { onDelete: 'cascade' }),
+  title: varchar("title", { length: 200 }).notNull(), // Position title (e.g., "CEO", "VP of Sales")
+  department: varchar("department", { length: 100 }), // Optional department
+  position: varchar("position", { length: 100 }), // Optional position type
+  roleType: varchar("role_type", { length: 50 }).default("standard"), // executive, management, individual_contributor, standard
+  notes: text("notes"), // Job responsibilities, requirements, etc.
+  parentId: varchar("parent_id"), // Self-reference to create hierarchy
+  orderIndex: integer("order_index").default(0), // Order among siblings
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOrgChartNodeSchema = createInsertSchema(orgChartNodes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type OrgChartNode = typeof orgChartNodes.$inferSelect;
+export type InsertOrgChartNode = z.infer<typeof insertOrgChartNodeSchema>;
+
+// Organization Chart Node Assignments (assign staff to positions)
+export const orgChartNodeAssignments = pgTable("org_chart_node_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nodeId: varchar("node_id").notNull().references(() => orgChartNodes.id, { onDelete: 'cascade' }),
+  staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: 'cascade' }),
+  assignmentType: varchar("assignment_type", { length: 50 }).default("primary"), // primary, backup, interim
+  effectiveDate: date("effective_date"), // When the assignment becomes effective
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Ensure one primary assignment per node
+  uniquePrimaryAssignment: unique().on(table.nodeId, table.assignmentType),
+}));
+
+export const insertOrgChartNodeAssignmentSchema = createInsertSchema(orgChartNodeAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type OrgChartNodeAssignment = typeof orgChartNodeAssignments.$inferSelect;
+export type InsertOrgChartNodeAssignment = z.infer<typeof insertOrgChartNodeAssignmentSchema>;
