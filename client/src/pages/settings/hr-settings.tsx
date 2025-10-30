@@ -34,6 +34,7 @@ import JobApplicationFormEditor from "@/components/hr/job-application-form-edito
 import NewHireOnboardingFormEditor from "@/components/hr/new-hire-onboarding-form-editor";
 import ExpenseReportFormEditor from "@/components/hr/expense-report-form-editor";
 import OffboardingFormEditor from "@/components/hr/offboarding-form-editor";
+import OrgChartStructureBuilder from "@/components/hr/org-chart-structure-builder";
 import { Link } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
@@ -815,29 +816,7 @@ export default function HRSettingsPage() {
 
         {/* Org Chart Tab */}
         <TabsContent value="org-chart" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-medium">Organization Chart Structure</h3>
-              <p className="text-muted-foreground">
-                Define and manage your organizational hierarchy structure.
-              </p>
-            </div>
-            <Button data-testid="button-create-structure">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Structure
-            </Button>
-          </div>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center py-12 text-muted-foreground">
-                <Network className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-lg font-medium mb-2">Org Chart Structure Builder</p>
-                <p className="text-sm">Create organizational chart structures to visualize your team hierarchy</p>
-                <p className="text-sm mt-4">This feature is coming soon!</p>
-              </div>
-            </CardContent>
-          </Card>
+          <OrgChartStructureBuilder />
         </TabsContent>
 
       </Tabs>
