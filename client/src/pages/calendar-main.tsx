@@ -408,16 +408,22 @@ export default function CalendarMain() {
     );
   };
 
-  // Filter appointments by selected calendars for calendar view
+  // Filter appointments by selected calendars and users for calendar view
   const calendarViewFilteredAppointments = useMemo(() => {
-    // If no calendars are selected, show all appointments
-    if (selectedCalendars.length === 0) {
-      return appointments;
+    let filtered = appointments;
+    
+    // Filter by selected calendars if any are selected
+    if (selectedCalendars.length > 0) {
+      filtered = filtered.filter(apt => selectedCalendars.includes(apt.calendarId));
     }
     
-    // Otherwise, only show appointments from selected calendars
-    return appointments.filter(apt => selectedCalendars.includes(apt.calendarId));
-  }, [appointments, selectedCalendars]);
+    // Filter by selected users if any are selected
+    if (selectedUsers.length > 0) {
+      filtered = filtered.filter(apt => selectedUsers.includes(apt.assignedTo));
+    }
+    
+    return filtered;
+  }, [appointments, selectedCalendars, selectedUsers]);
 
   // Appointments filtering and sorting logic
   const filteredAndSortedAppointments = useMemo(() => {
