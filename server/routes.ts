@@ -1615,15 +1615,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
               if (quote) {
                 // Create a deal from the accepted quote
+                const dealValue = quote.total || lead[0].value || 0;
                 const dealData = {
                   leadId: req.body.leadId,
                   clientId: client.id,
                   name: `${client.name || lead[0].name} - ${lead[0].company || 'Deal'}`,
                   assignedTo: lead[0].assignedTo,
-                  value: quote.total,
+                  value: dealValue,
                   mrr: quote.mrr || 0, // Monthly recurring revenue if available
                   wonDate: new Date(),
-                  notes: `Deal created from accepted quote #${quote.id}. Total value: $${quote.total}`,
+                  notes: `Deal created from accepted quote #${quote.id}. Total value: $${dealValue}`,
                 };
 
                 await db.insert(deals).values(dealData);
