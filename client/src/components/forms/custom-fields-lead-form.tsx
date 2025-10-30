@@ -12,11 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import CustomFieldRenderer from "@/components/CustomFieldRenderer";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertLeadSchema, type Lead, type InsertLead, type CustomField, type CustomFieldFolder, type LeadPipelineStage, type Tag, type User, type LeadSource } from "@shared/schema";
-import { ArrowRight, UserPlus, X, Trash2, User as UserIcon, Calendar, NotebookPen, CheckSquare } from "lucide-react";
+import { ArrowRight, UserPlus, X, Trash2, User as UserIcon, Calendar, NotebookPen, CheckSquare, InfoCircle } from "lucide-react";
 import LeadAppointmentBooking from "@/components/forms/lead-appointment-booking";
 import LeadAppointmentsDisplay from "@/components/forms/lead-appointments-display";
 import LeadNotesSection from "@/components/forms/lead-notes-section";
@@ -447,7 +448,19 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
                   name="value"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Potential Value</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <FormLabel>Potential Value</FormLabel>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <InfoCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p>Input the MONTHLY value of this client (MRR).</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       <FormControl>
                         <Input {...field} value={field.value || ""} type="number" placeholder="10000" />
                       </FormControl>
