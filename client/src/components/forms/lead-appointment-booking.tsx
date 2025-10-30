@@ -45,29 +45,25 @@ const leadMergeTagGroups = [
     label: "Lead Information",
     tags: [
       { label: "Lead Name", value: "{{name}}" },
-      { label: "Email", value: "{{email}}" },
-      { label: "Phone", value: "{{phone}}" },
-      { label: "Company", value: "{{company}}" },
-      { label: "Source", value: "{{source}}" },
-      { label: "Status", value: "{{status}}" },
-      { label: "Value", value: "{{value}}" },
-      { label: "Assigned To", value: "{{assignedTo}}" },
+      { label: "Email Address", value: "{{email}}" },
+      { label: "Phone Number", value: "{{phone}}" },
+      { label: "Company Name", value: "{{company}}" },
+      { label: "Lead Source", value: "{{source}}" },
+      { label: "Lead Status", value: "{{status}}" },
+      { label: "Potential Value", value: "{{value}}" },
+      { label: "Assigned To (Staff)", value: "{{assignedTo}}" },
+      { label: "Notes", value: "{{notes}}" },
+      { label: "Last Contact Date", value: "{{lastContactDate}}" },
     ]
   },
   {
     label: "Appointment Details",
     tags: [
-      { label: "Date", value: "{{appointmentDate}}" },
-      { label: "Time", value: "{{appointmentTime}}" },
-      { label: "Calendar", value: "{{calendarName}}" },
-      { label: "Team Member", value: "{{teamMember}}" },
-    ]
-  },
-  {
-    label: "Other",
-    tags: [
-      { label: "Notes", value: "{{notes}}" },
-      { label: "Last Contact Date", value: "{{lastContactDate}}" },
+      { label: "Appointment Date", value: "{{appointmentDate}}" },
+      { label: "Appointment Time", value: "{{appointmentTime}}" },
+      { label: "Calendar Name", value: "{{calendarName}}" },
+      { label: "Team Member Name", value: "{{teamMember}}" },
+      { label: "Meeting Location", value: "{{location}}" },
     ]
   }
 ];

@@ -13452,6 +13452,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Utility function to interpolate merge tags in appointment fields
+  function interpolateAppointmentMergeTags(text: string | null, appointment: any): string {
+    if (!text) return "";
+    
+    return text.replace(/\{\{([^}]+)\}\}/g, (match, tag) => {
+      const trimmedTag = tag.trim();
+      
+      // Lead information tags
+      if (trimmedTag === 'name') return appointment.leadName || match;
+      if (trimmedTag === 'email') return appointment.leadEmail || match;
+      if (trimmedTag === 'phone') return appointment.leadPhone || match;
+      if (trimmedTag === 'company') return appointment.leadCompany || match;
+      if (trimmedTag === 'source') return appointment.leadSource || match;
+      if (trimmedTag === 'status') return appointment.leadStatus || match;
+      if (trimmedTag === 'value') return appointment.leadValue ? `$${appointment.leadValue}` : match;
+      if (trimmedTag === 'assignedTo') return appointment.leadAssignedToName || match;
+      
+      // Appointment details tags
+      if (trimmedTag === 'appointmentDate') {
+        return appointment.startTime ? new Date(appointment.startTime).toLocaleDateString() : match;
+      }
+      if (trimmedTag === 'appointmentTime') {
+        return appointment.startTime ? new Date(appointment.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : match;
+      }
+      if (trimmedTag === 'calendarName') return appointment.calendarName || match;
+      if (trimmedTag === 'teamMember') {
+        return appointment.staffFirstName && appointment.staffLastName 
+          ? `${appointment.staffFirstName} ${appointment.staffLastName}` 
+          : match;
+      }
+      
+      // Other tags
+      if (trimmedTag === 'notes') return appointment.leadNotes || match;
+      if (trimmedTag === 'lastContactDate') {
+        return appointment.leadLastContactDate 
+          ? new Date(appointment.leadLastContactDate).toLocaleDateString() 
+          : match;
+      }
+      if (trimmedTag === 'location') return appointment.location || match;
+      
+      // If no match found, return the original tag
+      return match;
+    });
+  }
+
   // Get lead appointments
   app.get("/api/lead-appointments", requireAuth(), requirePermission('leads', 'canView'), async (req, res) => {
     try {
@@ -13472,11 +13517,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdBy: leadAppointments.createdBy,
           createdAt: leadAppointments.createdAt,
           updatedAt: leadAppointments.updatedAt,
+          activityType: leadAppointments.activityType,
           // Lead details
           leadName: leads.name,
           leadEmail: leads.email,
+          leadPhone: leads.phone,
           leadCompany: leads.company,
-          // Staff details
+          leadSource: leads.source,
+          leadStatus: leads.status,
+          leadValue: leads.value,
+          leadNotes: leads.notes,
+          leadLastContactDate: leads.lastContactDate,
+          leadAssignedTo: leads.assignedTo,
+          // Staff details (for team member assigned to appointment)
           staffFirstName: staff.firstName,
           staffLastName: staff.lastName,
           staffEmail: staff.email,
@@ -13492,9 +13545,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         query = query.where(eq(leadAppointments.leadId, leadId as string));
       }
 
-      const appointments = await query.orderBy(asc(leadAppointments.startTime));
+      const rawAppointments = await query.orderBy(asc(leadAppointments.startTime));
+      
+      // Get assigned staff names for leads
+      const appointmentsWithStaffNames = await Promise.all(
+        rawAppointments.map(async (apt) => {
+          let leadAssignedToName = null;
+          if (apt.leadAssignedTo) {
+            const [assignedStaff] = await db
+              .select({
+                firstName: staff.firstName,
+                lastName: staff.lastName,
+              })
+              .from(staff)
+              .where(eq(staff.id, apt.leadAssignedTo));
+            
+            if (assignedStaff) {
+              leadAssignedToName = `${assignedStaff.firstName} ${assignedStaff.lastName}`;
+            }
+          }
+          
+          return {
+            ...apt,
+            leadAssignedToName,
+          };
+        })
+      );
 
-      res.json(appointments);
+      // Interpolate merge tags in title and description
+      const interpolatedAppointments = appointmentsWithStaffNames.map(apt => ({
+        ...apt,
+        title: interpolateAppointmentMergeTags(apt.title, apt),
+        description: interpolateAppointmentMergeTags(apt.description, apt),
+      }));
+
+      res.json(interpolatedAppointments);
     } catch (error) {
       console.error('Error fetching lead appointments:', error);
       res.status(500).json({ message: "Failed to fetch lead appointments" });
