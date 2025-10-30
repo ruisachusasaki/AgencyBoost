@@ -1590,20 +1590,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .limit(1);
 
             if (lead && lead.length > 0) {
-              // Find any accepted quotes for this lead
-              const acceptedQuotes = await db
-                .select()
-                .from(quotes)
-                .where(and(
-                  sql`${quotes.leadId} = ${req.body.leadId}`,
-                  eq(quotes.status, 'accepted')
-                ))
-                .orderBy(desc(quotes.createdAt))
-                .limit(1);
+              // Use selectedQuoteId if provided, otherwise find the most recent accepted quote
+              let quote = null;
+              if (req.body.selectedQuoteId) {
+                const selectedQuote = await db
+                  .select()
+                  .from(quotes)
+                  .where(eq(quotes.id, req.body.selectedQuoteId))
+                  .limit(1);
+                quote = selectedQuote.length > 0 ? selectedQuote[0] : null;
+              } else {
+                // Find any accepted quotes for this lead
+                const acceptedQuotes = await db
+                  .select()
+                  .from(quotes)
+                  .where(and(
+                    sql`${quotes.leadId} = ${req.body.leadId}`,
+                    eq(quotes.status, 'accepted')
+                  ))
+                  .orderBy(desc(quotes.createdAt))
+                  .limit(1);
+                quote = acceptedQuotes.length > 0 ? acceptedQuotes[0] : null;
+              }
 
-              if (acceptedQuotes && acceptedQuotes.length > 0) {
-                const quote = acceptedQuotes[0];
-                
+              if (quote) {
                 // Create a deal from the accepted quote
                 const dealData = {
                   leadId: req.body.leadId,
@@ -1618,6 +1628,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
                 await db.insert(deals).values(dealData);
                 console.log(`✅ Created deal for client ${client.id} from quote ${quote.id}`);
+
+                // Transfer quote items (products/bundles) to the client
+                const items = await db
+                  .select()
+                  .from(quoteItems)
+                  .where(eq(quoteItems.quoteId, quote.id));
+
+                let transferredCount = 0;
+
+                // Transfer each item to the client
+                for (const item of items) {
+                  if (item.itemType === 'product' && item.productId) {
+                    // Check if product already assigned to client
+                    const existing = await db
+                      .select()
+                      .from(clientProducts)
+                      .where(
+                        and(
+                          eq(clientProducts.clientId, client.id),
+                          eq(clientProducts.productId, item.productId)
+                        )
+                      )
+                      .limit(1);
+
+                    if (existing.length === 0) {
+                      // Add product to client
+                      await db.insert(clientProducts).values({
+                        clientId: client.id,
+                        productId: item.productId,
+                      });
+                      transferredCount++;
+                      console.log(`✅ Transferred product ${item.productId} to client ${client.id}`);
+                    }
+                  } else if (item.itemType === 'bundle' && item.bundleId) {
+                    // Check if bundle already assigned to client
+                    const existing = await db
+                      .select()
+                      .from(clientBundles)
+                      .where(
+                        and(
+                          eq(clientBundles.clientId, client.id),
+                          eq(clientBundles.bundleId, item.bundleId)
+                        )
+                      )
+                      .limit(1);
+
+                    if (existing.length === 0) {
+                      // Add bundle to client
+                      await db.insert(clientBundles).values({
+                        clientId: client.id,
+                        bundleId: item.bundleId,
+                        customQuantities: item.customQuantities,
+                      });
+                      transferredCount++;
+                      console.log(`✅ Transferred bundle ${item.bundleId} to client ${client.id}`);
+                    }
+                  }
+                }
+
+                console.log(`✅ Transferred ${transferredCount} items from quote ${quote.id} to client ${client.id}`);
+
+                // Update lead status to "Won" and move to "Closed Won" pipeline stage
+                const closedWonStage = await db
+                  .select()
+                  .from(leadPipelineStages)
+                  .where(sql`LOWER(${leadPipelineStages.name}) = 'closed won'`)
+                  .limit(1);
+
+                const updateData: any = {
+                  status: 'Won',
+                };
+
+                if (closedWonStage.length > 0) {
+                  updateData.stageId = closedWonStage[0].id;
+                  console.log(`✅ Moving lead ${req.body.leadId} to "Closed Won" stage`);
+                }
+
+                await db
+                  .update(leads)
+                  .set(updateData)
+                  .where(eq(leads.id, req.body.leadId));
+
+                console.log(`✅ Updated lead ${req.body.leadId} status to "Won"`);
               } else {
                 console.warn(`⚠️ No accepted quote found for lead ${req.body.leadId} - deal not created`);
               }

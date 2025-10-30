@@ -110,6 +110,23 @@ export default function LeadDetail() {
     mutationFn: async () => {
       if (!lead) throw new Error("Lead data not available");
       
+      // Validate quotes before conversion
+      if (leadQuotes.length === 0) {
+        throw new Error(`${lead.name} has no quotes associated to them. Please create a quote first and ensure it has been accepted.`);
+      }
+
+      // Check for accepted quotes
+      const acceptedQuotes = leadQuotes.filter(q => q.status === 'accepted');
+      
+      if (acceptedQuotes.length === 0) {
+        throw new Error(`${lead.name} has ZERO Accepted Quotes. Please go and ensure there is an ACCEPTED quote for this lead.`);
+      }
+
+      // If multiple accepted quotes, use the most recent one
+      const selectedQuote = acceptedQuotes.sort((a, b) => 
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      )[0];
+      
       // Create a client from the lead data
       const clientData = {
         name: lead.name,
@@ -126,6 +143,7 @@ export default function LeadDetail() {
         tags: lead.tags,
         assignedTeam: lead.assignedTo ? [lead.assignedTo] : [],
         leadId: lead.id, // This triggers automatic deal creation in the backend
+        selectedQuoteId: selectedQuote.id, // Pass the selected quote ID for product transfer
       };
       
       return await apiRequest("POST", "/api/clients", clientData);
