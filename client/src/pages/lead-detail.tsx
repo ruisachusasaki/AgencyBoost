@@ -311,15 +311,15 @@ export default function LeadDetail() {
     else if (valueToSave === '') {
       valueToSave = null;
     }
+    // Handle date fields - convert string to Date object
+    else if (fieldType === 'date' && valueToSave) {
+      valueToSave = new Date(valueToSave);
+    }
     // Handle number fields
     else if (fieldType === 'number' && valueToSave !== null && valueToSave !== '') {
       const numValue = Number(valueToSave);
       // Guard against NaN
       valueToSave = isNaN(numValue) ? null : numValue;
-    }
-    // Handle date fields
-    else if (fieldType === 'date' && valueToSave) {
-      valueToSave = new Date(valueToSave).toISOString();
     }
     
     updateLeadFieldMutation.mutate({ fieldName, value: valueToSave });
@@ -551,23 +551,73 @@ export default function LeadDetail() {
               </div>
             )}
             
-            {/* Status - Non-editable (system field) */}
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-gray-500" />
-              <div>
-                <div className="text-sm text-gray-500">Status</div>
-                <Badge 
-                  variant={
-                    lead.status === 'Won' ? 'default' : 
-                    lead.status === 'Lost' ? 'destructive' : 
-                    'secondary'
-                  }
-                  data-testid="badge-lead-status"
-                >
-                  {lead.status || 'Open'}
-                </Badge>
+            {/* Status - Select dropdown */}
+            {editingLeadField === 'status' ? (
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-gray-500" />
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500">Status</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Select
+                      value={leadFieldEditValue ?? ''}
+                      onValueChange={setLeadFieldEditValue}
+                    >
+                      <SelectTrigger className="flex-1" data-testid="select-lead-status">
+                        <SelectValue placeholder="Select status..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Open">Open</SelectItem>
+                        <SelectItem value="Won">Won</SelectItem>
+                        <SelectItem value="Lost">Lost</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveLeadField('status')}
+                      disabled={updateLeadFieldMutation.isPending}
+                      data-testid="button-save-lead-status"
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleCancelLeadFieldEdit}
+                      data-testid="button-cancel-lead-status"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-gray-500" />
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500">Status</div>
+                  <Badge 
+                    variant={
+                      lead.status === 'Won' ? 'default' : 
+                      lead.status === 'Lost' ? 'destructive' : 
+                      'secondary'
+                    }
+                    data-testid="badge-lead-status"
+                  >
+                    {lead.status || 'Open'}
+                  </Badge>
+                </div>
+                {isAdminOrManager && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleStartEditLeadField('status', lead.status || 'Open')}
+                    data-testid="button-edit-lead-status"
+                  >
+                    Edit
+                  </Button>
+                )}
+              </div>
+            )}
             
             {/* Potential Value */}
             {renderEditableField('value', 'Potential Value', lead.value, DollarSign, 'number')}

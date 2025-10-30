@@ -3384,6 +3384,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { customFields, ...leadData } = req.body;
+      
+      // Convert date strings to Date objects for validation
+      if (leadData.lastContactDate && typeof leadData.lastContactDate === 'string') {
+        leadData.lastContactDate = new Date(leadData.lastContactDate);
+      }
+      
       const validatedData = insertLeadSchema.partial().parse({
         ...leadData,
         customFieldData: customFields !== undefined ? customFields : undefined
