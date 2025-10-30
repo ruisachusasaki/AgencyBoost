@@ -24,7 +24,8 @@ import {
   ArrowLeft,
   MessageCircle,
   MoreHorizontal,
-  GripVertical
+  GripVertical,
+  Network
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -639,7 +640,8 @@ export default function HRSettingsPage() {
                 { id: "new-hire-onboarding-form", name: "New Hire Onboarding Form", icon: Users },
                 { id: "expense-report-form", name: "Expense Report Form", icon: Settings },
                 { id: "offboarding-form", name: "Offboarding Form", icon: Users },
-                { id: "one-on-one-settings", name: "1v1 Settings", icon: MessageCircle }
+                { id: "one-on-one-settings", name: "1v1 Settings", icon: MessageCircle },
+                { id: "org-chart", name: "Org Chart", icon: Network }
               ];
               
               const visibleTabs = allTabs.slice(0, visibleTabsCount);
@@ -809,6 +811,33 @@ export default function HRSettingsPage() {
         {/* 1v1 Settings Tab */}
         <TabsContent value="one-on-one-settings" className="space-y-6">
           <ProgressionStatusManager />
+        </TabsContent>
+
+        {/* Org Chart Tab */}
+        <TabsContent value="org-chart" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-medium">Organization Chart Structure</h3>
+              <p className="text-muted-foreground">
+                Define and manage your organizational hierarchy structure.
+              </p>
+            </div>
+            <Button data-testid="button-create-structure">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Structure
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-center py-12 text-muted-foreground">
+                <Network className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-lg font-medium mb-2">Org Chart Structure Builder</p>
+                <p className="text-sm">Create organizational chart structures to visualize your team hierarchy</p>
+                <p className="text-sm mt-4">This feature is coming soon!</p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
       </Tabs>
