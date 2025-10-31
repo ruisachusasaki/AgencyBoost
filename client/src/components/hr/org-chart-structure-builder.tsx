@@ -310,7 +310,7 @@ export default function OrgChartStructureBuilder() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
+            <div className="pr-6">
               <CardTitle className="flex items-center gap-2">
                 <Briefcase className="h-5 w-5" />
                 Organization Chart Structure
