@@ -42,17 +42,21 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Client Management**: Client team assignment, health scoring, and an asset approval workflow with annotation capabilities. Includes per-user customizable and saveable column views for client tables. Client detail page includes Billing Information section with inline-editable MRR (Monthly Recurring Revenue) and Client Vertical fields for categorization and revenue tracking.
 - **HR Features**: Time off requests with pagination, job application form configuration, job application watchers, expense report management with configurable fields and submission tracking, and 1-on-1 meeting tracker for managers to conduct weekly meetings with direct reports (inspired by HeyRamp.com). Features keyboard shortcuts (Enter to submit inputs, Shift+Enter for newlines in textareas) for efficient data entry.
   - **1-on-1 Performance Reports**: Accessible under Reports > 1-on-1 Performance with role-based viewing (individuals see their own data, managers see direct reports, admins see all). Displays aggregated metrics including total meetings, average performance points, completion rates for talking points/action items/goals, most common feeling and progression status. Features comprehensive filtering (date range, feeling, progression status, department), search, sorting capabilities, and a dedicated granular permission (`reports.view_1on1_performance`) in Settings > Roles & Permissions for access control.
-  - **Organization Chart**: Interactive hierarchical visualization of team structure using ReactFlow, accessible under HR > Org Chart tab (next to Staff Directory). Features include:
-    - Top-down hierarchy display based on staff.managerId relationships
-    - Supports multiple top-level leaders (not limited to single CEO)
-    - Department-based color coding (Sales: blue, Marketing: purple, Engineering: green, Product: orange, Operations: yellow, Finance: emerald, HR: pink, Customer Success: cyan, Executive: indigo)
-    - Custom nodes displaying staff photo/avatar, name, position, department badge, and client count
-    - Expand/collapse functionality for teams with child count indicators
-    - Zoom and pan controls via ReactFlow (zoom in/out, fit view, drag canvas)
-    - BFS algorithm for hierarchical layout with automatic level-based centering
-    - Client assignment counts displayed when staff members are assigned to clients
-    - Defensive guards for incomplete staff records
-    - Background grid pattern for better spatial orientation
+  - **Organization Chart**: Interactive hierarchical visualization and management system with two components:
+    - **Org Chart Display** (HR > Org Chart tab): ReactFlow-based visualization showing team structure based on staff.managerId relationships with department color coding, expand/collapse functionality, zoom/pan controls, and client assignment counts
+    - **Org Chart Structure Builder** (Settings > HR Settings > Org Chart tab): Position-based org chart system allowing multiple structure configurations with drag-and-drop hierarchy builder. Features include:
+      - Multiple named org chart structures (e.g., "Main Organization", "Future State")
+      - Position-based nodes (independent of current staff assignments)
+      - Drag-and-drop tree builder using react-beautiful-dnd with hierarchical droppable zones
+      - Visual hierarchy with indentation showing parent-child relationships
+      - Expand/collapse nodes to manage complex hierarchies
+      - Staff assignment to positions with assignment types (primary, backup, interim) and date ranges
+      - Smart reordering with fractional indexing for precise position placement
+      - Parent validation preventing circular dependencies
+      - Split-view interface: tree builder (left, 2/3 width) + position detail panel (right, 1/3 width)
+      - Full CRUD operations for structures, positions, and staff assignments
+      - Real-time persistence with optimistic UI updates
+    - Database schema: orgChartStructures, orgChartNodes (with parentNodeId and orderIndex), orgChartNodeAssignments
 - **Sales Reports**: Pipeline and Sales Rep Reports with date range filtering and optimized data aggregation.
 - **Sales Settings**: Dynamic minimum margin threshold configuration for quotes, applied to validations and indicators.
 - **Lead Management**: Customizable lead source options managed through Settings > Leads page. Admins can add, edit, reorder, and toggle active/inactive status of lead sources. The lead creation/edit form dynamically loads active sources from the database. Default sources include Website, Referral, Social Media, Advertising, and Cold Outreach.
