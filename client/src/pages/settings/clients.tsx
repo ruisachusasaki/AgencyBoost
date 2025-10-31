@@ -1785,7 +1785,6 @@ export default function ClientsSettings() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
     </div>
   );
 }

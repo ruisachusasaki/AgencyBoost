@@ -283,7 +283,6 @@ export default function EditFolder() {
             </CardContent>
           </Card>
         </div>
-      </div>
     </div>
   );
 }
