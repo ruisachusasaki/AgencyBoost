@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { GripVertical, Users, Briefcase, ChevronRight, ChevronDown, Plus, Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { TeamPosition } from "@shared/schema";
 
 type OrgNode = {
   id: string;
@@ -42,9 +43,9 @@ export default function OrgChartStructureBuilder() {
     queryKey: ["/api/org-structure"],
   });
 
-  // Fetch all positions (master list)
-  const { data: allPositions = [] } = useQuery<Position[]>({
-    queryKey: ["/api/positions"],
+  // Fetch all position templates (master list)
+  const { data: allPositions = [] } = useQuery<TeamPosition[]>({
+    queryKey: ["/api/team-positions"],
   });
 
   // Toggle node expansion
@@ -87,10 +88,10 @@ export default function OrgChartStructureBuilder() {
 
   // Add position instance mutation
   const addPositionMutation = useMutation({
-    mutationFn: async (templatePosition: Position) => {
-      // Create position with parent context if available
+    mutationFn: async (templatePosition: TeamPosition) => {
+      // Create position instance from template with parent context if available
       const payload: any = {
-        name: templatePosition.name,
+        name: templatePosition.label, // Use label from template
         description: templatePosition.description,
         isActive: true,
         inOrgChart: true, // Mark as part of org chart
@@ -356,7 +357,7 @@ export default function OrgChartStructureBuilder() {
                     {(() => {
                       const filteredPositions = allPositions.filter(p => 
                         p.isActive && 
-                        p.name.toLowerCase().includes(positionSearchQuery.toLowerCase())
+                        p.label.toLowerCase().includes(positionSearchQuery.toLowerCase())
                       );
 
                       if (filteredPositions.length === 0) {
@@ -380,7 +381,7 @@ export default function OrgChartStructureBuilder() {
                             <div className="flex items-center gap-3">
                               <Briefcase className="h-5 w-5 text-orange-500" />
                               <div className="flex-1">
-                                <div className="font-medium">{position.name}</div>
+                                <div className="font-medium">{position.label}</div>
                               </div>
                               <Plus className="h-4 w-4 text-muted-foreground" />
                             </div>
