@@ -262,11 +262,13 @@ export default function OrgChartStructureBuilder() {
                     } ${!isExpanded && hasChildren ? 'hidden' : ''}`}
                   >
                     {isExpanded && hasChildren && node.children.map((child, idx) => renderNode(child, idx, node.id))}
-                    {!hasChildren && (
-                      <div className="text-xs text-center py-2 space-y-2">
-                        <div className="text-muted-foreground">
-                          Drop positions here
-                        </div>
+                    {(!hasChildren || isExpanded) && (
+                      <div className="text-xs text-center py-2 space-y-2 mt-2">
+                        {!hasChildren && (
+                          <div className="text-muted-foreground">
+                            Drop positions here
+                          </div>
+                        )}
                         <div>
                           <Button
                             variant="ghost"
