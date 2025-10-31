@@ -3,49 +3,70 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { GripVertical, Users, Briefcase, ChevronRight, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-type TeamPosition = {
+type OrgNode = {
   id: string;
-  key: string;
-  label: string;
-  description: string | null;
-  order: number;
+  name: string;
+  description?: string | null;
+  type: 'department' | 'position';
+  departmentId?: string;
+  parentDepartmentId?: string | null;
+  parentPositionId?: string | null;
+  orderIndex?: number;
   isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  children: OrgNode[];
 };
 
 export default function OrgChartStructureBuilder() {
   const { toast } = useToast();
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
-  // Fetch all team positions
-  const { data: positions = [], isLoading } = useQuery<TeamPosition[]>({
-    queryKey: ["/api/team-positions"],
+  // Fetch org structure
+  const { data: orgTree = [], isLoading } = useQuery<OrgNode[]>({
+    queryKey: ["/api/org-structure"],
   });
 
-  // Reorder mutation
-  const reorderMutation = useMutation({
-    mutationFn: async (reorderedPositions: TeamPosition[]) => {
-      // Update each position with new order
-      const promises = reorderedPositions.map((position, index) =>
-        apiRequest("PUT", `/api/team-positions/${position.id}`, { order: index + 1 })
-      );
-      return await Promise.all(promises);
+  // Toggle node expansion
+  const toggleNode = (nodeId: string) => {
+    setExpandedNodes(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+      return next;
+    });
+  };
+
+  // Move mutation
+  const moveMutation = useMutation({
+    mutationFn: async ({ id, type, payload }: { 
+      id: string; 
+      type: 'department' | 'position';
+      payload: any;
+    }) => {
+      if (type === 'department') {
+        return await apiRequest("PATCH", `/api/departments/${id}/hierarchy`, payload);
+      } else {
+        return await apiRequest("PATCH", `/api/positions/${id}/hierarchy`, payload);
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/org-structure"] });
       toast({
         title: "Success",
-        description: "Position order updated successfully",
+        description: "Org structure updated successfully",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update position order",
+        description: error.message || "Failed to update org structure",
         variant: "destructive",
       });
     },
@@ -54,35 +75,172 @@ export default function OrgChartStructureBuilder() {
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
-    // Get fresh data from cache to avoid stale closure issues
-    const currentPositions = queryClient.getQueryData<TeamPosition[]>(["/api/team-positions"]) || [];
-    const sortedCurrent = [...currentPositions].sort((a, b) => a.order - b.order);
+    const { destination, draggableId } = result;
+    
+    // Parse IDs to determine what was moved and where (using :: delimiter to avoid UUID conflicts)
+    const [nodeType, nodeId] = draggableId.split('::');
+    const destDroppableId = destination.droppableId;
+    const newOrderIndex = destination.index;
 
-    // Reorder the fresh sorted array
-    const items = Array.from(sortedCurrent);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+    // Determine the destination parent type and ID
+    let destParentType: 'root' | 'department' | 'position' = 'root';
+    let destParentId: string | null = null;
 
-    // Update order for all items
-    const reorderedPositions = items.map((item, index) => ({
-      ...item,
-      order: index + 1,
-    }));
+    if (destDroppableId !== 'root') {
+      const [parentType, parentId] = destDroppableId.split('::');
+      destParentType = parentType as 'department' | 'position';
+      destParentId = parentId;
+    }
 
-    // Optimistically update UI
-    queryClient.setQueryData(["/api/team-positions"], reorderedPositions);
+    // Build the appropriate payload based on what's being moved and where
+    let payload: any = { orderIndex: newOrderIndex };
 
-    // Persist to backend
-    reorderMutation.mutate(reorderedPositions);
+    if (nodeType === 'department') {
+      // Department being moved
+      payload.parentDepartmentId = destParentType === 'department' ? destParentId : null;
+    } else {
+      // Position being moved
+      if (destParentType === 'root') {
+        // Positions can't exist at root level - they must always belong to a department
+        toast({
+          title: "Invalid Move",
+          description: "Positions must belong to a department. Drag it to a department instead.",
+          variant: "destructive",
+        });
+        return;
+      } else if (destParentType === 'department') {
+        // Position dropped onto department - this is a cross-department move
+        // We need to update the position's departmentId, not parentPositionId
+        // First, we need to update via the regular PUT endpoint to change departmentId
+        apiRequest("PUT", `/api/positions/${nodeId}`, {
+          departmentId: destParentId
+        }).then(() => {
+          // Then update the hierarchy
+          return apiRequest("PATCH", `/api/positions/${nodeId}/hierarchy`, {
+            parentPositionId: null, // Reset parent since it's now under a department
+            orderIndex: newOrderIndex
+          });
+        }).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/org-structure"] });
+          toast({
+            title: "Success",
+            description: "Position moved to different department",
+          });
+        }).catch((error) => {
+          toast({
+            title: "Error",
+            description: error.message || "Failed to move position",
+            variant: "destructive",
+          });
+        });
+        return; // Exit early since we're handling this separately
+      } else if (destParentType === 'position') {
+        // Position dropped onto another position - hierarchical relationship
+        payload.parentPositionId = destParentId;
+      }
+    }
+
+    // Call the mutation
+    moveMutation.mutate({
+      id: nodeId,
+      type: nodeType as 'department' | 'position',
+      payload
+    });
   };
 
-  // Sort positions by order for display
-  const sortedPositions = [...positions].sort((a, b) => a.order - b.order);
+  // Render a single node (department or position)
+  const renderNode = (node: OrgNode, index: number, parentId: string | null = null): JSX.Element => {
+    const hasChildren = node.children && node.children.length > 0;
+    const isExpanded = expandedNodes.has(node.id);
+    const Icon = node.type === 'department' ? Users : Briefcase;
+    const droppableId = `${node.type}::${node.id}`;
+    const draggableId = `${node.type}::${node.id}`;
+
+    return (
+      <Draggable key={node.id} draggableId={draggableId} index={index}>
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            className="mb-2"
+          >
+            <div
+              className={`flex items-center gap-2 rounded-lg border bg-card p-3 shadow-sm transition-all ${
+                snapshot.isDragging ? 'shadow-lg ring-2 ring-primary' : ''
+              }`}
+            >
+              <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+
+              {hasChildren && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => toggleNode(node.id)}
+                  data-testid={`toggle-${draggableId}`}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+
+              <Icon className={`h-4 w-4 ${node.type === 'department' ? 'text-primary' : 'text-orange-500'}`} />
+
+              <div className="flex-1">
+                <div className="font-medium">{node.name}</div>
+                {node.description && (
+                  <div className="text-xs text-muted-foreground">{node.description}</div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Badge variant={node.type === 'department' ? 'default' : 'secondary'}>
+                  {node.type}
+                </Badge>
+                <Badge variant={node.isActive ? 'default' : 'outline'}>
+                  {node.isActive ? 'Active' : 'Inactive'}
+                </Badge>
+                <span className="text-xs text-muted-foreground">Order: {node.orderIndex || 0}</span>
+              </div>
+            </div>
+
+            {/* Nested droppable zone - always render for drag-and-drop, show children only when expanded */}
+            <div className="ml-8 mt-2">
+              <Droppable droppableId={droppableId} type="NODE">
+                {(provided, snapshot) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className={`rounded-lg border-2 border-dashed p-2 min-h-[50px] transition-colors ${
+                      snapshot.isDraggingOver ? 'border-primary bg-primary/5' : 'border-border'
+                    } ${!isExpanded && hasChildren ? 'hidden' : ''}`}
+                  >
+                    {isExpanded && hasChildren && node.children.map((child, idx) => renderNode(child, idx, node.id))}
+                    {!hasChildren && (
+                      <div className="text-xs text-muted-foreground text-center py-2">
+                        Drop {node.type === 'department' ? 'departments or positions' : 'positions'} here
+                      </div>
+                    )}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </div>
+          </div>
+        )}
+      </Draggable>
+    );
+  };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-muted-foreground">Loading positions...</div>
+        <div className="text-muted-foreground">Loading org structure...</div>
       </div>
     );
   }
@@ -93,85 +251,59 @@ export default function OrgChartStructureBuilder() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Organization Chart Position Order
+            Organization Chart Structure
           </CardTitle>
           <CardDescription>
-            Drag and drop to reorder how positions appear in the HR {'>'} Org Chart view. 
-            These positions are managed in Settings {'>'} Staff {'>'} Teams.
+            Drag and drop to organize your HR organizational hierarchy. Departments (teams) can contain positions.
+            These are managed in Settings {'>'} Staff {'>'} Teams. Changes here affect the HR {'>'} Org Chart display.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {sortedPositions.length === 0 ? (
+          {orgTree.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No team positions found. Add positions in Settings {'>'} Staff {'>'} Teams first.
+              No departments or positions found. Add them in Settings {'>'} Staff {'>'} Teams first.
             </div>
           ) : (
             <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="positions-list">
+              <Droppable droppableId="root" type="NODE">
                 {(provided, snapshot) => (
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-                    className={`space-y-2 min-h-[100px] rounded-lg border-2 border-dashed p-4 transition-colors ${
+                    className={`space-y-2 min-h-[200px] rounded-lg border-2 border-dashed p-4 transition-colors ${
                       snapshot.isDraggingOver ? 'border-primary bg-primary/5' : 'border-transparent'
                     }`}
                   >
-                    {sortedPositions.map((position, index) => (
-                      <Draggable key={position.id} draggableId={position.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            className={`flex items-center gap-3 rounded-lg border bg-card p-4 shadow-sm transition-shadow ${
-                              snapshot.isDragging ? 'shadow-lg ring-2 ring-primary' : ''
-                            }`}
-                          >
-                            <div
-                              {...provided.dragHandleProps}
-                              className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
-                              data-testid={`drag-handle-${position.id}`}
-                            >
-                              <GripVertical className="h-5 w-5" />
-                            </div>
-                            
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium" data-testid={`position-label-${position.id}`}>
-                                  {position.label}
-                                </span>
-                                {!position.isActive && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    Inactive
-                                  </Badge>
-                                )}
-                              </div>
-                              {position.description && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {position.description}
-                                </p>
-                              )}
-                            </div>
-
-                            <div className="text-sm text-muted-foreground">
-                              Order: <span className="font-medium">{index + 1}</span>
-                            </div>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
+                    {orgTree.map((node, index) => renderNode(node, index))}
                     {provided.placeholder}
                   </div>
                 )}
               </Droppable>
             </DragDropContext>
           )}
+        </CardContent>
+      </Card>
 
-          <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-            <p className="text-sm text-muted-foreground">
-              <strong>Note:</strong> To add, edit, or remove positions, go to{' '}
-              <span className="font-medium text-foreground">Settings {'>'} Staff {'>'} Teams</span>.
-              This page only controls the display order in the Org Chart.
-            </p>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Legend</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <span>Department (Team)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Briefcase className="h-4 w-4 text-orange-500" />
+            <span>Position</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+            <span>Drag handle</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ChevronRight className="h-4 w-4" />
+            <span>Expand/Collapse</span>
           </div>
         </CardContent>
       </Card>
