@@ -315,7 +315,7 @@ export default function OrgChartStructureBuilder() {
                 <Briefcase className="h-5 w-5" />
                 Organization Chart Structure
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="mt-2">
                 Drag and drop to organize your people-based organizational hierarchy. Build position-to-position reporting structures (e.g., CEO → VP → Manager).
                 Position templates are managed in Settings {'>'} Staff {'>'} Teams. Changes here affect the HR {'>'} Org Chart display.
               </CardDescription>
