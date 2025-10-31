@@ -63,7 +63,7 @@ export default function OrgChartStructureBuilder() {
   // Remove position from org chart mutation
   const removeFromOrgChartMutation = useMutation({
     mutationFn: async (positionId: string) => {
-      return await apiRequest("PATCH", `/api/positions/${positionId}`, {
+      return await apiRequest("PUT", `/api/positions/${positionId}`, {
         inOrgChart: false,
         parentPositionId: null, // Clear parent when removing from chart
       });
