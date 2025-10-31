@@ -75,12 +75,11 @@ export default function OrgChartStructureBuilder() {
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
-    const { destination, draggableId } = result;
+    const { destination, draggableId, source } = result;
     
     // Parse IDs to determine what was moved and where (using :: delimiter to avoid UUID conflicts)
     const [nodeType, nodeId] = draggableId.split('::');
     const destDroppableId = destination.droppableId;
-    const newOrderIndex = destination.index;
 
     // Determine the destination parent type and ID
     let destParentType: 'root' | 'department' | 'position' = 'root';
@@ -90,6 +89,61 @@ export default function OrgChartStructureBuilder() {
       const [parentType, parentId] = destDroppableId.split('::');
       destParentType = parentType as 'department' | 'position';
       destParentId = parentId;
+    }
+
+    // Find siblings at the destination to calculate proper orderIndex
+    let siblings: OrgNode[] = [];
+    if (destParentType === 'root') {
+      siblings = orgTree || [];
+    } else if (destParentType === 'department') {
+      const findNode = (nodes: OrgNode[]): OrgNode | null => {
+        for (const node of nodes) {
+          if (node.id === destParentId) return node;
+          const found = findNode(node.children);
+          if (found) return found;
+        }
+        return null;
+      };
+      const parentNode = findNode(orgTree || []);
+      siblings = parentNode?.children || [];
+    } else if (destParentType === 'position') {
+      const findNode = (nodes: OrgNode[]): OrgNode | null => {
+        for (const node of nodes) {
+          if (node.id === destParentId) return node;
+          const found = findNode(node.children);
+          if (found) return found;
+        }
+        return null;
+      };
+      const parentNode = findNode(orgTree || []);
+      siblings = parentNode?.children || [];
+    }
+
+    // Filter out the item being moved from siblings
+    const filteredSiblings = siblings.filter(s => s.id !== nodeId);
+
+    // Calculate the new orderIndex based on destination.index
+    let newOrderIndex = 0;
+    if (destination.index === 0) {
+      // Moving to first position - use orderIndex lower than the current first item
+      const firstItem = filteredSiblings[0];
+      newOrderIndex = firstItem ? (firstItem.orderIndex || 0) - 1 : 0;
+    } else if (destination.index >= filteredSiblings.length) {
+      // Moving to last position - use orderIndex higher than the current last item
+      const lastItem = filteredSiblings[filteredSiblings.length - 1];
+      newOrderIndex = lastItem ? (lastItem.orderIndex || 0) + 1 : filteredSiblings.length;
+    } else {
+      // Moving to middle position - use average of surrounding items
+      const beforeItem = filteredSiblings[destination.index - 1];
+      const afterItem = filteredSiblings[destination.index];
+      const beforeOrder = beforeItem?.orderIndex || 0;
+      const afterOrder = afterItem?.orderIndex || 0;
+      newOrderIndex = Math.floor((beforeOrder + afterOrder) / 2);
+      
+      // If they're adjacent integers, we need to shift everything
+      if (afterOrder - beforeOrder <= 1) {
+        newOrderIndex = afterOrder;
+      }
     }
 
     // Build the appropriate payload based on what's being moved and where
