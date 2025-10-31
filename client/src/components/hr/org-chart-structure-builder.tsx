@@ -267,9 +267,6 @@ export default function OrgChartStructureBuilder() {
 
               <div className="flex-1">
                 <div className="font-medium">{node.name}</div>
-                {node.description && (
-                  <div className="text-xs text-muted-foreground">{node.description}</div>
-                )}
               </div>
 
               <div className="flex items-center gap-2">
