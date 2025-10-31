@@ -296,8 +296,22 @@ export default function OrgChartStructureBuilder() {
                   >
                     {isExpanded && hasChildren && node.children.map((child, idx) => renderNode(child, idx, node.id))}
                     {!hasChildren && (
-                      <div className="text-xs text-muted-foreground text-center py-2">
-                        Drop {node.type === 'department' ? 'departments or positions' : 'positions'} here
+                      <div className="text-xs text-center py-2 space-y-2">
+                        <div className="text-muted-foreground">
+                          Drop {node.type === 'department' ? 'departments or positions' : 'positions'} here
+                        </div>
+                        <div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setAddPositionDialogOpen(true)}
+                            className="text-primary hover:text-primary"
+                            data-testid={`button-add-position-inline-${node.id}`}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Position
+                          </Button>
+                        </div>
                       </div>
                     )}
                     {provided.placeholder}
@@ -422,6 +436,20 @@ export default function OrgChartStructureBuilder() {
                   >
                     {orgTree.map((node, index) => renderNode(node, index))}
                     {provided.placeholder}
+                    
+                    {/* Add Position button at root level */}
+                    <div className="text-center pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAddPositionDialogOpen(true)}
+                        className="text-primary hover:text-primary"
+                        data-testid="button-add-position-root"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Position
+                      </Button>
+                    </div>
                   </div>
                 )}
               </Droppable>
