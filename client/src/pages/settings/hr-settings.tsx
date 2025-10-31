@@ -489,20 +489,20 @@ export default function HRSettingsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Responsive tab visibility
+  // Responsive tab visibility - adjusted for wider layout without max-width constraints
   useEffect(() => {
     const calculateVisibleTabs = () => {
       const width = window.innerWidth;
       
-      if (width >= 1400) {
-        setVisibleTabsCount(7); // Show all tabs
-      } else if (width >= 1200) {
+      if (width >= 1024) {
+        setVisibleTabsCount(7); // Show all tabs on screens >= 1024px
+      } else if (width >= 900) {
         setVisibleTabsCount(6);
-      } else if (width >= 1000) {
+      } else if (width >= 768) {
         setVisibleTabsCount(5);
-      } else if (width >= 800) {
+      } else if (width >= 640) {
         setVisibleTabsCount(4);
-      } else if (width >= 600) {
+      } else if (width >= 500) {
         setVisibleTabsCount(3);
       } else {
         setVisibleTabsCount(2);
