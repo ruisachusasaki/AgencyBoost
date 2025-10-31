@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { GripVertical, Users, Briefcase, ChevronRight, ChevronDown, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { GripVertical, Users, Briefcase, ChevronRight, ChevronDown, Plus, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -34,6 +35,7 @@ export default function OrgChartStructureBuilder() {
   const { toast } = useToast();
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [addPositionDialogOpen, setAddPositionDialogOpen] = useState(false);
+  const [positionSearchQuery, setPositionSearchQuery] = useState("");
 
   // Fetch org structure
   const { data: orgTree = [], isLoading } = useQuery<OrgNode[]>({
@@ -346,34 +348,57 @@ export default function OrgChartStructureBuilder() {
                     Select a position from your master list to add to the org chart. You can add the same position multiple times.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-2 mt-4">
-                  {allPositions.filter(p => p.isActive).length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No positions found. Create positions in Settings {'>'} Staff Management {'>'} Teams first.
-                    </div>
-                  ) : (
-                    allPositions.filter(p => p.isActive).map(position => (
-                      <Card 
-                        key={position.id} 
-                        className="hover:bg-accent cursor-pointer transition-colors"
-                        onClick={() => addPositionMutation.mutate(position)}
-                        data-testid={`position-template-${position.id}`}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <Briefcase className="h-5 w-5 text-orange-500" />
-                            <div className="flex-1">
-                              <div className="font-medium">{position.name}</div>
-                              {position.description && (
-                                <div className="text-sm text-muted-foreground">{position.description}</div>
-                              )}
-                            </div>
-                            <Plus className="h-4 w-4 text-muted-foreground" />
+                <div className="space-y-4 mt-4">
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search positions..."
+                      value={positionSearchQuery}
+                      onChange={(e) => setPositionSearchQuery(e.target.value)}
+                      className="pl-9"
+                      data-testid="input-search-positions"
+                    />
+                  </div>
+
+                  {/* Position List */}
+                  <div className="space-y-2">
+                    {(() => {
+                      const filteredPositions = allPositions.filter(p => 
+                        p.isActive && 
+                        p.name.toLowerCase().includes(positionSearchQuery.toLowerCase())
+                      );
+
+                      if (filteredPositions.length === 0) {
+                        return (
+                          <div className="text-center py-8 text-muted-foreground">
+                            {positionSearchQuery 
+                              ? "No positions match your search."
+                              : "No positions found. Create positions in Settings > Staff Management > Teams first."}
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
+                        );
+                      }
+
+                      return filteredPositions.map(position => (
+                        <Card 
+                          key={position.id} 
+                          className="hover:bg-accent cursor-pointer transition-colors"
+                          onClick={() => addPositionMutation.mutate(position)}
+                          data-testid={`position-template-${position.id}`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                              <Briefcase className="h-5 w-5 text-orange-500" />
+                              <div className="flex-1">
+                                <div className="font-medium">{position.name}</div>
+                              </div>
+                              <Plus className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ));
+                    })()}
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
