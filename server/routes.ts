@@ -9467,9 +9467,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { parentPositionId, destinationIndex, departmentId } = req.body;
       const positionId = req.params.id;
       
+      // Get the current position to know its current parent
+      const currentPosition = await appStorage.getPosition(positionId);
+      if (!currentPosition) {
+        return res.status(404).json({ message: "Position not found" });
+      }
+      
+      const sourceParentId = currentPosition.parentPositionId;
+      const destParentId = parentPositionId || null;
+      const isChangingParent = sourceParentId !== destParentId;
+      
       // Validate no circular reference
-      if (parentPositionId) {
-        let currentParent = parentPositionId;
+      if (destParentId) {
+        let currentParent = destParentId;
         const visited = new Set([positionId]);
         while (currentParent) {
           if (visited.has(currentParent)) {
@@ -9481,44 +9491,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Get all positions to find siblings under the new parent
-      const allPositions = await appStorage.getPositions();
-      
-      // Find siblings (positions with the same parent, excluding the one being moved)
-      const siblings = allPositions.filter(p => 
-        p.id !== positionId && 
-        p.parentPositionId === (parentPositionId || null)
-      ).sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
-      
-      // Insert the moved position at the destination index
-      const targetIndex = Math.max(0, Math.min(destinationIndex ?? 0, siblings.length));
-      
-      // Update the moved position first
-      await appStorage.updatePosition(positionId, {
-        parentPositionId,
-        departmentId: departmentId !== undefined ? departmentId : undefined,
-        orderIndex: targetIndex
-      });
-      
-      // Reindex all siblings to maintain sequential order (0, 1, 2, 3...)
-      for (let i = 0; i < siblings.length; i++) {
-        const sibling = siblings[i];
-        const newOrderIndex = i >= targetIndex ? i + 1 : i;
+      // Wrap in transaction for atomicity
+      await db.transaction(async (tx) => {
+        // Get all positions for reindexing
+        const allPositions = await tx.select().from(positions);
         
-        if (sibling.orderIndex !== newOrderIndex) {
-          await appStorage.updatePosition(sibling.id, {
-            orderIndex: newOrderIndex
-          });
+        // 1. Reindex source parent's siblings (if changing parents)
+        if (isChangingParent && sourceParentId !== undefined) {
+          const sourceSiblings = allPositions
+            .filter(p => p.id !== positionId && p.parentPositionId === sourceParentId)
+            .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+          
+          for (let i = 0; i < sourceSiblings.length; i++) {
+            if (sourceSiblings[i].orderIndex !== i) {
+              await tx.update(positions)
+                .set({ orderIndex: i })
+                .where(eq(positions.id, sourceSiblings[i].id));
+            }
+          }
         }
-      }
+        
+        // 2. Find destination siblings (excluding the moved position)
+        const destSiblings = allPositions
+          .filter(p => p.id !== positionId && p.parentPositionId === destParentId)
+          .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+        
+        // 3. Calculate target index and update moved position
+        const targetIndex = Math.max(0, Math.min(destinationIndex ?? 0, destSiblings.length));
+        
+        const updateData: any = {
+          parentPositionId: destParentId,
+          orderIndex: targetIndex
+        };
+        
+        if (departmentId !== undefined) {
+          updateData.departmentId = departmentId;
+        }
+        
+        await tx.update(positions)
+          .set(updateData)
+          .where(eq(positions.id, positionId));
+        
+        // 4. Reindex destination siblings to make room
+        for (let i = 0; i < destSiblings.length; i++) {
+          const sibling = destSiblings[i];
+          const newOrderIndex = i >= targetIndex ? i + 1 : i;
+          
+          if (sibling.orderIndex !== newOrderIndex) {
+            await tx.update(positions)
+              .set({ orderIndex: newOrderIndex })
+              .where(eq(positions.id, sibling.id));
+          }
+        }
+      });
       
       // Get the updated position to return
       const updated = await appStorage.getPosition(positionId);
-      
-      if (!updated) {
-        return res.status(404).json({ message: "Position not found" });
-      }
-      
       res.json(updated);
     } catch (error) {
       console.error('Error updating position hierarchy:', error);
