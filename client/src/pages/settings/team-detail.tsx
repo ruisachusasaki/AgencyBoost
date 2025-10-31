@@ -18,6 +18,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { FormLabelWithTooltip } from "@/components/ui/form-label-with-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
 import type { Department, Staff, Position, InsertPosition, Role } from "@shared/schema";
 
