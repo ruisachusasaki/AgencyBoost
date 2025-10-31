@@ -146,53 +146,9 @@ export default function OrgChartStructureBuilder() {
       destParentId = parentId;
     }
 
-    // Find siblings at the destination to calculate proper orderIndex
-    let siblings: OrgNode[] = [];
-    if (destParentType === 'root') {
-      siblings = orgTree || [];
-    } else {
-      const findNode = (nodes: OrgNode[]): OrgNode | null => {
-        for (const node of nodes) {
-          if (node.id === destParentId) return node;
-          const found = findNode(node.children);
-          if (found) return found;
-        }
-        return null;
-      };
-      const parentNode = findNode(orgTree || []);
-      siblings = parentNode?.children || [];
-    }
-
-    // Filter out the item being moved from siblings
-    const filteredSiblings = siblings.filter(s => s.id !== nodeId);
-
-    // Calculate the new orderIndex based on destination.index
-    let newOrderIndex = 0;
-    if (destination.index === 0) {
-      // Moving to first position - use orderIndex lower than the current first item
-      const firstItem = filteredSiblings[0];
-      newOrderIndex = firstItem ? (firstItem.orderIndex || 0) - 1 : 0;
-    } else if (destination.index >= filteredSiblings.length) {
-      // Moving to last position - use orderIndex higher than the current last item
-      const lastItem = filteredSiblings[filteredSiblings.length - 1];
-      newOrderIndex = lastItem ? (lastItem.orderIndex || 0) + 1 : filteredSiblings.length;
-    } else {
-      // Moving to middle position - use average of surrounding items
-      const beforeItem = filteredSiblings[destination.index - 1];
-      const afterItem = filteredSiblings[destination.index];
-      const beforeOrder = beforeItem?.orderIndex || 0;
-      const afterOrder = afterItem?.orderIndex || 0;
-      newOrderIndex = Math.floor((beforeOrder + afterOrder) / 2);
-      
-      // If they're adjacent integers, we need to shift everything
-      if (afterOrder - beforeOrder <= 1) {
-        newOrderIndex = afterOrder;
-      }
-    }
-
-    // Build payload for position move
+    // Build payload for position move - backend will handle sibling reindexing
     const payload: any = { 
-      orderIndex: newOrderIndex,
+      destinationIndex: destination.index,
       parentPositionId: destParentType === 'position' ? destParentId : null,
       departmentId: null // Not used in position-based org chart
     };

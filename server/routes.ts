@@ -9464,12 +9464,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch("/api/positions/:id/hierarchy", requireAuth(), requirePermission('departments', 'canEdit'), async (req, res) => {
     try {
-      const { parentPositionId, orderIndex, departmentId } = req.body;
+      const { parentPositionId, destinationIndex, departmentId } = req.body;
+      const positionId = req.params.id;
       
       // Validate no circular reference
       if (parentPositionId) {
         let currentParent = parentPositionId;
-        const visited = new Set([req.params.id]);
+        const visited = new Set([positionId]);
         while (currentParent) {
           if (visited.has(currentParent)) {
             return res.status(400).json({ message: "Circular reference detected" });
@@ -9480,11 +9481,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const updated = await appStorage.updatePosition(req.params.id, {
+      // Get all positions to find siblings under the new parent
+      const allPositions = await appStorage.getPositions();
+      
+      // Find siblings (positions with the same parent, excluding the one being moved)
+      const siblings = allPositions.filter(p => 
+        p.id !== positionId && 
+        p.parentPositionId === (parentPositionId || null)
+      ).sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+      
+      // Insert the moved position at the destination index
+      const targetIndex = Math.max(0, Math.min(destinationIndex ?? 0, siblings.length));
+      
+      // Update the moved position first
+      await appStorage.updatePosition(positionId, {
         parentPositionId,
-        departmentId: departmentId !== undefined ? departmentId : undefined, // Allow null to clear department
-        orderIndex: orderIndex ?? 0
+        departmentId: departmentId !== undefined ? departmentId : undefined,
+        orderIndex: targetIndex
       });
+      
+      // Reindex all siblings to maintain sequential order (0, 1, 2, 3...)
+      for (let i = 0; i < siblings.length; i++) {
+        const sibling = siblings[i];
+        const newOrderIndex = i >= targetIndex ? i + 1 : i;
+        
+        if (sibling.orderIndex !== newOrderIndex) {
+          await appStorage.updatePosition(sibling.id, {
+            orderIndex: newOrderIndex
+          });
+        }
+      }
+      
+      // Get the updated position to return
+      const updated = await appStorage.getPosition(positionId);
       
       if (!updated) {
         return res.status(404).json({ message: "Position not found" });
