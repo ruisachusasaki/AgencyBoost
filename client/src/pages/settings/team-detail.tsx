@@ -286,7 +286,7 @@ export default function TeamDetail() {
 
   // Fetch KPIs for the editing position
   const { data: kpis = [], isLoading: kpisLoading } = useQuery<PositionKpi[]>({
-    queryKey: ["/api/positions", editingPosition?.id, "kpis"],
+    queryKey: [`/api/positions/${editingPosition?.id}/kpis`],
     enabled: !!editingPosition?.id,
   });
 
@@ -297,7 +297,7 @@ export default function TeamDetail() {
       return apiRequest("POST", `/api/positions/${editingPosition.id}/kpis`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/positions", editingPosition?.id, "kpis"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/positions/${editingPosition?.id}/kpis`] });
       setIsAddKpiDialogOpen(false);
       kpiForm.reset();
       toast({
@@ -321,7 +321,7 @@ export default function TeamDetail() {
       return apiRequest("PUT", `/api/position-kpis/${editingKpi.id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/positions", editingPosition?.id, "kpis"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/positions/${editingPosition?.id}/kpis`] });
       setIsEditKpiDialogOpen(false);
       setEditingKpi(null);
       kpiForm.reset();
@@ -345,7 +345,7 @@ export default function TeamDetail() {
       return apiRequest("DELETE", `/api/position-kpis/${kpiId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/positions", editingPosition?.id, "kpis"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/positions/${editingPosition?.id}/kpis`] });
       toast({
         title: "Success",
         description: "KPI deleted successfully",
