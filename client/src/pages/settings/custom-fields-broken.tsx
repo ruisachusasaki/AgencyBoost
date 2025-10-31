@@ -340,15 +340,14 @@ export default function CustomFields() {
   );
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Database className="h-8 w-8 text-primary" />
-            Custom Fields
-          </h1>
-          <p className="text-gray-600 mt-2">Create and manage custom fields for contacts and email templates</p>
-        </div>
+    <div className="container mx-auto p-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <Database className="h-8 w-8 text-primary" />
+          Custom Fields
+        </h1>
+        <p className="text-gray-600 mt-2">Create and manage custom fields for contacts and email templates</p>
+      </div>
 
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-6">

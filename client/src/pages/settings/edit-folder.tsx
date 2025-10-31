@@ -146,24 +146,20 @@ export default function EditFolder() {
 
   if (folderLoading) {
     return (
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-8">Loading folder...</div>
-        </div>
+      <div className="container mx-auto p-6">
+        <div className="text-center py-8">Loading folder...</div>
       </div>
     );
   }
 
   if (!folder) {
     return (
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-8">
-            <h2 className="text-xl font-semibold mb-2">Folder not found</h2>
-            <Button onClick={() => setLocation("/settings/custom-fields")}>
-              Back to Custom Fields
-            </Button>
-          </div>
+      <div className="container mx-auto p-6">
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold mb-2">Folder not found</h2>
+          <Button onClick={() => setLocation("/settings/custom-fields")}>
+            Back to Custom Fields
+          </Button>
         </div>
       </div>
     );
@@ -172,20 +168,19 @@ export default function EditFolder() {
   const folderFields = getFieldsForFolder(folder.id);
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Button
-              variant="ghost"
-              onClick={() => setLocation("/settings/custom-fields")}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Custom Fields
-            </Button>
-          </div>
+    <div className="container mx-auto p-6">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-4 mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => setLocation("/settings/custom-fields")}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Custom Fields
+          </Button>
+        </div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Database className="h-8 w-8 text-primary" />
             Edit Folder: {folder.name}

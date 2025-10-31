@@ -72,17 +72,16 @@ export default function BusinessProfile() {
   };
 
   return (
-    <div className="p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Back to Settings */}
-        <div className="mb-4">
-          <Link href="/settings">
-            <Button variant="outline" size="sm" className="flex items-center space-x-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back to Settings</span>
-            </Button>
-          </Link>
-        </div>
+    <div className="container mx-auto p-6">
+      {/* Back to Settings */}
+      <div className="mb-4">
+        <Link href="/settings">
+          <Button variant="outline" size="sm" className="flex items-center space-x-2">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Settings</span>
+          </Button>
+        </Link>
+      </div>
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
@@ -291,7 +290,6 @@ export default function BusinessProfile() {
             </Button>
           </div>
         </form>
-      </div>
     </div>
   );
 }

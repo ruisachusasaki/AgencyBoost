@@ -609,7 +609,7 @@ export default function HRSettingsPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="container mx-auto p-6 space-y-6">
       {/* Back to Settings */}
       <div className="mb-4">
         <Link href="/settings">

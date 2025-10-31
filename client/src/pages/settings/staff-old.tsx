@@ -163,16 +163,15 @@ export default function Staff() {
   };
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Users className="h-8 w-8 text-primary" />
-              Staff Management
-            </h1>
-            <p className="text-gray-600 mt-2">Manage team members and user accounts</p>
-          </div>
+    <div className="container mx-auto p-6">
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <Users className="h-8 w-8 text-primary" />
+            Staff Management
+          </h1>
+          <p className="text-gray-600 mt-2">Manage team members and user accounts</p>
+        </div>
           
           <div className="flex items-center gap-4">
             <div className="relative flex-1 max-w-md">
