@@ -2036,6 +2036,8 @@ export const departments = pgTable("departments", {
   name: varchar("name", { length: 100 }).notNull().unique(),
   description: text("description"),
   workflowId: varchar("workflow_id").references(() => teamWorkflows.id), // team's custom workflow
+  parentDepartmentId: varchar("parent_department_id"), // self-referencing for hierarchy
+  orderIndex: integer("order_index").default(0), // for ordering within parent
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -2046,6 +2048,8 @@ export const positions = pgTable("positions", {
   name: varchar("name", { length: 100 }).notNull(),
   departmentId: varchar("department_id").notNull().references(() => departments.id, { onDelete: "cascade" }),
   description: text("description"),
+  parentPositionId: varchar("parent_position_id"), // self-referencing for hierarchy
+  orderIndex: integer("order_index").default(0), // for ordering within parent
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
