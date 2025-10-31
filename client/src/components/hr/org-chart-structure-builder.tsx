@@ -155,42 +155,17 @@ export default function OrgChartStructureBuilder() {
     } else {
       // Position being moved
       if (destParentType === 'root') {
-        // Positions can't exist at root level - they must always belong to a department
-        toast({
-          title: "Invalid Move",
-          description: "Positions must belong to a department. Drag it to a department instead.",
-          variant: "destructive",
-        });
-        return;
+        // Position moved to root - clear both parent and department
+        payload.parentPositionId = null;
+        payload.departmentId = null;
       } else if (destParentType === 'department') {
-        // Position dropped onto department - this is a cross-department move
-        // We need to update the position's departmentId, not parentPositionId
-        // First, we need to update via the regular PUT endpoint to change departmentId
-        apiRequest("PUT", `/api/positions/${nodeId}`, {
-          departmentId: destParentId
-        }).then(() => {
-          // Then update the hierarchy
-          return apiRequest("PATCH", `/api/positions/${nodeId}/hierarchy`, {
-            parentPositionId: null, // Reset parent since it's now under a department
-            orderIndex: newOrderIndex
-          });
-        }).then(() => {
-          queryClient.invalidateQueries({ queryKey: ["/api/org-structure"] });
-          toast({
-            title: "Success",
-            description: "Position moved to different department",
-          });
-        }).catch((error) => {
-          toast({
-            title: "Error",
-            description: error.message || "Failed to move position",
-            variant: "destructive",
-          });
-        });
-        return; // Exit early since we're handling this separately
+        // Position dropped onto department - assign to department and clear parent position
+        payload.departmentId = destParentId;
+        payload.parentPositionId = null;
       } else if (destParentType === 'position') {
         // Position dropped onto another position - hierarchical relationship
         payload.parentPositionId = destParentId;
+        // Keep the departmentId unchanged (positions in hierarchy stay in same dept if they have one)
       }
     }
 

@@ -2046,7 +2046,7 @@ export const departments = pgTable("departments", {
 export const positions = pgTable("positions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 100 }).notNull(),
-  departmentId: varchar("department_id").notNull().references(() => departments.id, { onDelete: "cascade" }),
+  departmentId: varchar("department_id").references(() => departments.id, { onDelete: "cascade" }), // Optional - positions can exist independently
   description: text("description"),
   parentPositionId: varchar("parent_position_id"), // self-referencing for hierarchy
   orderIndex: integer("order_index").default(0), // for ordering within parent

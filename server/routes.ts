@@ -9383,10 +9383,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Build hierarchical structure
       const buildTree = () => {
-        // Organize departments by parent
-        const deptMap = new Map();
-        const rootDepts: any[] = [];
+        const rootNodes: any[] = [];
         
+        // Create department nodes
+        const deptMap = new Map();
         departments.forEach(dept => {
           deptMap.set(dept.id, { ...dept, type: 'department', children: [] });
         });
@@ -9397,11 +9397,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (dept.parentDepartmentId && deptMap.has(dept.parentDepartmentId)) {
             deptMap.get(dept.parentDepartmentId).children.push(node);
           } else {
-            rootDepts.push(node);
+            rootNodes.push(node);
           }
         });
         
-        // Sort departments by orderIndex
+        // Create position nodes (both root-level and department-level)
+        const posMap = new Map();
+        positions.forEach(pos => {
+          posMap.set(pos.id, { ...pos, type: 'position', children: [] });
+        });
+        
+        // Build position hierarchy
+        positions.forEach(pos => {
+          const node = posMap.get(pos.id);
+          
+          if (pos.parentPositionId && posMap.has(pos.parentPositionId)) {
+            // Position nested under another position
+            posMap.get(pos.parentPositionId).children.push(node);
+          } else if (pos.departmentId && deptMap.has(pos.departmentId)) {
+            // Position belongs to a department (not nested under another position)
+            deptMap.get(pos.departmentId).children.push(node);
+          } else if (!pos.departmentId && !pos.parentPositionId) {
+            // Root-level position (no department, no parent)
+            rootNodes.push(node);
+          }
+        });
+        
+        // Sort all nodes by orderIndex recursively
         const sortByOrder = (nodes: any[]) => {
           nodes.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
           nodes.forEach(node => {
@@ -9410,42 +9432,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
         };
-        sortByOrder(rootDepts);
+        sortByOrder(rootNodes);
         
-        // Add positions to their departments
-        const addPositionsToDept = (deptNode: any) => {
-          const deptPositions = positions
-            .filter(p => p.departmentId === deptNode.id && !p.parentPositionId)
-            .map(p => ({ ...p, type: 'position', children: [] }))
-            .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
-          
-          // Handle position hierarchy within department
-          const posMap = new Map();
-          positions
-            .filter(p => p.departmentId === deptNode.id)
-            .forEach(pos => {
-              posMap.set(pos.id, { ...pos, type: 'position', children: [] });
-            });
-          
-          positions
-            .filter(p => p.departmentId === deptNode.id)
-            .forEach(pos => {
-              const node = posMap.get(pos.id);
-              if (pos.parentPositionId && posMap.has(pos.parentPositionId)) {
-                posMap.get(pos.parentPositionId).children.push(node);
-              }
-            });
-          
-          deptNode.children.push(...deptPositions);
-          
-          // Recursively process child departments
-          const childDepts = deptNode.children.filter((c: any) => c.type === 'department');
-          childDepts.forEach(addPositionsToDept);
-        };
-        
-        rootDepts.forEach(addPositionsToDept);
-        
-        return rootDepts;
+        return rootNodes;
       };
       
       const tree = buildTree();
@@ -9495,7 +9484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch("/api/positions/:id/hierarchy", requireAuth(), requirePermission('departments', 'canEdit'), async (req, res) => {
     try {
-      const { parentPositionId, orderIndex } = req.body;
+      const { parentPositionId, orderIndex, departmentId } = req.body;
       
       // Validate no circular reference
       if (parentPositionId) {
@@ -9513,6 +9502,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updated = await appStorage.updatePosition(req.params.id, {
         parentPositionId,
+        departmentId: departmentId !== undefined ? departmentId : undefined, // Allow null to clear department
         orderIndex: orderIndex ?? 0
       });
       
