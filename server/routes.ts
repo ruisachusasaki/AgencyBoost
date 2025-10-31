@@ -9459,6 +9459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/departments/:id/hierarchy", requireAuth(), requirePermission('departments', 'canEdit'), async (req, res) => {
     try {
       const { parentDepartmentId, orderIndex } = req.body;
+      console.log(`[HIERARCHY UPDATE] Department ${req.params.id}: parentDepartmentId=${parentDepartmentId}, orderIndex=${orderIndex}`);
       
       // Validate no circular reference
       if (parentDepartmentId) {
@@ -9478,6 +9479,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parentDepartmentId,
         orderIndex: orderIndex ?? 0
       });
+      
+      console.log(`[HIERARCHY UPDATE] Updated department:`, JSON.stringify(updated));
       
       if (!updated) {
         return res.status(404).json({ message: "Department not found" });
@@ -26567,6 +26570,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch widget data" });
     }
   });
+
+  // Test-only endpoint for creating test users (DEVELOPMENT ONLY)
+  // This endpoint allows automated tests to create users with known credentials
+  if (process.env.NODE_ENV === 'development') {
+    app.post("/api/test/create-user", async (req, res) => {
+      try {
+        const { email, password, firstName = "Test", lastName = "User", role = "Admin" } = req.body;
+
+        if (!email || !password) {
+          return res.status(400).json({ error: "Email and password are required" });
+        }
+
+        // Check if user already exists
+        const existingStaff = await db
+          .select()
+          .from(staff)
+          .where(eq(staff.email, email.toLowerCase().trim()))
+          .limit(1);
+
+        if (existingStaff.length > 0) {
+          return res.status(200).json({ message: "User already exists", userId: existingStaff[0].id });
+        }
+
+        // Create the staff member
+        const [newStaff] = await db
+          .insert(staff)
+          .values({
+            email: email.toLowerCase().trim(),
+            firstName,
+            lastName,
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .returning();
+
+        // Hash the password
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // Create auth_users entry
+        await db
+          .insert(authUsers)
+          .values({
+            userId: newStaff.id,
+            email: email.toLowerCase().trim(),
+            passwordHash,
+            isActive: true,
+          });
+
+        // Assign role
+        const [targetRole] = await db
+          .select()
+          .from(roles)
+          .where(eq(roles.name, role))
+          .limit(1);
+
+        if (targetRole) {
+          await db
+            .update(staff)
+            .set({ roleId: targetRole.id })
+            .where(eq(staff.id, newStaff.id));
+
+          await db.insert(userRoles).values({
+            userId: newStaff.id,
+            roleId: targetRole.id,
+          });
+        }
+
+        res.json({ 
+          success: true, 
+          message: "Test user created successfully",
+          userId: newStaff.id,
+          email: newStaff.email
+        });
+      } catch (error) {
+        console.error("Error creating test user:", error);
+        res.status(500).json({ error: "Failed to create test user" });
+      }
+    });
+  }
 
   return httpServer;
 }
