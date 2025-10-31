@@ -4,7 +4,8 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautif
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { GripVertical, Users, Briefcase, ChevronRight, ChevronDown } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { GripVertical, Users, Briefcase, ChevronRight, ChevronDown, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -21,13 +22,27 @@ type OrgNode = {
   children: OrgNode[];
 };
 
+type Position = {
+  id: string;
+  name: string;
+  description: string | null;
+  departmentId: string | null;
+  isActive: boolean;
+};
+
 export default function OrgChartStructureBuilder() {
   const { toast } = useToast();
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [addPositionDialogOpen, setAddPositionDialogOpen] = useState(false);
 
   // Fetch org structure
   const { data: orgTree = [], isLoading } = useQuery<OrgNode[]>({
     queryKey: ["/api/org-structure"],
+  });
+
+  // Fetch all positions (master list)
+  const { data: allPositions = [] } = useQuery<Position[]>({
+    queryKey: ["/api/positions"],
   });
 
   // Toggle node expansion
@@ -42,6 +57,34 @@ export default function OrgChartStructureBuilder() {
       return next;
     });
   };
+
+  // Add position instance mutation
+  const addPositionMutation = useMutation({
+    mutationFn: async (templatePosition: Position) => {
+      return await apiRequest("POST", "/api/positions", {
+        name: templatePosition.name,
+        description: templatePosition.description,
+        departmentId: null, // New instances start without a department
+        isActive: true,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/org-structure"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+      setAddPositionDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Position added to org chart. You can now drag it to place it in the hierarchy.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add position",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Move mutation
   const moveMutation = useMutation({
@@ -278,14 +321,63 @@ export default function OrgChartStructureBuilder() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Organization Chart Structure
-          </CardTitle>
-          <CardDescription>
-            Drag and drop to organize your HR organizational hierarchy. Departments (teams) can contain positions.
-            These are managed in Settings {'>'} Staff {'>'} Teams. Changes here affect the HR {'>'} Org Chart display.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Organization Chart Structure
+              </CardTitle>
+              <CardDescription>
+                Drag and drop to organize your HR organizational hierarchy. Departments (teams) can contain positions.
+                These are managed in Settings {'>'} Staff {'>'} Teams. Changes here affect the HR {'>'} Org Chart display.
+              </CardDescription>
+            </div>
+            <Dialog open={addPositionDialogOpen} onOpenChange={setAddPositionDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-add-position">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Position
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add Position to Org Chart</DialogTitle>
+                  <DialogDescription>
+                    Select a position from your master list to add to the org chart. You can add the same position multiple times.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2 mt-4">
+                  {allPositions.filter(p => p.isActive).length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No positions found. Create positions in Settings {'>'} Staff Management {'>'} Teams first.
+                    </div>
+                  ) : (
+                    allPositions.filter(p => p.isActive).map(position => (
+                      <Card 
+                        key={position.id} 
+                        className="hover:bg-accent cursor-pointer transition-colors"
+                        onClick={() => addPositionMutation.mutate(position)}
+                        data-testid={`position-template-${position.id}`}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <Briefcase className="h-5 w-5 text-orange-500" />
+                            <div className="flex-1">
+                              <div className="font-medium">{position.name}</div>
+                              {position.description && (
+                                <div className="text-sm text-muted-foreground">{position.description}</div>
+                              )}
+                            </div>
+                            <Plus className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           {orgTree.length === 0 ? (
