@@ -9374,6 +9374,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // HR Org Structure Hierarchy API
+  app.get("/api/org-structure", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+    try {
+      // Fetch all departments and positions
+      const departments = await appStorage.getDepartments();
+      const positions = await appStorage.getPositions();
+      
+      // Build hierarchical structure
+      const buildTree = () => {
+        // Organize departments by parent
+        const deptMap = new Map();
+        const rootDepts: any[] = [];
+        
+        departments.forEach(dept => {
+          deptMap.set(dept.id, { ...dept, type: 'department', children: [] });
+        });
+        
+        // Build department hierarchy
+        departments.forEach(dept => {
+          const node = deptMap.get(dept.id);
+          if (dept.parentDepartmentId && deptMap.has(dept.parentDepartmentId)) {
+            deptMap.get(dept.parentDepartmentId).children.push(node);
+          } else {
+            rootDepts.push(node);
+          }
+        });
+        
+        // Sort departments by orderIndex
+        const sortByOrder = (nodes: any[]) => {
+          nodes.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+          nodes.forEach(node => {
+            if (node.children && node.children.length > 0) {
+              sortByOrder(node.children);
+            }
+          });
+        };
+        sortByOrder(rootDepts);
+        
+        // Add positions to their departments
+        const addPositionsToDept = (deptNode: any) => {
+          const deptPositions = positions
+            .filter(p => p.departmentId === deptNode.id && !p.parentPositionId)
+            .map(p => ({ ...p, type: 'position', children: [] }))
+            .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+          
+          // Handle position hierarchy within department
+          const posMap = new Map();
+          positions
+            .filter(p => p.departmentId === deptNode.id)
+            .forEach(pos => {
+              posMap.set(pos.id, { ...pos, type: 'position', children: [] });
+            });
+          
+          positions
+            .filter(p => p.departmentId === deptNode.id)
+            .forEach(pos => {
+              const node = posMap.get(pos.id);
+              if (pos.parentPositionId && posMap.has(pos.parentPositionId)) {
+                posMap.get(pos.parentPositionId).children.push(node);
+              }
+            });
+          
+          deptNode.children.push(...deptPositions);
+          
+          // Recursively process child departments
+          const childDepts = deptNode.children.filter((c: any) => c.type === 'department');
+          childDepts.forEach(addPositionsToDept);
+        };
+        
+        rootDepts.forEach(addPositionsToDept);
+        
+        return rootDepts;
+      };
+      
+      const tree = buildTree();
+      res.json(tree);
+    } catch (error) {
+      console.error('Error fetching org structure:', error);
+      res.status(500).json({ message: "Failed to fetch org structure" });
+    }
+  });
+  
+  app.patch("/api/departments/:id/hierarchy", requireAuth(), requirePermission('departments', 'canEdit'), async (req, res) => {
+    try {
+      const { parentDepartmentId, orderIndex } = req.body;
+      
+      // Validate no circular reference
+      if (parentDepartmentId) {
+        let currentParent = parentDepartmentId;
+        const visited = new Set([req.params.id]);
+        while (currentParent) {
+          if (visited.has(currentParent)) {
+            return res.status(400).json({ message: "Circular reference detected" });
+          }
+          visited.add(currentParent);
+          const parent = await appStorage.getDepartment(currentParent);
+          currentParent = parent?.parentDepartmentId || null;
+        }
+      }
+      
+      const updated = await appStorage.updateDepartment(req.params.id, {
+        parentDepartmentId,
+        orderIndex: orderIndex ?? 0
+      });
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating department hierarchy:', error);
+      res.status(500).json({ message: "Failed to update department hierarchy" });
+    }
+  });
+  
+  app.patch("/api/positions/:id/hierarchy", requireAuth(), requirePermission('departments', 'canEdit'), async (req, res) => {
+    try {
+      const { parentPositionId, orderIndex } = req.body;
+      
+      // Validate no circular reference
+      if (parentPositionId) {
+        let currentParent = parentPositionId;
+        const visited = new Set([req.params.id]);
+        while (currentParent) {
+          if (visited.has(currentParent)) {
+            return res.status(400).json({ message: "Circular reference detected" });
+          }
+          visited.add(currentParent);
+          const parent = await appStorage.getPosition(currentParent);
+          currentParent = parent?.parentPositionId || null;
+        }
+      }
+      
+      const updated = await appStorage.updatePosition(req.params.id, {
+        parentPositionId,
+        orderIndex: orderIndex ?? 0
+      });
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Position not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating position hierarchy:', error);
+      res.status(500).json({ message: "Failed to update position hierarchy" });
+    }
+  });
+
   // Organization Chart Structure API
   app.get("/api/org-chart-structures", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
