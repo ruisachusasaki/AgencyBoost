@@ -14,9 +14,8 @@ type OrgNode = {
   id: string;
   name: string;
   description?: string | null;
-  type: 'department' | 'position';
+  type: 'position';
   departmentId?: string;
-  parentDepartmentId?: string | null;
   parentPositionId?: string | null;
   orderIndex?: number;
   isActive: boolean;
@@ -36,7 +35,7 @@ export default function OrgChartStructureBuilder() {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [addPositionDialogOpen, setAddPositionDialogOpen] = useState(false);
   const [positionSearchQuery, setPositionSearchQuery] = useState("");
-  const [parentNodeContext, setParentNodeContext] = useState<{ type: 'department' | 'position', id: string } | null>(null);
+  const [parentNodeContext, setParentNodeContext] = useState<{ type: 'position', id: string } | null>(null);
 
   // Fetch org structure
   const { data: orgTree = [], isLoading } = useQuery<OrgNode[]>({
@@ -69,20 +68,14 @@ export default function OrgChartStructureBuilder() {
         name: templatePosition.name,
         description: templatePosition.description,
         isActive: true,
+        departmentId: null, // Not used in position-based org chart
       };
 
       // Set parent based on context
       if (parentNodeContext) {
-        if (parentNodeContext.type === 'department') {
-          payload.departmentId = parentNodeContext.id;
-          payload.parentPositionId = null;
-        } else if (parentNodeContext.type === 'position') {
-          payload.parentPositionId = parentNodeContext.id;
-          payload.departmentId = null;
-        }
+        payload.parentPositionId = parentNodeContext.id;
       } else {
         // No context - add to root
-        payload.departmentId = null;
         payload.parentPositionId = null;
       }
 
@@ -110,18 +103,13 @@ export default function OrgChartStructureBuilder() {
     },
   });
 
-  // Move mutation
+  // Move mutation (positions only)
   const moveMutation = useMutation({
-    mutationFn: async ({ id, type, payload }: { 
+    mutationFn: async ({ id, payload }: { 
       id: string; 
-      type: 'department' | 'position';
       payload: any;
     }) => {
-      if (type === 'department') {
-        return await apiRequest("PATCH", `/api/departments/${id}/hierarchy`, payload);
-      } else {
-        return await apiRequest("PATCH", `/api/positions/${id}/hierarchy`, payload);
-      }
+      return await apiRequest("PATCH", `/api/positions/${id}/hierarchy`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/org-structure"] });
@@ -142,19 +130,19 @@ export default function OrgChartStructureBuilder() {
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
-    const { destination, draggableId, source } = result;
+    const { destination, draggableId } = result;
     
-    // Parse IDs to determine what was moved and where (using :: delimiter to avoid UUID conflicts)
-    const [nodeType, nodeId] = draggableId.split('::');
+    // Parse IDs (using :: delimiter to avoid UUID conflicts)
+    const [, nodeId] = draggableId.split('::');
     const destDroppableId = destination.droppableId;
 
-    // Determine the destination parent type and ID
-    let destParentType: 'root' | 'department' | 'position' = 'root';
+    // Determine the destination parent
+    let destParentType: 'root' | 'position' = 'root';
     let destParentId: string | null = null;
 
     if (destDroppableId !== 'root') {
-      const [parentType, parentId] = destDroppableId.split('::');
-      destParentType = parentType as 'department' | 'position';
+      const [, parentId] = destDroppableId.split('::');
+      destParentType = 'position';
       destParentId = parentId;
     }
 
@@ -162,18 +150,7 @@ export default function OrgChartStructureBuilder() {
     let siblings: OrgNode[] = [];
     if (destParentType === 'root') {
       siblings = orgTree || [];
-    } else if (destParentType === 'department') {
-      const findNode = (nodes: OrgNode[]): OrgNode | null => {
-        for (const node of nodes) {
-          if (node.id === destParentId) return node;
-          const found = findNode(node.children);
-          if (found) return found;
-        }
-        return null;
-      };
-      const parentNode = findNode(orgTree || []);
-      siblings = parentNode?.children || [];
-    } else if (destParentType === 'position') {
+    } else {
       const findNode = (nodes: OrgNode[]): OrgNode | null => {
         for (const node of nodes) {
           if (node.id === destParentId) return node;
@@ -213,44 +190,27 @@ export default function OrgChartStructureBuilder() {
       }
     }
 
-    // Build the appropriate payload based on what's being moved and where
-    let payload: any = { orderIndex: newOrderIndex };
-
-    if (nodeType === 'department') {
-      // Department being moved
-      payload.parentDepartmentId = destParentType === 'department' ? destParentId : null;
-    } else {
-      // Position being moved
-      if (destParentType === 'root') {
-        // Position moved to root - clear both parent and department
-        payload.parentPositionId = null;
-        payload.departmentId = null;
-      } else if (destParentType === 'department') {
-        // Position dropped onto department - assign to department and clear parent position
-        payload.departmentId = destParentId;
-        payload.parentPositionId = null;
-      } else if (destParentType === 'position') {
-        // Position dropped onto another position - hierarchical relationship
-        payload.parentPositionId = destParentId;
-        // Keep the departmentId unchanged (positions in hierarchy stay in same dept if they have one)
-      }
-    }
+    // Build payload for position move
+    const payload: any = { 
+      orderIndex: newOrderIndex,
+      parentPositionId: destParentType === 'position' ? destParentId : null,
+      departmentId: null // Not used in position-based org chart
+    };
 
     // Call the mutation
     moveMutation.mutate({
       id: nodeId,
-      type: nodeType as 'department' | 'position',
       payload
     });
   };
 
-  // Render a single node (department or position)
+  // Render a single position node
   const renderNode = (node: OrgNode, index: number, parentId: string | null = null): JSX.Element => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes.has(node.id);
-    const Icon = node.type === 'department' ? Users : Briefcase;
-    const droppableId = `${node.type}::${node.id}`;
-    const draggableId = `${node.type}::${node.id}`;
+    const Icon = Briefcase;
+    const droppableId = `position::${node.id}`;
+    const draggableId = `position::${node.id}`;
 
     return (
       <Draggable key={node.id} draggableId={draggableId} index={index}>
@@ -285,16 +245,13 @@ export default function OrgChartStructureBuilder() {
                 </Button>
               )}
 
-              <Icon className={`h-4 w-4 ${node.type === 'department' ? 'text-primary' : 'text-orange-500'}`} />
+              <Icon className="h-4 w-4 text-orange-500" />
 
               <div className="flex-1">
                 <div className="font-medium">{node.name}</div>
               </div>
 
               <div className="flex items-center gap-2">
-                <Badge variant={node.type === 'department' ? 'default' : 'secondary'}>
-                  {node.type}
-                </Badge>
                 <Badge variant={node.isActive ? 'default' : 'outline'}>
                   {node.isActive ? 'Active' : 'Inactive'}
                 </Badge>
@@ -317,14 +274,14 @@ export default function OrgChartStructureBuilder() {
                     {!hasChildren && (
                       <div className="text-xs text-center py-2 space-y-2">
                         <div className="text-muted-foreground">
-                          Drop {node.type === 'department' ? 'departments or positions' : 'positions'} here
+                          Drop positions here
                         </div>
                         <div>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setParentNodeContext({ type: node.type, id: node.id });
+                              setParentNodeContext({ type: 'position', id: node.id });
                               setAddPositionDialogOpen(true);
                             }}
                             className="text-primary hover:text-primary"
@@ -362,12 +319,12 @@ export default function OrgChartStructureBuilder() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
+                <Briefcase className="h-5 w-5" />
                 Organization Chart Structure
               </CardTitle>
               <CardDescription>
-                Drag and drop to organize your HR organizational hierarchy. Departments (teams) can contain positions.
-                These are managed in Settings {'>'} Staff {'>'} Teams. Changes here affect the HR {'>'} Org Chart display.
+                Drag and drop to organize your people-based organizational hierarchy. Build position-to-position reporting structures (e.g., CEO → VP → Manager).
+                Position templates are managed in Settings {'>'} Staff {'>'} Teams. Changes here affect the HR {'>'} Org Chart display.
               </CardDescription>
             </div>
             <Dialog open={addPositionDialogOpen} onOpenChange={setAddPositionDialogOpen}>
@@ -446,7 +403,7 @@ export default function OrgChartStructureBuilder() {
         <CardContent>
           {orgTree.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No departments or positions found. Add them in Settings {'>'} Staff {'>'} Teams first.
+              No positions found. Click "Add Position" above to start building your org chart.
             </div>
           ) : (
             <DragDropContext onDragEnd={handleDragEnd}>
@@ -492,12 +449,8 @@ export default function OrgChartStructureBuilder() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" />
-            <span>Department (Team)</span>
-          </div>
-          <div className="flex items-center gap-2">
             <Briefcase className="h-4 w-4 text-orange-500" />
-            <span>Position</span>
+            <span>Position (Person)</span>
           </div>
           <div className="flex items-center gap-2">
             <GripVertical className="h-4 w-4 text-muted-foreground" />

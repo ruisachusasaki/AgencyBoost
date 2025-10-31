@@ -9374,34 +9374,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // HR Org Structure Hierarchy API
+  // HR Org Structure Hierarchy API - Position-only (people-based)
   app.get("/api/org-structure", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
-      // Fetch all departments and positions
-      const departments = await appStorage.getDepartments();
+      // Fetch only positions (people-based org chart)
       const positions = await appStorage.getPositions();
       
-      // Build hierarchical structure
+      // Build hierarchical structure - positions only
       const buildTree = () => {
         const rootNodes: any[] = [];
         
-        // Create department nodes
-        const deptMap = new Map();
-        departments.forEach(dept => {
-          deptMap.set(dept.id, { ...dept, type: 'department', children: [] });
-        });
-        
-        // Build department hierarchy
-        departments.forEach(dept => {
-          const node = deptMap.get(dept.id);
-          if (dept.parentDepartmentId && deptMap.has(dept.parentDepartmentId)) {
-            deptMap.get(dept.parentDepartmentId).children.push(node);
-          } else {
-            rootNodes.push(node);
-          }
-        });
-        
-        // Create position nodes (both root-level and department-level)
+        // Create position nodes
         const posMap = new Map();
         positions.forEach(pos => {
           posMap.set(pos.id, { ...pos, type: 'position', children: [] });
@@ -9414,11 +9397,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (pos.parentPositionId && posMap.has(pos.parentPositionId)) {
             // Position nested under another position
             posMap.get(pos.parentPositionId).children.push(node);
-          } else if (pos.departmentId && deptMap.has(pos.departmentId)) {
-            // Position belongs to a department (not nested under another position)
-            deptMap.get(pos.departmentId).children.push(node);
-          } else if (!pos.departmentId && !pos.parentPositionId) {
-            // Root-level position (no department, no parent)
+          } else if (!pos.parentPositionId) {
+            // Root-level position (no parent)
             rootNodes.push(node);
           }
         });

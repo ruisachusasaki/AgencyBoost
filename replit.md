@@ -44,14 +44,16 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
   - **1-on-1 Performance Reports**: Accessible under Reports > 1-on-1 Performance with role-based viewing (individuals see their own data, managers see direct reports, admins see all). Displays aggregated metrics including total meetings, average performance points, completion rates for talking points/action items/goals, most common feeling and progression status. Features comprehensive filtering (date range, feeling, progression status, department), search, sorting capabilities, and a dedicated granular permission (`reports.view_1on1_performance`) in Settings > Roles & Permissions for access control.
   - **Organization Chart**: Interactive hierarchical visualization and management system with two components:
     - **Org Chart Display** (HR > Org Chart tab): ReactFlow-based visualization showing team structure based on staff.managerId relationships with department color coding, expand/collapse functionality, zoom/pan controls, and client assignment counts
-    - **Org Chart Position Order** (Settings > HR Settings > Org Chart tab): Simple drag-and-drop interface to control the display order of team positions in the org chart. Features include:
-      - Displays all team positions from Settings > Staff > Teams (managed via team_positions table)
-      - Drag-and-drop reordering using react-beautiful-dnd
-      - Updates team_positions.order field to persist display order
-      - Optimistic UI updates with fresh cache data to prevent stale closures
-      - Shows position label, description, active status, and current order number
-      - Clear messaging that positions are managed in Settings > Staff > Teams
-      - Ready for integration with HR > Org Chart display to respect position ordering
+    - **Org Chart Structure Builder** (Settings > HR Settings > Org Chart tab): Position-only (people-based) hierarchical org chart builder. Features include:
+      - Pure position-to-position reporting structure (e.g., CEO → VP → Manager) without departments
+      - Drag-and-drop interface using react-beautiful-dnd for building org hierarchy
+      - Position templates managed via Settings > Staff > Teams (team_positions table)
+      - "Add Position" buttons throughout the UI (header, root level, inline drop zones) for quick position creation
+      - Position instances created from master templates, allowing multiple instances of same position (e.g., multiple "Executive Assistant" positions)
+      - Search functionality in "Add Position" modal for quick template selection
+      - Automatic parent-child relationships when adding positions via inline buttons
+      - Updates positions.parentPositionId and positions.orderIndex fields to persist hierarchy
+      - Optimistic UI updates with proper cache invalidation
 - **Sales Reports**: Pipeline and Sales Rep Reports with date range filtering and optimized data aggregation.
 - **Sales Settings**: Dynamic minimum margin threshold configuration for quotes, applied to validations and indicators.
 - **Lead Management**: Customizable lead source options managed through Settings > Leads page. Admins can add, edit, reorder, and toggle active/inactive status of lead sources. The lead creation/edit form dynamically loads active sources from the database. Default sources include Website, Referral, Social Media, Advertising, and Cold Outreach.
