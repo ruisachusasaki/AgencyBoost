@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,9 @@ import {
   ChevronDown,
   Users,
   UserPlus,
-  X
+  X,
+  GripVertical,
+  MoveVertical
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -79,7 +82,6 @@ const nodeSchema = z.object({
   positionTitle: z.string().min(1, "Position title is required"),
   department: z.string().optional(),
   description: z.string().optional(),
-  parentNodeId: z.string().nullable().optional(),
 });
 
 const assignmentSchema = z.object({
@@ -99,6 +101,7 @@ export default function OrgChartStructureBuilder() {
   const [editingStructure, setEditingStructure] = useState<OrgChartStructure | null>(null);
   const [editingNode, setEditingNode] = useState<OrgChartNode | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [dragParentContext, setDragParentContext] = useState<string | null>(null);
 
   // Fetch structures
   const { data: structures = [] } = useQuery<OrgChartStructure[]>({
@@ -138,7 +141,6 @@ export default function OrgChartStructureBuilder() {
       positionTitle: "",
       department: "",
       description: "",
-      parentNodeId: null,
     },
   });
 
@@ -201,7 +203,7 @@ export default function OrgChartStructureBuilder() {
   });
 
   const createNodeMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof nodeSchema> & { structureId: string }) => {
+    mutationFn: async (data: z.infer<typeof nodeSchema> & { structureId: string; parentNodeId: string | null }) => {
       return await apiRequest("POST", "/api/org-chart/nodes", data);
     },
     onSuccess: () => {
@@ -216,7 +218,7 @@ export default function OrgChartStructureBuilder() {
   });
 
   const updateNodeMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<z.infer<typeof nodeSchema>> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<OrgChartNode> }) => {
       return await apiRequest("PUT", `/api/org-chart/nodes/${id}`, data);
     },
     onSuccess: () => {
@@ -307,22 +309,22 @@ export default function OrgChartStructureBuilder() {
   const handleCreateNode = (parentNodeId: string | null = null) => {
     if (!selectedStructureId) return;
     setEditingNode(null);
+    setDragParentContext(parentNodeId);
     nodeForm.reset({
       positionTitle: "",
       department: "",
       description: "",
-      parentNodeId,
     });
     setIsNodeDialogOpen(true);
   };
 
   const handleEditNode = (node: OrgChartNode) => {
     setEditingNode(node);
+    setDragParentContext(node.parentNodeId);
     nodeForm.reset({
       positionTitle: node.positionTitle,
       department: node.department || "",
       description: node.description || "",
-      parentNodeId: node.parentNodeId,
     });
     setIsNodeDialogOpen(true);
   };
@@ -332,7 +334,7 @@ export default function OrgChartStructureBuilder() {
     if (editingNode) {
       updateNodeMutation.mutate({ id: editingNode.id, data });
     } else {
-      createNodeMutation.mutate({ ...data, structureId: selectedStructureId });
+      createNodeMutation.mutate({ ...data, structureId: selectedStructureId, parentNodeId: dragParentContext });
     }
   };
 
@@ -378,84 +380,200 @@ export default function OrgChartStructureBuilder() {
     return person ? `${person.firstName} ${person.lastName}` : "Unknown";
   };
 
-  const renderNode = (node: OrgChartNode, level: number = 0) => {
+  // Drag and drop handler
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination) return;
+
+    const { source, destination, draggableId } = result;
+    
+    // Parse the IDs
+    const draggedNodeId = draggableId;
+    const sourceParentId = source.droppableId === 'root' ? null : source.droppableId;
+    const destParentId = destination.droppableId === 'root' ? null : destination.droppableId;
+
+    // Get the dragged node
+    const draggedNode = nodes.find(n => n.id === draggedNodeId);
+    if (!draggedNode) return;
+
+    // Prevent dropping a parent into its own child
+    const isDescendant = (nodeId: string, potentialAncestorId: string): boolean => {
+      const node = nodes.find(n => n.id === nodeId);
+      if (!node || node.parentNodeId === null) return false;
+      if (node.parentNodeId === potentialAncestorId) return true;
+      return isDescendant(node.parentNodeId, potentialAncestorId);
+    };
+
+    if (destParentId && isDescendant(destParentId, draggedNodeId)) {
+      toast({
+        title: "Invalid Move",
+        description: "Cannot move a position into its own descendant",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Get siblings at destination (excluding the dragged node if same parent)
+    const destSiblings = nodes
+      .filter(n => n.parentNodeId === destParentId && n.id !== draggedNodeId)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+
+    // Calculate new order index
+    let newOrderIndex = 0;
+    if (destSiblings.length === 0) {
+      // No other siblings, use orderIndex 0
+      newOrderIndex = 0;
+    } else if (destination.index === 0) {
+      // Inserting at the beginning
+      newOrderIndex = destSiblings[0].orderIndex - 1;
+    } else if (destination.index >= destSiblings.length) {
+      // Inserting at the end
+      newOrderIndex = destSiblings[destSiblings.length - 1].orderIndex + 1;
+    } else {
+      // Inserting between two siblings
+      const before = destSiblings[destination.index - 1];
+      const after = destSiblings[destination.index];
+      newOrderIndex = (before.orderIndex + after.orderIndex) / 2;
+    }
+
+    // Update the node
+    try {
+      await updateNodeMutation.mutateAsync({
+        id: draggedNodeId,
+        data: {
+          parentNodeId: destParentId,
+          orderIndex: newOrderIndex,
+        },
+      });
+      
+      toast({
+        title: "Success",
+        description: "Position moved successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to move position",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const renderDraggableNode = (node: OrgChartNode, index: number, level: number) => {
     const children = buildTree(node.id);
     const hasChildren = children.length > 0;
     const isExpanded = expandedNodes.has(node.id);
     const nodeAssignments = getNodeAssignments(node.id);
 
     return (
-      <div key={node.id} className="mb-2">
-        <div
-          className={`flex items-center gap-2 p-3 rounded-lg border ${
-            selectedNodeId === node.id ? "border-primary bg-primary/5" : "border-gray-200 hover:bg-gray-50"
-          }`}
-          style={{ marginLeft: `${level * 24}px` }}
-        >
-          {hasChildren && (
-            <button
-              onClick={() => toggleNodeExpansion(node.id)}
-              className="p-1 hover:bg-gray-200 rounded"
-              data-testid={`button-toggle-${node.id}`}
+      <Draggable key={node.id} draggableId={node.id} index={index}>
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            className={`mb-2 ${snapshot.isDragging ? 'opacity-50' : ''}`}
+          >
+            <div
+              className={`flex items-center gap-2 p-3 rounded-lg border bg-white ${
+                selectedNodeId === node.id ? "border-primary bg-primary/5" : "border-gray-200 hover:bg-gray-50"
+              } ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+              style={{ marginLeft: `${level * 24}px` }}
             >
-              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </button>
-          )}
-          {!hasChildren && <div className="w-6" />}
+              <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                <GripVertical className="h-4 w-4 text-gray-400" />
+              </div>
 
-          <div className="flex-1 cursor-pointer" onClick={() => setSelectedNodeId(node.id)}>
-            <div className="flex items-center gap-2">
-              <h4 className="font-medium text-sm">{node.positionTitle}</h4>
-              {node.department && (
-                <Badge variant="outline" className="text-xs">{node.department}</Badge>
+              {hasChildren && (
+                <button
+                  onClick={() => toggleNodeExpansion(node.id)}
+                  className="p-1 hover:bg-gray-200 rounded"
+                  data-testid={`button-toggle-${node.id}`}
+                >
+                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </button>
               )}
-              {nodeAssignments.length > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  <Users className="h-3 w-3 mr-1" />
-                  {nodeAssignments.length}
-                </Badge>
-              )}
+              {!hasChildren && <div className="w-6" />}
+
+              <div className="flex-1 cursor-pointer" onClick={() => setSelectedNodeId(node.id)}>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium text-sm">{node.positionTitle}</h4>
+                  {node.department && (
+                    <Badge variant="outline" className="text-xs">{node.department}</Badge>
+                  )}
+                  {nodeAssignments.length > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Users className="h-3 w-3 mr-1" />
+                      {nodeAssignments.length}
+                    </Badge>
+                  )}
+                </div>
+                {node.description && (
+                  <p className="text-xs text-muted-foreground mt-1">{node.description}</p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreateNode(node.id);
+                  }}
+                  data-testid={`button-add-child-${node.id}`}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditNode(node);
+                  }}
+                  data-testid={`button-edit-node-${node.id}`}
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteNodeMutation.mutate(node.id);
+                  }}
+                  className="text-destructive hover:text-destructive"
+                  data-testid={`button-delete-node-${node.id}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            {node.description && (
-              <p className="text-xs text-muted-foreground mt-1">{node.description}</p>
+            
+            {/* Nested droppable zone for this node's children */}
+            {isExpanded && (
+              <div style={{ marginLeft: `${(level + 1) * 24}px` }}>
+                <Droppable droppableId={node.id} type="NODE">
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`min-h-[40px] ${snapshot.isDraggingOver ? 'bg-primary/5 rounded-lg border-2 border-dashed border-primary' : ''}`}
+                    >
+                      {children.map((child, childIndex) => renderDraggableNode(child, childIndex, level + 1))}
+                      {provided.placeholder}
+                      {children.length === 0 && snapshot.isDraggingOver && (
+                        <div className="text-center py-4 text-xs text-muted-foreground">
+                          Drop here to make this a child position
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
             )}
           </div>
-
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleCreateNode(node.id)}
-              data-testid={`button-add-child-${node.id}`}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleEditNode(node)}
-              data-testid={`button-edit-node-${node.id}`}
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => deleteNodeMutation.mutate(node.id)}
-              className="text-destructive hover:text-destructive"
-              data-testid={`button-delete-node-${node.id}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {isExpanded && hasChildren && (
-          <div className="mt-2">
-            {children.map(child => renderNode(child, level + 1))}
-          </div>
         )}
-      </div>
+      </Draggable>
     );
   };
 
@@ -506,15 +624,20 @@ export default function OrgChartStructureBuilder() {
       {/* Main Content */}
       {selectedStructureId ? (
         <div className="grid grid-cols-3 gap-6">
-          {/* Tree Builder */}
+          {/* Drag-and-Drop Tree Builder */}
           <div className="col-span-2">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Network className="h-5 w-5" />
-                    Organization Structure
-                  </CardTitle>
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Network className="h-5 w-5" />
+                      Organization Structure
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Drag and drop to reorganize positions
+                    </p>
+                  </div>
                   <Button onClick={() => handleCreateNode(null)} size="sm" data-testid="button-add-root-node">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Top Position
@@ -522,17 +645,27 @@ export default function OrgChartStructureBuilder() {
                 </div>
               </CardHeader>
               <CardContent>
-                {nodes.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Network className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p>No positions defined yet</p>
-                    <p className="text-sm mt-2">Click "Add Top Position" to get started</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {buildTree(null).map(node => renderNode(node, 0))}
-                  </div>
-                )}
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="root" type="NODE">
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`min-h-[200px] ${snapshot.isDraggingOver ? 'bg-primary/5 rounded-lg' : ''}`}
+                      >
+                        {buildTree(null).map((node, index) => renderDraggableNode(node, index, 0))}
+                        {provided.placeholder}
+                        {buildTree(null).length === 0 && (
+                          <div className="text-center py-12 text-muted-foreground">
+                            <MoveVertical className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                            <p className="text-lg font-medium mb-2">No positions defined yet</p>
+                            <p className="text-sm">Click "Add Top Position" to start building your org chart</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
               </CardContent>
             </Card>
           </div>
@@ -610,7 +743,7 @@ export default function OrgChartStructureBuilder() {
                   </div>
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
-                    <p className="text-sm">Select a position to view details</p>
+                    <p className="text-sm">Select a position to view details and assign staff</p>
                   </div>
                 )}
               </CardContent>
