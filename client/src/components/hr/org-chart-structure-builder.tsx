@@ -36,6 +36,7 @@ export default function OrgChartStructureBuilder() {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [addPositionDialogOpen, setAddPositionDialogOpen] = useState(false);
   const [positionSearchQuery, setPositionSearchQuery] = useState("");
+  const [parentNodeContext, setParentNodeContext] = useState<{ type: 'department' | 'position', id: string } | null>(null);
 
   // Fetch org structure
   const { data: orgTree = [], isLoading } = useQuery<OrgNode[]>({
@@ -63,20 +64,41 @@ export default function OrgChartStructureBuilder() {
   // Add position instance mutation
   const addPositionMutation = useMutation({
     mutationFn: async (templatePosition: Position) => {
-      return await apiRequest("POST", "/api/positions", {
+      // Create position with parent context if available
+      const payload: any = {
         name: templatePosition.name,
         description: templatePosition.description,
-        departmentId: null, // New instances start without a department
         isActive: true,
-      });
+      };
+
+      // Set parent based on context
+      if (parentNodeContext) {
+        if (parentNodeContext.type === 'department') {
+          payload.departmentId = parentNodeContext.id;
+          payload.parentPositionId = null;
+        } else if (parentNodeContext.type === 'position') {
+          payload.parentPositionId = parentNodeContext.id;
+          payload.departmentId = null;
+        }
+      } else {
+        // No context - add to root
+        payload.departmentId = null;
+        payload.parentPositionId = null;
+      }
+
+      return await apiRequest("POST", "/api/positions", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/org-structure"] });
       queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
       setAddPositionDialogOpen(false);
+      setParentNodeContext(null); // Clear context
+      const contextMessage = parentNodeContext 
+        ? "Position added successfully."
+        : "Position added to org chart. You can now drag it to place it in the hierarchy.";
       toast({
         title: "Success",
-        description: "Position added to org chart. You can now drag it to place it in the hierarchy.",
+        description: contextMessage,
       });
     },
     onError: (error: any) => {
@@ -301,7 +323,10 @@ export default function OrgChartStructureBuilder() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setAddPositionDialogOpen(true)}
+                            onClick={() => {
+                              setParentNodeContext({ type: node.type, id: node.id });
+                              setAddPositionDialogOpen(true);
+                            }}
                             className="text-primary hover:text-primary"
                             data-testid={`button-add-position-inline-${node.id}`}
                           >
@@ -347,7 +372,10 @@ export default function OrgChartStructureBuilder() {
             </div>
             <Dialog open={addPositionDialogOpen} onOpenChange={setAddPositionDialogOpen}>
               <DialogTrigger asChild>
-                <Button data-testid="button-add-position">
+                <Button 
+                  data-testid="button-add-position"
+                  onClick={() => setParentNodeContext(null)}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Position
                 </Button>
@@ -439,7 +467,10 @@ export default function OrgChartStructureBuilder() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setAddPositionDialogOpen(true)}
+                        onClick={() => {
+                          setParentNodeContext(null); // Root level - no parent
+                          setAddPositionDialogOpen(true);
+                        }}
                         className="text-primary hover:text-primary"
                         data-testid="button-add-position-root"
                       >
