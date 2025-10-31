@@ -11,7 +11,7 @@ import {
   insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
-  insertStaffSchema, insertDepartmentSchema, insertPositionSchema, insertTeamPositionSchema, insertClientTeamAssignmentSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
+  insertStaffSchema, insertDepartmentSchema, insertPositionSchema, insertPositionKpiSchema, insertTeamPositionSchema, insertClientTeamAssignmentSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
   insertOrgChartStructureSchema, insertOrgChartNodeSchema, insertOrgChartNodeAssignmentSchema,
   insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema,
   insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertTimeOffBalanceSchema,
@@ -9371,6 +9371,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting position:', error);
       res.status(500).json({ message: "Failed to delete position" });
+    }
+  });
+
+  // Position KPIs API
+  app.get("/api/positions/:positionId/kpis", requireAuth(), requirePermission('departments', 'canView'), async (req, res) => {
+    try {
+      const kpis = await appStorage.getPositionKpis(req.params.positionId);
+      res.json(kpis);
+    } catch (error) {
+      console.error('Error fetching position KPIs:', error);
+      res.status(500).json({ message: "Failed to fetch position KPIs" });
+    }
+  });
+
+  app.post("/api/positions/:positionId/kpis", requireAuth(), requirePermission('departments', 'canEdit'), async (req, res) => {
+    try {
+      const { kpiName, benchmark } = insertPositionKpiSchema.omit({ positionId: true }).parse(req.body);
+      
+      const kpi = await appStorage.createPositionKpi({
+        positionId: req.params.positionId,
+        kpiName,
+        benchmark,
+      });
+      
+      res.status(201).json(kpi);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating position KPI:', error);
+      res.status(500).json({ message: "Failed to create position KPI" });
+    }
+  });
+
+  app.put("/api/position-kpis/:id", requireAuth(), requirePermission('departments', 'canEdit'), async (req, res) => {
+    try {
+      const insertData = insertPositionKpiSchema.partial().omit({ positionId: true }).parse(req.body);
+      const kpi = await appStorage.updatePositionKpi(req.params.id, insertData);
+      
+      if (!kpi) {
+        return res.status(404).json({ message: "Position KPI not found" });
+      }
+      
+      res.json(kpi);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating position KPI:', error);
+      res.status(500).json({ message: "Failed to update position KPI" });
+    }
+  });
+
+  app.delete("/api/position-kpis/:id", requireAuth(), requirePermission('departments', 'canDelete'), async (req, res) => {
+    try {
+      const success = await appStorage.deletePositionKpi(req.params.id);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete position KPI" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting position KPI:', error);
+      res.status(500).json({ message: "Failed to delete position KPI" });
     }
   });
 
