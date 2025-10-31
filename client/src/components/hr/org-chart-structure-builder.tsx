@@ -70,6 +70,7 @@ export default function OrgChartStructureBuilder() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/org-structure"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
       toast({
         title: "Success",
         description: "Position removed from org chart",
