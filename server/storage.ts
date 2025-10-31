@@ -60,6 +60,7 @@ import {
   notifications,
   type Department, type InsertDepartment, departments,
   type Position, type InsertPosition, positions,
+  type PositionKpi, type InsertPositionKpi, positionKpis,
   type JobApplication, type InsertJobApplication, jobApplications,
   type JobOpening, type InsertJobOpening, jobOpenings,
   type ClientBriefSection, type InsertClientBriefSection, clientBriefSections,
@@ -427,6 +428,13 @@ export interface IStorage {
   createPosition(position: InsertPosition): Promise<Position>;
   updatePosition(id: string, position: Partial<InsertPosition>): Promise<Position | undefined>;
   deletePosition(id: string): Promise<boolean>;
+  
+  // Position KPIs
+  getPositionKpis(positionId: string): Promise<import("@shared/schema").PositionKpi[]>;
+  getPositionKpi(id: string): Promise<import("@shared/schema").PositionKpi | undefined>;
+  createPositionKpi(kpi: import("@shared/schema").InsertPositionKpi): Promise<import("@shared/schema").PositionKpi>;
+  updatePositionKpi(id: string, kpi: Partial<import("@shared/schema").InsertPositionKpi>): Promise<import("@shared/schema").PositionKpi | undefined>;
+  deletePositionKpi(id: string): Promise<boolean>;
 
   // Organization Chart Structures
   getOrgChartStructures(): Promise<import("@shared/schema").OrgChartStructure[]>;
@@ -6013,6 +6021,45 @@ export class DbStorage implements IStorage {
       return true;
     } catch (error) {
       console.error("Error deleting position:", error);
+      return false;
+    }
+  }
+
+  // Position KPIs
+  async getPositionKpis(positionId: string): Promise<PositionKpi[]> {
+    const result = await db
+      .select()
+      .from(positionKpis)
+      .where(eq(positionKpis.positionId, positionId))
+      .orderBy(asc(positionKpis.createdAt));
+    return result;
+  }
+
+  async getPositionKpi(id: string): Promise<PositionKpi | undefined> {
+    const result = await db.select().from(positionKpis).where(eq(positionKpis.id, id));
+    return result[0];
+  }
+
+  async createPositionKpi(kpi: InsertPositionKpi): Promise<PositionKpi> {
+    const result = await db.insert(positionKpis).values(kpi).returning();
+    return result[0];
+  }
+
+  async updatePositionKpi(id: string, kpi: Partial<InsertPositionKpi>): Promise<PositionKpi | undefined> {
+    const result = await db
+      .update(positionKpis)
+      .set({ ...kpi, updatedAt: new Date() })
+      .where(eq(positionKpis.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deletePositionKpi(id: string): Promise<boolean> {
+    try {
+      await db.delete(positionKpis).where(eq(positionKpis.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting position KPI:", error);
       return false;
     }
   }

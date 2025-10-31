@@ -2056,6 +2056,25 @@ export const positions = pgTable("positions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Position KPIs
+export const positionKpis = pgTable("position_kpis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  positionId: varchar("position_id").notNull().references(() => positions.id, { onDelete: "cascade" }),
+  kpiName: varchar("kpi_name", { length: 200 }).notNull(),
+  benchmark: varchar("benchmark", { length: 100 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPositionKpiSchema = createInsertSchema(positionKpis).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PositionKpi = typeof positionKpis.$inferSelect;
+export type InsertPositionKpi = z.infer<typeof insertPositionKpiSchema>;
+
 // Staff Management
 export const staff = pgTable("staff", {
   id: uuid("id").primaryKey().defaultRandom(),
