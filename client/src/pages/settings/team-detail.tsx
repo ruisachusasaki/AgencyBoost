@@ -22,7 +22,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
-import type { Department, Staff, Position, InsertPosition, Role } from "@shared/schema";
+import type { Department, Staff, Position, InsertPosition, PositionKpi, InsertPositionKpi, Role } from "@shared/schema";
 
 type TeamWorkflow = {
   id: string;
@@ -45,8 +45,14 @@ const editTeamFormSchema = z.object({
   workflowId: z.string().optional(),
 });
 
+const kpiFormSchema = z.object({
+  kpiName: z.string().min(1, "KPI name is required"),
+  benchmark: z.string().min(1, "Benchmark is required"),
+});
+
 type PositionFormData = z.infer<typeof positionFormSchema>;
 type EditTeamFormData = z.infer<typeof editTeamFormSchema>;
+type KpiFormData = z.infer<typeof kpiFormSchema>;
 
 export default function TeamDetail() {
   const { toast } = useToast();
@@ -58,6 +64,9 @@ export default function TeamDetail() {
   const [isEditPositionDialogOpen, setIsEditPositionDialogOpen] = useState(false);
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
   const [editPositionActiveTab, setEditPositionActiveTab] = useState("details");
+  const [isAddKpiDialogOpen, setIsAddKpiDialogOpen] = useState(false);
+  const [isEditKpiDialogOpen, setIsEditKpiDialogOpen] = useState(false);
+  const [editingKpi, setEditingKpi] = useState<PositionKpi | null>(null);
   const teamId = params?.id;
 
   const positionForm = useForm<PositionFormData>({
@@ -82,6 +91,14 @@ export default function TeamDetail() {
     defaultValues: {
       name: "",
       description: "",
+    }
+  });
+
+  const kpiForm = useForm<KpiFormData>({
+    resolver: zodResolver(kpiFormSchema),
+    defaultValues: {
+      kpiName: "",
+      benchmark: "",
     }
   });
 
@@ -267,6 +284,82 @@ export default function TeamDetail() {
     }
   });
 
+  // Fetch KPIs for the editing position
+  const { data: kpis = [], isLoading: kpisLoading } = useQuery<PositionKpi[]>({
+    queryKey: ["/api/positions", editingPosition?.id, "kpis"],
+    enabled: !!editingPosition?.id,
+  });
+
+  // Create KPI mutation
+  const createKpiMutation = useMutation({
+    mutationFn: async (data: KpiFormData) => {
+      if (!editingPosition) throw new Error("No position selected");
+      return apiRequest("POST", `/api/positions/${editingPosition.id}/kpis`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/positions", editingPosition?.id, "kpis"] });
+      setIsAddKpiDialogOpen(false);
+      kpiForm.reset();
+      toast({
+        title: "Success",
+        description: "KPI added successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to add KPI"
+      });
+    }
+  });
+
+  // Update KPI mutation
+  const updateKpiMutation = useMutation({
+    mutationFn: async (data: KpiFormData) => {
+      if (!editingKpi) throw new Error("No KPI selected for editing");
+      return apiRequest("PUT", `/api/position-kpis/${editingKpi.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/positions", editingPosition?.id, "kpis"] });
+      setIsEditKpiDialogOpen(false);
+      setEditingKpi(null);
+      kpiForm.reset();
+      toast({
+        title: "Success",
+        description: "KPI updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update KPI"
+      });
+    }
+  });
+
+  // Delete KPI mutation
+  const deleteKpiMutation = useMutation({
+    mutationFn: async (kpiId: string) => {
+      return apiRequest("DELETE", `/api/position-kpis/${kpiId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/positions", editingPosition?.id, "kpis"] });
+      toast({
+        title: "Success",
+        description: "KPI deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete KPI"
+      });
+    }
+  });
+
   const onTeamSubmit = (data: EditTeamFormData) => {
     updateTeamMutation.mutate(data);
   };
@@ -304,6 +397,28 @@ export default function TeamDetail() {
       description: position.description || "",
     });
     setIsEditPositionDialogOpen(true);
+  };
+
+  const onKpiSubmit = (data: KpiFormData) => {
+    if (editingKpi) {
+      updateKpiMutation.mutate(data);
+    } else {
+      createKpiMutation.mutate(data);
+    }
+  };
+
+  const handleEditKpi = (kpi: PositionKpi) => {
+    setEditingKpi(kpi);
+    kpiForm.reset({
+      kpiName: kpi.kpiName,
+      benchmark: kpi.benchmark,
+    });
+    setIsEditKpiDialogOpen(true);
+  };
+
+  const handleDeleteKpi = (kpiId: string, kpiName: string) => {
+    if (!confirm(`Are you sure you want to delete the KPI "${kpiName}"?`)) return;
+    deleteKpiMutation.mutate(kpiId);
   };
 
   if (teamLoading) {
@@ -920,9 +1035,199 @@ export default function TeamDetail() {
             </TabsContent>
             
             <TabsContent value="kpis" className="mt-4">
-              <div className="text-sm text-muted-foreground mb-4">
-                Placeholder for KPIs tab - will be implemented in next task
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-medium">Position KPIs</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Define key performance indicators and benchmarks for this position
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => {
+                      kpiForm.reset({ kpiName: "", benchmark: "" });
+                      setIsAddKpiDialogOpen(true);
+                    }}
+                    size="sm"
+                    data-testid="button-add-kpi"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add KPI
+                  </Button>
+                </div>
+
+                {kpisLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+                  </div>
+                ) : kpis.length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                    <p className="text-muted-foreground mb-2">No KPIs defined yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Click "Add KPI" to define performance indicators for this position
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>KPI Name</TableHead>
+                        <TableHead>Benchmark</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {kpis.map((kpi) => (
+                        <TableRow key={kpi.id} data-testid={`row-kpi-${kpi.id}`}>
+                          <TableCell className="font-medium" data-testid={`text-kpi-name-${kpi.id}`}>
+                            {kpi.kpiName}
+                          </TableCell>
+                          <TableCell data-testid={`text-kpi-benchmark-${kpi.id}`}>
+                            {kpi.benchmark}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditKpi(kpi)}
+                                data-testid={`button-edit-kpi-${kpi.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteKpi(kpi.id, kpi.kpiName)}
+                                data-testid={`button-delete-kpi-${kpi.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </div>
+
+              {/* Add KPI Dialog */}
+              <Dialog open={isAddKpiDialogOpen} onOpenChange={setIsAddKpiDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add KPI</DialogTitle>
+                    <DialogDescription>
+                      Define a new key performance indicator for this position
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...kpiForm}>
+                    <form onSubmit={kpiForm.handleSubmit(onKpiSubmit)} className="space-y-4">
+                      <FormField
+                        control={kpiForm.control}
+                        name="kpiName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>KPI Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. CPR, Conversion Rate" {...field} data-testid="input-kpi-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={kpiForm.control}
+                        name="benchmark"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Benchmark</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. $35, 15%, 100 units" {...field} data-testid="input-kpi-benchmark" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <DialogFooter>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => {
+                            setIsAddKpiDialogOpen(false);
+                            kpiForm.reset();
+                          }}
+                          data-testid="button-cancel-kpi"
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={createKpiMutation.isPending} data-testid="button-save-kpi">
+                          {createKpiMutation.isPending ? "Adding..." : "Add KPI"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+
+              {/* Edit KPI Dialog */}
+              <Dialog open={isEditKpiDialogOpen} onOpenChange={setIsEditKpiDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit KPI</DialogTitle>
+                    <DialogDescription>
+                      Update the KPI details
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...kpiForm}>
+                    <form onSubmit={kpiForm.handleSubmit(onKpiSubmit)} className="space-y-4">
+                      <FormField
+                        control={kpiForm.control}
+                        name="kpiName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>KPI Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. CPR, Conversion Rate" {...field} data-testid="input-edit-kpi-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={kpiForm.control}
+                        name="benchmark"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Benchmark</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. $35, 15%, 100 units" {...field} data-testid="input-edit-kpi-benchmark" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <DialogFooter>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => {
+                            setIsEditKpiDialogOpen(false);
+                            setEditingKpi(null);
+                            kpiForm.reset();
+                          }}
+                          data-testid="button-cancel-edit-kpi"
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={updateKpiMutation.isPending} data-testid="button-update-kpi">
+                          {updateKpiMutation.isPending ? "Updating..." : "Update KPI"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
           </Tabs>
         </DialogContent>
