@@ -524,12 +524,6 @@ export default function StaffDetail() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="none">No Position</SelectItem>
-                            {/* Show the current position even if it's not in the loaded positions yet */}
-                            {field.value && field.value !== "none" && !departmentPositions.find(p => p.name === field.value) && (
-                              <SelectItem key="current" value={field.value}>
-                                {field.value} (current)
-                              </SelectItem>
-                            )}
                             {departmentPositions.map((position) => (
                               <SelectItem key={position.id} value={position.name}>
                                 {position.name}
