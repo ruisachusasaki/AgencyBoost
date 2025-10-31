@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { FormLabelWithTooltip } from "@/components/ui/form-label-with-tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +57,7 @@ export default function TeamDetail() {
   const [isEditTeamDialogOpen, setIsEditTeamDialogOpen] = useState(false);
   const [isEditPositionDialogOpen, setIsEditPositionDialogOpen] = useState(false);
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
+  const [editPositionActiveTab, setEditPositionActiveTab] = useState("details");
   const teamId = params?.id;
 
   const positionForm = useForm<PositionFormData>({
@@ -841,70 +843,88 @@ export default function TeamDetail() {
               Update the position details for {editingPosition?.name}
             </DialogDescription>
           </DialogHeader>
-          <Form {...editPositionForm}>
-            <form onSubmit={editPositionForm.handleSubmit(onPositionUpdateSubmit)} className="space-y-4">
-              <FormField
-                control={editPositionForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabelWithTooltip tooltip="The official title for this position within the team">
-                      Position Title
-                    </FormLabelWithTooltip>
-                    <FormControl>
-                      <Input placeholder="e.g. Marketing Manager, Sales Rep" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editPositionForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Position Job Description</FormLabel>
-                    <FormControl>
-                      <div className="min-h-[300px]">
-                        <ReactQuill
-                          theme="snow"
-                          value={field.value || ""}
-                          onChange={field.onChange}
-                          placeholder="Detailed description of this position, responsibilities, requirements, etc."
-                          style={{ height: "250px" }}
-                          modules={{
-                            toolbar: [
-                              [{ 'header': [1, 2, false] }],
-                              ['bold', 'italic', 'underline'],
-                              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                              ['clean']
-                            ],
-                          }}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsEditPositionDialogOpen(false);
-                    setEditingPosition(null);
-                    editPositionForm.reset();
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updatePositionMutation.isPending}>
-                  {updatePositionMutation.isPending ? "Updating..." : "Update Position"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+          
+          <Tabs value={editPositionActiveTab} onValueChange={setEditPositionActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="details" data-testid="tab-details">Details</TabsTrigger>
+              <TabsTrigger value="kpis" data-testid="tab-kpis">KPIs</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="details" className="mt-4">
+              <Form {...editPositionForm}>
+                <form onSubmit={editPositionForm.handleSubmit(onPositionUpdateSubmit)} className="space-y-4">
+                  <FormField
+                    control={editPositionForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabelWithTooltip tooltip="The official title for this position within the team">
+                          Position Title
+                        </FormLabelWithTooltip>
+                        <FormControl>
+                          <Input placeholder="e.g. Marketing Manager, Sales Rep" {...field} data-testid="input-position-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editPositionForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Position Job Description</FormLabel>
+                        <FormControl>
+                          <div className="min-h-[300px]">
+                            <ReactQuill
+                              theme="snow"
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              placeholder="Detailed description of this position, responsibilities, requirements, etc."
+                              style={{ height: "250px" }}
+                              modules={{
+                                toolbar: [
+                                  [{ 'header': [1, 2, false] }],
+                                  ['bold', 'italic', 'underline'],
+                                  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                  ['clean']
+                                ],
+                              }}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => {
+                        setIsEditPositionDialogOpen(false);
+                        setEditingPosition(null);
+                        editPositionForm.reset();
+                        setEditPositionActiveTab("details");
+                      }}
+                      data-testid="button-cancel-position"
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={updatePositionMutation.isPending} data-testid="button-update-position">
+                      {updatePositionMutation.isPending ? "Updating..." : "Update Position"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </TabsContent>
+            
+            <TabsContent value="kpis" className="mt-4">
+              <div className="text-sm text-muted-foreground mb-4">
+                Placeholder for KPIs tab - will be implemented in next task
+              </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
     </div>
