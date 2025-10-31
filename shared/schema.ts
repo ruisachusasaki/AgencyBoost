@@ -2050,6 +2050,7 @@ export const positions = pgTable("positions", {
   description: text("description"),
   parentPositionId: varchar("parent_position_id"), // self-referencing for hierarchy
   orderIndex: integer("order_index").default(0), // for ordering within parent
+  inOrgChart: boolean("in_org_chart").default(false), // Track if position is in the org chart structure
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

@@ -9377,8 +9377,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // HR Org Structure Hierarchy API - Position-only (people-based)
   app.get("/api/org-structure", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
-      // Fetch only positions (people-based org chart)
-      const positions = await appStorage.getPositions();
+      // Fetch only positions that are explicitly added to the org chart
+      const allPositions = await appStorage.getPositions();
+      const positions = allPositions.filter(p => p.inOrgChart === true);
       
       // Build hierarchical structure - positions only
       const buildTree = () => {

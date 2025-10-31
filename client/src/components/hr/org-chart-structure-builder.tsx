@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { GripVertical, Users, Briefcase, ChevronRight, ChevronDown, Plus, Search } from "lucide-react";
+import { GripVertical, Users, Briefcase, ChevronRight, ChevronDown, Plus, Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -60,6 +60,30 @@ export default function OrgChartStructureBuilder() {
     });
   };
 
+  // Remove position from org chart mutation
+  const removeFromOrgChartMutation = useMutation({
+    mutationFn: async (positionId: string) => {
+      return await apiRequest("PATCH", `/api/positions/${positionId}`, {
+        inOrgChart: false,
+        parentPositionId: null, // Clear parent when removing from chart
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/org-structure"] });
+      toast({
+        title: "Success",
+        description: "Position removed from org chart",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove position from org chart",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Add position instance mutation
   const addPositionMutation = useMutation({
     mutationFn: async (templatePosition: Position) => {
@@ -68,6 +92,7 @@ export default function OrgChartStructureBuilder() {
         name: templatePosition.name,
         description: templatePosition.description,
         isActive: true,
+        inOrgChart: true, // Mark as part of org chart
         departmentId: null, // Not used in position-based org chart
       };
 
@@ -212,6 +237,16 @@ export default function OrgChartStructureBuilder() {
                   {node.isActive ? 'Active' : 'Inactive'}
                 </Badge>
                 <span className="text-xs text-muted-foreground">Order: {node.orderIndex || 0}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeFromOrgChartMutation.mutate(node.id)}
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                  data-testid={`button-remove-${node.id}`}
+                  title="Remove from org chart"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 
