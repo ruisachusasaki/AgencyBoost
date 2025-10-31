@@ -9,8 +9,6 @@ import { Input } from "@/components/ui/input";
 import { GripVertical, Users, Briefcase, ChevronRight, ChevronDown, Plus, Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { TeamPosition } from "@shared/schema";
-
 type OrgNode = {
   id: string;
   name: string;
@@ -43,9 +41,9 @@ export default function OrgChartStructureBuilder() {
     queryKey: ["/api/org-structure"],
   });
 
-  // Fetch all position templates (master list)
-  const { data: allPositions = [] } = useQuery<TeamPosition[]>({
-    queryKey: ["/api/team-positions"],
+  // Fetch all positions from all departments
+  const { data: allPositions = [] } = useQuery<Position[]>({
+    queryKey: ["/api/positions"],
   });
 
   // Toggle node expansion
