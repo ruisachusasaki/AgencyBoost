@@ -54,7 +54,12 @@ export default function OrgChartStructureBuilder() {
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
-    const items = Array.from(positions);
+    // Get fresh data from cache to avoid stale closure issues
+    const currentPositions = queryClient.getQueryData<TeamPosition[]>(["/api/team-positions"]) || [];
+    const sortedCurrent = [...currentPositions].sort((a, b) => a.order - b.order);
+
+    // Reorder the fresh sorted array
+    const items = Array.from(sortedCurrent);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
@@ -71,7 +76,7 @@ export default function OrgChartStructureBuilder() {
     reorderMutation.mutate(reorderedPositions);
   };
 
-  // Sort positions by order
+  // Sort positions by order for display
   const sortedPositions = [...positions].sort((a, b) => a.order - b.order);
 
   if (isLoading) {
