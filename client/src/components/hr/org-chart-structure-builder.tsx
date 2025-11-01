@@ -355,7 +355,7 @@ export default function OrgChartStructureBuilder() {
                     {(() => {
                       const filteredPositions = allPositions.filter(p => 
                         p.isActive && 
-                        p.label.toLowerCase().includes(positionSearchQuery.toLowerCase())
+                        p.name.toLowerCase().includes(positionSearchQuery.toLowerCase())
                       );
 
                       if (filteredPositions.length === 0) {
@@ -379,7 +379,7 @@ export default function OrgChartStructureBuilder() {
                             <div className="flex items-center gap-3">
                               <Briefcase className="h-5 w-5 text-orange-500" />
                               <div className="flex-1">
-                                <div className="font-medium">{position.label}</div>
+                                <div className="font-medium">{position.name}</div>
                               </div>
                               <Plus className="h-4 w-4 text-muted-foreground" />
                             </div>
