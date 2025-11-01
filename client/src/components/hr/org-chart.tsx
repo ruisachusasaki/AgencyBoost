@@ -4,16 +4,21 @@ import ReactFlow, {
   Edge,
   Controls,
   Background,
+  MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   BackgroundVariant,
   Position,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ChevronDown, ChevronRight, Search, X } from 'lucide-react';
 import { Staff } from '@shared/schema';
 
 interface OrgChartProps {
@@ -118,8 +123,12 @@ const nodeTypes = {
   custom: CustomNode,
 };
 
-export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgChartProps) {
+// Inner component that has access to useReactFlow
+function OrgChartInner({ staffData, clientTeamAssignments = [] }: OrgChartProps) {
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [highlightedNode, setHighlightedNode] = useState<string | null>(null);
+  const { fitView, setCenter, getZoom } = useReactFlow();
 
   // Group client assignments by staff member
   const clientCountByStaff = useMemo(() => {
@@ -163,7 +172,7 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
     return { topLevelLeaders, reportsByManager, childCounts };
   }, [staffData]);
 
-  // Convert to ReactFlow nodes and edges with proper tree layout
+  // Convert to ReactFlow nodes and edges with VERTICAL top-down layout
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -172,120 +181,103 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
       return { nodes, edges };
     }
 
-    // Layout parameters
+    // Compact vertical layout parameters
     const NODE_WIDTH = 280;
-    const NODE_HEIGHT = 180;
-    const HORIZONTAL_SPACING = 40;
-    const VERTICAL_SPACING = 180;
+    const HORIZONTAL_SPACING = 100; // Space between siblings at same level
+    const VERTICAL_SPACING = 160; // Space between levels (top to bottom)
 
-    interface TreeNode {
+    interface PositionedNode {
       staff: Staff;
-      children: TreeNode[];
       x: number;
       y: number;
-      width: number;
+      level: number;
     }
 
-    // Build tree structure for each top-level leader (calculates depth from root)
-    const buildTree = (staff: Staff, depth: number = 0): TreeNode => {
-      const isCollapsed = collapsedNodes.has(staff.id);
-      const directReports = hierarchyData.reportsByManager[staff.id] || [];
-      const visibleChildren = isCollapsed ? [] : directReports;
-      
-      // Recursively build child nodes at next depth level
-      const children = visibleChildren.map(child => buildTree(child, depth + 1));
-      
-      return {
-        staff,
-        children,
-        x: 0,
-        y: depth * VERTICAL_SPACING,
-        width: 0,
-      };
-    };
+    const positionedNodes: PositionedNode[] = [];
+    const processedIds = new Set<string>();
 
-    // Calculate subtree widths (post-order traversal)
-    const calculateWidths = (node: TreeNode): number => {
-      if (node.children.length === 0) {
-        node.width = NODE_WIDTH;
-        return NODE_WIDTH;
-      }
+    // Process each top-level leader and their tree
+    let leaderStartX = 0;
 
-      let childrenWidth = 0;
-      node.children.forEach(child => {
-        childrenWidth += calculateWidths(child);
-      });
-      childrenWidth += (node.children.length - 1) * HORIZONTAL_SPACING;
+    hierarchyData.topLevelLeaders.forEach((leader, leaderIndex) => {
+      // BFS traversal for this leader's tree
+      const queue: Array<{ staff: Staff; level: number; parentX: number; siblingIndex: number; totalSiblings: number }> = [
+        { staff: leader, level: 0, parentX: leaderStartX, siblingIndex: 0, totalSiblings: 1 }
+      ];
 
-      node.width = Math.max(NODE_WIDTH, childrenWidth);
-      return node.width;
-    };
+      const levelNodes: Record<number, PositionedNode[]> = {};
+      let maxX = leaderStartX;
 
-    // Position nodes (pre-order traversal)
-    const positionNodes = (node: TreeNode, x: number) => {
-      if (node.children.length === 0) {
-        // Leaf node - center it in its allocated space
-        node.x = x + (node.width - NODE_WIDTH) / 2;
-      } else {
-        // Parent node - position children first, then center parent above them
-        let childX = x;
-        node.children.forEach(child => {
-          positionNodes(child, childX);
-          childX += child.width + HORIZONTAL_SPACING;
+      while (queue.length > 0) {
+        const { staff, level, parentX, siblingIndex, totalSiblings } = queue.shift()!;
+
+        if (processedIds.has(staff.id)) continue;
+        processedIds.add(staff.id);
+
+        const isCollapsed = collapsedNodes.has(staff.id);
+        const directReports = hierarchyData.reportsByManager[staff.id] || [];
+        const visibleChildren = isCollapsed ? [] : directReports;
+
+        // Calculate X position: distribute siblings evenly
+        let x: number;
+        if (level === 0) {
+          // Top-level leader
+          x = leaderStartX;
+        } else {
+          // Calculate offset from parent based on sibling position
+          const siblingSpread = (totalSiblings - 1) * HORIZONTAL_SPACING;
+          const startX = parentX - siblingSpread / 2;
+          x = startX + siblingIndex * HORIZONTAL_SPACING;
+        }
+
+        const y = level * VERTICAL_SPACING;
+
+        const posNode: PositionedNode = { staff, x, y, level };
+        positionedNodes.push(posNode);
+
+        if (!levelNodes[level]) levelNodes[level] = [];
+        levelNodes[level].push(posNode);
+
+        maxX = Math.max(maxX, x);
+
+        // Queue children for next level
+        visibleChildren.forEach((child, idx) => {
+          queue.push({
+            staff: child,
+            level: level + 1,
+            parentX: x,
+            siblingIndex: idx,
+            totalSiblings: visibleChildren.length,
+          });
         });
-
-        // Center parent over children
-        const firstChildCenter = node.children[0].x + NODE_WIDTH / 2;
-        const lastChildCenter = node.children[node.children.length - 1].x + NODE_WIDTH / 2;
-        node.x = (firstChildCenter + lastChildCenter) / 2 - NODE_WIDTH / 2;
       }
-    };
 
-    // Flatten tree to array
-    const flattenTree = (node: TreeNode, result: TreeNode[] = []): TreeNode[] => {
-      result.push(node);
-      node.children.forEach(child => flattenTree(child, result));
-      return result;
-    };
-
-    // Build and layout trees for all top-level leaders
-    const trees = hierarchyData.topLevelLeaders.map(leader => buildTree(leader));
-    
-    // Calculate widths for all trees
-    trees.forEach(tree => calculateWidths(tree));
-
-    // Position trees side by side
-    let currentX = 0;
-    trees.forEach((tree, index) => {
-      positionNodes(tree, currentX);
-      currentX += tree.width + HORIZONTAL_SPACING * 3; // Extra space between top-level leaders
+      // Update starting position for next leader tree
+      leaderStartX = maxX + HORIZONTAL_SPACING * 4;
     });
 
-    // Flatten all trees into a single array
-    const allNodes = trees.flatMap(tree => flattenTree(tree));
-
-    // Center the entire layout
-    if (allNodes.length > 0) {
-      const minX = Math.min(...allNodes.map(n => n.x));
-      const maxX = Math.max(...allNodes.map(n => n.x + NODE_WIDTH));
+    // Center the entire layout horizontally
+    if (positionedNodes.length > 0) {
+      const minX = Math.min(...positionedNodes.map(n => n.x));
+      const maxX = Math.max(...positionedNodes.map(n => n.x));
       const totalWidth = maxX - minX;
       const offset = -totalWidth / 2;
-      
-      allNodes.forEach(node => {
+
+      positionedNodes.forEach(node => {
         node.x += offset;
       });
     }
 
     // Create ReactFlow nodes
-    allNodes.forEach(({ staff, x, y }) => {
+    positionedNodes.forEach(({ staff, x, y }) => {
       const firstName = staff.firstName || '';
       const lastName = staff.lastName || '';
-      const initials = firstName && lastName 
-        ? `${firstName[0]}${lastName[0]}`.toUpperCase() 
-        : firstName 
-          ? firstName.substring(0, 2).toUpperCase() 
+      const initials = firstName && lastName
+        ? `${firstName[0]}${lastName[0]}`.toUpperCase()
+        : firstName
+          ? firstName.substring(0, 2).toUpperCase()
           : 'NA';
-      
+
       nodes.push({
         id: staff.id,
         type: 'custom',
@@ -317,8 +309,8 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
     });
 
     // Create edges for manager-employee relationships
-    allNodes.forEach(({ staff }) => {
-      if (staff.managerId) {
+    positionedNodes.forEach(({ staff }) => {
+      if (staff.managerId && processedIds.has(staff.managerId)) {
         edges.push({
           id: `${staff.managerId}-${staff.id}`,
           source: staff.managerId,
@@ -342,6 +334,58 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
+  // Search functionality
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    
+    const query = searchQuery.toLowerCase();
+    return staffData
+      .filter(staff => {
+        const fullName = `${staff.firstName} ${staff.lastName}`.toLowerCase();
+        const position = (staff.position || '').toLowerCase();
+        const department = (staff.department || '').toLowerCase();
+        return fullName.includes(query) || position.includes(query) || department.includes(query);
+      })
+      .slice(0, 5); // Limit to 5 results
+  }, [searchQuery, staffData]);
+
+  // Focus on a specific node
+  const focusNode = useCallback((nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) {
+      setHighlightedNode(nodeId);
+      setCenter(node.position.x + 140, node.position.y + 90, { zoom: 1.2, duration: 800 });
+      
+      // Remove highlight after 3 seconds
+      setTimeout(() => setHighlightedNode(null), 3000);
+    }
+  }, [nodes, setCenter]);
+
+  // Update node styling based on highlight
+  useEffect(() => {
+    if (highlightedNode) {
+      setNodes(nds =>
+        nds.map(node => ({
+          ...node,
+          style: {
+            ...node.style,
+            opacity: node.id === highlightedNode ? 1 : 0.3,
+          },
+        }))
+      );
+    } else {
+      setNodes(nds =>
+        nds.map(node => ({
+          ...node,
+          style: {
+            ...node.style,
+            opacity: 1,
+          },
+        }))
+      );
+    }
+  }, [highlightedNode, setNodes]);
+
   if (hierarchyData.topLevelLeaders.length === 0) {
     return (
       <Card className="p-12 text-center">
@@ -356,26 +400,117 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
   }
 
   return (
-    <div className="h-[800px] w-full border rounded-lg bg-gray-50" data-testid="org-chart-container">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{
-          padding: 0.2,
-          minZoom: 0.5,
-          maxZoom: 1.2,
-        }}
-        attributionPosition="bottom-left"
-        minZoom={0.3}
-        maxZoom={2}
-      >
-        <Controls />
-        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-      </ReactFlow>
+    <div className="space-y-4">
+      {/* Search Bar */}
+      <Card className="p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search by name, position, or department..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-10"
+            data-testid="org-chart-search"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-1 h-8 w-8 p-0"
+              onClick={() => setSearchQuery('')}
+              data-testid="clear-search"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        
+        {/* Search Results Dropdown */}
+        {searchResults.length > 0 && (
+          <div className="mt-2 border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto">
+            {searchResults.map((staff) => (
+              <button
+                key={staff.id}
+                onClick={() => {
+                  focusNode(staff.id);
+                  setSearchQuery('');
+                }}
+                className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b last:border-b-0 flex items-center gap-3"
+                data-testid={`search-result-${staff.id}`}
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={staff.profileImagePath || undefined} />
+                  <AvatarFallback>
+                    {staff.firstName?.[0]}{staff.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="font-medium text-sm">
+                    {staff.firstName} {staff.lastName}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {staff.position} {staff.department && `• ${staff.department}`}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        
+        {searchQuery && searchResults.length === 0 && (
+          <div className="mt-2 p-4 text-sm text-gray-500 text-center border rounded-md bg-white">
+            No staff members found matching "{searchQuery}"
+          </div>
+        )}
+      </Card>
+
+      {/* Org Chart */}
+      <div className="h-[800px] w-full border rounded-lg bg-gray-50" data-testid="org-chart-container">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{
+            padding: 0.2,
+            minZoom: 0.5,
+            maxZoom: 1.2,
+          }}
+          attributionPosition="bottom-left"
+          minZoom={0.3}
+          maxZoom={2}
+        >
+          <Controls />
+          <MiniMap 
+            nodeColor={(node) => {
+              const colors = getDepartmentColor(node.data.department);
+              return colors.border.includes('blue') ? '#3b82f6' :
+                     colors.border.includes('purple') ? '#a855f7' :
+                     colors.border.includes('green') ? '#22c55e' :
+                     colors.border.includes('orange') ? '#f97316' :
+                     colors.border.includes('yellow') ? '#eab308' :
+                     colors.border.includes('emerald') ? '#10b981' :
+                     colors.border.includes('pink') ? '#ec4899' :
+                     colors.border.includes('cyan') ? '#06b6d4' :
+                     colors.border.includes('indigo') ? '#6366f1' : '#9ca3af';
+            }}
+            pannable
+            zoomable
+          />
+          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+        </ReactFlow>
+      </div>
     </div>
+  );
+}
+
+// Wrapper component with ReactFlowProvider
+export default function OrgChart(props: OrgChartProps) {
+  return (
+    <ReactFlowProvider>
+      <OrgChartInner {...props} />
+    </ReactFlowProvider>
   );
 }
