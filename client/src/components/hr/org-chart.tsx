@@ -163,7 +163,7 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
     return { topLevelLeaders, reportsByManager, childCounts };
   }, [staffData]);
 
-  // Convert to ReactFlow nodes and edges
+  // Convert to ReactFlow nodes and edges with proper tree layout
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -173,84 +173,110 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
     }
 
     // Layout parameters
-    const HORIZONTAL_SPACING = 280;
-    const VERTICAL_SPACING = 200;
+    const NODE_WIDTH = 280;
+    const NODE_HEIGHT = 180;
+    const HORIZONTAL_SPACING = 60;
+    const VERTICAL_SPACING = 220;
 
-    interface LayoutNode {
+    interface TreeNode {
       staff: Staff;
+      children: TreeNode[];
       x: number;
       y: number;
-      level: number;
+      width: number;
     }
 
-    const layoutNodes: LayoutNode[] = [];
-    const processedIds = new Set<string>();
-
-    // BFS to assign positions - start with all top-level leaders
-    const queue: Array<{ staff: Staff; level: number; parentX?: number }> = 
-      hierarchyData.topLevelLeaders.map(leader => ({ staff: leader, level: 0 }));
-
-    // Track nodes at each level for proper spacing
-    const nodesByLevel: Record<number, LayoutNode[]> = {};
-
-    while (queue.length > 0) {
-      const { staff, level, parentX } = queue.shift()!;
-      
-      if (processedIds.has(staff.id)) continue;
-      processedIds.add(staff.id);
-
-      const directReports = hierarchyData.reportsByManager[staff.id] || [];
+    // Build tree structure for each top-level leader
+    const buildTree = (staff: Staff, level: number = 0): TreeNode => {
       const isCollapsed = collapsedNodes.has(staff.id);
+      const directReports = hierarchyData.reportsByManager[staff.id] || [];
       const visibleChildren = isCollapsed ? [] : directReports;
+      
+      const children = visibleChildren.map(child => buildTree(child, level + 1));
+      
+      return {
+        staff,
+        children,
+        x: 0,
+        y: level * VERTICAL_SPACING,
+        width: 0,
+      };
+    };
 
-      // Calculate x position
-      let x: number;
-      if (level === 0) {
-        // CEO at center
-        x = 0;
+    // Calculate subtree widths (post-order traversal)
+    const calculateWidths = (node: TreeNode): number => {
+      if (node.children.length === 0) {
+        node.width = NODE_WIDTH;
+        return NODE_WIDTH;
+      }
+
+      let childrenWidth = 0;
+      node.children.forEach(child => {
+        childrenWidth += calculateWidths(child);
+      });
+      childrenWidth += (node.children.length - 1) * HORIZONTAL_SPACING;
+
+      node.width = Math.max(NODE_WIDTH, childrenWidth);
+      return node.width;
+    };
+
+    // Position nodes (pre-order traversal)
+    const positionNodes = (node: TreeNode, x: number) => {
+      if (node.children.length === 0) {
+        // Leaf node - center it in its allocated space
+        node.x = x + (node.width - NODE_WIDTH) / 2;
       } else {
-        // Position relative to siblings
-        const levelNodes = nodesByLevel[level] || [];
-        if (levelNodes.length === 0) {
-          x = parentX ?? 0;
-        } else {
-          const lastNode = levelNodes[levelNodes.length - 1];
-          x = lastNode.x + HORIZONTAL_SPACING;
-        }
+        // Parent node - position children first, then center parent above them
+        let childX = x;
+        node.children.forEach(child => {
+          positionNodes(child, childX);
+          childX += child.width + HORIZONTAL_SPACING;
+        });
+
+        // Center parent over children
+        const firstChildCenter = node.children[0].x + NODE_WIDTH / 2;
+        const lastChildCenter = node.children[node.children.length - 1].x + NODE_WIDTH / 2;
+        node.x = (firstChildCenter + lastChildCenter) / 2 - NODE_WIDTH / 2;
       }
+    };
 
-      const y = level * VERTICAL_SPACING;
+    // Flatten tree to array
+    const flattenTree = (node: TreeNode, result: TreeNode[] = []): TreeNode[] => {
+      result.push(node);
+      node.children.forEach(child => flattenTree(child, result));
+      return result;
+    };
 
-      const layoutNode: LayoutNode = { staff, x, y, level };
-      layoutNodes.push(layoutNode);
+    // Build and layout trees for all top-level leaders
+    const trees = hierarchyData.topLevelLeaders.map(leader => buildTree(leader));
+    
+    // Calculate widths for all trees
+    trees.forEach(tree => calculateWidths(tree));
 
-      if (!nodesByLevel[level]) {
-        nodesByLevel[level] = [];
-      }
-      nodesByLevel[level].push(layoutNode);
-
-      // Add children to queue
-      visibleChildren.forEach(child => {
-        queue.push({ staff: child, level: level + 1, parentX: x });
-      });
-    }
-
-    // Center each level
-    Object.values(nodesByLevel).forEach(levelNodes => {
-      if (levelNodes.length === 0) return;
-      
-      const minX = Math.min(...levelNodes.map(n => n.x));
-      const maxX = Math.max(...levelNodes.map(n => n.x));
-      const offset = -(minX + maxX) / 2;
-      
-      levelNodes.forEach(node => {
-        node.x += offset;
-      });
+    // Position trees side by side
+    let currentX = 0;
+    trees.forEach((tree, index) => {
+      positionNodes(tree, currentX);
+      currentX += tree.width + HORIZONTAL_SPACING * 3; // Extra space between top-level leaders
     });
 
-    // Create nodes
-    layoutNodes.forEach(({ staff, x, y }) => {
-      // Defensive guards for incomplete staff records
+    // Flatten all trees into a single array
+    const allNodes = trees.flatMap(tree => flattenTree(tree));
+
+    // Center the entire layout
+    if (allNodes.length > 0) {
+      const minX = Math.min(...allNodes.map(n => n.x));
+      const maxX = Math.max(...allNodes.map(n => n.x + NODE_WIDTH));
+      const totalWidth = maxX - minX;
+      const offset = -totalWidth / 2;
+      
+      allNodes.forEach(node => {
+        node.x += offset;
+      });
+    }
+
+    // Create ReactFlow nodes
+    allNodes.forEach(({ staff, x, y }) => {
       const firstName = staff.firstName || '';
       const lastName = staff.lastName || '';
       const initials = firstName && lastName 
@@ -289,9 +315,9 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
       });
     });
 
-    // Create edges
-    layoutNodes.forEach(({ staff }) => {
-      if (staff.managerId && processedIds.has(staff.managerId)) {
+    // Create edges for manager-employee relationships
+    allNodes.forEach(({ staff }) => {
+      if (staff.managerId) {
         edges.push({
           id: `${staff.managerId}-${staff.id}`,
           source: staff.managerId,
