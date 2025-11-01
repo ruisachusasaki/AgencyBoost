@@ -86,14 +86,14 @@ export default function OrgChartStructureBuilder() {
 
   // Add position instance mutation
   const addPositionMutation = useMutation({
-    mutationFn: async (templatePosition: TeamPosition) => {
+    mutationFn: async (templatePosition: Position) => {
       // Create position instance from template with parent context if available
       const payload: any = {
-        name: templatePosition.label, // Use label from template
+        name: templatePosition.name, // Use name from position
         description: templatePosition.description,
         isActive: true,
         inOrgChart: true, // Mark as part of org chart
-        departmentId: null, // Not used in position-based org chart
+        departmentId: templatePosition.departmentId, // Keep department reference
       };
 
       // Set parent based on context
