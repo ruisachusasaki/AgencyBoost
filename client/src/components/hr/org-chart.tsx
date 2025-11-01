@@ -175,8 +175,8 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
     // Layout parameters
     const NODE_WIDTH = 280;
     const NODE_HEIGHT = 180;
-    const HORIZONTAL_SPACING = 60;
-    const VERTICAL_SPACING = 220;
+    const HORIZONTAL_SPACING = 40;
+    const VERTICAL_SPACING = 180;
 
     interface TreeNode {
       staff: Staff;
@@ -186,19 +186,20 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
       width: number;
     }
 
-    // Build tree structure for each top-level leader
-    const buildTree = (staff: Staff, level: number = 0): TreeNode => {
+    // Build tree structure for each top-level leader (calculates depth from root)
+    const buildTree = (staff: Staff, depth: number = 0): TreeNode => {
       const isCollapsed = collapsedNodes.has(staff.id);
       const directReports = hierarchyData.reportsByManager[staff.id] || [];
       const visibleChildren = isCollapsed ? [] : directReports;
       
-      const children = visibleChildren.map(child => buildTree(child, level + 1));
+      // Recursively build child nodes at next depth level
+      const children = visibleChildren.map(child => buildTree(child, depth + 1));
       
       return {
         staff,
         children,
         x: 0,
-        y: level * VERTICAL_SPACING,
+        y: depth * VERTICAL_SPACING,
         width: 0,
       };
     };
@@ -363,10 +364,14 @@ export default function OrgChart({ staffData, clientTeamAssignments = [] }: OrgC
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         fitView
+        fitViewOptions={{
+          padding: 0.2,
+          minZoom: 0.5,
+          maxZoom: 1.2,
+        }}
         attributionPosition="bottom-left"
-        minZoom={0.1}
-        maxZoom={1.5}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        minZoom={0.3}
+        maxZoom={2}
       >
         <Controls />
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
