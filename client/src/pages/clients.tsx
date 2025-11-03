@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal, ChevronLeft, ChevronRight, Users, Upload, Download, Filter, Save, X, Share2, Globe, Lock, Database, Eye, AlertTriangle } from "lucide-react";
+import { Plus, Search, Trash2, Settings, ChevronUp, ChevronDown, Calendar, MoreHorizontal, ChevronLeft, ChevronRight, Users, User, Upload, Download, Filter, Save, X, Share2, Globe, Lock, Database, Eye, AlertTriangle, Tag, Workflow } from "lucide-react";
 import { SimpleAddClientForm } from "@/components/forms/simple-add-client-form";
 import { ClientDeletionModal } from "@/components/client-deletion-modal";
 import { apiRequest } from "@/lib/queryClient";
