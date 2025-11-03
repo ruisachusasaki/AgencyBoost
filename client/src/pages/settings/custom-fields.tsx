@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -50,6 +51,8 @@ export default function CustomFields() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [deleteFieldId, setDeleteFieldId] = useState<string | null>(null);
+  const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null);
 
   const [newField, setNewField] = useState({
     name: "",
@@ -254,13 +257,25 @@ export default function CustomFields() {
   };
 
   const handleDeleteField = (fieldId: string) => {
-    if (!confirm("Are you sure you want to delete this field?")) return;
-    deleteFieldMutation.mutate(fieldId);
+    setDeleteFieldId(fieldId);
+  };
+
+  const confirmDeleteField = () => {
+    if (deleteFieldId) {
+      deleteFieldMutation.mutate(deleteFieldId);
+      setDeleteFieldId(null);
+    }
   };
 
   const handleDeleteFolder = (folderId: string) => {
-    if (!confirm("Are you sure you want to delete this folder? Fields in this folder will be moved to 'No Folder'.")) return;
-    deleteFolderMutation.mutate(folderId);
+    setDeleteFolderId(folderId);
+  };
+
+  const confirmDeleteFolder = () => {
+    if (deleteFolderId) {
+      deleteFolderMutation.mutate(deleteFolderId);
+      setDeleteFolderId(null);
+    }
   };
 
   const handleDragEnd = (result: any) => {
@@ -1033,6 +1048,42 @@ export default function CustomFields() {
             </DialogContent>
           </Dialog>
         )}
+
+      {/* Delete Field Confirmation Dialog */}
+      <AlertDialog open={deleteFieldId !== null} onOpenChange={(open) => !open && setDeleteFieldId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Custom Field</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this field? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteField} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Folder Confirmation Dialog */}
+      <AlertDialog open={deleteFolderId !== null} onOpenChange={(open) => !open && setDeleteFolderId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Folder</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this folder? Fields in this folder will be moved to 'No Folder'. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteFolder} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );
