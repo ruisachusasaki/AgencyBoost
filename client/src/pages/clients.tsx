@@ -95,6 +95,9 @@ export default function Clients() {
   const [isImporting, setIsImporting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   
+  // Bulk selection state
+  const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
+  
   // Filtering state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [currentFilter, setCurrentFilter] = useState<ClientFilter>({
@@ -598,6 +601,33 @@ export default function Clients() {
       setSortField(field);
       setSortDirection('asc');
     }
+  };
+
+  // Bulk selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      // Select all clients on current page
+      const allClientIds = new Set(clients.map(client => client.id));
+      setSelectedClients(allClientIds);
+    } else {
+      setSelectedClients(new Set());
+    }
+  };
+
+  const handleSelectClient = (clientId: string, checked: boolean) => {
+    setSelectedClients(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(clientId);
+      } else {
+        newSet.delete(clientId);
+      }
+      return newSet;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedClients(new Set());
   };
 
   // Import CSV handler
