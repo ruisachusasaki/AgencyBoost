@@ -285,6 +285,16 @@ export default function Clients() {
     queryKey: ['/api/staff'],
   });
 
+  // Fetch tags for bulk actions
+  const { data: tags = [] } = useQuery<Array<{ id: string; name: string; color: string }>>({
+    queryKey: ['/api/tags'],
+  });
+
+  // Fetch workflows for bulk actions
+  const { data: workflows = [] } = useQuery<Array<{ id: string; name: string; description?: string }>>({
+    queryKey: ['/api/team-workflows'],
+  });
+
   // Check if current user is admin
   const isAdmin = currentUser?.role === 'Admin';
 
@@ -378,6 +388,116 @@ export default function Clients() {
         variant: "destructive"
       });
     }
+  });
+
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (clientIds: string[]) => {
+      await apiRequest('DELETE', '/api/clients/bulk-delete', { clientIds });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      clearSelection();
+      toast({
+        title: "Clients deleted",
+        description: `${selectedClients.size} client(s) have been successfully deleted.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to delete clients. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk update mutation
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async ({ clientIds, updates }: { clientIds: string[], updates: any }) => {
+      await apiRequest('PUT', '/api/clients/bulk-update', { clientIds, updates });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      clearSelection();
+      toast({
+        title: "Clients updated",
+        description: `${selectedClients.size} client(s) have been successfully updated.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update clients. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk add tag mutation
+  const bulkAddTagMutation = useMutation({
+    mutationFn: async ({ clientIds, tagName }: { clientIds: string[], tagName: string }) => {
+      await apiRequest('POST', '/api/clients/bulk-add-tag', { clientIds, tagName });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      clearSelection();
+      toast({
+        title: "Tag added",
+        description: `Tag added to ${selectedClients.size} client(s).`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add tag. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk remove tag mutation
+  const bulkRemoveTagMutation = useMutation({
+    mutationFn: async ({ clientIds, tagName }: { clientIds: string[], tagName: string }) => {
+      await apiRequest('POST', '/api/clients/bulk-remove-tag', { clientIds, tagName });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      clearSelection();
+      toast({
+        title: "Tag removed",
+        description: `Tag removed from ${selectedClients.size} client(s).`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove tag. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk add to workflow mutation
+  const bulkAddToWorkflowMutation = useMutation({
+    mutationFn: async ({ clientIds, workflowId }: { clientIds: string[], workflowId: string }) => {
+      await apiRequest('POST', '/api/clients/bulk-add-to-workflow', { clientIds, workflowId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      clearSelection();
+      toast({
+        title: "Added to workflow",
+        description: `${selectedClients.size} client(s) added to workflow.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add to workflow. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   // Helper function to get contact owner display name
@@ -628,6 +748,297 @@ export default function Clients() {
 
   const clearSelection = () => {
     setSelectedClients(new Set());
+  };
+
+  // Bulk Actions Toolbar Component
+  const BulkActionsToolbar = () => {
+    const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+    const [bulkAssigneeDialogOpen, setBulkAssigneeDialogOpen] = useState(false);
+    const [bulkAddTagDialogOpen, setBulkAddTagDialogOpen] = useState(false);
+    const [bulkRemoveTagDialogOpen, setBulkRemoveTagDialogOpen] = useState(false);
+    const [bulkWorkflowDialogOpen, setBulkWorkflowDialogOpen] = useState(false);
+    const [tempAssignee, setTempAssignee] = useState("");
+    const [tempTagToAdd, setTempTagToAdd] = useState("");
+    const [tempTagToRemove, setTempTagToRemove] = useState("");
+    const [tempWorkflow, setTempWorkflow] = useState("");
+
+    const handleBulkDelete = () => {
+      bulkDeleteMutation.mutate(Array.from(selectedClients));
+      setBulkDeleteConfirmOpen(false);
+    };
+
+    const handleBulkAssignee = () => {
+      if (!tempAssignee) return;
+      bulkUpdateMutation.mutate({
+        clientIds: Array.from(selectedClients),
+        updates: { contactOwner: tempAssignee }
+      });
+      setBulkAssigneeDialogOpen(false);
+      setTempAssignee("");
+    };
+
+    const handleBulkExport = async () => {
+      try {
+        setIsExporting(true);
+        const response = await fetch('/api/clients/export', {
+          method: 'GET',
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error('Export failed');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `clients-export-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        toast({
+          title: "Export successful",
+          description: "Clients have been exported to CSV"
+        });
+      } catch (error) {
+        toast({
+          title: "Export failed",
+          description: "Failed to export clients",
+          variant: "destructive"
+        });
+      } finally {
+        setIsExporting(false);
+      }
+    };
+
+    const handleBulkAddTag = () => {
+      if (!tempTagToAdd) return;
+      bulkAddTagMutation.mutate({
+        clientIds: Array.from(selectedClients),
+        tagName: tempTagToAdd
+      });
+      setBulkAddTagDialogOpen(false);
+      setTempTagToAdd("");
+    };
+
+    const handleBulkRemoveTag = () => {
+      if (!tempTagToRemove) return;
+      bulkRemoveTagMutation.mutate({
+        clientIds: Array.from(selectedClients),
+        tagName: tempTagToRemove
+      });
+      setBulkRemoveTagDialogOpen(false);
+      setTempTagToRemove("");
+    };
+
+    const handleBulkAddToWorkflow = () => {
+      if (!tempWorkflow) return;
+      bulkAddToWorkflowMutation.mutate({
+        clientIds: Array.from(selectedClients),
+        workflowId: tempWorkflow
+      });
+      setBulkWorkflowDialogOpen(false);
+      setTempWorkflow("");
+    };
+
+    if (selectedClients.size === 0) return null;
+
+    return (
+      <div className="flex items-center justify-between p-3 bg-primary/10 border border-primary/30 rounded-lg mb-4">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-primary">
+            {selectedClients.size} client{selectedClients.size > 1 ? 's' : ''} selected
+          </span>
+          <Button variant="outline" size="sm" onClick={clearSelection} data-testid="button-clear-selection">
+            Clear Selection
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Delete Button */}
+          <Dialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" data-testid="button-bulk-delete">
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete {selectedClients.size} client(s)?</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete {selectedClients.size} client(s)? This action cannot be undone.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setBulkDeleteConfirmOpen(false)} data-testid="button-cancel-bulk-delete">
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleteMutation.isPending} data-testid="button-confirm-bulk-delete">
+                  {bulkDeleteMutation.isPending ? "Deleting..." : `Delete ${selectedClients.size} Client(s)`}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Assignee Button */}
+          <Dialog open={bulkAssigneeDialogOpen} onOpenChange={setBulkAssigneeDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-bulk-assignee">
+                <User className="h-4 w-4 mr-1" />
+                Assignee
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Change Assignee for {selectedClients.size} client(s)</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Select value={tempAssignee} onValueChange={setTempAssignee}>
+                  <SelectTrigger data-testid="select-bulk-assignee">
+                    <SelectValue placeholder="Select contact owner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staff.map((member) => (
+                      <SelectItem key={member.id} value={member.id} data-testid={`option-assignee-${member.id}`}>
+                        {member.firstName} {member.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkAssigneeDialogOpen(false)} data-testid="button-cancel-bulk-assignee">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkAssignee} disabled={!tempAssignee} data-testid="button-update-bulk-assignee">
+                    Update Assignee
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Export Button */}
+          <Button variant="outline" size="sm" onClick={handleBulkExport} disabled={isExporting} data-testid="button-bulk-export">
+            <Download className="h-4 w-4 mr-1" />
+            {isExporting ? "Exporting..." : "Export"}
+          </Button>
+
+          {/* Add Tag Button */}
+          <Dialog open={bulkAddTagDialogOpen} onOpenChange={setBulkAddTagDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-bulk-add-tag">
+                <Plus className="h-4 w-4 mr-1" />
+                Add Tag
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Tag to {selectedClients.size} client(s)</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Select value={tempTagToAdd} onValueChange={setTempTagToAdd}>
+                  <SelectTrigger data-testid="select-bulk-add-tag">
+                    <SelectValue placeholder="Select tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tags.map((tag) => (
+                      <SelectItem key={tag.id} value={tag.name} data-testid={`option-add-tag-${tag.id}`}>
+                        {tag.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkAddTagDialogOpen(false)} data-testid="button-cancel-bulk-add-tag">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkAddTag} disabled={!tempTagToAdd} data-testid="button-update-bulk-add-tag">
+                    Add Tag
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Remove Tag Button */}
+          <Dialog open={bulkRemoveTagDialogOpen} onOpenChange={setBulkRemoveTagDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-bulk-remove-tag">
+                <X className="h-4 w-4 mr-1" />
+                Remove Tag
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Remove Tag from {selectedClients.size} client(s)</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Select value={tempTagToRemove} onValueChange={setTempTagToRemove}>
+                  <SelectTrigger data-testid="select-bulk-remove-tag">
+                    <SelectValue placeholder="Select tag to remove" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tags.map((tag) => (
+                      <SelectItem key={tag.id} value={tag.name} data-testid={`option-remove-tag-${tag.id}`}>
+                        {tag.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkRemoveTagDialogOpen(false)} data-testid="button-cancel-bulk-remove-tag">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkRemoveTag} disabled={!tempTagToRemove} data-testid="button-update-bulk-remove-tag">
+                    Remove Tag
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Add to Workflow Button */}
+          <Dialog open={bulkWorkflowDialogOpen} onOpenChange={setBulkWorkflowDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-bulk-workflow">
+                <Share2 className="h-4 w-4 mr-1" />
+                Add to Workflow
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add {selectedClients.size} client(s) to Workflow</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Select value={tempWorkflow} onValueChange={setTempWorkflow}>
+                  <SelectTrigger data-testid="select-bulk-workflow">
+                    <SelectValue placeholder="Select workflow" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workflows.map((workflow) => (
+                      <SelectItem key={workflow.id} value={workflow.id} data-testid={`option-workflow-${workflow.id}`}>
+                        {workflow.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkWorkflowDialogOpen(false)} data-testid="button-cancel-bulk-workflow">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkAddToWorkflow} disabled={!tempWorkflow} data-testid="button-update-bulk-workflow">
+                    Add to Workflow
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+    );
   };
 
   // Import CSV handler
@@ -1325,11 +1736,30 @@ export default function Clients() {
 
       <Card>
         <CardContent className="p-0">
+          {/* Bulk Actions Toolbar */}
+          {filteredAndSortedClients.length > 0 && (
+            <div className="p-4 pb-0">
+              <BulkActionsToolbar />
+            </div>
+          )}
+          
           <div className="w-full">
             <div className="overflow-x-auto">
               <Table className="min-w-full">
                 <TableHeader>
                   <TableRow>
+                    {/* Checkbox column */}
+                    <TableHead className="w-12">
+                      <div className="flex items-center justify-center">
+                        <Checkbox
+                          checked={selectedClients.size > 0 && selectedClients.size === filteredAndSortedClients.length}
+                          onCheckedChange={handleSelectAll}
+                          data-testid="select-all-clients"
+                          className="bulk-select-checkbox"
+                        />
+                      </div>
+                    </TableHead>
+                    
                     {availableColumns.filter(col => visibleColumns.has(col.key)).map((column) => {
                       if (column.sortable) {
                         return (
@@ -1350,13 +1780,25 @@ export default function Clients() {
                 <TableBody>
                   {filteredAndSortedClients.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={visibleColumns.size} className="text-center py-8 text-slate-500">
+                      <TableCell colSpan={visibleColumns.size + 1} className="text-center py-8 text-slate-500">
                         {searchTerm ? "No clients found matching your search." : "No clients yet. Add your first client to get started."}
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredAndSortedClients.map((client) => (
                       <TableRow key={client.id} className="hover:bg-slate-50">
+                        {/* Checkbox cell */}
+                        <TableCell className="py-3">
+                          <div className="flex items-center justify-center">
+                            <Checkbox
+                              checked={selectedClients.has(client.id)}
+                              onCheckedChange={(checked) => handleSelectClient(client.id, checked as boolean)}
+                              data-testid={`select-client-${client.id}`}
+                              className="bulk-select-checkbox"
+                            />
+                          </div>
+                        </TableCell>
+                        
                         {availableColumns.filter(col => visibleColumns.has(col.key)).map((column) => (
                           <TableCell key={column.key} className="py-3">
                             {renderCellContent(client, column.key)}
