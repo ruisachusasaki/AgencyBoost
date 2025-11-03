@@ -183,8 +183,8 @@ function OrgChartInner({ staffData, clientTeamAssignments = [] }: OrgChartProps)
 
     // Compact vertical layout parameters
     const NODE_WIDTH = 280;
-    const HORIZONTAL_SPACING = 100; // Space between siblings at same level
-    const VERTICAL_SPACING = 160; // Space between levels (top to bottom)
+    const HORIZONTAL_GAP = 50; // Gap between sibling nodes (edge to edge)
+    const VERTICAL_SPACING = 180; // Space between levels (top to bottom)
 
     interface PositionedNode {
       staff: Staff;
@@ -218,16 +218,21 @@ function OrgChartInner({ staffData, clientTeamAssignments = [] }: OrgChartProps)
         const directReports = hierarchyData.reportsByManager[staff.id] || [];
         const visibleChildren = isCollapsed ? [] : directReports;
 
-        // Calculate X position: distribute siblings evenly
+        // Calculate X position: distribute siblings evenly accounting for node width
         let x: number;
         if (level === 0) {
           // Top-level leader
           x = leaderStartX;
         } else {
-          // Calculate offset from parent based on sibling position
-          const siblingSpread = (totalSiblings - 1) * HORIZONTAL_SPACING;
-          const startX = parentX - siblingSpread / 2;
-          x = startX + siblingIndex * HORIZONTAL_SPACING;
+          // Calculate total width needed for all siblings
+          // Total width = (nodes × node_width) + (gaps × gap_width)
+          const totalWidth = totalSiblings * NODE_WIDTH + (totalSiblings - 1) * HORIZONTAL_GAP;
+          
+          // Start position to center siblings under parent
+          const startX = parentX + (NODE_WIDTH / 2) - (totalWidth / 2);
+          
+          // Position this sibling
+          x = startX + siblingIndex * (NODE_WIDTH + HORIZONTAL_GAP);
         }
 
         const y = level * VERTICAL_SPACING;
@@ -252,8 +257,8 @@ function OrgChartInner({ staffData, clientTeamAssignments = [] }: OrgChartProps)
         });
       }
 
-      // Update starting position for next leader tree
-      leaderStartX = maxX + HORIZONTAL_SPACING * 4;
+      // Update starting position for next leader tree (account for node width + gap)
+      leaderStartX = maxX + NODE_WIDTH + HORIZONTAL_GAP * 3;
     });
 
     // Center the entire layout horizontally
