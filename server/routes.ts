@@ -2360,6 +2360,342 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk delete clients - SECURED
+  app.delete("/api/clients/bulk-delete", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
+    try {
+      const { clientIds } = req.body;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      if (!Array.isArray(clientIds) || clientIds.length === 0) {
+        return res.status(400).json({ message: "Invalid or empty clientIds array" });
+      }
+
+      console.log(`BULK DELETE clients request - Client IDs: ${clientIds.join(', ')}, User ID: ${userId}`);
+
+      let deletedCount = 0;
+      const errors = [];
+
+      for (const clientId of clientIds) {
+        try {
+          // Check if client exists and has associated records
+          const clientExists = await appStorage.getClientById(clientId);
+          if (!clientExists) {
+            errors.push(`Client not found: ${clientId}`);
+            continue;
+          }
+
+          // Check for associated records
+          const relatedCounts = await appStorage.getClientRelationsCounts(clientId);
+          if (relatedCounts.tasksCount > 0 || relatedCounts.campaignsCount > 0) {
+            errors.push(`Client ${clientId} has associated records and cannot be deleted`);
+            continue;
+          }
+
+          // Delete the client
+          await appStorage.deleteClient(clientId);
+
+          // Create audit log
+          await createAuditLog(
+            "deleted",
+            "client",
+            clientId,
+            "Client",
+            userId,
+            `Client bulk deleted`,
+            clientExists,
+            null,
+            req
+          );
+
+          deletedCount++;
+        } catch (error) {
+          console.error(`Error deleting client ${clientId}:`, error);
+          errors.push(`Failed to delete client: ${clientId}`);
+        }
+      }
+
+      console.log(`Bulk delete completed - ${deletedCount} clients deleted, ${errors.length} errors`);
+
+      res.json({
+        message: `Successfully deleted ${deletedCount} client(s)`,
+        deletedCount,
+        errors
+      });
+    } catch (error) {
+      console.error("Bulk delete error:", error);
+      res.status(500).json({ message: "Failed to bulk delete clients" });
+    }
+  });
+
+  // Bulk update clients - SECURED
+  app.put("/api/clients/bulk-update", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientIds, updates } = req.body;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      if (!Array.isArray(clientIds) || clientIds.length === 0) {
+        return res.status(400).json({ message: "Invalid or empty clientIds array" });
+      }
+
+      if (!updates || typeof updates !== 'object') {
+        return res.status(400).json({ message: "Updates object is required" });
+      }
+
+      console.log(`BULK UPDATE clients request - Client IDs: ${clientIds.join(', ')}, Updates:`, updates, `User ID: ${userId}`);
+
+      let updatedCount = 0;
+      const errors = [];
+
+      for (const clientId of clientIds) {
+        try {
+          // Check if client exists
+          const existingClient = await appStorage.getClientById(clientId);
+          if (!existingClient) {
+            errors.push(`Client not found: ${clientId}`);
+            continue;
+          }
+
+          // Update the client
+          await appStorage.updateClient(clientId, updates);
+
+          // Create audit log
+          await createAuditLog(
+            "updated",
+            "client",
+            clientId,
+            "Client",
+            userId,
+            `Client bulk updated`,
+            existingClient,
+            updates,
+            req
+          );
+
+          updatedCount++;
+        } catch (error) {
+          console.error(`Error updating client ${clientId}:`, error);
+          errors.push(`Failed to update client: ${clientId}`);
+        }
+      }
+
+      console.log(`Bulk update completed - ${updatedCount} clients updated, ${errors.length} errors`);
+
+      res.json({
+        message: `Successfully updated ${updatedCount} client(s)`,
+        updatedCount,
+        errors
+      });
+    } catch (error) {
+      console.error("Bulk update error:", error);
+      res.status(500).json({ message: "Failed to bulk update clients" });
+    }
+  });
+
+  // Bulk add tag to clients - SECURED
+  app.post("/api/clients/bulk-add-tag", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientIds, tagName } = req.body;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      if (!Array.isArray(clientIds) || clientIds.length === 0) {
+        return res.status(400).json({ message: "Invalid or empty clientIds array" });
+      }
+
+      if (!tagName || typeof tagName !== 'string') {
+        return res.status(400).json({ message: "Tag name is required" });
+      }
+
+      console.log(`BULK ADD TAG to clients - Client IDs: ${clientIds.join(', ')}, Tag: ${tagName}, User ID: ${userId}`);
+
+      let updatedCount = 0;
+      const errors = [];
+
+      for (const clientId of clientIds) {
+        try {
+          const client = await appStorage.getClientById(clientId);
+          if (!client) {
+            errors.push(`Client not found: ${clientId}`);
+            continue;
+          }
+
+          // Add tag if not already present
+          const currentTags = client.tags || [];
+          if (!currentTags.includes(tagName)) {
+            const newTags = [...currentTags, tagName];
+            await appStorage.updateClient(clientId, { tags: newTags });
+
+            await createAuditLog(
+              "updated",
+              "client",
+              clientId,
+              "Client",
+              userId,
+              `Added tag "${tagName}" to client`,
+              client,
+              { tags: newTags },
+              req
+            );
+
+            updatedCount++;
+          }
+        } catch (error) {
+          console.error(`Error adding tag to client ${clientId}:`, error);
+          errors.push(`Failed to add tag to client: ${clientId}`);
+        }
+      }
+
+      console.log(`Bulk add tag completed - ${updatedCount} clients updated, ${errors.length} errors`);
+
+      res.json({
+        message: `Successfully added tag to ${updatedCount} client(s)`,
+        updatedCount,
+        errors
+      });
+    } catch (error) {
+      console.error("Bulk add tag error:", error);
+      res.status(500).json({ message: "Failed to bulk add tag to clients" });
+    }
+  });
+
+  // Bulk remove tag from clients - SECURED
+  app.post("/api/clients/bulk-remove-tag", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientIds, tagName } = req.body;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      if (!Array.isArray(clientIds) || clientIds.length === 0) {
+        return res.status(400).json({ message: "Invalid or empty clientIds array" });
+      }
+
+      if (!tagName || typeof tagName !== 'string') {
+        return res.status(400).json({ message: "Tag name is required" });
+      }
+
+      console.log(`BULK REMOVE TAG from clients - Client IDs: ${clientIds.join(', ')}, Tag: ${tagName}, User ID: ${userId}`);
+
+      let updatedCount = 0;
+      const errors = [];
+
+      for (const clientId of clientIds) {
+        try {
+          const client = await appStorage.getClientById(clientId);
+          if (!client) {
+            errors.push(`Client not found: ${clientId}`);
+            continue;
+          }
+
+          // Remove tag if present
+          const currentTags = client.tags || [];
+          if (currentTags.includes(tagName)) {
+            const newTags = currentTags.filter(t => t !== tagName);
+            await appStorage.updateClient(clientId, { tags: newTags });
+
+            await createAuditLog(
+              "updated",
+              "client",
+              clientId,
+              "Client",
+              userId,
+              `Removed tag "${tagName}" from client`,
+              client,
+              { tags: newTags },
+              req
+            );
+
+            updatedCount++;
+          }
+        } catch (error) {
+          console.error(`Error removing tag from client ${clientId}:`, error);
+          errors.push(`Failed to remove tag from client: ${clientId}`);
+        }
+      }
+
+      console.log(`Bulk remove tag completed - ${updatedCount} clients updated, ${errors.length} errors`);
+
+      res.json({
+        message: `Successfully removed tag from ${updatedCount} client(s)`,
+        updatedCount,
+        errors
+      });
+    } catch (error) {
+      console.error("Bulk remove tag error:", error);
+      res.status(500).json({ message: "Failed to bulk remove tag from clients" });
+    }
+  });
+
+  // Bulk add clients to workflow - SECURED
+  app.post("/api/clients/bulk-add-to-workflow", requireAuth(), requirePermission('workflows', 'canExecute'), async (req, res) => {
+    try {
+      const { clientIds, workflowId } = req.body;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      if (!Array.isArray(clientIds) || clientIds.length === 0) {
+        return res.status(400).json({ message: "Invalid or empty clientIds array" });
+      }
+
+      if (!workflowId || typeof workflowId !== 'string') {
+        return res.status(400).json({ message: "Workflow ID is required" });
+      }
+
+      console.log(`BULK ADD TO WORKFLOW - Client IDs: ${clientIds.join(', ')}, Workflow ID: ${workflowId}, User ID: ${userId}`);
+
+      // Verify workflow exists
+      const workflow = await appStorage.getWorkflow(workflowId);
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+
+      let addedCount = 0;
+      const errors = [];
+
+      for (const clientId of clientIds) {
+        try {
+          const client = await appStorage.getClientById(clientId);
+          if (!client) {
+            errors.push(`Client not found: ${clientId}`);
+            continue;
+          }
+
+          // Trigger workflow for this client
+          await triggerWorkflow(workflowId, clientId, null, userId);
+
+          await createAuditLog(
+            "created",
+            "workflow_execution",
+            `${workflowId}-${clientId}`,
+            "Workflow Execution",
+            userId,
+            `Added client to workflow "${workflow.name}"`,
+            null,
+            { workflowId, clientId },
+            req
+          );
+
+          addedCount++;
+        } catch (error) {
+          console.error(`Error adding client ${clientId} to workflow:`, error);
+          errors.push(`Failed to add client ${clientId} to workflow`);
+        }
+      }
+
+      console.log(`Bulk add to workflow completed - ${addedCount} clients added, ${errors.length} errors`);
+
+      res.json({
+        message: `Successfully added ${addedCount} client(s) to workflow`,
+        addedCount,
+        errors
+      });
+    } catch (error) {
+      console.error("Bulk add to workflow error:", error);
+      res.status(500).json({ message: "Failed to bulk add clients to workflow" });
+    }
+  });
+
   // Client Brief Section routes - SECURED
   app.get("/api/client-brief-sections", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
