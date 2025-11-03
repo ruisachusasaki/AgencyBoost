@@ -5,6 +5,7 @@ import ReactFlow, {
   Controls,
   Background,
   MiniMap,
+  Handle,
   useNodesState,
   useEdgesState,
   useReactFlow,
@@ -20,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronRight, Search, X } from 'lucide-react';
 import { Staff } from '@shared/schema';
+import dagre from 'dagre';
 
 interface OrgChartProps {
   staffData: Staff[];
@@ -61,61 +63,67 @@ const CustomNode = ({ data }: any) => {
   };
 
   return (
-    <Card className={`p-4 min-w-[240px] shadow-lg ${colors.bg} ${colors.border} border-2`}>
-      <div className="flex flex-col items-center gap-3">
-        {/* Avatar */}
-        <Avatar className="h-16 w-16">
-          <AvatarImage src={data.profileImagePath || undefined} alt={data.name} />
-          <AvatarFallback className={`${colors.bg} ${colors.text} text-lg font-semibold`}>
-            {data.initials}
-          </AvatarFallback>
-        </Avatar>
+    <>
+      {/* Connection handles for edges */}
+      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+      
+      <Card className={`p-4 min-w-[240px] shadow-lg ${colors.bg} ${colors.border} border-2`}>
+        <div className="flex flex-col items-center gap-3">
+          {/* Avatar */}
+          <Avatar className="h-16 w-16">
+            <AvatarImage src={data.profileImagePath || undefined} alt={data.name} />
+            <AvatarFallback className={`${colors.bg} ${colors.text} text-lg font-semibold`}>
+              {data.initials}
+            </AvatarFallback>
+          </Avatar>
 
-        {/* Name */}
-        <div className="text-center">
-          <h3 className="font-semibold text-base text-gray-900">{data.name}</h3>
-          {data.position && (
-            <p className="text-sm text-gray-600 mt-1">{data.position}</p>
+          {/* Name */}
+          <div className="text-center">
+            <h3 className="font-semibold text-base text-gray-900">{data.name}</h3>
+            {data.position && (
+              <p className="text-sm text-gray-600 mt-1">{data.position}</p>
+            )}
+            {data.department && (
+              <Badge
+                variant="outline"
+                className={`mt-2 ${colors.bg} ${colors.text} ${colors.border}`}
+              >
+                {data.department}
+              </Badge>
+            )}
+          </div>
+
+          {/* Client count (if available) */}
+          {data.clientCount > 0 && (
+            <div className="text-xs text-gray-500 mt-1">
+              {data.clientCount} {data.clientCount === 1 ? 'client' : 'clients'}
+            </div>
           )}
-          {data.department && (
-            <Badge
-              variant="outline"
-              className={`mt-2 ${colors.bg} ${colors.text} ${colors.border}`}
+
+          {/* Expand/Collapse button */}
+          {hasChildren && (
+            <button
+              onClick={handleToggle}
+              className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 mt-2 px-2 py-1 rounded hover:bg-white/50"
+              data-testid={`toggle-${data.id}`}
             >
-              {data.department}
-            </Badge>
+              {isExpanded ? (
+                <>
+                  <ChevronDown className="h-3 w-3" />
+                  Collapse ({data.childCount})
+                </>
+              ) : (
+                <>
+                  <ChevronRight className="h-3 w-3" />
+                  Expand ({data.childCount})
+                </>
+              )}
+            </button>
           )}
         </div>
-
-        {/* Client count (if available) */}
-        {data.clientCount > 0 && (
-          <div className="text-xs text-gray-500 mt-1">
-            {data.clientCount} {data.clientCount === 1 ? 'client' : 'clients'}
-          </div>
-        )}
-
-        {/* Expand/Collapse button */}
-        {hasChildren && (
-          <button
-            onClick={handleToggle}
-            className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 mt-2 px-2 py-1 rounded hover:bg-white/50"
-            data-testid={`toggle-${data.id}`}
-          >
-            {isExpanded ? (
-              <>
-                <ChevronDown className="h-3 w-3" />
-                Collapse ({data.childCount})
-              </>
-            ) : (
-              <>
-                <ChevronRight className="h-3 w-3" />
-                Expand ({data.childCount})
-              </>
-            )}
-          </button>
-        )}
-      </div>
-    </Card>
+      </Card>
+    </>
   );
 };
 
@@ -172,7 +180,7 @@ function OrgChartInner({ staffData, clientTeamAssignments = [] }: OrgChartProps)
     return { topLevelLeaders, reportsByManager, childCounts };
   }, [staffData]);
 
-  // Convert to ReactFlow nodes and edges with VERTICAL top-down layout
+  // Convert to ReactFlow nodes and edges with Dagre hierarchical layout
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -181,100 +189,41 @@ function OrgChartInner({ staffData, clientTeamAssignments = [] }: OrgChartProps)
       return { nodes, edges };
     }
 
-    // Compact vertical layout parameters
-    const NODE_WIDTH = 280;
-    const HORIZONTAL_GAP = 50; // Gap between sibling nodes (edge to edge)
-    const VERTICAL_SPACING = 180; // Space between levels (top to bottom)
-
-    interface PositionedNode {
-      staff: Staff;
-      x: number;
-      y: number;
-      level: number;
-    }
-
-    const positionedNodes: PositionedNode[] = [];
-    const processedIds = new Set<string>();
-
-    // Process each top-level leader and their tree
-    let leaderStartX = 0;
-
-    hierarchyData.topLevelLeaders.forEach((leader, leaderIndex) => {
-      // BFS traversal for this leader's tree
-      const queue: Array<{ staff: Staff; level: number; parentX: number; siblingIndex: number; totalSiblings: number }> = [
-        { staff: leader, level: 0, parentX: leaderStartX, siblingIndex: 0, totalSiblings: 1 }
-      ];
-
-      const levelNodes: Record<number, PositionedNode[]> = {};
-      let maxX = leaderStartX;
-
-      while (queue.length > 0) {
-        const { staff, level, parentX, siblingIndex, totalSiblings } = queue.shift()!;
-
-        if (processedIds.has(staff.id)) continue;
-        processedIds.add(staff.id);
-
-        const isCollapsed = collapsedNodes.has(staff.id);
-        const directReports = hierarchyData.reportsByManager[staff.id] || [];
-        const visibleChildren = isCollapsed ? [] : directReports;
-
-        // Calculate X position: distribute siblings evenly accounting for node width
-        let x: number;
-        if (level === 0) {
-          // Top-level leader
-          x = leaderStartX;
-        } else {
-          // Calculate total width needed for all siblings
-          // Total width = (nodes × node_width) + (gaps × gap_width)
-          const totalWidth = totalSiblings * NODE_WIDTH + (totalSiblings - 1) * HORIZONTAL_GAP;
-          
-          // Start position to center siblings under parent
-          const startX = parentX + (NODE_WIDTH / 2) - (totalWidth / 2);
-          
-          // Position this sibling
-          x = startX + siblingIndex * (NODE_WIDTH + HORIZONTAL_GAP);
-        }
-
-        const y = level * VERTICAL_SPACING;
-
-        const posNode: PositionedNode = { staff, x, y, level };
-        positionedNodes.push(posNode);
-
-        if (!levelNodes[level]) levelNodes[level] = [];
-        levelNodes[level].push(posNode);
-
-        maxX = Math.max(maxX, x);
-
-        // Queue children for next level
-        visibleChildren.forEach((child, idx) => {
-          queue.push({
-            staff: child,
-            level: level + 1,
-            parentX: x,
-            siblingIndex: idx,
-            totalSiblings: visibleChildren.length,
-          });
-        });
-      }
-
-      // Update starting position for next leader tree (account for node width + gap)
-      leaderStartX = maxX + NODE_WIDTH + HORIZONTAL_GAP * 3;
+    // Create Dagre graph for hierarchical layout
+    const dagreGraph = new dagre.graphlib.Graph();
+    dagreGraph.setDefaultEdgeLabel(() => ({}));
+    dagreGraph.setGraph({
+      rankdir: 'TB', // Top to Bottom
+      nodesep: 80, // Horizontal space between nodes
+      ranksep: 120, // Vertical space between levels
+      marginx: 50,
+      marginy: 50,
     });
 
-    // Center the entire layout horizontally
-    if (positionedNodes.length > 0) {
-      const minX = Math.min(...positionedNodes.map(n => n.x));
-      const maxX = Math.max(...positionedNodes.map(n => n.x));
-      const totalWidth = maxX - minX;
-      const offset = -totalWidth / 2;
+    const NODE_WIDTH = 280;
+    const NODE_HEIGHT = 200;
 
-      positionedNodes.forEach(node => {
-        node.x += offset;
-      });
+    // Collect all visible staff (not under collapsed nodes)
+    const visibleStaff = new Set<string>();
+    const queue = [...hierarchyData.topLevelLeaders.map(s => s.id)];
+    
+    while (queue.length > 0) {
+      const staffId = queue.shift()!;
+      visibleStaff.add(staffId);
+      
+      if (!collapsedNodes.has(staffId)) {
+        const children = hierarchyData.reportsByManager[staffId] || [];
+        children.forEach(child => queue.push(child.id));
+      }
     }
 
-    // Create ReactFlow nodes
-    positionedNodes.forEach(({ staff, x, y }) => {
+    // Create node data for all visible staff
+    const staffById = new Map(staffData.map(s => [s.id, s]));
+    
+    visibleStaff.forEach(staffId => {
+      const staff = staffById.get(staffId);
+      if (!staff) return;
+
       const firstName = staff.firstName || '';
       const lastName = staff.lastName || '';
       const initials = firstName && lastName
@@ -283,19 +232,26 @@ function OrgChartInner({ staffData, clientTeamAssignments = [] }: OrgChartProps)
           ? firstName.substring(0, 2).toUpperCase()
           : 'NA';
 
+      // Add node to Dagre graph
+      dagreGraph.setNode(staffId, {
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
+      });
+
+      // Prepare node data for ReactFlow
       nodes.push({
-        id: staff.id,
+        id: staffId,
         type: 'custom',
-        position: { x, y },
+        position: { x: 0, y: 0 }, // Will be set by Dagre
         data: {
-          id: staff.id,
+          id: staffId,
           name: `${firstName} ${lastName}`.trim() || 'Unknown',
           position: staff.position,
           department: staff.department,
           profileImagePath: staff.profileImagePath,
           initials,
-          childCount: hierarchyData.childCounts[staff.id] || 0,
-          clientCount: clientCountByStaff[staff.id] || 0,
+          childCount: hierarchyData.childCounts[staffId] || 0,
+          clientCount: clientCountByStaff[staffId] || 0,
           onToggle: (id: string, expanded: boolean) => {
             setCollapsedNodes(prev => {
               const newSet = new Set(prev);
@@ -313,9 +269,11 @@ function OrgChartInner({ staffData, clientTeamAssignments = [] }: OrgChartProps)
       });
     });
 
-    // Create edges for manager-employee relationships
-    positionedNodes.forEach(({ staff }) => {
-      if (staff.managerId && processedIds.has(staff.managerId)) {
+    // Create edges for visible manager-employee relationships
+    staffData.forEach(staff => {
+      if (staff.managerId && visibleStaff.has(staff.id) && visibleStaff.has(staff.managerId)) {
+        dagreGraph.setEdge(staff.managerId, staff.id);
+        
         edges.push({
           id: `${staff.managerId}-${staff.id}`,
           source: staff.managerId,
@@ -323,7 +281,26 @@ function OrgChartInner({ staffData, clientTeamAssignments = [] }: OrgChartProps)
           type: 'smoothstep',
           animated: false,
           style: { stroke: '#94a3b8', strokeWidth: 2 },
+          markerEnd: {
+            type: 'arrowclosed',
+            color: '#94a3b8',
+          },
         });
+      }
+    });
+
+    // Run Dagre layout algorithm
+    dagre.layout(dagreGraph);
+
+    // Apply Dagre positions to ReactFlow nodes
+    nodes.forEach(node => {
+      const dagreNode = dagreGraph.node(node.id);
+      if (dagreNode) {
+        // Dagre returns center position, adjust for node size
+        node.position = {
+          x: dagreNode.x - NODE_WIDTH / 2,
+          y: dagreNode.y - NODE_HEIGHT / 2,
+        };
       }
     });
 
