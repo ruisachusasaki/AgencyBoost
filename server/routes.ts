@@ -74,7 +74,7 @@ import twilio from "twilio";
 import mailgun from "mailgun.js";
 import formData from "form-data";
 import { EncryptionService } from "./encryption";
-import { eq, like, or, and, asc, desc, sql, inArray, isNotNull, gte, lte, getTableColumns } from "drizzle-orm";
+import { eq, like, ilike, or, and, asc, desc, sql, inArray, isNotNull, gte, lte, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
@@ -6392,8 +6392,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .from(customFields)
           .where(
             or(
-              like(customFields.name, `%${search}%`),
-              like(customFields.type, `%${search}%`)
+              ilike(customFields.name, `%${search}%`),
+              ilike(customFields.type, `%${search}%`)
             )
           )
           .orderBy(asc(customFields.order));
