@@ -393,15 +393,25 @@ export default function Clients() {
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: async (clientIds: string[]) => {
-      await apiRequest('DELETE', '/api/clients/bulk-delete', { clientIds });
+      const response = await apiRequest('POST', '/api/clients/bulk-delete', { clientIds });
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       clearSelection();
-      toast({
-        title: "Clients deleted",
-        description: `${selectedClients.size} client(s) have been successfully deleted.`,
-      });
+      
+      if (data.errorCount > 0) {
+        toast({
+          title: "Partially completed",
+          description: `${data.successCount} client(s) deleted successfully. ${data.errorCount} failed. ${data.errors?.slice(0, 2).join('. ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Clients deleted",
+          description: `${data.successCount} client(s) have been successfully deleted.`,
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -415,20 +425,30 @@ export default function Clients() {
   // Bulk update mutation
   const bulkUpdateMutation = useMutation({
     mutationFn: async ({ clientIds, updates }: { clientIds: string[], updates: any }) => {
-      await apiRequest('PUT', '/api/clients/bulk-update', { clientIds, updates });
+      const response = await apiRequest('POST', '/api/clients/bulk-update', { clientIds, updates });
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       clearSelection();
-      toast({
-        title: "Clients updated",
-        description: `${selectedClients.size} client(s) have been successfully updated.`,
-      });
+      
+      if (data.errorCount > 0) {
+        toast({
+          title: "Partially completed",
+          description: `${data.successCount} client(s) updated successfully. ${data.errorCount} failed. ${data.errors?.slice(0, 2).join('. ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Clients updated",
+          description: `${data.successCount} client(s) have been successfully updated.`,
+        });
+      }
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to update clients. Please try again.",
+        description: error?.message || "Failed to update clients. Please try again.",
         variant: "destructive",
       });
     },
@@ -436,21 +456,31 @@ export default function Clients() {
 
   // Bulk add tag mutation
   const bulkAddTagMutation = useMutation({
-    mutationFn: async ({ clientIds, tagName }: { clientIds: string[], tagName: string }) => {
-      await apiRequest('POST', '/api/clients/bulk-add-tag', { clientIds, tagName });
+    mutationFn: async ({ clientIds, tag }: { clientIds: string[], tag: string }) => {
+      const response = await apiRequest('POST', '/api/clients/bulk-add-tag', { clientIds, tag });
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       clearSelection();
-      toast({
-        title: "Tag added",
-        description: `Tag added to ${selectedClients.size} client(s).`,
-      });
+      
+      if (data.errorCount > 0) {
+        toast({
+          title: "Partially completed",
+          description: `Tag added to ${data.successCount} client(s). ${data.errorCount} failed. ${data.errors?.slice(0, 2).join('. ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Tag added",
+          description: `Tag added to ${data.successCount} client(s).`,
+        });
+      }
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to add tag. Please try again.",
+        description: error?.message || "Failed to add tag. Please try again.",
         variant: "destructive",
       });
     },
@@ -458,21 +488,31 @@ export default function Clients() {
 
   // Bulk remove tag mutation
   const bulkRemoveTagMutation = useMutation({
-    mutationFn: async ({ clientIds, tagName }: { clientIds: string[], tagName: string }) => {
-      await apiRequest('POST', '/api/clients/bulk-remove-tag', { clientIds, tagName });
+    mutationFn: async ({ clientIds, tag }: { clientIds: string[], tag: string }) => {
+      const response = await apiRequest('POST', '/api/clients/bulk-remove-tag', { clientIds, tag });
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       clearSelection();
-      toast({
-        title: "Tag removed",
-        description: `Tag removed from ${selectedClients.size} client(s).`,
-      });
+      
+      if (data.errorCount > 0) {
+        toast({
+          title: "Partially completed",
+          description: `Tag removed from ${data.successCount} client(s). ${data.errorCount} failed. ${data.errors?.slice(0, 2).join('. ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Tag removed",
+          description: `Tag removed from ${data.successCount} client(s).`,
+        });
+      }
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to remove tag. Please try again.",
+        description: error?.message || "Failed to remove tag. Please try again.",
         variant: "destructive",
       });
     },
@@ -481,20 +521,30 @@ export default function Clients() {
   // Bulk add to workflow mutation
   const bulkAddToWorkflowMutation = useMutation({
     mutationFn: async ({ clientIds, workflowId }: { clientIds: string[], workflowId: string }) => {
-      await apiRequest('POST', '/api/clients/bulk-add-to-workflow', { clientIds, workflowId });
+      const response = await apiRequest('POST', '/api/clients/bulk-add-to-workflow', { clientIds, workflowId });
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       clearSelection();
-      toast({
-        title: "Added to workflow",
-        description: `${selectedClients.size} client(s) added to workflow.`,
-      });
+      
+      if (data.errorCount > 0) {
+        toast({
+          title: "Partially completed",
+          description: `${data.successCount} client(s) added to workflow. ${data.errorCount} failed. ${data.errors?.slice(0, 2).join('. ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Added to workflow",
+          description: `${data.successCount} client(s) added to workflow.`,
+        });
+      }
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to add to workflow. Please try again.",
+        description: error?.message || "Failed to add to workflow. Please try again.",
         variant: "destructive",
       });
     },
@@ -818,7 +868,7 @@ export default function Clients() {
       if (!tempTagToAdd) return;
       bulkAddTagMutation.mutate({
         clientIds: Array.from(selectedClients),
-        tagName: tempTagToAdd
+        tag: tempTagToAdd
       });
       setBulkAddTagDialogOpen(false);
       setTempTagToAdd("");
@@ -828,7 +878,7 @@ export default function Clients() {
       if (!tempTagToRemove) return;
       bulkRemoveTagMutation.mutate({
         clientIds: Array.from(selectedClients),
-        tagName: tempTagToRemove
+        tag: tempTagToRemove
       });
       setBulkRemoveTagDialogOpen(false);
       setTempTagToRemove("");
