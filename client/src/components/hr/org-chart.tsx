@@ -136,7 +136,7 @@ function OrgChartInner({ staffData, clientTeamAssignments = [] }: OrgChartProps)
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedNode, setHighlightedNode] = useState<string | null>(null);
-  const { fitView, setCenter, getZoom } = useReactFlow();
+  const { fitView, setCenter, getZoom, getNode } = useReactFlow();
 
   // Group client assignments by staff member
   const clientCountByStaff = useMemo(() => {
@@ -331,17 +331,44 @@ function OrgChartInner({ staffData, clientTeamAssignments = [] }: OrgChartProps)
       .slice(0, 5); // Limit to 5 results
   }, [searchQuery, staffData]);
 
-  // Focus on a specific node
+  // Focus on a specific node (expand ancestors if collapsed)
   const focusNode = useCallback((nodeId: string) => {
-    const node = nodes.find(n => n.id === nodeId);
-    if (node) {
-      setHighlightedNode(nodeId);
-      setCenter(node.position.x + 140, node.position.y + 90, { zoom: 1.2, duration: 800 });
+    // Find all ancestors and expand them
+    const expandAncestors = (staffId: string) => {
+      const staff = staffData.find(s => s.id === staffId);
+      if (staff?.managerId) {
+        setCollapsedNodes(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(staff.managerId);
+          return newSet;
+        });
+        expandAncestors(staff.managerId);
+      }
+    };
+    
+    expandAncestors(nodeId);
+    
+    // Poll for node to appear after expansion (using requestAnimationFrame for efficiency)
+    const attemptFocus = (attempts = 0) => {
+      if (attempts > 30) return; // Give up after ~500ms
       
-      // Remove highlight after 3 seconds
-      setTimeout(() => setHighlightedNode(null), 3000);
-    }
-  }, [nodes, setCenter]);
+      const node = getNode(nodeId);
+      
+      if (node) {
+        setHighlightedNode(nodeId);
+        setCenter(node.position.x + 140, node.position.y + 90, { zoom: 1.2, duration: 800 });
+        
+        // Remove highlight after 3 seconds
+        setTimeout(() => setHighlightedNode(null), 3000);
+      } else {
+        // Node not ready yet, try again
+        requestAnimationFrame(() => attemptFocus(attempts + 1));
+      }
+    };
+    
+    // Start polling after a brief delay to allow state update
+    requestAnimationFrame(() => attemptFocus());
+  }, [setCenter, staffData, getNode]);
 
   // Update node styling based on highlight
   useEffect(() => {
