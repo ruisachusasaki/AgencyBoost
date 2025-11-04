@@ -22600,8 +22600,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Insert new permissions
         for (const permission of permissions) {
           await db.execute(sql`
-            INSERT INTO knowledge_base_permissions (resource_type, resource_id, access_type, access_id, permission)
-            VALUES ('article', ${req.params.id}, ${permission.accessType}, ${permission.accessId}, ${permission.permission || 'read'})
+            INSERT INTO knowledge_base_permissions (id, resource_type, resource_id, access_type, access_id, permission, created_at)
+            VALUES (gen_random_uuid(), 'article', ${req.params.id}, ${permission.accessType}, ${permission.accessId}, ${permission.permission || 'read'}, NOW())
           `);
         }
       }
