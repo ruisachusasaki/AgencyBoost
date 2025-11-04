@@ -7559,6 +7559,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/workflow-templates/:id/use - Create workflow from template
+  app.post("/api/workflow-templates/:id/use", requireAuth(), requirePermission('workflows', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const template = await appStorage.getWorkflowTemplate(req.params.id);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Workflow template not found" });
+      }
+
+      const workflowData = {
+        name: req.body.name || `${template.name} (Copy)`,
+        description: template.description || '',
+        category: template.category,
+        status: 'draft',
+        trigger: template.triggers && Array.isArray(template.triggers) && template.triggers.length > 0 
+          ? template.triggers[0] 
+          : { type: 'manual', conditions: [] },
+        actions: template.actions || [],
+        createdBy: userId,
+      };
+
+      const newWorkflow = await appStorage.createWorkflow(workflowData);
+
+      await appStorage.incrementWorkflowTemplateUsage(req.params.id);
+
+      await createAuditLog(
+        "created",
+        "workflow",
+        newWorkflow.id,
+        newWorkflow.name,
+        userId,
+        `Created workflow from template: ${template.name}`,
+        null,
+        { templateId: template.id, templateName: template.name },
+        req
+      );
+
+      res.status(201).json(newWorkflow);
+    } catch (error) {
+      console.error("Error creating workflow from template:", error);
+      res.status(500).json({ message: "Failed to create workflow from template" });
+    }
+  });
+
   // DELETE /api/workflow-templates/:id - Delete workflow template (ADMIN ONLY)
   app.delete("/api/workflow-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
     try {

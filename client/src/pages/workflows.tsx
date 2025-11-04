@@ -124,6 +124,22 @@ export default function WorkflowsPage() {
     }
   });
 
+  // Use workflow template mutation
+  const useTemplateMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      return await apiRequest("POST", `/api/workflow-templates/${templateId}/use`, {});
+    },
+    onSuccess: (newWorkflow) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workflow-templates"] });
+      toast({ title: "Success", description: "Workflow created from template successfully" });
+      navigate(`/workflows/build?edit=${newWorkflow.id}`);
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to create workflow from template" });
+    }
+  });
+
   // Update workflow status mutation
   const updateWorkflowMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -825,8 +841,15 @@ export default function WorkflowsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2 mt-4">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      Use Template
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => useTemplateMutation.mutate(template.id)}
+                      disabled={useTemplateMutation.isPending}
+                      data-testid={`button-use-template-${template.id}`}
+                    >
+                      {useTemplateMutation.isPending ? "Creating..." : "Use Template"}
                     </Button>
                     {currentUser?.role === 'Admin' && (
                       <AlertDialog>

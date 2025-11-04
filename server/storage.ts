@@ -279,6 +279,7 @@ export interface IStorage {
   createWorkflowTemplate(template: InsertWorkflowTemplate): Promise<WorkflowTemplate>;
   updateWorkflowTemplate(id: string, template: Partial<InsertWorkflowTemplate>): Promise<WorkflowTemplate | undefined>;
   deleteWorkflowTemplate(id: string): Promise<boolean>;
+  incrementWorkflowTemplateUsage(id: string): Promise<void>;
   
   // Task Categories
   getTaskCategories(): Promise<TaskCategory[]>;
@@ -3219,6 +3220,14 @@ export class MemStorage implements IStorage {
     return this.workflowTemplates.delete(id);
   }
 
+  async incrementWorkflowTemplateUsage(id: string): Promise<void> {
+    const template = this.workflowTemplates.get(id);
+    if (template) {
+      template.usageCount = (template.usageCount || 0) + 1;
+      this.workflowTemplates.set(id, template);
+    }
+  }
+
   // Task Categories
   async getTaskCategories(): Promise<TaskCategory[]> {
     return Array.from(this.taskCategories.values());
@@ -5386,6 +5395,16 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error("Error deleting workflow template from database:", error);
       return false;
+    }
+  }
+
+  async incrementWorkflowTemplateUsage(id: string): Promise<void> {
+    try {
+      await db.update(workflowTemplates)
+        .set({ usageCount: sql`${workflowTemplates.usageCount} + 1` })
+        .where(eq(workflowTemplates.id, id));
+    } catch (error) {
+      console.error("Error incrementing workflow template usage:", error);
     }
   }
 
