@@ -7576,9 +7576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: template.description || '',
         category: template.category,
         status: 'draft',
-        trigger: template.triggers && Array.isArray(template.triggers) && template.triggers.length > 0 
-          ? template.triggers[0] 
-          : { type: 'manual', conditions: [] },
+        triggers: template.triggers || [],
         actions: template.actions || [],
         createdBy: userId,
       };
