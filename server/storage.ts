@@ -5328,9 +5328,43 @@ export class DbStorage implements IStorage {
       return undefined;
     }
   }
-  async createWorkflow(workflow: InsertWorkflow): Promise<Workflow> { return this.memStorage.createWorkflow(workflow); }
-  async updateWorkflow(id: string, workflow: Partial<InsertWorkflow>): Promise<Workflow | undefined> { return this.memStorage.updateWorkflow(id, workflow); }
-  async deleteWorkflow(id: string): Promise<boolean> { return this.memStorage.deleteWorkflow(id); }
+  async createWorkflow(workflow: InsertWorkflow): Promise<Workflow> {
+    try {
+      const result = await db.insert(workflows).values({
+        ...workflow,
+        id: sql`gen_random_uuid()`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating workflow in database:", error);
+      throw error;
+    }
+  }
+  
+  async updateWorkflow(id: string, workflow: Partial<InsertWorkflow>): Promise<Workflow | undefined> {
+    try {
+      const result = await db.update(workflows)
+        .set({ ...workflow, updatedAt: new Date() })
+        .where(eq(workflows.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating workflow in database:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteWorkflow(id: string): Promise<boolean> {
+    try {
+      await db.delete(workflows).where(eq(workflows.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting workflow from database:", error);
+      return false;
+    }
+  }
 
   async getWorkflowExecutions(): Promise<WorkflowExecution[]> { return this.memStorage.getWorkflowExecutions(); }
   async getWorkflowExecution(id: string): Promise<WorkflowExecution | undefined> { return this.memStorage.getWorkflowExecution(id); }
