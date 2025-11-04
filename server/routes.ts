@@ -22589,20 +22589,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
       }
 
-      // Update permissions using raw SQL
+      // Update permissions using Drizzle ORM
       if (permissions && Array.isArray(permissions)) {
         // Delete existing permissions
-        await db.execute(sql`
-          DELETE FROM knowledge_base_permissions 
-          WHERE resource_type = 'article' AND resource_id = ${req.params.id}
-        `);
+        await db.delete(knowledgeBasePermissions)
+          .where(and(
+            eq(knowledgeBasePermissions.resourceType, 'article'),
+            eq(knowledgeBasePermissions.resourceId, req.params.id)
+          ));
 
         // Insert new permissions
-        for (const permission of permissions) {
-          await db.execute(sql`
-            INSERT INTO knowledge_base_permissions (id, resource_type, resource_id, access_type, access_id, permission, created_at)
-            VALUES (gen_random_uuid(), 'article', ${req.params.id}, ${permission.accessType}, ${permission.accessId}, ${permission.permission || 'read'}, NOW())
-          `);
+        if (permissions.length > 0) {
+          await db.insert(knowledgeBasePermissions).values(
+            permissions.map(permission => ({
+              resourceType: 'article' as const,
+              resourceId: req.params.id,
+              accessType: permission.accessType,
+              accessId: permission.accessId,
+              permission: permission.permission || 'read',
+            }))
+          );
         }
       }
 
