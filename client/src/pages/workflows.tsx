@@ -127,7 +127,8 @@ export default function WorkflowsPage() {
   // Use workflow template mutation
   const useTemplateMutation = useMutation({
     mutationFn: async (templateId: string) => {
-      return await apiRequest("POST", `/api/workflow-templates/${templateId}/use`, {});
+      const response = await apiRequest("POST", `/api/workflow-templates/${templateId}/use`, {});
+      return response.json();
     },
     onSuccess: (newWorkflow) => {
       queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
