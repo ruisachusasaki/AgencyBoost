@@ -22537,7 +22537,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         FROM knowledge_base_permissions
         WHERE resource_type = 'article' AND resource_id = ${req.params.id}
       `);
-      const permissions = Array.isArray(permissionsResult) ? permissionsResult : permissionsResult.rows;
+      const permissionsRaw = Array.isArray(permissionsResult) ? permissionsResult : permissionsResult.rows;
+
+      // Convert snake_case to camelCase for frontend
+      const permissions = permissionsRaw.map((p: any) => ({
+        id: p.id,
+        accessType: p.access_type,
+        accessId: p.access_id,
+        permission: p.permission
+      }));
 
       res.json({
         isPublic: article.is_public,
