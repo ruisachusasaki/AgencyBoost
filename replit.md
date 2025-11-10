@@ -37,6 +37,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
   - **Organization Chart**: Interactive ReactFlow-based visualization with Dagre layout, department color-coding, search, and navigation controls. Includes a position-only structure builder with drag-and-drop functionality and position templates.
 - **Sales Reports**: Pipeline and Sales Rep Reports with date range filtering.
 - **Sales Settings**: Dynamic minimum margin threshold configuration for quotes.
+- **Quotes Management**: Modern table-based layout matching Clients page design pattern with sortable columns (name, client, created date, total cost, margin %, status), inline status updates, action buttons, low margin highlighting, and pagination.
 - **Lead Management**: Customizable lead source options managed via settings.
 - **Quote to Client Products Transfer**: Automatic transfer of accepted quote products/bundles.
 - **Predictive Hiring Alerts**: Staffing capacity prediction with configurable alerts.

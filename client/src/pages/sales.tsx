@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -38,7 +40,8 @@ import {
   CheckCircle,
   Target,
   ChevronUp,
-  Info
+  Info,
+  MoreHorizontal
 } from "lucide-react";
 
 export default function Sales() {
@@ -60,6 +63,11 @@ export default function Sales() {
   const [quotesDateFrom, setQuotesDateFrom] = useState<string>("");
   const [quotesDateTo, setQuotesDateTo] = useState<string>("");
   const [quotesShowLowMarginOnly, setQuotesShowLowMarginOnly] = useState(false);
+  
+  // Quotes sorting
+  type QuotesSortField = 'name' | 'clientName' | 'createdAt' | 'totalCost' | 'desiredMargin' | 'status';
+  const [quotesSortField, setQuotesSortField] = useState<QuotesSortField>('createdAt');
+  const [quotesSortOrder, setQuotesSortOrder] = useState<SortOrder>('desc');
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1695,19 +1703,99 @@ export default function Sales() {
                              matchesDateFrom && matchesDateTo && matchesMargin;
                     });
 
+                    // Apply sorting
+                    const sortedQuotes = [...filteredQuotes].sort((a, b) => {
+                      let aVal: any;
+                      let bVal: any;
+                      
+                      switch (quotesSortField) {
+                        case 'name':
+                          aVal = a.name || '';
+                          bVal = b.name || '';
+                          break;
+                        case 'clientName':
+                          aVal = (a.clientName || a.leadName || '').toLowerCase();
+                          bVal = (b.clientName || b.leadName || '').toLowerCase();
+                          break;
+                        case 'createdAt':
+                          aVal = new Date(a.createdAt);
+                          bVal = new Date(b.createdAt);
+                          break;
+                        case 'totalCost':
+                          aVal = parseFloat(a.totalCost || 0);
+                          bVal = parseFloat(b.totalCost || 0);
+                          break;
+                        case 'desiredMargin':
+                          aVal = parseFloat(a.desiredMargin || 0);
+                          bVal = parseFloat(b.desiredMargin || 0);
+                          break;
+                        case 'status':
+                          // Define status order for sorting
+                          const statusOrder = ['draft', 'pending_approval', 'approved', 'sent', 'accepted', 'rejected'];
+                          aVal = statusOrder.indexOf(a.status);
+                          bVal = statusOrder.indexOf(b.status);
+                          break;
+                        default:
+                          return 0;
+                      }
+                      
+                      if (aVal < bVal) return quotesSortOrder === 'asc' ? -1 : 1;
+                      if (aVal > bVal) return quotesSortOrder === 'asc' ? 1 : -1;
+                      return 0;
+                    });
+
                     // Calculate pagination
-                    const totalQuotes = filteredQuotes.length;
+                    const totalQuotes = sortedQuotes.length;
                     const totalPages = Math.ceil(totalQuotes / quotesPageSize);
                     const startIndex = (quotesPage - 1) * quotesPageSize;
                     const endIndex = startIndex + quotesPageSize;
-                    const paginatedQuotes = filteredQuotes.slice(startIndex, endIndex);
+                    const paginatedQuotes = sortedQuotes.slice(startIndex, endIndex);
 
                     // Ensure current page is valid
                     if (quotesPage > totalPages && totalPages > 0) {
                       setQuotesPage(1);
                     }
 
-                    if (filteredQuotes.length === 0) {
+                    const handleQuoteSort = (field: QuotesSortField) => {
+                      if (quotesSortField === field) {
+                        setQuotesSortOrder(quotesSortOrder === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setQuotesSortField(field);
+                        setQuotesSortOrder('asc');
+                      }
+                    };
+
+                    const SortableQuoteHeader = ({ field, children }: { field: QuotesSortField; children: React.ReactNode }) => {
+                      const isActive = quotesSortField === field;
+                      return (
+                        <TableHead 
+                          className="cursor-pointer hover:bg-slate-50 select-none"
+                          onClick={() => handleQuoteSort(field)}
+                        >
+                          <div className="flex items-center gap-1">
+                            {children}
+                            <div className="flex flex-col ml-1">
+                              <ChevronUp 
+                                className={`h-3 w-3 ${
+                                  isActive && quotesSortOrder === 'asc' 
+                                    ? 'text-primary' 
+                                    : 'text-gray-400'
+                                }`} 
+                              />
+                              <ChevronDown 
+                                className={`h-3 w-3 -mt-1 ${
+                                  isActive && quotesSortOrder === 'desc' 
+                                    ? 'text-primary' 
+                                    : 'text-gray-400'
+                                }`} 
+                              />
+                            </div>
+                          </div>
+                        </TableHead>
+                      );
+                    };
+
+                    if (sortedQuotes.length === 0) {
                       return (
                         <div className="text-center py-8 text-muted-foreground">
                           {searchTerm || quotesStatusFilter !== "all" || quotesClientFilter !== "all" || quotesCreatedByFilter !== "all" || quotesDateFrom || quotesDateTo || quotesShowLowMarginOnly
@@ -1719,159 +1807,181 @@ export default function Sales() {
 
                     return (
                       <>
-                        <div className="space-y-4">
-                          {paginatedQuotes.map((quote: any) => (
-                    <div key={quote.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <h3 className="font-semibold text-lg" data-testid={`text-quote-name-${quote.id}`}>
-                            {quote.name}
-                          </h3>
-                          <Badge 
-                            className={getQuoteStatusBadge(quote.status)}
-                            data-testid={`text-quote-status-${quote.id}`}
-                          >
-                            {quote.status.replace('_', ' ').toUpperCase()}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {/* Show approve/reject buttons for quotes pending approval - only for Sales Managers */}
-                          {quote.status === 'pending_approval' && isSalesManager && (
-                            <>
-                              <Button 
-                                variant="default"
-                                size="sm" 
-                                className="bg-primary hover:bg-primary/90"
-                                data-testid={`button-approve-quote-${quote.id}`}
-                                onClick={() => approveQuoteMutation.mutate(quote.id)}
-                                disabled={approveQuoteMutation.isPending}
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                {approveQuoteMutation.isPending ? "Approving..." : "Approve"}
-                              </Button>
-                              <Button 
-                                variant="destructive" 
-                                size="sm" 
-                                data-testid={`button-reject-quote-${quote.id}`}
-                                onClick={() => rejectQuoteMutation.mutate(quote.id)}
-                                disabled={rejectQuoteMutation.isPending}
-                              >
-                                <X className="h-4 w-4 mr-1" />
-                                {rejectQuoteMutation.isPending ? "Rejecting..." : "Reject"}
-                              </Button>
-                            </>
-                          )}
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            data-testid={`button-view-quote-${quote.id}`}
-                            onClick={() => setViewingQuoteId(quote.id)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            data-testid={`button-edit-quote-${quote.id}`}
-                            onClick={() => loadQuoteForEdit(quote.id)}
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            data-testid={`button-delete-quote-${quote.id}`}
-                            onClick={() => setDeleteConfirmQuoteId(quote.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Client/Lead:</span>
-                          <p className="font-medium" data-testid={`text-quote-client-${quote.id}`}>
-                            {quote.clientName || quote.leadName || 'Unknown'}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Budget:</span>
-                          <p className="font-medium" data-testid={`text-quote-budget-${quote.id}`}>
-                            ${parseFloat(quote.clientBudget || 0).toLocaleString()}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Desired Margin:</span>
-                          <p className={`font-medium ${parseFloat(quote.desiredMargin) < minimumMarginThreshold ? 'text-red-600' : 'text-green-600'}`} data-testid={`text-quote-margin-${quote.id}`}>
-                            {parseFloat(quote.desiredMargin || 0)}%
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Total Cost:</span>
-                          <p className="font-medium" data-testid={`text-quote-total-cost-${quote.id}`}>
-                            ${parseFloat(quote.totalCost || 0).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 flex items-center justify-between">
-                        <div className="text-xs text-muted-foreground" data-testid={`text-quote-created-${quote.id}`}>
-                          Created: {new Date(quote.createdAt).toLocaleDateString()} by {quote.createdByName} {quote.createdByLastName}
-                        </div>
-                        
-                        {/* Status Update Dropdown - don't show for rejected quotes */}
-                        {quote.status !== 'rejected' && (
-                          <div className="flex items-center gap-2">
-                            <Label className="text-xs text-muted-foreground">Update Status:</Label>
-                            <Select
-                              value={quote.status}
-                              onValueChange={(newStatus) => updateQuoteStatusMutation.mutate({ quoteId: quote.id, newStatus })}
-                              disabled={updateQuoteStatusMutation.isPending}
-                            >
-                              <SelectTrigger className="w-[140px] h-8 text-xs" data-testid={`select-quote-status-${quote.id}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {/* Only show valid status transitions */}
-                                {quote.status === 'draft' && (
-                                  <>
-                                    <SelectItem value="draft">Draft</SelectItem>
-                                    <SelectItem value="sent">Sent</SelectItem>
-                                  </>
-                                )}
-                                {quote.status === 'pending_approval' && (
-                                  <SelectItem value="pending_approval">Pending Approval</SelectItem>
-                                )}
-                                {quote.status === 'approved' && (
-                                  <>
-                                    <SelectItem value="approved">Approved</SelectItem>
-                                    <SelectItem value="sent">Sent</SelectItem>
-                                  </>
-                                )}
-                                {quote.status === 'sent' && (
-                                  <>
-                                    <SelectItem value="sent">Sent</SelectItem>
-                                    <SelectItem value="accepted">Accepted</SelectItem>
-                                  </>
-                                )}
-                                {quote.status === 'accepted' && (
-                                  <SelectItem value="accepted">Accepted</SelectItem>
-                                )}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                          ))}
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <SortableQuoteHeader field="name">Quote Name</SortableQuoteHeader>
+                                <SortableQuoteHeader field="clientName">Client/Lead</SortableQuoteHeader>
+                                <TableHead>Created By</TableHead>
+                                <SortableQuoteHeader field="createdAt">Created</SortableQuoteHeader>
+                                <SortableQuoteHeader field="totalCost">Total Cost</SortableQuoteHeader>
+                                <SortableQuoteHeader field="desiredMargin">Margin %</SortableQuoteHeader>
+                                <SortableQuoteHeader field="status">Status</SortableQuoteHeader>
+                                <TableHead>Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {paginatedQuotes.map((quote: any) => {
+                                const isLowMargin = parseFloat(quote.desiredMargin || 100) < minimumMarginThreshold;
+                                return (
+                                  <TableRow 
+                                    key={quote.id} 
+                                    className={`hover:bg-slate-50 ${isLowMargin ? 'bg-red-50/50 border-l-4 border-l-red-400' : ''}`}
+                                    data-testid={`row-quote-${quote.id}`}
+                                  >
+                                    {/* Quote Name */}
+                                    <TableCell className="font-medium" data-testid={`text-quote-name-${quote.id}`}>
+                                      {quote.name}
+                                    </TableCell>
+                                    
+                                    {/* Client/Lead */}
+                                    <TableCell data-testid={`text-quote-client-${quote.id}`}>
+                                      {quote.clientName || quote.leadName || 'Unknown'}
+                                    </TableCell>
+                                    
+                                    {/* Created By */}
+                                    <TableCell data-testid={`text-quote-created-${quote.id}`}>
+                                      {quote.createdByName} {quote.createdByLastName}
+                                    </TableCell>
+                                    
+                                    {/* Created Date */}
+                                    <TableCell>
+                                      {new Date(quote.createdAt).toLocaleDateString()}
+                                    </TableCell>
+                                    
+                                    {/* Total Cost */}
+                                    <TableCell className="font-medium" data-testid={`text-quote-total-cost-${quote.id}`}>
+                                      ${parseFloat(quote.totalCost || 0).toLocaleString()}
+                                    </TableCell>
+                                    
+                                    {/* Margin % */}
+                                    <TableCell data-testid={`text-quote-margin-${quote.id}`}>
+                                      <span className={isLowMargin ? 'text-red-600 font-semibold' : 'text-green-600 font-medium'}>
+                                        {parseFloat(quote.desiredMargin || 0)}%
+                                      </span>
+                                    </TableCell>
+                                    
+                                    {/* Status */}
+                                    <TableCell>
+                                      {quote.status !== 'rejected' ? (
+                                        <Select
+                                          value={quote.status}
+                                          onValueChange={(newStatus) => updateQuoteStatusMutation.mutate({ quoteId: quote.id, newStatus })}
+                                          disabled={updateQuoteStatusMutation.isPending}
+                                        >
+                                          <SelectTrigger className="w-[140px] h-8" data-testid={`select-quote-status-${quote.id}`}>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {/* Only show valid status transitions */}
+                                            {quote.status === 'draft' && (
+                                              <>
+                                                <SelectItem value="draft">Draft</SelectItem>
+                                                <SelectItem value="sent">Sent</SelectItem>
+                                              </>
+                                            )}
+                                            {quote.status === 'pending_approval' && (
+                                              <SelectItem value="pending_approval">Pending Approval</SelectItem>
+                                            )}
+                                            {quote.status === 'approved' && (
+                                              <>
+                                                <SelectItem value="approved">Approved</SelectItem>
+                                                <SelectItem value="sent">Sent</SelectItem>
+                                              </>
+                                            )}
+                                            {quote.status === 'sent' && (
+                                              <>
+                                                <SelectItem value="sent">Sent</SelectItem>
+                                                <SelectItem value="accepted">Accepted</SelectItem>
+                                              </>
+                                            )}
+                                            {quote.status === 'accepted' && (
+                                              <SelectItem value="accepted">Accepted</SelectItem>
+                                            )}
+                                          </SelectContent>
+                                        </Select>
+                                      ) : (
+                                        <Badge className="bg-red-100 text-red-800" data-testid={`text-quote-status-${quote.id}`}>
+                                          REJECTED
+                                        </Badge>
+                                      )}
+                                    </TableCell>
+                                    
+                                    {/* Actions */}
+                                    <TableCell>
+                                      <div className="flex items-center gap-1">
+                                        {/* Show approve/reject buttons for quotes pending approval - only for Sales Managers */}
+                                        {quote.status === 'pending_approval' && isSalesManager && (
+                                          <>
+                                            <Button 
+                                              variant="default"
+                                              size="sm" 
+                                              className="bg-primary hover:bg-primary/90 h-8 px-2"
+                                              data-testid={`button-approve-quote-${quote.id}`}
+                                              onClick={() => approveQuoteMutation.mutate(quote.id)}
+                                              disabled={approveQuoteMutation.isPending}
+                                            >
+                                              <CheckCircle className="h-4 w-4" />
+                                            </Button>
+                                            <Button 
+                                              variant="destructive" 
+                                              size="sm" 
+                                              className="h-8 px-2"
+                                              data-testid={`button-reject-quote-${quote.id}`}
+                                              onClick={() => rejectQuoteMutation.mutate(quote.id)}
+                                              disabled={rejectQuoteMutation.isPending}
+                                            >
+                                              <X className="h-4 w-4" />
+                                            </Button>
+                                          </>
+                                        )}
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          className="h-8 px-2"
+                                          data-testid={`button-view-quote-${quote.id}`}
+                                          onClick={() => setViewingQuoteId(quote.id)}
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          className="h-8 px-2"
+                                          data-testid={`button-edit-quote-${quote.id}`}
+                                          onClick={() => loadQuoteForEdit(quote.id)}
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                              <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              onClick={() => setDeleteConfirmQuoteId(quote.id)}
+                                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                              data-testid={`button-delete-quote-${quote.id}`}
+                                            >
+                                              <Trash2 className="mr-2 h-4 w-4" />
+                                              Delete Quote
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
                         </div>
 
                         {/* Pagination Controls */}
-                        <div className="flex items-center justify-between border-t pt-4">
+                        <div className="flex items-center justify-between border-t pt-4 mt-4">
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">Rows per page:</span>
                             <Select
@@ -1913,38 +2023,14 @@ export default function Sales() {
                             >
                               Previous
                             </Button>
-                            
-                            {/* Page numbers */}
-                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                              let pageNum;
-                              if (totalPages <= 5) {
-                                pageNum = i + 1;
-                              } else if (quotesPage <= 3) {
-                                pageNum = i + 1;
-                              } else if (quotesPage >= totalPages - 2) {
-                                pageNum = totalPages - 4 + i;
-                              } else {
-                                pageNum = quotesPage - 2 + i;
-                              }
-                              
-                              return (
-                                <Button
-                                  key={pageNum}
-                                  variant={quotesPage === pageNum ? "default" : "outline"}
-                                  size="sm"
-                                  onClick={() => setQuotesPage(pageNum)}
-                                  className="w-8"
-                                >
-                                  {pageNum}
-                                </Button>
-                              );
-                            })}
-                            
+                            <span className="text-sm text-muted-foreground px-2">
+                              Page {quotesPage} of {totalPages}
+                            </span>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => setQuotesPage(Math.min(totalPages, quotesPage + 1))}
-                              disabled={quotesPage === totalPages}
+                              disabled={quotesPage >= totalPages}
                             >
                               Next
                             </Button>
@@ -1952,7 +2038,7 @@ export default function Sales() {
                               variant="outline"
                               size="sm"
                               onClick={() => setQuotesPage(totalPages)}
-                              disabled={quotesPage === totalPages}
+                              disabled={quotesPage >= totalPages}
                             >
                               Last
                             </Button>
@@ -1962,6 +2048,7 @@ export default function Sales() {
                     );
                   })()}
                 </div>
+
               </div>
             </CardContent>
           </Card>
