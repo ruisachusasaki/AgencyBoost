@@ -2,7 +2,7 @@ import { useState } from "react";
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format, differenceInDays, addDays, parseISO } from "date-fns";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -26,7 +26,7 @@ const timeOffRequestSchema = z.object({
   endDate: z.date({
     required_error: "End date is required",
   }),
-  type: z.enum(["vacation", "sick", "personal"], {
+  timeOffTypeId: z.string({
     required_error: "Time off category is required",
   }),
   reason: z.string().optional(),
@@ -53,6 +53,11 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
   const [endDateOpen, setEndDateOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch available time off types for the current user
+  const { data: timeOffTypes = [], isLoading: isLoadingTypes } = useQuery<any[]>({
+    queryKey: ["/api/hr/time-off-types/available"],
+  });
 
   const form = useForm<TimeOffRequestFormData>({
     resolver: zodResolver(timeOffRequestSchema),
@@ -97,7 +102,7 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
       const totalDays = data.dayHours.length;
 
       const requestData = {
-        type: data.type,
+        timeOffTypeId: data.timeOffTypeId,
         startDate: format(data.startDate, 'yyyy-MM-dd'),
         endDate: format(data.endDate, 'yyyy-MM-dd'),
         totalDays,
@@ -255,20 +260,33 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
             {/* Time Off Category */}
             <FormField
               control={form.control}
-              name="type"
+              name="timeOffTypeId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Time Off Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingTypes}>
                     <FormControl>
                       <SelectTrigger data-testid="select-time-off-type">
-                        <SelectValue placeholder="Select a category" />
+                        <SelectValue placeholder={isLoadingTypes ? "Loading..." : "Select a category"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="vacation">Vacation (PTO)</SelectItem>
-                      <SelectItem value="sick">Sick Leave</SelectItem>
-                      <SelectItem value="personal">Personal Time Off</SelectItem>
+                      {timeOffTypes.map((type) => (
+                        <SelectItem key={type.id} value={type.id}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: type.color }}
+                            />
+                            {type.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                      {timeOffTypes.length === 0 && !isLoadingTypes && (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                          No time off types available
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />

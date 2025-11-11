@@ -18969,10 +18969,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       
+      // Get staffId (auto-set to current user if not provided)
+      const staffId = req.body.staffId || currentUserId;
+      
+      // If timeOffTypeId is provided, look up the type and populate the legacy type field
+      let legacyType = req.body.type || "vacation"; // Default for backward compat
+      if (req.body.timeOffTypeId) {
+        const [typeRecord] = await db
+          .select()
+          .from(timeOffTypes)
+          .where(eq(timeOffTypes.id, req.body.timeOffTypeId))
+          .limit(1);
+        
+        if (!typeRecord) {
+          return res.status(400).json({ error: "Invalid time off type" });
+        }
+        
+        // Map type name to legacy type value (basic mapping for now)
+        const typeName = typeRecord.name.toLowerCase();
+        if (typeName.includes('vacation') || typeName.includes('annual') || typeName.includes('pto')) {
+          legacyType = 'vacation';
+        } else if (typeName.includes('sick')) {
+          legacyType = 'sick';
+        } else if (typeName.includes('personal')) {
+          legacyType = 'personal';
+        } else {
+          // For custom types, use first word as legacy type or default to 'personal'
+          legacyType = typeName.split(' ')[0].toLowerCase() || 'personal';
+        }
+      }
+      
       // Convert totalHours from number to string for decimal field
       const cleanedBody = {
         ...req.body,
-        staffId: req.body.staffId || currentUserId, // Auto-set to current user if not provided
+        staffId,
+        type: legacyType, // Populate legacy field
+        timeOffTypeId: req.body.timeOffTypeId || null,
         totalHours: req.body.totalHours?.toString() || "0"
       };
       
@@ -18983,9 +19015,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "created",
         "time_off_request",
         newRequest.id,
-        `Time off request by ${validatedData.staffId}`,
-        validatedData.staffId,
-        `Created ${validatedData.type} request for ${validatedData.totalDays} days`,
+        `Time off request by ${staffId}`,
+        staffId,
+        `Created ${legacyType} request for ${validatedData.totalDays} days`,
         null,
         newRequest,
         req
@@ -19128,6 +19160,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Time Off Types routes
+  // Get available time off types for the current user (based on their staff policy)
+  app.get("/api/hr/time-off-types/available", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+
+      // Get the current user's staff record to find their policy
+      const [staffRecord] = await db
+        .select()
+        .from(staff)
+        .where(eq(staff.userId, currentUserId))
+        .limit(1);
+
+      if (!staffRecord || !staffRecord.timeOffPolicyId) {
+        // No policy assigned, return empty array
+        return res.json([]);
+      }
+
+      // Get the time off types for this policy (only active types)
+      const types = await db
+        .select()
+        .from(timeOffTypes)
+        .where(
+          and(
+            eq(timeOffTypes.policyId, staffRecord.timeOffPolicyId),
+            eq(timeOffTypes.isActive, true)
+          )
+        )
+        .orderBy(asc(timeOffTypes.orderIndex));
+
+      res.json(types);
+    } catch (error) {
+      console.error("Error fetching available time off types:", error);
+      res.status(500).json({ message: "Failed to fetch available time off types" });
+    }
+  });
+
   app.get("/api/hr/time-off-policies/:policyId/types", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
       const types = await appStorage.getTimeOffTypes(req.params.policyId);
