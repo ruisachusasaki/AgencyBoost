@@ -917,6 +917,423 @@ export default function HRSettingsPage() {
   );
 }
 
+// Time Off Types Manager Component
+function TimeOffTypesManager({ policyId }: { policyId: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingType, setEditingType] = useState<any | null>(null);
+
+  // Schema for time off type
+  const timeOffTypeSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    defaultDays: z.coerce.number().min(0, "Default days must be 0 or greater"),
+    carryOverAllowed: z.boolean().default(false),
+    maxCarryOverDays: z.coerce.number().min(0, "Max carry over days must be 0 or greater").default(0),
+    color: z.string().min(1, "Color is required"),
+    isActive: z.boolean().default(true),
+  });
+
+  type TimeOffTypeFormData = z.infer<typeof timeOffTypeSchema>;
+
+  // Fetch time off types
+  const { data: types = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/hr/time-off-policies", policyId, "types"],
+  });
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: TimeOffTypeFormData) => {
+      const orderIndex = types.length;
+      return await apiRequest("POST", `/api/hr/time-off-policies/${policyId}/types`, {
+        ...data,
+        orderIndex,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-policies", policyId, "types"] });
+      toast({
+        title: "Success",
+        description: "Time off type created successfully",
+      });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create time off type",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<TimeOffTypeFormData> }) => {
+      return await apiRequest("PATCH", `/api/hr/time-off-types/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-policies", policyId, "types"] });
+      toast({
+        title: "Success",
+        description: "Time off type updated successfully",
+      });
+      setIsDialogOpen(false);
+      setEditingType(null);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update time off type",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/hr/time-off-types/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-policies", policyId, "types"] });
+      toast({
+        title: "Success",
+        description: "Time off type deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete time off type",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Reorder mutation
+  const reorderMutation = useMutation({
+    mutationFn: async (updates: Array<{ id: string; orderIndex: number }>) => {
+      return await apiRequest("PATCH", "/api/hr/time-off-types/reorder", { updates });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reorder time off types",
+        variant: "destructive",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-policies", policyId, "types"] });
+    },
+  });
+
+  const form = useForm<TimeOffTypeFormData>({
+    resolver: zodResolver(timeOffTypeSchema),
+    defaultValues: {
+      name: "",
+      defaultDays: 0,
+      carryOverAllowed: false,
+      maxCarryOverDays: 0,
+      color: "#00C9C6",
+      isActive: true,
+    },
+  });
+
+  const carryOverAllowed = form.watch("carryOverAllowed");
+
+  const handleOpenDialog = (type?: any) => {
+    if (type) {
+      setEditingType(type);
+      form.reset({
+        name: type.name,
+        defaultDays: type.defaultDays,
+        carryOverAllowed: type.carryOverAllowed,
+        maxCarryOverDays: type.maxCarryOverDays,
+        color: type.color,
+        isActive: type.isActive,
+      });
+    } else {
+      setEditingType(null);
+      form.reset({
+        name: "",
+        defaultDays: 0,
+        carryOverAllowed: false,
+        maxCarryOverDays: 0,
+        color: "#00C9C6",
+        isActive: true,
+      });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingType(null);
+    form.reset();
+  };
+
+  const onSubmit = (data: TimeOffTypeFormData) => {
+    if (editingType) {
+      updateMutation.mutate({ id: editingType.id, data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleDeleteType = (id: string) => {
+    if (confirm("Are you sure you want to delete this time off type?")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = Array.from(types);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    const updates = items.map((item, index) => ({
+      id: item.id,
+      orderIndex: index,
+    }));
+
+    queryClient.setQueryData(["/api/hr/time-off-policies", policyId, "types"], items);
+    reorderMutation.mutate(updates);
+  };
+
+  if (isLoading) {
+    return <div className="text-center py-4">Loading time off types...</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle>Time Off Types</CardTitle>
+            <CardDescription>
+              Configure custom time off categories with individual settings
+            </CardDescription>
+          </div>
+          <Button onClick={() => handleOpenDialog()} data-testid="button-add-type">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Type
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {types.length === 0 ? (
+          <div className="text-center py-8 border-2 border-dashed rounded-lg">
+            <p className="text-muted-foreground mb-2">No time off types configured</p>
+            <p className="text-sm text-muted-foreground">
+              Add custom time off categories like Annual Leave, Sick Days, etc.
+            </p>
+          </div>
+        ) : (
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="types">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                  {types.map((type, index) => (
+                    <Draggable key={type.id} draggableId={type.id} index={index}>
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className="flex items-center gap-3 p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors"
+                          data-testid={`type-item-${type.id}`}
+                        >
+                          <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                            <GripVertical className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: type.color }}
+                          />
+                          <div className="flex-1">
+                            <div className="font-medium">{type.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {type.defaultDays} days/year
+                              {type.carryOverAllowed && ` • Carry over up to ${type.maxCarryOverDays} days`}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenDialog(type)}
+                              data-testid={`button-edit-type-${type.id}`}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteType(type.id)}
+                              data-testid={`button-delete-type-${type.id}`}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        )}
+      </CardContent>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingType ? "Edit Time Off Type" : "Add Time Off Type"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingType
+                ? "Update the time off type details."
+                : "Create a new time off category with custom settings."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., Annual Leave, Sick Days"
+                        data-testid="input-type-name"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="defaultDays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Default Days Per Year</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="15"
+                          data-testid="input-type-default-days"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="color"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Color</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="color"
+                          data-testid="input-type-color"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="carryOverAllowed"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Allow Carry Over</FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        Allow unused days to carry over to next year
+                      </div>
+                    </div>
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        data-testid="input-type-carry-over"
+                        className="h-4 w-4"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {carryOverAllowed && (
+                <FormField
+                  control={form.control}
+                  name="maxCarryOverDays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Max Carry Over Days</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="5"
+                          data-testid="input-type-max-carry-over"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCloseDialog}
+                  data-testid="button-cancel-type"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  data-testid="button-save-type"
+                >
+                  {editingType ? "Update" : "Create"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
 // Time Off Policy Manager Component
 function TimeOffPolicyManager() {
   const { toast } = useToast();
@@ -926,6 +1343,12 @@ function TimeOffPolicyManager() {
   // Fetch policies
   const { data: policies = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/hr/time-off-policies"],
+  });
+
+  // Fetch time off types for the first policy
+  const { data: types = [] } = useQuery<any[]>({
+    queryKey: ["/api/hr/time-off-policies", policies[0]?.id, "types"],
+    enabled: !!policies[0]?.id,
   });
 
   // Create/Update mutation
@@ -965,6 +1388,11 @@ function TimeOffPolicyManager() {
     }
   });
 
+  // Calculate aggregated metrics from types
+  const hasTypes = types.length > 0;
+  const totalDefaultDays = types.reduce((sum: number, type: any) => sum + (type.defaultDays || 0), 0);
+  const typesWithCarryOver = types.filter((type: any) => type.carryOverAllowed);
+
   if (isLoading) {
     return <div className="text-center py-8">Loading policies...</div>;
   }
@@ -985,33 +1413,90 @@ function TimeOffPolicyManager() {
       </div>
 
       {policies.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{policies[0].name}</CardTitle>
-            <CardDescription>{policies[0].description}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{policies[0].vacationDaysDefault}</div>
-                <div className="text-sm text-blue-700">Annual Vacation Days</div>
-              </div>
-              <div className="text-center p-4 bg-orange-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-600">{policies[0].sickDaysDefault}</div>
-                <div className="text-sm text-orange-700">Annual Sick Days</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{policies[0].personalDaysDefault}</div>
-                <div className="text-sm text-green-700">Annual Personal Days</div>
-              </div>
-            </div>
-            
-            <div className="text-sm text-muted-foreground space-y-1">
-              <p><strong>Effective Date:</strong> {new Date(policies[0].effectiveDate).toLocaleDateString()}</p>
-              <p><strong>Carry Over:</strong> {policies[0].carryOverAllowed ? `Yes (Max ${policies[0].maxCarryOverDays} days)` : 'Not allowed'}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          {!hasTypes && (
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="py-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-primary mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">Ready to Configure Time Off Types</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Create custom time off categories below to replace the legacy vacation/sick/personal days structure. Each type can have individual carry-over settings.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{policies[0].name}</CardTitle>
+              <CardDescription>{policies[0].description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {hasTypes ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="text-center p-4 bg-primary/10 rounded-lg">
+                      <div className="text-2xl font-bold" style={{ color: 'hsl(179, 100%, 39%)' }}>{types.length}</div>
+                      <div className="text-sm text-muted-foreground">Time Off Types</div>
+                    </div>
+                    <div className="text-center p-4 bg-primary/10 rounded-lg">
+                      <div className="text-2xl font-bold" style={{ color: 'hsl(179, 100%, 39%)' }}>{totalDefaultDays}</div>
+                      <div className="text-sm text-muted-foreground">Total Annual Days</div>
+                    </div>
+                    <div className="text-center p-4 bg-primary/10 rounded-lg">
+                      <div className="text-2xl font-bold" style={{ color: 'hsl(179, 100%, 39%)' }}>{typesWithCarryOver.length}</div>
+                      <div className="text-sm text-muted-foreground">Allow Carry Over</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {types.slice(0, 5).map((type: any) => (
+                      <Badge key={type.id} variant="secondary" className="gap-1.5">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: type.color }} />
+                        {type.name}
+                      </Badge>
+                    ))}
+                    {types.length > 5 && (
+                      <Badge variant="outline">+{types.length - 5} more</Badge>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{policies[0].vacationDaysDefault}</div>
+                      <div className="text-sm text-blue-700 dark:text-blue-500">Annual Vacation Days (Legacy)</div>
+                    </div>
+                    <div className="text-center p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                      <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{policies[0].sickDaysDefault}</div>
+                      <div className="text-sm text-orange-700 dark:text-orange-500">Annual Sick Days (Legacy)</div>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">{policies[0].personalDaysDefault}</div>
+                      <div className="text-sm text-green-700 dark:text-green-500">Annual Personal Days (Legacy)</div>
+                    </div>
+                  </div>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p><strong>Effective Date:</strong> {new Date(policies[0].effectiveDate).toLocaleDateString()}</p>
+                    <p><strong>Carry Over:</strong> {policies[0].carryOverAllowed ? `Yes (Max ${policies[0].maxCarryOverDays} days)` : 'Not allowed'}</p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {policies[0] && <TimeOffTypesManager policyId={policies[0].id} />}
+        </>
       ) : (
         <Card>
           <CardContent className="text-center py-8">
