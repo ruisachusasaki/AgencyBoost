@@ -981,6 +981,85 @@ async function initializeDefaultProgressionStatuses() {
   }
 }
 
+/**
+ * Initialize default time off types for existing policies
+ * Creates Annual Vacation, Sick Days, and Personal Days types based on policy defaults
+ */
+async function initializeDefaultTimeOffTypes() {
+  try {
+    log("Running startup migration: initializeDefaultTimeOffTypes");
+    
+    // Get all existing time off policies
+    const policies = await db.select().from(timeOffPolicies);
+    
+    if (policies.length === 0) {
+      log("No time off policies found - skipping time off types initialization");
+      return;
+    }
+    
+    let totalTypesCreated = 0;
+    
+    for (const policy of policies) {
+      // Check if this policy already has types
+      const existingTypes = await db
+        .select()
+        .from(timeOffTypes)
+        .where(eq(timeOffTypes.policyId, policy.id))
+        .limit(1);
+      
+      if (existingTypes.length > 0) {
+        log(`Policy "${policy.name}" already has time off types - skipping`);
+        continue;
+      }
+      
+      // Create default types based on policy's legacy fields
+      // Always create baseline types even if defaultDays is 0
+      const defaultTypes = [
+        {
+          policyId: policy.id,
+          name: "Annual Vacation",
+          defaultDays: policy.vacationDaysDefault ?? 0,
+          carryOverAllowed: policy.carryOverAllowed || false,
+          maxCarryOverDays: policy.carryOverAllowed ? (policy.maxCarryOverDays || 0) : 0,
+          color: "#00C9C6", // Primary teal
+          orderIndex: 0,
+          isActive: true,
+        },
+        {
+          policyId: policy.id,
+          name: "Sick Days",
+          defaultDays: policy.sickDaysDefault ?? 0,
+          carryOverAllowed: false,
+          maxCarryOverDays: 0,
+          color: "#F97316", // Orange
+          orderIndex: 1,
+          isActive: true,
+        },
+        {
+          policyId: policy.id,
+          name: "Personal Days",
+          defaultDays: policy.personalDaysDefault ?? 0,
+          carryOverAllowed: false,
+          maxCarryOverDays: 0,
+          color: "#10B981", // Green
+          orderIndex: 2,
+          isActive: true,
+        }
+      ];
+      
+      await db.insert(timeOffTypes).values(defaultTypes);
+      totalTypesCreated += defaultTypes.length;
+      log(`Created ${defaultTypes.length} default time off types for policy "${policy.name}"`);
+
+    }
+    
+    log(`Time off types initialization completed - created ${totalTypesCreated} types across ${policies.length} policies`);
+  } catch (error: any) {
+    log(`Time off types initialization error: ${error.message}`);
+    log("WARNING: Time off types initialization failed - types may not be available");
+  }
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -1030,6 +1109,7 @@ app.use((req, res, next) => {
   await initializeCalendarAppointmentWidgets();
   await initializeActivityAlertsWidgets();
   await initializeDefaultProgressionStatuses();
+  await initializeDefaultTimeOffTypes();
   
   // Setup Replit Auth
   await setupAuth(app);
