@@ -19130,7 +19130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Time Off Types routes
   app.get("/api/hr/time-off-policies/:policyId/types", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
-      const types = await storage.getTimeOffTypes(req.params.policyId);
+      const types = await appStorage.getTimeOffTypes(req.params.policyId);
       res.json(types);
     } catch (error) {
       console.error("Error fetching time off types:", error);
@@ -19141,7 +19141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/hr/time-off-policies/:policyId/types", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
     try {
       const { policyId } = req.params;
-      const newType = await storage.createTimeOffType({
+      const newType = await appStorage.createTimeOffType({
         ...req.body,
         policyId,
       });
@@ -19154,7 +19154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/hr/time-off-types/:id", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
     try {
-      const updated = await storage.updateTimeOffType(req.params.id, req.body);
+      const updated = await appStorage.updateTimeOffType(req.params.id, req.body);
       if (!updated) {
         return res.status(404).json({ message: "Time off type not found" });
       }
@@ -19167,7 +19167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/hr/time-off-types/:id", requireAuth(), requirePermission('hr', 'canDelete'), async (req, res) => {
     try {
-      const success = await storage.deleteTimeOffType(req.params.id);
+      const success = await appStorage.deleteTimeOffType(req.params.id);
       if (!success) {
         return res.status(404).json({ message: "Time off type not found" });
       }
@@ -19181,7 +19181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/hr/time-off-types/reorder", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
     try {
       const { updates } = req.body;
-      await storage.reorderTimeOffTypes(updates);
+      await appStorage.reorderTimeOffTypes(updates);
       res.json({ message: "Time off types reordered successfully" });
     } catch (error) {
       console.error("Error reordering time off types:", error);
