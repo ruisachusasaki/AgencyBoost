@@ -76,6 +76,7 @@ import {
   type DashboardWidget, type InsertDashboardWidget, dashboardWidgets,
   type UserDashboardWidget, type InsertUserDashboardWidget, userDashboardWidgets,
   type TimeOffRequest, type InsertTimeOffRequest, timeOffRequests,
+  type TimeOffType, type InsertTimeOffType, type SelectTimeOffType, timeOffTypes,
   type NewHireOnboardingSubmission, type InsertNewHireOnboardingSubmission, newHireOnboardingSubmissions,
   type ExpenseReportSubmission, type InsertExpenseReportSubmission, expenseReportSubmissions,
   type TrainingEnrollment, type InsertTrainingEnrollment, trainingEnrollments,
@@ -671,6 +672,14 @@ export interface IStorage {
   createProgressionStatus(data: InsertOneOnOneProgressionStatus): Promise<OneOnOneProgressionStatus>;
   updateProgressionStatus(id: string, data: Partial<InsertOneOnOneProgressionStatus>): Promise<OneOnOneProgressionStatus | undefined>;
   deleteProgressionStatus(id: string): Promise<boolean>;
+  
+  // Time Off Types
+  getTimeOffTypes(policyId: string): Promise<SelectTimeOffType[]>;
+  getTimeOffType(id: string): Promise<SelectTimeOffType | undefined>;
+  createTimeOffType(data: InsertTimeOffType): Promise<SelectTimeOffType>;
+  updateTimeOffType(id: string, data: Partial<InsertTimeOffType>): Promise<SelectTimeOffType | undefined>;
+  deleteTimeOffType(id: string): Promise<boolean>;
+  reorderTimeOffTypes(updates: Array<{ id: string; orderIndex: number }>): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -9228,6 +9237,52 @@ export class DbStorage implements IStorage {
       console.error("Error fetching system alerts:", error);
       return [];
     }
+  }
+
+  // Time Off Types methods
+  async getTimeOffTypes(policyId: string): Promise<SelectTimeOffType[]> {
+    const types = await db
+      .select()
+      .from(timeOffTypes)
+      .where(eq(timeOffTypes.policyId, policyId))
+      .orderBy(asc(timeOffTypes.orderIndex));
+    return types;
+  }
+
+  async getTimeOffType(id: string): Promise<SelectTimeOffType | undefined> {
+    const [type] = await db
+      .select()
+      .from(timeOffTypes)
+      .where(eq(timeOffTypes.id, id))
+      .limit(1);
+    return type;
+  }
+
+  async createTimeOffType(data: InsertTimeOffType): Promise<SelectTimeOffType> {
+    const [newType] = await db.insert(timeOffTypes).values(data).returning();
+    return newType;
+  }
+
+  async updateTimeOffType(id: string, data: Partial<InsertTimeOffType>): Promise<SelectTimeOffType | undefined> {
+    const [updated] = await db
+      .update(timeOffTypes)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(timeOffTypes.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteTimeOffType(id: string): Promise<boolean> {
+    const result = await db.delete(timeOffTypes).where(eq(timeOffTypes.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async reorderTimeOffTypes(updates: Array<{ id: string; orderIndex: number }>): Promise<void> {
+    await Promise.all(
+      updates.map(({ id, orderIndex }) =>
+        db.update(timeOffTypes).set({ orderIndex }).where(eq(timeOffTypes.id, id))
+      )
+    );
   }
 }
 
