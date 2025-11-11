@@ -73,6 +73,7 @@ import { google } from "googleapis";
 import twilio from "twilio";
 import mailgun from "mailgun.js";
 import formData from "form-data";
+import { NotificationService } from "./notification-service";
 import { EncryptionService } from "./encryption";
 import { eq, like, ilike, or, and, asc, desc, sql, inArray, isNotNull, gte, lte, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -146,6 +147,9 @@ async function createAuditLog(
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
+
+  // Initialize NotificationService for multi-channel notifications
+  const notificationService = new NotificationService(appStorage);
 
   // Configure multer for file uploads  
   const multerStorage = multer.memoryStorage();
@@ -1825,6 +1829,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
+      }
+      
+      // Send notification if assignee changed
+      if (validatedData.assignee && validatedData.assignee !== oldClient.assignee) {
+        void notificationService.notifyClientAssigned(
+          validatedData.assignee,
+          client.name || client.email,
+          currentUserId,
+          client.id
+        ).catch(err => console.error('[Notification] Failed to send client assignment notification:', err));
       }
       
       // Determine what changed for audit logging
@@ -5012,6 +5026,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { title: newTask.title, assignedTo: newTask.assignedTo, priority: newTask.priority, status: newTask.status },
         req
       );
+      
+      // Send notification if task is assigned to someone
+      if (newTask.assignedTo && newTask.assignedTo !== userId) {
+        void notificationService.notifyTaskAssigned(
+          newTask.assignedTo,
+          newTask.title || 'New Task',
+          userId,
+          newTask.id,
+          'task'
+        ).catch(err => console.error('[Notification] Failed to send task assignment notification:', err));
+      }
       
       // Note: Recurring task instances will be created on-demand when tasks are completed
       
@@ -14353,6 +14378,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching notifications:", error);
       res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  // Get unread notification count - SECURED
+  app.get("/api/notifications/unread-count", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, userId),
+            eq(notifications.isRead, false)
+          )
+        );
+      
+      res.json({ count: Number(result[0]?.count || 0) });
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+      res.status(500).json({ error: "Failed to fetch unread count" });
     }
   });
 
