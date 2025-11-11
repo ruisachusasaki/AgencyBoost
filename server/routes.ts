@@ -9874,6 +9874,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all team assignments with enriched client data (for Settings > Clients > Team Assignments management)
+  app.get("/api/client-team-assignments", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const assignments = await appStorage.getClientTeamAssignmentsList();
+      res.json(assignments);
+    } catch (error) {
+      console.error('Error fetching all client team assignments:', error);
+      res.status(500).json({ message: "Failed to fetch client team assignments" });
+    }
+  });
+
   // Departments API - SECURED
   app.get("/api/departments", requireAuth(), requirePermission('staff', 'canView'), async (req, res) => {
     try {

@@ -411,6 +411,19 @@ export interface IStorage {
   // Client Team Assignments
   getClientTeamAssignments(clientId: string): Promise<(ClientTeamAssignment & { position: TeamPosition; staffMember: Staff })[]>;
   getTeamAssignments(): Promise<(ClientTeamAssignment & { position: TeamPosition; staffMember: Staff })[]>;
+  getClientTeamAssignmentsList(): Promise<Array<{
+    id: string;
+    clientId: string;
+    staffId: string;
+    positionId: string;
+    assignedAt: Date | null;
+    assignedBy: string;
+    clientName: string | null;
+    staffFirstName: string | null;
+    staffLastName: string | null;
+    positionLabel: string | null;
+    positionKey: string | null;
+  }>>;
   createClientTeamAssignment(assignment: InsertClientTeamAssignment): Promise<ClientTeamAssignment>;
   updateClientTeamAssignment(id: string, assignment: Partial<InsertClientTeamAssignment>): Promise<ClientTeamAssignment | undefined>;
   deleteClientTeamAssignment(id: string): Promise<boolean>;
@@ -5997,6 +6010,41 @@ export class DbStorage implements IStorage {
   async deleteClientTeamAssignment(id: string): Promise<boolean> {
     const result = await db.delete(clientTeamAssignments).where(eq(clientTeamAssignments.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getClientTeamAssignmentsList(): Promise<Array<{
+    id: string;
+    clientId: string;
+    staffId: string;
+    positionId: string;
+    assignedAt: Date | null;
+    assignedBy: string;
+    clientName: string | null;
+    staffFirstName: string | null;
+    staffLastName: string | null;
+    positionLabel: string | null;
+    positionKey: string | null;
+  }>> {
+    const result = await db.select({
+      id: clientTeamAssignments.id,
+      clientId: clientTeamAssignments.clientId,
+      staffId: clientTeamAssignments.staffId,
+      positionId: clientTeamAssignments.position,
+      assignedAt: clientTeamAssignments.assignedAt,
+      assignedBy: clientTeamAssignments.assignedBy,
+      clientName: clients.name,
+      staffFirstName: staff.firstName,
+      staffLastName: staff.lastName,
+      positionLabel: teamPositions.label,
+      positionKey: teamPositions.key,
+    })
+    .from(clientTeamAssignments)
+    .leftJoin(clients, eq(clientTeamAssignments.clientId, clients.id))
+    .leftJoin(staff, eq(clientTeamAssignments.staffId, staff.id))
+    .leftJoin(teamPositions, eq(clientTeamAssignments.position, teamPositions.id))
+    .orderBy(asc(clients.name), asc(teamPositions.order));
+
+    return result;
   }
 
   // Departments
