@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -539,6 +540,7 @@ function TeamAssignmentsManagement() {
   const [editingPosition, setEditingPosition] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [positionToDelete, setPositionToDelete] = useState<{ id: string; label: string } | null>(null);
 
   // Team position creation/edit form schema
   const teamPositionSchema = z.object({
@@ -691,9 +693,14 @@ function TeamAssignmentsManagement() {
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this team position? This action cannot be undone.")) {
-      deletePositionMutation.mutate(id);
+  const handleDelete = (id: string, label: string) => {
+    setPositionToDelete({ id, label });
+  };
+
+  const confirmDelete = () => {
+    if (positionToDelete) {
+      deletePositionMutation.mutate(positionToDelete.id);
+      setPositionToDelete(null);
     }
   };
 
@@ -817,7 +824,7 @@ function TeamAssignmentsManagement() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleDelete(position.id)}
+                                onClick={() => handleDelete(position.id, position.label)}
                                 disabled={deletePositionMutation.isPending || isSaving}
                                 data-testid={`button-delete-${position.key}`}
                               >
@@ -1093,6 +1100,28 @@ function TeamAssignmentsManagement() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!positionToDelete} onOpenChange={(open) => !open && setPositionToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Team Position</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the position "{positionToDelete?.label}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="button-confirm-delete"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
