@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Staff, InsertStaff, Role, NotificationSettings, InsertNotificationSettings, Department, Position } from "@shared/schema";
+import NotificationSettingsPanel from "@/components/settings/NotificationSettingsPanel";
 
 const userTypes = [
   "Admin",
@@ -230,9 +231,10 @@ export default function StaffDetail() {
 
   const onSubmit = (data: StaffFormData) => {
     console.log("Form data before processing:", data);
-    // Convert "none" back to null for managerId, department, and timeOffPolicyId
+    // Convert "none" back to null for managerId, department, timeOffPolicyId, and roleId
     const submitData = {
       ...data,
+      roleId: data.roleId === "none" ? null : (data.roleId || null),
       managerId: data.managerId === "none" ? null : (data.managerId || null),
       department: data.department === "none" ? null : (data.department || null),
       timeOffPolicyId: data.timeOffPolicyId === "none" ? null : (data.timeOffPolicyId || null)
@@ -739,122 +741,18 @@ export default function StaffDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Client Assignment */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Client Assignment</h4>
-                      <div className="flex flex-wrap gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="client-assigned-app" />
-                          <Label htmlFor="client-assigned-app" className="text-xs">In-App</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="client-assigned-email" />
-                          <Label htmlFor="client-assigned-email" className="text-xs">Email</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="client-assigned-sms" />
-                          <Label htmlFor="client-assigned-sms" className="text-xs">SMS</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Internal Chat Added */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Added to Chat</h4>
-                      <div className="flex flex-wrap gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="chat-added-app" />
-                          <Label htmlFor="chat-added-app" className="text-xs">In-App</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="chat-added-email" />
-                          <Label htmlFor="chat-added-email" className="text-xs">Email</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="chat-added-sms" />
-                          <Label htmlFor="chat-added-sms" className="text-xs">SMS</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Chat Messages */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">All Chat Messages</h4>
-                      <div className="flex flex-wrap gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="chat-messages-app" />
-                          <Label htmlFor="chat-messages-app" className="text-xs">In-App</Label>
-                        </div>
-                        <div className="flex items-center space-x-2 opacity-50">
-                          <Checkbox id="chat-messages-email" disabled />
-                          <Label htmlFor="chat-messages-email" className="text-xs text-muted-foreground">Email</Label>
-                        </div>
-                        <div className="flex items-center space-x-2 opacity-50">
-                          <Checkbox id="chat-messages-sms" disabled />
-                          <Label htmlFor="chat-messages-sms" className="text-xs text-muted-foreground">SMS</Label>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Web only</p>
-                    </div>
-
-                    {/* Mentions */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Mentions</h4>
-                      <div className="flex flex-wrap gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="mentioned-app" />
-                          <Label htmlFor="mentioned-app" className="text-xs">In-App</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="mentioned-email" />
-                          <Label htmlFor="mentioned-email" className="text-xs">Email</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="mentioned-sms" />
-                          <Label htmlFor="mentioned-sms" className="text-xs">SMS</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Mention Follow-ups */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Mention Follow-ups</h4>
-                      <div className="flex flex-wrap gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="mention-followup-app" />
-                          <Label htmlFor="mention-followup-app" className="text-xs">In-App</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="mention-followup-email" />
-                          <Label htmlFor="mention-followup-email" className="text-xs">Email</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="mention-followup-sms" />
-                          <Label htmlFor="mention-followup-sms" className="text-xs">SMS</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Task Assignment */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Task Assignment</h4>
-                      <div className="flex flex-wrap gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="task-assigned-app" />
-                          <Label htmlFor="task-assigned-app" className="text-xs">In-App</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="task-assigned-email" />
-                          <Label htmlFor="task-assigned-email" className="text-xs">Email</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox id="task-assigned-sms" />
-                          <Label htmlFor="task-assigned-sms" className="text-xs">SMS</Label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  {id && (
+                    <NotificationSettingsPanel 
+                      userId={id} 
+                      isEditing={isEditing}
+                      showSaveButton={true}
+                      onSaveSuccess={() => {
+                        // Refresh staff data after notification settings change
+                        queryClient.invalidateQueries({ queryKey: [`/api/staff/${id}`] });
+                        queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+                      }}
+                    />
+                  )}
                 </CardContent>
               </Card>
             </form>

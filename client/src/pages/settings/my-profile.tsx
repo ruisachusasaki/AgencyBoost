@@ -23,6 +23,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
+import NotificationSettingsPanel from "@/components/settings/NotificationSettingsPanel";
 
 // Form schemas for different tabs
 const personalInfoSchema = z.object({
@@ -39,14 +40,6 @@ const addressSchema = z.object({
   state: z.string().optional(),
   zip: z.string().optional(),
   country: z.string().optional(),
-});
-
-const notificationSchema = z.object({
-  emailNotifications: z.boolean().default(true),
-  smsNotifications: z.boolean().default(false),
-  pushNotifications: z.boolean().default(true),
-  taskReminders: z.boolean().default(true),
-  appointmentReminders: z.boolean().default(true),
 });
 
 export default function MyProfile() {
@@ -119,18 +112,6 @@ export default function MyProfile() {
       state: currentUser?.state || "",
       zip: currentUser?.zip || "",
       country: currentUser?.country || "",
-    },
-  });
-
-  // Form for notification settings
-  const notificationForm = useForm<z.infer<typeof notificationSchema>>({
-    resolver: zodResolver(notificationSchema),
-    defaultValues: {
-      emailNotifications: true,
-      smsNotifications: false,
-      pushNotifications: true,
-      taskReminders: true,
-      appointmentReminders: true,
     },
   });
   
@@ -790,93 +771,7 @@ export default function MyProfile() {
 
           {/* Notifications Tab */}
           <div className={activeTab === "notifications" ? "space-y-6" : "hidden"}>
-            <Form {...notificationForm}>
-              <form onSubmit={notificationForm.handleSubmit((data) => {
-                toast({
-                  title: "Coming Soon",
-                  description: "Notification settings will be available in a future update.",
-                });
-              })}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Notification Preferences</CardTitle>
-                    <p className="text-sm text-muted-foreground">Manage how you receive notifications</p>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <FormField
-                        control={notificationForm.control}
-                        name="emailNotifications"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Email Notifications</FormLabel>
-                              <p className="text-sm text-muted-foreground">
-                                Receive email notifications for updates and reminders
-                              </p>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={notificationForm.control}
-                        name="taskReminders"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Task Reminders</FormLabel>
-                              <p className="text-sm text-muted-foreground">
-                                Get reminders for upcoming task deadlines
-                              </p>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={notificationForm.control}
-                        name="appointmentReminders"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Appointment Reminders</FormLabel>
-                              <p className="text-sm text-muted-foreground">
-                                Receive reminders for upcoming appointments
-                              </p>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <div className="rounded-lg bg-muted p-4">
-                      <p className="text-sm text-muted-foreground">
-                        <strong>Note:</strong> Notification settings are coming soon. These preferences will be saved once the feature is fully implemented.
-                      </p>
-                    </div>
-                    <Button type="submit" variant="outline" disabled>
-                      Save Notification Preferences (Coming Soon)
-                    </Button>
-                  </CardContent>
-                </Card>
-              </form>
-            </Form>
+            {currentUserId && <NotificationSettingsPanel userId={currentUserId} />}
           </div>
 
           {/* HR Tab */}
