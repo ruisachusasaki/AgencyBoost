@@ -19170,7 +19170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [staffRecord] = await db
         .select()
         .from(staff)
-        .where(eq(staff.userId, currentUserId))
+        .where(eq(staff.id, currentUserId))
         .limit(1);
 
       if (!staffRecord || !staffRecord.timeOffPolicyId) {
