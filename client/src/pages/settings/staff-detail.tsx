@@ -42,6 +42,7 @@ const staffFormSchema = z.object({
   position: z.string().optional(),
   managerId: z.string().nullable().optional(),
   birthdate: z.string().optional(),
+  timeOffPolicyId: z.string().nullable().optional(),
 });
 
 type StaffFormData = z.infer<typeof staffFormSchema>;
@@ -66,6 +67,10 @@ export default function StaffDetail() {
 
   const { data: departments = [] } = useQuery<Department[]>({
     queryKey: ["/api/departments"]
+  });
+
+  const { data: timeOffPolicies = [] } = useQuery<any[]>({
+    queryKey: ["/api/hr/time-off-policies"]
   });
 
   const { data: notificationSettings } = useQuery<NotificationSettings>({
@@ -123,6 +128,7 @@ export default function StaffDetail() {
         hireDate: staffMember.hireDate ? new Date(staffMember.hireDate).toISOString().split('T')[0] : "",
         department: staffMember.department || "none",
         position: staffMember.position || "",
+        timeOffPolicyId: (staffMember as any).timeOffPolicyId || "none",
         managerId: staffMember.managerId || "none",
         birthdate: staffMember.birthdate ? new Date(staffMember.birthdate).toISOString().split('T')[0] : "",
       });
@@ -224,11 +230,12 @@ export default function StaffDetail() {
 
   const onSubmit = (data: StaffFormData) => {
     console.log("Form data before processing:", data);
-    // Convert "none" back to null for managerId and department
+    // Convert "none" back to null for managerId, department, and timeOffPolicyId
     const submitData = {
       ...data,
       managerId: data.managerId === "none" ? null : (data.managerId || null),
-      department: data.department === "none" ? null : (data.department || null)
+      department: data.department === "none" ? null : (data.department || null),
+      timeOffPolicyId: data.timeOffPolicyId === "none" ? null : (data.timeOffPolicyId || null)
     };
     console.log("Submit data after processing:", submitData);
     updateMutation.mutate(submitData as any);
@@ -591,6 +598,37 @@ export default function StaffDetail() {
                         <FormControl>
                           <Input {...field} type="date" disabled={!isEditing} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="timeOffPolicyId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabelWithTooltip tooltip="Assign a time off policy to determine available leave types and allocations">
+                          Time Off Policy
+                        </FormLabelWithTooltip>
+                        <Select
+                          value={field.value || undefined}
+                          onValueChange={field.onChange}
+                          disabled={!isEditing}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-time-off-policy">
+                              <SelectValue placeholder="Select policy" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">No Policy Assigned</SelectItem>
+                            {timeOffPolicies.map((policy) => (
+                              <SelectItem key={policy.id} value={policy.id}>
+                                {policy.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

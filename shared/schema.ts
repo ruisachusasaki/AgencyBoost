@@ -2124,7 +2124,10 @@ export const staff = pgTable("staff", {
   emergencyContactPhone: varchar("emergency_contact_phone", { length: 20 }),
   emergencyContactRelationship: varchar("emergency_contact_relationship", { length: 100 }),
   
-  // Time off entitlements (annual allocation)
+  // Time off policy assignment
+  timeOffPolicyId: varchar("time_off_policy_id").references(() => timeOffPolicies.id),
+  
+  // DEPRECATED: Time off entitlements (annual allocation) - Use timeOffPolicyId + timeOffTypes instead
   vacationDaysAnnually: integer("vacation_days_annually").default(15), // Default 15 vacation days per year
   sickDaysAnnually: integer("sick_days_annually").default(10), // Default 10 sick days per year
   personalDaysAnnually: integer("personal_days_annually").default(3), // Default 3 personal days per year
@@ -2138,6 +2141,8 @@ export const insertStaffSchema = createInsertSchema(staff).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  timeOffPolicyId: z.string().nullable().optional(),
 });
 
 export type Staff = typeof staff.$inferSelect;
