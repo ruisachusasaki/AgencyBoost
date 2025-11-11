@@ -822,14 +822,30 @@ export const timeOffPolicies = pgTable("time_off_policies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
-  vacationDaysDefault: integer("vacation_days_default").default(15),
-  sickDaysDefault: integer("sick_days_default").default(10),
-  personalDaysDefault: integer("personal_days_default").default(3),
-  carryOverAllowed: boolean("carry_over_allowed").default(false),
-  maxCarryOverDays: integer("max_carry_over_days").default(0),
+  vacationDaysDefault: integer("vacation_days_default").default(15), // DEPRECATED: Use timeOffTypes instead
+  sickDaysDefault: integer("sick_days_default").default(10), // DEPRECATED: Use timeOffTypes instead
+  personalDaysDefault: integer("personal_days_default").default(3), // DEPRECATED: Use timeOffTypes instead
+  carryOverAllowed: boolean("carry_over_allowed").default(false), // DEPRECATED: Use timeOffTypes instead
+  maxCarryOverDays: integer("max_carry_over_days").default(0), // DEPRECATED: Use timeOffTypes instead
   policyDocument: text("policy_document"), // Rich text content
   effectiveDate: date("effective_date").notNull(),
   isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// HR System - Time Off Types (flexible PTO categories per policy)
+export const timeOffTypes = pgTable("time_off_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  policyId: varchar("policy_id").notNull().references(() => timeOffPolicies.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(), // e.g., "Annual Vacation", "Sick Days", "Bereavement"
+  description: text("description"),
+  defaultDaysPerYear: integer("default_days_per_year").notNull().default(0),
+  allowCarryOver: boolean("allow_carry_over").default(false),
+  maxCarryOverDays: integer("max_carry_over_days").default(0),
+  color: varchar("color", { length: 50 }).default("bg-blue-100 text-blue-800"), // Badge color classes
+  isActive: boolean("is_active").default(true),
+  orderIndex: integer("order_index").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -838,7 +854,8 @@ export const timeOffPolicies = pgTable("time_off_policies", {
 export const timeOffRequests = pgTable("time_off_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
-  type: text("type").notNull(), // PTO, Sick Leave, Unpaid Time Off
+  timeOffTypeId: varchar("time_off_type_id").references(() => timeOffTypes.id), // NEW: FK to timeOffTypes (nullable for backward compat)
+  type: text("type").notNull(), // DEPRECATED: Keep for backward compatibility, use timeOffTypeId going forward
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
   totalDays: integer("total_days").notNull(),
@@ -4100,3 +4117,16 @@ export const insertOrgChartNodeAssignmentSchema = createInsertSchema(orgChartNod
 
 export type OrgChartNodeAssignment = typeof orgChartNodeAssignments.$inferSelect;
 export type InsertOrgChartNodeAssignment = z.infer<typeof insertOrgChartNodeAssignmentSchema>;
+
+// Time Off Types schemas
+export const insertTimeOffTypeSchema = createInsertSchema(timeOffTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  defaultDaysPerYear: z.coerce.number().min(0).max(365),
+  maxCarryOverDays: z.coerce.number().min(0).max(365),
+  orderIndex: z.coerce.number().min(0),
+});
+export type InsertTimeOffType = z.infer<typeof insertTimeOffTypeSchema>;
+export type SelectTimeOffType = typeof timeOffTypes.$inferSelect;
