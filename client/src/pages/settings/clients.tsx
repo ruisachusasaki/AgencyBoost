@@ -576,11 +576,8 @@ function TeamAssignmentsManagement() {
   // Create team position mutation
   const createPositionMutation = useMutation({
     mutationFn: async (data: TeamPositionForm) => {
-      const response = await apiRequest('/api/team-positions', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
-      return response;
+      const response = await apiRequest('POST', '/api/team-positions', data);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-positions'] });
@@ -591,10 +588,10 @@ function TeamAssignmentsManagement() {
       createForm.reset();
       setIsCreateDialogOpen(false);
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to create team position",
+        description: error?.message || "Failed to create team position",
         variant: "destructive"
       });
     }
@@ -603,11 +600,8 @@ function TeamAssignmentsManagement() {
   // Update team position mutation
   const updatePositionMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: TeamPositionForm }) => {
-      const response = await apiRequest(`/api/team-positions/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data)
-      });
-      return response;
+      const response = await apiRequest('PUT', `/api/team-positions/${id}`, data);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-positions'] });
@@ -618,10 +612,10 @@ function TeamAssignmentsManagement() {
       setEditingPosition(null);
       setIsEditDialogOpen(false);
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to update team position",
+        description: error?.message || "Failed to update team position",
         variant: "destructive"
       });
     }
@@ -630,10 +624,8 @@ function TeamAssignmentsManagement() {
   // Delete team position mutation
   const deletePositionMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiRequest(`/api/team-positions/${id}`, {
-        method: 'DELETE'
-      });
-      return response;
+      const response = await apiRequest('DELETE', `/api/team-positions/${id}`);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-positions'] });
@@ -642,10 +634,10 @@ function TeamAssignmentsManagement() {
         description: "Team position deleted successfully"
       });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to delete team position",
+        description: error?.message || "Failed to delete team position",
         variant: "destructive"
       });
     }
