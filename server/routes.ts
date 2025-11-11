@@ -19200,10 +19200,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/hr/time-off-policies/:policyId/types", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
       const types = await appStorage.getTimeOffTypes(req.params.policyId);
+      console.log(`[DEBUG] Fetching types for policy ${req.params.policyId}:`);
+      console.log(`[DEBUG] First type:`, types[0]);
       res.json(types);
     } catch (error) {
       console.error("Error fetching time off types:", error);
-      res.status(500).json({ message: "Failed to fetch time off types" });
+      res.status(500).json({ message: "Failed to fetch time off policy" });
     }
   });
 
