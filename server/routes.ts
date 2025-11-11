@@ -19197,6 +19197,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get ALL time off types across all policies (global view)
+  app.get("/api/hr/time-off-types", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+    try {
+      const types = await db
+        .select()
+        .from(timeOffTypes)
+        .orderBy(asc(timeOffTypes.orderIndex), asc(timeOffTypes.name));
+      res.json(types);
+    } catch (error) {
+      console.error("Error fetching all time off types:", error);
+      res.status(500).json({ message: "Failed to fetch time off types" });
+    }
+  });
+
   app.get("/api/hr/time-off-policies/:policyId/types", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
       const types = await appStorage.getTimeOffTypes(req.params.policyId);

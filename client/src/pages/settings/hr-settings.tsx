@@ -941,7 +941,7 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
 
   // Fetch time off types
   const { data: types = [], isLoading } = useQuery<any[]>({
-    queryKey: ["/api/hr/time-off-policies", policyId, "types"],
+    queryKey: [`/api/hr/time-off-policies/${policyId}/types`],
   });
 
   // Create mutation
@@ -954,7 +954,7 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-policies", policyId, "types"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/hr/time-off-policies/${policyId}/types`] });
       toast({
         title: "Success",
         description: "Time off type created successfully",
@@ -977,7 +977,7 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
       return await apiRequest("PATCH", `/api/hr/time-off-types/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-policies", policyId, "types"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/hr/time-off-policies/${policyId}/types`] });
       toast({
         title: "Success",
         description: "Time off type updated successfully",
@@ -1001,7 +1001,7 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
       return await apiRequest("DELETE", `/api/hr/time-off-types/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-policies", policyId, "types"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/hr/time-off-policies/${policyId}/types`] });
       toast({
         title: "Success",
         description: "Time off type deleted successfully",
@@ -1027,7 +1027,7 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
         description: "Failed to reorder time off types",
         variant: "destructive",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-policies", policyId, "types"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/hr/time-off-policies/${policyId}/types`] });
     },
   });
 
@@ -1382,7 +1382,7 @@ function TimeOffPolicyManager() {
 
   // Fetch time off types for the first policy
   const { data: types = [] } = useQuery<any[]>({
-    queryKey: ["/api/hr/time-off-policies", policies[0]?.id, "types"],
+    queryKey: [`/api/hr/time-off-policies/${policies[0]?.id}/types`],
     enabled: !!policies[0]?.id,
   });
 

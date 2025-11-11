@@ -982,78 +982,60 @@ async function initializeDefaultProgressionStatuses() {
 }
 
 /**
- * Initialize default time off types for existing policies
- * Creates Annual Vacation, Sick Days, and Personal Days types based on policy defaults
+ * Initialize default global time off types
+ * Creates Vacation Time, Sick Days, and Personal Days as company-wide categories
  */
 async function initializeDefaultTimeOffTypes() {
   try {
     log("Running startup migration: initializeDefaultTimeOffTypes");
     
-    // Get all existing time off policies
-    const policies = await db.select().from(timeOffPolicies);
+    // Check if global types already exist
+    const existingTypes = await db.select().from(timeOffTypes).limit(1);
     
-    if (policies.length === 0) {
-      log("No time off policies found - skipping time off types initialization");
+    if (existingTypes.length > 0) {
+      log("Time off types already exist - skipping initialization");
       return;
     }
     
-    let totalTypesCreated = 0;
+    // Create global default types
+    const defaultTypes = [
+      {
+        name: "Vacation Time",
+        description: "Paid time off for personal rest and relaxation",
+        defaultDaysPerYear: 15,
+        allowCarryOver: false,
+        maxCarryOverDays: 0,
+        color: "bg-primary/10 text-primary",
+        orderIndex: 0,
+        isActive: true,
+      },
+      {
+        name: "Sick Days",
+        description: "Paid time off for illness or medical appointments",
+        defaultDaysPerYear: 10,
+        allowCarryOver: false,
+        maxCarryOverDays: 0,
+        color: "bg-orange-100 text-orange-800",
+        orderIndex: 1,
+        isActive: true,
+      },
+      {
+        name: "Personal Days",
+        description: "Paid time off for personal matters",
+        defaultDaysPerYear: 3,
+        allowCarryOver: false,
+        maxCarryOverDays: 0,
+        color: "bg-purple-100 text-purple-800",
+        orderIndex: 2,
+        isActive: true,
+      },
+    ];
     
-    for (const policy of policies) {
-      // Check if this policy already has types
-      const existingTypes = await db
-        .select()
-        .from(timeOffTypes)
-        .where(eq(timeOffTypes.policyId, policy.id))
-        .limit(1);
-      
-      if (existingTypes.length > 0) {
-        log(`Policy "${policy.name}" already has time off types - skipping`);
-        continue;
-      }
-      
-      // Create default types based on policy's legacy fields
-      // Always create baseline types even if defaultDays is 0
-      const defaultTypes = [
-        {
-          policyId: policy.id,
-          name: "Annual Vacation",
-          defaultDays: policy.vacationDaysDefault ?? 0,
-          carryOverAllowed: policy.carryOverAllowed || false,
-          maxCarryOverDays: policy.carryOverAllowed ? (policy.maxCarryOverDays || 0) : 0,
-          color: "#00C9C6", // Primary teal
-          orderIndex: 0,
-          isActive: true,
-        },
-        {
-          policyId: policy.id,
-          name: "Sick Days",
-          defaultDays: policy.sickDaysDefault ?? 0,
-          carryOverAllowed: false,
-          maxCarryOverDays: 0,
-          color: "#F97316", // Orange
-          orderIndex: 1,
-          isActive: true,
-        },
-        {
-          policyId: policy.id,
-          name: "Personal Days",
-          defaultDays: policy.personalDaysDefault ?? 0,
-          carryOverAllowed: false,
-          maxCarryOverDays: 0,
-          color: "#10B981", // Green
-          orderIndex: 2,
-          isActive: true,
-        }
-      ];
-      
-      await db.insert(timeOffTypes).values(defaultTypes);
-      totalTypesCreated += defaultTypes.length;
-      log(`Created ${defaultTypes.length} default time off types for policy "${policy.name}"`);
-
+    for (const typeData of defaultTypes) {
+      await db.insert(timeOffTypes).values(typeData);
     }
     
-    log(`Time off types initialization completed - created ${totalTypesCreated} types across ${policies.length} policies`);
+    log(`Time off types initialization completed - created ${defaultTypes.length} global types`);
   } catch (error: any) {
     log(`Time off types initialization error: ${error.message}`);
     log("WARNING: Time off types initialization failed - types may not be available");

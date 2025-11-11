@@ -817,17 +817,17 @@ export const imageAnnotations = pgTable("image_annotations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// HR System - Time Off Policies (company-wide settings)
+// HR System - Time Off Policies (DEPRECATED - kept for backward compatibility, use timeOffTypes instead)
 export const timeOffPolicies = pgTable("time_off_policies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
-  vacationDaysDefault: integer("vacation_days_default").default(15), // DEPRECATED: Use timeOffTypes instead
-  sickDaysDefault: integer("sick_days_default").default(10), // DEPRECATED: Use timeOffTypes instead
-  personalDaysDefault: integer("personal_days_default").default(3), // DEPRECATED: Use timeOffTypes instead
-  carryOverAllowed: boolean("carry_over_allowed").default(false), // DEPRECATED: Use timeOffTypes instead
-  maxCarryOverDays: integer("max_carry_over_days").default(0), // DEPRECATED: Use timeOffTypes instead
-  policyDocument: text("policy_document"), // Rich text content
+  vacationDaysDefault: integer("vacation_days_default").default(15),
+  sickDaysDefault: integer("sick_days_default").default(10),
+  personalDaysDefault: integer("personal_days_default").default(3),
+  carryOverAllowed: boolean("carry_over_allowed").default(false),
+  maxCarryOverDays: integer("max_carry_over_days").default(0),
+  policyDocument: text("policy_document"),
   effectiveDate: date("effective_date").notNull(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
