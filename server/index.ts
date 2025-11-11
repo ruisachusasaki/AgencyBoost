@@ -4,7 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./replitAuth";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses } from "@shared/schema";
+import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses, timeOffPolicies, timeOffTypes } from "@shared/schema";
 
 /**
  * Startup migration to ensure client brief columns exist
