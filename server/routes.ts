@@ -19127,6 +19127,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Time Off Types routes
+  app.get("/api/hr/time-off-policies/:policyId/types", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+    try {
+      const types = await storage.getTimeOffTypes(req.params.policyId);
+      res.json(types);
+    } catch (error) {
+      console.error("Error fetching time off types:", error);
+      res.status(500).json({ message: "Failed to fetch time off types" });
+    }
+  });
+
+  app.post("/api/hr/time-off-policies/:policyId/types", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
+    try {
+      const { policyId } = req.params;
+      const newType = await storage.createTimeOffType({
+        ...req.body,
+        policyId,
+      });
+      res.status(201).json(newType);
+    } catch (error) {
+      console.error("Error creating time off type:", error);
+      res.status(500).json({ message: "Failed to create time off type" });
+    }
+  });
+
+  app.patch("/api/hr/time-off-types/:id", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
+    try {
+      const updated = await storage.updateTimeOffType(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Time off type not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating time off type:", error);
+      res.status(500).json({ message: "Failed to update time off type" });
+    }
+  });
+
+  app.delete("/api/hr/time-off-types/:id", requireAuth(), requirePermission('hr', 'canDelete'), async (req, res) => {
+    try {
+      const success = await storage.deleteTimeOffType(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Time off type not found" });
+      }
+      res.json({ message: "Time off type deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting time off type:", error);
+      res.status(500).json({ message: "Failed to delete time off type" });
+    }
+  });
+
+  app.patch("/api/hr/time-off-types/reorder", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
+    try {
+      const { updates } = req.body;
+      await storage.reorderTimeOffTypes(updates);
+      res.json({ message: "Time off types reordered successfully" });
+    } catch (error) {
+      console.error("Error reordering time off types:", error);
+      res.status(500).json({ message: "Failed to reorder time off types" });
+    }
+  });
+
   // Delete time off request (ADMINS ONLY)
   app.delete("/api/hr/time-off-requests/:requestId", requireAuth(), requireAdmin(), async (req, res) => {
     try {
