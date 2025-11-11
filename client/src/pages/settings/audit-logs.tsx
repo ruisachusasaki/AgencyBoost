@@ -19,6 +19,9 @@ export default function AuditLogs() {
   const [filterAction, setFilterAction] = useState("all");
   const [filterEntity, setFilterEntity] = useState("all");
   const [filterUser, setFilterUser] = useState("all");
+  const [filterTimeFrame, setFilterTimeFrame] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   
   // Fetch audit logs and staff data from API
   const { data: auditLogs = [], isLoading } = useQuery<AuditLogDisplay[]>({
@@ -102,6 +105,25 @@ export default function AuditLogs() {
   const entityTypes = Array.from(new Set(displayLogs.map(log => log.entityType))).sort();
   const users = Object.values(userLookup);
   
+  // Calculate date range based on time frame filter
+  const getDateRangeFilter = () => {
+    if (filterTimeFrame === "all") return null;
+    
+    const now = new Date();
+    const days = {
+      "7days": 7,
+      "30days": 30,
+      "90days": 90,
+      "180days": 180,
+      "365days": 365,
+    }[filterTimeFrame];
+    
+    if (!days) return null;
+    
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    return startDate;
+  };
+
   const filteredLogs = displayLogs.filter(log => {
     const matchesSearch = 
       log.entityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -112,8 +134,26 @@ export default function AuditLogs() {
     const matchesEntity = filterEntity === "all" || log.entityType === filterEntity; 
     const matchesUser = filterUser === "all" || log.userName === filterUser;
     
-    return matchesSearch && matchesAction && matchesEntity && matchesUser;
+    // Time frame filter
+    const dateRangeFilter = getDateRangeFilter();
+    const matchesTimeFrame = !dateRangeFilter || new Date(log.timestamp) >= dateRangeFilter;
+    
+    return matchesSearch && matchesAction && matchesEntity && matchesUser && matchesTimeFrame;
   });
+
+  // Apply pagination
+  const totalLogs = filteredLogs.length;
+  const totalPages = Math.ceil(totalLogs / pageSize);
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedLogs = filteredLogs.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  const resetPage = () => {
+    if (page > totalPages && totalPages > 0) {
+      setPage(1);
+    }
+  };
 
   const getActionBadgeColor = (action: string) => {
     switch (action) {
@@ -194,7 +234,7 @@ export default function AuditLogs() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-5 gap-4">
               <div>
                 <Label htmlFor="search">Search</Label>
                 <div className="relative">
@@ -202,17 +242,44 @@ export default function AuditLogs() {
                   <Input
                     id="search"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setPage(1);
+                    }}
                     placeholder="Search logs..."
                     className="pl-10"
+                    data-testid="input-search-logs"
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="timeframe">Time Frame</Label>
+                <Select value={filterTimeFrame} onValueChange={(value) => {
+                  setFilterTimeFrame(value);
+                  setPage(1);
+                }}>
+                  <SelectTrigger data-testid="select-timeframe">
+                    <SelectValue placeholder="All Time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="7days">Last 7 Days</SelectItem>
+                    <SelectItem value="30days">Last 30 Days</SelectItem>
+                    <SelectItem value="90days">Last 90 Days</SelectItem>
+                    <SelectItem value="180days">Last 180 Days</SelectItem>
+                    <SelectItem value="365days">Last Year</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div>
                 <Label htmlFor="action">Action</Label>
-                <Select value={filterAction} onValueChange={setFilterAction}>
-                  <SelectTrigger>
+                <Select value={filterAction} onValueChange={(value) => {
+                  setFilterAction(value);
+                  setPage(1);
+                }}>
+                  <SelectTrigger data-testid="select-action">
                     <SelectValue placeholder="All Actions" />
                   </SelectTrigger>
                   <SelectContent>
@@ -228,8 +295,11 @@ export default function AuditLogs() {
               
               <div>
                 <Label htmlFor="entity">Entity Type</Label>
-                <Select value={filterEntity} onValueChange={setFilterEntity}>
-                  <SelectTrigger>
+                <Select value={filterEntity} onValueChange={(value) => {
+                  setFilterEntity(value);
+                  setPage(1);
+                }}>
+                  <SelectTrigger data-testid="select-entity">
                     <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent>
@@ -245,8 +315,11 @@ export default function AuditLogs() {
               
               <div>
                 <Label htmlFor="user">User</Label>
-                <Select value={filterUser} onValueChange={setFilterUser}>
-                  <SelectTrigger>
+                <Select value={filterUser} onValueChange={(value) => {
+                  setFilterUser(value);
+                  setPage(1);
+                }}>
+                  <SelectTrigger data-testid="select-user">
                     <SelectValue placeholder="All Users" />
                   </SelectTrigger>
                   <SelectContent>
@@ -336,7 +409,7 @@ export default function AuditLogs() {
 
         {/* Audit Log Entries */}
         <div className="space-y-3">
-          {filteredLogs.map((log) => (
+          {paginatedLogs.map((log) => (
             <Card key={log.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
@@ -374,12 +447,86 @@ export default function AuditLogs() {
           ))}
         </div>
 
-        {filteredLogs.length === 0 && (
+        {paginatedLogs.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
               <ScrollText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No audit logs found</h3>
               <p className="text-gray-500">Try adjusting your search criteria or filters.</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Pagination Controls */}
+        {totalLogs > 0 && (
+          <Card className="mt-6">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Rows per page:</span>
+                  <Select
+                    value={pageSize.toString()}
+                    onValueChange={(value) => {
+                      setPageSize(Number(value));
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[80px]" data-testid="select-page-size">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="250">250</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-muted-foreground">
+                    {startIndex + 1}-{Math.min(endIndex, totalLogs)} of {totalLogs}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(1)}
+                    disabled={page === 1}
+                    data-testid="button-first-page"
+                  >
+                    First
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(Math.max(1, page - 1))}
+                    disabled={page === 1}
+                    data-testid="button-prev-page"
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground px-2">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    disabled={page >= totalPages}
+                    data-testid="button-next-page"
+                  >
+                    Next
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(totalPages)}
+                    disabled={page >= totalPages}
+                    data-testid="button-last-page"
+                  >
+                    Last
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
