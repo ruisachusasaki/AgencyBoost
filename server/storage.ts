@@ -407,6 +407,7 @@ export interface IStorage {
   createTeamPosition(position: InsertTeamPosition): Promise<TeamPosition>;
   updateTeamPosition(id: string, position: Partial<InsertTeamPosition>): Promise<TeamPosition | undefined>;
   deleteTeamPosition(id: string): Promise<boolean>;
+  reorderTeamPositions(positions: Array<{ id: string; order: number }>): Promise<boolean>;
   
   // Client Team Assignments
   getClientTeamAssignments(clientId: string): Promise<(ClientTeamAssignment & { position: TeamPosition; staffMember: Staff })[]>;
@@ -5942,6 +5943,26 @@ export class DbStorage implements IStorage {
   async deleteTeamPosition(id: string): Promise<boolean> {
     const result = await db.delete(teamPositions).where(eq(teamPositions.id, id)).returning();
     return result.length > 0;
+  }
+
+  async reorderTeamPositions(positions: Array<{ id: string; order: number }>): Promise<boolean> {
+    try {
+      // Update all positions in a transaction
+      await db.transaction(async (tx) => {
+        for (const position of positions) {
+          await tx.update(teamPositions)
+            .set({ 
+              order: position.order,
+              updatedAt: new Date()
+            })
+            .where(eq(teamPositions.id, position.id));
+        }
+      });
+      return true;
+    } catch (error) {
+      console.error('Error reordering team positions:', error);
+      return false;
+    }
   }
   
   // Client Team Assignments

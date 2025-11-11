@@ -538,6 +538,7 @@ function TeamAssignmentsManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingPosition, setEditingPosition] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Team position creation/edit form schema
   const teamPositionSchema = z.object({
@@ -643,6 +644,31 @@ function TeamAssignmentsManagement() {
     }
   });
 
+  // Reorder positions mutation
+  const reorderMutation = useMutation({
+    mutationFn: async (positions: Array<{ id: string; order: number }>) => {
+      const response = await apiRequest('PATCH', '/api/team-positions/reorder', { positions });
+      return response.json();
+    },
+    onError: (error: any) => {
+      // Rollback on error
+      queryClient.invalidateQueries({ queryKey: ['/api/team-positions'] });
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to reorder positions",
+        variant: "destructive"
+      });
+      setIsSaving(false);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Positions reordered successfully"
+      });
+      setIsSaving(false);
+    }
+  });
+
   const onCreateSubmit = (data: TeamPositionForm) => {
     createPositionMutation.mutate(data);
   };
@@ -671,6 +697,32 @@ function TeamAssignmentsManagement() {
     }
   };
 
+  const handleDragEnd = (result: any) => {
+    if (!result.destination || !positions) return;
+    
+    // Don't do anything if dropped in the same position
+    if (result.source.index === result.destination.index) return;
+    
+    const items = Array.from(positions);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    // Resequence all positions with new order values
+    const updatedPositions = items.map((item: any, index) => ({
+      id: item.id,
+      order: index
+    }));
+    
+    // Optimistically update the cache
+    queryClient.setQueryData(['/api/team-positions'], items.map((item: any, index) => ({
+      ...item,
+      order: index
+    })));
+    
+    setIsSaving(true);
+    reorderMutation.mutate(updatedPositions);
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -697,61 +749,98 @@ function TeamAssignmentsManagement() {
           {positionsLoading ? (
             <div className="text-center py-8 text-gray-500">Loading positions...</div>
           ) : positions && positions.length > 0 ? (
-            <div className="space-y-4">
-              {positions.map((position: any) => (
-                <div
-                  key={position.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-                  data-testid={`position-item-${position.key}`}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <h4 className="font-medium" data-testid="text-position-label">
-                          {position.label}
-                        </h4>
-                        <p className="text-sm text-gray-500" data-testid="text-position-key">
-                          Key: {position.key}
-                        </p>
-                        {position.description && (
-                          <p className="text-sm text-gray-600 mt-1" data-testid="text-position-description">
-                            {position.description}
-                          </p>
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="positions-list">
+                {(provided) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-4"
+                  >
+                    {positions.map((position: any, index: number) => (
+                      <Draggable
+                        key={position.id}
+                        draggableId={position.id}
+                        index={index}
+                        isDragDisabled={isSaving || positionsLoading}
+                      >
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={`flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white transition-shadow ${
+                              snapshot.isDragging ? 'shadow-lg' : ''
+                            }`}
+                            data-testid={`position-item-${position.key}`}
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              <div
+                                {...provided.dragHandleProps}
+                                className="cursor-grab active:cursor-grabbing"
+                                data-testid={`drag-handle-${position.key}`}
+                              >
+                                <GripVertical className="h-5 w-5 text-gray-400" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3">
+                                  <div>
+                                    <h4 className="font-medium" data-testid="text-position-label">
+                                      {position.label}
+                                    </h4>
+                                    <p className="text-sm text-gray-500" data-testid="text-position-key">
+                                      Key: {position.key}
+                                    </p>
+                                    {position.description && (
+                                      <p className="text-sm text-gray-600 mt-1" data-testid="text-position-description">
+                                        {position.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="ml-auto flex items-center gap-2">
+                                    <Badge variant={position.isActive ? "default" : "secondary"}>
+                                      {position.isActive ? "Active" : "Inactive"}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 ml-4">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEdit(position)}
+                                disabled={isSaving}
+                                data-testid={`button-edit-${position.key}`}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDelete(position.id)}
+                                disabled={deletePositionMutation.isPending || isSaving}
+                                data-testid={`button-delete-${position.key}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
                         )}
-                      </div>
-                      <div className="ml-auto flex items-center gap-2">
-                        <Badge variant={position.isActive ? "default" : "secondary"}>
-                          {position.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                        <span className="text-xs text-gray-400">Order: {position.order || 0}</span>
-                      </div>
-                    </div>
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEdit(position)}
-                      data-testid={`button-edit-${position.key}`}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDelete(position.id)}
-                      disabled={deletePositionMutation.isPending}
-                      data-testid={`button-delete-${position.key}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                )}
+              </Droppable>
+            </DragDropContext>
           ) : (
             <div className="text-center py-8 text-gray-500">
               No team positions configured yet. Click "Add Position" to create your first position.
+            </div>
+          )}
+          {isSaving && (
+            <div className="text-center py-2 text-sm text-gray-500">
+              Saving new order...
             </div>
           )}
         </CardContent>

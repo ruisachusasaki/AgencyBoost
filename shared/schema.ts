@@ -3106,6 +3106,16 @@ export const insertTeamPositionSchema = createInsertSchema(teamPositions).omit({
 export type TeamPosition = typeof teamPositions.$inferSelect;
 export type InsertTeamPosition = z.infer<typeof insertTeamPositionSchema>;
 
+// Reorder team positions schema
+export const reorderTeamPositionsSchema = z.object({
+  positions: z.array(z.object({
+    id: z.string(),
+    order: z.number().int().min(0)
+  })).min(1)
+});
+
+export type ReorderTeamPositions = z.infer<typeof reorderTeamPositionsSchema>;
+
 // Client Team Assignments schema exports
 export const insertClientTeamAssignmentSchema = createInsertSchema(clientTeamAssignments).omit({
   id: true,

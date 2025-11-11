@@ -31,7 +31,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Task Management**: Hierarchical sub-tasks with scheduling, dependencies, recurring tasks, bulk actions, and dynamic project progress.
 - **Communication**: Smart Lists, Email/SMS, document management, notes, calendar management with dynamic merge tags, and unified templating. Lead appointment merge tags support server-side interpolation.
 - **Automation System**: GoHighLevel-style, API-driven, database-backed workflow engine with 25+ trigger definitions and 7 action types, featuring conditional evaluation and variable interpolation.
-- **Client Management**: Client team assignment, health scoring, asset approval workflow with annotation, customizable column views, and a Billing Information section. Includes comprehensive bulk actions (Delete, Assignee, Export, Add Tag, Remove Tag, Add to Workflow) with partial failure handling.
+- **Client Management**: Client team assignment with drag-and-drop reordering in Settings, health scoring, asset approval workflow with annotation, customizable column views, and a Billing Information section. Includes comprehensive bulk actions (Delete, Assignee, Export, Add Tag, Remove Tag, Add to Workflow) with partial failure handling.
 - **HR Features**: Time off requests, job application form configuration, job application watchers, expense reports, and a 1-on-1 meeting tracker.
   - **1-on-1 Performance Reports**: Aggregated metrics, filtering, search, sorting, and role-based access control.
   - **Organization Chart**: Interactive ReactFlow-based visualization with Dagre layout, department color-coding, search, and navigation controls. Includes a position-only structure builder with drag-and-drop functionality and position templates.

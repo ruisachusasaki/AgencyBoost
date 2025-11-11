@@ -11,7 +11,7 @@ import {
   insertSocialMediaAnalyticsSchema, insertWorkflowSchema, insertEnhancedTaskSchema,
   insertTaskCategorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema,
   insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema,
-  insertStaffSchema, insertDepartmentSchema, insertPositionSchema, insertPositionKpiSchema, insertTeamPositionSchema, insertClientTeamAssignmentSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
+  insertStaffSchema, insertDepartmentSchema, insertPositionSchema, insertPositionKpiSchema, insertTeamPositionSchema, reorderTeamPositionsSchema, insertClientTeamAssignmentSchema, insertCustomFieldSchema, insertCustomFieldFolderSchema,
   insertOrgChartStructureSchema, insertOrgChartNodeSchema, insertOrgChartNodeAssignmentSchema,
   insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema,
   insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertTimeOffBalanceSchema,
@@ -9729,6 +9729,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting team position:', error);
       res.status(500).json({ message: "Failed to delete team position" });
+    }
+  });
+
+  app.patch("/api/team-positions/reorder", requireAuth(), requirePermission('settings', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { positions } = reorderTeamPositionsSchema.parse(req.body);
+      
+      const success = await appStorage.reorderTeamPositions(positions);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Failed to reorder team positions" });
+      }
+
+      await createAuditLog(
+        "updated",
+        "team_position",
+        "multiple",
+        "Team Positions",
+        userId,
+        `Reordered ${positions.length} team positions`,
+        null,
+        { positions },
+        req
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error reordering team positions:', error);
+      
+      // Return 400 for validation errors, 500 for server errors
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request data",
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to reorder team positions" });
     }
   });
 
