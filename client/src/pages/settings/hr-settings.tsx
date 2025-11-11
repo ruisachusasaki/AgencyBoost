@@ -1085,12 +1085,16 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
   };
 
   const handleDeleteType = (type: any) => {
+    console.log("Deleting type:", type);
+    console.log("Type ID:", type.id);
+    console.log("Policy ID:", policyId);
     setTypeToDelete({ id: type.id, name: type.name });
     setDeleteDialogOpen(true);
   };
 
   const confirmDelete = () => {
     if (typeToDelete) {
+      console.log("Confirming delete for ID:", typeToDelete.id);
       deleteMutation.mutate(typeToDelete.id);
       setDeleteDialogOpen(false);
       setTypeToDelete(null);
