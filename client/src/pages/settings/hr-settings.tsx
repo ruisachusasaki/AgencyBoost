@@ -483,7 +483,7 @@ interface TimeOffCategory {
 }
 
 export default function HRSettingsPage() {
-  const [activeTab, setActiveTab] = useState("categories");
+  const [activeTab, setActiveTab] = useState("time-off-types");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<TimeOffCategory | null>(null);
   const [visibleTabsCount, setVisibleTabsCount] = useState(7);
@@ -636,8 +636,7 @@ export default function HRSettingsPage() {
           <nav className="-mb-px flex space-x-2">
             {(() => {
               const allTabs = [
-                { id: "categories", name: "Time Off Categories", icon: CalendarDays },
-                { id: "policies", name: "Policies", icon: Clock },
+                { id: "time-off-types", name: "Time Off Types", icon: CalendarDays },
                 { id: "job-application-form", name: "Job Application Form", icon: Briefcase },
                 { id: "new-hire-onboarding-form", name: "New Hire Onboarding Form", icon: Users },
                 { id: "expense-report-form", name: "Expense Report Form", icon: Settings },
@@ -710,84 +709,9 @@ export default function HRSettingsPage() {
           </nav>
         </div>
 
-        {/* Time Off Categories Tab */}
-        <TabsContent value="categories" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-medium">Time Off Categories</h3>
-              <p className="text-muted-foreground">
-                Manage the types of time off employees can request.
-              </p>
-            </div>
-            <Button onClick={() => handleOpenDialog()} data-testid="button-add-category">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Category
-            </Button>
-          </div>
-
-          <Card>
-            <CardContent>
-              {categories.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No time off categories configured. Add one to get started.
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Default Hours</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {categories.map((category) => (
-                      <TableRow key={category.id}>
-                        <TableCell className="font-medium">{category.name}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {category.description || "—"}
-                        </TableCell>
-                        <TableCell>{category.defaultHours} hours</TableCell>
-                        <TableCell>
-                          <Badge variant={category.isActive ? "default" : "secondary"}>
-                            {category.isActive ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenDialog(category)}
-                              data-testid={`button-edit-${category.id}`}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteCategory(category.id)}
-                              data-testid={`button-delete-${category.id}`}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Policies Tab */}
-        <TabsContent value="policies" className="space-y-6">
-          <TimeOffPolicyManager />
+        {/* Time Off Types Tab - Simple global view of all types */}
+        <TabsContent value="time-off-types" className="space-y-6">
+          <GlobalTimeOffTypesManager />
         </TabsContent>
 
         {/* Job Application Form Tab */}
@@ -915,6 +839,403 @@ export default function HRSettingsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Global Time Off Types Manager - Shows all types from all policies
+function GlobalTimeOffTypesManager() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingType, setEditingType] = useState<any | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [typeToDelete, setTypeToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  // Fetch all policies to get a default policy for creating types
+  const { data: policies = [] } = useQuery<any[]>({
+    queryKey: ["/api/hr/time-off-policies"],
+  });
+
+  // Fetch ALL time off types globally
+  const { data: types = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/hr/time-off-types"],
+  });
+
+  // Schema for time off type
+  const timeOffTypeSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    defaultDaysPerYear: z.coerce.number().min(0, "Default days must be 0 or greater"),
+    allowCarryOver: z.boolean().default(false),
+    maxCarryOverDays: z.coerce.number().min(0, "Max carry over days must be 0 or greater").default(0),
+    color: z.string().min(1, "Color is required"),
+    isActive: z.boolean().default(true),
+  });
+
+  type TimeOffTypeFormData = z.infer<typeof timeOffTypeSchema>;
+
+  // Create mutation - uses first available policy as default
+  const createMutation = useMutation({
+    mutationFn: async (data: TimeOffTypeFormData) => {
+      if (!policies[0]?.id) {
+        throw new Error("No policy available. Please create a policy first.");
+      }
+      const orderIndex = types.length;
+      return await apiRequest("POST", `/api/hr/time-off-policies/${policies[0].id}/types`, {
+        ...data,
+        orderIndex,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-types"] });
+      toast({
+        title: "Success",
+        description: "Time off type created successfully",
+      });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create time off type",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<TimeOffTypeFormData> }) => {
+      return await apiRequest("PATCH", `/api/hr/time-off-types/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-types"] });
+      toast({
+        title: "Success",
+        description: "Time off type updated successfully",
+      });
+      setIsDialogOpen(false);
+      setEditingType(null);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update time off type",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/hr/time-off-types/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-types"] });
+      toast({
+        title: "Success",
+        description: "Time off type deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete time off type",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const form = useForm<TimeOffTypeFormData>({
+    resolver: zodResolver(timeOffTypeSchema),
+    defaultValues: {
+      name: "",
+      defaultDaysPerYear: 0,
+      allowCarryOver: false,
+      maxCarryOverDays: 0,
+      color: "#00C9C6",
+      isActive: true,
+    },
+  });
+
+  const allowCarryOver = form.watch("allowCarryOver");
+
+  const handleOpenDialog = (type?: any) => {
+    if (type) {
+      setEditingType(type);
+      form.reset({
+        name: type.name,
+        defaultDaysPerYear: type.defaultDaysPerYear,
+        allowCarryOver: type.allowCarryOver,
+        maxCarryOverDays: type.maxCarryOverDays,
+        color: type.color,
+        isActive: type.isActive,
+      });
+    } else {
+      setEditingType(null);
+      form.reset({
+        name: "",
+        defaultDaysPerYear: 0,
+        allowCarryOver: false,
+        maxCarryOverDays: 0,
+        color: "#00C9C6",
+        isActive: true,
+      });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleDeleteType = (type: any) => {
+    setTypeToDelete({ id: type.id, name: type.name });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (typeToDelete) {
+      deleteMutation.mutate(typeToDelete.id);
+      setDeleteDialogOpen(false);
+      setTypeToDelete(null);
+    }
+  };
+
+  const onSubmit = (data: TimeOffTypeFormData) => {
+    if (editingType) {
+      updateMutation.mutate({ id: editingType.id, data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="text-center py-4">Loading time off types...</div>;
+  }
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Time Off Types</CardTitle>
+              <CardDescription>
+                Manage all time off categories for your company
+              </CardDescription>
+            </div>
+            <Button onClick={() => handleOpenDialog()} data-testid="button-add-type">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Type
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {types.length === 0 ? (
+            <div className="text-center py-8 border-2 border-dashed rounded-lg">
+              <p className="text-muted-foreground mb-2">No time off types configured</p>
+              <p className="text-sm text-muted-foreground">
+                Add custom time off categories like Vacation Time, Sick Days, Personal Days, etc.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {types.map((type) => (
+                <div
+                  key={type.id}
+                  className="flex items-center gap-3 p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors"
+                  data-testid={`type-item-${type.id}`}
+                >
+                  <div
+                    className="w-4 h-4 rounded-full"
+                    style={{ backgroundColor: type.color }}
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">{type.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {type.defaultDaysPerYear} days/year
+                      {type.allowCarryOver && ` • Carry over up to ${type.maxCarryOverDays} days`}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenDialog(type)}
+                      data-testid={`button-edit-type-${type.id}`}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteType(type)}
+                      data-testid={`button-delete-type-${type.id}`}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingType ? "Edit Time Off Type" : "Add Time Off Type"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingType
+                ? "Update the time off type details."
+                : "Create a new time off category."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., Vacation Time, Sick Days, Service Days"
+                        data-testid="input-type-name"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="defaultDaysPerYear"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default Days Per Year</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="15"
+                        data-testid="input-type-default-days"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Color</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="color"
+                        data-testid="input-type-color"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="allowCarryOver"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Allow Carry Over</FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        Unused days can carry over to next year
+                      </div>
+                    </div>
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        data-testid="checkbox-allow-carry-over"
+                        className="h-4 w-4"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {allowCarryOver && (
+                <FormField
+                  control={form.control}
+                  name="maxCarryOverDays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Max Carry Over Days</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="5"
+                          data-testid="input-max-carry-over"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                  data-testid="button-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" data-testid="button-save">
+                  {editingType ? "Update" : "Create"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Time Off Type</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{typeToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
