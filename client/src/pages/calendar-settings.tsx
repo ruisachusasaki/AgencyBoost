@@ -382,18 +382,25 @@ export default function CalendarSettings() {
                   <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <Label className="text-sm font-medium">Public Booking URL:</Label>
                     <Input 
-                      value={calendar.publicUrl} 
+                      value={calendar.publicUrl || ''} 
                       readOnly 
                       className="flex-1 bg-white dark:bg-gray-700"
+                      data-testid={`input-public-url-${calendar.id}`}
                     />
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => copyPublicUrl(calendar.publicUrl)}
+                      data-testid={`button-copy-url-${calendar.id}`}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(calendar.publicUrl, '_blank')}
+                      data-testid={`button-open-url-${calendar.id}`}
+                    >
                       <ExternalLink className="h-4 w-4" />
                     </Button>
                   </div>

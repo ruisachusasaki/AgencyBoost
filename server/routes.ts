@@ -14788,7 +14788,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(calendars)
         .orderBy(asc(calendars.name));
 
-      res.json(calendarsData);
+      // Construct public booking URLs from customUrl
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const calendarsWithPublicUrl = calendarsData.map(calendar => ({
+        ...calendar,
+        publicUrl: `${baseUrl}/book/${calendar.customUrl}`
+      }));
+
+      res.json(calendarsWithPublicUrl);
     } catch (error) {
       console.error('Error fetching calendars:', error);
       res.status(500).json({ message: "Failed to fetch calendars" });
@@ -14860,9 +14867,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eq(calendarStaff.isActive, true)
         ));
 
+      // Construct public booking URL
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
       const calendarWithStaff = {
         ...calendar,
-        assignedStaff: assignedStaffRecord?.staffId || null
+        assignedStaff: assignedStaffRecord?.staffId || null,
+        publicUrl: `${baseUrl}/book/${calendar.customUrl}`
       };
 
       res.json(calendarWithStaff);
