@@ -1127,7 +1127,7 @@ function TeamAssignmentsManagement() {
 }
 
 export default function ClientsSettings() {
-  const [activeTab, setActiveTab] = useState<"overview" | "clientBrief" | "portalAccess" | "teamAssignments">("overview");
+  const [activeTab, setActiveTab] = useState<"clientBrief" | "portalAccess" | "teamAssignments">("clientBrief");
   const [editingSection, setEditingSection] = useState<ClientBriefSection | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -1367,18 +1367,6 @@ export default function ClientsSettings() {
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
             <button
-              onClick={() => setActiveTab("overview")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                activeTab === "overview"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-              data-testid="tab-overview"
-            >
-              <Settings className="h-4 w-4" />
-              Overview
-            </button>
-            <button
               onClick={() => setActiveTab("clientBrief")}
               className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
                 activeTab === "clientBrief"
@@ -1416,42 +1404,6 @@ export default function ClientsSettings() {
             </button>
           </nav>
         </div>
-
-        {/* Overview Tab */}
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Client Settings Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 border border-gray-200 rounded-lg">
-                      <h3 className="font-medium mb-2">Coming Soon</h3>
-                      <p className="text-sm text-gray-600">
-                        Additional client management settings and configuration options will be added here.
-                      </p>
-                      <Badge variant="secondary" className="mt-2">
-                        In Development
-                      </Badge>
-                    </div>
-                    
-                    <div className="p-4 border border-gray-200 rounded-lg">
-                      <h3 className="font-medium mb-2">Sub-tabs Ready</h3>
-                      <p className="text-sm text-gray-600">
-                        This section is prepared for additional sub-tabs and functionality as requested.
-                      </p>
-                      <Badge variant="outline" className="mt-2">
-                        Ready for Configuration
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
 
         {/* Client Brief Tab */}
         {activeTab === "clientBrief" && (
