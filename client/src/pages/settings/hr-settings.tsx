@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -923,6 +924,8 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<any | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [typeToDelete, setTypeToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Schema for time off type
   const timeOffTypeSchema = z.object({
@@ -1081,9 +1084,16 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
     }
   };
 
-  const handleDeleteType = (id: string) => {
-    if (confirm("Are you sure you want to delete this time off type?")) {
-      deleteMutation.mutate(id);
+  const handleDeleteType = (type: any) => {
+    setTypeToDelete({ id: type.id, name: type.name });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (typeToDelete) {
+      deleteMutation.mutate(typeToDelete.id);
+      setDeleteDialogOpen(false);
+      setTypeToDelete(null);
     }
   };
 
@@ -1171,7 +1181,7 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDeleteType(type.id)}
+                              onClick={() => handleDeleteType(type)}
                               data-testid={`button-delete-type-${type.id}`}
                               className="text-destructive hover:text-destructive"
                             >
@@ -1330,6 +1340,27 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Time Off Type</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{typeToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              data-testid="button-confirm-delete"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
