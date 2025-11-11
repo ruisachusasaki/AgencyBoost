@@ -927,8 +927,8 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
   // Schema for time off type
   const timeOffTypeSchema = z.object({
     name: z.string().min(1, "Name is required"),
-    defaultDays: z.coerce.number().min(0, "Default days must be 0 or greater"),
-    carryOverAllowed: z.boolean().default(false),
+    defaultDaysPerYear: z.coerce.number().min(0, "Default days must be 0 or greater"),
+    allowCarryOver: z.boolean().default(false),
     maxCarryOverDays: z.coerce.number().min(0, "Max carry over days must be 0 or greater").default(0),
     color: z.string().min(1, "Color is required"),
     isActive: z.boolean().default(true),
@@ -1032,23 +1032,23 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
     resolver: zodResolver(timeOffTypeSchema),
     defaultValues: {
       name: "",
-      defaultDays: 0,
-      carryOverAllowed: false,
+      defaultDaysPerYear: 0,
+      allowCarryOver: false,
       maxCarryOverDays: 0,
       color: "#00C9C6",
       isActive: true,
     },
   });
 
-  const carryOverAllowed = form.watch("carryOverAllowed");
+  const allowCarryOver = form.watch("allowCarryOver");
 
   const handleOpenDialog = (type?: any) => {
     if (type) {
       setEditingType(type);
       form.reset({
         name: type.name,
-        defaultDays: type.defaultDays,
-        carryOverAllowed: type.carryOverAllowed,
+        defaultDaysPerYear: type.defaultDaysPerYear,
+        allowCarryOver: type.allowCarryOver,
         maxCarryOverDays: type.maxCarryOverDays,
         color: type.color,
         isActive: type.isActive,
@@ -1057,8 +1057,8 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
       setEditingType(null);
       form.reset({
         name: "",
-        defaultDays: 0,
-        carryOverAllowed: false,
+        defaultDaysPerYear: 0,
+        allowCarryOver: false,
         maxCarryOverDays: 0,
         color: "#00C9C6",
         isActive: true,
@@ -1155,8 +1155,8 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
                           <div className="flex-1">
                             <div className="font-medium">{type.name}</div>
                             <div className="text-sm text-muted-foreground">
-                              {type.defaultDays} days/year
-                              {type.carryOverAllowed && ` • Carry over up to ${type.maxCarryOverDays} days`}
+                              {type.defaultDaysPerYear} days/year
+                              {type.allowCarryOver && ` • Carry over up to ${type.maxCarryOverDays} days`}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1226,7 +1226,7 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="defaultDays"
+                  name="defaultDaysPerYear"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Default Days Per Year</FormLabel>
@@ -1265,7 +1265,7 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
 
               <FormField
                 control={form.control}
-                name="carryOverAllowed"
+                name="allowCarryOver"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                     <div className="space-y-0.5">
@@ -1287,7 +1287,7 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
                 )}
               />
 
-              {carryOverAllowed && (
+              {allowCarryOver && (
                 <FormField
                   control={form.control}
                   name="maxCarryOverDays"
@@ -1390,8 +1390,8 @@ function TimeOffPolicyManager() {
 
   // Calculate aggregated metrics from types
   const hasTypes = types.length > 0;
-  const totalDefaultDays = types.reduce((sum: number, type: any) => sum + (type.defaultDays || 0), 0);
-  const typesWithCarryOver = types.filter((type: any) => type.carryOverAllowed);
+  const totalDefaultDays = types.reduce((sum: number, type: any) => sum + (type.defaultDaysPerYear || 0), 0);
+  const typesWithCarryOver = types.filter((type: any) => type.allowCarryOver);
 
   if (isLoading) {
     return <div className="text-center py-8">Loading policies...</div>;
