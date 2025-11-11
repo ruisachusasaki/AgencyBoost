@@ -19160,35 +19160,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Time Off Types routes
-  // Get available time off types for the current user (based on their staff policy)
+  // Get available time off types for requests - returns ALL active types (global system)
   app.get("/api/hr/time-off-types/available", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
-
-      // Get the current user's staff record to find their policy
-      const [staffRecord] = await db
-        .select()
-        .from(staff)
-        .where(eq(staff.id, currentUserId))
-        .limit(1);
-
-      if (!staffRecord || !staffRecord.timeOffPolicyId) {
-        // No policy assigned, return empty array
-        return res.json([]);
-      }
-
-      // Get the time off types for this policy (only active types)
+      // Return all active time off types (simplified global system)
       const types = await db
         .select()
         .from(timeOffTypes)
-        .where(
-          and(
-            eq(timeOffTypes.policyId, staffRecord.timeOffPolicyId),
-            eq(timeOffTypes.isActive, true)
-          )
-        )
-        .orderBy(asc(timeOffTypes.orderIndex));
+        .where(eq(timeOffTypes.isActive, true))
+        .orderBy(asc(timeOffTypes.orderIndex), asc(timeOffTypes.name));
 
       res.json(types);
     } catch (error) {
