@@ -544,7 +544,7 @@ function TeamAssignmentsManagement() {
     key: z.string().min(1, "Key is required").max(50, "Key must be under 50 characters").regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, "Key must start with letter and contain only letters, numbers, underscore"),
     label: z.string().min(1, "Label is required").max(100, "Label must be under 100 characters"),
     description: z.string().max(500, "Description must be under 500 characters").optional(),
-    order: z.number().min(0, "Order must be non-negative").optional(),
+    order: z.coerce.number().min(0, "Order must be non-negative").optional(),
     isActive: z.boolean().default(true)
   });
 
