@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,7 @@ import {
   Eye, EyeOff, Users, Target, Briefcase, Building, ShoppingBag, TrendingUp,
   Monitor, FileX, User, Clock, Mail, Phone, Globe, MapPin, Calendar,
   PenTool, Palette, Hash, Heart, Star, Zap, Coffee, Lightbulb, Rocket,
-  Shield, ShieldCheck, ExternalLink
+  Shield, ShieldCheck, ExternalLink, ChevronUp, ChevronDown, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -69,6 +69,12 @@ function PortalAccessManagement() {
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  
+  // Sorting and pagination state
+  const [sortField, setSortField] = useState<'name' | 'client' | 'email' | 'status' | 'lastLogin'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   // Portal user creation/edit form schema
   const portalUserSchema = z.object({
@@ -200,10 +206,96 @@ function PortalAccessManagement() {
     }
   };
 
-  // Filter users by selected client
+  // Handle sorting
+  const handleSort = (field: 'name' | 'client' | 'email' | 'status' | 'lastLogin') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Filter, sort, and paginate users
   const filteredUsers = (selectedClient && selectedClient !== "all")
     ? portalUsers.filter((user: any) => user.clientId === selectedClient)
     : portalUsers;
+
+  // Sort filtered users
+  const sortedUsers = [...filteredUsers].sort((a: any, b: any) => {
+    let aValue, bValue;
+    
+    switch (sortField) {
+      case 'name':
+        aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
+        bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
+        break;
+      case 'client':
+        aValue = (a.clientName || getClientName(a.clientId)).toLowerCase();
+        bValue = (b.clientName || getClientName(b.clientId)).toLowerCase();
+        break;
+      case 'email':
+        aValue = a.email.toLowerCase();
+        bValue = b.email.toLowerCase();
+        break;
+      case 'status':
+        aValue = a.isActive ? 1 : 0;
+        bValue = b.isActive ? 1 : 0;
+        break;
+      case 'lastLogin':
+        aValue = a.lastLogin ? new Date(a.lastLogin).getTime() : 0;
+        bValue = b.lastLogin ? new Date(b.lastLogin).getTime() : 0;
+        break;
+      default:
+        return 0;
+    }
+
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(sortedUsers.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedUsers = sortedUsers.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedClient]);
+
+  // SortableHeader component
+  const SortableHeader = ({ column, children }: { column: 'name' | 'client' | 'email' | 'status' | 'lastLogin'; children: React.ReactNode }) => {
+    const isActive = sortField === column;
+    return (
+      <th 
+        className="text-left p-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+        onClick={() => handleSort(column)}
+      >
+        <div className="flex items-center gap-1">
+          {children}
+          <div className="flex flex-col ml-1">
+            <ChevronUp 
+              className={`h-3 w-3 ${
+                isActive && sortDirection === 'asc' 
+                  ? 'text-primary' 
+                  : 'text-gray-400'
+              }`} 
+            />
+            <ChevronDown 
+              className={`h-3 w-3 -mt-1 ${
+                isActive && sortDirection === 'desc' 
+                  ? 'text-primary' 
+                  : 'text-gray-400'
+              }`} 
+            />
+          </div>
+        </div>
+      </th>
+    );
+  };
 
   const getClientName = (clientId: string) => {
     const client = clients.find((c: any) => c.id === clientId);
@@ -308,20 +400,21 @@ function PortalAccessManagement() {
               </Button>
             </div>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left p-4 font-medium text-gray-900">User</th>
-                    <th className="text-left p-4 font-medium text-gray-900">Client</th>
-                    <th className="text-left p-4 font-medium text-gray-900">Email</th>
-                    <th className="text-left p-4 font-medium text-gray-900">Status</th>
-                    <th className="text-left p-4 font-medium text-gray-900">Last Login</th>
-                    <th className="text-left p-4 font-medium text-gray-900">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredUsers.map((user: any) => (
+            <div className="space-y-4">
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <SortableHeader column="name">User</SortableHeader>
+                      <SortableHeader column="client">Client</SortableHeader>
+                      <SortableHeader column="email">Email</SortableHeader>
+                      <SortableHeader column="status">Status</SortableHeader>
+                      <SortableHeader column="lastLogin">Last Login</SortableHeader>
+                      <th className="text-left p-4 font-medium text-gray-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {paginatedUsers.map((user: any) => (
                     <tr key={user.id} className="hover:bg-gray-50">
                       <td className="p-4">
                         <div className="flex items-center">
@@ -380,6 +473,83 @@ function PortalAccessManagement() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600">Items per page:</span>
+                    <Select value={pageSize.toString()} onValueChange={(value) => {
+                      setPageSize(Number(value));
+                      setCurrentPage(1);
+                    }}>
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Showing {startIndex + 1} to {Math.min(endIndex, sortedUsers.length)} of {sortedUsers.length} users
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={pageNum === currentPage ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
           )}
         </CardContent>
       </Card>
