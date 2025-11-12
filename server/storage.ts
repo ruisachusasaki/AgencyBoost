@@ -5100,13 +5100,9 @@ export class DbStorage implements IStorage {
         WHERE entry->>'startTime' IS NOT NULL
         AND (entry->>'startTime')::date >= ${dateFrom}::date
         AND (entry->>'startTime')::date <= ${dateTo}::date
+        ${effectiveUserId ? sql`AND entry->>'userId' = ${effectiveUserId}` : sql``}
       )`
     ];
-    
-    // Filter by user if specified
-    if (effectiveUserId) {
-      conditions.push(eq(tasks.assignedTo, effectiveUserId));
-    }
     
     // Filter by client if specified  
     if (clientId) {
@@ -5123,7 +5119,7 @@ export class DbStorage implements IStorage {
       .leftJoin(clients, eq(tasks.clientId, clients.id))
       .where(and(...conditions));
     
-    // Filter time entries to only include those in the date range
+    // Filter time entries to only include those in the date range and for the specified user
     return tasksData.map(({ task, clientName }) => ({
       ...task,
       clientName: clientName || undefined,
@@ -5131,7 +5127,9 @@ export class DbStorage implements IStorage {
         ? (task.timeEntries as any[]).filter((entry: any) => {
             if (!entry.startTime) return false;
             const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
-            return entryDate >= dateFrom && entryDate <= dateTo;
+            const dateMatch = entryDate >= dateFrom && entryDate <= dateTo;
+            const userMatch = !effectiveUserId || entry.userId === effectiveUserId;
+            return dateMatch && userMatch;
           }) as import("@shared/schema").TimeEntry[]
         : []
     }));
