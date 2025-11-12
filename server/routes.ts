@@ -14139,8 +14139,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create notifications for mentioned users
       if (mentions && mentions.length > 0) {
+        // Get task details for context
+        const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
+        const taskTitle = task?.title || 'a task';
+        const taskUrl = `/tasks/${taskId}`;
+        
         for (const mentionedUserId of mentions) {
-          // Add notification logic here if needed
+          // Don't notify if user mentioned themselves
+          if (mentionedUserId !== userId) {
+            void notificationService.notifyMentioned(
+              mentionedUserId,
+              `${author.firstName} ${author.lastName}`,
+              taskTitle,
+              userId,
+              taskId,
+              'task',
+              taskUrl
+            ).catch(err => console.error('[Notification] Failed to send mention notification:', err));
+          }
         }
       }
 
@@ -22689,44 +22705,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send notifications to mentioned users
       if (mentions && mentions.length > 0) {
-        try {
-          // Get article title and author name for notification
-          const [article] = await db.select({
-            title: knowledgeBaseArticles.title,
-          })
-          .from(knowledgeBaseArticles)
-          .where(eq(knowledgeBaseArticles.id, req.params.articleId));
+        // Get article title and author name for notification
+        const [article] = await db.select({
+          title: knowledgeBaseArticles.title,
+        })
+        .from(knowledgeBaseArticles)
+        .where(eq(knowledgeBaseArticles.id, req.params.articleId));
 
-          const [author] = await db.select({
-            firstName: staff.firstName,
-            lastName: staff.lastName,
-          })
-          .from(staff)
-          .where(eq(staff.id, userId));
+        const [author] = await db.select({
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+        })
+        .from(staff)
+        .where(eq(staff.id, userId));
 
-          const authorName = author ? `${author.firstName} ${author.lastName}` : 'Someone';
-          const articleTitle = article?.title || 'an article';
+        const authorName = author ? `${author.firstName} ${author.lastName}` : 'Someone';
+        const articleTitle = article?.title || 'an article';
+        const articleUrl = `/knowledge-base/articles/${req.params.articleId}`;
 
-          // Create notifications for each mentioned user
-          for (const mentionedUserId of mentions) {
-            // Skip self-mentions
-            if (mentionedUserId === userId) continue;
+        // Create notifications for each mentioned user
+        for (const mentionedUserId of mentions) {
+          // Skip self-mentions
+          if (mentionedUserId === userId) continue;
 
-            // Create in-app notification
-            await db.insert(notifications).values({
-              userId: mentionedUserId,
-              type: 'mention',
-              title: 'You were mentioned in a comment',
-              message: `${authorName} mentioned you in a comment on "${articleTitle}"`,
-              entityType: 'knowledge_base_article',
-              entityId: req.params.articleId,
-              priority: 'normal',
-              isRead: false,
-            });
-          }
-        } catch (notificationError) {
-          console.error('Error creating mention notifications:', notificationError);
-          // Don't fail the comment creation if notifications fail
+          // Use NotificationService for multi-channel delivery
+          void notificationService.notifyMentioned(
+            mentionedUserId,
+            authorName,
+            articleTitle,
+            userId,
+            req.params.articleId,
+            'knowledge_base_article',
+            articleUrl
+          ).catch(err => console.error('[Notification] Failed to send mention notification:', err));
         }
       }
       
