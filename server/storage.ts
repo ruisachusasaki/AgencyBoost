@@ -57,7 +57,7 @@ import {
   type TaskDependency, type InsertTaskDependency, taskDependencies,
   taskAttachments,
   knowledgeBaseComments, knowledgeBaseArticles,
-  notifications,
+  notifications, notificationSettings,
   type Department, type InsertDepartment, departments,
   type Position, type InsertPosition, positions,
   type PositionKpi, type InsertPositionKpi, positionKpis,
@@ -6527,6 +6527,88 @@ export class DbStorage implements IStorage {
   async deleteUserRole(id: string): Promise<boolean> {
     const result = await db.delete(userRoles).where(eq(userRoles.id, id));
     return result.rowCount > 0;
+  }
+
+  // Notifications - Database Implementation
+  async getNotifications(userId: string): Promise<Notification[]> {
+    try {
+      const result = await db.select().from(notifications)
+        .where(eq(notifications.userId, userId))
+        .orderBy(desc(notifications.createdAt));
+      return result;
+    } catch (error) {
+      console.error(`Error fetching notifications for user ${userId}:`, error);
+      return [];
+    }
+  }
+
+  async getNotification(id: string): Promise<Notification | undefined> {
+    try {
+      const result = await db.select().from(notifications).where(eq(notifications.id, id)).limit(1);
+      return result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error(`Error fetching notification ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async getUnreadNotifications(userId: string): Promise<Notification[]> {
+    try {
+      const result = await db.select().from(notifications)
+        .where(and(
+          eq(notifications.userId, userId),
+          eq(notifications.read, false)
+        ))
+        .orderBy(desc(notifications.createdAt));
+      return result;
+    } catch (error) {
+      console.error(`Error fetching unread notifications for user ${userId}:`, error);
+      return [];
+    }
+  }
+
+  async createNotification(notificationData: InsertNotification): Promise<Notification> {
+    const [created] = await db.insert(notifications).values({
+      id: randomUUID(),
+      ...notificationData,
+      read: false,
+      createdAt: new Date()
+    }).returning();
+    return created;
+  }
+
+  async markNotificationAsRead(id: string): Promise<boolean> {
+    try {
+      const result = await db.update(notifications)
+        .set({ read: true })
+        .where(eq(notifications.id, id));
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error(`Error marking notification ${id} as read:`, error);
+      return false;
+    }
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<boolean> {
+    try {
+      const result = await db.update(notifications)
+        .set({ read: true })
+        .where(eq(notifications.userId, userId));
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error(`Error marking all notifications as read for user ${userId}:`, error);
+      return false;
+    }
+  }
+
+  async deleteNotification(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(notifications).where(eq(notifications.id, id));
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error(`Error deleting notification ${id}:`, error);
+      return false;
+    }
   }
 
   // Notification Settings - Database Implementation
