@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,28 +9,54 @@ import { useToast } from "@/hooks/use-toast";
 import { Building, Upload, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { ObjectUploader } from "@/components/ObjectUploader";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { UploadResult } from "@uppy/core";
 
 export default function BusinessProfile() {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>("");
   
   const [formData, setFormData] = useState({
-    companyName: "AgencyFlow Marketing",
-    email: "hello@agencyflow.com",
-    phone: "(555) 123-4567",
-    website: "https://agencyflow.com",
+    companyName: "",
+    email: "",
+    phone: "",
+    website: "",
     timeZone: "America/New_York",
-    address: "123 Business St",
-    address2: "Suite 100",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
-    country: "United States"
+    address: "",
+    address2: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: ""
   });
+
+  // Fetch business profile data
+  const { data: businessProfileData, isLoading } = useQuery({
+    queryKey: ['/api/business-profile'],
+  });
+
+  // Update form data when profile is loaded
+  useEffect(() => {
+    if (businessProfileData) {
+      setFormData({
+        companyName: businessProfileData.companyName || "",
+        email: businessProfileData.email || "",
+        phone: businessProfileData.phone || "",
+        website: businessProfileData.website || "",
+        timeZone: businessProfileData.timezone || "America/New_York",
+        address: businessProfileData.address || "",
+        address2: businessProfileData.address2 || "",
+        city: businessProfileData.city || "",
+        state: businessProfileData.state || "",
+        zipCode: businessProfileData.zipCode || "",
+        country: businessProfileData.country || ""
+      });
+      if (businessProfileData.logo) {
+        setLogoUrl(businessProfileData.logo);
+      }
+    }
+  }, [businessProfileData]);
 
   const profileImageMutation = useMutation({
     mutationFn: async (imageURL: string) => {
@@ -44,32 +70,60 @@ export default function BusinessProfile() {
     },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      // TODO: Implement API call to save business profile
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const response = await apiRequest("PUT", "/api/business-profile", {
+        companyName: data.companyName,
+        email: data.email,
+        phone: data.phone,
+        website: data.website,
+        timezone: data.timeZone,
+        address: data.address,
+        address2: data.address2,
+        city: data.city,
+        state: data.state,
+        zipCode: data.zipCode,
+        country: data.country,
+        logo: logoUrl
+      });
+      return response.json();
+    },
+    onSuccess: () => {
       toast({
         title: "Success",
         description: "Business profile updated successfully.",
       });
-    } catch (error) {
+    },
+    onError: (error) => {
       toast({
         title: "Error",
         description: "Failed to update business profile. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    updateProfileMutation.mutate(formData);
   };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-sm text-muted-foreground">Loading business profile...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6">
@@ -285,8 +339,8 @@ export default function BusinessProfile() {
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : "Save Changes"}
+            <Button type="submit" disabled={isLoading || updateProfileMutation.isPending}>
+              {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>
