@@ -14137,11 +14137,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Create notifications for mentioned users
+      // Validate and create notifications for mentioned users
       if (mentions && mentions.length > 0) {
+        // Extract actual @mentions from the comment content
+        const mentionRegex = /@([A-Za-z]+(?:\s+[A-Za-z]+)*)/g;
+        const mentionMatches = Array.from(content.matchAll(mentionRegex));
+        const mentionNames = mentionMatches.map(match => match[1].toLowerCase());
+        
+        // Get all staff to validate mentions
+        const allStaff = await db.select().from(staff);
+        
+        // Build a set of valid user IDs that are actually mentioned in the content
+        const validMentionIds = new Set<string>();
+        mentionNames.forEach(mentionName => {
+          const staffMember = allStaff.find((s: any) => {
+            const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
+            const name = s.name?.toLowerCase();
+            return fullName === mentionName || name === mentionName;
+          });
+          if (staffMember) {
+            validMentionIds.add(staffMember.id);
+          }
+        });
+        
+        // Only notify users whose IDs are both submitted AND validated
         for (const mentionedUserId of mentions) {
-          // Don't notify if user mentioned themselves
-          if (mentionedUserId !== userId) {
+          if (validMentionIds.has(mentionedUserId) && mentionedUserId !== userId) {
             void notificationService.notifyMentioned(
               mentionedUserId,  // Who to notify
               userId,           // Who mentioned them (author ID)

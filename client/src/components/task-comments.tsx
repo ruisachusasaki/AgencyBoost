@@ -54,7 +54,6 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
-  const [mentionedUserIds, setMentionedUserIds] = useState<Set<string>>(new Set());
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [emojiButtonRect, setEmojiButtonRect] = useState<DOMRect | null>(null);
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
@@ -130,11 +129,23 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
 
   const addCommentMutation = useMutation({
     mutationFn: async ({ content, parentId }: { content: string; parentId?: string }) => {
-      // Use the tracked mention IDs directly
-      const mentions = Array.from(mentionedUserIds);
+      // Extract mention IDs from the actual comment content
+      const mentionRegex = /@([A-Za-z]+(?:\s+[A-Za-z]+)*)/g;
+      const mentionMatches = Array.from(content.matchAll(mentionRegex));
+      const mentionNames = mentionMatches.map(match => match[1].toLowerCase());
       
-      console.log('[Frontend] Content:', content);
-      console.log('[Frontend] Tracked mention IDs:', mentions);
+      // Match mention names against staff list to get user IDs
+      const mentions: string[] = [];
+      mentionNames.forEach(mentionName => {
+        const staff = staffData.find((s: any) => {
+          const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
+          const name = s.name?.toLowerCase();
+          return fullName === mentionName || name === mentionName;
+        });
+        if (staff && !mentions.includes(staff.id)) {
+          mentions.push(staff.id);
+        }
+      });
       
       const response = await fetch(`/api/tasks/${taskId}/comments`, {
         method: 'POST',
@@ -149,7 +160,6 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
       setNewComment("");
       setPendingFiles([]);
       setShowToolbar(false);
-      setMentionedUserIds(new Set()); // Clear tracked mentions after successful submission
       toast({
         title: "Success",
         description: "Comment added successfully",
@@ -233,10 +243,6 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
     setNewComment(newText);
     setShowMentionDropdown(false);
     setMentionQuery("");
-    
-    // Track this mentioned user ID
-    setMentionedUserIds(prev => new Set(prev).add(staffId));
-    console.log('[Frontend] Mentioned user added:', staffId, staffName);
     
     // Focus back to textarea
     setTimeout(() => {
