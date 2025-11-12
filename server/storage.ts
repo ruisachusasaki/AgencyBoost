@@ -6529,12 +6529,34 @@ export class DbStorage implements IStorage {
     return result.rowCount > 0;
   }
 
-  // Notifications
-  async getNotificationSettings(): Promise<NotificationSettings[]> { return this.memStorage.getNotificationSettings(); }
-  async getNotificationSetting(id: string): Promise<NotificationSettings | undefined> { return this.memStorage.getNotificationSetting(id); }
-  async createNotificationSettings(settings: InsertNotificationSettings): Promise<NotificationSettings> { return this.memStorage.createNotificationSettings(settings); }
-  async updateNotificationSettings(id: string, settings: Partial<InsertNotificationSettings>): Promise<NotificationSettings | undefined> { return this.memStorage.updateNotificationSettings(id, settings); }
-  async deleteNotificationSettings(id: string): Promise<boolean> { return this.memStorage.deleteNotificationSettings(id); }
+  // Notification Settings - Database Implementation
+  async getNotificationSettings(userId: string): Promise<NotificationSettings | undefined> {
+    try {
+      const result = await db.select().from(notificationSettings).where(eq(notificationSettings.userId, userId)).limit(1);
+      return result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error(`Error fetching notification settings for user ${userId}:`, error);
+      return undefined;
+    }
+  }
+
+  async createNotificationSettings(settings: InsertNotificationSettings): Promise<NotificationSettings> {
+    const [created] = await db.insert(notificationSettings).values({
+      id: randomUUID(),
+      ...settings,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return created;
+  }
+
+  async updateNotificationSettings(userId: string, settings: Partial<InsertNotificationSettings>): Promise<NotificationSettings | undefined> {
+    const [updated] = await db.update(notificationSettings)
+      .set({ ...settings, updatedAt: new Date() })
+      .where(eq(notificationSettings.userId, userId))
+      .returning();
+    return updated;
+  }
 
   // Sales Settings - Database Implementation
   async getSalesSettings(): Promise<SalesSettings | undefined> {
