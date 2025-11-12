@@ -2124,7 +2124,9 @@ export const staff = pgTable("staff", {
   emergencyContactPhone: varchar("emergency_contact_phone", { length: 20 }),
   emergencyContactRelationship: varchar("emergency_contact_relationship", { length: 100 }),
   
-  // Time off policy assignment
+  // DEPRECATED: Time off policy assignment - Replaced by global time off types system
+  // TODO: Remove after confirming zero active writes and preparing migration (see deprecation plan)
+  // Kept for backward compatibility - UI no longer allows setting this field
   timeOffPolicyId: varchar("time_off_policy_id").references(() => timeOffPolicies.id),
   
   // DEPRECATED: Time off entitlements (annual allocation) - Use timeOffPolicyId + timeOffTypes instead
