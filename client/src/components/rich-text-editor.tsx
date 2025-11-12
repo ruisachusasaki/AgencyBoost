@@ -221,11 +221,11 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
-      // Validate file size (5MB limit)
-      if (file.size > 5 * 1024 * 1024) {
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Please select an image smaller than 5MB",
+          description: "Please select an image smaller than 10MB",
           variant: "destructive"
         });
         return;

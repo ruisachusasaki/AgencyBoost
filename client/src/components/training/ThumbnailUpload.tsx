@@ -29,11 +29,11 @@ export function ThumbnailUpload({ value, onChange, onRemove }: ThumbnailUploadPr
     }
 
     // Recommended size: 1200x675 (16:9 aspect ratio) for course thumbnails
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
       toast({
         title: "File too large",
-        description: "Please select an image smaller than 5MB",
+        description: "Please select an image smaller than 10MB",
         variant: "destructive",
       });
       return;

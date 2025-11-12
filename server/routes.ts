@@ -155,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const multerStorage = multer.memoryStorage();
   const upload = multer({ 
     storage: multerStorage, // Use local variable to avoid any scope confusion
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
   });
 
   // SECURITY: Rate limiting for login attempts - in-memory store

@@ -60,7 +60,7 @@ export default function BusinessProfile() {
     mutationFn: async (imageURL: string) => {
       const response = await fetch("/api/profile-images", {
         method: "PUT",
-        body: JSON.stringify({ imageURL }),
+        body: JSON.stringify({ profileImageURL: imageURL }),
         headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) throw new Error("Failed to save image");
