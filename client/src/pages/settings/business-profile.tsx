@@ -24,7 +24,6 @@ export default function BusinessProfile() {
     website: "",
     timeZone: "America/New_York",
     address: "",
-    address2: "",
     city: "",
     state: "",
     zipCode: "",
@@ -46,7 +45,6 @@ export default function BusinessProfile() {
         website: businessProfileData.website || "",
         timeZone: businessProfileData.timezone || "America/New_York",
         address: businessProfileData.address || "",
-        address2: businessProfileData.address2 || "",
         city: businessProfileData.city || "",
         state: businessProfileData.state || "",
         zipCode: businessProfileData.zipCode || "",
@@ -79,7 +77,6 @@ export default function BusinessProfile() {
         website: data.website,
         timezone: data.timeZone,
         address: data.address,
-        address2: data.address2,
         city: data.city,
         state: data.state,
         zipCode: data.zipCode,
@@ -283,20 +280,11 @@ export default function BusinessProfile() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="address">Address Line 1</Label>
+                <Label htmlFor="address">Address</Label>
                 <Input
                   id="address"
                   value={formData.address}
                   onChange={(e) => handleInputChange('address', e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="address2">Address Line 2</Label>
-                <Input
-                  id="address2"
-                  value={formData.address2}
-                  onChange={(e) => handleInputChange('address2', e.target.value)}
                 />
               </div>
               
