@@ -4013,8 +4013,12 @@ export default function Reports() {
                     <MrrSortableHeader field="name">
                       Client Name
                     </MrrSortableHeader>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Status</TableHead>
+                    <MrrSortableHeader field="email">
+                      Email
+                    </MrrSortableHeader>
+                    <MrrSortableHeader field="status">
+                      Status
+                    </MrrSortableHeader>
                     <MrrSortableHeader field="mrr">
                       MRR
                     </MrrSortableHeader>
