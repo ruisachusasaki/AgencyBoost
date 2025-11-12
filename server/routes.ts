@@ -14139,22 +14139,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create notifications for mentioned users
       if (mentions && mentions.length > 0) {
-        // Get task details for context
-        const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
-        const taskTitle = task?.title || 'a task';
-        const taskUrl = `/tasks/${taskId}`;
-        
         for (const mentionedUserId of mentions) {
           // Don't notify if user mentioned themselves
           if (mentionedUserId !== userId) {
             void notificationService.notifyMentioned(
-              mentionedUserId,
-              `${author.firstName} ${author.lastName}`,
-              taskTitle,
-              userId,
-              taskId,
-              'task',
-              taskUrl
+              mentionedUserId,  // Who to notify
+              userId,           // Who mentioned them (author ID)
+              'task',           // Context type
+              taskId,           // Context ID
+              content.trim()    // Comment content
             ).catch(err => console.error('[Notification] Failed to send mention notification:', err));
           }
         }
@@ -22705,38 +22698,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send notifications to mentioned users
       if (mentions && mentions.length > 0) {
-        // Get article title and author name for notification
-        const [article] = await db.select({
-          title: knowledgeBaseArticles.title,
-        })
-        .from(knowledgeBaseArticles)
-        .where(eq(knowledgeBaseArticles.id, req.params.articleId));
-
-        const [author] = await db.select({
-          firstName: staff.firstName,
-          lastName: staff.lastName,
-        })
-        .from(staff)
-        .where(eq(staff.id, userId));
-
-        const authorName = author ? `${author.firstName} ${author.lastName}` : 'Someone';
-        const articleTitle = article?.title || 'an article';
-        const articleUrl = `/knowledge-base/articles/${req.params.articleId}`;
-
-        // Create notifications for each mentioned user
         for (const mentionedUserId of mentions) {
           // Skip self-mentions
           if (mentionedUserId === userId) continue;
 
           // Use NotificationService for multi-channel delivery
           void notificationService.notifyMentioned(
-            mentionedUserId,
-            authorName,
-            articleTitle,
-            userId,
-            req.params.articleId,
-            'knowledge_base_article',
-            articleUrl
+            mentionedUserId,              // Who to notify
+            userId,                       // Who mentioned them (author ID)
+            'knowledge_base_article',     // Context type
+            req.params.articleId,         // Context ID
+            content                       // Comment content
           ).catch(err => console.error('[Notification] Failed to send mention notification:', err));
         }
       }

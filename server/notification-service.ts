@@ -458,9 +458,10 @@ export class NotificationService {
   private getContextUrl(contextType: string, contextId: string): string {
     const urlMapping: Record<string, string> = {
       'client': `/clients/${contextId}`,
-      'task': `/tasks`,
+      'task': `/tasks/${contextId}`,
       'deal': `/deals/${contextId}`,
       'lead': `/leads/${contextId}`,
+      'knowledge_base_article': `/knowledge-base/articles/${contextId}`,
     };
     
     return urlMapping[contextType] || '/';
