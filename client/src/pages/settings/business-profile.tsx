@@ -166,7 +166,7 @@ export default function BusinessProfile() {
                 <div>
                   <ObjectUploader
                     maxNumberOfFiles={1}
-                    maxFileSize={5242880} // 5MB
+                    maxFileSize={10485760} // 10MB
                     onGetUploadParameters={async () => {
                       const response = await fetch("/api/objects/upload", { method: "POST" });
                       const data = await response.json();
@@ -176,12 +176,31 @@ export default function BusinessProfile() {
                       const uploadedFile = result.successful[0];
                       if (uploadedFile?.uploadURL) {
                         profileImageMutation.mutate(uploadedFile.uploadURL as string, {
-                          onSuccess: (data) => {
+                          onSuccess: async (data) => {
                             setLogoUrl(data.objectPath);
-                            toast({
-                              title: "Success",
-                              description: "Company logo uploaded successfully.",
-                            });
+                            
+                            // Auto-save the logo to the business profile
+                            try {
+                              await apiRequest("PUT", "/api/business-profile", {
+                                ...formData,
+                                timezone: formData.timeZone,
+                                logo: data.objectPath
+                              });
+                              
+                              toast({
+                                title: "Success",
+                                description: "Company logo uploaded and saved successfully.",
+                              });
+                              
+                              // Invalidate the business profile cache to refresh the data
+                              queryClient.invalidateQueries({ queryKey: ['/api/business-profile'] });
+                            } catch (error) {
+                              toast({
+                                title: "Error",
+                                description: "Logo uploaded but failed to save to profile. Please click Save Changes.",
+                                variant: "destructive",
+                              });
+                            }
                           },
                           onError: () => {
                             toast({
@@ -199,7 +218,7 @@ export default function BusinessProfile() {
                     Upload Logo
                   </ObjectUploader>
                   <p className="text-sm text-gray-500">
-                    Recommended: 500x500px, PNG or JPG, max 5MB
+                    Recommended: 500x500px, PNG or JPG, max 10MB
                   </p>
                 </div>
               </div>
