@@ -1391,26 +1391,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
-      // Process team assignments to count workload
+      // Process team assignments to count workload (ACTIVE STAFF ONLY)
       teamAssignments.forEach(assignment => {
         const staffId = assignment.staffId;
         const clientId = assignment.clientId;
         const client = clients.find(c => c.id === clientId);
         
+        // Skip assignments for inactive staff members
         if (!staffWorkloadMap.has(staffId)) {
-          // Handle case where staff member is assigned but not in staff list
-          const unknownStaff = {
-            staffId,
-            staffName: 'Unknown Staff',
-            staffRole: 'Unknown',
-            department: 'Unknown',
-            clientCount: 0,
-            clients: []
-          };
-          staffWorkloadMap.set(staffId, unknownStaff);
+          return; // Skip this assignment - staff member is inactive or doesn't exist
         }
         
-        const staffWorkload = staffWorkloadMap.get(staffId)!;
+        const staffWorkload = staffWorkloadMap.get(staffId)!
         
         // Check if this client is already tracked for this staff member
         let existingClient = staffWorkload.clients.find(c => c.clientId === clientId);
