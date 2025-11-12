@@ -129,28 +129,26 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
 
   const addCommentMutation = useMutation({
     mutationFn: async ({ content, parentId }: { content: string; parentId?: string }) => {
-      // Extract mention IDs from the actual comment content
-      const mentionRegex = /@([A-Za-z]+(?:\s+[A-Za-z]+)*)/g;
+      // Extract mention IDs from embedded markers: @Name[userId]
+      const mentionRegex = /@([\p{L}\p{M}\p{N}\s'-]+)\[([a-f0-9-]+)\]/gu;
       const mentionMatches = Array.from(content.matchAll(mentionRegex));
-      const mentionNames = mentionMatches.map(match => match[1].toLowerCase());
-      
-      // Match mention names against staff list to get user IDs
       const mentions: string[] = [];
-      mentionNames.forEach(mentionName => {
-        const staff = staffData.find((s: any) => {
-          const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
-          const name = s.name?.toLowerCase();
-          return fullName === mentionName || name === mentionName;
-        });
-        if (staff && !mentions.includes(staff.id)) {
-          mentions.push(staff.id);
+      
+      // Extract user IDs from the markers
+      mentionMatches.forEach(match => {
+        const userId = match[2]; // The ID from [userId]
+        if (userId && !mentions.includes(userId)) {
+          mentions.push(userId);
         }
       });
+      
+      // Strip the ID markers from content before sending to backend
+      const cleanContent = content.replace(/@([\p{L}\p{M}\p{N}\s'-]+)\[([a-f0-9-]+)\]/gu, '@$1');
       
       const response = await fetch(`/api/tasks/${taskId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, mentions, parentId, fileUrls: pendingFiles }),
+        body: JSON.stringify({ content: cleanContent, mentions, parentId, fileUrls: pendingFiles }),
       });
       if (!response.ok) throw new Error('Failed to add comment');
       return response.json();
@@ -236,8 +234,10 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
     const textAfterCursor = newComment.slice(cursorPos);
     const words = textBeforeCursor.split(/\s/);
     
-    // Replace the last word (which starts with @) with the mention
-    words[words.length - 1] = `@${staffName}`;
+    // Embed a hidden ID marker in the mention text: @Name[id]
+    // The [id] part will be stripped for display but preserved for submission
+    const mentionText = `@${staffName}[${staffId}]`;
+    words[words.length - 1] = mentionText;
     const newText = words.join(' ') + ' ' + textAfterCursor;
     
     setNewComment(newText);
