@@ -34,29 +34,53 @@ export class NotificationService {
   private storage: IStorage;
   private mailgunClient: any;
   private twilioClient: any;
+  private emailConfig: any = null;
+  private smsConfig: any = null;
 
   constructor(storage: IStorage) {
     this.storage = storage;
     
-    // Initialize Mailgun if credentials are available
-    if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
-      this.mailgunClient = mailgun.client({
-        username: 'api',
-        key: process.env.MAILGUN_API_KEY
-      });
-    }
+    // Initialize integrations asynchronously
+    this.initializeIntegrations();
+  }
 
-    // Initialize Twilio if credentials are available
-    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-      // Dynamic import to avoid loading Twilio if not configured
-      import('twilio').then(({ default: Twilio }) => {
+  /**
+   * Initialize email and SMS integrations from database and environment
+   */
+  private async initializeIntegrations() {
+    try {
+      // Get email integration from database (Mailgun already configured)
+      const emailIntegrations = await this.storage.getEmailIntegrations();
+      const activeEmailIntegration = emailIntegrations.find(i => i.isActive && i.provider === 'mailgun');
+      
+      if (activeEmailIntegration) {
+        this.emailConfig = activeEmailIntegration;
+        this.mailgunClient = mailgun.client({
+          username: 'api',
+          key: activeEmailIntegration.apiKey
+        });
+        console.log('[NotificationService] Mailgun initialized from database:', activeEmailIntegration.domain);
+      } else {
+        console.warn('[NotificationService] No active Mailgun integration found in database');
+      }
+
+      // Get SMS integration from database (Twilio already configured)
+      const smsIntegrations = await this.storage.getSmsIntegrations();
+      const activeSmsIntegration = smsIntegrations.find(i => i.isActive && i.provider === 'twilio');
+      
+      if (activeSmsIntegration) {
+        this.smsConfig = activeSmsIntegration;
+        const Twilio = (await import('twilio')).default;
         this.twilioClient = Twilio(
-          process.env.TWILIO_ACCOUNT_SID,
-          process.env.TWILIO_AUTH_TOKEN
+          activeSmsIntegration.accountSid,
+          activeSmsIntegration.authToken
         );
-      }).catch(err => {
-        console.error('[NotificationService] Failed to initialize Twilio:', err);
-      });
+        console.log('[NotificationService] Twilio initialized from database:', activeSmsIntegration.phoneNumber);
+      } else {
+        console.warn('[NotificationService] No active Twilio integration found in database');
+      }
+    } catch (error) {
+      console.error('[NotificationService] Failed to initialize integrations:', error);
     }
   }
 
@@ -308,12 +332,12 @@ export class NotificationService {
    * Send email via Mailgun
    */
   private async sendEmail(options: EmailOptions): Promise<void> {
-    if (!this.mailgunClient || !process.env.MAILGUN_DOMAIN) {
+    if (!this.mailgunClient || !this.emailConfig) {
       return;
     }
 
-    await this.mailgunClient.messages.create(process.env.MAILGUN_DOMAIN, {
-      from: `AgencyFlow <notifications@${process.env.MAILGUN_DOMAIN}>`,
+    await this.mailgunClient.messages.create(this.emailConfig.domain, {
+      from: `${this.emailConfig.fromName} <${this.emailConfig.fromEmail}>`,
       to: [options.to],
       subject: options.subject,
       text: options.text,
@@ -325,13 +349,13 @@ export class NotificationService {
    * Send SMS via Twilio
    */
   private async sendSms(options: SmsOptions): Promise<void> {
-    if (!this.twilioClient || !process.env.TWILIO_PHONE_NUMBER) {
+    if (!this.twilioClient || !this.smsConfig?.phoneNumber) {
       return;
     }
 
     await this.twilioClient.messages.create({
       body: options.body,
-      from: process.env.TWILIO_PHONE_NUMBER,
+      from: this.smsConfig.phoneNumber,
       to: options.to,
     });
   }

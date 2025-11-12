@@ -67,6 +67,7 @@ import {
   type ClientBriefValue, type InsertClientBriefValue, clientBriefValues,
   type AuthUser, type InsertAuthUser, authUsers,
   type EmailIntegration, type InsertEmailIntegration, emailIntegrations,
+  type SmsIntegration, type InsertSmsIntegration, smsIntegrations,
   type TeamPosition, type InsertTeamPosition, teamPositions,
   type ClientTeamAssignment, type InsertClientTeamAssignment, clientTeamAssignments,
   type UserViewPreference, type InsertUserViewPreference, userViewPreferences,
@@ -640,6 +641,7 @@ export interface IStorage {
   
   // Email Integrations
   getEmailIntegrations(): Promise<EmailIntegration[]>;
+  getSmsIntegrations(): Promise<SmsIntegration[]>;
   getEmailIntegration(id: string): Promise<EmailIntegration | undefined>;
   getEmailIntegrationByProvider(provider: string): Promise<EmailIntegration | undefined>;
   createEmailIntegration(integration: InsertEmailIntegration): Promise<EmailIntegration>;
@@ -4322,6 +4324,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.emailIntegrations.values());
   }
 
+  async getSmsIntegrations(): Promise<SmsIntegration[]> {
+    return Array.from(this.smsIntegrations.values());
+  }
+
   async getEmailIntegration(id: string): Promise<EmailIntegration | undefined> {
     return this.emailIntegrations.get(id);
   }
@@ -7182,6 +7188,17 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error("Error deleting email integration:", error);
       return false;
+    }
+  }
+
+  // SMS Integrations
+  async getSmsIntegrations(): Promise<SmsIntegration[]> {
+    try {
+      const result = await db.select().from(smsIntegrations);
+      return result;
+    } catch (error) {
+      console.error("Error fetching SMS integrations:", error);
+      return [];
     }
   }
 
