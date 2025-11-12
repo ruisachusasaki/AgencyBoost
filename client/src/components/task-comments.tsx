@@ -138,14 +138,25 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
         mentionedNames.push(match[1]);
       }
       
+      console.log('[Frontend] Content:', content);
+      console.log('[Frontend] Mentioned names found:', mentionedNames);
+      console.log('[Frontend] Staff data available:', staffData?.length, staffData);
+      
       // Find staff IDs for mentioned names
       const mentions = mentionedNames.map(name => {
-        const staff = staffData.find(s => 
-          (s.name && s.name.toLowerCase() === name.toLowerCase()) ||
-          (`${s.firstName} ${s.lastName}`.toLowerCase().trim() === name.toLowerCase())
-        );
+        console.log('[Frontend] Looking for staff with name:', name);
+        const staff = staffData.find(s => {
+          const fullName = `${s.firstName} ${s.lastName}`.toLowerCase().trim();
+          const nameMatch = s.name?.toLowerCase() === name.toLowerCase();
+          const fullNameMatch = fullName === name.toLowerCase();
+          console.log('[Frontend] Checking staff:', s.firstName, s.lastName, '- name match:', nameMatch, 'fullName match:', fullNameMatch);
+          return nameMatch || fullNameMatch;
+        });
+        console.log('[Frontend] Found staff:', staff);
         return staff?.id;
       }).filter(Boolean);
+      
+      console.log('[Frontend] Final mentions array:', mentions);
       
       const response = await fetch(`/api/tasks/${taskId}/comments`, {
         method: 'POST',
