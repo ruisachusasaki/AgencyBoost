@@ -159,8 +159,14 @@ export class NotificationService {
    * Helper method for @mention notifications
    */
   async notifyMentioned(userId: string, mentionedBy: string, contextType: string, contextId: string, message: string): Promise<void> {
+    console.log('[NotificationService] notifyMentioned called with:', { userId, mentionedBy, contextType, contextId });
+    
     const user = await this.storage.getStaffMember(mentionedBy);
+    console.log('[NotificationService] Mentioner user:', user);
     const mentionerName = user ? `${user.firstName} ${user.lastName}` : 'Someone';
+    
+    const actionUrl = this.getContextUrl(contextType, contextId);
+    console.log('[NotificationService] Generated actionUrl:', actionUrl);
     
     await this.notify({
       userId,
@@ -169,11 +175,12 @@ export class NotificationService {
       message: `${mentionerName} mentioned you: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`,
       entityType: contextType,
       entityId: contextId,
-      actionUrl: this.getContextUrl(contextType, contextId),
+      actionUrl,
       actionText: 'View',
       priority: 'normal',
       metadata: { mentionedBy, contextType, contextId }
     });
+    console.log('[NotificationService] Mention notification created successfully');
   }
 
   /**
