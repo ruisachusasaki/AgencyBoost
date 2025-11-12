@@ -47,6 +47,8 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **File & Media**: Advanced uploads, inline media display, voice recording, secure object storage, and collaborative annotation.
 - **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, and search.
 - **User Preferences**: Per-user view customization system storing column visibility.
+- **Notification System**: Database-backed notification system with bell icon display, @mention detection in comments, notification settings panel, and My Mentions widget. Known limitation: duplicate staff names may cause incorrect notification routing (acceptable for CRM use case).
+- **User Profile Settings**: Rich text editor (TipTap) for email signature in Settings > My Profile > Profile tab, with HTML formatting support and enable/disable toggle.
 - **Multi-Dashboard System**: Users can create multiple named dashboards with tab-based navigation, management dialogs, and default settings.
 - **Dashboard Widgets**: Customizable dashboard with drag-and-drop widget management, including widgets across various categories (Client Management, Sales & Revenue, Tasks, Lead Management, HR & Team, Calendar & Appointments, Activity & Alerts) with per-user layouts and real-time data.
 - **Global Search**: Intelligent search across clients, leads, and tasks with debouncing, real-time results, type-specific icons, and direct navigation.

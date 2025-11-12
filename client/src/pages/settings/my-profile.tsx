@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +23,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
 import NotificationSettingsPanel from "@/components/settings/NotificationSettingsPanel";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 // Form schemas for different tabs
 const personalInfoSchema = z.object({
@@ -537,12 +537,13 @@ export default function MyProfile() {
                     
                     <div className="space-y-2">
                       <Label>Signature Content</Label>
-                      <Textarea
-                        value={formData.signature}
-                        onChange={(e) => handleInputChange('signature', e.target.value)}
-                        placeholder="Enter your email signature..."
-                        className={`min-h-[200px] resize-none ${!signatureEnabled ? 'opacity-50 pointer-events-none' : ''}`}
-                      />
+                      <div className={!signatureEnabled ? 'opacity-50 pointer-events-none' : ''}>
+                        <RichTextEditor
+                          content={formData.signature}
+                          onChange={(content) => handleInputChange('signature', content)}
+                          placeholder="Enter your email signature..."
+                        />
+                      </div>
                     </div>
                     
                     <p className="text-sm text-gray-500">
