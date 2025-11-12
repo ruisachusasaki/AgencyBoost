@@ -1053,7 +1053,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user is admin - non-admins can only see their own data
-      const userIsAdmin = await isCurrentUserAdmin(authenticatedUserId);
+      // When impersonating, check the ORIGINAL admin's permissions, not the impersonated user
+      const impersonationContext = getImpersonationContext(req);
+      const userIdToCheckForAdmin = impersonationContext ? impersonationContext.originalAdminId : authenticatedUserId;
+      const userIsAdmin = await isCurrentUserAdmin(userIdToCheckForAdmin);
       
       // Enforce user-level filtering for non-admins
       let effectiveUserId = userId;
