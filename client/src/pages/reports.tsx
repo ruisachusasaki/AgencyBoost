@@ -757,6 +757,32 @@ export default function Reports() {
     </SortableHeader>
   );
 
+  // MRR table sorting functions
+  const handleMrrSort = (field: string) => {
+    if (mrrSortField === field) {
+      // Toggle sort order if clicking same field
+      setMrrSortOrder(mrrSortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field with default desc order
+      setMrrSortField(field);
+      setMrrSortOrder('desc');
+    }
+    // Reset to first page when sorting
+    setMrrPage(1);
+  };
+
+  // MRR-specific sortable header
+  const MrrSortableHeader = ({ field, children }: { field: string; children: React.ReactNode }) => (
+    <SortableHeader
+      field={field}
+      sortField={mrrSortField}
+      sortOrder={mrrSortOrder}
+      onSort={handleMrrSort}
+    >
+      {children}
+    </SortableHeader>
+  );
+
   // Helper functions for health analytics
   function calculateHealthTrend(scores: Array<ClientHealthScore & { clientName: string; clientEmail: string }>) {
     if (scores.length === 0) return { direction: 'stable', percentage: 0 };
@@ -3984,44 +4010,14 @@ export default function Reports() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead 
-                      className="cursor-pointer hover:bg-slate-50"
-                      onClick={() => {
-                        if (mrrSortField === 'name') {
-                          setMrrSortOrder(mrrSortOrder === 'asc' ? 'desc' : 'asc');
-                        } else {
-                          setMrrSortField('name');
-                          setMrrSortOrder('asc');
-                        }
-                      }}
-                    >
-                      <div className="flex items-center gap-1">
-                        Client Name
-                        {mrrSortField === 'name' && (
-                          mrrSortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                        )}
-                      </div>
-                    </TableHead>
+                    <MrrSortableHeader field="name">
+                      Client Name
+                    </MrrSortableHeader>
                     <TableHead>Email</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead 
-                      className="cursor-pointer hover:bg-slate-50"
-                      onClick={() => {
-                        if (mrrSortField === 'mrr') {
-                          setMrrSortOrder(mrrSortOrder === 'asc' ? 'desc' : 'asc');
-                        } else {
-                          setMrrSortField('mrr');
-                          setMrrSortOrder('desc');
-                        }
-                      }}
-                    >
-                      <div className="flex items-center gap-1">
-                        MRR
-                        {mrrSortField === 'mrr' && (
-                          mrrSortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                        )}
-                      </div>
-                    </TableHead>
+                    <MrrSortableHeader field="mrr">
+                      MRR
+                    </MrrSortableHeader>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
