@@ -54,6 +54,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [mentionedUserIds, setMentionedUserIds] = useState<Set<string>>(new Set());
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [emojiButtonRect, setEmojiButtonRect] = useState<DOMRect | null>(null);
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
@@ -129,34 +130,11 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
 
   const addCommentMutation = useMutation({
     mutationFn: async ({ content, parentId }: { content: string; parentId?: string }) => {
-      // Extract mentions from content
-      const mentionRegex = /@(\w+(?:\s+\w+)*)/g;
-      const mentionedNames = [];
-      let match;
-      
-      while ((match = mentionRegex.exec(content)) !== null) {
-        mentionedNames.push(match[1]);
-      }
+      // Use the tracked mention IDs directly
+      const mentions = Array.from(mentionedUserIds);
       
       console.log('[Frontend] Content:', content);
-      console.log('[Frontend] Mentioned names found:', mentionedNames);
-      console.log('[Frontend] Staff data available:', staffData?.length, staffData);
-      
-      // Find staff IDs for mentioned names
-      const mentions = mentionedNames.map(name => {
-        console.log('[Frontend] Looking for staff with name:', name);
-        const staff = staffData.find(s => {
-          const fullName = `${s.firstName} ${s.lastName}`.toLowerCase().trim();
-          const nameMatch = s.name?.toLowerCase() === name.toLowerCase();
-          const fullNameMatch = fullName === name.toLowerCase();
-          console.log('[Frontend] Checking staff:', s.firstName, s.lastName, '- name match:', nameMatch, 'fullName match:', fullNameMatch);
-          return nameMatch || fullNameMatch;
-        });
-        console.log('[Frontend] Found staff:', staff);
-        return staff?.id;
-      }).filter(Boolean);
-      
-      console.log('[Frontend] Final mentions array:', mentions);
+      console.log('[Frontend] Tracked mention IDs:', mentions);
       
       const response = await fetch(`/api/tasks/${taskId}/comments`, {
         method: 'POST',
@@ -171,6 +149,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
       setNewComment("");
       setPendingFiles([]);
       setShowToolbar(false);
+      setMentionedUserIds(new Set()); // Clear tracked mentions after successful submission
       toast({
         title: "Success",
         description: "Comment added successfully",
@@ -226,7 +205,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
         e.preventDefault();
         const selectedStaff = filteredStaff[selectedMentionIndex];
         if (selectedStaff) {
-          insertMention(selectedStaff.name || `${selectedStaff.firstName} ${selectedStaff.lastName}`.trim());
+          insertMention(selectedStaff.id, selectedStaff.name || `${selectedStaff.firstName} ${selectedStaff.lastName}`.trim());
         }
         break;
       case 'Escape':
@@ -238,7 +217,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
     }
   };
 
-  const insertMention = (staffName: string) => {
+  const insertMention = (staffId: string, staffName: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -254,6 +233,10 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
     setNewComment(newText);
     setShowMentionDropdown(false);
     setMentionQuery("");
+    
+    // Track this mentioned user ID
+    setMentionedUserIds(prev => new Set(prev).add(staffId));
+    console.log('[Frontend] Mentioned user added:', staffId, staffName);
     
     // Focus back to textarea
     setTimeout(() => {
@@ -926,7 +909,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                   className={`w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 ${
                     index === selectedMentionIndex ? 'bg-blue-100 text-blue-900' : ''
                   }`}
-                  onClick={() => insertMention(staff.name || `${staff.firstName} ${staff.lastName}`.trim())}
+                  onClick={() => insertMention(staff.id, staff.name || `${staff.firstName} ${staff.lastName}`.trim())}
                 >
                   <AtSign className={`h-4 w-4 ${index === selectedMentionIndex ? 'text-blue-600' : 'text-slate-400'}`} />
                   <span>{staff.name || `${staff.firstName} ${staff.lastName}`.trim()}</span>

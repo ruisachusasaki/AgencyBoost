@@ -14138,16 +14138,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create notifications for mentioned users
-      console.log('[Comment] Mentions received:', mentions);
-      console.log('[Comment] User ID:', userId);
-      
       if (mentions && mentions.length > 0) {
-        console.log('[Comment] Processing', mentions.length, 'mentions');
         for (const mentionedUserId of mentions) {
-          console.log('[Comment] Processing mention for user:', mentionedUserId);
           // Don't notify if user mentioned themselves
           if (mentionedUserId !== userId) {
-            console.log('[Comment] Triggering notification for:', mentionedUserId);
             void notificationService.notifyMentioned(
               mentionedUserId,  // Who to notify
               userId,           // Who mentioned them (author ID)
@@ -14155,12 +14149,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               taskId,           // Context ID
               content.trim()    // Comment content
             ).catch(err => console.error('[Notification] Failed to send mention notification:', err));
-          } else {
-            console.log('[Comment] Skipping self-mention');
           }
         }
-      } else {
-        console.log('[Comment] No mentions to process');
       }
 
       // Log the comment creation
