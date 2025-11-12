@@ -1354,8 +1354,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all team assignments with related staff and client data
       const teamAssignments = await appStorage.getTeamAssignments();
       
-      // Get all staff members for reference
+      // Get all staff members for reference (ACTIVE ONLY)
       const allStaff = await appStorage.getStaff();
+      const activeStaff = allStaff.filter(staff => staff.isActive);
       
       // Get all clients for reference
       const clients = await appStorage.getClients();
@@ -1378,8 +1379,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }>;
       }>();
       
-      // Initialize all staff members with zero assignments
-      allStaff.forEach(staff => {
+      // Initialize all ACTIVE staff members with zero assignments
+      activeStaff.forEach(staff => {
         staffWorkloadMap.set(staff.id, {
           staffId: staff.id,
           staffName: `${staff.firstName} ${staff.lastName}`,
@@ -1437,9 +1438,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const staffWorkloadData = Array.from(staffWorkloadMap.values())
         .sort((a, b) => b.clientCount - a.clientCount);
       
-      // Calculate summary statistics
+      // Calculate summary statistics (ACTIVE STAFF ONLY)
       const summary = {
-        totalStaff: allStaff.length,
+        totalStaff: activeStaff.length,
         staffWithAssignments: staffWorkloadData.filter(s => s.clientCount > 0).length,
         staffWithoutAssignments: staffWorkloadData.filter(s => s.clientCount === 0).length,
         totalAssignments: teamAssignments.length,
