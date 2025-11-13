@@ -1033,7 +1033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== CRITICAL FIX: TIME TRACKING API ENDPOINT =====
   // COMPLETELY SELF-CONTAINED - NO IMPORTS TO AVOID ALL DRIZZLE CONFLICTS
   // This is a minimal, working endpoint with all logic inline
-  app.post("/api/reports/time-tracking", async (req, res) => {
+  app.post("/api/reports/time-tracking", requireAuth(), async (req, res) => {
     try {
       console.log("🚀🚀🚀 SELF-CONTAINED TIME TRACKING ENDPOINT CALLED! 🚀🚀🚀");
       console.log("SELF-CONTAINED TIME TRACKING ENDPOINT: Request received:", req.body);
