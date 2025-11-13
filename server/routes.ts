@@ -1058,14 +1058,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userIdToCheckForAdmin = impersonationContext ? impersonationContext.originalAdminId : authenticatedUserId;
       const userIsAdmin = await isCurrentUserAdmin(userIdToCheckForAdmin);
       
+      console.log("🔍 DEBUG userId from request:", userId, "type:", typeof userId);
+      console.log("🔍 DEBUG userIsAdmin:", userIsAdmin);
+      
       // Enforce user-level filtering for non-admins
       let effectiveUserId = userId;
       if (!userIsAdmin) {
         // Non-admins can ONLY see their own data
         effectiveUserId = authenticatedUserId;
+        console.log("🔍 DEBUG Non-admin user - forcing effectiveUserId:", effectiveUserId);
       } else if (!userId || userId === "all") {
         // Admin selected "All Users" - show all data
         effectiveUserId = undefined;
+        console.log("🔍 DEBUG Admin selected all users - effectiveUserId set to undefined");
+      } else {
+        console.log("🔍 DEBUG Admin selected specific user - effectiveUserId:", effectiveUserId);
       }
       
       // Get actual time entries from the database
