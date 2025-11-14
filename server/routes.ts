@@ -22320,42 +22320,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isAdmin) {
         articles = await db.execute(sql`
           SELECT 
-            id,
-            title,
-            excerpt,
-            slug,
-            category_id as "categoryId",
-            parent_id as "parentId",
-            featured_image as "featuredImage",
-            tags,
-            view_count as "viewCount",
-            like_count as "likeCount",
-            is_public as "isPublic",
-            created_at as "createdAt",
-            updated_at as "updatedAt"
-          FROM knowledge_base_articles
-          WHERE status = 'published'
-          ORDER BY created_at DESC
+            kba.id,
+            kba.title,
+            kba.excerpt,
+            kba.slug,
+            kba.category_id as "categoryId",
+            kba.parent_id as "parentId",
+            kba.featured_image as "featuredImage",
+            kba.tags,
+            kba.view_count as "viewCount",
+            kba.like_count as "likeCount",
+            kba.is_public as "isPublic",
+            kba.created_at as "createdAt",
+            kba.updated_at as "updatedAt",
+            kba.created_by as "authorId",
+            COALESCE(s.first_name || ' ' || s.last_name, 'Unknown Author') as "authorName"
+          FROM knowledge_base_articles kba
+          LEFT JOIN staff s ON kba.created_by = s.id
+          WHERE kba.status = 'published'
+          ORDER BY kba.created_at DESC
         `);
       } else {
         articles = await db.execute(sql`
           SELECT 
-            id,
-            title,
-            excerpt,
-            slug,
-            category_id as "categoryId",
-            parent_id as "parentId",
-            featured_image as "featuredImage",
-            tags,
-            view_count as "viewCount",
-            like_count as "likeCount",
-            is_public as "isPublic",
-            created_at as "createdAt",
-            updated_at as "updatedAt"
-          FROM knowledge_base_articles
-          WHERE status = 'published' AND is_public = true
-          ORDER BY created_at DESC
+            kba.id,
+            kba.title,
+            kba.excerpt,
+            kba.slug,
+            kba.category_id as "categoryId",
+            kba.parent_id as "parentId",
+            kba.featured_image as "featuredImage",
+            kba.tags,
+            kba.view_count as "viewCount",
+            kba.like_count as "likeCount",
+            kba.is_public as "isPublic",
+            kba.created_at as "createdAt",
+            kba.updated_at as "updatedAt",
+            kba.created_by as "authorId",
+            COALESCE(s.first_name || ' ' || s.last_name, 'Unknown Author') as "authorName"
+          FROM knowledge_base_articles kba
+          LEFT JOIN staff s ON kba.created_by = s.id
+          WHERE kba.status = 'published' AND kba.is_public = true
+          ORDER BY kba.created_at DESC
         `);
       }
       
