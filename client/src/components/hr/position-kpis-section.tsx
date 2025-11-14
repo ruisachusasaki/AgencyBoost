@@ -23,10 +23,17 @@ export function PositionKpisSection({ staffPosition }: PositionKpisSectionProps)
     (p: Position) => p.name?.trim().toLowerCase() === normalizedStaffPosition
   );
 
+  // Debug logging
+  console.log('[PositionKpisSection] staffPosition:', staffPosition);
+  console.log('[PositionKpisSection] normalizedStaffPosition:', normalizedStaffPosition);
+  console.log('[PositionKpisSection] positions count:', positions?.length);
+  console.log('[PositionKpisSection] matchedPosition:', matchedPosition);
+
   // Log if no match found (for debugging)
   // Note: Relies on label matching until stable position ID is exposed on DirectReport
   if (staffPosition && !matchedPosition && positions && positions.length > 0 && !loadingPositions) {
     console.warn(`No position found matching "${staffPosition}"`);
+    console.warn('Available positions:', positions.map(p => p.name));
   }
 
   // Fetch position KPIs if we have a position ID
