@@ -246,7 +246,7 @@ export default function Training() {
                       <Button asChild className="w-full" data-testid={`button-start-course-${course.id}`}>
                         <Link href={`/training/courses/${course.id}`}>
                           <Play className="h-4 w-4 mr-2" />
-                          Start Course
+                          {myCourses.some(enrollment => enrollment.courseId === course.id) ? 'Continue Course' : 'Start Course'}
                         </Link>
                       </Button>
                     </CardContent>

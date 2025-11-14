@@ -79,6 +79,7 @@ export default function LessonDetail() {
         title: "Great job!",
         description: "Lesson marked as completed!",
       });
+      queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${lesson?.courseId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/training/my-courses"] });
     },
@@ -711,15 +712,17 @@ export default function LessonDetail() {
         <div className="flex gap-3">
           <Button 
             onClick={() => completeLessonMutation.mutate()}
-            disabled={completeLessonMutation.isPending}
-            variant="outline"
+            disabled={completeLessonMutation.isPending || lesson.isCompleted}
+            variant={lesson.isCompleted ? "default" : "outline"}
+            className={lesson.isCompleted ? "bg-green-600 hover:bg-green-700" : ""}
+            data-testid="button-mark-complete"
           >
             <CheckCircle className="h-4 w-4 mr-2" />
-            {completeLessonMutation.isPending ? "Completing..." : "Mark Complete"}
+            {completeLessonMutation.isPending ? "Completing..." : lesson.isCompleted ? "Completed" : "Mark Complete"}
           </Button>
           
           {nextLesson && (
-            <Button asChild>
+            <Button asChild data-testid="button-next-lesson">
               <Link href={`/training/lessons/${nextLesson.id}`}>
                 Next: {nextLesson.title}
                 <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />

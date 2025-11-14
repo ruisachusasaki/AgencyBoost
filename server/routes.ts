@@ -23663,6 +23663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Track lesson access if user is enrolled
+      let isCompleted = false;
       if (userId) {
         const [enrollment] = await db.select().from(trainingEnrollments)
           .where(and(eq(trainingEnrollments.courseId, lesson.courseId), eq(trainingEnrollments.userId, userId)));
@@ -23676,6 +23677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await db.update(trainingProgress)
               .set({ lastAccessedAt: new Date() })
               .where(eq(trainingProgress.id, existingProgress.id));
+            isCompleted = existingProgress.status === "completed";
           } else {
             await db.insert(trainingProgress).values({
               enrollmentId: enrollment.id,
@@ -23697,7 +23699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      res.json(lesson);
+      res.json({ ...lesson, isCompleted });
     } catch (error) {
       console.error('Error fetching lesson:', error);
       res.status(500).json({ error: "Failed to fetch lesson" });
