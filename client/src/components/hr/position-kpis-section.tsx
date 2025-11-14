@@ -65,11 +65,9 @@ export function PositionKpisSection({ staffPosition, meetingId }: PositionKpisSe
   const updateStatusMutation = useMutation({
     mutationFn: async ({ kpiId, status }: { kpiId: string; status: string }) => {
       return await apiRequest(
+        "PUT",
         `/api/hr/one-on-one/kpi-statuses/${meetingId}/${kpiId}`,
-        {
-          method: "PUT",
-          body: JSON.stringify({ status }),
-        }
+        { status }
       );
     },
     onSuccess: () => {
@@ -202,10 +200,10 @@ export function PositionKpisSection({ staffPosition, meetingId }: PositionKpisSe
                     disabled={updateStatusMutation.isPending}
                   >
                     <SelectTrigger 
-                      className="w-[140px]" 
+                      className="w-[140px] rounded-md" 
                       data-testid={`select-kpi-status-${kpi.id}`}
                     >
-                      <div className={`px-2.5 py-0.5 rounded-md text-xs font-medium ${
+                      <div className={`px-2.5 py-0.5 rounded text-xs font-medium ${
                         currentStatus === 'on_track' ? 'bg-green-100 text-green-800' :
                         currentStatus === 'off_track' ? 'bg-red-100 text-red-800' :
                         'bg-blue-100 text-blue-800'

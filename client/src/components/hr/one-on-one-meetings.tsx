@@ -1058,8 +1058,8 @@ function MeetingEditor({
                         value={goal.status}
                         onValueChange={(value) => handleUpdateGoalStatus(goal.id, value)}
                       >
-                        <SelectTrigger className="w-[140px]" data-testid={`select-goal-status-${goal.id}`}>
-                          <div className={`px-2.5 py-0.5 rounded-md text-xs font-medium ${
+                        <SelectTrigger className="w-[140px] rounded-md" data-testid={`select-goal-status-${goal.id}`}>
+                          <div className={`px-2.5 py-0.5 rounded text-xs font-medium ${
                             GOAL_STATUS_OPTIONS.find(s => s.value === goal.status)?.color || 'bg-gray-100 text-gray-800'
                           }`}>
                             {GOAL_STATUS_OPTIONS.find(s => s.value === goal.status)?.label || goal.status}
