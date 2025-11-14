@@ -23563,32 +23563,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { courseId } = req.params;
       const userId = req.session?.userId;
       
-      // Join with modules to order by module order first, then lesson order
-      const lessons = await db.select({
-        id: trainingLessons.id,
-        title: trainingLessons.title,
-        description: trainingLessons.description,
-        courseId: trainingLessons.courseId,
-        moduleId: trainingLessons.moduleId,
-        order: trainingLessons.order,
-        contentType: trainingLessons.contentType,
-        content: trainingLessons.content,
-        videoUrl: trainingLessons.videoUrl,
-        estimatedDuration: trainingLessons.estimatedDuration,
-        isRequired: trainingLessons.isRequired,
-        createdAt: trainingLessons.createdAt,
-        updatedAt: trainingLessons.updatedAt,
-        createdBy: trainingLessons.createdBy,
-        updatedBy: trainingLessons.updatedBy,
-        moduleOrder: trainingModules.order,
+      // Fetch lessons with their modules
+      const lessonsWithModules = await db.select({
+        lesson: trainingLessons,
+        moduleOrder: trainingModules.order
       })
         .from(trainingLessons)
         .leftJoin(trainingModules, eq(trainingLessons.moduleId, trainingModules.id))
-        .where(eq(trainingLessons.courseId, courseId))
-        .orderBy(
-          sql`COALESCE(${trainingModules.order}, 999999) ASC`,
-          asc(trainingLessons.order)
-        );
+        .where(eq(trainingLessons.courseId, courseId));
+      
+      // Sort by module order first (nulls last), then by lesson order
+      const lessons = lessonsWithModules
+        .sort((a, b) => {
+          const aModuleOrder = a.moduleOrder ?? 999999;
+          const bModuleOrder = b.moduleOrder ?? 999999;
+          if (aModuleOrder !== bModuleOrder) {
+            return aModuleOrder - bModuleOrder;
+          }
+          return a.lesson.order - b.lesson.order;
+        })
+        .map(item => item.lesson);
       
       // Get progress for user if logged in
       if (userId) {
