@@ -192,31 +192,21 @@ export function PositionKpisSection({ staffPosition, meetingId }: PositionKpisSe
                   Target: {kpi.benchmark}
                 </p>
               </div>
-              <div className="flex-shrink-0">
-                {meetingId ? (
-                  <Select
-                    value={currentStatus}
-                    onValueChange={(value) => handleStatusChange(kpi.id, value)}
-                    disabled={updateStatusMutation.isPending}
-                  >
-                    <SelectTrigger 
-                      className="w-[140px]" 
-                      data-testid={`select-kpi-status-${kpi.id}`}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {KPI_STATUS_OPTIONS.map((status) => (
-                        <SelectItem key={status.value} value={status.value}>
-                          {status.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <span className="text-sm text-muted-foreground">-</span>
-                )}
-              </div>
+              <Select
+                value={currentStatus}
+                onValueChange={(value) => handleStatusChange(kpi.id, value)}
+              >
+                <SelectTrigger className="w-[140px]" data-testid={`select-kpi-status-${kpi.id}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {KPI_STATUS_OPTIONS.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           );
         })}
