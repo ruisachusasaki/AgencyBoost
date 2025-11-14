@@ -15,7 +15,7 @@ interface PositionKpisSectionProps {
 const KPI_STATUS_OPTIONS = [
   { value: "on_track", label: "On-Track", color: "bg-green-100 text-green-800" },
   { value: "off_track", label: "Off-Track", color: "bg-red-100 text-red-800" },
-  { value: "complete", label: "Complete", color: "bg-blue-100 text-blue-800" },
+  { value: "complete", label: "Complete", color: "bg-green-700 text-white" },
 ];
 
 export function PositionKpisSection({ staffPosition, meetingId }: PositionKpisSectionProps) {
@@ -202,7 +202,7 @@ export function PositionKpisSection({ staffPosition, meetingId }: PositionKpisSe
                 <SelectContent>
                   {KPI_STATUS_OPTIONS.map((status) => (
                     <SelectItem key={status.value} value={status.value}>
-                      {status.label}
+                      <Badge className={status.color}>{status.label}</Badge>
                     </SelectItem>
                   ))}
                 </SelectContent>
