@@ -130,10 +130,10 @@ const BONUS_OPTIONS = [
 // Progression options are now fetched from the API instead of being hard-coded
 
 const GOAL_STATUS_OPTIONS = [
-  { value: "pending", label: "Pending", color: "bg-gray-100 text-gray-800" },
-  { value: "on_track", label: "On-Track", color: "bg-blue-100 text-blue-800" },
-  { value: "off_track", label: "Off-Track", color: "bg-yellow-100 text-yellow-800" },
-  { value: "complete", label: "Complete", color: "bg-green-100 text-green-800" },
+  { value: "pending", label: "Pending", color: "bg-yellow-100 text-yellow-800" },
+  { value: "on_track", label: "On-Track", color: "bg-green-100 text-green-800" },
+  { value: "off_track", label: "Off-Track", color: "bg-red-100 text-red-800" },
+  { value: "complete", label: "Complete", color: "bg-green-700 text-white" },
 ];
 
 export default function OneOnOneMeetings() {
@@ -1064,7 +1064,7 @@ function MeetingEditor({
                         <SelectContent>
                           {GOAL_STATUS_OPTIONS.map((status) => (
                             <SelectItem key={status.value} value={status.value}>
-                              {status.label}
+                              <Badge className={status.color}>{status.label}</Badge>
                             </SelectItem>
                           ))}
                         </SelectContent>
