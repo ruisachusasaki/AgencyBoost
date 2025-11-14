@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfWeek, addWeeks } from "date-fns";
@@ -263,45 +264,25 @@ export default function OneOnOneMeetings() {
 
   // Tab Navigation Component
   const TabNavigation = () => (
-    <div className="border-b border-gray-200 mb-6">
-      <nav className="-mb-px flex space-x-8">
+    <Tabs value={viewMode} onValueChange={(value) => {
+      setViewMode(value as "my-direct-reports" | "my-meetings");
+      setSelectedReport(null);
+      setSelectedMeeting(null);
+      setIsCreatingMeeting(false);
+    }} className="mb-6">
+      <TabsList className={directReports.length > 0 ? "grid w-fit grid-cols-2" : "grid w-fit grid-cols-1"}>
         {directReports.length > 0 && (
-          <button
-            onClick={() => {
-              setViewMode("my-direct-reports");
-              setSelectedMeeting(null);
-              setIsCreatingMeeting(false);
-            }}
-            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-              viewMode === "my-direct-reports"
-                ? "border-primary text-primary"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-            data-testid="tab-my-direct-reports"
-          >
+          <TabsTrigger value="my-direct-reports" className="flex items-center gap-2" data-testid="tab-my-direct-reports">
             <Users className="h-4 w-4" />
             My Direct Reports
-          </button>
+          </TabsTrigger>
         )}
-        <button
-          onClick={() => {
-            setViewMode("my-meetings");
-            setSelectedReport(null);
-            setSelectedMeeting(null);
-            setIsCreatingMeeting(false);
-          }}
-          className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-            viewMode === "my-meetings"
-              ? "border-primary text-primary"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-          }`}
-          data-testid="tab-my-meetings"
-        >
+        <TabsTrigger value="my-meetings" className="flex items-center gap-2" data-testid="tab-my-meetings">
           <Calendar className="h-4 w-4" />
           My 1v1 Meetings
-        </button>
-      </nav>
-    </div>
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
   );
 
   if (loadingReports) {

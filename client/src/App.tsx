@@ -218,21 +218,31 @@ function Router() {
         )}
       </Route>
       
-      <Route path="/hr">
-        {() => (
-          <AuthGate>
-            <MainLayout>
-              <HRPage />
-            </MainLayout>
-          </AuthGate>
-        )}
-      </Route>
-      
       <Route path="/hr/applicant/:id">
         {(params) => (
           <AuthGate>
             <MainLayout>
               <ApplicantDetailPage />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/hr/:tab">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <HRPage initialTab={params.tab} />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/hr">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <HRPage />
             </MainLayout>
           </AuthGate>
         )}

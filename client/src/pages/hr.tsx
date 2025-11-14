@@ -49,7 +49,7 @@ import {
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import TimeOffRequestForm from "@/components/forms/time-off-request-form";
 import ApprovalBoard from "@/components/hr/approval-board";
 import ExpenseReportForm from "@/components/hr/expense-report-form";
@@ -59,13 +59,38 @@ import OffboardingSubmissionsView from "@/components/hr/offboarding-submissions-
 import OneOnOneMeetings from "@/components/hr/one-on-one-meetings";
 import OrgChart from "@/components/hr/org-chart";
 
-export default function HRPage() {
-  // Check for URL parameter to set initial tab
-  const urlParams = new URLSearchParams(window.location.search);
-  const tabParam = urlParams.get('tab');
-  const [activeTab, setActiveTab] = useState(tabParam || "dashboard");
+interface HRPageProps {
+  initialTab?: string;
+}
+
+export default function HRPage({ initialTab }: HRPageProps = {}) {
+  const [location, setLocation] = useLocation();
+  
+  // Derive initial tab from prop, query param (fallback), or default
+  const deriveInitialTab = useMemo(() => {
+    if (initialTab) return initialTab;
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    return tabParam || "dashboard";
+  }, [initialTab]);
+  
+  const [activeTab, setActiveTab] = useState(deriveInitialTab);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Sync activeTab when initialTab prop changes (for route navigation)
+  useEffect(() => {
+    if (initialTab && initialTab !== activeTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, activeTab]);
+  
+  // Handle tab change with URL sync
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    const newPath = tabId === "dashboard" ? "/hr" : `/hr/${tabId}`;
+    setLocation(newPath, { replace: true });
+  };
   
   // Admin permission state
   const [isHRAdmin, setIsHRAdmin] = useState(false);
@@ -900,7 +925,7 @@ export default function HRPage() {
                   return (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => handleTabChange(tab.id)}
                       className={`py-2 px-4 border-b-2 font-medium text-sm flex items-center justify-center gap-2 whitespace-nowrap ${
                         activeTab === tab.id
                           ? "border-primary text-primary"
@@ -934,7 +959,7 @@ export default function HRPage() {
                         return (
                           <DropdownMenuItem
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => handleTabChange(tab.id)}
                             className={`flex items-center gap-2 ${
                               activeTab === tab.id ? "bg-primary/10 text-primary" : ""
                             }`}
