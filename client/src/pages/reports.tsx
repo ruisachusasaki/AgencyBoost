@@ -1302,7 +1302,7 @@ export default function Reports() {
             { id: "tasks", name: "Tasks", icon: Clock, count: null },
             { id: "team", name: "Team Workload", icon: Users, count: null },
             { id: "mrr", name: "MRR Report", icon: DollarSign, count: null },
-            { id: "one-on-one", name: "1-on-1 Performance", icon: Target, count: null }
+            { id: "one-on-one", name: "1v1 Performance", icon: Target, count: null }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
