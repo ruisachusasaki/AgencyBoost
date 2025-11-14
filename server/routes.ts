@@ -20804,7 +20804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("📊 First meeting:", meetings[0]);
       }
 
-      // Fetch talking points, action items, and goals for all meetings
+      // Fetch talking points, action items, goals, and KPI statuses for all meetings
       const meetingIds = meetings.map(m => m.id);
       
       const talkingPoints = meetingIds.length > 0 
@@ -20817,6 +20817,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const goals = meetingIds.length > 0
         ? await db.select().from(oneOnOneGoals).where(inArray(oneOnOneGoals.meetingId, meetingIds))
+        : [];
+      
+      const kpiStatuses = meetingIds.length > 0
+        ? await db.select().from(oneOnOneMeetingKpiStatuses).where(inArray(oneOnOneMeetingKpiStatuses.meetingId, meetingIds))
         : [];
 
       // Group meetings by direct report
@@ -20840,6 +20844,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             actionItemsCompleted: 0,
             goalsTotal: 0,
             goalsCompleted: 0,
+            kpisTotal: 0,
+            kpisOnTrack: 0,
+            kpisOffTrack: 0,
+            kpisComplete: 0,
             meetings: [],
           });
         }
@@ -20874,6 +20882,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userData.goalsTotal += meetingGoals.length;
         userData.goalsCompleted += meetingGoals.filter(g => g.status === 'complete').length;
 
+        // Count KPIs
+        const meetingKpis = kpiStatuses.filter(k => k.meetingId === meeting.id);
+        userData.kpisTotal += meetingKpis.length;
+        userData.kpisOnTrack += meetingKpis.filter(k => k.status === 'on_track').length;
+        userData.kpisOffTrack += meetingKpis.filter(k => k.status === 'off_track').length;
+        userData.kpisComplete += meetingKpis.filter(k => k.status === 'complete').length;
+
         userData.meetings.push({
           id: meeting.id,
           meetingDate: meeting.meetingDate,
@@ -20902,6 +20917,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         goalsCompletionRate: userData.goalsTotal > 0
           ? (userData.goalsCompleted / userData.goalsTotal) * 100
           : null,
+        kpiSummary: {
+          total: userData.kpisTotal,
+          onTrack: userData.kpisOnTrack,
+          offTrack: userData.kpisOffTrack,
+          complete: userData.kpisComplete,
+          percentageComplete: userData.kpisTotal > 0
+            ? (userData.kpisComplete / userData.kpisTotal) * 100
+            : null,
+        },
         mostCommonFeeling: userData.feelings.length > 0
           ? userData.feelings.sort((a, b) =>
               userData.feelings.filter(f => f === a).length - userData.feelings.filter(f => f === b).length

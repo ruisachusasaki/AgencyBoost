@@ -4625,29 +4625,64 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
             </Card>
           </div>
 
+          {/* KPI Progress */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">KPI Progress</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {report.kpiSummary.total > 0 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-muted rounded-lg">
+                      <div className="text-2xl font-bold text-primary">{report.kpiSummary.total}</div>
+                      <div className="text-xs text-muted-foreground mt-1">Total KPIs</div>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 dark:bg-green-950 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">{report.kpiSummary.complete}</div>
+                      <div className="text-xs text-muted-foreground mt-1">Complete</div>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 dark:bg-green-950 rounded-lg">
+                      <div className="text-2xl font-bold text-green-500">{report.kpiSummary.onTrack}</div>
+                      <div className="text-xs text-muted-foreground mt-1">On-Track</div>
+                    </div>
+                    <div className="text-center p-4 bg-red-50 dark:bg-red-950 rounded-lg">
+                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">{report.kpiSummary.offTrack}</div>
+                      <div className="text-xs text-muted-foreground mt-1">Off-Track</div>
+                    </div>
+                  </div>
+                  {report.kpiSummary.percentageComplete !== null && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Overall Completion</span>
+                        <span className="text-sm text-muted-foreground">
+                          {report.kpiSummary.percentageComplete.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-3">
+                        <div 
+                          className="bg-green-600 h-3 rounded-full transition-all"
+                          style={{ width: `${report.kpiSummary.percentageComplete}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No KPI data available for this team member
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Completion Rates */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Completion Rates</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Talking Points</span>
-                    <span className="text-sm text-muted-foreground">
-                      {report.talkingPointsCompletionRate !== null 
-                        ? `${report.talkingPointsCompletionRate.toFixed(0)}%` 
-                        : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full transition-all"
-                      style={{ width: `${report.talkingPointsCompletionRate || 0}%` }}
-                    />
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Action Items</span>
@@ -4777,6 +4812,13 @@ function OneOnOnePerformanceReport() {
     talkingPointsCompletionRate: number | null;
     actionItemsCompletionRate: number | null;
     goalsCompletionRate: number | null;
+    kpiSummary: {
+      total: number;
+      onTrack: number;
+      offTrack: number;
+      complete: number;
+      percentageComplete: number | null;
+    };
     mostCommonFeeling: string | null;
     mostCommonProgressionStatus: string | null;
     meetings: Array<{
@@ -5129,6 +5171,7 @@ function OneOnOnePerformanceReport() {
                 <SortableHeader field="avgPerformancePoints">
                   Avg Performance
                 </SortableHeader>
+                <TableHead>KPI Progress</TableHead>
                 <TableHead>Completion Rates</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -5167,13 +5210,31 @@ function OneOnOnePerformanceReport() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="space-y-1 text-xs">
-                      {report.talkingPointsCompletionRate !== null && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground w-20">Talking:</span>
-                          <span className="font-medium">{report.talkingPointsCompletionRate.toFixed(0)}%</span>
+                    {report.kpiSummary.total > 0 ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-xs">
+                          <Badge variant="default" className="bg-green-600 text-white text-xs px-1.5 py-0">
+                            {report.kpiSummary.complete}
+                          </Badge>
+                          <Badge variant="default" className="bg-green-500 text-white text-xs px-1.5 py-0">
+                            {report.kpiSummary.onTrack}
+                          </Badge>
+                          <Badge variant="default" className="bg-red-600 text-white text-xs px-1.5 py-0">
+                            {report.kpiSummary.offTrack}
+                          </Badge>
                         </div>
-                      )}
+                        {report.kpiSummary.percentageComplete !== null && (
+                          <div className="text-xs text-muted-foreground">
+                            {report.kpiSummary.percentageComplete.toFixed(0)}% complete
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">No KPIs</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1 text-xs">
                       {report.actionItemsCompletionRate !== null && (
                         <div className="flex items-center gap-2">
                           <span className="text-muted-foreground w-20">Actions:</span>
