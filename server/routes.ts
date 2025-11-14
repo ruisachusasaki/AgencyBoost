@@ -23716,7 +23716,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      res.json({ ...lesson, isCompleted });
+      // Map database fields to frontend fields
+      res.json({ 
+        ...lesson, 
+        isCompleted,
+        duration: lesson.videoDuration || 0 // Map videoDuration to duration for frontend
+      });
     } catch (error) {
       console.error('Error fetching lesson:', error);
       res.status(500).json({ error: "Failed to fetch lesson" });
@@ -23750,11 +23755,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       
-      // Map frontend contentUrl to database videoUrl field
-      const { contentUrl, ...otherData } = req.body;
+      // Map frontend fields to database fields
+      const { contentUrl, duration, ...otherData } = req.body;
       const updates = insertTrainingLessonSchema.partial().parse({
         ...otherData,
         videoUrl: contentUrl || null, // Map contentUrl to videoUrl
+        videoDuration: duration || null, // Map duration to videoDuration
         updatedBy: getAuthenticatedUserIdOrFail(req, res) || userId
       });
       
