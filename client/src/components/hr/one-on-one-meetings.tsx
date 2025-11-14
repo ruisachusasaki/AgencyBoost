@@ -1064,7 +1064,7 @@ function MeetingEditor({
                         <SelectContent>
                           {GOAL_STATUS_OPTIONS.map((status) => (
                             <SelectItem key={status.value} value={status.value}>
-                              <Badge className={status.color}>{status.label}</Badge>
+                              {status.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
