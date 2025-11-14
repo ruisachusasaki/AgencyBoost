@@ -96,10 +96,77 @@ const GranularPermissionsEditor = ({
     });
   };
 
+  const selectAll = () => {
+    const allPermissions: GranularPermissionState = {};
+    
+    PERMISSION_TEMPLATES.forEach((moduleTemplate) => {
+      const subPermissions: { [key: string]: boolean } = {};
+      moduleTemplate.subPermissions.forEach((subPerm) => {
+        subPermissions[subPerm.key] = true;
+      });
+      
+      allPermissions[moduleTemplate.module] = {
+        enabled: true,
+        subPermissions,
+      };
+    });
+    
+    setGranularPermissions(allPermissions);
+  };
+
+  const deselectAll = () => {
+    const allPermissions: GranularPermissionState = {};
+    
+    PERMISSION_TEMPLATES.forEach((moduleTemplate) => {
+      const subPermissions: { [key: string]: boolean } = {};
+      moduleTemplate.subPermissions.forEach((subPerm) => {
+        subPermissions[subPerm.key] = false;
+      });
+      
+      allPermissions[moduleTemplate.module] = {
+        enabled: false,
+        subPermissions,
+      };
+    });
+    
+    setGranularPermissions(allPermissions);
+  };
+
+  const areAllSelected = () => {
+    return PERMISSION_TEMPLATES.every((moduleTemplate) => {
+      const moduleState = granularPermissions[moduleTemplate.module];
+      if (!moduleState?.enabled) return false;
+      
+      return moduleTemplate.subPermissions.every((subPerm) => 
+        moduleState.subPermissions[subPerm.key] === true
+      );
+    });
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="font-medium">Granular Permissions</h4>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={deselectAll}
+            data-testid="button-deselect-all-permissions"
+          >
+            Deselect All
+          </Button>
+          <Button
+            type="button"
+            variant={areAllSelected() ? "secondary" : "default"}
+            size="sm"
+            onClick={selectAll}
+            data-testid="button-select-all-permissions"
+          >
+            Select All
+          </Button>
+        </div>
       </div>
       
       <div className="border rounded-lg divide-y">
