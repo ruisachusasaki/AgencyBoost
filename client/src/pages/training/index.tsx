@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Search, Plus, Users, Clock, Star, Play, BookOpen, 
-  TrendingUp, Award, Filter, GraduationCap
+  TrendingUp, Award, Filter, GraduationCap, CheckCircle2, Target, PlayCircle, Calendar
 } from "lucide-react";
 import { useHasPermission } from "@/hooks/use-has-permission";
 
