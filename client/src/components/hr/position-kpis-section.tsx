@@ -205,7 +205,13 @@ export function PositionKpisSection({ staffPosition, meetingId }: PositionKpisSe
                       className="w-[140px]" 
                       data-testid={`select-kpi-status-${kpi.id}`}
                     >
-                      <SelectValue />
+                      <div className={`px-2.5 py-0.5 rounded-md text-xs font-medium ${
+                        currentStatus === 'on_track' ? 'bg-green-100 text-green-800' :
+                        currentStatus === 'off_track' ? 'bg-red-100 text-red-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {KPI_STATUS_OPTIONS.find(s => s.value === currentStatus)?.label || currentStatus}
+                      </div>
                     </SelectTrigger>
                     <SelectContent>
                       {KPI_STATUS_OPTIONS.map((status) => (
