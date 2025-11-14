@@ -22415,9 +22415,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           kba.created_at as "createdAt",
           kba.updated_at as "updatedAt",
           COALESCE(s.first_name || ' ' || s.last_name, 'Unknown Author') as "authorName",
-          kba.created_by as "authorId"
+          kba.created_by as "authorId",
+          CASE WHEN kbb.id IS NOT NULL THEN true ELSE false END as "isBookmarked",
+          CASE WHEN kbl.id IS NOT NULL THEN true ELSE false END as "isLiked"
         FROM knowledge_base_articles kba
         LEFT JOIN staff s ON kba.created_by = s.id
+        LEFT JOIN knowledge_base_bookmarks kbb ON kbb.article_id = kba.id AND kbb.user_id = ${userId}
+        LEFT JOIN knowledge_base_likes kbl ON kbl.article_id = kba.id AND kbl.user_id = ${userId}
         WHERE kba.id = ${req.params.id}
       `);
       

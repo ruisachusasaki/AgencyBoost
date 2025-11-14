@@ -174,6 +174,14 @@ export default function ArticleView() {
     enabled: !!id,
   });
 
+  // Set bookmark and like states when article loads
+  useEffect(() => {
+    if (article) {
+      setIsBookmarked((article as any).isBookmarked || false);
+      setIsLiked((article as any).isLiked || false);
+    }
+  }, [article]);
+
   // Set initial edit content when starting to edit - content should already be initialized
   useEffect(() => {
     if (isEditing && article) {
