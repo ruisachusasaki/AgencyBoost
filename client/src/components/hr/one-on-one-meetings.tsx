@@ -197,14 +197,23 @@ export default function OneOnOneMeetings() {
       const response = await apiRequest("POST", "/api/hr/one-on-one/meetings", newMeetingData);
       return await response.json();
     },
-    onSuccess: (createdMeeting: Meeting) => {
-      // Invalidate meetings query to refresh the list
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/hr/one-on-one/meetings", selectedReport?.id] 
-      });
+    onSuccess: async (createdMeeting: Meeting) => {
       // Set the newly created meeting as selected so it opens in the editor
       setSelectedMeeting(createdMeeting);
       setIsCreatingMeeting(false);
+      
+      // Invalidate and refetch queries to ensure fresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/hr/one-on-one/meetings", selectedReport?.id] 
+        }),
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/hr/one-on-one/meetings", createdMeeting.id, "details"] 
+        }),
+        queryClient.invalidateQueries({ 
+          queryKey: ['/api/hr/one-on-one/meetings', createdMeeting.id, 'kpi-statuses'] 
+        }),
+      ]);
     },
     onError: (error: Error) => {
       toast({
@@ -354,9 +363,10 @@ export default function OneOnOneMeetings() {
                 onClick={handleCreateNewMeeting}
                 className="bg-primary hover:bg-primary/90"
                 data-testid="button-create-meeting"
+                disabled={createMeetingMutation.isPending}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                New 1v1 Meeting
+                {createMeetingMutation.isPending ? "Creating..." : "New 1v1 Meeting"}
               </Button>
             </div>
           </CardHeader>

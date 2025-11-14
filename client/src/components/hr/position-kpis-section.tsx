@@ -47,12 +47,13 @@ export function PositionKpisSection({ staffPosition, meetingId }: PositionKpisSe
   });
 
   // Fetch KPI statuses for this meeting
+  // Only fetch after position KPIs are loaded to avoid 404 on new meetings
   const { 
     data: kpiStatuses = [],
     isLoading: loadingStatuses 
   } = useQuery<OneOnOneMeetingKpiStatus[]>({
-    queryKey: [`/api/hr/one-on-one/meetings/${meetingId}/kpi-statuses`],
-    enabled: !!meetingId,
+    queryKey: ['/api/hr/one-on-one/meetings', meetingId, 'kpi-statuses'],
+    enabled: !!meetingId && !!positionKpis && positionKpis.length > 0,
   });
 
   // Create a map of KPI ID to status for quick lookup
@@ -73,7 +74,7 @@ export function PositionKpisSection({ staffPosition, meetingId }: PositionKpisSe
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: [`/api/hr/one-on-one/meetings/${meetingId}/kpi-statuses`] 
+        queryKey: ['/api/hr/one-on-one/meetings', meetingId, 'kpi-statuses'] 
       });
     },
     onError: (error: Error) => {

@@ -20209,6 +20209,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .values(validatedData)
         .returning();
 
+      // Auto-create default KPI status rows for the direct report's position
+      if (directReport?.positionId) {
+        // Fetch all KPIs for this position
+        const kpisForPosition = await db.select()
+          .from(positionKpis)
+          .where(eq(positionKpis.positionId, directReport.positionId));
+
+        // Create default "on_track" status for each KPI
+        if (kpisForPosition.length > 0) {
+          await db.insert(oneOnOneMeetingKpiStatuses)
+            .values(
+              kpisForPosition.map((kpi) => ({
+                meetingId: newMeeting.id,
+                positionKpiId: kpi.id,
+                status: 'on_track' as const,
+              }))
+            );
+        }
+      }
+
       res.json(newMeeting);
     } catch (error) {
       console.error("Error creating 1-on-1 meeting:", error);
