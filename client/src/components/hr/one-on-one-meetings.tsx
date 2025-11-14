@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfWeek, addWeeks } from "date-fns";
+import { PositionKpisSection } from "@/components/hr/position-kpis-section";
 import {
   Users,
   Calendar,
@@ -990,6 +991,11 @@ function MeetingEditor({
                   </div>
                 </div>
               </div>
+
+              <Separator />
+
+              {/* Position KPIs */}
+              <PositionKpisSection staffPosition={directReport.position} />
 
               <Separator />
 
