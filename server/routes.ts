@@ -83,7 +83,8 @@ import { calculateHealthMetrics, analyzeHealthStatus } from "@shared/utils/healt
 import { emitTrigger } from "./workflow-engine";
 import { 
   requireAuth, 
-  requirePermission, 
+  requirePermission,
+  requireGranularPermission,
   requireRole,
   requireAdmin,
   getAuthenticatedUserId,
@@ -23975,7 +23976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== TRAINING ANALYTICS (Admin/Manager only) =====
   
   // Get training analytics dashboard
-  app.get("/api/training/analytics", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
+  app.get("/api/training/analytics", requireAuth(), requireGranularPermission('training.view_analytics'), async (req, res) => {
     try {
       const { courseId, userId } = req.query;
       const currentUserId = getAuthenticatedUserIdOrFail(req, res);

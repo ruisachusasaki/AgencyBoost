@@ -11,12 +11,16 @@ import {
   Search, Plus, Users, Clock, Star, Play, BookOpen, 
   TrendingUp, Award, Filter, GraduationCap
 } from "lucide-react";
+import { useHasPermission } from "@/hooks/use-has-permission";
 
 export default function Training() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("browse");
+  
+  // Check permission for viewing analytics
+  const { hasPermission: canViewAnalytics } = useHasPermission('training.view_analytics');
   
   // Fetch training data
   const { data: categories = [] } = useQuery({
@@ -60,12 +64,14 @@ export default function Training() {
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" asChild data-testid="button-analytics">
-            <Link href="/training/analytics">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Analytics
-            </Link>
-          </Button>
+          {canViewAnalytics && (
+            <Button variant="outline" asChild data-testid="button-analytics">
+              <Link href="/training/analytics">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Analytics
+              </Link>
+            </Button>
+          )}
           <Button asChild data-testid="button-create-course">
             <Link href="/training/create">
               <Plus className="h-4 w-4 mr-2" />

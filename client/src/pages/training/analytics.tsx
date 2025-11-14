@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   BookOpen, 
   Users, 
@@ -17,8 +18,10 @@ import {
   UserCheck,
   Target,
   BarChart3,
-  ArrowLeft
+  ArrowLeft,
+  ShieldAlert
 } from "lucide-react";
+import { useHasPermission } from "@/hooks/use-has-permission";
 
 interface CourseStats {
   courseId: string;
@@ -59,6 +62,17 @@ interface AnalyticsData {
 export default function TrainingAnalytics() {
   const [selectedUser, setSelectedUser] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
+  const [, setLocation] = useLocation();
+  
+  // Check permission for viewing analytics
+  const { hasPermission: canViewAnalytics, isLoading: permissionLoading } = useHasPermission('training.view_analytics');
+
+  // Redirect if user doesn't have permission
+  useEffect(() => {
+    if (!permissionLoading && !canViewAnalytics) {
+      setLocation('/training');
+    }
+  }, [canViewAnalytics, permissionLoading, setLocation]);
 
   const { data: analytics, isLoading } = useQuery<AnalyticsData>({
     queryKey: [
@@ -83,6 +97,35 @@ export default function TrainingAnalytics() {
       return response.json();
     },
   });
+
+  // Show access denied if no permission
+  if (permissionLoading) {
+    return (
+      <div className="space-y-6">
+        <div>Loading...</div>
+      </div>
+    );
+  }
+
+  if (!canViewAnalytics) {
+    return (
+      <div className="space-y-6">
+        <Alert variant="destructive">
+          <ShieldAlert className="h-4 w-4" />
+          <AlertTitle>Access Denied</AlertTitle>
+          <AlertDescription>
+            You don't have permission to view training analytics. Contact your administrator if you need access.
+          </AlertDescription>
+        </Alert>
+        <Link href="/training">
+          <Button variant="outline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Training
+          </Button>
+        </Link>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

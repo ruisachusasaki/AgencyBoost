@@ -204,6 +204,69 @@ export async function hasPermission(
 }
 
 /**
+ * Check if user has specific granular sub-permission (e.g., 'training.view_analytics').
+ */
+export async function hasGranularPermission(
+  userId: string,
+  permissionKey: string
+): Promise<boolean> {
+  try {
+    // Check if user has admin role
+    const adminRoles = await db
+      .select({ roleId: userRoles.roleId, roleName: roles.name })
+      .from(userRoles)
+      .leftJoin(roles, eq(userRoles.roleId, roles.id))
+      .where(
+        and(
+          eq(userRoles.userId, userId),
+          eq(roles.name, 'Admin')
+        )
+      );
+    
+    // Admin users have all permissions
+    if (adminRoles.length > 0) {
+      return true;
+    }
+    
+    // Get user roles
+    const userRolesList = await db
+      .select({ roleId: userRoles.roleId })
+      .from(userRoles)
+      .where(eq(userRoles.userId, userId));
+    
+    if (userRolesList.length === 0) {
+      return false;
+    }
+    
+    // Check granular permissions for the specific permission key
+    for (const userRole of userRolesList) {
+      const granularPerms = await db
+        .select({
+          permissionKey: granularPermissions.permissionKey,
+          enabled: granularPermissions.enabled
+        })
+        .from(granularPermissions)
+        .where(
+          and(
+            eq(granularPermissions.roleId, userRole.roleId),
+            eq(granularPermissions.permissionKey, permissionKey),
+            eq(granularPermissions.enabled, true)
+          )
+        );
+      
+      if (granularPerms.length > 0) {
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking granular permission:', error);
+    return false;
+  }
+}
+
+/**
  * Middleware to require specific permission.
  * Must be used AFTER requireAuth().
  */
@@ -225,6 +288,34 @@ export function requirePermission(module: string, permission: 'canView' | 'canCr
       return res.status(403).json({ 
         error: "Insufficient permissions",
         message: `You don't have ${permission} permission for ${module}`
+      });
+    }
+    
+    next();
+  };
+}
+
+/**
+ * Middleware to require specific granular permission (e.g., 'training.view_analytics').
+ * Must be used AFTER requireAuth().
+ */
+export function requireGranularPermission(permissionKey: string) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const userId = getAuthenticatedUserId(req);
+    
+    if (!userId) {
+      return res.status(401).json({ 
+        error: "Authentication required",
+        message: "Please log in to access this resource"
+      });
+    }
+    
+    const allowed = await hasGranularPermission(userId, permissionKey);
+    
+    if (!allowed) {
+      return res.status(403).json({ 
+        error: "Insufficient permissions",
+        message: `You don't have permission to access this resource`
       });
     }
     
