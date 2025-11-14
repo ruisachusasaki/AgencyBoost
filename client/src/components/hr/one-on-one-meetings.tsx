@@ -185,6 +185,37 @@ export default function OneOnOneMeetings() {
     enabled: !!selectedMeeting,
   });
 
+  // Mutation to create a new meeting immediately
+  const createMeetingMutation = useMutation({
+    mutationFn: async (directReportId: string) => {
+      const newMeetingData = {
+        directReportId,
+        meetingDate: format(new Date(), "yyyy-MM-dd"),
+        weekOf: format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"),
+      };
+      
+      const response = await apiRequest("POST", "/api/hr/one-on-one/meetings", newMeetingData);
+      return await response.json();
+    },
+    onSuccess: (createdMeeting: Meeting) => {
+      // Invalidate meetings query to refresh the list
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/hr/one-on-one/meetings", selectedReport?.id] 
+      });
+      // Set the newly created meeting as selected so it opens in the editor
+      setSelectedMeeting(createdMeeting);
+      setIsCreatingMeeting(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create meeting",
+        variant: "destructive",
+      });
+      setIsCreatingMeeting(false);
+    },
+  });
+
   const handleSelectReport = (report: DirectReport) => {
     setSelectedReport(report);
     setSelectedMeeting(null);
@@ -204,8 +235,9 @@ export default function OneOnOneMeetings() {
   };
 
   const handleCreateNewMeeting = () => {
+    if (!selectedReport?.id) return;
     setIsCreatingMeeting(true);
-    setSelectedMeeting(null);
+    createMeetingMutation.mutate(selectedReport.id);
   };
 
   const handleSelectMeeting = (meeting: Meeting) => {
