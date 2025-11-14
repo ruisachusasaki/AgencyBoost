@@ -52,7 +52,7 @@ export function PositionKpisSection({ staffPosition, meetingId }: PositionKpisSe
     data: kpiStatuses = [],
     isLoading: loadingStatuses 
   } = useQuery<OneOnOneMeetingKpiStatus[]>({
-    queryKey: ['/api/hr/one-on-one/meetings', meetingId, 'kpi-statuses'],
+    queryKey: [`/api/hr/one-on-one/meetings/${meetingId}/kpi-statuses`],
     enabled: !!meetingId && !!positionKpis && positionKpis.length > 0,
   });
 
@@ -72,7 +72,7 @@ export function PositionKpisSection({ staffPosition, meetingId }: PositionKpisSe
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
-        queryKey: ['/api/hr/one-on-one/meetings', meetingId, 'kpi-statuses'] 
+        queryKey: [`/api/hr/one-on-one/meetings/${meetingId}/kpi-statuses`] 
       });
     },
     onError: (error: Error) => {
@@ -200,16 +200,10 @@ export function PositionKpisSection({ staffPosition, meetingId }: PositionKpisSe
                     disabled={updateStatusMutation.isPending}
                   >
                     <SelectTrigger 
-                      className="w-[140px] rounded-md" 
+                      className="w-[140px]" 
                       data-testid={`select-kpi-status-${kpi.id}`}
                     >
-                      <div className={`px-2.5 py-0.5 rounded text-xs font-medium ${
-                        currentStatus === 'on_track' ? 'bg-green-100 text-green-800' :
-                        currentStatus === 'off_track' ? 'bg-red-100 text-red-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {KPI_STATUS_OPTIONS.find(s => s.value === currentStatus)?.label || currentStatus}
-                      </div>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {KPI_STATUS_OPTIONS.map((status) => (
