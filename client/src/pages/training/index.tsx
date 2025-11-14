@@ -136,7 +136,8 @@ export default function Training() {
           <nav className="-mb-px flex space-x-8">
             {[
               { id: "browse", name: "Browse Courses", icon: Search },
-              { id: "my-courses", name: `My Courses (${myCourses.length})`, icon: BookOpen }
+              { id: "my-courses", name: `My Courses (${myCourses.length})`, icon: BookOpen },
+              { id: "my-progress", name: "My Progress", icon: TrendingUp }
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -378,7 +379,262 @@ export default function Training() {
             )}
           </div>
         )}
+
+        {/* My Progress Tab */}
+        {activeTab === "my-progress" && (
+          <MyProgressTab />
+        )}
       </div>
+    </div>
+  );
+}
+
+// Personal Analytics Component
+function MyProgressTab() {
+  const { data: analytics, isLoading } = useQuery({
+    queryKey: ["/api/training/my-analytics"],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader>
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No analytics available</h3>
+          <p className="text-gray-500">Start taking courses to see your progress!</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { overview, courseProgress, recentActivity } = analytics;
+
+  return (
+    <div className="space-y-6">
+      {/* Overview KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card data-testid="card-total-enrollments">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Enrollments</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.totalEnrollments}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {overview.inProgressCourses} in progress
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-completed-courses">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed Courses</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{overview.completedCourses}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {overview.totalEnrollments > 0 
+                ? `${Math.round((overview.completedCourses / overview.totalEnrollments) * 100)}% completion rate`
+                : "No courses yet"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-average-progress">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Progress</CardTitle>
+            <Target className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.averageProgress}%</div>
+            <Progress value={overview.averageProgress} className="h-2 mt-2" />
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-lessons-completed">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Lessons Completed</CardTitle>
+            <PlayCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.totalLessonsCompleted}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Across all courses
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-time-spent">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Time Spent Learning</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {overview.totalTimeSpentMinutes < 60 
+                ? `${overview.totalTimeSpentMinutes}m`
+                : `${Math.floor(overview.totalTimeSpentMinutes / 60)}h ${overview.totalTimeSpentMinutes % 60}m`
+              }
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Video watch time
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-recent-activity">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{recentActivity.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Last 7 days
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Course Progress Details */}
+      {courseProgress.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Course Progress</CardTitle>
+            <CardDescription>Detailed view of your enrolled courses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {courseProgress.map((course) => (
+                <div key={course.courseId} className="border rounded-lg p-4 space-y-3" data-testid={`progress-course-${course.courseId}`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <Link href={`/training/courses/${course.courseId}`} className="font-medium hover:text-primary">
+                        {course.courseTitle}
+                      </Link>
+                      <div className="flex gap-2 mt-2">
+                        {course.categoryName && (
+                          <Badge variant="secondary" style={{ backgroundColor: course.categoryColor + "20", color: course.categoryColor }}>
+                            {course.categoryName}
+                          </Badge>
+                        )}
+                        <Badge 
+                          variant={course.enrollmentStatus === "completed" ? "default" : "outline"}
+                          className="capitalize"
+                        >
+                          {course.enrollmentStatus.replace("_", " ")}
+                        </Badge>
+                        {course.difficulty && (
+                          <Badge variant="outline" className="capitalize">
+                            {course.difficulty}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    {course.enrollmentStatus === "completed" && (
+                      <Award className="h-5 w-5 text-green-600" />
+                    )}
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Progress</span>
+                      <span className="font-medium">{course.progress || 0}%</span>
+                    </div>
+                    <Progress value={course.progress || 0} className="h-2" />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>{course.completedLessons || 0} of {course.totalLessons || 0} lessons</span>
+                      {course.estimatedDuration && (
+                        <span>{Math.round(course.estimatedDuration / 60)}h total</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>Enrolled: {new Date(course.enrolledAt).toLocaleDateString()}</span>
+                    {course.completedAt ? (
+                      <span className="text-green-600 font-medium">
+                        Completed: {new Date(course.completedAt).toLocaleDateString()}
+                      </span>
+                    ) : course.lastAccessedAt ? (
+                      <span>Last accessed: {new Date(course.lastAccessedAt).toLocaleDateString()}</span>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Activity */}
+      {recentActivity.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>Your learning activity in the last 7 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentActivity.map((activity, index) => (
+                <div key={`${activity.lessonId}-${index}`} className="flex items-start gap-3 pb-3 border-b last:border-0" data-testid={`activity-${index}`}>
+                  <div className={`mt-1 ${activity.status === 'completed' ? 'text-green-600' : 'text-gray-400'}`}>
+                    {activity.status === 'completed' ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      <PlayCircle className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{activity.lessonTitle}</p>
+                    <p className="text-xs text-gray-500">{activity.courseTitle}</p>
+                  </div>
+                  {activity.completedAt && (
+                    <span className="text-xs text-gray-500 whitespace-nowrap">
+                      {new Date(activity.completedAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Empty State */}
+      {courseProgress.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Start Your Learning Journey</h3>
+            <p className="text-gray-500 mb-4">
+              Enroll in courses to track your progress and see your achievements here.
+            </p>
+            <Button asChild data-testid="button-browse-courses-empty">
+              <Link href="/training">
+                <Search className="h-4 w-4 mr-2" />
+                Browse Courses
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

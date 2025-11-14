@@ -23433,6 +23433,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's personal training analytics
+  app.get("/api/training/my-analytics", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      // Get all enrollments
+      const enrollments = await db.select().from(trainingEnrollments)
+        .where(eq(trainingEnrollments.userId, userId));
+      
+      // Calculate overall stats
+      const totalEnrollments = enrollments.length;
+      const completedCourses = enrollments.filter(e => e.status === 'completed').length;
+      const inProgressCourses = enrollments.filter(e => e.status === 'in_progress').length;
+      const averageProgress = totalEnrollments > 0
+        ? Math.round(enrollments.reduce((sum, e) => sum + (e.progress || 0), 0) / totalEnrollments)
+        : 0;
+      
+      // Get detailed course progress - ensure all course metadata is populated
+      const courseProgressRaw = await db.select({
+        courseId: trainingCourses.id,
+        courseTitle: trainingCourses.title,
+        courseThumbnail: trainingCourses.thumbnailUrl,
+        categoryName: trainingCategories.name,
+        categoryColor: trainingCategories.color,
+        difficulty: trainingCourses.difficulty,
+        enrollmentStatus: trainingEnrollments.status,
+        progress: trainingEnrollments.progress,
+        completedLessons: trainingEnrollments.completedLessons,
+        totalLessons: trainingEnrollments.totalLessons,
+        enrolledAt: trainingEnrollments.enrolledAt,
+        lastAccessedAt: trainingEnrollments.lastAccessedAt,
+        completedAt: trainingEnrollments.completedAt,
+        estimatedDuration: trainingCourses.estimatedDuration
+      }).from(trainingEnrollments)
+        .innerJoin(trainingCourses, eq(trainingEnrollments.courseId, trainingCourses.id))
+        .leftJoin(trainingCategories, eq(trainingCourses.categoryId, trainingCategories.id))
+        .where(eq(trainingEnrollments.userId, userId))
+        .orderBy(desc(trainingEnrollments.lastAccessedAt));
+      
+      // Filter out any enrollments with null course data (orphaned enrollments)
+      const courseProgress = courseProgressRaw.filter(course => course.courseId && course.courseTitle);
+      
+      // Get total time spent (sum of completed lessons video duration)
+      const progressRecords = await db.select({
+        lessonId: trainingProgress.lessonId,
+        status: trainingProgress.status
+      }).from(trainingProgress)
+        .where(and(
+          eq(trainingProgress.userId, userId),
+          eq(trainingProgress.status, 'completed')
+        ));
+      
+      const completedLessonIds = progressRecords.map(p => p.lessonId);
+      
+      let totalTimeSpentMinutes = 0;
+      if (completedLessonIds.length > 0) {
+        const lessonsData = await db.select({
+          videoDuration: trainingLessons.videoDuration
+        }).from(trainingLessons)
+          .where(inArray(trainingLessons.id, completedLessonIds));
+        
+        totalTimeSpentMinutes = Math.round(
+          lessonsData.reduce((sum, l) => sum + (l.videoDuration || 0), 0) / 60
+        );
+      }
+      
+      // Calculate total lessons completed across all courses
+      const totalLessonsCompleted = enrollments.reduce((sum, e) => sum + (e.completedLessons || 0), 0);
+      
+      // Recent activity (last 7 days) - include both accessed and completed lessons
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const recentActivity = await db.select({
+        lessonId: trainingProgress.lessonId,
+        lessonTitle: trainingLessons.title,
+        courseTitle: trainingCourses.title,
+        completedAt: trainingProgress.completedAt,
+        lastAccessedAt: trainingProgress.lastAccessedAt,
+        status: trainingProgress.status
+      }).from(trainingProgress)
+        .leftJoin(trainingLessons, eq(trainingProgress.lessonId, trainingLessons.id))
+        .leftJoin(trainingCourses, eq(trainingLessons.courseId, trainingCourses.id))
+        .where(and(
+          eq(trainingProgress.userId, userId),
+          or(
+            and(
+              isNotNull(trainingProgress.lastAccessedAt),
+              gte(trainingProgress.lastAccessedAt, sevenDaysAgo)
+            ),
+            and(
+              isNotNull(trainingProgress.completedAt),
+              gte(trainingProgress.completedAt, sevenDaysAgo)
+            )
+          )
+        ))
+        .orderBy(
+          desc(sql`COALESCE(${trainingProgress.completedAt}, ${trainingProgress.lastAccessedAt})`)
+        )
+        .limit(10);
+      
+      // Serialize dates to ISO strings for frontend
+      const serializedCourseProgress = courseProgress.map(course => ({
+        ...course,
+        enrolledAt: course.enrolledAt ? new Date(course.enrolledAt).toISOString() : null,
+        lastAccessedAt: course.lastAccessedAt ? new Date(course.lastAccessedAt).toISOString() : null,
+        completedAt: course.completedAt ? new Date(course.completedAt).toISOString() : null
+      }));
+
+      const serializedRecentActivity = recentActivity.map(activity => ({
+        ...activity,
+        completedAt: activity.completedAt ? new Date(activity.completedAt).toISOString() : null,
+        lastAccessedAt: activity.lastAccessedAt ? new Date(activity.lastAccessedAt).toISOString() : null
+      }));
+
+      res.json({
+        overview: {
+          totalEnrollments,
+          completedCourses,
+          inProgressCourses,
+          averageProgress,
+          totalLessonsCompleted,
+          totalTimeSpentMinutes
+        },
+        courseProgress: serializedCourseProgress,
+        recentActivity: serializedRecentActivity
+      });
+    } catch (error) {
+      console.error('Error fetching personal analytics:', error);
+      res.status(500).json({ error: "Failed to fetch personal analytics" });
+    }
+  });
+
   // ===== TRAINING MODULES =====
   
   // Get modules for a course
