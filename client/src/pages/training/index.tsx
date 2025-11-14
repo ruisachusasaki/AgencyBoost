@@ -19,8 +19,9 @@ export default function Training() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("browse");
   
-  // Check permission for viewing analytics
+  // Check permissions
   const { hasPermission: canViewAnalytics } = useHasPermission('training.view_analytics');
+  const { hasPermission: canManageCourses } = useHasPermission('training.manage_courses');
   
   // Fetch training data
   const { data: categories = [] } = useQuery({
@@ -72,12 +73,14 @@ export default function Training() {
               </Link>
             </Button>
           )}
-          <Button asChild data-testid="button-create-course">
-            <Link href="/training/create">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Course
-            </Link>
-          </Button>
+          {canManageCourses && (
+            <Button asChild data-testid="button-create-course">
+              <Link href="/training/create">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Course
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
