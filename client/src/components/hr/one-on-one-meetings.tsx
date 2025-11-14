@@ -139,6 +139,7 @@ const GOAL_STATUS_OPTIONS = [
 export default function OneOnOneMeetings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [viewMode, setViewMode] = useState<"my-direct-reports" | "my-meetings">("my-direct-reports");
   const [selectedReport, setSelectedReport] = useState<DirectReport | null>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
@@ -153,6 +154,12 @@ export default function OneOnOneMeetings() {
   // Fetch direct reports
   const { data: directReports = [], isLoading: loadingReports } = useQuery<DirectReport[]>({
     queryKey: ["/api/hr/one-on-one/direct-reports"],
+  });
+
+  // Fetch current user's own 1v1 meetings (where they are the direct report)
+  const { data: myMeetings = [], isLoading: loadingMyMeetings } = useQuery<Meeting[]>({
+    queryKey: ["/api/hr/one-on-one/my-meetings"],
+    enabled: viewMode === "my-meetings",
   });
 
   // Fetch meetings for selected report
@@ -254,30 +261,204 @@ export default function OneOnOneMeetings() {
     setIsCreatingMeeting(false);
   };
 
+  // Tab Navigation Component
+  const TabNavigation = () => (
+    <div className="border-b border-gray-200 mb-6">
+      <nav className="-mb-px flex space-x-8">
+        {directReports.length > 0 && (
+          <button
+            onClick={() => {
+              setViewMode("my-direct-reports");
+              setSelectedMeeting(null);
+              setIsCreatingMeeting(false);
+            }}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              viewMode === "my-direct-reports"
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+            data-testid="tab-my-direct-reports"
+          >
+            <Users className="h-4 w-4" />
+            My Direct Reports
+          </button>
+        )}
+        <button
+          onClick={() => {
+            setViewMode("my-meetings");
+            setSelectedReport(null);
+            setSelectedMeeting(null);
+            setIsCreatingMeeting(false);
+          }}
+          className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+            viewMode === "my-meetings"
+              ? "border-primary text-primary"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          }`}
+          data-testid="tab-my-meetings"
+        >
+          <Calendar className="h-4 w-4" />
+          My 1v1 Meetings
+        </button>
+      </nav>
+    </div>
+  );
+
   if (loadingReports) {
     return <div className="flex items-center justify-center p-12">Loading...</div>;
   }
 
-  if (directReports.length === 0) {
+  // MY MEETINGS VIEW
+  if (viewMode === "my-meetings") {
+    if (loadingMyMeetings) {
+      return (
+        <div className="space-y-6">
+          <TabNavigation />
+          <div className="flex items-center justify-center p-12">Loading meetings...</div>
+        </div>
+      );
+    }
+
+    // If a specific meeting is selected, show the detail view
+    if (selectedMeeting) {
+      return (
+        <MeetingEditor
+          directReport={null}
+          meeting={selectedMeeting}
+          meetingDetails={meetingDetails}
+          onBack={handleBackToMeetings}
+          onSave={handleBackToMeetings}
+          viewMode="my-meetings"
+        />
+      );
+    }
+
+    // Show list of user's own 1v1 meetings
+    const totalPages = Math.ceil(myMeetings.length / meetingsPerPage);
+    const startIndex = (currentPage - 1) * meetingsPerPage;
+    const paginatedMeetings = myMeetings.slice(startIndex, startIndex + meetingsPerPage);
+
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            1-on-1 Meetings
-          </CardTitle>
-          <CardDescription>
-            Track weekly meetings and development progress with your direct reports
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>You don't have any direct reports assigned.</p>
-            <p className="text-sm mt-2">Contact your HR administrator to set up reporting structure.</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <TabNavigation />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              My 1v1 Meetings
+            </CardTitle>
+            <CardDescription>
+              View your 1v1 meeting history and progress
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {myMeetings.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No 1v1 meetings yet.</p>
+                <p className="text-sm mt-2">Your manager will create meetings for you.</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  {paginatedMeetings.map((meeting) => (
+                    <div
+                      key={meeting.id}
+                      onClick={() => handleSelectMeeting(meeting)}
+                      className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                      data-testid={`meeting-card-${meeting.id}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4">
+                            <div>
+                              <p className="font-semibold">
+                                {format(new Date(meeting.meetingDate), "MMMM d, yyyy")}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Week of {format(new Date(meeting.weekOf), "MMM d, yyyy")}
+                              </p>
+                            </div>
+                            {meeting.feeling && (
+                              <Badge variant="outline" className="flex items-center gap-1">
+                                <span>{FEELING_OPTIONS.find(f => f.value === meeting.feeling)?.emoji}</span>
+                                <span>{FEELING_OPTIONS.find(f => f.value === meeting.feeling)?.label}</span>
+                              </Badge>
+                            )}
+                            {meeting.performancePoints !== null && (
+                              <Badge variant="outline">
+                                <Star className="h-3 w-3 mr-1" />
+                                {meeting.performancePoints}/5
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {startIndex + 1} to {Math.min(startIndex + meetingsPerPage, myMeetings.length)} of {myMeetings.length} meetings
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        data-testid="button-prev-page"
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        data-testid="button-next-page"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // MY DIRECT REPORTS VIEW - Show empty state if no direct reports AND in direct-reports mode
+  if (viewMode === "my-direct-reports" && directReports.length === 0) {
+    return (
+      <div className="space-y-6">
+        <TabNavigation />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              My Direct Reports
+            </CardTitle>
+            <CardDescription>
+              Track weekly meetings and development progress with your direct reports
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>You don't have any direct reports assigned.</p>
+              <p className="text-sm mt-2">Switch to "My 1v1 Meetings" to view your own meeting history.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -285,6 +466,7 @@ export default function OneOnOneMeetings() {
   if (!selectedReport) {
     return (
       <div className="space-y-6">
+        <TabNavigation />
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -513,8 +695,9 @@ function MeetingEditor({
   meetingDetails,
   onBack,
   onSave,
+  viewMode = "my-direct-reports",
 }: {
-  directReport: DirectReport;
+  directReport: DirectReport | null;
   meeting: Meeting | null;
   meetingDetails?: {
     meeting: Meeting;
@@ -525,6 +708,7 @@ function MeetingEditor({
   };
   onBack: () => void;
   onSave: () => void;
+  viewMode?: "my-direct-reports" | "my-meetings";
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -850,6 +1034,8 @@ function MeetingEditor({
     }
   };
 
+  const isReadOnly = viewMode === "my-meetings";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -859,16 +1045,18 @@ function MeetingEditor({
           data-testid="button-back-to-meetings"
         >
           <ChevronLeft className="h-4 w-4 mr-2" />
-          Back to Meetings
+          {isReadOnly ? "Back to My Meetings" : "Back to Meetings"}
         </Button>
-        <Button
-          onClick={handleSave}
-          className="bg-primary hover:bg-primary/90"
-          disabled={saveMeetingMutation.isPending}
-          data-testid="button-save-meeting"
-        >
-          {saveMeetingMutation.isPending ? "Saving..." : meeting ? "Update Meeting" : "Create Meeting"}
-        </Button>
+        {!isReadOnly && (
+          <Button
+            onClick={handleSave}
+            className="bg-primary hover:bg-primary/90"
+            disabled={saveMeetingMutation.isPending}
+            data-testid="button-save-meeting"
+          >
+            {saveMeetingMutation.isPending ? "Saving..." : meeting ? "Update Meeting" : "Create Meeting"}
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -877,16 +1065,26 @@ function MeetingEditor({
           <Card>
             <CardHeader>
               <div className="flex items-center gap-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={directReport.profileImagePath ? `/objects${directReport.profileImagePath}` : undefined} />
-                  <AvatarFallback>
-                    {directReport.firstName[0]}{directReport.lastName[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle>1-on-1 Meeting</CardTitle>
-                  <CardDescription>{directReport.firstName} {directReport.lastName}</CardDescription>
-                </div>
+                {directReport && (
+                  <>
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={directReport.profileImagePath ? `/objects${directReport.profileImagePath}` : undefined} />
+                      <AvatarFallback>
+                        {directReport.firstName[0]}{directReport.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <CardTitle>1-on-1 Meeting</CardTitle>
+                      <CardDescription>{directReport.firstName} {directReport.lastName}</CardDescription>
+                    </div>
+                  </>
+                )}
+                {!directReport && (
+                  <div>
+                    <CardTitle>My 1-on-1 Meeting</CardTitle>
+                    <CardDescription>{format(new Date(meetingDate), "MMMM d, yyyy")}</CardDescription>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -899,6 +1097,7 @@ function MeetingEditor({
                     type="date"
                     value={meetingDate}
                     onChange={(e) => setMeetingDate(e.target.value)}
+                    disabled={isReadOnly}
                     data-testid="input-meeting-date"
                   />
                 </div>
@@ -909,6 +1108,7 @@ function MeetingEditor({
                     type="date"
                     value={weekOf}
                     onChange={(e) => setWeekOf(e.target.value)}
+                    disabled={isReadOnly}
                     data-testid="input-week-of"
                   />
                 </div>
@@ -919,18 +1119,19 @@ function MeetingEditor({
               {/* Feeling Rating */}
               <div>
                 <Label className="text-base font-semibold mb-3 block">
-                  How is {directReport.firstName} feeling today?
+                  {directReport ? `How is ${directReport.firstName} feeling today?` : "How are you feeling?"}
                 </Label>
                 <div className="flex gap-2 flex-wrap">
                   {FEELING_OPTIONS.map((option) => (
                     <button
                       key={option.value}
-                      onClick={() => setFeeling(option.value)}
+                      onClick={() => !isReadOnly && setFeeling(option.value)}
+                      disabled={isReadOnly}
                       className={`px-4 py-3 rounded-lg border-2 transition-all ${
                         feeling === option.value
                           ? "border-primary bg-primary/10"
                           : "border-gray-200 hover:border-primary/50"
-                      }`}
+                      } ${isReadOnly ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
                       data-testid={`button-feeling-${option.value}`}
                     >
                       <div className="text-2xl mb-1">{option.emoji}</div>
@@ -1336,25 +1537,27 @@ function MeetingEditor({
             </CardContent>
           </Card>
 
-          {/* Private Notes */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <StickyNote className="h-4 w-4" />
-                Private Notes
-              </CardTitle>
-              <CardDescription className="text-xs">Only visible to you and admins</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                placeholder="Private notes about this team member..."
-                value={privateNotes}
-                onChange={(e) => setPrivateNotes(e.target.value)}
-                rows={8}
-                data-testid="textarea-private-notes"
-              />
-            </CardContent>
-          </Card>
+          {/* Private Notes - Only visible to managers */}
+          {viewMode === "my-direct-reports" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <StickyNote className="h-4 w-4" />
+                  Private Notes
+                </CardTitle>
+                <CardDescription className="text-xs">Only visible to you and admins</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  placeholder="Private notes about this team member..."
+                  value={privateNotes}
+                  onChange={(e) => setPrivateNotes(e.target.value)}
+                  rows={8}
+                  data-testid="textarea-private-notes"
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

@@ -20085,6 +20085,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current user's own 1v1 meetings (where they are the direct report)
+  // SECURITY: Private notes are excluded from this endpoint
+  app.get("/api/hr/one-on-one/my-meetings", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+
+      // Get meetings where current user is the direct report
+      // Explicitly exclude privateNotes for security
+      const meetings = await db.select({
+        id: oneOnOneMeetings.id,
+        managerId: oneOnOneMeetings.managerId,
+        directReportId: oneOnOneMeetings.directReportId,
+        meetingDate: oneOnOneMeetings.meetingDate,
+        weekOf: oneOnOneMeetings.weekOf,
+        feeling: oneOnOneMeetings.feeling,
+        performanceFeedback: oneOnOneMeetings.performanceFeedback,
+        performancePoints: oneOnOneMeetings.performancePoints,
+        bonusPoints: oneOnOneMeetings.bonusPoints,
+        progressionStatus: oneOnOneMeetings.progressionStatus,
+        hobbies: oneOnOneMeetings.hobbies,
+        family: oneOnOneMeetings.family,
+        recordingLink: oneOnOneMeetings.recordingLink,
+        createdAt: oneOnOneMeetings.createdAt,
+        updatedAt: oneOnOneMeetings.updatedAt,
+        // privateNotes intentionally excluded
+      })
+        .from(oneOnOneMeetings)
+        .where(eq(oneOnOneMeetings.directReportId, currentUserId))
+        .orderBy(desc(oneOnOneMeetings.meetingDate));
+
+      res.json(meetings);
+    } catch (error) {
+      console.error("Error fetching user's own 1-on-1 meetings:", error);
+      res.status(500).json({ error: "Failed to fetch meetings" });
+    }
+  });
+
   // Get all meetings for a direct report
   app.get("/api/hr/one-on-one/meetings/:directReportId", requireAuth(), async (req, res) => {
     try {
