@@ -23563,9 +23563,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { courseId } = req.params;
       const userId = req.session?.userId;
       
-      const lessons = await db.select().from(trainingLessons)
+      // Join with modules to order by module order first, then lesson order
+      const lessons = await db.select({
+        id: trainingLessons.id,
+        title: trainingLessons.title,
+        description: trainingLessons.description,
+        courseId: trainingLessons.courseId,
+        moduleId: trainingLessons.moduleId,
+        order: trainingLessons.order,
+        contentType: trainingLessons.contentType,
+        content: trainingLessons.content,
+        videoUrl: trainingLessons.videoUrl,
+        estimatedDuration: trainingLessons.estimatedDuration,
+        isRequired: trainingLessons.isRequired,
+        createdAt: trainingLessons.createdAt,
+        updatedAt: trainingLessons.updatedAt,
+        createdBy: trainingLessons.createdBy,
+        updatedBy: trainingLessons.updatedBy,
+        moduleOrder: trainingModules.order,
+      })
+        .from(trainingLessons)
+        .leftJoin(trainingModules, eq(trainingLessons.moduleId, trainingModules.id))
         .where(eq(trainingLessons.courseId, courseId))
-        .orderBy(asc(trainingLessons.order));
+        .orderBy(
+          sql`COALESCE(${trainingModules.order}, 999999) ASC`,
+          asc(trainingLessons.order)
+        );
       
       // Get progress for user if logged in
       if (userId) {
