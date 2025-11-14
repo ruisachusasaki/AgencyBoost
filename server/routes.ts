@@ -61,7 +61,7 @@ import {
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
   clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings,
   knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseLikes, knowledgeBaseBookmarks, knowledgeBasePermissions,
-  oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments
+  oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments, oneOnOneMeetingKpiStatuses
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
@@ -20442,6 +20442,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting goal:", error);
       res.status(500).json({ error: "Failed to delete goal" });
+    }
+  });
+
+  // Position KPI Status Routes
+  app.get("/api/hr/one-on-one/meetings/:meetingId/kpi-statuses", requireAuth(), async (req, res) => {
+    try {
+      const { meetingId } = req.params;
+      const statuses = await db.select()
+        .from(oneOnOneMeetingKpiStatuses)
+        .where(eq(oneOnOneMeetingKpiStatuses.meetingId, meetingId));
+      res.json(statuses);
+    } catch (error) {
+      console.error("Error fetching KPI statuses:", error);
+      res.status(500).json({ error: "Failed to fetch KPI statuses" });
+    }
+  });
+
+  app.put("/api/hr/one-on-one/kpi-statuses/:meetingId/:positionKpiId", requireAuth(), async (req, res) => {
+    try {
+      const { meetingId, positionKpiId } = req.params;
+      const { status } = req.body;
+
+      if (!status || !['on_track', 'off_track', 'complete'].includes(status)) {
+        return res.status(400).json({ error: "Invalid status value" });
+      }
+
+      // Check if status already exists
+      const [existing] = await db.select()
+        .from(oneOnOneMeetingKpiStatuses)
+        .where(
+          and(
+            eq(oneOnOneMeetingKpiStatuses.meetingId, meetingId),
+            eq(oneOnOneMeetingKpiStatuses.positionKpiId, positionKpiId)
+          )
+        );
+
+      let result;
+      if (existing) {
+        // Update existing status
+        [result] = await db.update(oneOnOneMeetingKpiStatuses)
+          .set({ status, updatedAt: new Date() })
+          .where(
+            and(
+              eq(oneOnOneMeetingKpiStatuses.meetingId, meetingId),
+              eq(oneOnOneMeetingKpiStatuses.positionKpiId, positionKpiId)
+            )
+          )
+          .returning();
+      } else {
+        // Insert new status
+        [result] = await db.insert(oneOnOneMeetingKpiStatuses)
+          .values({
+            meetingId,
+            positionKpiId,
+            status,
+          })
+          .returning();
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error updating KPI status:", error);
+      res.status(500).json({ error: "Failed to update KPI status" });
     }
   });
 

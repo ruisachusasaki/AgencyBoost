@@ -995,7 +995,10 @@ function MeetingEditor({
               <Separator />
 
               {/* Position KPIs */}
-              <PositionKpisSection staffPosition={directReport.position} />
+              <PositionKpisSection 
+                staffPosition={directReport.position} 
+                meetingId={meeting?.id || null}
+              />
 
               <Separator />
 

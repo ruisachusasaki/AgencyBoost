@@ -4020,6 +4020,25 @@ export const insertOneOnOneGoalSchema = createInsertSchema(oneOnOneGoals).omit({
 export type OneOnOneGoal = typeof oneOnOneGoals.$inferSelect;
 export type InsertOneOnOneGoal = z.infer<typeof insertOneOnOneGoalSchema>;
 
+// Position KPI status tracking per meeting
+export const oneOnOneMeetingKpiStatuses = pgTable("one_on_one_meeting_kpi_statuses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  meetingId: varchar("meeting_id").notNull().references(() => oneOnOneMeetings.id, { onDelete: 'cascade' }),
+  positionKpiId: varchar("position_kpi_id").notNull().references(() => positionKpis.id, { onDelete: 'cascade' }),
+  status: text("status").notNull().default("on_track"), // on_track, off_track, complete
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOneOnOneMeetingKpiStatusSchema = createInsertSchema(oneOnOneMeetingKpiStatuses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type OneOnOneMeetingKpiStatus = typeof oneOnOneMeetingKpiStatuses.$inferSelect;
+export type InsertOneOnOneMeetingKpiStatus = z.infer<typeof insertOneOnOneMeetingKpiStatusSchema>;
+
 // Comments visible to both manager and direct report
 export const oneOnOneComments = pgTable("one_on_one_comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

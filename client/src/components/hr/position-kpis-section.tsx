@@ -1,13 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Target, AlertCircle } from "lucide-react";
-import type { Position, PositionKpi } from "@shared/schema";
+import type { Position, PositionKpi, OneOnOneMeetingKpiStatus } from "@shared/schema";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface PositionKpisSectionProps {
   staffPosition?: string;
+  meetingId: string | null;
 }
 
-export function PositionKpisSection({ staffPosition }: PositionKpisSectionProps) {
+const KPI_STATUS_OPTIONS = [
+  { value: "on_track", label: "On-Track", color: "bg-green-100 text-green-800" },
+  { value: "off_track", label: "Off-Track", color: "bg-red-100 text-red-800" },
+  { value: "complete", label: "Complete", color: "bg-blue-100 text-blue-800" },
+];
+
+export function PositionKpisSection({ staffPosition, meetingId }: PositionKpisSectionProps) {
+  const { toast } = useToast();
+
   // Fetch all positions to find the position ID from the staff member's position name
   const { 
     data: positions, 
@@ -32,6 +45,49 @@ export function PositionKpisSection({ staffPosition }: PositionKpisSectionProps)
     queryKey: [`/api/positions/${matchedPosition?.id}/kpis`],
     enabled: !!matchedPosition?.id,
   });
+
+  // Fetch KPI statuses for this meeting
+  const { 
+    data: kpiStatuses = [],
+    isLoading: loadingStatuses 
+  } = useQuery<OneOnOneMeetingKpiStatus[]>({
+    queryKey: [`/api/hr/one-on-one/meetings/${meetingId}/kpi-statuses`],
+    enabled: !!meetingId,
+  });
+
+  // Create a map of KPI ID to status for quick lookup
+  const statusMap = new Map(
+    kpiStatuses.map(status => [status.positionKpiId, status.status])
+  );
+
+  // Mutation to update KPI status
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ kpiId, status }: { kpiId: string; status: string }) => {
+      return await apiRequest(
+        `/api/hr/one-on-one/kpi-statuses/${meetingId}/${kpiId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ status }),
+        }
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: [`/api/hr/one-on-one/meetings/${meetingId}/kpi-statuses`] 
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update KPI status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStatusChange = (kpiId: string, status: string) => {
+    updateStatusMutation.mutate({ kpiId, status });
+  };
 
   // Don't show section if staff has no position assigned
   if (!staffPosition) {
@@ -114,7 +170,7 @@ export function PositionKpisSection({ staffPosition }: PositionKpisSectionProps)
     );
   }
 
-  // Show KPIs
+  // Show KPIs with status dropdowns
   return (
     <div>
       <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
@@ -122,22 +178,49 @@ export function PositionKpisSection({ staffPosition }: PositionKpisSectionProps)
         Position KPIs ({matchedPosition.name})
       </Label>
       <div className="space-y-2">
-        {positionKpis.map((kpi) => (
-          <div
-            key={kpi.id}
-            className="flex items-start justify-between p-3 bg-gray-50 rounded"
-            data-testid={`position-kpi-${kpi.id}`}
-          >
-            <div className="flex-1">
-              <p className="font-medium text-sm">{kpi.kpiName}</p>
+        {positionKpis.map((kpi) => {
+          const currentStatus = statusMap.get(kpi.id) || "on_track";
+          
+          return (
+            <div
+              key={kpi.id}
+              className="flex items-center justify-between p-3 bg-gray-50 rounded gap-4"
+              data-testid={`position-kpi-${kpi.id}`}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">{kpi.kpiName}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Target: {kpi.benchmark}
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                {meetingId ? (
+                  <Select
+                    value={currentStatus}
+                    onValueChange={(value) => handleStatusChange(kpi.id, value)}
+                    disabled={updateStatusMutation.isPending}
+                  >
+                    <SelectTrigger 
+                      className="w-[140px]" 
+                      data-testid={`select-kpi-status-${kpi.id}`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {KPI_STATUS_OPTIONS.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          <Badge className={status.color}>{status.label}</Badge>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <span className="text-sm text-muted-foreground">-</span>
+                )}
+              </div>
             </div>
-            <div className="ml-4">
-              <span className="text-sm font-semibold text-primary">
-                {kpi.benchmark}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
