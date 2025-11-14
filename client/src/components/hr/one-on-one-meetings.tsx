@@ -64,6 +64,7 @@ interface Meeting {
   hobbies?: string;
   family?: string;
   privateNotes?: string;
+  recordingLink?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -504,6 +505,7 @@ function MeetingEditor({
   const [hobbies, setHobbies] = useState(meeting?.hobbies || "");
   const [family, setFamily] = useState(meeting?.family || "");
   const [privateNotes, setPrivateNotes] = useState(meeting?.privateNotes || "");
+  const [recordingLink, setRecordingLink] = useState(meeting?.recordingLink || "");
   
   // Lists
   const [talkingPoints, setTalkingPoints] = useState<TalkingPoint[]>([]);
@@ -673,6 +675,7 @@ function MeetingEditor({
       hobbies: hobbies || null,
       family: family || null,
       privateNotes: privateNotes || null,
+      recordingLink: recordingLink || null,
     });
   };
 
@@ -1250,6 +1253,35 @@ function MeetingEditor({
                   data-testid="textarea-family"
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Meeting Recording Link */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Meeting Recording Link
+              </CardTitle>
+              <CardDescription className="text-xs">Link to Fathom, Google Meet, or other recording</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Input
+                placeholder="https://..."
+                value={recordingLink}
+                onChange={(e) => setRecordingLink(e.target.value)}
+                data-testid="input-recording-link"
+              />
+              {recordingLink && (
+                <a
+                  href={recordingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline mt-2 inline-block"
+                >
+                  Open recording →
+                </a>
+              )}
             </CardContent>
           </Card>
 

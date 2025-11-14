@@ -3945,6 +3945,7 @@ export const oneOnOneMeetings = pgTable("one_on_one_meetings", {
   hobbies: text("hobbies"),
   family: text("family"),
   privateNotes: text("private_notes"), // Only visible to manager and admins
+  recordingLink: text("recording_link"), // Link to Fathom, Google Meet, or other video recording
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
