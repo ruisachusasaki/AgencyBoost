@@ -1414,7 +1414,7 @@ function MeetingEditor({
               {performanceFeedback && (
                 <div>
                   <Label className="text-base font-semibold mb-3 block">
-                    Did {directReport.firstName} exceed expectations? Add bonus points (optional)
+                    {directReport ? `Did ${directReport.firstName} exceed expectations? Add bonus points (optional)` : "Did you exceed expectations? Add bonus points (optional)"}
                   </Label>
                   <Select
                     value={bonusPoints.toString()}
@@ -1522,35 +1522,36 @@ function MeetingEditor({
             </CardContent>
           </Card>
 
-          {/* Know Better Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Know {directReport.firstName} Better</CardTitle>
-              <CardDescription className="text-xs">Visible to you</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="text-sm flex items-center gap-2 mb-2">
-                  <Briefcase className="h-3 w-3" />
-                  Start Date
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {directReport.hireDate
-                    ? format(new Date(directReport.hireDate), "MMM d, yyyy")
-                    : "Not set"}
-                </p>
-              </div>
-              <div>
-                <Label className="text-sm flex items-center gap-2 mb-2">
-                  <Cake className="h-3 w-3" />
-                  Birthday
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {directReport.birthdate
-                    ? format(new Date(directReport.birthdate), "MMM d")
-                    : "Not set"}
-                </p>
-              </div>
+          {/* Know Better Section - Only show for managers viewing their direct reports */}
+          {directReport && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Know {directReport.firstName} Better</CardTitle>
+                <CardDescription className="text-xs">Visible to you</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label className="text-sm flex items-center gap-2 mb-2">
+                    <Briefcase className="h-3 w-3" />
+                    Start Date
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {directReport.hireDate
+                      ? format(new Date(directReport.hireDate), "MMM d, yyyy")
+                      : "Not set"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm flex items-center gap-2 mb-2">
+                    <Cake className="h-3 w-3" />
+                    Birthday
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {directReport.birthdate
+                      ? format(new Date(directReport.birthdate), "MMM d")
+                      : "Not set"}
+                  </p>
+                </div>
               <div>
                 <Label htmlFor="hobbies" className="text-sm flex items-center gap-2 mb-2">
                   <Heart className="h-3 w-3" />
@@ -1581,6 +1582,7 @@ function MeetingEditor({
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Meeting Recording Link */}
           <Card>
