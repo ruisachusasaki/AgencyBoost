@@ -714,6 +714,31 @@ function MeetingEditor({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch current authenticated user (for "My 1v1 Meetings" view)
+  const { data: authUser, isLoading: loadingAuthUser } = useQuery<{ id: string; firstName: string; lastName: string }>({
+    queryKey: ['/api/auth/current-user'],
+    enabled: viewMode === "my-meetings" && !directReport,
+  });
+
+  // Fetch current user's staff profile (for getting position in "My 1v1 Meetings" view)
+  const { data: currentUserStaffProfile, isLoading: loadingStaffProfile } = useQuery<DirectReport>({
+    queryKey: ["/api/staff", authUser?.id],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/staff/${authUser?.id}`);
+      return await response.json();
+    },
+    enabled: viewMode === "my-meetings" && !directReport && !!authUser?.id,
+  });
+
+  // In "My 1v1 Meetings" view without directReport, wait for user data to load before proceeding
+  const isLoadingUserData = viewMode === "my-meetings" && !directReport && (loadingAuthUser || (authUser && loadingStaffProfile));
+
+  // Compute staff position safely: use directReport if available, otherwise use current user's position
+  const staffPosition = directReport?.position ?? currentUserStaffProfile?.position ?? null;
+
+  // Compute directReportId safely for mutations: use directReport if available, otherwise use meeting data or current user
+  const directReportId = directReport?.id ?? meeting?.directReportId ?? authUser?.id ?? "";
+
   // Fetch progression statuses
   const { data: progressionStatuses = [] } = useQuery<any[]>({
     queryKey: ["/api/hr/one-on-one/progression-statuses"],
@@ -863,7 +888,7 @@ function MeetingEditor({
         for (const goal of goals) {
           await apiRequest("POST", "/api/hr/one-on-one/goals", {
             meetingId: savedMeeting.id,
-            directReportId: directReport.id,
+            directReportId: directReportId,
             content: goal.content,
             status: goal.status,
           });
@@ -892,7 +917,7 @@ function MeetingEditor({
     )?.points || 0;
 
     saveMeetingMutation.mutate({
-      directReportId: directReport.id,
+      directReportId: directReportId,
       meetingDate,
       weekOf,
       feeling: feeling || null,
@@ -964,7 +989,7 @@ function MeetingEditor({
       // Existing meeting - save to API
       createGoalMutation.mutate({
         meetingId: meeting.id,
-        directReportId: directReport.id,
+        directReportId: directReportId,
         content: newGoal.trim(),
         status: "pending",
       });
@@ -975,7 +1000,7 @@ function MeetingEditor({
       setGoals([...goals, {
         id: tempId,
         meetingId: "",
-        directReportId: directReport.id,
+        directReportId: directReportId,
         content: newGoal.trim(),
         status: "pending",
       }]);
@@ -1036,6 +1061,54 @@ function MeetingEditor({
   };
 
   const isReadOnly = viewMode === "my-meetings";
+
+  // Show loading state while fetching user data in "My 1v1 Meetings" view
+  if (isLoadingUserData) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            onClick={onBack}
+            data-testid="button-back-to-meetings"
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back to My Meetings
+          </Button>
+        </div>
+        <div className="flex items-center justify-center p-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading meeting details...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Validate directReportId before allowing mutations
+  if (!directReportId && viewMode === "my-meetings") {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            onClick={onBack}
+            data-testid="button-back-to-meetings"
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back to My Meetings
+          </Button>
+        </div>
+        <div className="flex items-center justify-center p-12">
+          <div className="text-center text-destructive">
+            <AlertCircle className="h-8 w-8 mx-auto mb-4" />
+            <p>Unable to load user profile. Please try again.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -1240,7 +1313,7 @@ function MeetingEditor({
 
               {/* Position KPIs */}
               <PositionKpisSection 
-                staffPosition={directReport.position} 
+                staffPosition={staffPosition} 
                 meetingId={meeting?.id || null}
               />
 
