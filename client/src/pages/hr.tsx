@@ -82,8 +82,17 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
   useEffect(() => {
     if (initialTab && initialTab !== activeTab) {
       setActiveTab(initialTab);
+    } else if (!initialTab) {
+      // Check if there's a query parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      const expectedTab = tabParam || "dashboard";
+      
+      if (activeTab !== expectedTab) {
+        setActiveTab(expectedTab);
+      }
     }
-  }, [initialTab, activeTab]);
+  }, [initialTab, activeTab, location]);
   
   // Handle tab change with URL sync
   const handleTabChange = (tabId: string) => {
