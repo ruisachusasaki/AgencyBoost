@@ -89,7 +89,7 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
     const newPath = tabId === "dashboard" ? "/hr" : `/hr/${tabId}`;
-    setLocation(newPath, { replace: true });
+    setLocation(newPath);
   };
   
   // Admin permission state
