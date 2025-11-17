@@ -204,6 +204,7 @@ export async function setupAuth(app: Express) {
       updateUserSession(user, tokens);
       const staffMember = await upsertStaffFromClaims(tokens.claims());
       user.staffId = staffMember.id;
+      user.userId = staffMember.id; // Set userId for session compatibility
       verified(null, user);
     } catch (error: any) {
       console.error("Authentication error:", error.message);
@@ -236,10 +237,34 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/login?error=auth_failed",
-      failureMessage: true
+    passport.authenticate(`replitauth:${req.hostname}`, (err: any, user: any, info: any) => {
+      if (err || !user) {
+        console.error("Authentication failed:", err || info);
+        return res.redirect("/login?error=auth_failed");
+      }
+      
+      req.logIn(user, (loginErr) => {
+        if (loginErr) {
+          console.error("Login error:", loginErr);
+          return res.redirect("/login?error=login_failed");
+        }
+        
+        // Set userId in session for compatibility with existing auth system
+        if (user.userId || user.staffId) {
+          req.session.userId = user.userId || user.staffId;
+        }
+        
+        // Save session and redirect
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.redirect("/login?error=session_failed");
+          }
+          
+          console.log("✅ Google authentication successful, redirecting to dashboard");
+          res.redirect("/");
+        });
+      });
     })(req, res, next);
   });
 
