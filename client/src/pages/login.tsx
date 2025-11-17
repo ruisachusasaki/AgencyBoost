@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { FcGoogle } from "react-icons/fc";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -96,6 +97,27 @@ export default function LoginPage() {
                 {loginMutation.isPending ? "Signing in..." : "Sign In"}
               </Button>
             </form>
+            
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-gray-200 dark:border-gray-700" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              </div>
+            </div>
+            
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-12 text-base flex items-center justify-center gap-3"
+              size="lg"
+              onClick={() => window.location.href = '/api/login'}
+              data-testid="button-google-login"
+            >
+              <FcGoogle className="h-5 w-5" />
+              Sign in with Google
+            </Button>
           </CardContent>
         </Card>
       </div>
