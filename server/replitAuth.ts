@@ -199,11 +199,17 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user: any = {};
-    updateUserSession(user, tokens);
-    const staffMember = await upsertStaffFromClaims(tokens.claims());
-    user.staffId = staffMember.id;
-    verified(null, user);
+    try {
+      const user: any = {};
+      updateUserSession(user, tokens);
+      const staffMember = await upsertStaffFromClaims(tokens.claims());
+      user.staffId = staffMember.id;
+      verified(null, user);
+    } catch (error: any) {
+      console.error("Authentication error:", error.message);
+      // Pass error to passport which will redirect to failureRedirect
+      verified(error, false);
+    }
   };
 
   for (const domain of process.env.REPLIT_DOMAINS!.split(",")) {
@@ -232,7 +238,8 @@ export async function setupAuth(app: Express) {
   app.get("/api/callback", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
+      failureRedirect: "/login?error=auth_failed",
+      failureMessage: true
     })(req, res, next);
   });
 
