@@ -10094,15 +10094,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/departments/:departmentId/positions", async (req, res) => {
-    try {
-      const positions = await appStorage.getPositionsByDepartment(req.params.departmentId);
-      res.json(positions);
-    } catch (error) {
-      console.error('Error fetching positions for department:', error);
-      res.status(500).json({ message: "Failed to fetch positions for department" });
-    }
-  });
 
   app.post("/api/positions", requireAuth(), requirePermission('departments', 'canCreate'), async (req, res) => {
     try {

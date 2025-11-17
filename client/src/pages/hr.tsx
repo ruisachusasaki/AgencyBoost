@@ -294,7 +294,7 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
 
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
   const { data: positions = [] } = useQuery<any[]>({
-    queryKey: ["/api/departments", selectedDepartmentId, "positions"],
+    queryKey: [`/api/departments/${selectedDepartmentId}/positions`],
     enabled: canManageJobOpenings && !!selectedDepartmentId,
   });
 
