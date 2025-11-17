@@ -26,7 +26,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - Responsive tab navigation with intelligent overflow menus for sections like HR, adapting to screen size breakpoints.
 
 ### Technical Implementations
-- **Authentication & Authorization**: Replit Auth OIDC, session management, role-based access control (Admin, Manager, User, Accounting), granular permissions system with templates and database schema.
+- **Authentication & Authorization**: Dual authentication system with email/password and Google login (via Replit Auth OIDC). Session management, role-based access control (Admin, Manager, User, Accounting), granular permissions system with templates and database schema.
 - **Data Management**: Relational schema, CRUD, audit logs, sorting, pagination, CSV import/export, custom fields.
 - **Task Management**: Hierarchical sub-tasks with scheduling, dependencies, recurring tasks, bulk actions, and dynamic project progress.
 - **Communication**: Smart Lists, Email/SMS, document management, notes, calendar management with dynamic merge tags, and unified templating. Lead appointment merge tags support server-side interpolation.
