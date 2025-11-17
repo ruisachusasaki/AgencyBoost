@@ -21312,8 +21312,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       if (action === "approve") {
-        // If approved, set status to 'open' so it becomes available for applications
+        // If approved, set status to 'open' and make it public so it appears on careers page
         updateData.status = "open";
+        updateData.isPublic = true;
       }
 
       if (action === "reject" && rejectionReason) {
@@ -21890,16 +21891,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
-  // Public endpoint for job openings (no authentication required)
-  app.get('/api/job-openings/public', async (req, res) => {
-    try {
-      const jobOpenings = await appStorage.getJobOpenings();
-      res.json(jobOpenings);
-    } catch (error) {
-      console.error("Error fetching public job openings:", error);
-      res.status(500).json({ message: "Failed to fetch job openings" });
-    }
-  });
 
   // Get single job application by ID
   app.get('/api/hr/job-applications/:id', async (req, res) => {
