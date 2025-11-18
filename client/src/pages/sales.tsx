@@ -1936,24 +1936,38 @@ export default function Sales() {
                                             </Button>
                                           </>
                                         )}
-                                        <Button 
-                                          variant="ghost" 
-                                          size="sm"
-                                          className="h-8 px-2"
-                                          data-testid={`button-view-quote-${quote.id}`}
-                                          onClick={() => setViewingQuoteId(quote.id)}
-                                        >
-                                          <Eye className="h-4 w-4" />
-                                        </Button>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="sm"
-                                          className="h-8 px-2"
-                                          data-testid={`button-edit-quote-${quote.id}`}
-                                          onClick={() => loadQuoteForEdit(quote.id)}
-                                        >
-                                          <Edit className="h-4 w-4" />
-                                        </Button>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="sm"
+                                              className="h-8 px-2"
+                                              data-testid={`button-view-quote-${quote.id}`}
+                                              onClick={() => setViewingQuoteId(quote.id)}
+                                            >
+                                              <Eye className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>View Quote</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="sm"
+                                              className="h-8 px-2"
+                                              data-testid={`button-edit-quote-${quote.id}`}
+                                              onClick={() => loadQuoteForEdit(quote.id)}
+                                            >
+                                              <Edit className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Edit Quote</p>
+                                          </TooltipContent>
+                                        </Tooltip>
                                         <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
