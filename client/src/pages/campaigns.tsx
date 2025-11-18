@@ -1047,18 +1047,19 @@ export default function Campaigns() {
                           <DropdownMenuContent className="w-64" align="end">
                             {mergeTagGroups.map((group, groupIndex) => (
                               <div key={group.label}>
-                                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">
                                   {group.label}
-                                </DropdownMenuLabel>
+                                </div>
                                 {group.tags.map((tag) => (
-                                  <DropdownMenuItem
-                                    key={tag.value}
+                                  <DropdownMenuItem 
+                                    key={tag.value} 
                                     onClick={() => insertMergeTagIntoSubject(tag.value)}
                                     className="cursor-pointer"
                                   >
-                                    <Tag className="h-3 w-3 mr-2" />
-                                    <span className="flex-1">{tag.label}</span>
-                                    <code className="text-xs ml-2 text-muted-foreground">{tag.value}</code>
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{tag.label}</span>
+                                      <span className="text-xs text-gray-500">{tag.value}</span>
+                                    </div>
                                   </DropdownMenuItem>
                                 ))}
                                 {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
@@ -1092,18 +1093,19 @@ export default function Campaigns() {
                           <DropdownMenuContent className="w-64" align="end">
                             {mergeTagGroups.map((group, groupIndex) => (
                               <div key={group.label}>
-                                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">
                                   {group.label}
-                                </DropdownMenuLabel>
+                                </div>
                                 {group.tags.map((tag) => (
-                                  <DropdownMenuItem
-                                    key={tag.value}
+                                  <DropdownMenuItem 
+                                    key={tag.value} 
                                     onClick={() => insertMergeTagIntoPreviewText(tag.value)}
                                     className="cursor-pointer"
                                   >
-                                    <Tag className="h-3 w-3 mr-2" />
-                                    <span className="flex-1">{tag.label}</span>
-                                    <code className="text-xs ml-2 text-muted-foreground">{tag.value}</code>
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{tag.label}</span>
+                                      <span className="text-xs text-gray-500">{tag.value}</span>
+                                    </div>
                                   </DropdownMenuItem>
                                 ))}
                                 {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
