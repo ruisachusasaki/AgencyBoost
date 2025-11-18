@@ -1120,12 +1120,28 @@ export default function Campaigns() {
                         <label className="block text-sm font-medium">Email Content</label>
                         <MergeTagsDropdown onInsert={insertMergeTagIntoEmail} />
                       </div>
-                      <Textarea
-                        value={emailContent}
-                        onChange={(e) => setEmailContent(e.target.value)}
-                        placeholder="Enter your email content..."
-                        className="min-h-[250px] resize-none"
-                      />
+                      <div className="border rounded-md overflow-hidden">
+                        <ReactQuill
+                          theme="snow"
+                          value={emailContent}
+                          onChange={setEmailContent}
+                          modules={{
+                            toolbar: [
+                              [{ 'header': '1' }, { 'header': '2' }, 'bold', 'italic', 'underline'],
+                              [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                              ['link', 'clean']
+                            ],
+                          }}
+                          formats={[
+                            'header', 'bold', 'italic', 'underline', 'list', 'bullet', 'link'
+                          ]}
+                          placeholder="Enter your email content with rich formatting..."
+                          style={{ 
+                            minHeight: '250px',
+                            border: 'none'
+                          }}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1">Tags</label>
