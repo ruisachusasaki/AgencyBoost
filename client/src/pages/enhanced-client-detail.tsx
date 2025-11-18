@@ -2532,6 +2532,9 @@ export default function EnhancedClientDetail() {
 
   // Check if current user can delete products/bundles (Admin, Accounting, Manager roles)
   const canDeleteProducts = currentUser && ['Admin', 'Accounting', 'Manager'].includes(currentUser.role);
+  
+  // Check if current user can view costs (Manager and Admin roles only)
+  const canViewCosts = currentUser && ['Manager', 'Admin'].includes(currentUser.role);
 
   // Check if current user is admin (only admins can uncheck DND settings)
   const isAdmin = currentUser && currentUser.role === 'Admin';
@@ -3009,7 +3012,9 @@ export default function EnhancedClientDetail() {
       setTempQuantities({});
       toast({
         title: "Bundle customized",
-        description: `Bundle quantities updated. New cost: $${data.newCost?.toFixed(2)}`,
+        description: canViewCosts 
+          ? `Bundle quantities updated. New cost: $${data.newCost?.toFixed(2)}` 
+          : "Bundle quantities updated successfully",
       });
     },
     onError: () => {
@@ -4671,8 +4676,8 @@ export default function EnhancedClientDetail() {
                     Add Product
                   </Button>
                 </div>
-                {/* Total Cost Display */}
-                {clientProductsData && clientProductsData.length > 0 && (
+                {/* Total Cost Display - Only visible to Managers and Admins */}
+                {clientProductsData && clientProductsData.length > 0 && canViewCosts && (
                   <div className="bg-primary/10 p-3 rounded-lg border border-primary/20 mt-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -4732,12 +4737,12 @@ export default function EnhancedClientDetail() {
                               </p>
                             )}
                             <div className="flex items-center gap-4 mt-2">
-                              {product.itemType === 'bundle' && (
+                              {product.itemType === 'bundle' && canViewCosts && (
                                 <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded" data-testid={`text-bundle-total-${product.id}`}>
                                   Bundle Total: ${calculateIndividualBundleCost(product.productId).toFixed(2)}
                                 </span>
                               )}
-                              {product.price && product.itemType !== 'bundle' && (
+                              {product.price && product.itemType !== 'bundle' && canViewCosts && (
                                 <span className="text-sm font-medium text-green-600" data-testid={`text-product-price-${product.id}`}>
                                   ${product.price}
                                 </span>
@@ -4828,18 +4833,20 @@ export default function EnhancedClientDetail() {
                                       <span className="ml-2 text-primary">x{item.quantity || 1}</span>
                                     )}
                                   </span>
-                                  <span className="text-gray-500">
-                                    ${(() => {
-                                      // Handle various formats of cost fields (string, number, null, undefined)
-                                      // Try multiple possible field names: productCost, cost, price, productPrice
-                                      const costValue = item.productCost || item.cost || item.price || item.productPrice || 0;
-                                      const cost = typeof costValue === 'string' ? parseFloat(costValue) : Number(costValue);
-                                      const validCost = isNaN(cost) ? 0 : cost;
-                                      const quantity = item.quantity || 1;
-                                      const totalCost = validCost * quantity;
-                                      return totalCost.toFixed(2);
-                                    })()}
-                                  </span>
+                                  {canViewCosts && (
+                                    <span className="text-gray-500">
+                                      ${(() => {
+                                        // Handle various formats of cost fields (string, number, null, undefined)
+                                        // Try multiple possible field names: productCost, cost, price, productPrice
+                                        const costValue = item.productCost || item.cost || item.price || item.productPrice || 0;
+                                        const cost = typeof costValue === 'string' ? parseFloat(costValue) : Number(costValue);
+                                        const validCost = isNaN(cost) ? 0 : cost;
+                                        const quantity = item.quantity || 1;
+                                        const totalCost = validCost * quantity;
+                                        return totalCost.toFixed(2);
+                                      })()}
+                                    </span>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -6394,9 +6401,11 @@ export default function EnhancedClientDetail() {
                         {product.description && (
                           <p className="text-sm text-gray-600">{product.description}</p>
                         )}
-                        <p className="text-sm font-medium text-primary">
-                          ${Number(product.cost || 0).toFixed(2)}
-                        </p>
+                        {canViewCosts && (
+                          <p className="text-sm font-medium text-primary">
+                            ${Number(product.cost || 0).toFixed(2)}
+                          </p>
+                        )}
                       </div>
                       <Button
                         size="sm"
@@ -6449,9 +6458,11 @@ export default function EnhancedClientDetail() {
                         {bundle.description && (
                           <p className="text-sm text-gray-600">{bundle.description}</p>
                         )}
-                        <p className="text-sm font-medium text-primary">
-                          ${Number(bundle.price || 0).toFixed(2)}
-                        </p>
+                        {canViewCosts && (
+                          <p className="text-sm font-medium text-primary">
+                            ${Number(bundle.price || 0).toFixed(2)}
+                          </p>
+                        )}
                       </div>
                       <Button
                         size="sm"
