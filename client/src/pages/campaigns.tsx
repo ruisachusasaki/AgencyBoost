@@ -47,6 +47,8 @@ export default function Campaigns() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [smsContent, setSmsContent] = useState("");
   const [emailContent, setEmailContent] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailPreviewText, setEmailPreviewText] = useState("");
   const [moveToFolderDialogOpen, setMoveToFolderDialogOpen] = useState(false);
   const [formToMove, setFormToMove] = useState<any>(null);
   const [moveEmailToFolderDialogOpen, setMoveEmailToFolderDialogOpen] = useState(false);
@@ -506,9 +508,9 @@ export default function Campaigns() {
     
     const data = {
       name: formData.get("name") as string,
-      subject: formData.get("subject") as string,
+      subject: emailSubject, // Use controlled state value
       content: emailContent,
-      previewText: formData.get("previewText") as string || "",
+      previewText: emailPreviewText || "", // Use controlled state value
       tags,
       folderId: selectedFolder || undefined,
       // createdBy will be set by the backend from authenticated user session
@@ -535,6 +537,8 @@ export default function Campaigns() {
   const handleDialogClose = () => {
     setIsCreateTemplateDialogOpen(false);
     setEmailContent("");
+    setEmailSubject("");
+    setEmailPreviewText("");
     setSmsContent("");
   };
 
@@ -646,6 +650,14 @@ export default function Campaigns() {
 
   const insertMergeTagIntoEmail = (tag: string) => {
     setEmailContent(prev => prev + tag);
+  };
+
+  const insertMergeTagIntoSubject = (tag: string) => {
+    setEmailSubject(prev => prev + tag);
+  };
+
+  const insertMergeTagIntoPreviewText = (tag: string) => {
+    setEmailPreviewText(prev => prev + tag);
   };
 
   const insertMergeTagIntoSms = (tag: string) => {
@@ -1012,11 +1024,94 @@ export default function Campaigns() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1">Subject Line</label>
-                      <Input name="subject" placeholder="Email subject" required />
+                      <div className="relative flex items-center">
+                        <Input 
+                          name="subject" 
+                          value={emailSubject}
+                          onChange={(e) => setEmailSubject(e.target.value)}
+                          placeholder="Email subject" 
+                          className="pr-10"
+                          required 
+                        />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              type="button"
+                              className="absolute right-1 h-7 w-7 p-0"
+                            >
+                              <Tag className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-64" align="end">
+                            {mergeTagGroups.map((group, groupIndex) => (
+                              <div key={group.label}>
+                                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                  {group.label}
+                                </DropdownMenuLabel>
+                                {group.tags.map((tag) => (
+                                  <DropdownMenuItem
+                                    key={tag.value}
+                                    onClick={() => insertMergeTagIntoSubject(tag.value)}
+                                    className="cursor-pointer"
+                                  >
+                                    <Tag className="h-3 w-3 mr-2" />
+                                    <span className="flex-1">{tag.label}</span>
+                                    <code className="text-xs ml-2 text-muted-foreground">{tag.value}</code>
+                                  </DropdownMenuItem>
+                                ))}
+                                {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
+                              </div>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1">Preview Text</label>
-                      <Input name="previewText" placeholder="Preview text (optional)" />
+                      <div className="relative flex items-center">
+                        <Input 
+                          name="previewText" 
+                          value={emailPreviewText}
+                          onChange={(e) => setEmailPreviewText(e.target.value)}
+                          placeholder="Preview text (optional)"
+                          className="pr-10"
+                        />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              type="button"
+                              className="absolute right-1 h-7 w-7 p-0"
+                            >
+                              <Tag className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-64" align="end">
+                            {mergeTagGroups.map((group, groupIndex) => (
+                              <div key={group.label}>
+                                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                  {group.label}
+                                </DropdownMenuLabel>
+                                {group.tags.map((tag) => (
+                                  <DropdownMenuItem
+                                    key={tag.value}
+                                    onClick={() => insertMergeTagIntoPreviewText(tag.value)}
+                                    className="cursor-pointer"
+                                  >
+                                    <Tag className="h-3 w-3 mr-2" />
+                                    <span className="flex-1">{tag.label}</span>
+                                    <code className="text-xs ml-2 text-muted-foreground">{tag.value}</code>
+                                  </DropdownMenuItem>
+                                ))}
+                                {groupIndex < mergeTagGroups.length - 1 && <DropdownMenuSeparator />}
+                              </div>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-2">
