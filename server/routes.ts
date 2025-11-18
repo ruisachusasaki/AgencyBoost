@@ -11278,7 +11278,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Products API with search and filtering
-  app.get("/api/products", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
+  // Allow users who can view clients to also see products (needed for adding products to clients)
+  app.get("/api/products", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const { search, category, status } = req.query;
       
@@ -11359,7 +11360,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Client Products API - Get products for a specific client
-  app.get("/api/clients/:clientId/products", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
+  // Allow users who can view clients to see the products associated with those clients
+  app.get("/api/clients/:clientId/products", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const { clientId } = req.params;
       
@@ -11603,7 +11605,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get bundle products details with client-specific overrides
-  app.get("/api/product-bundles/:bundleId/products", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
+  // Allow users who can view clients to see bundle details (needed for displaying client bundles)
+  app.get("/api/product-bundles/:bundleId/products", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const { bundleId } = req.params;
       const { clientId } = req.query;
@@ -11900,7 +11903,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Product Bundles API
-  app.get("/api/product-bundles", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
+  // Allow users who can view clients to also see bundles (needed for adding bundles to clients)
+  app.get("/api/product-bundles", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
       const { search, status } = req.query;
       
