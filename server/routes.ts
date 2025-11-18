@@ -6808,7 +6808,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
-      const validatedData = insertEmailTemplateSchema.parse(req.body);
+      // Add createdBy from authenticated user session
+      const dataWithCreatedBy = { ...req.body, createdBy: userId };
+      const validatedData = insertEmailTemplateSchema.parse(dataWithCreatedBy);
       console.log("Creating email template with data:", validatedData);
       const template = await appStorage.createEmailTemplate(validatedData);
       
@@ -6837,7 +6839,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/email-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const validatedData = insertEmailTemplateSchema.partial().parse(req.body);
+      // Don't include createdBy in updates, it should remain unchanged
+      const { createdBy, ...updateData } = req.body;
+      const validatedData = insertEmailTemplateSchema.partial().parse(updateData);
       const template = await appStorage.updateEmailTemplate(req.params.id, validatedData);
       if (!template) {
         return res.status(404).json({ message: "Email template not found" });
@@ -7010,9 +7014,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
-      const validatedData = insertSmsTemplateSchema.parse(req.body);
-      // SECURE: Use authenticated user ID only, not hardcoded fallback
-      validatedData.createdBy = userId;
+      // Add createdBy from authenticated user session
+      const dataWithCreatedBy = { ...req.body, createdBy: userId };
+      const validatedData = insertSmsTemplateSchema.parse(dataWithCreatedBy);
       
       const template = await appStorage.createSmsTemplate(validatedData);
       
@@ -7040,7 +7044,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/sms-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const validatedData = insertSmsTemplateSchema.partial().parse(req.body);
+      // Don't include createdBy in updates, it should remain unchanged
+      const { createdBy, ...updateData } = req.body;
+      const validatedData = insertSmsTemplateSchema.partial().parse(updateData);
       const template = await appStorage.updateSmsTemplate(req.params.id, validatedData);
       if (!template) {
         return res.status(404).json({ message: "SMS template not found" });
