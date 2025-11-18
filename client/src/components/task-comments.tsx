@@ -46,9 +46,10 @@ interface CommentReaction {
 
 interface TaskCommentsProps {
   taskId: string;
+  highlightedCommentId?: string | null;
 }
 
-export default function TaskComments({ taskId }: TaskCommentsProps) {
+export default function TaskComments({ taskId, highlightedCommentId }: TaskCommentsProps) {
   const [newComment, setNewComment] = useState("");
   const [mentionQuery, setMentionQuery] = useState("");
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
@@ -72,7 +73,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: comments = [] } = useQuery<TaskComment[]>({
+  const { data: comments = [], isSuccess: commentsLoaded } = useQuery<TaskComment[]>({
     queryKey: [`/api/tasks/${taskId}/comments`],
   });
 
@@ -126,6 +127,32 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
       });
     });
   }, [comments, taskId]);
+  
+  // Handle scrolling and highlighting when comments are loaded and highlightedCommentId is present
+  useEffect(() => {
+    if (commentsLoaded && highlightedCommentId && comments.length > 0) {
+      // Wait a short moment for DOM to update
+      const scrollTimer = setTimeout(() => {
+        const commentElement = document.getElementById(`comment-${highlightedCommentId}`);
+        if (commentElement) {
+          // Scroll the comment into view
+          commentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Find the Card element within the comment and add highlight
+          const cardElement = commentElement.querySelector('.border-l-4');
+          if (cardElement) {
+            cardElement.classList.add('!bg-primary/10');
+            // Remove highlight after 3 seconds
+            setTimeout(() => {
+              cardElement.classList.remove('!bg-primary/10');
+            }, 3000);
+          }
+        }
+      }, 100);
+      
+      return () => clearTimeout(scrollTimer);
+    }
+  }, [commentsLoaded, comments, highlightedCommentId]);
 
   const addCommentMutation = useMutation({
     mutationFn: async ({ content, parentId }: { content: string; parentId?: string }) => {
@@ -460,8 +487,8 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
           </div>
         ) : (
           comments.map((comment) => (
-            <div key={comment.id} className="space-y-3">
-              <Card className="border-l-4 border-l-teal-200">
+            <div key={comment.id} className="space-y-3" id={`comment-${comment.id}`}>
+              <Card className="border-l-4 border-l-teal-200 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <Avatar className="h-8 w-8">
@@ -746,8 +773,9 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
               {comment.replies && comment.replies.length > 0 && (
                 <div className="ml-8 space-y-2">
                   {comment.replies.map((reply) => (
-                    <Card key={reply.id} className="border-l-4 border-l-blue-200 bg-slate-50">
-                      <CardContent className="p-3">
+                    <div key={reply.id} id={`comment-${reply.id}`}>
+                      <Card className="border-l-4 border-l-blue-200 bg-slate-50 transition-colors">
+                        <CardContent className="p-3">
                         <div className="flex items-start gap-2">
                           <Avatar className="h-6 w-6">
                             {reply.author.profileImage && (
@@ -827,6 +855,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                         </div>
                       </CardContent>
                     </Card>
+                    </div>
                   ))}
                 </div>
               )}

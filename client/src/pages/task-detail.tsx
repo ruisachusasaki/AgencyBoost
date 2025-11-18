@@ -47,6 +47,26 @@ export default function TaskDetail() {
   const [timeEstimateUnit, setTimeEstimateUnit] = useState<"minutes" | "hours">("minutes");
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
+  const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null);
+  const [highlightedAnnotationId, setHighlightedAnnotationId] = useState<string | null>(null);
+  
+  // Get URL search parameters
+  const searchParams = new URLSearchParams(window.location.search);
+  const commentIdParam = searchParams.get('commentId');
+  const annotationIdParam = searchParams.get('annotationId');
+  
+  // Switch to comments tab if navigating from a mention and set highlighted ID
+  useEffect(() => {
+    if (commentIdParam || annotationIdParam) {
+      setActiveTab("comments");
+      if (commentIdParam) {
+        setHighlightedCommentId(commentIdParam);
+      }
+      if (annotationIdParam) {
+        setHighlightedAnnotationId(annotationIdParam);
+      }
+    }
+  }, [commentIdParam, annotationIdParam]);
 
   // Template form
   const templateForm = useForm<TemplateFormData>({
@@ -924,7 +944,7 @@ export default function TaskDetail() {
           <CardContent className="pt-6">
             {/* Tab Content */}
             {activeTab === "comments" && (
-              <TaskComments taskId={taskId!} />
+              <TaskComments taskId={taskId!} highlightedCommentId={highlightedCommentId} />
             )}
             
             {activeTab === "activity" && (
