@@ -1585,6 +1585,13 @@ export default function Tasks() {
     onDeleteTask: (id: string) => void;
     deleteTaskMutation: any;
   }) => {
+    // Helper function to strip HTML tags and get plain text
+    const stripHtml = (html: string) => {
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      return temp.textContent || temp.innerText || '';
+    };
+
     // Get the selected workflow or default to the first one
     const selectedWorkflow = workflows.find(w => w.id === workflowFilter) || workflows[0];
     
@@ -1650,7 +1657,7 @@ export default function Tasks() {
             </div>
             
             {task.description && (
-              <p className="text-xs text-slate-600 mb-2 line-clamp-2">{task.description}</p>
+              <p className="text-xs text-slate-600 mb-2 line-clamp-2">{stripHtml(task.description)}</p>
             )}
             
             <div className="flex items-center justify-between text-xs">
