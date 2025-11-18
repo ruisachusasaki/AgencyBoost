@@ -4755,7 +4755,8 @@ export default function EnhancedClientDetail() {
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            {product.itemType === 'bundle' && (
+                            {/* Only show bundle edit button for Managers and Admins */}
+                            {canViewCosts && product.itemType === 'bundle' && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -4782,7 +4783,8 @@ export default function EnhancedClientDetail() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                             )}
-                            {product.itemType !== 'bundle' && (
+                            {/* Only show edit button for Managers and Admins */}
+                            {canViewCosts && product.itemType !== 'bundle' && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -4795,15 +4797,18 @@ export default function EnhancedClientDetail() {
                                 <Edit2 className="h-4 w-4" />
                               </Button>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteProduct(product.productId)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              data-testid={`button-delete-product-${product.id}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {/* Only show delete button for Managers and Admins */}
+                            {canViewCosts && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteProduct(product.productId)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                data-testid={`button-delete-product-${product.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                         
