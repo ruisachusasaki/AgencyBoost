@@ -15785,8 +15785,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check Google Calendar connection status
   app.get("/api/integrations/google-calendar/status", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
     try {
+      // Import the new Google Calendar service
+      const { isGoogleCalendarConnected } = await import('./googleCalendar');
+      
+      const connected = await isGoogleCalendarConnected();
+      
+      return res.json({ 
+        connected,
+        status: connected ? "connected" : "disconnected",
+        lastSync: connected ? new Date().toISOString() : null
+      });
+      
+      // Legacy code - kept for reference but using new integration
+      /*
       const staffId = getAuthenticatedUserIdOrFail(req, res);
-      if (!staffId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!staffId) return;
       
       const [integration] = await db
         .select()
@@ -15841,6 +15854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: "Authentication failed. Please reconnect."
         });
       }
+      */
     } catch (error) {
       console.error('Error checking Google Calendar status:', error);
       res.status(500).json({ message: "Failed to check connection status" });
