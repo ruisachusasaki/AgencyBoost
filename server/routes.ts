@@ -15865,8 +15865,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/integrations/google-calendar/sync", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const staffId = getAuthenticatedUserIdOrFail(req, res);
-      if (!staffId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!staffId) return;
       
+      // Import the new Google Calendar service
+      const { getGoogleCalendarEvents, syncAppointmentToGoogleCalendar } = await import('./googleCalendar');
+      
+      // Get events from the last 30 days to 30 days in the future
+      const timeMin = new Date();
+      timeMin.setDate(timeMin.getDate() - 30);
+      const timeMax = new Date();
+      timeMax.setDate(timeMax.getDate() + 30);
+      
+      const result = await getGoogleCalendarEvents(timeMin, timeMax);
+      
+      if (!result.success) {
+        return res.status(500).json({ message: result.error || "Failed to sync Google Calendar" });
+      }
+      
+      // Also sync CRM appointments to Google Calendar
+      const appointments = await db
+        .select()
+        .from(calendarAppointments)
+        .where(and(
+          eq(calendarAppointments.assignedTo, staffId),
+          gte(calendarAppointments.startTime, timeMin),
+          lte(calendarAppointments.startTime, timeMax)
+        ));
+      
+      let syncedToGoogle = 0;
+      for (const appointment of appointments) {
+        if (!appointment.externalEventId) {
+          const syncResult = await syncAppointmentToGoogleCalendar({
+            id: appointment.id,
+            title: appointment.title,
+            description: appointment.description || undefined,
+            startTime: appointment.startTime,
+            endTime: appointment.endTime,
+            location: appointment.location || undefined,
+          });
+          
+          if (syncResult.success && syncResult.googleEventId) {
+            await db
+              .update(calendarAppointments)
+              .set({
+                externalEventId: syncResult.googleEventId,
+                updatedAt: new Date()
+              })
+              .where(eq(calendarAppointments.id, appointment.id));
+            syncedToGoogle++;
+          }
+        }
+      }
+      
+      res.json({
+        message: "Sync completed successfully",
+        eventsFromGoogle: result.events.length,
+        syncedToGoogle,
+        totalEvents: result.events.length + syncedToGoogle
+      });
+      
+      /* Legacy implementation - kept for reference
       const [integration] = await db
         .select()
         .from(calendarIntegrations)
@@ -15990,7 +16048,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .where(eq(calendarIntegrations.id, integration.id));
       }
+      */
       
+    } catch (error) {
+      console.error('Error syncing Google Calendar:', error);
       res.status(500).json({ message: "Failed to sync Google Calendar" });
     }
   });
