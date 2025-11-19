@@ -53,9 +53,11 @@ export async function getUncachableGoogleCalendarClient() {
 // Check if Google Calendar is connected
 export async function isGoogleCalendarConnected(): Promise<boolean> {
   try {
-    await getAccessToken();
+    const token = await getAccessToken();
+    console.log('Google Calendar connection check - token exists:', !!token);
     return true;
   } catch (error) {
+    console.log('Google Calendar connection check - error:', error instanceof Error ? error.message : 'Unknown error');
     return false;
   }
 }
