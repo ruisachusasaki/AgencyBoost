@@ -154,10 +154,17 @@ export default function CalendarSettings() {
       
       if (data.connected) {
         setGoogleCalendarStatus("connected");
-        // Fetch connected calendar details
-        const calendarsResponse = await apiRequest('GET', '/api/integrations/google-calendar/calendars');
-        const calendarsData = await calendarsResponse.json();
-        setConnectedCalendars(calendarsData.calendars || []);
+        // Mock calendar details for now since backend doesn't have a calendars endpoint yet
+        // In production, this would fetch from the actual endpoint
+        setConnectedCalendars([{
+          id: 'primary',
+          name: 'Google Calendar',
+          email: 'Connected Account',
+          twoWaySync: true,
+          createContacts: true,
+          triggerWorkflows: true,
+          lastSync: data.lastSync || new Date().toISOString()
+        }]);
       } else {
         setGoogleCalendarStatus("disconnected");
         setConnectedCalendars([]);
@@ -172,6 +179,7 @@ export default function CalendarSettings() {
   const handleGoogleCalendarConnect = async () => {
     setIsConnecting(true);
     try {
+      // Use the connect endpoint which returns the auth URL
       const response = await apiRequest('POST', '/api/integrations/google-calendar/connect');
       const data = await response.json();
       
@@ -212,6 +220,7 @@ export default function CalendarSettings() {
   const handleSync = async (calendarId: string) => {
     setIsSyncing(calendarId);
     try {
+      // Use the sync endpoint
       const response = await apiRequest('POST', '/api/integrations/google-calendar/sync');
       const result = await response.json();
       
@@ -241,7 +250,8 @@ export default function CalendarSettings() {
   // Handle disconnect
   const handleDisconnect = async (calendarId: string) => {
     try {
-      await apiRequest('DELETE', `/api/integrations/google-calendar/disconnect/${calendarId}`);
+      // The disconnect endpoint doesn't need a calendarId parameter
+      await apiRequest('POST', '/api/integrations/google-calendar/disconnect');
       
       toast({
         title: "Disconnected",
@@ -259,12 +269,11 @@ export default function CalendarSettings() {
     }
   };
   
-  // Handle updating sync settings
+  // Handle updating sync settings (client-side only for now)
   const handleUpdateSyncSettings = async (calendarId: string, settings: Partial<ConnectedCalendar>) => {
     try {
-      await apiRequest('PUT', `/api/integrations/google-calendar/settings/${calendarId}`, settings);
-      
-      // Update local state
+      // For now, just update the local state since backend doesn't have a settings endpoint
+      // In production, this would save to the backend
       setConnectedCalendars(prev => prev.map(cal => 
         cal.id === calendarId 
           ? { ...cal, ...settings }
