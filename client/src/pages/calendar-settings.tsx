@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,17 @@ interface CalendarData {
   createdBy: string;
 }
 
+// Types for Google Calendar integration
+interface ConnectedCalendar {
+  id: string;
+  name: string;
+  email: string;
+  twoWaySync: boolean;
+  createContacts: boolean;
+  triggerWorkflows: boolean;
+  lastSync?: string;
+}
+
 export default function CalendarSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -50,6 +61,12 @@ export default function CalendarSettings() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  
+  // Google Calendar integration states
+  const [googleCalendarStatus, setGoogleCalendarStatus] = useState<"loading" | "connected" | "disconnected">("loading");
+  const [connectedCalendars, setConnectedCalendars] = useState<ConnectedCalendar[]>([]);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState<string | null>(null);
 
   // Fetch calendars
   const { data: calendars = [], isLoading: calendarsLoading } = useQuery<CalendarData[]>({
@@ -120,6 +137,152 @@ export default function CalendarSettings() {
       title: "Copied",
       description: "Public booking URL copied to clipboard.",
     });
+  };
+  
+  // Check Google Calendar connection status on mount
+  useEffect(() => {
+    if (activeTab === "integrations") {
+      checkGoogleCalendarStatus();
+    }
+  }, [activeTab]);
+  
+  // Check Google Calendar connection status
+  const checkGoogleCalendarStatus = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/integrations/google-calendar/status');
+      const data = await response.json();
+      
+      if (data.connected) {
+        setGoogleCalendarStatus("connected");
+        // Fetch connected calendar details
+        const calendarsResponse = await apiRequest('GET', '/api/integrations/google-calendar/calendars');
+        const calendarsData = await calendarsResponse.json();
+        setConnectedCalendars(calendarsData.calendars || []);
+      } else {
+        setGoogleCalendarStatus("disconnected");
+        setConnectedCalendars([]);
+      }
+    } catch (error) {
+      console.error('Failed to check Google Calendar status:', error);
+      setGoogleCalendarStatus("disconnected");
+    }
+  };
+  
+  // Handle Google Calendar connection
+  const handleGoogleCalendarConnect = async () => {
+    setIsConnecting(true);
+    try {
+      const response = await apiRequest('POST', '/api/integrations/google-calendar/connect');
+      const data = await response.json();
+      
+      if (data.authUrl) {
+        // Open Google OAuth in a popup window
+        const width = 600;
+        const height = 700;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+        
+        const popup = window.open(
+          data.authUrl, 
+          'google-calendar-auth',
+          `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no`
+        );
+        
+        // Poll for connection status
+        const checkInterval = setInterval(async () => {
+          if (popup?.closed) {
+            clearInterval(checkInterval);
+            setIsConnecting(false);
+            await checkGoogleCalendarStatus();
+          }
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Failed to connect Google Calendar:', error);
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect to Google Calendar. Please try again.",
+        variant: "destructive",
+      });
+      setIsConnecting(false);
+    }
+  };
+  
+  // Handle sync
+  const handleSync = async (calendarId: string) => {
+    setIsSyncing(calendarId);
+    try {
+      const response = await apiRequest('POST', '/api/integrations/google-calendar/sync');
+      const result = await response.json();
+      
+      toast({
+        title: "Sync Complete",
+        description: `Synced ${result.syncedEvents || 0} events from Google Calendar`,
+      });
+      
+      // Update last sync time
+      setConnectedCalendars(prev => prev.map(cal => 
+        cal.id === calendarId 
+          ? { ...cal, lastSync: new Date().toISOString() }
+          : cal
+      ));
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to sync with Google Calendar. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(null);
+    }
+  };
+  
+  // Handle disconnect
+  const handleDisconnect = async (calendarId: string) => {
+    try {
+      await apiRequest('DELETE', `/api/integrations/google-calendar/disconnect/${calendarId}`);
+      
+      toast({
+        title: "Disconnected",
+        description: "Google Calendar has been disconnected.",
+      });
+      
+      await checkGoogleCalendarStatus();
+    } catch (error) {
+      console.error('Disconnect error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to disconnect Google Calendar.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Handle updating sync settings
+  const handleUpdateSyncSettings = async (calendarId: string, settings: Partial<ConnectedCalendar>) => {
+    try {
+      await apiRequest('PUT', `/api/integrations/google-calendar/settings/${calendarId}`, settings);
+      
+      // Update local state
+      setConnectedCalendars(prev => prev.map(cal => 
+        cal.id === calendarId 
+          ? { ...cal, ...settings }
+          : cal
+      ));
+      
+      toast({
+        title: "Settings Updated",
+        description: "Google Calendar sync settings have been updated.",
+      });
+    } catch (error) {
+      console.error('Update settings error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update sync settings.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (calendarsLoading) {
@@ -417,12 +580,149 @@ export default function CalendarSettings() {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
             Calendar Integrations
           </h2>
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-gray-600 dark:text-gray-400">
-                Calendar integrations (Google Calendar, Outlook, etc.) will be implemented here.
-                This will allow syncing appointments with external calendar systems.
-              </p>
+          
+          {/* Google Calendar Integration Section */}
+          <Card className="border border-gray-200 dark:border-gray-700">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Connected Calendars</CardTitle>
+                <Button 
+                  onClick={() => handleGoogleCalendarConnect()}
+                  className="flex items-center gap-2"
+                  disabled={isConnecting}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add New
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {googleCalendarStatus === "loading" ? (
+                <div className="p-6 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-gray-600 dark:text-gray-400">Checking connection status...</p>
+                </div>
+              ) : connectedCalendars.length === 0 ? (
+                <div className="p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    No calendars connected
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Connect your Google Calendar to sync appointments and availability
+                  </p>
+                </div>
+              ) : (
+                connectedCalendars.map((calendar) => (
+                  <div key={calendar.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                          <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold">{calendar.name}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{calendar.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="success">Connected</Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSync(calendar.id)}
+                          disabled={isSyncing === calendar.id}
+                        >
+                          {isSyncing === calendar.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary mr-2"></div>
+                              Syncing...
+                            </>
+                          ) : (
+                            <>
+                              <ExternalLink className="h-3 w-3 mr-2" />
+                              Sync Now
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDisconnect(calendar.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Sync Settings */}
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <Label className="text-sm font-medium">Two-Way Sync</Label>
+                            <p className="text-xs text-gray-500">
+                              Events created in either system will sync automatically
+                            </p>
+                          </div>
+                          <Switch 
+                            checked={calendar.twoWaySync || false}
+                            onCheckedChange={(checked) => handleUpdateSyncSettings(calendar.id, { twoWaySync: checked })}
+                          />
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <Label className="text-sm font-medium">Create Contacts from Events</Label>
+                            <p className="text-xs text-gray-500">
+                              Automatically create contacts for guests in Google events
+                            </p>
+                          </div>
+                          <Switch 
+                            checked={calendar.createContacts || false}
+                            onCheckedChange={(checked) => handleUpdateSyncSettings(calendar.id, { createContacts: checked })}
+                          />
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <Label className="text-sm font-medium">Trigger Workflows</Label>
+                            <p className="text-xs text-gray-500">
+                              Run automation workflows for synced appointments
+                            </p>
+                          </div>
+                          <Switch 
+                            checked={calendar.triggerWorkflows || false}
+                            onCheckedChange={(checked) => handleUpdateSyncSettings(calendar.id, { triggerWorkflows: checked })}
+                          />
+                        </div>
+                      </div>
+                      
+                      {calendar.lastSync && (
+                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                          <p className="text-xs text-gray-500">
+                            Last synced: {new Date(calendar.lastSync).toLocaleString()}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+              
+              {/* Integration Info */}
+              <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                  How Google Calendar Integration Works
+                </h4>
+                <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                  <li>• Bookings made in AgencyFlow appear automatically in your Google Calendar</li>
+                  <li>• Events in Google Calendar block availability to prevent double-bookings</li>
+                  <li>• Each team member connects their own Google account</li>
+                  <li>• Choose which calendars are used for booking and conflict checking</li>
+                </ul>
+              </div>
             </CardContent>
           </Card>
         </div>
