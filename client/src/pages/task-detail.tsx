@@ -910,52 +910,54 @@ export default function TaskDetail() {
         </div>
 
         {/* Sidebar - Tabbed Interface with Dynamic Height */}
-        <Card className="w-full sticky top-4 flex flex-col" style={{ maxHeight: 'calc(100vh - 2rem)' }}>
-          <CardHeader className="pb-0 flex-shrink-0">
-            {/* Tabs Navigation */}
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8">
-                {[
-                  { id: "comments", name: "Comments", icon: MessageSquare },
-                  { id: "activity", name: "Activity", icon: Activity },
-                  { id: "dependencies", name: "Dependencies", icon: Link2 }
-                ].map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                        activeTab === tab.id
-                          ? "border-primary text-primary"
-                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                      }`}
-                      data-testid={`tab-${tab.id}`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {tab.name}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-          </CardHeader>
+        <div className="sticky top-0 h-[calc(100vh-8rem)]">
+          <Card className="w-full flex flex-col h-full">
+            <CardHeader className="pb-0 flex-shrink-0">
+              {/* Tabs Navigation */}
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8">
+                  {[
+                    { id: "comments", name: "Comments", icon: MessageSquare },
+                    { id: "activity", name: "Activity", icon: Activity },
+                    { id: "dependencies", name: "Dependencies", icon: Link2 }
+                  ].map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                          activeTab === tab.id
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        }`}
+                        data-testid={`tab-${tab.id}`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {tab.name}
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+            </CardHeader>
 
-          <CardContent className="pt-6 flex-1 overflow-y-auto">
-            {/* Tab Content */}
-            {activeTab === "comments" && (
-              <TaskComments taskId={taskId!} highlightedCommentId={highlightedCommentId} />
-            )}
-            
-            {activeTab === "activity" && (
-              <TaskActivities taskId={taskId!} showCard={false} />
-            )}
-            
-            {activeTab === "dependencies" && (
-              <TaskDependencies taskId={taskId!} />
-            )}
-          </CardContent>
-        </Card>
+            <CardContent className="pt-6 flex-1 overflow-y-auto min-h-0">
+              {/* Tab Content */}
+              {activeTab === "comments" && (
+                <TaskComments taskId={taskId!} highlightedCommentId={highlightedCommentId} />
+              )}
+              
+              {activeTab === "activity" && (
+                <TaskActivities taskId={taskId!} showCard={false} />
+              )}
+              
+              {activeTab === "dependencies" && (
+                <TaskDependencies taskId={taskId!} />
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Save as Template Modal */}
