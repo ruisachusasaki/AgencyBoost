@@ -512,7 +512,7 @@ export default function TaskDetail() {
       {/* Task Path - Breadcrumb Navigation for Sub-tasks */}
       <TaskPath taskId={taskId!} className="mb-4" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ minHeight: 'calc(100vh - 12rem)' }}>
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Task Details */}
@@ -910,8 +910,8 @@ export default function TaskDetail() {
         </div>
 
         {/* Sidebar - Tabbed Interface with Dynamic Height */}
-        <div className="sticky top-0 h-[calc(100vh-8rem)]">
-          <Card className="w-full flex flex-col h-full">
+        <div className="h-full">
+          <Card className="w-full flex flex-col sticky top-6" style={{ height: 'calc(100vh - 10rem)' }}>
             <CardHeader className="pb-0 flex-shrink-0">
               {/* Tabs Navigation */}
               <div className="border-b border-gray-200">
