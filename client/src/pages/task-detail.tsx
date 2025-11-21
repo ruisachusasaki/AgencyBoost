@@ -909,9 +909,9 @@ export default function TaskDetail() {
 
         </div>
 
-        {/* Sidebar - Tabbed Interface */}
-        <Card className="w-full">
-          <CardHeader className="pb-0">
+        {/* Sidebar - Tabbed Interface with Dynamic Height */}
+        <Card className="w-full sticky top-4 flex flex-col" style={{ maxHeight: 'calc(100vh - 2rem)' }}>
+          <CardHeader className="pb-0 flex-shrink-0">
             {/* Tabs Navigation */}
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex space-x-8">
@@ -941,7 +941,7 @@ export default function TaskDetail() {
             </div>
           </CardHeader>
 
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 flex-1 overflow-y-auto">
             {/* Tab Content */}
             {activeTab === "comments" && (
               <TaskComments taskId={taskId!} highlightedCommentId={highlightedCommentId} />
