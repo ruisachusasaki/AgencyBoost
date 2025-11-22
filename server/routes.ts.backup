@@ -15640,7 +15640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Generate OAuth authorization URL
-  app.get("/api/integrations/google-calendar/authorize", requireAuth(), async (req, res) => {
+  app.get("/api/integrations/google-calendar/authorize", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const oauth2Client = createGoogleOAuth2Client();
       
@@ -15664,7 +15664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Handle OAuth callback
-  app.get("/api/integrations/google-calendar/callback", requireAuth(), async (req, res) => {
+  app.get("/api/integrations/google-calendar/callback", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const { code, state } = req.query;
       
@@ -15732,7 +15732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Connect Google Calendar integration (for testing/reconnection)
-  app.post("/api/integrations/google-calendar/connect", requireAuth(), async (req, res) => {
+  app.post("/api/integrations/google-calendar/connect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const staffId = getAuthenticatedUserIdOrFail(req, res);
       if (!staffId) return; // getAuthenticatedUserIdOrFail already sent 401 response
@@ -15759,7 +15759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Disconnect Google Calendar integration
-  app.post("/api/integrations/google-calendar/disconnect", requireAuth(), async (req, res) => {
+  app.post("/api/integrations/google-calendar/disconnect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const staffId = getAuthenticatedUserIdOrFail(req, res);
       if (!staffId) return; // getAuthenticatedUserIdOrFail already sent 401 response
@@ -15783,7 +15783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check Google Calendar connection status
-  app.get("/api/integrations/google-calendar/status", requireAuth(), async (req, res) => {
+  app.get("/api/integrations/google-calendar/status", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
     try {
       // Import the new Google Calendar service
       const { isGoogleCalendarConnected } = await import('./googleCalendar');
@@ -15862,7 +15862,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Sync Google Calendar events
-  app.post("/api/integrations/google-calendar/sync", requireAuth(), async (req, res) => {
+  app.post("/api/integrations/google-calendar/sync", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const staffId = getAuthenticatedUserIdOrFail(req, res);
       if (!staffId) return;

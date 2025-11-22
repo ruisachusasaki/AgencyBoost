@@ -205,7 +205,7 @@ export default function CalendarSettings() {
           }
         }, 1000);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to connect Google Calendar:', error);
       toast({
         title: "Connection Failed",
