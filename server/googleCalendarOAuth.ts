@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import { db } from './db';
-import { calendarConnections, calendarSyncState } from '@/shared/schema';
+import { calendarConnections, calendarSyncState } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { EncryptionService } from './encryption';
 
