@@ -40,7 +40,7 @@ function createOAuth2Client() {
 
 // Start OAuth flow
 router.get('/auth', (req: Request, res: Response) => {
-  if (!req.session?.user?.id) {
+  if (!req.session?.userId) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
@@ -48,7 +48,7 @@ router.get('/auth', (req: Request, res: Response) => {
   
   // Store user ID in state parameter for callback
   const state = Buffer.from(JSON.stringify({
-    userId: req.session.user.id,
+    userId: req.session.userId,
     timestamp: Date.now()
   })).toString('base64');
 
@@ -142,7 +142,7 @@ router.get('/oauth/callback', async (req: Request, res: Response) => {
 
 // Disconnect calendar (support both DELETE and POST for frontend compatibility)
 router.post('/disconnect', async (req: Request, res: Response) => {
-  if (!req.session?.user?.id) {
+  if (!req.session?.userId) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
@@ -151,7 +151,7 @@ router.post('/disconnect', async (req: Request, res: Response) => {
   try {
     const connection = await db.query.calendarConnections.findFirst({
       where: and(
-        eq(calendarConnections.userId, req.session.user.id),
+        eq(calendarConnections.userId, req.session.userId),
         eq(calendarConnections.calendarId, calendarId as string)
       )
     });
@@ -180,13 +180,13 @@ router.post('/disconnect', async (req: Request, res: Response) => {
 
 // Get connection status
 router.get('/status', async (req: Request, res: Response) => {
-  if (!req.session?.user?.id) {
+  if (!req.session?.userId) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
   try {
     const connections = await db.query.calendarConnections.findMany({
-      where: eq(calendarConnections.userId, req.session.user.id)
+      where: eq(calendarConnections.userId, req.session.userId)
     });
 
     const connectionsWithStatus = await Promise.all(
@@ -218,7 +218,7 @@ router.get('/status', async (req: Request, res: Response) => {
 
 // Sync calendar events (placeholder for now)
 router.post('/sync', async (req: Request, res: Response) => {
-  if (!req.session?.user?.id) {
+  if (!req.session?.userId) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
@@ -227,7 +227,7 @@ router.post('/sync', async (req: Request, res: Response) => {
     const connections = await db
       .select()
       .from(calendarConnections)
-      .where(eq(calendarConnections.userId, req.session.user.id));
+      .where(eq(calendarConnections.userId, req.session.userId));
     
     if (connections.length === 0) {
       return res.status(400).json({ error: 'No Google Calendar connected' });
