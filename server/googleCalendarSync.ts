@@ -14,7 +14,7 @@ import {
   CalendarSyncState
 } from '@shared/schema';
 import { eq, and, gte, lte, or, not, inArray } from 'drizzle-orm';
-import { getUserCalendarClient } from './googleCalendarAuth';
+import { getUserCalendarClient } from './googleCalendarOAuth';
 import { calendar_v3 } from 'googleapis';
 
 interface SyncResult {

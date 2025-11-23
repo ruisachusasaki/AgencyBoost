@@ -259,4 +259,38 @@ router.post('/sync', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Get an authenticated Google Calendar client for a user
+ * This function retrieves the stored tokens and creates an authenticated client
+ */
+export async function getUserCalendarClient(userId: string, calendarId: string = 'primary') {
+  const { google } = await import('googleapis');
+  
+  // Get the user's calendar connection
+  const connection = await db.query.calendarConnections.findFirst({
+    where: and(
+      eq(calendarConnections.userId, userId),
+      eq(calendarConnections.calendarId, calendarId)
+    ),
+  });
+  
+  if (!connection || !connection.accessToken) {
+    throw new Error('No valid calendar connection found');
+  }
+  
+  // Decrypt tokens
+  const accessToken = await encryptionService.decrypt(connection.accessToken);
+  const refreshToken = connection.refreshToken ? await encryptionService.decrypt(connection.refreshToken) : null;
+  
+  // Create OAuth2 client with tokens
+  const oauth2Client = createOAuth2Client();
+  oauth2Client.setCredentials({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+  
+  // Return the calendar service
+  return google.calendar({ version: 'v3', auth: oauth2Client });
+}
+
 export default router;
