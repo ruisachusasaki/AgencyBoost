@@ -28135,44 +28135,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-
-  // Get synced Google Calendar events for the authenticated user
-  app.get("/api/google-calendar-events", requireAuth(), async (req, res) => {
-    try {
-      const { calendarEvents } = await import('./db');
-      const userId = req.session?.userId;
-      
-      if (!userId) {
-        return res.status(401).json({ error: 'Not authenticated' });
-      }
-
-      // Get all calendar events for the user
-      const events = await db
-        .select({
-          id: calendarEvents.id,
-          googleEventId: calendarEvents.googleEventId,
-          title: calendarEvents.title,
-          description: calendarEvents.description,
-          startTime: calendarEvents.startTime,
-          endTime: calendarEvents.endTime,
-          location: calendarEvents.location,
-          status: calendarEvents.status,
-          isAllDay: calendarEvents.isAllDay,
-          organizerEmail: calendarEvents.organizerEmail,
-          organizerName: calendarEvents.organizerName,
-          recurringEventId: calendarEvents.recurringEventId,
-          lastSyncedAt: calendarEvents.lastSyncedAt,
-          createdAt: calendarEvents.createdAt
-        })
-        .from(calendarEvents)
-        .where(eq(calendarEvents.userId, userId))
-        .orderBy(desc(calendarEvents.startTime));
-
-      res.json({ events });
-    } catch (error) {
-      console.error("Error fetching Google Calendar events:", error);
-      res.status(500).json({ error: "Failed to fetch Google Calendar events" });
-    }
-  });
   return httpServer;
 }

@@ -216,7 +216,7 @@ router.get('/status', async (req: Request, res: Response) => {
   }
 });
 
-// Sync calendar events (placeholder for now)
+// Sync calendar events
 router.post('/sync', async (req: Request, res: Response) => {
   if (!req.session?.userId) {
     return res.status(401).json({ error: 'Not authenticated' });
@@ -233,16 +233,29 @@ router.post('/sync', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No Google Calendar connected' });
     }
 
-    // TODO: Implement actual sync logic using googleCalendarSync.ts
-    // For now, return a success message
-    res.json({ 
-      success: true, 
-      message: 'Sync functionality will be implemented soon',
-      syncedEvents: 0 
-    });
+    // Import the sync function
+    const { syncUserCalendar } = await import('./googleCalendarSync');
+    
+    // Sync the primary calendar
+    const result = await syncUserCalendar(req.session.userId, 'primary');
+    
+    if (result.success) {
+      res.json({ 
+        success: true, 
+        message: `Synced successfully: ${result.eventsCreated} created, ${result.eventsUpdated} updated, ${result.eventsDeleted} deleted`,
+        eventsCreated: result.eventsCreated,
+        eventsUpdated: result.eventsUpdated,
+        eventsDeleted: result.eventsDeleted
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Sync failed', 
+        errors: result.errors 
+      });
+    }
   } catch (error) {
     console.error('Sync error:', error);
-    res.status(500).json({ error: 'Failed to sync calendar' });
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to sync calendar' });
   }
 });
 
