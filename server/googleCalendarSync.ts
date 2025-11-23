@@ -148,30 +148,37 @@ async function pullGoogleEvents(
   };
   
   try {
-    // Set time range for sync (e.g., past 30 days to next 90 days)
+    // Set time range for sync (past 365 days to next 365 days)
     const timeMin = new Date();
-    timeMin.setDate(timeMin.getDate() - 30);
+    timeMin.setDate(timeMin.getDate() - 365);
     const timeMax = new Date();
-    timeMax.setDate(timeMax.getDate() + 90);
+    timeMax.setDate(timeMax.getDate() + 365);
+    
+    console.log('[pullGoogleEvents] Fetching events from', timeMin.toISOString(), 'to', timeMax.toISOString());
     
     // List events from Google Calendar
+    // Note: Cannot use syncToken with timeMin/timeMax
     const response = await calendar.events.list({
       calendarId: connection.calendarId,
       timeMin: timeMin.toISOString(),
       timeMax: timeMax.toISOString(),
-      maxResults: 250,
+      maxResults: 2500,  // Increased from 250 to get more events
       singleEvents: true,
       orderBy: 'startTime',
-      syncToken: connection.syncToken || undefined,
+      // Don't use syncToken with time range parameters
     });
     
     const googleEvents = response.data.items || [];
     const nextSyncToken = response.data.nextSyncToken;
     
+    console.log(`[pullGoogleEvents] Found ${googleEvents.length} events in Google Calendar`);
+    
     // Get existing synced events
     const existingEvents = await db.query.calendarEvents.findMany({
       where: eq(calendarEvents.connectionId, connection.id),
     });
+    
+    console.log(`[pullGoogleEvents] Found ${existingEvents.length} existing synced events in database`);
     
     const existingEventMap = new Map(
       existingEvents.map(event => [event.googleEventId, event])
@@ -244,15 +251,10 @@ async function pullGoogleEvents(
       result.eventsDeleted = eventsToDelete.length;
     }
     
-    // Update sync token
-    if (nextSyncToken) {
-      await db.update(calendarConnections)
-        .set({
-          syncToken: nextSyncToken,
-          updatedAt: new Date(),
-        })
-        .where(eq(calendarConnections.id, connection.id));
-    }
+    // Don't update sync token when using time range parameters
+    // syncToken is incompatible with timeMin/timeMax
+    
+    console.log(`[pullGoogleEvents] Sync complete: Created ${result.eventsCreated}, Updated ${result.eventsUpdated}, Deleted ${result.eventsDeleted} events`);
     
     result.success = true;
   } catch (error) {
