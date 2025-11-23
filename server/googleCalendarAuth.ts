@@ -112,7 +112,7 @@ export async function saveCalendarConnection(
   // Check if connection already exists
   const existingConnection = await db.query.calendarConnections.findFirst({
     where: and(
-      eq(calendarConnections.userId, userId),
+      eq(calendarConnections.userId, userId), // userId is varchar matching staff.id
       eq(calendarConnections.calendarId, userInfo.calendarId || 'primary')
     ),
   });
