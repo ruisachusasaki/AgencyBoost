@@ -197,7 +197,7 @@ router.get('/status', async (req: Request, res: Response) => {
   }
 });
 
-// Sync calendar events
+// Sync calendar events (runs in background to avoid timeout)
 router.post('/sync', async (req: Request, res: Response) => {
   if (!req.session?.userId) {
     return res.status(401).json({ error: 'Not authenticated' });
@@ -214,26 +214,40 @@ router.post('/sync', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No Google Calendar connected' });
     }
 
+    // Check if sync is already in progress
+    const syncState = await db.query.calendarSyncState.findFirst({
+      where: eq(calendarSyncState.connectionId, connections[0].id)
+    });
+
+    if (syncState?.lastSyncStatus === 'in_progress') {
+      const timeSinceStart = Date.now() - (syncState.lastSyncStarted?.getTime() || 0);
+      if (timeSinceStart < 120000) { // If sync started less than 2 minutes ago
+        return res.json({ 
+          success: true,
+          message: 'Sync already in progress',
+          status: 'in_progress'
+        });
+      }
+    }
+
     // Import the sync function
     const { syncUserCalendar } = await import('./googleCalendarSync');
     
-    // Sync the primary calendar
-    const result = await syncUserCalendar(req.session.userId, 'primary');
+    // Start sync in background (don't await)
+    syncUserCalendar(req.session.userId, 'primary')
+      .then(result => {
+        console.log(`[Sync Complete] User ${req.session?.userId}: ${result.eventsCreated} created, ${result.eventsUpdated} updated, ${result.eventsDeleted} deleted`);
+      })
+      .catch(error => {
+        console.error('[Sync Error]', error);
+      });
     
-    if (result.success) {
-      res.json({ 
-        success: true, 
-        message: `Synced successfully: ${result.eventsCreated} created, ${result.eventsUpdated} updated, ${result.eventsDeleted} deleted`,
-        eventsCreated: result.eventsCreated,
-        eventsUpdated: result.eventsUpdated,
-        eventsDeleted: result.eventsDeleted
-      });
-    } else {
-      res.status(500).json({ 
-        error: 'Sync failed', 
-        errors: result.errors 
-      });
-    }
+    // Return immediately with success
+    res.json({ 
+      success: true, 
+      message: 'Sync started. This may take a few moments for large calendars.',
+      status: 'started'
+    });
   } catch (error) {
     console.error('Sync error details:', {
       error: error instanceof Error ? {
@@ -243,7 +257,7 @@ router.post('/sync', async (req: Request, res: Response) => {
       } : error,
       userId: req.session?.userId
     });
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to sync calendar' });
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to start sync' });
   }
 });
 

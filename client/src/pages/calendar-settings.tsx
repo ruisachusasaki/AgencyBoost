@@ -222,17 +222,85 @@ export default function CalendarSettings() {
       const response = await apiRequest('POST', '/api/google-calendar/sync');
       const result = await response.json();
       
-      toast({
-        title: "Sync Complete",
-        description: `Synced ${result.syncedEvents || 0} events from Google Calendar`,
-      });
-      
-      // Update last sync time
-      setConnectedCalendars(prev => prev.map(cal => 
-        cal.id === calendarId 
-          ? { ...cal, lastSync: new Date().toISOString() }
-          : cal
-      ));
+      // Check if sync started successfully
+      if (result.success) {
+        if (result.status === 'in_progress') {
+          toast({
+            title: "Sync In Progress",
+            description: result.message || "The sync is already running. Please wait.",
+          });
+        } else {
+          toast({
+            title: "Sync Started",
+            description: result.message || "Syncing your Google Calendar. This may take a few moments for large calendars.",
+          });
+          
+          // Poll for sync status every 3 seconds
+          let pollCount = 0;
+          const maxPolls = 20; // Max 1 minute of polling
+          
+          const pollInterval = setInterval(async () => {
+            pollCount++;
+            
+            try {
+              const statusResponse = await apiRequest('GET', '/api/google-calendar/status');
+              const statusData = await statusResponse.json();
+              
+              if (statusData.connections && statusData.connections[0]) {
+                const conn = statusData.connections[0];
+                
+                // Check if sync completed
+                if (conn.syncStatus !== 'in_progress') {
+                  clearInterval(pollInterval);
+                  
+                  if (conn.syncStatus === 'success') {
+                    toast({
+                      title: "Sync Complete",
+                      description: "Your Google Calendar has been synced successfully!",
+                    });
+                  } else if (conn.lastSyncError) {
+                    toast({
+                      title: "Sync Error",
+                      description: conn.lastSyncError,
+                      variant: "destructive",
+                    });
+                  }
+                  
+                  // Update last sync time
+                  setConnectedCalendars(prev => prev.map(cal => 
+                    cal.id === calendarId 
+                      ? { ...cal, lastSync: conn.lastSyncedAt || new Date().toISOString() }
+                      : cal
+                  ));
+                  
+                  setIsSyncing(null);
+                }
+              }
+              
+              // Stop polling after max attempts
+              if (pollCount >= maxPolls) {
+                clearInterval(pollInterval);
+                setIsSyncing(null);
+                toast({
+                  title: "Sync Status Unknown",
+                  description: "The sync is taking longer than expected. Please check back later.",
+                });
+              }
+            } catch (error) {
+              // Continue polling even if one check fails
+              console.error('Status check error:', error);
+            }
+          }, 3000);
+        }
+      } else {
+        // Sync failed to start
+        toast({
+          title: "Sync Failed",
+          description: result.error || "Failed to start sync. Please try again.",
+          variant: "destructive",
+        });
+        setIsSyncing(null);
+      }
     } catch (error) {
       console.error('Sync error:', error);
       toast({
@@ -240,7 +308,6 @@ export default function CalendarSettings() {
         description: "Failed to sync with Google Calendar. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setIsSyncing(null);
     }
   };
