@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./replitAuth";
+import { setupGoogleCalendar } from "./googleCalendarSetup";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
 import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses, timeOffPolicies, timeOffTypes } from "@shared/schema";
@@ -1096,6 +1097,10 @@ app.use((req, res, next) => {
   // Setup Replit Auth
   await setupAuth(app);
   log("✅ Replit Auth initialized");
+  
+  // Setup Google Calendar OAuth routes
+  setupGoogleCalendar(app);
+  log("✅ Google Calendar OAuth routes initialized");
   
   const server = await registerRoutes(app);
 
