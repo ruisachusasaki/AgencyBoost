@@ -235,7 +235,14 @@ router.post('/sync', async (req: Request, res: Response) => {
       });
     }
   } catch (error) {
-    console.error('Sync error:', error);
+    console.error('Sync error details:', {
+      error: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      } : error,
+      userId: req.session?.userId
+    });
     res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to sync calendar' });
   }
 });

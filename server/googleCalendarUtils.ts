@@ -10,8 +10,6 @@ import { calendarConnections } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { EncryptionService } from './encryption';
 
-const encryptionService = new EncryptionService();
-
 // Get OAuth configuration from environment
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
@@ -57,12 +55,12 @@ export async function getUserCalendarClient(
   }
   
   // Decrypt tokens
-  const accessToken = await encryptionService.decrypt(connection.accessToken);
+  const accessToken = EncryptionService.decrypt(connection.accessToken);
   let refreshToken: string | null = null;
   
   // Only decrypt refresh token if it exists
   if (connection.refreshToken) {
-    refreshToken = await encryptionService.decrypt(connection.refreshToken);
+    refreshToken = EncryptionService.decrypt(connection.refreshToken);
   }
   
   // Create OAuth2 client with tokens
@@ -76,7 +74,7 @@ export async function getUserCalendarClient(
   oauth2Client.on('tokens', async (tokens) => {
     // If we get new tokens, update them in the database
     if (tokens.access_token) {
-      const encryptedAccessToken = await encryptionService.encrypt(tokens.access_token);
+      const encryptedAccessToken = EncryptionService.encrypt(tokens.access_token);
       
       const updateData: any = {
         accessToken: encryptedAccessToken,
@@ -85,7 +83,7 @@ export async function getUserCalendarClient(
       
       // Only update refresh token if we get a new one
       if (tokens.refresh_token) {
-        updateData.refreshToken = await encryptionService.encrypt(tokens.refresh_token);
+        updateData.refreshToken = EncryptionService.encrypt(tokens.refresh_token);
       }
       
       await db.update(calendarConnections)

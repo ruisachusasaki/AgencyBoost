@@ -32,6 +32,8 @@ export async function syncUserCalendar(
   userId: string,
   calendarId: string = 'primary'
 ): Promise<SyncResult> {
+  console.log('[syncUserCalendar] Starting sync for user:', userId, 'calendar:', calendarId);
+  
   const result: SyncResult = {
     success: false,
     eventsCreated: 0,
@@ -51,11 +53,18 @@ export async function syncUserCalendar(
       ),
     });
     
+    console.log('[syncUserCalendar] Connection found:', !!connection, {
+      id: connection?.id,
+      syncEnabled: connection?.syncEnabled,
+      hasAccessToken: !!connection?.accessToken
+    });
+    
     if (!connection || !connection.syncEnabled) {
       throw new Error('Calendar sync is not enabled');
     }
     
     // Update sync state to in_progress
+    console.log('[syncUserCalendar] Updating sync state to in_progress');
     await db.update(calendarSyncState)
       .set({
         lastSyncStarted: new Date(),
@@ -65,6 +74,7 @@ export async function syncUserCalendar(
       .where(eq(calendarSyncState.connectionId, connection.id));
     
     // Get Google Calendar client
+    console.log('[syncUserCalendar] Getting Google Calendar client');
     const calendar = await getUserCalendarClient(userId, calendarId);
     
     // Pull events from Google Calendar
