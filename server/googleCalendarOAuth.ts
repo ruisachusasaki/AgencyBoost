@@ -10,7 +10,16 @@ const router = Router();
 // OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/google-calendar/oauth/callback';
+
+// Get the correct redirect URI based on environment
+function getRedirectUri() {
+  // In production, use the Replit domains
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}/api/google-calendar/oauth/callback`;
+  }
+  // Fallback to localhost for development
+  return process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/google-calendar/oauth/callback';
+}
 
 // Calendar scopes needed for full sync
 const SCOPES = [
@@ -25,7 +34,7 @@ function createOAuth2Client() {
   return new OAuth2Client(
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
-    REDIRECT_URI
+    getRedirectUri()
   );
 }
 
