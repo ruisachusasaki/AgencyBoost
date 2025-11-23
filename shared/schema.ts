@@ -4161,7 +4161,7 @@ export type SelectTimeOffType = typeof timeOffTypes.$inferSelect;
 // Google Calendar Connections - stores per-user OAuth tokens
 export const calendarConnections = pgTable("calendar_connections", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }), // Using varchar to match staff.id type
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }), // Using uuid to match staff.id type
   calendarId: text("calendar_id").notNull().default("primary"),
   calendarName: text("calendar_name"),
   email: text("email").notNull(),

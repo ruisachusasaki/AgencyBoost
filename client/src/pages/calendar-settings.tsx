@@ -149,22 +149,20 @@ export default function CalendarSettings() {
   // Check Google Calendar connection status
   const checkGoogleCalendarStatus = async () => {
     try {
-      const response = await apiRequest('GET', '/api/integrations/google-calendar/status');
+      const response = await apiRequest('GET', '/api/google-calendar/status');
       const data = await response.json();
       
-      if (data.connected) {
+      if (data.connections && data.connections.length > 0) {
         setGoogleCalendarStatus("connected");
-        // Mock calendar details for now since backend doesn't have a calendars endpoint yet
-        // In production, this would fetch from the actual endpoint
-        setConnectedCalendars([{
-          id: 'primary',
-          name: 'Google Calendar',
-          email: 'Connected Account',
-          twoWaySync: true,
-          createContacts: true,
-          triggerWorkflows: true,
-          lastSync: data.lastSync || new Date().toISOString()
-        }]);
+        setConnectedCalendars(data.connections.map((conn: any) => ({
+          id: conn.id,
+          name: conn.calendarName || 'Primary Calendar',
+          email: conn.email,
+          twoWaySync: conn.twoWaySync,
+          createContacts: conn.createContacts || false,
+          triggerWorkflows: conn.triggerWorkflows || false,
+          lastSync: conn.lastSyncedAt
+        })));
       } else {
         setGoogleCalendarStatus("disconnected");
         setConnectedCalendars([]);
@@ -179,8 +177,8 @@ export default function CalendarSettings() {
   const handleGoogleCalendarConnect = async () => {
     setIsConnecting(true);
     try {
-      // Use the connect endpoint which returns the auth URL
-      const response = await apiRequest('POST', '/api/integrations/google-calendar/connect');
+      // Get the OAuth authorization URL from the new endpoint
+      const response = await apiRequest('GET', '/api/google-calendar/auth');
       const data = await response.json();
       
       if (data.authUrl) {

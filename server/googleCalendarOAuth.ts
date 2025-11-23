@@ -84,7 +84,7 @@ router.get('/oauth/callback', async (req: Request, res: Response) => {
 
     // Store encrypted tokens in database
     const connectionData = {
-      userId,
+      userId, // This is UUID from staff.id
       calendarId: 'primary',
       calendarName: `${userInfo.name}'s Calendar`,
       email: userInfo.email,
