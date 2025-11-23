@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { db } from './db';
-import { calendarConnections, calendarSyncState } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { calendarConnections, calendarSyncState, calendarEvents } from '@shared/schema';
+import { eq, and, asc, sql } from 'drizzle-orm';
 import { EncryptionService } from './encryption';
 import { createOAuth2Client } from './googleCalendarUtils';
 
@@ -258,6 +258,56 @@ router.post('/sync', async (req: Request, res: Response) => {
       userId: req.session?.userId
     });
     res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to start sync' });
+  }
+});
+
+// Get synced Google Calendar events for display in calendar view
+router.get('/events', async (req: Request, res: Response) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    // Check if user has a connected calendar
+    const connections = await db
+      .select()
+      .from(calendarConnections)
+      .where(eq(calendarConnections.userId, req.session.userId));
+    
+    if (connections.length === 0) {
+      return res.json({ events: [] });
+    }
+
+    // Get synced events from calendar_events table
+    const events = await db
+      .select({
+        id: calendarEvents.id,
+        calendarId: sql<string>`'google-calendar'`.as('calendarId'),
+        connectionId: calendarEvents.connectionId,
+        googleEventId: calendarEvents.googleEventId,
+        title: calendarEvents.summary,
+        description: calendarEvents.description,
+        startTime: calendarEvents.startTime,
+        endTime: calendarEvents.endTime,
+        location: calendarEvents.location,
+        status: calendarEvents.status,
+        allDay: calendarEvents.allDay,
+        transparency: calendarEvents.transparency,
+        attendees: calendarEvents.attendees,
+        organizer: calendarEvents.organizer,
+        googleHtmlLink: calendarEvents.googleHtmlLink,
+        googleHangoutLink: calendarEvents.googleHangoutLink,
+        type: sql<string>`'google'`.as('type'),
+      })
+      .from(calendarEvents)
+      .where(eq(calendarEvents.connectionId, connections[0].id))
+      .orderBy(asc(calendarEvents.startTime));
+
+    console.log(`[Google Calendar Events] Returning ${events.length} events for user ${req.session.userId}`);
+    res.json({ events });
+  } catch (error) {
+    console.error('Error fetching Google Calendar events:', error);
+    res.status(500).json({ error: 'Failed to fetch Google Calendar events' });
   }
 });
 

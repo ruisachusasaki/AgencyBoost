@@ -150,16 +150,49 @@ export default function CalendarMain() {
     queryKey: ["/api/calendar-appointments-with-leads"],
     queryFn: async () => {
       console.log("CalendarMain: Fetching appointments with lead appointments included");
-      const response = await fetch("/api/calendar-appointments?includeLeadAppointments=true");
-      const data = await response.json();
-      console.log("CalendarMain: Fetched appointments count:", data.length);
-      console.log("CalendarMain: First 3 appointments:", data.slice(0, 3).map(apt => ({ 
-        id: apt.id, 
-        title: apt.title, 
-        type: apt.type, 
-        leadId: apt.leadId 
-      })));
-      return data;
+      
+      // Fetch regular appointments (including lead appointments)
+      const appointmentsResponse = await fetch("/api/calendar-appointments?includeLeadAppointments=true");
+      const regularAppointments = await appointmentsResponse.json();
+      
+      // Fetch Google Calendar synced events
+      let googleEvents = [];
+      try {
+        const googleResponse = await fetch("/api/google-calendar/events");
+        const googleData = await googleResponse.json();
+        if (googleData.events && Array.isArray(googleData.events)) {
+          // Transform Google events to match appointment structure
+          googleEvents = googleData.events.map(event => ({
+            ...event,
+            // Map Google event fields to appointment fields
+            assignedTo: '', // Google events don't have assignedTo
+            bookerName: event.organizer ? (event.organizer.name || event.organizer.email || '') : '',
+            bookerEmail: event.organizer ? (event.organizer.email || '') : '',
+            bookerPhone: null,
+            clientId: null,
+            status: event.status || 'confirmed',
+            timezone: 'UTC',
+            customFieldData: null,
+            externalEventId: event.googleEventId,
+            bookingSource: 'google-calendar',
+            cancelledAt: null,
+            cancelledBy: null,
+            cancellationReason: null,
+            type: 'google'
+          }));
+        }
+      } catch (error) {
+        console.log("CalendarMain: Could not fetch Google Calendar events:", error);
+      }
+      
+      // Combine all appointments
+      const allAppointments = [...regularAppointments, ...googleEvents];
+      
+      console.log("CalendarMain: Fetched appointments count:", regularAppointments.length);
+      console.log("CalendarMain: Fetched Google events count:", googleEvents.length);
+      console.log("CalendarMain: Total combined count:", allAppointments.length);
+      
+      return allAppointments;
     },
     staleTime: 0, // Always fetch fresh data
   });
