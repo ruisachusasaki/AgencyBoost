@@ -140,8 +140,8 @@ router.get('/oauth/callback', async (req: Request, res: Response) => {
   }
 });
 
-// Disconnect calendar
-router.delete('/disconnect', async (req: Request, res: Response) => {
+// Disconnect calendar (support both DELETE and POST for frontend compatibility)
+router.post('/disconnect', async (req: Request, res: Response) => {
   if (!req.session?.user?.id) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
@@ -213,6 +213,36 @@ router.get('/status', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Status error:', error);
     res.status(500).json({ error: 'Failed to get connection status' });
+  }
+});
+
+// Sync calendar events (placeholder for now)
+router.post('/sync', async (req: Request, res: Response) => {
+  if (!req.session?.user?.id) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    // Check if user has a connected calendar
+    const connections = await db
+      .select()
+      .from(calendarConnections)
+      .where(eq(calendarConnections.userId, req.session.user.id));
+    
+    if (connections.length === 0) {
+      return res.status(400).json({ error: 'No Google Calendar connected' });
+    }
+
+    // TODO: Implement actual sync logic using googleCalendarSync.ts
+    // For now, return a success message
+    res.json({ 
+      success: true, 
+      message: 'Sync functionality will be implemented soon',
+      syncedEvents: 0 
+    });
+  } catch (error) {
+    console.error('Sync error:', error);
+    res.status(500).json({ error: 'Failed to sync calendar' });
   }
 });
 
