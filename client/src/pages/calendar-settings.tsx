@@ -219,7 +219,7 @@ export default function CalendarSettings() {
     setIsSyncing(calendarId);
     try {
       // Use the sync endpoint
-      const response = await apiRequest('POST', '/api/integrations/google-calendar/sync');
+      const response = await apiRequest('POST', '/api/google-calendar/sync');
       const result = await response.json();
       
       toast({
@@ -249,7 +249,7 @@ export default function CalendarSettings() {
   const handleDisconnect = async (calendarId: string) => {
     try {
       // The disconnect endpoint doesn't need a calendarId parameter
-      await apiRequest('POST', '/api/integrations/google-calendar/disconnect');
+      await apiRequest('POST', '/api/google-calendar/disconnect');
       
       toast({
         title: "Disconnected",
