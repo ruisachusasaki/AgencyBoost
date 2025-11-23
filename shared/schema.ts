@@ -72,6 +72,81 @@ export const businessProfile = pgTable("business_profile", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Google Calendar Connections - stores per-user OAuth tokens
+export const calendarConnections = pgTable("calendar_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  calendarId: text("calendar_id").notNull().default("primary"),
+  calendarName: text("calendar_name"),
+  email: text("email").notNull(),
+  accessToken: text("access_token").notNull(), // Encrypted
+  refreshToken: text("refresh_token").notNull(), // Encrypted
+  expiresAt: timestamp("expires_at").notNull(),
+  scope: text("scope").notNull(),
+  syncEnabled: boolean("sync_enabled").default(true),
+  twoWaySync: boolean("two_way_sync").default(true),
+  createContacts: boolean("create_contacts").default(false),
+  triggerWorkflows: boolean("trigger_workflows").default(false),
+  lastSyncedAt: timestamp("last_synced_at"),
+  syncToken: text("sync_token"), // For incremental sync
+  webhookChannelId: text("webhook_channel_id"),
+  webhookExpiration: timestamp("webhook_expiration"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_calendar_connections_user_id").on(table.userId),
+  unique("unique_user_calendar").on(table.userId, table.calendarId),
+]);
+
+// Calendar Sync State - tracks sync history and errors
+export const calendarSyncState = pgTable("calendar_sync_state", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => calendarConnections.id, { onDelete: "cascade" }),
+  lastSyncStarted: timestamp("last_sync_started"),
+  lastSyncCompleted: timestamp("last_sync_completed"),
+  lastSyncStatus: text("last_sync_status"), // success, failed, in_progress
+  lastSyncError: text("last_sync_error"),
+  eventsCreated: integer("events_created").default(0),
+  eventsUpdated: integer("events_updated").default(0),
+  eventsDeleted: integer("events_deleted").default(0),
+  nextSyncToken: text("next_sync_token"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_calendar_sync_state_connection_id").on(table.connectionId),
+]);
+
+// Calendar Events - cached Google Calendar events for availability checking
+export const calendarEvents = pgTable("calendar_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => calendarConnections.id, { onDelete: "cascade" }),
+  googleEventId: text("google_event_id").notNull(),
+  appointmentId: varchar("appointment_id").references(() => clientAppointments.id, { onDelete: "set null" }),
+  summary: text("summary"),
+  description: text("description"),
+  location: text("location"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  allDay: boolean("all_day").default(false),
+  status: text("status"), // confirmed, tentative, cancelled
+  visibility: text("visibility"), // public, private, confidential
+  transparency: text("transparency"), // opaque (busy), transparent (free)
+  attendees: jsonb("attendees"), // Array of {email, name, responseStatus}
+  organizer: jsonb("organizer"), // {email, name}
+  recurrence: jsonb("recurrence"), // Recurrence rules
+  googleHtmlLink: text("google_html_link"),
+  googleHangoutLink: text("google_hangout_link"),
+  syncedAt: timestamp("synced_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_calendar_events_connection_id").on(table.connectionId),
+  index("idx_calendar_events_google_event_id").on(table.googleEventId),
+  index("idx_calendar_events_appointment_id").on(table.appointmentId),
+  index("idx_calendar_events_time_range").on(table.startTime, table.endTime),
+  unique("unique_connection_google_event").on(table.connectionId, table.googleEventId),
+]);
+
 // Custom field folders/sections
 export const customFieldFolders = pgTable("custom_field_folders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -126,13 +201,19 @@ export const clientTasks = pgTable("client_tasks", {
 // Client appointments - calendaring functionality
 export const clientAppointments = pgTable("client_appointments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  clientId: varchar("client_id").notNull().references(() => clients.id),
+  clientId: varchar("client_id").references(() => clients.id),
+  leadId: varchar("lead_id").references(() => leads.id),
   title: text("title").notNull(),
   description: text("description"),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
   location: text("location"),
   status: text("status").notNull().default("confirmed"), // confirmed, showed, no_show, cancelled
+  assignedToId: uuid("assigned_to_id").references(() => staff.id),
+  attendees: jsonb("attendees"), // Array of {email, name}
+  reminderMinutes: integer("reminder_minutes"),
+  googleEventId: text("google_event_id"),
+  lastGoogleSyncAt: timestamp("last_google_sync_at"),
   createdBy: uuid("created_by").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -4157,3 +4238,35 @@ export const insertTimeOffTypeSchema = createInsertSchema(timeOffTypes).omit({
 });
 export type InsertTimeOffType = z.infer<typeof insertTimeOffTypeSchema>;
 export type SelectTimeOffType = typeof timeOffTypes.$inferSelect;
+
+// Calendar Connection schemas
+export const insertCalendarConnectionSchema = createInsertSchema(calendarConnections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSyncedAt: true,
+  syncToken: true,
+  webhookChannelId: true,
+  webhookExpiration: true,
+});
+export type InsertCalendarConnection = z.infer<typeof insertCalendarConnectionSchema>;
+export type CalendarConnection = typeof calendarConnections.$inferSelect;
+
+// Calendar Sync State schemas
+export const insertCalendarSyncStateSchema = createInsertSchema(calendarSyncState).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCalendarSyncState = z.infer<typeof insertCalendarSyncStateSchema>;
+export type CalendarSyncState = typeof calendarSyncState.$inferSelect;
+
+// Calendar Events schemas
+export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit({
+  id: true,
+  syncedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
+export type CalendarEvent = typeof calendarEvents.$inferSelect;
