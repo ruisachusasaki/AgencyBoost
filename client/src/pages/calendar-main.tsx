@@ -152,13 +152,20 @@ export default function CalendarMain() {
       console.log("CalendarMain: Fetching appointments with lead appointments included");
       
       // Fetch regular appointments (including lead appointments)
-      const appointmentsResponse = await fetch("/api/calendar-appointments?includeLeadAppointments=true");
+      const appointmentsResponse = await fetch("/api/calendar-appointments?includeLeadAppointments=true", {
+        credentials: 'include'  // Include cookies for authentication
+      });
       const regularAppointments = await appointmentsResponse.json();
       
       // Fetch Google Calendar synced events
       let googleEvents = [];
       try {
-        const googleResponse = await fetch("/api/google-calendar/events");
+        const googleResponse = await fetch("/api/google-calendar/events", {
+          credentials: 'include',  // Include cookies for authentication
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
         const googleData = await googleResponse.json();
         if (googleData.events && Array.isArray(googleData.events)) {
           // Transform Google events to match appointment structure
