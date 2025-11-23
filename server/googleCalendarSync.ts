@@ -14,7 +14,7 @@ import {
   CalendarSyncState
 } from '@shared/schema';
 import { eq, and, gte, lte, or, not, inArray } from 'drizzle-orm';
-import { getUserCalendarClient } from './googleCalendarOAuth';
+import { getUserCalendarClient } from './googleCalendarUtils';
 import { calendar_v3 } from 'googleapis';
 
 interface SyncResult {
@@ -40,9 +40,11 @@ export async function syncUserCalendar(
     errors: [],
   };
   
+  let connection: CalendarConnection | undefined;
+  
   try {
     // Get the calendar connection
-    const connection = await db.query.calendarConnections.findFirst({
+    connection = await db.query.calendarConnections.findFirst({
       where: and(
         eq(calendarConnections.userId, userId),
         eq(calendarConnections.calendarId, calendarId)

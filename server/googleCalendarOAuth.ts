@@ -1,25 +1,15 @@
 import { Router, Request, Response } from 'express';
-import { OAuth2Client } from 'google-auth-library';
 import { db } from './db';
 import { calendarConnections, calendarSyncState } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { EncryptionService } from './encryption';
+import { createOAuth2Client } from './googleCalendarUtils';
 
 const router = Router();
 
 // OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-
-// Get the correct redirect URI based on environment
-function getRedirectUri() {
-  // In production, use the Replit domains
-  if (process.env.REPLIT_DEV_DOMAIN) {
-    return `https://${process.env.REPLIT_DEV_DOMAIN}/api/google-calendar/oauth/callback`;
-  }
-  // Fallback to localhost for development
-  return process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/google-calendar/oauth/callback';
-}
 
 // Calendar scopes needed for full sync
 const SCOPES = [
@@ -28,15 +18,6 @@ const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile'
 ];
-
-// Create OAuth2 client
-function createOAuth2Client() {
-  return new OAuth2Client(
-    GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET,
-    getRedirectUri()
-  );
-}
 
 // Start OAuth flow
 router.get('/auth', (req: Request, res: Response) => {
@@ -258,39 +239,5 @@ router.post('/sync', async (req: Request, res: Response) => {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to sync calendar' });
   }
 });
-
-/**
- * Get an authenticated Google Calendar client for a user
- * This function retrieves the stored tokens and creates an authenticated client
- */
-export async function getUserCalendarClient(userId: string, calendarId: string = 'primary') {
-  const { google } = await import('googleapis');
-  
-  // Get the user's calendar connection
-  const connection = await db.query.calendarConnections.findFirst({
-    where: and(
-      eq(calendarConnections.userId, userId),
-      eq(calendarConnections.calendarId, calendarId)
-    ),
-  });
-  
-  if (!connection || !connection.accessToken) {
-    throw new Error('No valid calendar connection found');
-  }
-  
-  // Decrypt tokens
-  const accessToken = await encryptionService.decrypt(connection.accessToken);
-  const refreshToken = connection.refreshToken ? await encryptionService.decrypt(connection.refreshToken) : null;
-  
-  // Create OAuth2 client with tokens
-  const oauth2Client = createOAuth2Client();
-  oauth2Client.setCredentials({
-    access_token: accessToken,
-    refresh_token: refreshToken,
-  });
-  
-  // Return the calendar service
-  return google.calendar({ version: 'v3', auth: oauth2Client });
-}
 
 export default router;
