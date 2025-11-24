@@ -95,7 +95,11 @@ export default function Integrations() {
     clientId: "",
     clientSecret: "",
     webhookUrl: "",
-    syncFrequency: "hourly"
+    syncFrequency: "hourly",
+    twoWaySync: true,
+    createContacts: true,
+    triggerWorkflows: true,
+    blockAsAppointments: false
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -1132,6 +1136,64 @@ export default function Integrations() {
                       onChange={(e) => setConnectionSettings({...connectionSettings, clientSecret: e.target.value})}
                       placeholder="Your Google OAuth Client Secret"
                     />
+                  </div>
+                  
+                  <div className="border-t pt-4 mt-4">
+                    <h3 className="font-medium mb-3">Sync Preferences</h3>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Label className="text-sm font-medium">Two-Way Sync</Label>
+                          <p className="text-xs text-gray-500">
+                            Events created in either system will sync automatically
+                          </p>
+                        </div>
+                        <Switch 
+                          checked={connectionSettings.twoWaySync || false}
+                          onCheckedChange={(checked) => setConnectionSettings({...connectionSettings, twoWaySync: checked})}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Label className="text-sm font-medium">Create Contacts from Events</Label>
+                          <p className="text-xs text-gray-500">
+                            Automatically create contacts for guests in Google events
+                          </p>
+                        </div>
+                        <Switch 
+                          checked={connectionSettings.createContacts || false}
+                          onCheckedChange={(checked) => setConnectionSettings({...connectionSettings, createContacts: checked})}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Label className="text-sm font-medium">Trigger Workflows</Label>
+                          <p className="text-xs text-gray-500">
+                            Run automation workflows for synced appointments
+                          </p>
+                        </div>
+                        <Switch 
+                          checked={connectionSettings.triggerWorkflows || false}
+                          onCheckedChange={(checked) => setConnectionSettings({...connectionSettings, triggerWorkflows: checked})}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Label className="text-sm font-medium">Block as Appointments</Label>
+                          <p className="text-xs text-gray-500">
+                            External events create full appointments (vs just blocking time)
+                          </p>
+                        </div>
+                        <Switch 
+                          checked={connectionSettings.blockAsAppointments || false}
+                          onCheckedChange={(checked) => setConnectionSettings({...connectionSettings, blockAsAppointments: checked})}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </>
               )}
