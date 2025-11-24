@@ -286,17 +286,17 @@ router.get('/events', async (req: Request, res: Response) => {
         connectionId: calendarEvents.connectionId,
         googleEventId: calendarEvents.googleEventId,
         title: calendarEvents.summary,
-        description: calendarEvents.description,
+        description: sql<string | null>`null`.as('description'), // Not stored in optimized schema
         startTime: calendarEvents.startTime,
         endTime: calendarEvents.endTime,
-        location: calendarEvents.location,
+        location: sql<string | null>`null`.as('location'), // Not stored in optimized schema
         status: calendarEvents.status,
         allDay: calendarEvents.allDay,
         transparency: calendarEvents.transparency,
         attendees: calendarEvents.attendees,
-        organizer: calendarEvents.organizer,
-        googleHtmlLink: calendarEvents.googleHtmlLink,
-        googleHangoutLink: calendarEvents.googleHangoutLink,
+        organizer: calendarEvents.organizerEmail, // Use organizerEmail field
+        googleHtmlLink: sql<string | null>`null`.as('googleHtmlLink'), // Not stored in optimized schema
+        googleHangoutLink: sql<string | null>`null`.as('googleHangoutLink'), // Not stored in optimized schema
         type: sql<string>`'google'`.as('type'),
       })
       .from(calendarEvents)
