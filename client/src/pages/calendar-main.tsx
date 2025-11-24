@@ -802,36 +802,38 @@ export default function CalendarMain() {
 
                   {/* Week View */}
                   {calendarView === "week" && (
-                    <div className="p-4">
-                      {/* Week header with days */}
-                      <div className="grid grid-cols-8 gap-0 mb-4">
-                        <div className="p-2 border-r border-gray-200 dark:border-gray-700"></div> {/* Empty cell for time column */}
-                        {(() => {
-                          const startOfWeek = new Date(currentDate);
-                          startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
-                          return Array.from({ length: 7 }, (_, i) => {
-                            const day = new Date(startOfWeek);
-                            day.setDate(startOfWeek.getDate() + i);
-                            const isToday = day.toDateString() === new Date().toDateString();
-                            
-                            return (
-                              <div key={i} className={`p-2 text-center border-b border-gray-200 dark:border-gray-700 ${
-                                i < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""
-                              } ${isToday ? "bg-primary/10 text-primary font-semibold" : ""}`}>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                    <div className="relative h-full">
+                      {/* Week header with days - sticky */}
+                      <div className="sticky top-0 z-20 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-700">
+                        <div className="grid grid-cols-8 gap-0">
+                          <div className="p-2 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950"></div> {/* Empty cell for time column */}
+                          {(() => {
+                            const startOfWeek = new Date(currentDate);
+                            startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+                            return Array.from({ length: 7 }, (_, i) => {
+                              const day = new Date(startOfWeek);
+                              day.setDate(startOfWeek.getDate() + i);
+                              const isToday = day.toDateString() === new Date().toDateString();
+                              
+                              return (
+                                <div key={i} className={`p-2 text-center bg-white dark:bg-gray-950 ${
+                                  i < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""
+                                } ${isToday ? "bg-primary/10 dark:bg-primary/20 text-primary font-semibold" : ""}`}>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                                  </div>
+                                  <div className={`text-lg ${isToday ? "text-primary" : ""}`}>
+                                    {day.getDate()}
+                                  </div>
                                 </div>
-                                <div className={`text-lg ${isToday ? "text-primary" : ""}`}>
-                                  {day.getDate()}
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
+                              );
+                            });
+                          })()}
+                        </div>
                       </div>
 
-                      {/* Week time slots */}
-                      <div className="space-y-0">
+                      {/* Week time slots - scrollable */}
+                      <div className="h-[600px] overflow-y-auto overflow-x-hidden">
                         {Array.from({ length: 24 }, (_, hour) => {
                           const timeSlot = new Date().setHours(hour, 0, 0, 0);
                           const timeDisplay = new Date(timeSlot).toLocaleTimeString('en-US', { 
@@ -922,10 +924,10 @@ export default function CalendarMain() {
 
                   {/* Day View */}
                   {calendarView === "day" && (
-                    <div className="p-4">
-                      {/* Day header */}
-                      <div className="mb-4 pb-2 border-b border-gray-200">
-                        <div className="text-center">
+                    <div className="relative h-full">
+                      {/* Day header - sticky */}
+                      <div className="sticky top-0 z-20 bg-white dark:bg-gray-950 pb-2 border-b border-gray-200 dark:border-gray-700">
+                        <div className="text-center pt-4">
                           <div className="text-sm text-gray-500 dark:text-gray-400">
                             {currentDate.toLocaleDateString('en-US', { weekday: 'long' })}
                           </div>
@@ -938,8 +940,8 @@ export default function CalendarMain() {
                         </div>
                       </div>
 
-                      {/* Day time slots */}
-                      <div className="space-y-0">
+                      {/* Day time slots - scrollable */}
+                      <div className="h-[600px] overflow-y-auto overflow-x-hidden">
                         {Array.from({ length: 24 }, (_, hour) => {
                           const timeSlot = new Date().setHours(hour, 0, 0, 0);
                           const timeDisplay = new Date(timeSlot).toLocaleTimeString('en-US', { 
