@@ -1,3 +1,4 @@
+import { getGoogleCalendarEventsForView } from "./googleCalendarEventsEndpoint";
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
@@ -28174,5 +28175,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch Google Calendar events" });
     }
   });
+  app.get("/api/google-calendar/events", requireAuth(), getGoogleCalendarEventsForView);
   return httpServer;
 }

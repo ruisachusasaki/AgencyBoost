@@ -147,7 +147,7 @@ export default function CalendarMain() {
   });
 
   const { data: appointments = [], error: appointmentsError, refetch: refetchAppointments } = useQuery<Appointment[]>({
-    queryKey: ["/api/calendar-appointments-with-leads"],
+    queryKey: ["/api/calendar-appointments-with-leads", selectedUsers], // Include selectedUsers for refetching
     queryFn: async () => {
       console.log("CalendarMain: Fetching appointments with lead appointments included");
       
@@ -160,7 +160,12 @@ export default function CalendarMain() {
       // Fetch Google Calendar synced events
       let googleEvents = [];
       try {
-        const googleResponse = await fetch("/api/google-calendar/events", {
+        // Build URL with selected user IDs if any
+        const googleUrl = selectedUsers.length > 0 
+          ? `/api/google-calendar/events?userIds=${selectedUsers.join(',')}`
+          : "/api/google-calendar/events";
+          
+        const googleResponse = await fetch(googleUrl, {
           credentials: 'include',  // Include cookies for authentication
           headers: {
             'Content-Type': 'application/json'
@@ -172,19 +177,19 @@ export default function CalendarMain() {
           googleEvents = googleData.events.map(event => ({
             ...event,
             // Map Google event fields to appointment fields
-            assignedTo: '', // Google events don't have assignedTo
-            bookerName: event.organizer ? (event.organizer.name || event.organizer.email || '') : '',
-            bookerEmail: event.organizer ? (event.organizer.email || '') : '',
-            bookerPhone: null,
-            clientId: null,
+            assignedTo: event.assignedTo || event.userId || '', // Use the assignedTo field from the API
+            bookerName: event.bookerName || event.organizerName || '',
+            bookerEmail: event.bookerEmail || event.organizerEmail || '',
+            bookerPhone: event.bookerPhone || null,
+            clientId: event.clientId || null,
             status: event.status || 'confirmed',
-            timezone: 'UTC',
-            customFieldData: null,
-            externalEventId: event.googleEventId,
-            bookingSource: 'google-calendar',
-            cancelledAt: null,
-            cancelledBy: null,
-            cancellationReason: null,
+            timezone: event.timezone || 'UTC',
+            customFieldData: event.customFieldData || null,
+            externalEventId: event.externalEventId || event.googleEventId,
+            bookingSource: event.bookingSource || 'google-calendar',
+            cancelledAt: event.cancelledAt || null,
+            cancelledBy: event.cancelledBy || null,
+            cancellationReason: event.cancellationReason || null,
             type: 'google'
           }));
         }

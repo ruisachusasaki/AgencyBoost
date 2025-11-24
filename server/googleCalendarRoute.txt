@@ -1,0 +1,7 @@
+
+// Add this import at the top of the file with other imports
+import { getGoogleCalendarEventsForView } from "./googleCalendarEventsEndpoint";
+
+// Add this route before the return httpServer line
+app.get("/api/google-calendar/events", requireAuth(), getGoogleCalendarEventsForView);
+
