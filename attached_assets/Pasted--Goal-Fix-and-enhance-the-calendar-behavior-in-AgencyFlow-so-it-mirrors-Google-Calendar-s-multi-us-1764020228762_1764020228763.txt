@@ -1,0 +1,32 @@
+# Goal
+Fix and enhance the calendar behavior in AgencyFlow so it mirrors Google Calendar’s multi-user, multi-calendar viewing and permission model.
+
+# Current Context
+- I’m logged in as **Aldana** (`aldana@themediaoptimizers.com`) in AgencyFlow.
+- Aldana’s Google Calendar is **already synced** (OAuth completed) to AgencyFlow.
+- In the **Users** filter/section of the calendar screen, when I select **Aldana**, **all Google events disappear**. This is wrong.
+
+# What Must Happen (Expected Behavior)
+1) **Auto-recognition of a user’s own calendar**
+   - If a user has already synced their Google Calendar, AgencyFlow must treat that Google account as **the user’s default calendar**.
+   - Selecting that user in the Users filter must **show** their events (not hide them).
+
+2) **Multi-user selection**
+   - The **Users** control must allow **selecting multiple users** simultaneously (multi-select).
+   - When multiple users are selected, AgencyFlow should **overlay/aggregate** events from all selected users’ calendars into a single view.
+
+3) **Google-like permissions & visibility**
+   - Behavior must match **Google Calendar** visibility rules:
+     - Same-organization calendars (e.g., `aldana@themediaoptimizers.com` viewing `rui@themediaoptimizers.com`) should display according to the target calendar’s sharing settings.
+     - If only free/busy is allowed, **show events as “Busy”** (no title/description/location), with correct time blocks.
+     - If details are allowed, show full details.
+     - If not shared at all, show nothing (and display a non-blocking info state like “No permission to view Rui’s events.”).
+   - Ensure recurring events, all-day events, and private events behave like Google Calendar.
+
+4) **Selection model**
+   - Selecting a user means: **display that user’s primary Google Calendar** by default.
+   - If possible (future-friendly), also include any additional calendars that user has explicitly shared with the logged-in user, honoring each calendar’s permission level.
+
+5) **Never clear events on valid selection**
+   - Selecting a synced user must **not** clear the view.
+   - Adding or removing users in the filter should **incrementally add/remove**

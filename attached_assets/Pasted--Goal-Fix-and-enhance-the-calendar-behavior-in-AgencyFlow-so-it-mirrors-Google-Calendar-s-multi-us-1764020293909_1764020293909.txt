@@ -1,0 +1,115 @@
+# Goal
+Fix and enhance the calendar behavior in AgencyFlow so it mirrors Google Calendar’s multi-user, multi-calendar viewing and permission model.
+
+# Current Context
+- I’m logged in as **Aldana** (`aldana@themediaoptimizers.com`) in AgencyFlow.
+- Aldana’s Google Calendar is **already synced** (OAuth completed) to AgencyFlow.
+- In the **Users** filter/section of the calendar screen, when I select **Aldana**, **all Google events disappear**. This is wrong.
+
+# What Must Happen (Expected Behavior)
+1) **Auto-recognition of a user’s own calendar**
+   - If a user has already synced their Google Calendar, AgencyFlow must treat that Google account as **the user’s default calendar**.
+   - Selecting that user in the Users filter must **show** their events (not hide them).
+
+2) **Multi-user selection**
+   - The **Users** control must allow **selecting multiple users** simultaneously (multi-select).
+   - When multiple users are selected, AgencyFlow should **overlay/aggregate** events from all selected users’ calendars into a single view.
+
+3) **Google-like permissions & visibility**
+   - Behavior must match **Google Calendar** visibility rules:
+     - Same-organization calendars (e.g., `aldana@themediaoptimizers.com` viewing `rui@themediaoptimizers.com`) should display according to the target calendar’s sharing settings.
+     - If only free/busy is allowed, **show events as “Busy”** (no title/description/location), with correct time blocks.
+     - If details are allowed, show full details.
+     - If not shared at all, show nothing (and display a non-blocking info state like “No permission to view Rui’s events.”).
+   - Ensure recurring events, all-day events, and private events behave like Google Calendar.
+
+4) **Selection model**
+   - Selecting a user means: **display that user’s primary Google Calendar** by default.
+   - If possible (future-friendly), also include any additional calendars that user has explicitly shared with the logged-in user, honoring each calendar’s permission level.
+
+5) **Never clear events on valid selection**
+   - Selecting a synced user must **not** clear the view.
+   - Adding or removing users in the filter should **incrementally add/remove** event layers, not reset the entire calendar.
+
+6) **Aggregation & de-duplication**
+   - When multiple selected calendars contain the *same meeting* (same `iCalUID`), **render a single block** (choose the “most detailed” version available based on permissions).
+   - Color-code events by **calendar owner** (user) so overlaps are readable.
+
+7) **Time range & refresh**
+   - Fetch events for the visible date range only (e.g., current week/month).
+   - Refresh data when:
+     - The visible range changes,
+     - The selected users change,
+     - The logged-in user switches.
+   - Use short-term caching to avoid rate limits; ensure manual **Refresh** works.
+
+# Likely Root Cause (to fix)
+- The filter is probably using an **owner-based condition** or an **agency-level event list** that hides Google-sourced events when a user is selected.
+- Replace this with a **per-user calendar feed** approach:
+  - For each selected user who has a Google token, call **Google Calendar API** `calendarList.list` to confirm available calendars (at minimum the primary).
+  - For each enabled calendar, call **events.list** with:
+    - `timeMin`, `timeMax` = visible range,
+    - `singleEvents=true` (expand recurring),
+    - `showDeleted=false`,
+    - `maxResults` reasonable,
+    - Use the **selected user’s OAuth token** for their calendars.
+  - Union all results; then **de-duplicate by `iCalUID`** with a rule that prefers detailed visibility over free/busy.
+
+# Permission Rules (mirror Google)
+- **Same domain (Google Workspace)**:
+  - Default: show “Busy” unless the other user/shared calendar grants more detail.
+  - If calendar is shared with “See all event details” → show full details.
+  - If calendar not shared → show nothing for that user and surface a gentle info note.
+- **Cross-domain or personal Google accounts**:
+  - Respect whatever that calendar shares publicly or with the logged-in user.
+- **Private events**:
+  - Render time blocks as “Private” or “Busy” per Google semantics, no details.
+
+# UI Requirements
+- **Users** field: Convert to a **multi-select** (chips/pills) with clear add/remove.
+- **Legend**: Show a color chip per selected user (owner).
+- **Event rendering**:
+  - Title: full text or “Busy” depending on permission.
+  - Tooltip/Details panel must hide restricted fields when only free/busy is available.
+- **Empty-state messages**:
+  - If no permission: “You don’t have permission to view {User}’s event details.”
+  - If no events in range: “No events for the selected users in this time range.”
+
+# Acceptance Tests (Must Pass)
+1) **Self view**:
+   - Login as Aldana (synced).
+   - Select Aldana in Users → Aldana’s events show (DO NOT disappear).
+2) **Multi-user overlay**:
+   - Select Aldana + Rui → see both users’ events together; overlapping meetings are not duplicated.
+3) **Free/Busy masking**:
+   - As Aldana, view Rui’s calendar when sharing is free/busy only → Rui’s blocks show as “Busy” with no details.
+4) **Permission denial**:
+   - As Aldana, if Rui’s calendar is not shared → show an unobtrusive info note and no Rui events.
+5) **Stability**:
+   - Switching months/weeks or toggling users does not clear unrelated calendars.
+6) **Recurring & all-day**:
+   - Recurring events are expanded correctly; all-day events render at the top per day.
+7) **Performance**:
+   - Multi-user selection (e.g., 3–5 users) remains responsive; no excessive API calls.
+
+# Non-Goals (for now)
+- Editing events inside AgencyFlow.
+- Cross-account invitation workflows.
+- Creating new calendars.
+
+# Implementation Notes (if helpful)
+- Use Google Calendar API:
+  - `calendarList.list` to identify accessible calendars per selected user (via that user’s token).
+  - `events.list` per calendar with `singleEvents=true`.
+- Normalize events to `{start, end, title, visibility, organizerEmail, iCalUID, calendarOwner}`.
+- De-dupe by `iCalUID`, prefer the instance with `visibility=public/details` over `freeBusy`.
+- Respect time zones from Google Calendar; render consistently in the viewer’s local TZ.
+
+# Summary
+Fix the bug where selecting a synced user hides events. Implement multi-user selection and aggregate calendars with Google-like permission visibility (full details vs. busy). Ensure stable rendering, de-duplication, and correct handling of recurring/all-day events, matching Google Calendar behavior.
+
+
+
+
+
+
