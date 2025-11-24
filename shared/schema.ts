@@ -2569,6 +2569,9 @@ export const calendarAppointments = pgTable("calendar_appointments", {
   customFieldData: jsonb("custom_field_data"), // Responses to custom fields
   // External calendar integration
   externalEventId: text("external_event_id"), // ID from external calendar (Google, Outlook)
+  googleEventId: text("google_event_id"), // Specific Google Calendar event ID
+  googleCalendarId: text("google_calendar_id"), // Which Google Calendar it's on
+  syncedToGoogle: boolean("synced_to_google").default(false), // Track if pushed to Google
   // Metadata
   bookingSource: text("booking_source").notNull().default("public"), // 'public', 'admin', 'api'
   bookingIp: text("booking_ip"),
@@ -4169,14 +4172,21 @@ export const calendarConnections = pgTable("calendar_connections", {
   refreshToken: text("refresh_token").notNull(), // Encrypted
   expiresAt: timestamp("expires_at").notNull(),
   scope: text("scope").notNull(),
+  // Sync preferences
   syncEnabled: boolean("sync_enabled").default(true),
   twoWaySync: boolean("two_way_sync").default(true),
   createContacts: boolean("create_contacts").default(false),
   triggerWorkflows: boolean("trigger_workflows").default(false),
+  blockAsAppointments: boolean("block_as_appointments").default(false), // false = just block time, true = create full appointments
+  // Sync state
   lastSyncedAt: timestamp("last_synced_at"),
   syncToken: text("sync_token"), // For incremental sync
+  pageToken: text("page_token"), // For pagination during initial sync
+  // Watch/webhook for real-time updates
   webhookChannelId: text("webhook_channel_id"),
   webhookExpiration: timestamp("webhook_expiration"),
+  webhookResourceId: text("webhook_resource_id"),
+  // Metadata
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -4202,35 +4212,50 @@ export const calendarSyncState = pgTable("calendar_sync_state", {
   index("idx_calendar_sync_state_connection_id").on(table.connectionId),
 ]);
 
-// Calendar Events - cached Google Calendar events for availability checking
+// Calendar Events - optimized storage for Google Calendar events (only essential fields)
+// Stores only events within rolling window (e.g., -90 to +365 days)
 export const calendarEvents = pgTable("calendar_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   connectionId: varchar("connection_id").notNull().references(() => calendarConnections.id, { onDelete: "cascade" }),
   googleEventId: text("google_event_id").notNull(),
-  appointmentId: varchar("appointment_id").references(() => clientAppointments.id, { onDelete: "set null" }),
+  appointmentId: varchar("appointment_id").references(() => calendarAppointments.id, { onDelete: "set null" }), // Links to AgencyFlow appointment
+  // Essential fields only for availability and display
   summary: text("summary"),
-  description: text("description"),
-  location: text("location"),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
   allDay: boolean("all_day").default(false),
   status: text("status"), // confirmed, tentative, cancelled
-  visibility: text("visibility"), // public, private, confidential
   transparency: text("transparency"), // opaque (busy), transparent (free)
-  attendees: jsonb("attendees"), // Array of {email, name, responseStatus}
-  organizer: jsonb("organizer"), // {email, name}
-  recurrence: jsonb("recurrence"), // Recurrence rules
-  googleHtmlLink: text("google_html_link"),
-  googleHangoutLink: text("google_hangout_link"),
+  // Minimal attendee data for contact creation
+  attendees: jsonb("attendees"), // Array of {email, name, responseStatus} - only stored if createContacts is enabled
+  organizerEmail: text("organizer_email"), // Just the email for quick lookup
+  // Sync metadata
+  etag: text("etag"), // For change detection
+  lastModified: timestamp("last_modified"), // Google's updated timestamp
   syncedAt: timestamp("synced_at").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  // Flags
+  isRecurring: boolean("is_recurring").default(false), // Flag instead of full recurrence data
+  createdInAgencyFlow: boolean("created_in_agency_flow").default(false), // Track origin for two-way sync
 }, (table) => [
   index("idx_calendar_events_connection_id").on(table.connectionId),
   index("idx_calendar_events_google_event_id").on(table.googleEventId),
   index("idx_calendar_events_appointment_id").on(table.appointmentId),
   index("idx_calendar_events_time_range").on(table.startTime, table.endTime),
+  index("idx_calendar_events_user_time").on(table.connectionId, table.startTime, table.endTime), // For availability checks
   unique("unique_connection_google_event").on(table.connectionId, table.googleEventId),
+]);
+
+// Calendar Event Cache - stores next 7 days of events for fast availability checks
+export const calendarEventCache = pgTable("calendar_event_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  date: date("date").notNull(), // Date for this cache entry
+  busySlots: jsonb("busy_slots").notNull(), // Array of {start, end} timestamps for this day
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  etag: text("etag"), // For cache validation
+}, (table) => [
+  index("idx_event_cache_user_date").on(table.userId, table.date),
+  unique("unique_user_date_cache").on(table.userId, table.date),
 ]);
 
 // Calendar Connection schemas
