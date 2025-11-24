@@ -67,6 +67,11 @@ export default function CalendarSettings() {
   const [connectedCalendars, setConnectedCalendars] = useState<ConnectedCalendar[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
+  const [syncPreferences, setSyncPreferences] = useState({
+    blockAsAppointments: false,
+    createContacts: false,
+    triggerWorkflows: false
+  });
 
   // Fetch calendars
   const { data: calendars = [], isLoading: calendarsLoading } = useQuery<CalendarData[]>({
@@ -769,6 +774,19 @@ export default function CalendarSettings() {
                           <Switch 
                             checked={calendar.triggerWorkflows || false}
                             onCheckedChange={(checked) => handleUpdateSyncSettings(calendar.id, { triggerWorkflows: checked })}
+                          />
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <Label className="text-sm font-medium">Block as Appointments</Label>
+                            <p className="text-xs text-gray-500">
+                              External events create full appointments (vs just blocking time)
+                            </p>
+                          </div>
+                          <Switch 
+                            checked={syncPreferences.blockAsAppointments || false}
+                            onCheckedChange={(checked) => handleUpdateSyncSettings(calendar.id, { blockAsAppointments: checked })}
                           />
                         </div>
                       </div>
