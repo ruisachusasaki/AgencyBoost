@@ -223,22 +223,25 @@ export class GoogleCalendarIncrementalSync {
             // Create new event
             await db.insert(calendarEvents).values(eventData);
             result.eventsCreated++;
+          }
+          
+          // Process attendees to create contacts if enabled (for both new and updated events)
+          if (conn.createContacts && event.attendees && event.attendees.length > 0) {
+            const attendeeResult = await contactCreator.processEventAttendees(
+              event.attendees.map(a => ({
+                email: a.email || '',
+                displayName: a.displayName,
+                responseStatus: a.responseStatus
+              })),
+              connectionId,
+              event.summary
+            );
             
-            // Process attendees to create contacts if enabled
-            if (conn.createContacts && event.attendees && event.attendees.length > 0) {
-              const attendeeResult = await contactCreator.processEventAttendees(
-                event.attendees.map(a => ({
-                  email: a.email || '',
-                  displayName: a.displayName,
-                  responseStatus: a.responseStatus
-                })),
-                connectionId,
-                event.summary
-              );
-              
-              if (attendeeResult.contactsCreated > 0) {
-                console.log(`📧 Created ${attendeeResult.contactsCreated} contacts from event attendees`);
-              }
+            if (attendeeResult.contactsCreated > 0) {
+              console.log(`📧 Created ${attendeeResult.contactsCreated} contacts from event attendees`);
+            }
+            if (attendeeResult.contactsUpdated > 0) {
+              console.log(`📝 Updated ${attendeeResult.contactsUpdated} existing contacts from event attendees`);
             }
           }
         }

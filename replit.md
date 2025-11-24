@@ -19,6 +19,17 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Backend**: Node.js with Express.js, TypeScript, RESTful API.
 - **Database**: PostgreSQL with Drizzle ORM.
 
+### Google Calendar Integration (GoHighLevel-style)
+- **Authentication**: Per-user OAuth 2.0 with Google Calendar API, each team member connects their own account
+- **Two-Way Sync**: Bidirectional event synchronization between AgencyFlow and Google Calendar with conflict resolution
+- **Incremental Sync**: Uses Google's syncToken API for 90% reduction in API calls, fetches only changes since last sync
+- **Contact Creation**: Automatically creates leads from event attendees with email deduplication
+- **Availability Blocking**: Real-time conflict detection prevents double-bookings across both systems
+- **Workflow Triggers**: Calendar events trigger automation workflows (event.created, event.updated, event.deleted)
+- **Optimized Storage**: Stores only essential event fields (~400 bytes vs 3KB per event), supports 3000+ users efficiently
+- **Event Caching**: 7-day cache for fast availability checks, automatic cleanup of events >1 year old
+- **Sync Preferences**: Per-connection toggles for two-way sync, contact creation, workflow triggers, and appointment blocking
+
 ### UI/UX Decisions
 - Responsive sidebar navigation and mobile-first design using Radix UI, shadcn/ui, and Tailwind CSS for 3-column layouts.
 - Enhanced visual design for pipeline views and an icon picker.
