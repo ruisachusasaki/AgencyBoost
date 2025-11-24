@@ -864,9 +864,15 @@ export default function CalendarMain() {
                                     {dayAppointments.map((apt) => (
                                       <Tooltip key={apt.id}>
                                         <TooltipTrigger asChild>
-                                          <div className="text-xs p-2 bg-primary/20 text-primary rounded mb-1 cursor-pointer hover:bg-primary/30">
+                                          <div className={`text-xs p-2 rounded mb-1 cursor-pointer border ${
+                                            apt.type === 'google' 
+                                              ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/50' 
+                                              : 'bg-primary/20 border-primary/30 text-primary hover:bg-primary/30'
+                                          }`}>
                                             <div className="font-medium truncate">{apt.title}</div>
-                                            <div className="text-xs opacity-75">{apt.bookerName || apt.attendeeName || 'Unknown'}</div>
+                                            {(apt.bookerName || apt.attendeeName) && (
+                                              <div className="text-xs opacity-75">{apt.bookerName || apt.attendeeName}</div>
+                                            )}
                                           </div>
                                         </TooltipTrigger>
                                         <TooltipContent side="top" className="max-w-80">
@@ -933,13 +939,22 @@ export default function CalendarMain() {
                                     return (
                                       <Tooltip key={apt.id}>
                                         <TooltipTrigger asChild>
-                                          <div className="p-3 bg-primary/10 text-primary rounded-lg border-l-4 border-primary cursor-pointer hover:bg-primary/20">
+                                          <div className={`p-3 rounded-lg border-l-4 cursor-pointer ${
+                                            apt.type === 'google'
+                                              ? 'bg-blue-100 dark:bg-blue-900/30 border-l-blue-500 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                                              : 'bg-primary/10 border-l-primary text-primary hover:bg-primary/20'
+                                          }`}>
                                             <div className="flex justify-between items-start">
                                               <div className="flex-1">
                                                 <div className="font-semibold">{apt.title}</div>
-                                                <div className="text-sm opacity-75 mt-1">
-                                                  {apt.bookerName || apt.attendeeName || 'Unknown'} ({apt.bookerEmail || apt.attendeeEmail || 'No email'})
-                                                </div>
+                                                {(apt.bookerName || apt.attendeeName || apt.bookerEmail || apt.attendeeEmail) && (
+                                                  <div className="text-sm opacity-75 mt-1">
+                                                    {(apt.bookerName || apt.attendeeName) ? 
+                                                      `${apt.bookerName || apt.attendeeName}${apt.bookerEmail || apt.attendeeEmail ? ` (${apt.bookerEmail || apt.attendeeEmail})` : ''}` 
+                                                      : (apt.bookerEmail || apt.attendeeEmail)
+                                                    }
+                                                  </div>
+                                                )}
                                                 {apt.description && (
                                                   <div className="text-sm opacity-75 mt-1">
                                                     {apt.description}
