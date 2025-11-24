@@ -10,6 +10,12 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
     const currentUserId = req.session?.userId;
     const { userIds } = req.query; // Accept multiple user IDs
     
+    console.log('[GoogleCalendarEvents] Request received:', { 
+      currentUserId, 
+      userIds,
+      queryParams: req.query 
+    });
+    
     if (!currentUserId) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
@@ -39,6 +45,13 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
         const userStaff = selectedStaff.find(s => s.id === userId);
         const isSameOrg = userStaff?.organizationId === currentUserOrgId;
         const isCurrentUser = userId === currentUserId;
+        
+        console.log('[GoogleCalendarEvents] Processing user:', {
+          userId,
+          isCurrentUser,
+          isSameOrg,
+          userStaff: userStaff?.email
+        });
         
         // Get events for this user by joining with calendar connections
         const userEvents = await db
@@ -72,13 +85,19 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
               : sql<any>`'[]'::jsonb`.as('attendees'),
             isRecurring: calendarEvents.isRecurring,
             createdInAgencyFlow: calendarEvents.createdInAgencyFlow,
-            // Include both userId and assignedTo for compatibility
-            userId: sql<string>`${userId}`.as('userId'),
-            assignedTo: sql<string>`${userId}`.as('assignedTo')
+            // CRITICAL: Use the connection's userId (which is the staff ID who owns this calendar)
+            userId: calendarConnections.userId,
+            assignedTo: calendarConnections.userId
           })
           .from(calendarEvents)
           .innerJoin(calendarConnections, eq(calendarEvents.connectionId, calendarConnections.id))
           .where(eq(calendarConnections.userId, userId));
+        
+        console.log('[GoogleCalendarEvents] Found events for user:', {
+          userId,
+          eventCount: userEvents.length,
+          firstEvent: userEvents[0]?.title
+        });
         
         return userEvents;
       });
@@ -134,9 +153,14 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
       type: 'google'
     }));
     
+    console.log('[GoogleCalendarEvents] Returning events:', {
+      totalCount: transformedEvents.length,
+      userIds: userIds || 'none'
+    });
+    
     res.json({ events: transformedEvents });
   } catch (error) {
-    console.error("Error fetching Google Calendar events for calendar view:", error);
-    res.status(500).json({ error: "Failed to fetch Google Calendar events" });
+    console.error("[GoogleCalendarEvents] Error fetching Google Calendar events for calendar view:", error);
+    res.status(500).json({ error: "Failed to fetch Google Calendar events", details: error.message });
   }
 }
