@@ -4,6 +4,7 @@ import { db } from './db';
 import { calendarConnections, calendarEvents, calendarSyncState, calendarEventCache } from '@shared/schema';
 import { eq, and, lte, gte, sql, inArray } from 'drizzle-orm';
 import { decrypt } from './encryption';
+import { contactCreator } from './googleCalendarContactCreation';
 
 const SYNC_WINDOW_PAST_DAYS = 90;
 const SYNC_WINDOW_FUTURE_DAYS = 365;
@@ -222,6 +223,23 @@ export class GoogleCalendarIncrementalSync {
             // Create new event
             await db.insert(calendarEvents).values(eventData);
             result.eventsCreated++;
+            
+            // Process attendees to create contacts if enabled
+            if (conn.createContacts && event.attendees && event.attendees.length > 0) {
+              const attendeeResult = await contactCreator.processEventAttendees(
+                event.attendees.map(a => ({
+                  email: a.email || '',
+                  displayName: a.displayName,
+                  responseStatus: a.responseStatus
+                })),
+                connectionId,
+                event.summary
+              );
+              
+              if (attendeeResult.contactsCreated > 0) {
+                console.log(`📧 Created ${attendeeResult.contactsCreated} contacts from event attendees`);
+              }
+            }
           }
         }
 
