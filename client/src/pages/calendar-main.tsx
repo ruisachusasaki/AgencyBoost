@@ -851,35 +851,65 @@ export default function CalendarMain() {
                                 day.setDate(startOfWeek.getDate() + dayIndex);
                                 day.setHours(hour, 0, 0, 0);
                                 
-                                const dayAppointments = calendarViewFilteredAppointments.filter(apt => {
+                                // Get all appointments that start or span through this hour
+                                const hourAppointments = calendarViewFilteredAppointments.filter(apt => {
                                   const aptStart = new Date(apt.startTime);
+                                  const aptEnd = new Date(apt.endTime);
+                                  const hourStart = new Date(day);
+                                  hourStart.setHours(hour, 0, 0, 0);
+                                  const hourEnd = new Date(day);
+                                  hourEnd.setHours(hour + 1, 0, 0, 0);
+                                  
                                   return aptStart.toDateString() === day.toDateString() && 
-                                         aptStart.getHours() === hour;
+                                         aptStart < hourEnd && aptEnd > hourStart;
                                 });
                                 
                                 return (
-                                  <div key={dayIndex} className={`min-h-[60px] p-1 hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                  <div key={dayIndex} className={`relative h-[60px] hover:bg-gray-50 dark:hover:bg-gray-800 ${
                                     dayIndex < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""
                                   }`}>
-                                    {dayAppointments.map((apt) => (
-                                      <Tooltip key={apt.id}>
-                                        <TooltipTrigger asChild>
-                                          <div className={`text-xs p-2 rounded mb-1 cursor-pointer border ${
-                                            apt.type === 'google' 
-                                              ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/50' 
-                                              : 'bg-primary/20 border-primary/30 text-primary hover:bg-primary/30'
-                                          }`}>
-                                            <div className="font-medium truncate">{apt.title}</div>
-                                            {(apt.bookerName || apt.attendeeName) && (
-                                              <div className="text-xs opacity-75">{apt.bookerName || apt.attendeeName}</div>
-                                            )}
-                                          </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="top" className="max-w-80">
-                                          <AppointmentTooltip appointment={apt} />
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    ))}
+                                    {hourAppointments.map((apt) => {
+                                      const aptStart = new Date(apt.startTime);
+                                      const aptEnd = new Date(apt.endTime);
+                                      const hourStart = new Date(day);
+                                      hourStart.setHours(hour, 0, 0, 0);
+                                      
+                                      // Calculate position and height
+                                      const minutesFromHourStart = Math.max(0, (aptStart.getTime() - hourStart.getTime()) / (1000 * 60));
+                                      const topPosition = (minutesFromHourStart / 60) * 60; // 60px per hour
+                                      const duration = (aptEnd.getTime() - aptStart.getTime()) / (1000 * 60);
+                                      const height = Math.min((duration / 60) * 60, (60 - topPosition)); // Cap at hour boundary
+                                      
+                                      // Only show if event starts in this hour
+                                      if (aptStart.getHours() !== hour) return null;
+                                      
+                                      return (
+                                        <Tooltip key={apt.id}>
+                                          <TooltipTrigger asChild>
+                                            <div 
+                                              className={`absolute left-1 right-1 text-xs p-1 rounded cursor-pointer border overflow-hidden ${
+                                                apt.type === 'google' 
+                                                  ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/50' 
+                                                  : 'bg-primary/20 border-primary/30 text-primary hover:bg-primary/30'
+                                              }`}
+                                              style={{
+                                                top: `${topPosition}px`,
+                                                height: `${Math.max(20, height)}px`, // Minimum height of 20px
+                                                zIndex: 10
+                                              }}
+                                            >
+                                              <div className="font-medium truncate text-[10px]">{apt.title}</div>
+                                              {height > 30 && (apt.bookerName || apt.attendeeName) && (
+                                                <div className="text-[10px] opacity-75 truncate">{apt.bookerName || apt.attendeeName}</div>
+                                              )}
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="max-w-80">
+                                            <AppointmentTooltip appointment={apt} />
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      );
+                                    })}
                                   </div>
                                 );
                               })}
@@ -925,68 +955,93 @@ export default function CalendarMain() {
                                    aptStart.getHours() === hour;
                           });
                           
+                          // Get all appointments that start or span through this hour
+                          const allHourAppointments = calendarViewFilteredAppointments.filter(apt => {
+                            const aptStart = new Date(apt.startTime);
+                            const aptEnd = new Date(apt.endTime);
+                            const hourStart = new Date(currentDate);
+                            hourStart.setHours(hour, 0, 0, 0);
+                            const hourEnd = new Date(currentDate);
+                            hourEnd.setHours(hour + 1, 0, 0, 0);
+                            
+                            return aptStart.toDateString() === currentDate.toDateString() && 
+                                   aptStart < hourEnd && aptEnd > hourStart;
+                          });
+                          
                           return (
                             <div key={hour} className="flex border-b border-gray-100 dark:border-gray-800">
                               <div className="w-20 p-3 text-sm text-gray-500 dark:text-gray-400 text-right border-r border-gray-100 dark:border-gray-800">
                                 {timeDisplay}
                               </div>
-                              <div className="flex-1 min-h-[80px] p-2 hover:bg-gray-50 dark:hover:bg-gray-800">
-                                <div className="space-y-2">
-                                  {hourAppointments.map((apt) => {
-                                    const startTime = new Date(apt.startTime);
-                                    const endTime = new Date(apt.endTime);
-                                    
-                                    return (
-                                      <Tooltip key={apt.id}>
-                                        <TooltipTrigger asChild>
-                                          <div className={`p-3 rounded-lg border-l-4 cursor-pointer ${
-                                            apt.type === 'google'
-                                              ? 'bg-blue-100 dark:bg-blue-900/30 border-l-blue-500 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/50'
-                                              : 'bg-primary/10 border-l-primary text-primary hover:bg-primary/20'
-                                          }`}>
-                                            <div className="flex justify-between items-start">
-                                              <div className="flex-1">
-                                                <div className="font-semibold">{apt.title}</div>
-                                                {(apt.bookerName || apt.attendeeName || apt.bookerEmail || apt.attendeeEmail) && (
-                                                  <div className="text-sm opacity-75 mt-1">
-                                                    {(apt.bookerName || apt.attendeeName) ? 
-                                                      `${apt.bookerName || apt.attendeeName}${apt.bookerEmail || apt.attendeeEmail ? ` (${apt.bookerEmail || apt.attendeeEmail})` : ''}` 
-                                                      : (apt.bookerEmail || apt.attendeeEmail)
-                                                    }
-                                                  </div>
-                                                )}
-                                                {apt.description && (
-                                                  <div className="text-sm opacity-75 mt-1">
-                                                    {apt.description}
-                                                  </div>
-                                                )}
-                                                {apt.location && (
-                                                  <div className="text-sm opacity-75 mt-1">
-                                                    📍 {apt.location}
-                                                  </div>
-                                                )}
-                                              </div>
-                                              <div className="text-sm opacity-75 ml-4">
+                              <div className="flex-1 h-[80px] relative hover:bg-gray-50 dark:hover:bg-gray-800">
+                                {allHourAppointments.map((apt) => {
+                                  const startTime = new Date(apt.startTime);
+                                  const endTime = new Date(apt.endTime);
+                                  const hourStart = new Date(currentDate);
+                                  hourStart.setHours(hour, 0, 0, 0);
+                                  
+                                  // Calculate position and height
+                                  const minutesFromHourStart = Math.max(0, (startTime.getTime() - hourStart.getTime()) / (1000 * 60));
+                                  const topPosition = (minutesFromHourStart / 60) * 80; // 80px per hour for day view
+                                  const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+                                  const height = Math.min((duration / 60) * 80, (80 - topPosition)); // Cap at hour boundary
+                                  
+                                  // Only show if event starts in this hour
+                                  if (startTime.getHours() !== hour) return null;
+                                  
+                                  return (
+                                    <Tooltip key={apt.id}>
+                                      <TooltipTrigger asChild>
+                                        <div className={`absolute left-2 right-2 p-2 rounded-lg border-l-4 cursor-pointer overflow-hidden ${
+                                          apt.type === 'google'
+                                            ? 'bg-blue-100 dark:bg-blue-900/30 border-l-blue-500 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                                            : 'bg-primary/10 border-l-primary text-primary hover:bg-primary/20'
+                                        }`}
+                                        style={{
+                                          top: `${topPosition}px`,
+                                          height: `${Math.max(25, height)}px`, // Minimum height of 25px
+                                          zIndex: 10
+                                        }}
+                                        >
+                                          <div className="flex justify-between items-start">
+                                            <div className="flex-1 min-w-0">
+                                              <div className="font-semibold text-sm truncate">{apt.title}</div>
+                                              {height > 35 && (
+                                                <>
+                                                  {(apt.bookerName || apt.attendeeName || apt.bookerEmail || apt.attendeeEmail) && (
+                                                    <div className="text-xs opacity-75 truncate">
+                                                      {(apt.bookerName || apt.attendeeName) ? 
+                                                        `${apt.bookerName || apt.attendeeName}${apt.bookerEmail || apt.attendeeEmail ? ` (${apt.bookerEmail || apt.attendeeEmail})` : ''}` 
+                                                        : (apt.bookerEmail || apt.attendeeEmail)
+                                                      }
+                                                    </div>
+                                                  )}
+                                                  {height > 60 && apt.location && (
+                                                    <div className="text-xs opacity-75 truncate">
+                                                      📍 {apt.location}
+                                                    </div>
+                                                  )}
+                                                </>
+                                              )}
+                                            </div>
+                                            {height > 40 && (
+                                              <div className="text-xs opacity-75 ml-2 whitespace-nowrap">
                                                 {startTime.toLocaleTimeString('en-US', { 
                                                   hour: 'numeric', 
                                                   minute: '2-digit',
                                                   hour12: true 
-                                                })} - {endTime.toLocaleTimeString('en-US', { 
-                                                  hour: 'numeric', 
-                                                  minute: '2-digit',
-                                                  hour12: true 
-                                                })}
+                                                }).replace(' ', '')}
                                               </div>
-                                            </div>
+                                            )}
                                           </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="right" className="max-w-80">
-                                          <AppointmentTooltip appointment={apt} />
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    );
-                                  })}
-                                </div>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="right" className="max-w-80">
+                                        <AppointmentTooltip appointment={apt} />
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  );
+                                })}
                               </div>
                             </div>
                           );
@@ -1035,8 +1090,8 @@ export default function CalendarMain() {
                   <CardContent className="pb-4">
                     {/* Mini calendar grid */}
                     <div className="grid grid-cols-7 gap-1 text-xs">
-                      {["S", "M", "T", "W", "T", "F", "S"].map((day) => (
-                        <div key={day} className="p-1 text-center font-medium text-gray-500">
+                      {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+                        <div key={`day-${index}`} className="p-1 text-center font-medium text-gray-500">
                           {day}
                         </div>
                       ))}
