@@ -155,7 +155,13 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
     
     console.log('[GoogleCalendarEvents] Returning events:', {
       totalCount: transformedEvents.length,
-      userIds: userIds || 'none'
+      userIds: userIds || 'none',
+      sampleEvents: transformedEvents.slice(0, 2).map(e => ({
+        title: e.title,
+        assignedTo: e.assignedTo,
+        userId: e.userId,
+        type: typeof e.assignedTo
+      }))
     });
     
     res.json({ events: transformedEvents });

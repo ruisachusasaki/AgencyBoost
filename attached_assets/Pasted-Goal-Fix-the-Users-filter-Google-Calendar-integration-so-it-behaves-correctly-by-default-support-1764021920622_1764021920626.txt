@@ -1,0 +1,60 @@
+Goal
+Fix the Users filter + Google Calendar integration so it behaves correctly by default, supports multi-select, and never hides calendars unexpectedly.
+
+Context
+- Logged in as: rui@themediaoptimizers.com (Google Calendar already synced)
+- Colleague: aldana@themediaoptimizers.com (Google Calendar already synced)
+
+Issues (please reproduce and fix)
+1) Default selection + disappearing events
+   - Steps:
+     a) Log in as rui@themediaoptimizers.com.
+     b) Open the Calendar page.
+     c) Check the “Users” filter (Selected section).
+   - Expected:
+     • My own user (Rui) is selected by default.
+     • My Google Calendar events are visible.
+     • If I toggle my name on/off, events appear/disappear accordingly and come back immediately without a full-page refresh.
+   - Actual:
+     • Rui is NOT selected by default.
+     • If I select Rui, my Google events disappear.
+     • After they disappear, the only way to get them back is to refresh the entire page.
+
+2) Cross-user visibility (Aldana)
+   - Steps:
+     a) While still logged in as Rui, open the Users filter and select Aldana.
+   - Expected:
+     • I should see Aldana’s events according to her calendar’s share settings (at minimum “Busy” blocks).
+   - Actual:
+     • Nothing shows at all for Aldana.
+
+3) Multi-select missing
+   - Steps:
+     a) Try to select more than one user in the Users filter.
+   - Expected:
+     • The filter allows multiple selections (e.g., Rui + Aldana), and the calendar overlays events from all selected users.
+   - Actual:
+     • I can only select ONE user.
+
+Requirements
+- Self calendar: Auto-select the logged-in user’s calendar by default and render their events immediately.
+- Never clear calendars on valid selection: Toggling users must not require a hard refresh.
+- Multi-select: Allow selecting multiple users and overlay all selected users’ events.
+- Google parity: Respect Google Calendar permissions (show full details if allowed; otherwise show “Busy”).
+- Recurring/all-day events must render correctly.
+
+QA Checklist (verify before marking done)
+- [ ] Login as Rui → Rui is preselected, Rui’s events render.
+- [ ] Toggling Rui off/on hides/shows Rui’s events without page refresh.
+- [ ] Selecting Aldana shows her events (or “Busy”) per permissions.
+- [ ] Multi-select (Rui + Aldana) displays both calendars together.
+- [ ] Switching weeks/months or toggling users never causes permanent disappearance of events.
+- [ ] No duplicates; performance remains responsive.
+
+Testing Note
+Please test with your own Google accounts if needed. When you ask me to “take over,” I don’t have a way to log in via your Google accounts, so I can’t validate those flows on my side.
+
+Deliverable
+- Short summary of root cause.
+- Explanation of the code changes.
+- Confirmation that all QA checklist items pass.

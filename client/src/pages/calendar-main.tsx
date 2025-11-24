@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -114,6 +114,11 @@ export default function CalendarMain() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Fetch current user to auto-select their calendar
+  const { data: currentUser } = useQuery<{ id: string; firstName: string; lastName: string; email: string }>({
+    queryKey: ['/api/auth/current-user'],
+  });
+  
   const [activeTab, setActiveTab] = useState("calendar-view");
   const [calendarView, setCalendarView] = useState<CalendarViewType>("week");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -123,6 +128,7 @@ export default function CalendarMain() {
   const [calendarSearch, setCalendarSearch] = useState("");
   const [sidebarTab, setSidebarTab] = useState("users");
   const [appointmentTypeFilter, setAppointmentTypeFilter] = useState<'all' | 'lead' | 'client'>('all');
+  const [hasAutoSelectedUser, setHasAutoSelectedUser] = useState(false);
   
   // Appointments table state
   const [appointmentsTab, setAppointmentsTab] = useState<"upcoming" | "cancelled" | "all">("upcoming");
@@ -216,6 +222,15 @@ export default function CalendarMain() {
   
   // Extract clients array from response
   const clients = (clientsResponse as any)?.clients || [];
+
+  // Auto-select current user's calendar by default when page loads
+  useEffect(() => {
+    if (currentUser?.id && !hasAutoSelectedUser) {
+      console.log("CalendarMain: Auto-selecting current user:", currentUser.id);
+      setSelectedUsers([currentUser.id]);
+      setHasAutoSelectedUser(true);
+    }
+  }, [currentUser?.id, hasAutoSelectedUser]);
 
   // Filter staff based on search
   const filteredStaff = useMemo(() => {
@@ -457,15 +472,29 @@ export default function CalendarMain() {
   const calendarViewFilteredAppointments = useMemo(() => {
     let filtered = appointments;
     
+    console.log("CalendarMain: Filtering appointments:", {
+      totalAppointments: appointments.length,
+      selectedUsers,
+      sampleAssignedTo: appointments.slice(0, 3).map(a => ({ title: a.title, assignedTo: a.assignedTo, type: a.type }))
+    });
+    
     // Filter by selected calendars if any are selected
     if (selectedCalendars.length > 0) {
       filtered = filtered.filter(apt => selectedCalendars.includes(apt.calendarId));
     }
     
     // Filter by selected users if any are selected
+    // For Google events, use assignedTo or userId field
     if (selectedUsers.length > 0) {
-      filtered = filtered.filter(apt => selectedUsers.includes(apt.assignedTo));
+      filtered = filtered.filter(apt => {
+        // Check both assignedTo and userId fields
+        const userMatch = selectedUsers.includes(apt.assignedTo) || 
+                         selectedUsers.includes((apt as any).userId);
+        return userMatch;
+      });
     }
+    
+    console.log("CalendarMain: After filtering:", { filteredCount: filtered.length });
     
     return filtered;
   }, [appointments, selectedCalendars, selectedUsers]);
