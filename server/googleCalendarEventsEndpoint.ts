@@ -1,12 +1,11 @@
 import { Request, Response } from 'express';
 import { db } from './db';
 import { eq, inArray, sql } from 'drizzle-orm';
+import { calendarEvents, calendarConnections, staff } from '@shared/schema';
 
 // Get Google Calendar events for calendar view (supports multi-user and organization-wide viewing)
 export async function getGoogleCalendarEventsForView(req: Request, res: Response) {
   try {
-    // Import tables dynamically to avoid circular dependency issues
-    const { calendarEvents, calendarConnections, staff } = await import('./db');
     const currentUserId = req.session?.userId;
     const { userIds } = req.query; // Accept multiple user IDs
     
@@ -54,6 +53,7 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
         });
         
         // Get events for this user by joining with calendar connections
+        // Note: calendarEvents table only has: summary, startTime, endTime, allDay, status, transparency, attendees, organizerEmail, isRecurring, createdInAgencyFlow
         const userEvents = await db
           .select({
             id: calendarEvents.id,
@@ -63,23 +63,17 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
             title: isCurrentUser || isSameOrg 
               ? sql<string>`COALESCE(${calendarEvents.summary}, 'Untitled Event')`.as('title')
               : sql<string>`'Busy'`.as('title'),
-            description: isCurrentUser || isSameOrg 
-              ? sql<string>`COALESCE(${calendarEvents.description}, '')`.as('description') 
-              : sql<string>`''`.as('description'),
+            description: sql<string>`''`.as('description'), // Not stored in optimized schema
             startTime: calendarEvents.startTime,
             endTime: calendarEvents.endTime,
-            location: isCurrentUser || isSameOrg 
-              ? sql<string>`COALESCE(${calendarEvents.location}, '')`.as('location') 
-              : sql<string>`''`.as('location'),
+            location: sql<string>`''`.as('location'), // Not stored in optimized schema
             status: calendarEvents.status,
             allDay: calendarEvents.allDay,
             transparency: calendarEvents.transparency,
             organizerEmail: isCurrentUser || isSameOrg 
               ? calendarEvents.organizerEmail 
               : sql<string>`''`.as('organizerEmail'),
-            organizerName: isCurrentUser || isSameOrg
-              ? sql<string>`COALESCE(${calendarEvents.organizerName}, '')`.as('organizerName')
-              : sql<string>`''`.as('organizerName'),
+            organizerName: sql<string>`''`.as('organizerName'), // Not stored in optimized schema
             attendees: isCurrentUser || isSameOrg 
               ? calendarEvents.attendees 
               : sql<any>`'[]'::jsonb`.as('attendees'),
@@ -106,21 +100,22 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
       events = allEvents.flat();
     } else {
       // No specific users selected, return all events for the current user
+      // Note: calendarEvents table only has: summary, startTime, endTime, allDay, status, transparency, attendees, organizerEmail, isRecurring, createdInAgencyFlow
       const userEvents = await db
         .select({
           id: calendarEvents.id,
           googleEventId: calendarEvents.googleEventId,
           connectionId: calendarEvents.connectionId,
           title: sql<string>`COALESCE(${calendarEvents.summary}, 'Untitled Event')`.as('title'),
-          description: sql<string>`COALESCE(${calendarEvents.description}, '')`.as('description'),
+          description: sql<string>`''`.as('description'), // Not stored in optimized schema
           startTime: calendarEvents.startTime,
           endTime: calendarEvents.endTime,
-          location: sql<string>`COALESCE(${calendarEvents.location}, '')`.as('location'),
+          location: sql<string>`''`.as('location'), // Not stored in optimized schema
           status: calendarEvents.status,
           allDay: calendarEvents.allDay,
           transparency: calendarEvents.transparency,
           organizerEmail: calendarEvents.organizerEmail,
-          organizerName: sql<string>`COALESCE(${calendarEvents.organizerName}, '')`.as('organizerName'),
+          organizerName: sql<string>`''`.as('organizerName'), // Not stored in optimized schema
           attendees: calendarEvents.attendees,
           isRecurring: calendarEvents.isRecurring,
           createdInAgencyFlow: calendarEvents.createdInAgencyFlow,

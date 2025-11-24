@@ -261,54 +261,7 @@ router.post('/sync', async (req: Request, res: Response) => {
   }
 });
 
-// Get synced Google Calendar events for display in calendar view
-router.get('/events', async (req: Request, res: Response) => {
-  if (!req.session?.userId) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  try {
-    // Check if user has a connected calendar
-    const connections = await db
-      .select()
-      .from(calendarConnections)
-      .where(eq(calendarConnections.userId, req.session.userId));
-    
-    if (connections.length === 0) {
-      return res.json({ events: [] });
-    }
-
-    // Get synced events from calendar_events table
-    const events = await db
-      .select({
-        id: calendarEvents.id,
-        calendarId: sql<string>`'google-calendar'`.as('calendarId'),
-        connectionId: calendarEvents.connectionId,
-        googleEventId: calendarEvents.googleEventId,
-        title: calendarEvents.summary,
-        description: sql<string | null>`null`.as('description'), // Not stored in optimized schema
-        startTime: calendarEvents.startTime,
-        endTime: calendarEvents.endTime,
-        location: sql<string | null>`null`.as('location'), // Not stored in optimized schema
-        status: calendarEvents.status,
-        allDay: calendarEvents.allDay,
-        transparency: calendarEvents.transparency,
-        attendees: calendarEvents.attendees,
-        organizer: calendarEvents.organizerEmail, // Use organizerEmail field
-        googleHtmlLink: sql<string | null>`null`.as('googleHtmlLink'), // Not stored in optimized schema
-        googleHangoutLink: sql<string | null>`null`.as('googleHangoutLink'), // Not stored in optimized schema
-        type: sql<string>`'google'`.as('type'),
-      })
-      .from(calendarEvents)
-      .where(eq(calendarEvents.connectionId, connections[0].id))
-      .orderBy(asc(calendarEvents.startTime));
-
-    console.log(`[Google Calendar Events] Returning ${events.length} events for user ${req.session.userId}`);
-    res.json({ events });
-  } catch (error) {
-    console.error('Error fetching Google Calendar events:', error);
-    res.status(500).json({ error: 'Failed to fetch Google Calendar events' });
-  }
-});
+// Note: The /events endpoint is now handled by googleCalendarEventsEndpoint.ts
+// which supports multi-user filtering and proper assignedTo field mapping
 
 export default router;
