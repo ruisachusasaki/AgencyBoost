@@ -1258,7 +1258,7 @@ export default function CalendarMain() {
                       {/* Week time grid with events - scrollable */}
                       <div ref={weekScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: '560px' }}>
                         <div className="grid grid-cols-8 gap-0 relative">
-                          {/* Live Line - Current Time Indicator */}
+                          {/* Live Line - Current Time Indicator - spans full width Sunday to Saturday */}
                           {isTodayVisible && (() => {
                             const PIXELS_PER_HOUR = 60;
                             const todayIndex = getTodayDayIndex();
@@ -1275,15 +1275,17 @@ export default function CalendarMain() {
                                   right: 0
                                 }}
                               >
-                                <div className="flex items-center">
+                                <div className="flex items-center w-full">
+                                  {/* Red circle indicator positioned at today's column */}
                                   <div 
-                                    className="w-2 h-2 rounded-full bg-red-500"
-                                    style={{ marginLeft: `calc(${todayIndex} * (100% / 7))` }}
+                                    className="absolute w-2.5 h-2.5 rounded-full bg-red-500"
+                                    style={{ 
+                                      left: `calc(${todayIndex} * (100% / 7))`,
+                                      transform: 'translateX(-50%)'
+                                    }}
                                   />
-                                  <div 
-                                    className="h-0.5 bg-red-500 flex-1"
-                                    style={{ marginLeft: '-4px' }}
-                                  />
+                                  {/* Full-width red line from Sunday to Saturday */}
+                                  <div className="h-0.5 bg-red-500 w-full" />
                                 </div>
                               </div>
                             );
