@@ -1275,18 +1275,8 @@ export default function CalendarMain() {
                                   right: 0
                                 }}
                               >
-                                <div className="flex items-center w-full">
-                                  {/* Red circle indicator positioned at today's column */}
-                                  <div 
-                                    className="absolute w-2.5 h-2.5 rounded-full bg-red-500"
-                                    style={{ 
-                                      left: `calc(${todayIndex} * (100% / 7))`,
-                                      transform: 'translateX(-50%)'
-                                    }}
-                                  />
-                                  {/* Full-width red line from Sunday to Saturday */}
-                                  <div className="h-0.5 bg-red-500 w-full" />
-                                </div>
+                                {/* Full-width red line from Sunday to Saturday */}
+                                <div className="h-0.5 bg-red-500 w-full" />
                               </div>
                             );
                           })()}
@@ -1486,10 +1476,8 @@ export default function CalendarMain() {
                                       right: 0
                                     }}
                                   >
-                                    <div className="flex items-center">
-                                      <div className="w-3 h-3 rounded-full bg-red-500 -ml-1.5" />
-                                      <div className="h-0.5 bg-red-500 flex-1" style={{ marginLeft: '-6px' }} />
-                                    </div>
+                                    {/* Full-width red line */}
+                                    <div className="h-0.5 bg-red-500 w-full" />
                                   </div>
                                 );
                               })()}
