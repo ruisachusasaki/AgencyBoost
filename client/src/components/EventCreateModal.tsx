@@ -28,7 +28,12 @@ import {
   Video,
   Users,
   Loader2,
+  UserPlus,
+  X,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 
 interface EventCreateModalProps {
@@ -45,6 +50,20 @@ interface GoogleCalendarConnection {
   email: string;
   syncEnabled: boolean;
   twoWaySyncEnabled: boolean;
+}
+
+interface Staff {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  profileImage?: string;
+}
+
+interface Guest {
+  id: string;
+  name: string;
+  email: string;
 }
 
 export function EventCreateModal({
@@ -64,9 +83,15 @@ export function EventCreateModal({
   const [startTime, setStartTime] = useState(initialTime || "09:00");
   const [duration, setDuration] = useState("30");
   const [addGoogleMeet, setAddGoogleMeet] = useState(false);
+  const [selectedGuests, setSelectedGuests] = useState<Guest[]>([]);
+  const [showGuestPicker, setShowGuestPicker] = useState(false);
 
   const { data: googleCalendarStatus } = useQuery<{ connections: GoogleCalendarConnection[] }>({
     queryKey: ["/api/google-calendar/status"],
+  });
+
+  const { data: staffList } = useQuery<Staff[]>({
+    queryKey: ["/api/staff"],
   });
 
   const hasGoogleCalendarSync = googleCalendarStatus?.connections?.some(
@@ -86,8 +111,29 @@ export function EventCreateModal({
       setLocation("");
       setDuration("30");
       setAddGoogleMeet(false);
+      setSelectedGuests([]);
+      setShowGuestPicker(false);
     }
   }, [isOpen, initialDate, initialTime]);
+
+  const toggleGuest = (staff: Staff) => {
+    const isSelected = selectedGuests.some(g => g.id === staff.id);
+    if (isSelected) {
+      setSelectedGuests(selectedGuests.filter(g => g.id !== staff.id));
+    } else {
+      setSelectedGuests([...selectedGuests, {
+        id: staff.id,
+        name: `${staff.firstName} ${staff.lastName}`,
+        email: staff.email,
+      }]);
+    }
+  };
+
+  const removeGuest = (guestId: string) => {
+    setSelectedGuests(selectedGuests.filter(g => g.id !== guestId));
+  };
+
+  const availableStaff = staffList?.filter(s => s.id !== currentUserId) || [];
 
   const createEventMutation = useMutation({
     mutationFn: async (eventData: {
@@ -98,6 +144,7 @@ export function EventCreateModal({
       endTime: string;
       addGoogleMeet: boolean;
       syncToGoogle: boolean;
+      guests: Guest[];
     }) => {
       const response = await apiRequest("POST", "/api/calendar/events", eventData);
       return response.json();
@@ -153,6 +200,7 @@ export function EventCreateModal({
       endTime: endDateTime.toISOString(),
       addGoogleMeet: addGoogleMeet && !!hasGoogleCalendarSync,
       syncToGoogle: !!userConnection,
+      guests: selectedGuests,
     });
   };
 
@@ -290,6 +338,87 @@ export function EventCreateModal({
               rows={3}
               data-testid="input-event-description"
             />
+          </div>
+
+          {/* Add Guests Section */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                Add Guests (optional)
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowGuestPicker(!showGuestPicker)}
+                data-testid="button-add-guests"
+              >
+                {showGuestPicker ? "Hide" : "Add"}
+              </Button>
+            </div>
+
+            {/* Selected guests display */}
+            {selectedGuests.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedGuests.map((guest) => (
+                  <Badge
+                    key={guest.id}
+                    variant="secondary"
+                    className="flex items-center gap-1 py-1 px-2"
+                  >
+                    <span className="text-sm">{guest.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeGuest(guest.id)}
+                      className="ml-1 hover:text-destructive"
+                      data-testid={`remove-guest-${guest.id}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {/* Guest picker dropdown */}
+            {showGuestPicker && (
+              <div className="border rounded-lg p-2 bg-gray-50 dark:bg-gray-900">
+                <ScrollArea className="h-[150px]">
+                  <div className="space-y-1">
+                    {availableStaff.length === 0 ? (
+                      <p className="text-sm text-gray-500 p-2">No team members available</p>
+                    ) : (
+                      availableStaff.map((staff) => {
+                        const isSelected = selectedGuests.some(g => g.id === staff.id);
+                        return (
+                          <div
+                            key={staff.id}
+                            className="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded cursor-pointer"
+                            onClick={() => toggleGuest(staff)}
+                            data-testid={`guest-option-${staff.id}`}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleGuest(staff)}
+                              className="pointer-events-none"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">
+                                {staff.firstName} {staff.lastName}
+                              </p>
+                              <p className="text-xs text-gray-500 truncate">
+                                {staff.email}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
           </div>
 
           {userConnection && (

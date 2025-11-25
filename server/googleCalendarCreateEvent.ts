@@ -7,6 +7,12 @@ import { randomUUID } from 'crypto';
 import { EncryptionService } from './encryption';
 import { createOAuth2Client } from './googleCalendarUtils';
 
+interface Guest {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface CreateEventRequest {
   title: string;
   description?: string;
@@ -15,6 +21,7 @@ interface CreateEventRequest {
   endTime: string;
   addGoogleMeet?: boolean;
   syncToGoogle?: boolean;
+  guests?: Guest[];
 }
 
 export async function createCalendarEvent(req: Request, res: Response) {
@@ -25,13 +32,13 @@ export async function createCalendarEvent(req: Request, res: Response) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const { title, description, location, startTime, endTime, addGoogleMeet, syncToGoogle } = req.body as CreateEventRequest;
+    const { title, description, location, startTime, endTime, addGoogleMeet, syncToGoogle, guests } = req.body as CreateEventRequest;
 
     if (!title || !startTime || !endTime) {
       return res.status(400).json({ error: 'Title, start time, and end time are required' });
     }
 
-    console.log('[CreateEvent] Creating event:', { userId, title, startTime, endTime, addGoogleMeet, syncToGoogle });
+    console.log('[CreateEvent] Creating event:', { userId, title, startTime, endTime, addGoogleMeet, syncToGoogle, guestCount: guests?.length || 0 });
 
     let googleEventId: string | null = null;
     let googleHangoutLink: string | null = null;
@@ -99,6 +106,15 @@ export async function createCalendarEvent(req: Request, res: Response) {
           },
         };
 
+        // Add attendees/guests if provided
+        if (guests && guests.length > 0) {
+          eventResource.attendees = guests.map(guest => ({
+            email: guest.email,
+            displayName: guest.name,
+          }));
+          console.log('[CreateEvent] Adding attendees:', eventResource.attendees);
+        }
+
         // Add Google Meet conference if requested
         if (addGoogleMeet && connection.twoWaySync) {
           eventResource.conferenceData = {
@@ -118,6 +134,7 @@ export async function createCalendarEvent(req: Request, res: Response) {
           calendarId: 'primary',
           requestBody: eventResource,
           conferenceDataVersion: addGoogleMeet ? 1 : 0,
+          sendUpdates: guests && guests.length > 0 ? 'all' : 'none', // Send email invitations to guests
         });
 
         if (googleEvent.data) {
@@ -133,6 +150,7 @@ export async function createCalendarEvent(req: Request, res: Response) {
           });
 
           // Store the event in the calendar_events table (for synced events)
+          const attendeeEmails = guests?.map(g => g.email) || [];
           const newCalendarEvent = await db
             .insert(calendarEvents)
             .values({
@@ -148,7 +166,7 @@ export async function createCalendarEvent(req: Request, res: Response) {
               googleHangoutLink: googleHangoutLink,
               googleHtmlLink: googleHtmlLink,
               organizerEmail: connection.email,
-              attendees: [],
+              attendees: attendeeEmails,
               allDay: false,
               transparency: 'opaque',
               isRecurring: false,
