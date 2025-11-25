@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -354,6 +354,69 @@ export default function CalendarMain() {
   const [calendarFilter, setCalendarFilter] = useState<string>("all");
   const [userFilter, setUserFilter] = useState<string>("all");
   const [clientFilter, setClientFilter] = useState<string>("all");
+  
+  // Live line (current time indicator) state
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const weekScrollRef = useRef<HTMLDivElement>(null);
+  const dayScrollRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToCurrentTime = useRef(false);
+  
+  // Update current time every minute for live line
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+    
+    return () => clearInterval(timer);
+  }, []);
+  
+  // Calculate live line position based on current time
+  const getLiveLinePosition = useCallback((pixelsPerHour: number) => {
+    const now = currentTime;
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    return (hours * pixelsPerHour) + (minutes / 60) * pixelsPerHour;
+  }, [currentTime]);
+  
+  // Check if today is visible in current view
+  const isTodayVisible = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (calendarView === "day") {
+      const viewDate = new Date(currentDate);
+      viewDate.setHours(0, 0, 0, 0);
+      return viewDate.getTime() === today.getTime();
+    } else if (calendarView === "week") {
+      const startOfWeek = new Date(currentDate);
+      startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+      
+      return today >= startOfWeek && today <= endOfWeek;
+    }
+    return false;
+  }, [currentDate, calendarView]);
+  
+  // Get the day index of today in the week view (0 = Sunday, 6 = Saturday)
+  const getTodayDayIndex = useCallback(() => {
+    const today = new Date();
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      if (day.toDateString() === today.toDateString()) {
+        return i;
+      }
+    }
+    return -1;
+  }, [currentDate]);
 
   // Fetch data
   const { data: calendars = [], isLoading: calendarsLoading, error: calendarsError } = useQuery<CalendarData[]>({
@@ -443,6 +506,32 @@ export default function CalendarMain() {
       setHasAutoSelectedUser(true);
     }
   }, [currentUser?.id, hasAutoSelectedUser]);
+  
+  // Auto-scroll to current time when the calendar view loads
+  useEffect(() => {
+    if (hasScrolledToCurrentTime.current) return;
+    
+    const scrollToCurrentTime = () => {
+      const containerHeight = 560; // maxHeight of the scroll container
+      const pixelsPerHour = calendarView === "day" ? 80 : 60;
+      const liveLinePosition = getLiveLinePosition(pixelsPerHour);
+      
+      // Scroll so that current time is visible (positioned about 1/3 from top)
+      const scrollPosition = Math.max(0, liveLinePosition - containerHeight / 3);
+      
+      if (calendarView === "week" && weekScrollRef.current) {
+        weekScrollRef.current.scrollTop = scrollPosition;
+        hasScrolledToCurrentTime.current = true;
+      } else if (calendarView === "day" && dayScrollRef.current) {
+        dayScrollRef.current.scrollTop = scrollPosition;
+        hasScrolledToCurrentTime.current = true;
+      }
+    };
+    
+    // Small delay to ensure DOM is ready
+    const timeoutId = setTimeout(scrollToCurrentTime, 100);
+    return () => clearTimeout(timeoutId);
+  }, [calendarView, getLiveLinePosition]);
 
   // Filter staff based on search and sort (selected users first, then alphabetically)
   const filteredStaff = useMemo(() => {
@@ -1167,8 +1256,39 @@ export default function CalendarMain() {
                       })()}
 
                       {/* Week time grid with events - scrollable */}
-                      <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: '560px' }}>
-                        <div className="grid grid-cols-8 gap-0">
+                      <div ref={weekScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: '560px' }}>
+                        <div className="grid grid-cols-8 gap-0 relative">
+                          {/* Live Line - Current Time Indicator */}
+                          {isTodayVisible && (() => {
+                            const PIXELS_PER_HOUR = 60;
+                            const todayIndex = getTodayDayIndex();
+                            const liveLineTop = getLiveLinePosition(PIXELS_PER_HOUR);
+                            
+                            if (todayIndex === -1) return null;
+                            
+                            return (
+                              <div 
+                                className="absolute pointer-events-none z-30"
+                                style={{ 
+                                  top: `${liveLineTop}px`,
+                                  left: '64px', // After time column (w-16 = 64px)
+                                  right: 0
+                                }}
+                              >
+                                <div className="flex items-center">
+                                  <div 
+                                    className="w-2 h-2 rounded-full bg-red-500"
+                                    style={{ marginLeft: `calc(${todayIndex} * (100% / 7))` }}
+                                  />
+                                  <div 
+                                    className="h-0.5 bg-red-500 flex-1"
+                                    style={{ marginLeft: '-4px' }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          
                           {/* Time column */}
                           <div className="w-16">
                             {Array.from({ length: 24 }, (_, hour) => {
@@ -1344,13 +1464,34 @@ export default function CalendarMain() {
                       })()}
 
                       {/* Day time grid with events - scrollable */}
-                      <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: '560px' }}>
+                      <div ref={dayScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: '560px' }}>
                         {(() => {
                           const PIXELS_PER_HOUR = 80;
                           const dayLayouts = computeEventLayouts(calendarViewFilteredAppointments, currentDate, PIXELS_PER_HOUR);
                           
                           return (
-                            <div className="flex">
+                            <div className="flex relative">
+                              {/* Live Line - Current Time Indicator for Day View */}
+                              {isTodayVisible && (() => {
+                                const liveLineTop = getLiveLinePosition(PIXELS_PER_HOUR);
+                                
+                                return (
+                                  <div 
+                                    className="absolute pointer-events-none z-30"
+                                    style={{ 
+                                      top: `${liveLineTop}px`,
+                                      left: '80px', // After time column (w-20 = 80px)
+                                      right: 0
+                                    }}
+                                  >
+                                    <div className="flex items-center">
+                                      <div className="w-3 h-3 rounded-full bg-red-500 -ml-1.5" />
+                                      <div className="h-0.5 bg-red-500 flex-1" style={{ marginLeft: '-6px' }} />
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                              
                               {/* Time column */}
                               <div className="w-20 flex-shrink-0">
                                 {Array.from({ length: 24 }, (_, hour) => {
