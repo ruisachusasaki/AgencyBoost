@@ -1587,6 +1587,7 @@ export default function CalendarMain() {
                                   id={`calendar-${calendar.id}`}
                                   checked={selectedCalendars.includes(calendar.id)}
                                   onCheckedChange={() => handleCalendarToggle(calendar.id)}
+                                  className="rounded-none"
                                   data-testid={`checkbox-calendar-${calendar.id}`}
                                 />
                                 <div 
