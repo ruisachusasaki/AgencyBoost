@@ -132,6 +132,21 @@ interface EventSegment {
   isEndSegment: boolean;
 }
 
+// User color palette for multi-user calendar view
+// Each user gets a unique color for their checkbox and events
+const USER_COLOR_PALETTE = [
+  { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af', dark: { bg: 'rgba(59, 130, 246, 0.2)', text: '#93c5fd' } }, // Light blue
+  { bg: '#d1fae5', border: '#10b981', text: '#065f46', dark: { bg: 'rgba(16, 185, 129, 0.2)', text: '#6ee7b7' } }, // Green
+  { bg: '#fce7f3', border: '#ec4899', text: '#9d174d', dark: { bg: 'rgba(236, 72, 153, 0.2)', text: '#f9a8d4' } }, // Pink
+  { bg: '#fef3c7', border: '#f59e0b', text: '#92400e', dark: { bg: 'rgba(245, 158, 11, 0.2)', text: '#fcd34d' } }, // Amber
+  { bg: '#e0e7ff', border: '#6366f1', text: '#3730a3', dark: { bg: 'rgba(99, 102, 241, 0.2)', text: '#a5b4fc' } }, // Indigo
+  { bg: '#ccfbf1', border: '#14b8a6', text: '#115e59', dark: { bg: 'rgba(20, 184, 166, 0.2)', text: '#5eead4' } }, // Teal
+  { bg: '#fed7aa', border: '#f97316', text: '#9a3412', dark: { bg: 'rgba(249, 115, 22, 0.2)', text: '#fdba74' } }, // Orange
+  { bg: '#ddd6fe', border: '#8b5cf6', text: '#5b21b6', dark: { bg: 'rgba(139, 92, 246, 0.2)', text: '#c4b5fd' } }, // Violet
+  { bg: '#fecaca', border: '#ef4444', text: '#991b1b', dark: { bg: 'rgba(239, 68, 68, 0.2)', text: '#fca5a5' } }, // Red
+  { bg: '#cffafe', border: '#06b6d4', text: '#155e75', dark: { bg: 'rgba(6, 182, 212, 0.2)', text: '#67e8f9' } }, // Cyan
+];
+
 // Helper function to check if an event is an all-day event (24+ hours or spans full day)
 function isAllDayEvent(apt: Appointment): boolean {
   const start = new Date(apt.startTime);
@@ -734,6 +749,17 @@ export default function CalendarMain() {
     );
   };
 
+  // Helper function to get user color for an event based on assignedTo
+  const getUserColorForEvent = (apt: Appointment) => {
+    const userId = apt.assignedTo || (apt as any).userId;
+    if (!userId) return null;
+    
+    const userIndex = selectedUsers.indexOf(userId);
+    if (userIndex === -1) return null;
+    
+    return USER_COLOR_PALETTE[userIndex % USER_COLOR_PALETTE.length];
+  };
+
   // Helper component for appointment tooltip content
   const AppointmentTooltip = ({ appointment }: { appointment: Appointment }) => {
     const startTime = new Date(appointment.startTime);
@@ -1111,20 +1137,27 @@ export default function CalendarMain() {
                                 {day.getDate()}
                               </div>
                               <div className="space-y-1">
-                                {dayAppointments.slice(0, 2).map((apt) => (
-                                  <Tooltip key={apt.id}>
-                                    <TooltipTrigger asChild>
-                                      <div
-                                        className="text-xs p-1 bg-primary/10 text-primary rounded truncate cursor-pointer hover:bg-primary/20"
-                                      >
-                                        {apt.title}
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right" className="max-w-80">
-                                      <AppointmentTooltip appointment={apt} />
-                                    </TooltipContent>
-                                  </Tooltip>
-                                ))}
+                                {dayAppointments.slice(0, 2).map((apt) => {
+                                  const userColor = getUserColorForEvent(apt);
+                                  return (
+                                    <Tooltip key={apt.id}>
+                                      <TooltipTrigger asChild>
+                                        <div
+                                          className="text-xs p-1 rounded truncate cursor-pointer"
+                                          style={{
+                                            backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.1)'),
+                                            color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
+                                          }}
+                                        >
+                                          {apt.title}
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="right" className="max-w-80">
+                                        <AppointmentTooltip appointment={apt} />
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  );
+                                })}
                                 {dayAppointments.length > 2 && (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -1212,24 +1245,27 @@ export default function CalendarMain() {
                                     className={`min-h-[28px] p-1 ${dayIndex < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""}`}
                                   >
                                     <div className="space-y-1">
-                                      {allDayEvents.slice(0, 2).map((apt) => (
-                                        <Tooltip key={apt.id}>
-                                          <TooltipTrigger asChild>
-                                            <div 
-                                              className={`text-[10px] px-1 py-0.5 rounded truncate cursor-pointer ${
-                                                apt.type === 'google' 
-                                                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 hover:bg-blue-200' 
-                                                  : 'bg-primary/20 text-primary hover:bg-primary/30'
-                                              }`}
-                                            >
-                                              {apt.title}
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent side="bottom" className="max-w-80">
-                                            <AppointmentTooltip appointment={apt} />
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      ))}
+                                      {allDayEvents.slice(0, 2).map((apt) => {
+                                        const userColor = getUserColorForEvent(apt);
+                                        return (
+                                          <Tooltip key={apt.id}>
+                                            <TooltipTrigger asChild>
+                                              <div 
+                                                className="text-[10px] px-1 py-0.5 rounded truncate cursor-pointer"
+                                                style={{
+                                                  backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.2)'),
+                                                  color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
+                                                }}
+                                              >
+                                                {apt.title}
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom" className="max-w-80">
+                                              <AppointmentTooltip appointment={apt} />
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        );
+                                      })}
                                       {allDayEvents.length > 2 && (
                                         <Tooltip>
                                           <TooltipTrigger asChild>
@@ -1338,21 +1374,23 @@ export default function CalendarMain() {
                                     const isContinuation = !isStartSegment;
                                     const continuesNextDay = !isEndSegment;
                                     
+                                    // Get user-specific color for event
+                                    const userColor = getUserColorForEvent(apt);
+                                    
                                     return (
                                       <Tooltip key={segmentKey}>
                                         <TooltipTrigger asChild>
                                           <div 
-                                            className={`absolute text-xs p-1 cursor-pointer border overflow-hidden ${
-                                              apt.type === 'google' 
-                                                ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/50' 
-                                                : 'bg-primary/20 border-primary/30 text-primary hover:bg-primary/30'
-                                            } ${isContinuation ? 'rounded-t-none border-t-0' : 'rounded-t'} ${continuesNextDay ? 'rounded-b-none border-b-0' : 'rounded-b'}`}
+                                            className={`absolute text-xs p-1 cursor-pointer border overflow-hidden ${isContinuation ? 'rounded-t-none border-t-0' : 'rounded-t'} ${continuesNextDay ? 'rounded-b-none border-b-0' : 'rounded-b'}`}
                                             style={{
                                               top: `${top}px`,
                                               height: `${height}px`,
                                               left: `${leftPercent + 1}%`,
                                               width: `${widthPercent - 1}%`,
-                                              zIndex: 10 + column
+                                              zIndex: 10 + column,
+                                              backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.2)'),
+                                              borderColor: userColor?.border || (apt.type === 'google' ? '#93c5fd' : 'hsl(179, 100%, 39%, 0.3)'),
+                                              color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
                                             }}
                                           >
                                             <div className="font-medium truncate text-[10px]">
@@ -1415,24 +1453,27 @@ export default function CalendarMain() {
                                 All Day
                               </div>
                               <div className="flex-1 flex flex-wrap gap-2">
-                                {allDayEvents.slice(0, 3).map((apt) => (
-                                  <Tooltip key={apt.id}>
-                                    <TooltipTrigger asChild>
-                                      <div 
-                                        className={`text-xs px-2 py-1 rounded cursor-pointer ${
-                                          apt.type === 'google' 
-                                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 hover:bg-blue-200' 
-                                            : 'bg-primary/20 text-primary hover:bg-primary/30'
-                                        }`}
-                                      >
-                                        {apt.title}
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="bottom" className="max-w-80">
-                                      <AppointmentTooltip appointment={apt} />
-                                    </TooltipContent>
-                                  </Tooltip>
-                                ))}
+                                {allDayEvents.slice(0, 3).map((apt) => {
+                                  const userColor = getUserColorForEvent(apt);
+                                  return (
+                                    <Tooltip key={apt.id}>
+                                      <TooltipTrigger asChild>
+                                        <div 
+                                          className="text-xs px-2 py-1 rounded cursor-pointer"
+                                          style={{
+                                            backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.2)'),
+                                            color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
+                                          }}
+                                        >
+                                          {apt.title}
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="bottom" className="max-w-80">
+                                        <AppointmentTooltip appointment={apt} />
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  );
+                                })}
                                 {allDayEvents.length > 3 && (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -1525,21 +1566,23 @@ export default function CalendarMain() {
                                   const isContinuation = !isStartSegment;
                                   const continuesNextDay = !isEndSegment;
                                   
+                                  // Get user-specific color for event
+                                  const userColor = getUserColorForEvent(apt);
+                                  
                                   return (
                                     <Tooltip key={segmentKey}>
                                       <TooltipTrigger asChild>
                                         <div 
-                                          className={`absolute p-2 border-l-4 cursor-pointer overflow-hidden ${
-                                            apt.type === 'google'
-                                              ? 'bg-blue-100 dark:bg-blue-900/30 border-l-blue-500 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/50'
-                                              : 'bg-primary/10 border-l-primary text-primary hover:bg-primary/20'
-                                          } ${isContinuation ? 'rounded-t-none' : 'rounded-t-lg'} ${continuesNextDay ? 'rounded-b-none' : 'rounded-b-lg'}`}
+                                          className={`absolute p-2 border-l-4 cursor-pointer overflow-hidden ${isContinuation ? 'rounded-t-none' : 'rounded-t-lg'} ${continuesNextDay ? 'rounded-b-none' : 'rounded-b-lg'}`}
                                           style={{
                                             top: `${top}px`,
                                             height: `${height}px`,
                                             left: `${leftPercent}%`,
                                             width: `${widthPercent}%`,
-                                            zIndex: 10 + column
+                                            zIndex: 10 + column,
+                                            backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.1)'),
+                                            borderLeftColor: userColor?.border || (apt.type === 'google' ? '#3b82f6' : 'hsl(179, 100%, 39%)'),
+                                            color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
                                           }}
                                         >
                                           <div className="flex justify-between items-start h-full">
@@ -1693,21 +1736,34 @@ export default function CalendarMain() {
                             />
                           </div>
                           <div className="max-h-64 overflow-y-auto space-y-2">
-                            {filteredStaff.map((member) => (
-                              <div key={member.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`user-${member.id}`}
-                                  checked={selectedUsers.includes(member.id)}
-                                  onCheckedChange={() => handleUserToggle(member.id)}
-                                  className="rounded-none"
-                                  data-testid={`checkbox-user-${member.id}`}
-                                />
-                                <Label htmlFor={`user-${member.id}`} className="flex-1 text-sm cursor-pointer">
-                                  {member.firstName} {member.lastName}
-                                  <div className="text-xs text-gray-500">{member.email}</div>
-                                </Label>
-                              </div>
-                            ))}
+                            {filteredStaff.map((member) => {
+                              const isChecked = selectedUsers.includes(member.id);
+                              const userColorIndex = selectedUsers.indexOf(member.id);
+                              const userColor = userColorIndex >= 0 ? USER_COLOR_PALETTE[userColorIndex % USER_COLOR_PALETTE.length] : null;
+                              
+                              return (
+                                <div key={member.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`user-${member.id}`}
+                                    checked={isChecked}
+                                    onCheckedChange={() => handleUserToggle(member.id)}
+                                    className="rounded-none"
+                                    checkedColor={userColor?.border}
+                                    data-testid={`checkbox-user-${member.id}`}
+                                  />
+                                  {isChecked && userColor && (
+                                    <div 
+                                      className="w-3 h-3 rounded-sm flex-shrink-0" 
+                                      style={{ backgroundColor: userColor.bg, border: `1px solid ${userColor.border}` }}
+                                    />
+                                  )}
+                                  <Label htmlFor={`user-${member.id}`} className="flex-1 text-sm cursor-pointer">
+                                    {member.firstName} {member.lastName}
+                                    <div className="text-xs text-gray-500">{member.email}</div>
+                                  </Label>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                     )}
