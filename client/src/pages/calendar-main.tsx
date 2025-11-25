@@ -119,13 +119,55 @@ interface EventLayout {
   totalColumns: number;
 }
 
+// Helper function to check if an event is an all-day event (24+ hours or spans full day)
+function isAllDayEvent(apt: Appointment): boolean {
+  const start = new Date(apt.startTime);
+  const end = new Date(apt.endTime);
+  const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+  
+  // Consider it all-day if:
+  // 1. Duration is 24 hours or more
+  // 2. OR starts at midnight and ends at midnight (or near midnight)
+  if (durationHours >= 23) return true;
+  
+  // Check if it's a midnight-to-midnight event
+  const startsAtMidnight = start.getHours() === 0 && start.getMinutes() === 0;
+  const endsAtMidnight = end.getHours() === 0 && end.getMinutes() === 0;
+  const endsAtEndOfDay = end.getHours() === 23 && end.getMinutes() >= 59;
+  
+  return startsAtMidnight && (endsAtMidnight || endsAtEndOfDay);
+}
+
+// Helper function to get all-day events for a specific day
+function getAllDayEventsForDay(appointments: Appointment[], dayDate: Date): Appointment[] {
+  const dayStart = new Date(dayDate);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayDate);
+  dayEnd.setHours(23, 59, 59, 999);
+  
+  return appointments.filter(apt => {
+    if (!isAllDayEvent(apt)) return false;
+    
+    const aptStart = new Date(apt.startTime);
+    const aptEnd = new Date(apt.endTime);
+    
+    // Check if the all-day event spans this day
+    return aptStart <= dayEnd && aptEnd >= dayStart;
+  });
+}
+
+// Helper function to filter out all-day events from regular events
+function getTimedEvents(appointments: Appointment[]): Appointment[] {
+  return appointments.filter(apt => !isAllDayEvent(apt));
+}
+
 // Helper function to compute event layouts with overlap detection
 function computeEventLayouts(appointments: Appointment[], dayDate: Date, pixelsPerHour: number): EventLayout[] {
   if (appointments.length === 0) return [];
   
-  // Filter to events on this day and sort by start time
+  // Filter to timed events on this day (exclude all-day events) and sort by start time
   const dayEvents = appointments
-    .filter(apt => new Date(apt.startTime).toDateString() === dayDate.toDateString())
+    .filter(apt => !isAllDayEvent(apt) && new Date(apt.startTime).toDateString() === dayDate.toDateString())
     .map(apt => ({
       apt,
       start: new Date(apt.startTime),
@@ -932,7 +974,7 @@ export default function CalendarMain() {
 
                   {/* Week View */}
                   {calendarView === "week" && (
-                    <div className="relative h-full">
+                    <div className="relative h-full flex flex-col">
                       {/* Week header with days - sticky */}
                       <div className="sticky top-0 z-20 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-700">
                         <div className="grid grid-cols-8 gap-0">
@@ -962,8 +1004,82 @@ export default function CalendarMain() {
                         </div>
                       </div>
 
+                      {/* All-Day Events Section - frozen header */}
+                      {(() => {
+                        const startOfWeek = new Date(currentDate);
+                        startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+                        
+                        // Check if there are any all-day events this week
+                        const hasAllDayEvents = Array.from({ length: 7 }).some((_, i) => {
+                          const day = new Date(startOfWeek);
+                          day.setDate(startOfWeek.getDate() + i);
+                          return getAllDayEventsForDay(calendarViewFilteredAppointments, day).length > 0;
+                        });
+                        
+                        if (!hasAllDayEvents) return null;
+                        
+                        return (
+                          <div className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                            <div className="grid grid-cols-8 gap-0">
+                              <div className="w-16 p-1 text-[10px] text-gray-500 dark:text-gray-400 text-right border-r border-gray-200 dark:border-gray-700 flex items-center justify-end pr-2">
+                                All Day
+                              </div>
+                              {Array.from({ length: 7 }, (_, dayIndex) => {
+                                const day = new Date(startOfWeek);
+                                day.setDate(startOfWeek.getDate() + dayIndex);
+                                const allDayEvents = getAllDayEventsForDay(calendarViewFilteredAppointments, day);
+                                
+                                return (
+                                  <div 
+                                    key={dayIndex} 
+                                    className={`min-h-[28px] p-1 ${dayIndex < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""}`}
+                                  >
+                                    <div className="space-y-1">
+                                      {allDayEvents.slice(0, 2).map((apt) => (
+                                        <Tooltip key={apt.id}>
+                                          <TooltipTrigger asChild>
+                                            <div 
+                                              className={`text-[10px] px-1 py-0.5 rounded truncate cursor-pointer ${
+                                                apt.type === 'google' 
+                                                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 hover:bg-blue-200' 
+                                                  : 'bg-primary/20 text-primary hover:bg-primary/30'
+                                              }`}
+                                            >
+                                              {apt.title}
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="bottom" className="max-w-80">
+                                            <AppointmentTooltip appointment={apt} />
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      ))}
+                                      {allDayEvents.length > 2 && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="text-[10px] text-gray-500 cursor-pointer px-1">
+                                              +{allDayEvents.length - 2} more
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="bottom" className="max-w-80">
+                                            <div className="space-y-2">
+                                              {allDayEvents.slice(2).map((apt) => (
+                                                <AppointmentTooltip key={apt.id} appointment={apt} />
+                                              ))}
+                                            </div>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {/* Week time grid with events - scrollable */}
-                      <div className="h-[600px] overflow-y-auto overflow-x-hidden">
+                      <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: '560px' }}>
                         <div className="grid grid-cols-8 gap-0">
                           {/* Time column */}
                           <div className="w-16">
@@ -991,7 +1107,7 @@ export default function CalendarMain() {
                               const day = new Date(startOfWeek);
                               day.setDate(startOfWeek.getDate() + dayIndex);
                               
-                              // Compute layouts for this day's events
+                              // Compute layouts for this day's timed events (excludes all-day events)
                               const dayLayouts = computeEventLayouts(calendarViewFilteredAppointments, day, PIXELS_PER_HOUR);
                               
                               return (
@@ -1009,7 +1125,7 @@ export default function CalendarMain() {
                                     />
                                   ))}
                                   
-                                  {/* Events */}
+                                  {/* Timed Events (non all-day) */}
                                   {dayLayouts.map((layout) => {
                                     const { apt, top, height, column, totalColumns } = layout;
                                     const widthPercent = totalColumns > 1 ? (100 / totalColumns) - 1 : 100;
@@ -1061,7 +1177,7 @@ export default function CalendarMain() {
 
                   {/* Day View */}
                   {calendarView === "day" && (
-                    <div className="relative h-full">
+                    <div className="relative h-full flex flex-col">
                       {/* Day header - sticky */}
                       <div className="sticky top-0 z-20 bg-white dark:bg-gray-950 pb-2 border-b border-gray-200 dark:border-gray-700">
                         <div className="text-center pt-4">
@@ -1077,8 +1193,61 @@ export default function CalendarMain() {
                         </div>
                       </div>
 
+                      {/* All-Day Events Section - frozen header */}
+                      {(() => {
+                        const allDayEvents = getAllDayEventsForDay(calendarViewFilteredAppointments, currentDate);
+                        
+                        if (allDayEvents.length === 0) return null;
+                        
+                        return (
+                          <div className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-2">
+                            <div className="flex items-start gap-3">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 pt-1 flex-shrink-0">
+                                All Day
+                              </div>
+                              <div className="flex-1 flex flex-wrap gap-2">
+                                {allDayEvents.slice(0, 3).map((apt) => (
+                                  <Tooltip key={apt.id}>
+                                    <TooltipTrigger asChild>
+                                      <div 
+                                        className={`text-xs px-2 py-1 rounded cursor-pointer ${
+                                          apt.type === 'google' 
+                                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 hover:bg-blue-200' 
+                                            : 'bg-primary/20 text-primary hover:bg-primary/30'
+                                        }`}
+                                      >
+                                        {apt.title}
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="max-w-80">
+                                      <AppointmentTooltip appointment={apt} />
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ))}
+                                {allDayEvents.length > 3 && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="text-xs text-gray-500 cursor-pointer px-2 py-1">
+                                        +{allDayEvents.length - 3} more
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="max-w-80">
+                                      <div className="space-y-2">
+                                        {allDayEvents.slice(3).map((apt) => (
+                                          <AppointmentTooltip key={apt.id} appointment={apt} />
+                                        ))}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {/* Day time grid with events - scrollable */}
-                      <div className="h-[600px] overflow-y-auto overflow-x-hidden">
+                      <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: '560px' }}>
                         {(() => {
                           const PIXELS_PER_HOUR = 80;
                           const dayLayouts = computeEventLayouts(calendarViewFilteredAppointments, currentDate, PIXELS_PER_HOUR);
@@ -1115,7 +1284,7 @@ export default function CalendarMain() {
                                   />
                                 ))}
                                 
-                                {/* Events */}
+                                {/* Timed Events (non all-day) */}
                                 {dayLayouts.map((layout) => {
                                   const { apt, top, height, column, totalColumns } = layout;
                                   const widthPercent = totalColumns > 1 ? (100 / totalColumns) - 2 : 96;
