@@ -4,6 +4,8 @@ import { db } from './db';
 import { calendarConnections, calendarEvents, calendarAppointments, calendars } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { EncryptionService } from './encryption';
+import { createOAuth2Client } from './googleCalendarUtils';
 
 interface CreateEventRequest {
   title: string;
@@ -49,15 +51,35 @@ export async function createCalendarEvent(req: Request, res: Response) {
     // If user has Google Calendar sync enabled and wants to sync
     if (connection && syncToGoogle) {
       try {
-        // Create OAuth2 client with the user's tokens
-        const oauth2Client = new google.auth.OAuth2(
-          process.env.GOOGLE_CLIENT_ID,
-          process.env.GOOGLE_CLIENT_SECRET
-        );
+        // Decrypt the stored tokens
+        const accessToken = EncryptionService.decrypt(connection.accessToken);
+        let refreshToken: string | null = null;
+        if (connection.refreshToken) {
+          refreshToken = EncryptionService.decrypt(connection.refreshToken);
+        }
 
+        // Create OAuth2 client with the user's decrypted tokens
+        const oauth2Client = createOAuth2Client();
         oauth2Client.setCredentials({
-          access_token: connection.accessToken,
-          refresh_token: connection.refreshToken,
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        // Handle token refresh - save new tokens to database
+        oauth2Client.on('tokens', async (tokens) => {
+          if (tokens.access_token) {
+            const updateData: any = {
+              accessToken: EncryptionService.encrypt(tokens.access_token),
+              updatedAt: new Date(),
+            };
+            if (tokens.refresh_token) {
+              updateData.refreshToken = EncryptionService.encrypt(tokens.refresh_token);
+            }
+            await db.update(calendarConnections)
+              .set(updateData)
+              .where(eq(calendarConnections.id, connection.id));
+            console.log('[CreateEvent] Updated tokens in database');
+          }
         });
 
         const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
@@ -78,7 +100,7 @@ export async function createCalendarEvent(req: Request, res: Response) {
         };
 
         // Add Google Meet conference if requested
-        if (addGoogleMeet && connection.twoWaySyncEnabled) {
+        if (addGoogleMeet && connection.twoWaySync) {
           eventResource.conferenceData = {
             createRequest: {
               requestId: randomUUID(),
@@ -147,16 +169,30 @@ export async function createCalendarEvent(req: Request, res: Response) {
       } catch (googleError: any) {
         console.error('[CreateEvent] Google Calendar API error:', googleError);
         
-        // If token expired, try to refresh
-        if (googleError.code === 401) {
+        // Check for authentication errors that require re-authentication
+        const isInvalidGrant = googleError.message?.includes('invalid_grant') || 
+          googleError.response?.data?.error === 'invalid_grant';
+        const isTokenExpired = googleError.code === 401;
+        
+        if (isInvalidGrant || isTokenExpired) {
+          // Mark connection as needing re-authentication
+          await db.update(calendarConnections)
+            .set({ 
+              syncEnabled: false,
+              updatedAt: new Date() 
+            })
+            .where(eq(calendarConnections.id, connection.id));
+          
+          console.log('[CreateEvent] Google Calendar auth expired - connection disabled');
+          
           return res.status(401).json({ 
-            error: 'Google Calendar authentication expired. Please reconnect your calendar.',
+            error: 'Your Google Calendar connection has expired. Please disconnect and reconnect your Google Calendar in Settings.',
             needsReauth: true 
           });
         }
         
-        // Fall back to creating local event only
-        console.log('[CreateEvent] Falling back to local event creation');
+        // Fall back to creating local event only for other errors
+        console.log('[CreateEvent] Falling back to local event creation due to error:', googleError.message);
       }
     }
 
