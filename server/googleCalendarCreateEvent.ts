@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { google } from 'googleapis';
 import { db } from './db';
-import { calendarConnections, calendarEvents, appointments, calendars } from '@shared/schema';
+import { calendarConnections, calendarEvents, calendarAppointments, calendars } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -188,9 +188,9 @@ export async function createCalendarEvent(req: Request, res: Response) {
       defaultCalendar = newCalendar[0];
     }
 
-    // Create local appointment
+    // Create local calendar appointment (supports null clientId)
     const newAppointment = await db
-      .insert(appointments)
+      .insert(calendarAppointments)
       .values({
         id: randomUUID(),
         calendarId: defaultCalendar.id,

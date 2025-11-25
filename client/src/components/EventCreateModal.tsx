@@ -99,10 +99,8 @@ export function EventCreateModal({
       addGoogleMeet: boolean;
       syncToGoogle: boolean;
     }) => {
-      return apiRequest("/api/calendar/events", {
-        method: "POST",
-        body: JSON.stringify(eventData),
-      });
+      const response = await apiRequest("POST", "/api/calendar/events", eventData);
+      return response.json();
     },
     onSuccess: (data: any) => {
       toast({
