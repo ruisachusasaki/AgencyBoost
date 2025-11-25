@@ -176,16 +176,20 @@ export class GoogleCalendarIncrementalSync {
             }
           }
 
-          // Prepare event data (minimal fields only)
+          // Prepare event data (including Google Meet link)
           const eventData = {
             connectionId,
             googleEventId: event.id,
             summary: event.summary || 'Untitled',
+            description: event.description || null,
+            location: event.location || null,
             startTime: new Date(event.start?.dateTime || event.start?.date || ''),
             endTime: new Date(event.end?.dateTime || event.end?.date || ''),
             allDay: !event.start?.dateTime,
             status: event.status || 'confirmed',
             transparency: event.transparency || 'opaque',
+            googleHangoutLink: event.hangoutLink || null,
+            googleHtmlLink: event.htmlLink || null,
             attendees: conn.createContacts && event.attendees 
               ? event.attendees.map(a => ({
                   email: a.email,
@@ -193,11 +197,17 @@ export class GoogleCalendarIncrementalSync {
                   responseStatus: a.responseStatus,
                 }))
               : null,
+            organizer: event.organizer ? {
+              email: event.organizer.email,
+              displayName: event.organizer.displayName,
+              self: event.organizer.self,
+            } : null,
             organizerEmail: event.organizer?.email,
             etag: event.etag,
             lastModified: event.updated ? new Date(event.updated) : new Date(),
             isRecurring: !!event.recurringEventId,
             syncedAt: new Date(),
+            updatedAt: new Date(),
           };
 
           // Upsert event

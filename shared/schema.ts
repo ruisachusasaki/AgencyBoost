@@ -4221,18 +4221,26 @@ export const calendarEvents = pgTable("calendar_events", {
   appointmentId: varchar("appointment_id").references(() => calendarAppointments.id, { onDelete: "set null" }), // Links to AgencyFlow appointment
   // Essential fields only for availability and display
   summary: text("summary"),
+  description: text("description"), // Event description
+  location: text("location"), // Event location
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
   allDay: boolean("all_day").default(false),
   status: text("status"), // confirmed, tentative, cancelled
   transparency: text("transparency"), // opaque (busy), transparent (free)
+  // Google Meet / Hangout link
+  googleHangoutLink: text("google_hangout_link"), // For Google Meet links
+  googleHtmlLink: text("google_html_link"), // Link to event in Google Calendar UI
   // Minimal attendee data for contact creation
   attendees: jsonb("attendees"), // Array of {email, name, responseStatus} - only stored if createContacts is enabled
+  organizer: jsonb("organizer"), // {email, name, self} - organizer info
   organizerEmail: text("organizer_email"), // Just the email for quick lookup
   // Sync metadata
   etag: text("etag"), // For change detection
   lastModified: timestamp("last_modified"), // Google's updated timestamp
   syncedAt: timestamp("synced_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
   // Flags
   isRecurring: boolean("is_recurring").default(false), // Flag instead of full recurrence data
   createdInAgencyFlow: boolean("created_in_agency_flow").default(false), // Track origin for two-way sync

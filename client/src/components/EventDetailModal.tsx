@@ -392,10 +392,12 @@ export function EventDetailModal({
                     </div>
                   </div>
 
-                  {event.meetingLink && (
+                  {/* Only show meeting link for own events (privacy/security) */}
+                  {isOwnEvent && event.meetingLink && (
                     <div className="flex items-start gap-3">
-                      <Video className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <Video className="h-5 w-5 text-primary mt-0.5" />
                       <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Google Meet Link</div>
                         <Button
                           variant="outline"
                           className="w-full justify-center bg-primary/10 text-primary hover:bg-primary/20 border-primary/20"
