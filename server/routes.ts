@@ -1,4 +1,5 @@
 import { getGoogleCalendarEventsForView } from "./googleCalendarEventsEndpoint";
+import { createCalendarEvent } from "./googleCalendarCreateEvent";
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
@@ -28176,5 +28177,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   app.get("/api/google-calendar/events", requireAuth(), getGoogleCalendarEventsForView);
+  app.post("/api/calendar/events", requireAuth(), createCalendarEvent);
   return httpServer;
 }
