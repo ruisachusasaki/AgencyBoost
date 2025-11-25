@@ -178,11 +178,13 @@ router.get('/status', async (req: Request, res: Response) => {
 
         return {
           id: conn.id,
+          userId: conn.userId,
           calendarId: conn.calendarId,
           calendarName: conn.calendarName,
           email: conn.email,
           syncEnabled: conn.syncEnabled,
           twoWaySync: conn.twoWaySync,
+          twoWaySyncEnabled: conn.twoWaySync,
           lastSyncedAt: conn.lastSyncedAt,
           syncStatus: syncState?.lastSyncStatus || 'never_synced',
           lastSyncError: syncState?.lastSyncError
