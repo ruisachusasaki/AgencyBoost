@@ -33,7 +33,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 
 interface EventCreateModalProps {
@@ -398,11 +397,19 @@ export function EventCreateModal({
                             onClick={() => toggleGuest(staff)}
                             data-testid={`guest-option-${staff.id}`}
                           >
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleGuest(staff)}
-                              className="pointer-events-none"
-                            />
+                            <div 
+                              className={`h-4 w-4 rounded border flex items-center justify-center ${
+                                isSelected 
+                                  ? 'bg-primary border-primary text-primary-foreground' 
+                                  : 'border-input bg-background'
+                              }`}
+                            >
+                              {isSelected && (
+                                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
+                            </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">
                                 {staff.firstName} {staff.lastName}
