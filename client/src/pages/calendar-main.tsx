@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { AppointmentModal } from "@/components/AppointmentModal";
 import { EventDetailModal } from "@/components/EventDetailModal";
+import { EventCreateModal } from "@/components/EventCreateModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -368,6 +369,10 @@ export default function CalendarMain() {
   // State for event detail modal (view/edit own events)
   const [selectedEventForDetail, setSelectedEventForDetail] = useState<Appointment | null>(null);
   const [showEventDetailModal, setShowEventDetailModal] = useState(false);
+  // State for event create modal (quick create by clicking grid)
+  const [showEventCreateModal, setShowEventCreateModal] = useState(false);
+  const [createEventInitialDate, setCreateEventInitialDate] = useState<Date>(new Date());
+  const [createEventInitialTime, setCreateEventInitialTime] = useState<string>("09:00");
   const [sortField, setSortField] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -769,6 +774,22 @@ export default function CalendarMain() {
     // For other users' events, do nothing (tooltip will still show on hover)
   };
 
+  // Handler for clicking on empty calendar grid to create a new event
+  const handleGridClick = (date: Date, hour?: number) => {
+    const clickedDate = new Date(date);
+    let timeString = "09:00";
+    
+    if (hour !== undefined) {
+      clickedDate.setHours(hour, 0, 0, 0);
+      timeString = `${hour.toString().padStart(2, "0")}:00`;
+    }
+    
+    setCreateEventInitialDate(clickedDate);
+    setCreateEventInitialTime(timeString);
+    setShowEventCreateModal(true);
+  
+  };
+
   // Helper function to get user color for an event based on assignedTo
   const getUserColorForEvent = (apt: Appointment) => {
     const userId = apt.assignedTo || (apt as any).userId;
@@ -1149,7 +1170,8 @@ export default function CalendarMain() {
                           return (
                             <div
                               key={index}
-                              className={`min-h-[100px] p-2 border border-gray-100 dark:border-gray-800 ${
+                              onClick={() => handleGridClick(day)}
+                              className={`min-h-[100px] p-2 border border-gray-100 dark:border-gray-800 cursor-pointer ${
                                 !isCurrentMonth ? "bg-gray-50 dark:bg-gray-900 text-gray-400" : ""
                               } ${isToday ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200" : ""}`}
                             >
@@ -1380,7 +1402,7 @@ export default function CalendarMain() {
                                   {Array.from({ length: 24 }, (_, hour) => (
                                     <div 
                                       key={hour} 
-                                      className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                                      className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onClick={() => handleGridClick(day, hour)}
                                       style={{ top: `${hour * PIXELS_PER_HOUR}px`, height: `${PIXELS_PER_HOUR}px` }}
                                     />
                                   ))}
@@ -1576,7 +1598,7 @@ export default function CalendarMain() {
                                 {Array.from({ length: 24 }, (_, hour) => (
                                   <div 
                                     key={hour} 
-                                    className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                                    className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onClick={() => handleGridClick(currentDate, hour)}
                                     style={{ top: `${hour * PIXELS_PER_HOUR}px`, height: `${PIXELS_PER_HOUR}px` }}
                                   />
                                 ))}
@@ -2236,6 +2258,15 @@ export default function CalendarMain() {
         }}
         currentUserId={currentUser?.id || ''}
         staffMembers={staff}
+      />
+
+      {/* Event Create Modal - quick create by clicking calendar grid */}
+      <EventCreateModal
+        isOpen={showEventCreateModal}
+        onClose={() => setShowEventCreateModal(false)}
+        initialDate={createEventInitialDate}
+        initialTime={createEventInitialTime}
+        currentUserId={currentUser?.id || ''}
       />
     </TooltipProvider>
   );
