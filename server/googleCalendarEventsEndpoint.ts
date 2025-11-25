@@ -53,7 +53,6 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
         });
         
         // Get events for this user by joining with calendar connections
-        // Note: calendarEvents table only has: summary, startTime, endTime, allDay, status, transparency, attendees, organizerEmail, isRecurring, createdInAgencyFlow
         const userEvents = await db
           .select({
             id: calendarEvents.id,
@@ -63,17 +62,30 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
             title: isCurrentUser || isSameOrg 
               ? sql<string>`COALESCE(${calendarEvents.summary}, 'Untitled Event')`.as('title')
               : sql<string>`'Busy'`.as('title'),
-            description: sql<string>`''`.as('description'), // Not stored in optimized schema
+            description: isCurrentUser || isSameOrg 
+              ? calendarEvents.description 
+              : sql<string>`''`.as('description'),
             startTime: calendarEvents.startTime,
             endTime: calendarEvents.endTime,
-            location: sql<string>`''`.as('location'), // Not stored in optimized schema
+            location: isCurrentUser || isSameOrg 
+              ? calendarEvents.location 
+              : sql<string>`''`.as('location'),
+            // IMPORTANT: Only show meeting link for own events (privacy/security)
+            meetingLink: isCurrentUser 
+              ? calendarEvents.googleHangoutLink 
+              : sql<string>`null`.as('meetingLink'),
+            googleHtmlLink: isCurrentUser 
+              ? calendarEvents.googleHtmlLink 
+              : sql<string>`null`.as('googleHtmlLink'),
             status: calendarEvents.status,
             allDay: calendarEvents.allDay,
             transparency: calendarEvents.transparency,
             organizerEmail: isCurrentUser || isSameOrg 
               ? calendarEvents.organizerEmail 
               : sql<string>`''`.as('organizerEmail'),
-            organizerName: sql<string>`''`.as('organizerName'), // Not stored in optimized schema
+            organizer: isCurrentUser || isSameOrg 
+              ? calendarEvents.organizer 
+              : sql<any>`null`.as('organizer'),
             attendees: isCurrentUser || isSameOrg 
               ? calendarEvents.attendees 
               : sql<any>`'[]'::jsonb`.as('attendees'),
@@ -99,23 +111,24 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
       const allEvents = await Promise.all(eventsPromises);
       events = allEvents.flat();
     } else {
-      // No specific users selected, return all events for the current user
-      // Note: calendarEvents table only has: summary, startTime, endTime, allDay, status, transparency, attendees, organizerEmail, isRecurring, createdInAgencyFlow
+      // No specific users selected, return all events for the current user (with full details including meetingLink)
       const userEvents = await db
         .select({
           id: calendarEvents.id,
           googleEventId: calendarEvents.googleEventId,
           connectionId: calendarEvents.connectionId,
           title: sql<string>`COALESCE(${calendarEvents.summary}, 'Untitled Event')`.as('title'),
-          description: sql<string>`''`.as('description'), // Not stored in optimized schema
+          description: calendarEvents.description,
           startTime: calendarEvents.startTime,
           endTime: calendarEvents.endTime,
-          location: sql<string>`''`.as('location'), // Not stored in optimized schema
+          location: calendarEvents.location,
+          meetingLink: calendarEvents.googleHangoutLink,
+          googleHtmlLink: calendarEvents.googleHtmlLink,
           status: calendarEvents.status,
           allDay: calendarEvents.allDay,
           transparency: calendarEvents.transparency,
           organizerEmail: calendarEvents.organizerEmail,
-          organizerName: sql<string>`''`.as('organizerName'), // Not stored in optimized schema
+          organizer: calendarEvents.organizer,
           attendees: calendarEvents.attendees,
           isRecurring: calendarEvents.isRecurring,
           createdInAgencyFlow: calendarEvents.createdInAgencyFlow,
@@ -155,6 +168,7 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
         title: e.title,
         assignedTo: e.assignedTo,
         userId: e.userId,
+        meetingLink: e.meetingLink || 'none',
         type: typeof e.assignedTo
       }))
     });
