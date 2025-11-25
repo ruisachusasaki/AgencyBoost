@@ -1202,7 +1202,7 @@ export default function CalendarMain() {
                                   id={`user-${member.id}`}
                                   checked={selectedUsers.includes(member.id)}
                                   onCheckedChange={() => handleUserToggle(member.id)}
-                                  className="rounded-sm"
+                                  className="rounded-none"
                                   data-testid={`checkbox-user-${member.id}`}
                                 />
                                 <Label htmlFor={`user-${member.id}`} className="flex-1 text-sm cursor-pointer">
