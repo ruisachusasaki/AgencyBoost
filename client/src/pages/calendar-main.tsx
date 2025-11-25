@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { AppointmentModal } from "@/components/AppointmentModal";
+import { EventDetailModal } from "@/components/EventDetailModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -363,6 +364,10 @@ export default function CalendarMain() {
   // State for appointment modal
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<any>(null);
+  
+  // State for event detail modal (view/edit own events)
+  const [selectedEventForDetail, setSelectedEventForDetail] = useState<Appointment | null>(null);
+  const [showEventDetailModal, setShowEventDetailModal] = useState(false);
   const [sortField, setSortField] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -747,6 +752,21 @@ export default function CalendarMain() {
         ? prev.filter(id => id !== calendarId)
         : [...prev, calendarId]
     );
+  };
+
+  // Handler for clicking on an event to view details (only for own events)
+  const handleEventClick = (event: Appointment, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent tooltip from interfering
+    
+    // Check if this is the current user's event
+    const eventUserId = event.assignedTo || (event as any).userId;
+    const isOwnEvent = eventUserId === currentUser?.id;
+    
+    if (isOwnEvent) {
+      setSelectedEventForDetail(event);
+      setShowEventDetailModal(true);
+    }
+    // For other users' events, do nothing (tooltip will still show on hover)
   };
 
   // Helper function to get user color for an event based on assignedTo
@@ -1148,6 +1168,8 @@ export default function CalendarMain() {
                                             backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.1)'),
                                             color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
                                           }}
+                                          onClick={(e) => handleEventClick(apt, e)}
+                                          data-testid={`event-month-${apt.id}`}
                                         >
                                           {apt.title}
                                         </div>
@@ -1256,6 +1278,8 @@ export default function CalendarMain() {
                                                   backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.2)'),
                                                   color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
                                                 }}
+                                                onClick={(e) => handleEventClick(apt, e)}
+                                                data-testid={`event-allday-week-${apt.id}`}
                                               >
                                                 {apt.title}
                                               </div>
@@ -1392,6 +1416,8 @@ export default function CalendarMain() {
                                               borderColor: userColor?.border || (apt.type === 'google' ? '#93c5fd' : 'hsl(179, 100%, 39%, 0.3)'),
                                               color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
                                             }}
+                                            onClick={(e) => handleEventClick(apt, e)}
+                                            data-testid={`event-week-${apt.id}`}
                                           >
                                             <div className="font-medium truncate text-[10px]">
                                               {isContinuation && '↓ '}{apt.title}
@@ -1464,6 +1490,8 @@ export default function CalendarMain() {
                                             backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.2)'),
                                             color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
                                           }}
+                                          onClick={(e) => handleEventClick(apt, e)}
+                                          data-testid={`event-allday-day-${apt.id}`}
                                         >
                                           {apt.title}
                                         </div>
@@ -1584,6 +1612,8 @@ export default function CalendarMain() {
                                             borderLeftColor: userColor?.border || (apt.type === 'google' ? '#3b82f6' : 'hsl(179, 100%, 39%)'),
                                             color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
                                           }}
+                                          onClick={(e) => handleEventClick(apt, e)}
+                                          data-testid={`event-day-${apt.id}`}
                                         >
                                           <div className="flex justify-between items-start h-full">
                                             <div className="flex-1 min-w-0">
@@ -2194,6 +2224,18 @@ export default function CalendarMain() {
           queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments-with-leads'] });
           refetchAppointments();
         }}
+      />
+
+      {/* Event Detail Modal - for viewing/editing own events */}
+      <EventDetailModal
+        event={selectedEventForDetail}
+        isOpen={showEventDetailModal}
+        onClose={() => {
+          setShowEventDetailModal(false);
+          setSelectedEventForDetail(null);
+        }}
+        currentUserId={currentUser?.id || ''}
+        staffMembers={staff}
       />
     </TooltipProvider>
   );
