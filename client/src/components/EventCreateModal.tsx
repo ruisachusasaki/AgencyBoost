@@ -136,8 +136,11 @@ export function EventCreateModal({
     }
 
     const [hours, minutes] = startTime.split(":").map(Number);
-    const startDateTime = new Date(date);
-    startDateTime.setHours(hours, minutes, 0, 0);
+    const [year, month, day] = date.split("-").map(Number);
+    
+    // Create date in local timezone by specifying year, month, day, hours, minutes directly
+    // This avoids the timezone issue with new Date("YYYY-MM-DD") which creates UTC midnight
+    const startDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
     const endDateTime = new Date(startDateTime);
     endDateTime.setMinutes(endDateTime.getMinutes() + parseInt(duration));
