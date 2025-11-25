@@ -113,10 +113,23 @@ type CalendarViewType = "day" | "week" | "month";
 // Event layout interface for positioning overlapping events
 interface EventLayout {
   apt: Appointment;
+  segmentStart: Date;  // The segment's display start time (clamped to day)
+  segmentEnd: Date;    // The segment's display end time (clamped to day)
+  isStartSegment: boolean;  // Is this the first segment of a multi-day event?
+  isEndSegment: boolean;    // Is this the last segment of a multi-day event?
   top: number;
   height: number;
   column: number;
   totalColumns: number;
+}
+
+// Event segment interface for splitting multi-day events
+interface EventSegment {
+  apt: Appointment;
+  segmentStart: Date;
+  segmentEnd: Date;
+  isStartSegment: boolean;
+  isEndSegment: boolean;
 }
 
 // Helper function to check if an event is an all-day event (24+ hours or spans full day)
@@ -136,6 +149,60 @@ function isAllDayEvent(apt: Appointment): boolean {
   const endsAtEndOfDay = end.getHours() === 23 && end.getMinutes() >= 59;
   
   return startsAtMidnight && (endsAtMidnight || endsAtEndOfDay);
+}
+
+// Helper function to split an event into day segments at midnight boundaries
+function splitEventIntoSegments(apt: Appointment, dayDate: Date): EventSegment | null {
+  if (isAllDayEvent(apt)) return null;
+  
+  const aptStart = new Date(apt.startTime);
+  const aptEnd = new Date(apt.endTime);
+  
+  // Day boundaries
+  const dayStart = new Date(dayDate);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayDate);
+  dayEnd.setHours(23, 59, 59, 999);
+  const nextDayStart = new Date(dayDate);
+  nextDayStart.setDate(nextDayStart.getDate() + 1);
+  nextDayStart.setHours(0, 0, 0, 0);
+  
+  // Check if event overlaps with this day
+  if (aptEnd <= dayStart || aptStart >= nextDayStart) {
+    return null; // Event doesn't touch this day
+  }
+  
+  // Clamp segment times to day boundaries
+  const segmentStart = aptStart < dayStart ? dayStart : aptStart;
+  const segmentEnd = aptEnd > nextDayStart ? nextDayStart : aptEnd;
+  
+  // Determine if this is the start/end segment
+  const isStartSegment = aptStart.toDateString() === dayDate.toDateString();
+  const isEndSegment = aptEnd.toDateString() === dayDate.toDateString() || 
+                       (aptEnd.getHours() === 0 && aptEnd.getMinutes() === 0 && 
+                        new Date(aptEnd.getTime() - 1).toDateString() === dayDate.toDateString());
+  
+  return {
+    apt,
+    segmentStart,
+    segmentEnd,
+    isStartSegment,
+    isEndSegment
+  };
+}
+
+// Helper function to get all event segments for a specific day (including multi-day event portions)
+function getEventSegmentsForDay(appointments: Appointment[], dayDate: Date): EventSegment[] {
+  const segments: EventSegment[] = [];
+  
+  for (const apt of appointments) {
+    const segment = splitEventIntoSegments(apt, dayDate);
+    if (segment) {
+      segments.push(segment);
+    }
+  }
+  
+  return segments;
 }
 
 // Helper function to get all-day events for a specific day
@@ -161,41 +228,44 @@ function getTimedEvents(appointments: Appointment[]): Appointment[] {
   return appointments.filter(apt => !isAllDayEvent(apt));
 }
 
-// Helper function to compute event layouts with overlap detection
+// Helper function to compute event layouts with overlap detection and midnight splitting
 function computeEventLayouts(appointments: Appointment[], dayDate: Date, pixelsPerHour: number): EventLayout[] {
   if (appointments.length === 0) return [];
   
-  // Filter to timed events on this day (exclude all-day events) and sort by start time
-  const dayEvents = appointments
-    .filter(apt => !isAllDayEvent(apt) && new Date(apt.startTime).toDateString() === dayDate.toDateString())
-    .map(apt => ({
-      apt,
-      start: new Date(apt.startTime),
-      end: new Date(apt.endTime)
-    }))
-    .sort((a, b) => a.start.getTime() - b.start.getTime());
+  // Get all event segments for this day (handles multi-day events split at midnight)
+  const segments = getEventSegmentsForDay(appointments, dayDate);
   
-  if (dayEvents.length === 0) return [];
+  if (segments.length === 0) return [];
+  
+  // Sort segments by start time
+  const sortedSegments = segments.sort((a, b) => a.segmentStart.getTime() - b.segmentStart.getTime());
   
   // Day start at midnight
   const dayStart = new Date(dayDate);
   dayStart.setHours(0, 0, 0, 0);
   
-  // Group overlapping events into clusters
-  const clusters: typeof dayEvents[] = [];
-  let currentCluster: typeof dayEvents = [];
+  // Group overlapping segments into clusters
+  type SegmentWithTimes = EventSegment & { start: Date; end: Date };
+  const segmentsWithTimes: SegmentWithTimes[] = sortedSegments.map(seg => ({
+    ...seg,
+    start: seg.segmentStart,
+    end: seg.segmentEnd
+  }));
+  
+  const clusters: SegmentWithTimes[][] = [];
+  let currentCluster: SegmentWithTimes[] = [];
   let clusterEnd = 0;
   
-  for (const event of dayEvents) {
-    if (currentCluster.length === 0 || event.start.getTime() < clusterEnd) {
+  for (const segment of segmentsWithTimes) {
+    if (currentCluster.length === 0 || segment.start.getTime() < clusterEnd) {
       // Add to current cluster
-      currentCluster.push(event);
-      clusterEnd = Math.max(clusterEnd, event.end.getTime());
+      currentCluster.push(segment);
+      clusterEnd = Math.max(clusterEnd, segment.end.getTime());
     } else {
       // Start new cluster
       if (currentCluster.length > 0) clusters.push(currentCluster);
-      currentCluster = [event];
-      clusterEnd = event.end.getTime();
+      currentCluster = [segment];
+      clusterEnd = segment.end.getTime();
     }
   }
   if (currentCluster.length > 0) clusters.push(currentCluster);
@@ -207,11 +277,11 @@ function computeEventLayouts(appointments: Appointment[], dayDate: Date, pixelsP
     // Assign columns using a greedy algorithm
     const columns: { end: number }[] = [];
     
-    for (const event of cluster) {
+    for (const segment of cluster) {
       // Find first available column
       let columnIndex = 0;
       for (let i = 0; i < columns.length; i++) {
-        if (columns[i].end <= event.start.getTime()) {
+        if (columns[i].end <= segment.start.getTime()) {
           columnIndex = i;
           break;
         }
@@ -220,17 +290,21 @@ function computeEventLayouts(appointments: Appointment[], dayDate: Date, pixelsP
       
       // Assign or create column
       if (columnIndex >= columns.length) {
-        columns.push({ end: event.end.getTime() });
+        columns.push({ end: segment.end.getTime() });
       } else {
-        columns[columnIndex].end = event.end.getTime();
+        columns[columnIndex].end = segment.end.getTime();
       }
       
-      // Calculate position
-      const minutesFromDayStart = (event.start.getTime() - dayStart.getTime()) / (1000 * 60);
-      const durationMinutes = (event.end.getTime() - event.start.getTime()) / (1000 * 60);
+      // Calculate position based on segment times (clamped to day)
+      const minutesFromDayStart = (segment.segmentStart.getTime() - dayStart.getTime()) / (1000 * 60);
+      const durationMinutes = (segment.segmentEnd.getTime() - segment.segmentStart.getTime()) / (1000 * 60);
       
       layouts.push({
-        apt: event.apt,
+        apt: segment.apt,
+        segmentStart: segment.segmentStart,
+        segmentEnd: segment.segmentEnd,
+        isStartSegment: segment.isStartSegment,
+        isEndSegment: segment.isEndSegment,
         top: (minutesFromDayStart / 60) * pixelsPerHour,
         height: Math.max(20, (durationMinutes / 60) * pixelsPerHour), // Minimum 20px
         column: columnIndex,
@@ -238,7 +312,7 @@ function computeEventLayouts(appointments: Appointment[], dayDate: Date, pixelsP
       });
     }
     
-    // Set total columns for all events in this cluster
+    // Set total columns for all segments in this cluster
     const totalCols = columns.length;
     for (let i = layouts.length - cluster.length; i < layouts.length; i++) {
       layouts[i].totalColumns = totalCols;
@@ -1125,22 +1199,28 @@ export default function CalendarMain() {
                                     />
                                   ))}
                                   
-                                  {/* Timed Events (non all-day) */}
-                                  {dayLayouts.map((layout) => {
-                                    const { apt, top, height, column, totalColumns } = layout;
+                                  {/* Timed Events (non all-day) - with midnight splitting */}
+                                  {dayLayouts.map((layout, layoutIndex) => {
+                                    const { apt, segmentStart, segmentEnd, isStartSegment, isEndSegment, top, height, column, totalColumns } = layout;
                                     const widthPercent = totalColumns > 1 ? (100 / totalColumns) - 1 : 100;
                                     const leftPercent = column * (100 / totalColumns);
-                                    const startTime = new Date(apt.startTime);
+                                    
+                                    // Unique key for segment (handles same event appearing on multiple days)
+                                    const segmentKey = `${apt.id}-${day.toDateString()}-${layoutIndex}`;
+                                    
+                                    // Visual indicator for continuation segments
+                                    const isContinuation = !isStartSegment;
+                                    const continuesNextDay = !isEndSegment;
                                     
                                     return (
-                                      <Tooltip key={apt.id}>
+                                      <Tooltip key={segmentKey}>
                                         <TooltipTrigger asChild>
                                           <div 
-                                            className={`absolute text-xs p-1 rounded cursor-pointer border overflow-hidden ${
+                                            className={`absolute text-xs p-1 cursor-pointer border overflow-hidden ${
                                               apt.type === 'google' 
                                                 ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/50' 
                                                 : 'bg-primary/20 border-primary/30 text-primary hover:bg-primary/30'
-                                            }`}
+                                            } ${isContinuation ? 'rounded-t-none border-t-0' : 'rounded-t'} ${continuesNextDay ? 'rounded-b-none border-b-0' : 'rounded-b'}`}
                                             style={{
                                               top: `${top}px`,
                                               height: `${height}px`,
@@ -1149,10 +1229,13 @@ export default function CalendarMain() {
                                               zIndex: 10 + column
                                             }}
                                           >
-                                            <div className="font-medium truncate text-[10px]">{apt.title}</div>
+                                            <div className="font-medium truncate text-[10px]">
+                                              {isContinuation && '↓ '}{apt.title}
+                                            </div>
                                             {height > 25 && (
                                               <div className="text-[9px] opacity-75 truncate">
-                                                {startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                                {segmentStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                                {continuesNextDay && ' →'}
                                               </div>
                                             )}
                                             {height > 40 && (apt.bookerName || apt.attendeeName) && (
@@ -1284,23 +1367,28 @@ export default function CalendarMain() {
                                   />
                                 ))}
                                 
-                                {/* Timed Events (non all-day) */}
-                                {dayLayouts.map((layout) => {
-                                  const { apt, top, height, column, totalColumns } = layout;
+                                {/* Timed Events (non all-day) - with midnight splitting */}
+                                {dayLayouts.map((layout, layoutIndex) => {
+                                  const { apt, segmentStart, segmentEnd, isStartSegment, isEndSegment, top, height, column, totalColumns } = layout;
                                   const widthPercent = totalColumns > 1 ? (100 / totalColumns) - 2 : 96;
                                   const leftPercent = totalColumns > 1 ? column * (100 / totalColumns) + 2 : 2;
-                                  const startTime = new Date(apt.startTime);
-                                  const endTime = new Date(apt.endTime);
+                                  
+                                  // Unique key for segment
+                                  const segmentKey = `${apt.id}-${currentDate.toDateString()}-${layoutIndex}`;
+                                  
+                                  // Visual indicator for continuation segments
+                                  const isContinuation = !isStartSegment;
+                                  const continuesNextDay = !isEndSegment;
                                   
                                   return (
-                                    <Tooltip key={apt.id}>
+                                    <Tooltip key={segmentKey}>
                                       <TooltipTrigger asChild>
                                         <div 
-                                          className={`absolute p-2 rounded-lg border-l-4 cursor-pointer overflow-hidden ${
+                                          className={`absolute p-2 border-l-4 cursor-pointer overflow-hidden ${
                                             apt.type === 'google'
                                               ? 'bg-blue-100 dark:bg-blue-900/30 border-l-blue-500 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/50'
                                               : 'bg-primary/10 border-l-primary text-primary hover:bg-primary/20'
-                                          }`}
+                                          } ${isContinuation ? 'rounded-t-none' : 'rounded-t-lg'} ${continuesNextDay ? 'rounded-b-none' : 'rounded-b-lg'}`}
                                           style={{
                                             top: `${top}px`,
                                             height: `${height}px`,
@@ -1311,11 +1399,14 @@ export default function CalendarMain() {
                                         >
                                           <div className="flex justify-between items-start h-full">
                                             <div className="flex-1 min-w-0">
-                                              <div className="font-semibold text-sm truncate">{apt.title}</div>
+                                              <div className="font-semibold text-sm truncate">
+                                                {isContinuation && '↓ '}{apt.title}
+                                              </div>
                                               {height > 35 && (
                                                 <>
                                                   <div className="text-xs opacity-75">
-                                                    {startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - {endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                                    {segmentStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - {segmentEnd.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                                    {continuesNextDay && ' →'}
                                                   </div>
                                                   {(apt.bookerName || apt.attendeeName) && (
                                                     <div className="text-xs opacity-75 truncate">
