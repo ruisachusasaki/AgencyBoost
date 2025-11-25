@@ -1186,10 +1186,15 @@ input[type="checkbox"]:not(.bulk-action-checkbox),
   border-radius: var(--border-radius-pill) !important;
 }
 
-/* Specifically target switch components */
-button[role="switch"],
-[aria-checked] {
+/* Specifically target switch components - exclude checkboxes */
+button[role="switch"] {
   border-radius: var(--border-radius-pill) !important;
+}
+
+/* Ensure checkboxes remain square */
+button[role="checkbox"],
+[data-state][data-radix-checkbox-root] {
+  border-radius: 0 !important;
 }
 
 /* Banner Styling */
