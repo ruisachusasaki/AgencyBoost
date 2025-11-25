@@ -444,13 +444,27 @@ export default function CalendarMain() {
     }
   }, [currentUser?.id, hasAutoSelectedUser]);
 
-  // Filter staff based on search
+  // Filter staff based on search and sort (selected users first, then alphabetically)
   const filteredStaff = useMemo(() => {
-    return staff.filter(member => 
-      `${member.firstName} ${member.lastName}`.toLowerCase().includes(userSearch.toLowerCase()) ||
-      member.email.toLowerCase().includes(userSearch.toLowerCase())
-    );
-  }, [staff, userSearch]);
+    return staff
+      .filter(member => 
+        `${member.firstName} ${member.lastName}`.toLowerCase().includes(userSearch.toLowerCase()) ||
+        member.email.toLowerCase().includes(userSearch.toLowerCase())
+      )
+      .sort((a, b) => {
+        const aSelected = selectedUsers.includes(a.id);
+        const bSelected = selectedUsers.includes(b.id);
+        
+        // Selected users come first
+        if (aSelected && !bSelected) return -1;
+        if (!aSelected && bSelected) return 1;
+        
+        // Within same group, sort alphabetically by name
+        const aName = `${a.firstName} ${a.lastName}`.toLowerCase();
+        const bName = `${b.firstName} ${b.lastName}`.toLowerCase();
+        return aName.localeCompare(bName);
+      });
+  }, [staff, userSearch, selectedUsers]);
 
   // Filter calendars based on search
   const filteredCalendars = useMemo(() => {
