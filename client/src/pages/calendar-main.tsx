@@ -454,6 +454,8 @@ export default function CalendarMain() {
 
   const { data: appointments = [], error: appointmentsError, refetch: refetchAppointments } = useQuery<Appointment[]>({
     queryKey: ["/api/calendar-appointments-with-leads", selectedUsers], // Include selectedUsers for refetching
+    refetchInterval: 30000, // Poll every 30 seconds for real-time updates
+    refetchIntervalInBackground: false, // Don't poll when tab is not visible
     queryFn: async () => {
       console.log("CalendarMain: Fetching appointments with lead appointments included");
       
@@ -522,6 +524,32 @@ export default function CalendarMain() {
   
   // Extract clients array from response
   const clients = (clientsResponse as any)?.clients || [];
+
+  // Auto-sync Google Calendar on page load (triggers background sync if data is stale)
+  useEffect(() => {
+    const triggerAutoSync = async () => {
+      try {
+        const response = await fetch('/api/google-calendar/auto-sync', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        console.log('[Calendar] Auto-sync result:', data);
+        
+        // If sync was triggered, refetch appointments after a short delay
+        if (data.synced) {
+          setTimeout(() => {
+            refetchAppointments();
+          }, 3000); // Wait 3 seconds for sync to complete
+        }
+      } catch (error) {
+        console.log('[Calendar] Auto-sync failed:', error);
+      }
+    };
+    
+    triggerAutoSync();
+  }, [refetchAppointments]); // Include refetchAppointments in deps
 
   // Auto-select current user's calendar by default when page loads
   useEffect(() => {

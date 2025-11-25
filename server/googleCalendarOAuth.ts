@@ -263,6 +263,84 @@ router.post('/sync', async (req: Request, res: Response) => {
   }
 });
 
+// Auto-sync endpoint - triggered on page load, runs in background if stale
+router.post('/auto-sync', async (req: Request, res: Response) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    const STALE_THRESHOLD_MS = 60 * 1000; // 1 minute - sync if last sync was over 1 minute ago
+    
+    // Check if user has a connected calendar
+    const connections = await db
+      .select()
+      .from(calendarConnections)
+      .where(and(
+        eq(calendarConnections.userId, req.session.userId),
+        eq(calendarConnections.syncEnabled, true)
+      ));
+    
+    if (connections.length === 0) {
+      return res.json({ 
+        synced: false, 
+        reason: 'no_connection',
+        message: 'No Google Calendar connected'
+      });
+    }
+
+    const connection = connections[0];
+    const lastSyncedAt = connection.lastSyncedAt?.getTime() || 0;
+    const timeSinceSync = Date.now() - lastSyncedAt;
+    
+    // Check if sync is already in progress
+    const syncState = await db.query.calendarSyncState.findFirst({
+      where: eq(calendarSyncState.connectionId, connection.id)
+    });
+
+    if (syncState?.lastSyncStatus === 'in_progress') {
+      const timeSinceStart = Date.now() - (syncState.lastSyncStarted?.getTime() || 0);
+      if (timeSinceStart < 120000) { // If sync started less than 2 minutes ago
+        return res.json({ 
+          synced: false,
+          reason: 'in_progress',
+          message: 'Sync already in progress'
+        });
+      }
+    }
+
+    // If data is not stale, don't sync
+    if (timeSinceSync < STALE_THRESHOLD_MS) {
+      return res.json({ 
+        synced: false,
+        reason: 'recent',
+        lastSyncedAt: connection.lastSyncedAt,
+        message: 'Data is recent, no sync needed'
+      });
+    }
+
+    // Import and run sync in background
+    const { syncUserCalendar } = await import('./googleCalendarSync');
+    
+    syncUserCalendar(req.session.userId, 'primary')
+      .then(result => {
+        console.log(`[Auto-Sync Complete] User ${req.session?.userId}: ${result.eventsCreated} created, ${result.eventsUpdated} updated, ${result.eventsDeleted} deleted`);
+      })
+      .catch(error => {
+        console.error('[Auto-Sync Error]', error);
+      });
+    
+    res.json({ 
+      synced: true,
+      reason: 'stale',
+      message: 'Sync started in background'
+    });
+  } catch (error) {
+    console.error('Auto-sync error:', error);
+    res.status(500).json({ error: 'Failed to trigger auto-sync' });
+  }
+});
+
 // Note: The /events endpoint is now handled by googleCalendarEventsEndpoint.ts
 // which supports multi-user filtering and proper assignedTo field mapping
 

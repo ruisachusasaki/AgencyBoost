@@ -1102,6 +1102,11 @@ app.use((req, res, next) => {
   setupGoogleCalendar(app);
   log("✅ Google Calendar OAuth routes initialized");
   
+  // Start background calendar sync service
+  const { startBackgroundSync } = await import('./googleCalendarBackgroundSync');
+  startBackgroundSync();
+  log("✅ Google Calendar background sync started");
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
