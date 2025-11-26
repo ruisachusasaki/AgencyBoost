@@ -212,10 +212,8 @@ export function EventDetailModal({
   // Appointment status update mutation for Google events (auto-creates time entry when "Showed")
   const appointmentStatusMutation = useMutation({
     mutationFn: async (appointmentStatus: string) => {
-      return apiRequest(`/api/calendar/events/${eventId}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ appointmentStatus }),
-      });
+      const response = await apiRequest('PATCH', `/api/calendar/events/${eventId}/status`, { appointmentStatus });
+      return response.json();
     },
     onSuccess: (data: any) => {
       if (data.timeEntry) {
