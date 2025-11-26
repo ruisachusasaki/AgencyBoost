@@ -101,7 +101,7 @@ export function EventCreateModal({
     queryKey: ["/api/staff"],
   });
 
-  const { data: clientsList } = useQuery<Client[]>({
+  const { data: clientsResponse } = useQuery<{ clients: Client[] }>({
     queryKey: ["/api/clients"],
   });
 
@@ -214,7 +214,7 @@ export function EventCreateModal({
       addGoogleMeet: addGoogleMeet && !!hasGoogleCalendarSync,
       syncToGoogle: !!userConnection,
       guests: selectedGuests,
-      clientId: selectedClientId || undefined,
+      clientId: selectedClientId && selectedClientId !== "none" ? selectedClientId : undefined,
     });
   };
 
@@ -365,8 +365,8 @@ export function EventCreateModal({
                 <SelectValue placeholder="Select a client..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No client</SelectItem>
-                {clientsList?.map((client) => (
+                <SelectItem value="none">No client</SelectItem>
+                {clientsResponse?.clients?.map((client) => (
                   <SelectItem key={client.id} value={client.id}>
                     {client.companyName}
                   </SelectItem>
