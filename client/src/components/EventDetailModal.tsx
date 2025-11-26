@@ -166,6 +166,7 @@ export function EventDetailModal({
       queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/google-calendar'] });
       queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments-with-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       onClose();
     },
     onError: (error: any) => {
@@ -198,6 +199,7 @@ export function EventDetailModal({
       queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/google-calendar'] });
       queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments-with-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       onClose();
     },
     onError: (error: any) => {
@@ -216,10 +218,10 @@ export function EventDetailModal({
       return response.json();
     },
     onSuccess: (data: any) => {
-      if (data.timeEntry) {
+      if (data.task || data.timeEntry) {
         toast({
           title: "Appointment marked as Showed",
-          description: data.message || `Time entry of ${data.timeEntry.duration} minutes automatically logged.`,
+          description: data.message || "Time has been automatically tracked for this meeting.",
         });
       } else {
         toast({
@@ -231,6 +233,7 @@ export function EventDetailModal({
       queryClient.invalidateQueries({ queryKey: ['/api/google-calendar/events'] });
       queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments-with-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
     },
     onError: (error: any) => {
       toast({

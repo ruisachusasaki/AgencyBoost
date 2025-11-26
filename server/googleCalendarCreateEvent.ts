@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { google } from 'googleapis';
 import { db } from './db';
-import { calendarConnections, calendarEvents, calendarAppointments, calendars, eventTimeEntries, staff } from '@shared/schema';
+import { calendarConnections, calendarEvents, calendarAppointments, calendars, eventTimeEntries, staff, tasks } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { EncryptionService } from './encryption';
@@ -341,7 +341,7 @@ export async function updateCalendarEventStatus(req: Request, res: Response) {
       .where(eq(calendarEvents.id, eventId))
       .returning();
 
-    // If status changed to "showed" and time entry hasn't been created yet, create one
+    // If status changed to "showed" and time entry hasn't been created yet, create a task with time tracking
     if (appointmentStatus === 'showed' && !existingEvent.timeEntryCreated) {
       try {
         // Calculate duration in minutes
@@ -350,15 +350,51 @@ export async function updateCalendarEventStatus(req: Request, res: Response) {
         const durationMs = endTime.getTime() - startTime.getTime();
         const durationMinutes = Math.round(durationMs / (1000 * 60));
 
-        // Create time entry
-        const [timeEntry] = await db
+        // Create a task named "Meeting: {event_name}" with the time entry
+        const taskId = randomUUID();
+        const timeEntryId = randomUUID();
+        const eventTitle = existingEvent.summary || 'Untitled Event';
+        
+        const timeEntry = {
+          id: timeEntryId,
+          userId: userId,
+          userName: '', // Will be populated by the UI
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          duration: durationMinutes,
+          description: `Auto-logged from calendar event: ${eventTitle}`,
+          source: 'calendar_auto',
+        };
+
+        // Create the task with time tracking
+        const [createdTask] = await db
+          .insert(tasks)
+          .values({
+            id: taskId,
+            title: `Meeting: ${eventTitle}`,
+            description: existingEvent.description || `Time tracked from calendar event on ${startTime.toLocaleDateString()}`,
+            status: 'completed', // Meeting happened, so task is completed
+            priority: 'normal',
+            assignedTo: userId,
+            clientId: existingEvent.clientId,
+            dueDate: startTime,
+            startDate: startTime,
+            timeEstimate: durationMinutes,
+            timeTracked: durationMinutes,
+            timeEntries: [timeEntry],
+            visibleToClient: false,
+          })
+          .returning();
+
+        // Also create an event_time_entries record for backup/tracking
+        await db
           .insert(eventTimeEntries)
           .values({
-            id: randomUUID(),
+            id: timeEntryId,
             calendarEventId: eventId,
             userId: userId,
             clientId: existingEvent.clientId,
-            title: existingEvent.summary || 'Meeting',
+            title: eventTitle,
             description: existingEvent.description || null,
             startTime: startTime,
             endTime: endTime,
@@ -366,8 +402,7 @@ export async function updateCalendarEventStatus(req: Request, res: Response) {
             source: 'auto',
             createdAt: new Date(),
             updatedAt: new Date(),
-          })
-          .returning();
+          });
 
         // Mark the event as having a time entry created
         await db
@@ -378,8 +413,9 @@ export async function updateCalendarEventStatus(req: Request, res: Response) {
           })
           .where(eq(calendarEvents.id, eventId));
 
-        console.log('[UpdateEventStatus] Auto-created time entry:', { 
-          timeEntryId: timeEntry.id, 
+        console.log('[UpdateEventStatus] Auto-created task with time tracking:', { 
+          taskId: createdTask.id,
+          taskTitle: createdTask.title,
           duration: durationMinutes,
           clientId: existingEvent.clientId 
         });
@@ -387,16 +423,16 @@ export async function updateCalendarEventStatus(req: Request, res: Response) {
         return res.json({
           success: true,
           event: { ...updatedEvent, timeEntryCreated: true },
-          timeEntry,
-          message: `Time entry of ${durationMinutes} minutes automatically logged`,
+          task: createdTask,
+          message: `Task "${createdTask.title}" created with ${durationMinutes} minutes tracked`,
         });
-      } catch (timeEntryError: any) {
-        console.error('[UpdateEventStatus] Error creating time entry:', timeEntryError);
-        // Event status was updated, but time entry failed - still return success with warning
+      } catch (taskError: any) {
+        console.error('[UpdateEventStatus] Error creating task:', taskError);
+        // Event status was updated, but task creation failed - still return success with warning
         return res.json({
           success: true,
           event: updatedEvent,
-          warning: 'Event status updated, but failed to create time entry',
+          warning: 'Event status updated, but failed to create task with time tracking',
         });
       }
     }
