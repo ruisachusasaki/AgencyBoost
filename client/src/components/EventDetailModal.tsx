@@ -82,6 +82,8 @@ interface Appointment {
   leadId?: string;
   leadName?: string;
   leadEmail?: string;
+  appointmentStatus?: string;
+  timeEntryCreated?: boolean;
 }
 
 interface StaffMember {
@@ -202,6 +204,38 @@ export function EventDetailModal({
       toast({
         title: "Failed to delete event",
         description: error.message || "An error occurred while deleting the event.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Appointment status update mutation for Google events (auto-creates time entry when "Showed")
+  const appointmentStatusMutation = useMutation({
+    mutationFn: async (appointmentStatus: string) => {
+      return apiRequest(`/api/calendar/events/${eventId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ appointmentStatus }),
+      });
+    },
+    onSuccess: (data: any) => {
+      if (data.timeEntry) {
+        toast({
+          title: "Appointment marked as Showed",
+          description: data.message || `Time entry of ${data.timeEntry.duration} minutes automatically logged.`,
+        });
+      } else {
+        toast({
+          title: "Status updated",
+          description: "Appointment status has been updated.",
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/google-calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments-with-leads'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update status",
+        description: error.message || "An error occurred while updating the appointment status.",
         variant: "destructive",
       });
     },
@@ -530,13 +564,66 @@ export function EventDetailModal({
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3 pt-2 border-t">
-                    <CheckCircle2 className="h-5 w-5 text-gray-400" />
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</span>
-                      <Badge className={getStatusColor(event.status)} data-testid="badge-event-status">
-                        {event.status.charAt(0).toUpperCase() + event.status.slice(1).replace('_', ' ')}
-                      </Badge>
+                  {/* Appointment Status section with dropdown for Google events */}
+                  <div className="flex items-start gap-3 pt-2 border-t">
+                    <CheckCircle2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Appointment Status</div>
+                      {isGoogleEvent && isOwnEvent ? (
+                        <div className="space-y-2">
+                          <Select
+                            value={event.appointmentStatus || event.status || "confirmed"}
+                            onValueChange={(value) => appointmentStatusMutation.mutate(value)}
+                            disabled={appointmentStatusMutation.isPending}
+                          >
+                            <SelectTrigger 
+                              className="w-full" 
+                              data-testid="select-appointment-status"
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="confirmed">
+                                <span className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                                  Confirmed
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="showed">
+                                <span className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                                  Showed (Auto-logs time)
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="no_show">
+                                <span className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-orange-500" />
+                                  No Show
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="cancelled">
+                                <span className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                                  Cancelled
+                                </span>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {event.timeEntryCreated && (
+                            <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                              <Clock className="h-3 w-3" />
+                              Time entry has been logged for this meeting
+                            </div>
+                          )}
+                          {appointmentStatusMutation.isPending && (
+                            <div className="text-xs text-gray-500">Updating status...</div>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge className={getStatusColor(event.appointmentStatus || event.status)} data-testid="badge-event-status">
+                          {(event.appointmentStatus || event.status).charAt(0).toUpperCase() + (event.appointmentStatus || event.status).slice(1).replace('_', ' ')}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
