@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { google } from 'googleapis';
 import { db } from './db';
-import { calendarConnections, calendarEvents, calendarAppointments, calendars } from '@shared/schema';
+import { calendarConnections, calendarEvents, calendarAppointments, calendars, eventTimeEntries, staff } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { EncryptionService } from './encryption';
@@ -280,5 +280,183 @@ export async function createCalendarEvent(req: Request, res: Response) {
   } catch (error: any) {
     console.error('[CreateEvent] Error creating event:', error);
     return res.status(500).json({ error: 'Failed to create event', details: error.message });
+  }
+}
+
+interface UpdateAppointmentStatusRequest {
+  appointmentStatus: 'confirmed' | 'showed' | 'no_show' | 'cancelled';
+}
+
+// Update appointment status and auto-create time entry when "Showed"
+export async function updateCalendarEventStatus(req: Request, res: Response) {
+  try {
+    const userId = req.session?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { eventId } = req.params;
+    const { appointmentStatus } = req.body as UpdateAppointmentStatusRequest;
+
+    if (!eventId) {
+      return res.status(400).json({ error: 'Event ID is required' });
+    }
+
+    if (!appointmentStatus || !['confirmed', 'showed', 'no_show', 'cancelled'].includes(appointmentStatus)) {
+      return res.status(400).json({ error: 'Valid appointment status is required (confirmed, showed, no_show, cancelled)' });
+    }
+
+    console.log('[UpdateEventStatus] Updating event status:', { userId, eventId, appointmentStatus });
+
+    // Get the calendar event
+    const [existingEvent] = await db
+      .select()
+      .from(calendarEvents)
+      .where(eq(calendarEvents.id, eventId))
+      .limit(1);
+
+    if (!existingEvent) {
+      return res.status(404).json({ error: 'Calendar event not found' });
+    }
+
+    // Check if user has access to this event (via connection)
+    const [connection] = await db
+      .select()
+      .from(calendarConnections)
+      .where(eq(calendarConnections.id, existingEvent.connectionId))
+      .limit(1);
+
+    if (!connection || connection.userId !== userId) {
+      return res.status(403).json({ error: 'You do not have permission to update this event' });
+    }
+
+    // Update the event status
+    const [updatedEvent] = await db
+      .update(calendarEvents)
+      .set({
+        appointmentStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(calendarEvents.id, eventId))
+      .returning();
+
+    // If status changed to "showed" and time entry hasn't been created yet, create one
+    if (appointmentStatus === 'showed' && !existingEvent.timeEntryCreated) {
+      try {
+        // Calculate duration in minutes
+        const startTime = new Date(existingEvent.startTime);
+        const endTime = new Date(existingEvent.endTime);
+        const durationMs = endTime.getTime() - startTime.getTime();
+        const durationMinutes = Math.round(durationMs / (1000 * 60));
+
+        // Create time entry
+        const [timeEntry] = await db
+          .insert(eventTimeEntries)
+          .values({
+            id: randomUUID(),
+            calendarEventId: eventId,
+            userId: userId,
+            clientId: existingEvent.clientId,
+            title: existingEvent.summary || 'Meeting',
+            description: existingEvent.description || null,
+            startTime: startTime,
+            endTime: endTime,
+            duration: durationMinutes,
+            source: 'auto',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .returning();
+
+        // Mark the event as having a time entry created
+        await db
+          .update(calendarEvents)
+          .set({
+            timeEntryCreated: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(calendarEvents.id, eventId));
+
+        console.log('[UpdateEventStatus] Auto-created time entry:', { 
+          timeEntryId: timeEntry.id, 
+          duration: durationMinutes,
+          clientId: existingEvent.clientId 
+        });
+
+        return res.json({
+          success: true,
+          event: { ...updatedEvent, timeEntryCreated: true },
+          timeEntry,
+          message: `Time entry of ${durationMinutes} minutes automatically logged`,
+        });
+      } catch (timeEntryError: any) {
+        console.error('[UpdateEventStatus] Error creating time entry:', timeEntryError);
+        // Event status was updated, but time entry failed - still return success with warning
+        return res.json({
+          success: true,
+          event: updatedEvent,
+          warning: 'Event status updated, but failed to create time entry',
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      event: updatedEvent,
+    });
+
+  } catch (error: any) {
+    console.error('[UpdateEventStatus] Error updating event status:', error);
+    return res.status(500).json({ error: 'Failed to update event status', details: error.message });
+  }
+}
+
+// Get event time entries for a user (for time tracking reports)
+export async function getEventTimeEntries(req: Request, res: Response) {
+  try {
+    const userId = req.session?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { startDate, endDate, clientId } = req.query;
+
+    console.log('[GetEventTimeEntries] Fetching entries:', { userId, startDate, endDate, clientId });
+
+    let query = db
+      .select()
+      .from(eventTimeEntries)
+      .where(eq(eventTimeEntries.userId, userId));
+
+    const entries = await query;
+
+    // Filter by date range if provided
+    let filteredEntries = entries;
+    if (startDate) {
+      const start = new Date(startDate as string);
+      filteredEntries = filteredEntries.filter(e => new Date(e.startTime) >= start);
+    }
+    if (endDate) {
+      const end = new Date(endDate as string);
+      filteredEntries = filteredEntries.filter(e => new Date(e.startTime) <= end);
+    }
+    if (clientId) {
+      filteredEntries = filteredEntries.filter(e => e.clientId === clientId);
+    }
+
+    // Calculate total time
+    const totalMinutes = filteredEntries.reduce((sum, e) => sum + e.duration, 0);
+
+    return res.json({
+      entries: filteredEntries,
+      totalMinutes,
+      totalHours: Math.round((totalMinutes / 60) * 100) / 100,
+    });
+
+  } catch (error: any) {
+    console.error('[GetEventTimeEntries] Error fetching entries:', error);
+    return res.status(500).json({ error: 'Failed to fetch time entries', details: error.message });
   }
 }
