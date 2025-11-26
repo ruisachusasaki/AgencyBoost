@@ -103,7 +103,7 @@ export function EventCreateModal({
   });
 
   const { data: clientsResponse } = useQuery<{ clients: Client[] }>({
-    queryKey: ["/api/clients"],
+    queryKey: ["/api/clients", { page: 1, limit: 100 }],
     enabled: isOpen,
   });
 
