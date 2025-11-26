@@ -102,18 +102,10 @@ export function EventCreateModal({
     queryKey: ["/api/staff"],
   });
 
-  const { data: clientsResponse, isLoading: isLoadingClients } = useQuery<{ clients: Client[] }>({
+  const { data: clientsResponse } = useQuery<{ clients: Client[] }>({
     queryKey: ["/api/clients", { page: 1, limit: 100 }],
     enabled: isOpen,
     staleTime: 0,
-  });
-
-  console.log("[EventCreateModal] Clients data:", {
-    isOpen,
-    isLoading: isLoadingClients,
-    clientsResponse,
-    clientsCount: clientsResponse?.clients?.length || 0,
-    firstThreeClients: clientsResponse?.clients?.slice(0, 3).map(c => ({ id: c.id, name: c.name, company: c.company }))
   });
 
   const hasGoogleCalendarSync = googleCalendarStatus?.connections?.some(
@@ -379,7 +371,9 @@ export function EventCreateModal({
                 <SelectItem value="none">No client</SelectItem>
                 {clientsResponse?.clients?.map((client) => (
                   <SelectItem key={client.id} value={client.id}>
-                    {client.company || client.name}
+                    {client.company 
+                      ? `${client.name} - ${client.company}`
+                      : client.name}
                   </SelectItem>
                 ))}
               </SelectContent>
