@@ -68,7 +68,8 @@ interface Guest {
 
 interface Client {
   id: string;
-  companyName: string;
+  name: string;
+  company?: string;
   email?: string;
 }
 
@@ -103,6 +104,7 @@ export function EventCreateModal({
 
   const { data: clientsResponse } = useQuery<{ clients: Client[] }>({
     queryKey: ["/api/clients"],
+    enabled: isOpen,
   });
 
   const hasGoogleCalendarSync = googleCalendarStatus?.connections?.some(
@@ -368,7 +370,7 @@ export function EventCreateModal({
                 <SelectItem value="none">No client</SelectItem>
                 {clientsResponse?.clients?.map((client) => (
                   <SelectItem key={client.id} value={client.id}>
-                    {client.companyName}
+                    {client.company || client.name}
                   </SelectItem>
                 ))}
               </SelectContent>

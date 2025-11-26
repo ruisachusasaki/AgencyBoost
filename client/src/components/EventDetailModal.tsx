@@ -93,7 +93,8 @@ interface StaffMember {
 
 interface Client {
   id: string;
-  companyName: string;
+  name: string;
+  company?: string;
   email?: string;
 }
 
@@ -452,7 +453,7 @@ export function EventDetailModal({
                         <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Associated Client</div>
                         <Link href={`/clients/${event.clientId}`}>
                           <span className="text-sm text-primary hover:underline cursor-pointer" data-testid="link-event-client">
-                            {clientData.companyName}
+                            {clientData.company || clientData.name}
                           </span>
                         </Link>
                       </div>
