@@ -52,7 +52,7 @@ import {
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, granularPermissions, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
   clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
-  calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, customFieldFileUploads,
+  calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, eventTimeEntries, smsIntegrations, emailIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments,
   socialMediaAccounts, socialMediaPosts, workflows, workflowTemplates, workflowExecutions, workflowActionAnalytics, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
@@ -1078,6 +1078,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       console.log("REAL TIME ENTRIES FOUND:", realTimeEntries.length, "tasks");
+
+      // Also fetch event time entries (auto-logged from calendar events marked as "Showed")
+      console.log("FETCHING EVENT TIME ENTRIES FROM DATABASE...");
+      const eventTimeEntriesResult = await db
+        .select()
+        .from(eventTimeEntries)
+        .where(
+          and(
+            gte(eventTimeEntries.startTime, new Date(dateFrom)),
+            lte(eventTimeEntries.startTime, new Date(dateTo)),
+            effectiveUserId ? eq(eventTimeEntries.userId, effectiveUserId) : sql`1=1`,
+            clientId ? eq(eventTimeEntries.clientId, clientId) : sql`1=1`
+          )
+        );
+      
+      console.log("EVENT TIME ENTRIES FOUND:", eventTimeEntriesResult.length, "entries");
+
       
       // Transform the real data to match the expected format
       const actualTasks = realTimeEntries;
@@ -1235,6 +1252,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
+      // Also add event time entries to user summaries
+      console.log("PROCESSING EVENT TIME ENTRIES FOR USER SUMMARIES...");
+      for (const eventEntry of eventTimeEntriesResult) {
+        const entryDate = new Date(eventEntry.startTime).toISOString().split('T')[0];
+        
+        // Lookup user name
+        await getUserName(eventEntry.userId);
+        
+        if (!userMap.has(eventEntry.userId)) {
+          const staffData = await appStorage.getStaffMember(eventEntry.userId);
+          userMap.set(eventEntry.userId, {
+            userId: eventEntry.userId,
+            userName: staffData ? `${staffData.firstName} ${staffData.lastName}` : 'Unknown User',
+            userRole: 'User',
+            totalTime: 0,
+            tasksWorked: new Set(),
+            dailyTotals: {}
+          });
+        }
+        
+        const user = userMap.get(eventEntry.userId);
+        user.totalTime += eventEntry.duration || 0;
+        user.tasksWorked.add(`event-${eventEntry.id}`); // Use event prefix to distinguish from tasks
+        user.dailyTotals[entryDate] = (user.dailyTotals[entryDate] || 0) + (eventEntry.duration || 0);
+        
+        console.log("⏱️ Event time entry added:", {
+          eventId: eventEntry.id,
+          userId: eventEntry.userId,
+          duration: eventEntry.duration,
+          entryDate
+        });
+      }
+      console.log("EVENT TIME ENTRIES PROCESSED");
+
       const userSummaries = Array.from(userMap.values()).map(user => ({
         ...user,
         tasksWorked: user.tasksWorked.size

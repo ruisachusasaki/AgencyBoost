@@ -227,7 +227,9 @@ export function EventDetailModal({
           description: "Appointment status has been updated.",
         });
       }
-      queryClient.invalidateQueries({ queryKey: ['/api/google-calendar'] });
+      // Invalidate all relevant queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['/api/google-calendar/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/calendar-appointments-with-leads'] });
     },
     onError: (error: any) => {
