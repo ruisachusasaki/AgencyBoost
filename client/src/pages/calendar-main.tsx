@@ -2205,20 +2205,40 @@ export default function CalendarMain() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-2 h-2 rounded-full" 
-                                  style={{ backgroundColor: calendar?.color || '#6366f1' }}
-                                ></div>
-                                <span>{calendar?.name || "Unknown Calendar"}</span>
+                                {appointment.type === 'google' ? (
+                                  <>
+                                    <div 
+                                      className="w-2 h-2 rounded-full" 
+                                      style={{ backgroundColor: '#4285f4' }}
+                                    ></div>
+                                    <span>Google Calendar</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div 
+                                      className="w-2 h-2 rounded-full" 
+                                      style={{ backgroundColor: calendar?.color || '#6366f1' }}
+                                    ></div>
+                                    <span>{calendar?.name || "Unknown Calendar"}</span>
+                                  </>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
-                                  {owner ? `${owner.firstName.charAt(0)}${owner.lastName.charAt(0)}` : "?"}
-                                </div>
-                                <span>{owner ? `${owner.firstName} ${owner.lastName}` : "Unknown User"}</span>
-                              </div>
+                              {(() => {
+                                // For Google events, find owner from assignedTo field
+                                const eventOwner = appointment.type === 'google' && appointment.assignedTo
+                                  ? staff.find(member => member.id === appointment.assignedTo)
+                                  : owner;
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+                                      {eventOwner ? `${eventOwner.firstName.charAt(0)}${eventOwner.lastName.charAt(0)}` : "?"}
+                                    </div>
+                                    <span>{eventOwner ? `${eventOwner.firstName} ${eventOwner.lastName}` : "Unknown User"}</span>
+                                  </div>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
