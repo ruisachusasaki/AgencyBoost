@@ -22,6 +22,7 @@ interface CreateEventRequest {
   addGoogleMeet?: boolean;
   syncToGoogle?: boolean;
   guests?: Guest[];
+  clientId?: string; // Optional client association for time tracking
 }
 
 export async function createCalendarEvent(req: Request, res: Response) {
@@ -32,7 +33,7 @@ export async function createCalendarEvent(req: Request, res: Response) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const { title, description, location, startTime, endTime, addGoogleMeet, syncToGoogle, guests } = req.body as CreateEventRequest;
+    const { title, description, location, startTime, endTime, addGoogleMeet, syncToGoogle, guests, clientId } = req.body as CreateEventRequest;
 
     if (!title || !startTime || !endTime) {
       return res.status(400).json({ error: 'Title, start time, and end time are required' });
@@ -157,6 +158,7 @@ export async function createCalendarEvent(req: Request, res: Response) {
               id: randomUUID(),
               connectionId: connection.id,
               googleEventId: googleEventId!,
+              clientId: clientId || null,
               summary: title,
               description: description || null,
               location: location || null,
@@ -242,13 +244,13 @@ export async function createCalendarEvent(req: Request, res: Response) {
       defaultCalendar = newCalendar[0];
     }
 
-    // Create local calendar appointment (supports null clientId)
+    // Create local calendar appointment (supports clientId)
     const newAppointment = await db
       .insert(calendarAppointments)
       .values({
         id: randomUUID(),
         calendarId: defaultCalendar.id,
-        clientId: null,
+        clientId: clientId || null,
         assignedTo: userId,
         title,
         description: description || null,

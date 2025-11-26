@@ -30,6 +30,7 @@ import {
   Loader2,
   UserPlus,
   X,
+  Building,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -65,6 +66,12 @@ interface Guest {
   email: string;
 }
 
+interface Client {
+  id: string;
+  companyName: string;
+  email?: string;
+}
+
 export function EventCreateModal({
   isOpen,
   onClose,
@@ -84,6 +91,7 @@ export function EventCreateModal({
   const [addGoogleMeet, setAddGoogleMeet] = useState(false);
   const [selectedGuests, setSelectedGuests] = useState<Guest[]>([]);
   const [showGuestPicker, setShowGuestPicker] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
 
   const { data: googleCalendarStatus } = useQuery<{ connections: GoogleCalendarConnection[] }>({
     queryKey: ["/api/google-calendar/status"],
@@ -91,6 +99,10 @@ export function EventCreateModal({
 
   const { data: staffList } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
+  });
+
+  const { data: clientsList } = useQuery<Client[]>({
+    queryKey: ["/api/clients"],
   });
 
   const hasGoogleCalendarSync = googleCalendarStatus?.connections?.some(
@@ -112,6 +124,7 @@ export function EventCreateModal({
       setAddGoogleMeet(false);
       setSelectedGuests([]);
       setShowGuestPicker(false);
+      setSelectedClientId("");
     }
   }, [isOpen, initialDate, initialTime]);
 
@@ -144,6 +157,7 @@ export function EventCreateModal({
       addGoogleMeet: boolean;
       syncToGoogle: boolean;
       guests: Guest[];
+      clientId?: string;
     }) => {
       const response = await apiRequest("POST", "/api/calendar/events", eventData);
       return response.json();
@@ -200,6 +214,7 @@ export function EventCreateModal({
       addGoogleMeet: addGoogleMeet && !!hasGoogleCalendarSync,
       syncToGoogle: !!userConnection,
       guests: selectedGuests,
+      clientId: selectedClientId || undefined,
     });
   };
 
@@ -337,6 +352,30 @@ export function EventCreateModal({
               rows={3}
               data-testid="input-event-description"
             />
+          </div>
+
+          {/* Client Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="client" className="flex items-center gap-2">
+              <Building className="h-4 w-4" />
+              Client (optional)
+            </Label>
+            <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+              <SelectTrigger data-testid="select-event-client">
+                <SelectValue placeholder="Select a client..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No client</SelectItem>
+                {clientsList?.map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.companyName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">
+              Associate this event with a client for time tracking
+            </p>
           </div>
 
           {/* Add Guests Section */}

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ import {
   CheckCircle2,
   Video,
   ExternalLink,
+  Building,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -89,6 +91,12 @@ interface StaffMember {
   email: string;
 }
 
+interface Client {
+  id: string;
+  companyName: string;
+  email?: string;
+}
+
 interface EventDetailModalProps {
   event: Appointment | null;
   isOpen: boolean;
@@ -120,6 +128,17 @@ export function EventDetailModal({
   const eventId = event?.id || '';
   const isGoogleEvent = event?.type === 'google' || event?.bookingSource === 'google-calendar';
   const isOwnEvent = event ? (event.assignedTo === currentUserId || (event as any).userId === currentUserId) : false;
+
+  // Fetch client data if clientId exists
+  const { data: clientData } = useQuery<Client>({
+    queryKey: ['/api/clients', event?.clientId],
+    queryFn: async () => {
+      const response = await fetch(`/api/clients/${event?.clientId}`);
+      if (!response.ok) throw new Error('Failed to fetch client');
+      return response.json();
+    },
+    enabled: !!event?.clientId && isOpen,
+  });
 
   const updateMutation = useMutation({
     mutationFn: async (data: typeof editForm) => {
@@ -424,6 +443,21 @@ export function EventDetailModal({
                       </div>
                     </div>
                   </div>
+
+                  {/* Client info */}
+                  {(event.clientId && clientData) && (
+                    <div className="flex items-start gap-3">
+                      <Building className="h-5 w-5 text-primary mt-0.5" />
+                      <div>
+                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Associated Client</div>
+                        <Link href={`/clients/${event.clientId}`}>
+                          <span className="text-sm text-primary hover:underline cursor-pointer" data-testid="link-event-client">
+                            {clientData.companyName}
+                          </span>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
 
                   {(event.bookerName || event.attendeeName) && (
                     <div className="flex items-start gap-3">
