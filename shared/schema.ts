@@ -4245,6 +4245,9 @@ export const calendarEvents = pgTable("calendar_events", {
   // Flags
   isRecurring: boolean("is_recurring").default(false), // Flag instead of full recurrence data
   createdInAgencyFlow: boolean("created_in_agency_flow").default(false), // Track origin for two-way sync
+  // Appointment status for time tracking
+  appointmentStatus: text("appointment_status").default("confirmed"), // confirmed, showed, no_show, cancelled
+  timeEntryCreated: boolean("time_entry_created").default(false), // Track if time entry was auto-created
 }, (table) => [
   index("idx_calendar_events_connection_id").on(table.connectionId),
   index("idx_calendar_events_google_event_id").on(table.googleEventId),
@@ -4299,3 +4302,32 @@ export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit
 });
 export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
+
+// Event Time Entries - standalone time tracking for calendar events (auto-created when status = "Showed")
+export const eventTimeEntries = pgTable("event_time_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  calendarEventId: varchar("calendar_event_id").notNull().references(() => calendarEvents.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: "set null" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  duration: integer("duration").notNull(), // in minutes
+  source: text("source").default("auto"), // auto (from calendar), manual
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_event_time_entries_calendar_event").on(table.calendarEventId),
+  index("idx_event_time_entries_user").on(table.userId),
+  index("idx_event_time_entries_client").on(table.clientId),
+  index("idx_event_time_entries_date").on(table.startTime),
+]);
+
+export const insertEventTimeEntrySchema = createInsertSchema(eventTimeEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertEventTimeEntry = z.infer<typeof insertEventTimeEntrySchema>;
+export type EventTimeEntry = typeof eventTimeEntries.$inferSelect;
