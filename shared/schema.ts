@@ -4219,6 +4219,7 @@ export const calendarEvents = pgTable("calendar_events", {
   connectionId: varchar("connection_id").notNull().references(() => calendarConnections.id, { onDelete: "cascade" }),
   googleEventId: text("google_event_id").notNull(),
   appointmentId: varchar("appointment_id").references(() => calendarAppointments.id, { onDelete: "set null" }), // Links to AgencyFlow appointment
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: "set null" }), // Links to client for time tracking
   // Essential fields only for availability and display
   summary: text("summary"),
   description: text("description"), // Event description
@@ -4248,6 +4249,7 @@ export const calendarEvents = pgTable("calendar_events", {
   index("idx_calendar_events_connection_id").on(table.connectionId),
   index("idx_calendar_events_google_event_id").on(table.googleEventId),
   index("idx_calendar_events_appointment_id").on(table.appointmentId),
+  index("idx_calendar_events_client_id").on(table.clientId),
   index("idx_calendar_events_time_range").on(table.startTime, table.endTime),
   index("idx_calendar_events_user_time").on(table.connectionId, table.startTime, table.endTime), // For availability checks
   unique("unique_connection_google_event").on(table.connectionId, table.googleEventId),
