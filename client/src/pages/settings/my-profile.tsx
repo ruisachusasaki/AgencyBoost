@@ -553,6 +553,48 @@ export default function MyProfile() {
                 </CardContent>
               </Card>
 
+              {/* Fathom Integration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/>
+                    </svg>
+                    Fathom Integration
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Connect your Fathom account to automatically link meeting recordings to tasks
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="fathomApiKey">Fathom API Key</Label>
+                      <Input
+                        id="fathomApiKey"
+                        type="password"
+                        value={(currentUser as any)?.fathomApiKey || ""}
+                        onChange={(e) => updateStaffMutation.mutate({ fathomApiKey: e.target.value })}
+                        placeholder="Enter your Fathom API key"
+                        data-testid="input-fathom-api-key"
+                      />
+                      <p className="text-sm text-gray-500 mt-2">
+                        Get your API key from{" "}
+                        <a 
+                          href="https://fathom.video/settings/api" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          Fathom Settings → API
+                        </a>
+                        . When you mark a calendar event as "Showed", we'll automatically fetch the recording link.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               <div className="flex justify-end">
                 <Button type="submit">
                   Save Profile Changes
