@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy } from "lucide-react";
+import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy, Video, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -863,6 +863,36 @@ export default function TaskDetail() {
                 )}
               </CardContent>
             </Card>
+
+          {/* Fathom Recording Link - Only shown for meeting tasks with recordings */}
+          {(task as any).fathomRecordingUrl && (
+            <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-white">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-purple-700">
+                  <Video className="h-5 w-5" />
+                  Meeting Recording
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-slate-600">
+                      This meeting was recorded and is available on Fathom.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="ml-4 border-purple-300 text-purple-700 hover:bg-purple-100"
+                    onClick={() => window.open((task as any).fathomRecordingUrl, '_blank')}
+                    data-testid="view-fathom-recording"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View Recording
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Task Description */}
           <TaskDescriptionCard 
