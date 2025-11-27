@@ -6,6 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { EncryptionService } from './encryption';
 import { createOAuth2Client } from './googleCalendarUtils';
+import { findFathomRecording } from './fathomService';
 
 interface Guest {
   id: string;
@@ -366,6 +367,35 @@ export async function updateCalendarEventStatus(req: Request, res: Response) {
           source: 'calendar_auto',
         };
 
+        // Try to find Fathom recording for this event
+        let fathomRecordingUrl: string | null = null;
+        try {
+          // Get user's Fathom API key from staff record
+          const [staffRecord] = await db
+            .select()
+            .from(staff)
+            .where(eq(staff.id, userId))
+            .limit(1);
+
+          if ((staffRecord as any)?.fathomApiKey) {
+            console.log('[UpdateEventStatus] Searching for Fathom recording...');
+            fathomRecordingUrl = await findFathomRecording(
+              (staffRecord as any).fathomApiKey,
+              startTime,
+              endTime,
+              eventTitle
+            );
+            if (fathomRecordingUrl) {
+              console.log('[UpdateEventStatus] Found Fathom recording:', fathomRecordingUrl);
+            } else {
+              console.log('[UpdateEventStatus] No Fathom recording found for this event');
+            }
+          }
+        } catch (fathomError) {
+          console.error('[UpdateEventStatus] Error fetching Fathom recording:', fathomError);
+          // Continue without Fathom recording
+        }
+
         // Create the task with time tracking
         const [createdTask] = await db
           .insert(tasks)
@@ -383,7 +413,9 @@ export async function updateCalendarEventStatus(req: Request, res: Response) {
             timeTracked: durationMinutes,
             timeEntries: [timeEntry],
             visibleToClient: false,
-          })
+            fathomRecordingUrl: fathomRecordingUrl,
+            calendarEventId: eventId,
+          } as any)
           .returning();
 
         // Also create an event_time_entries record for backup/tracking
