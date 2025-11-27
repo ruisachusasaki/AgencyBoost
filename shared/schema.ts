@@ -757,6 +757,10 @@ export const tasks = pgTable("tasks", {
   clientApprovalNotes: text("client_approval_notes"), // Client feedback/notes on the task
   clientApprovalDate: timestamp("client_approval_date"), // When client approved/rejected
   
+  // Fathom meeting recording integration
+  fathomRecordingUrl: text("fathom_recording_url"), // URL to Fathom meeting recording
+  calendarEventId: varchar("calendar_event_id"), // Reference to the source calendar event
+  
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -2133,6 +2137,9 @@ export const staff = pgTable("staff", {
   vacationDaysAnnually: integer("vacation_days_annually").default(15), // Default 15 vacation days per year
   sickDaysAnnually: integer("sick_days_annually").default(10), // Default 10 sick days per year
   personalDaysAnnually: integer("personal_days_annually").default(3), // Default 3 personal days per year
+
+  // Fathom integration - API key for fetching meeting recordings
+  fathomApiKey: text("fathom_api_key"),
 
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
