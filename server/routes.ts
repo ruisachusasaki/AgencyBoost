@@ -20430,6 +20430,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (updated) {
               updatedMeeting = updated;
             }
+          } else if (!calendarResult.success) {
+            // Include calendar error reason in response so frontend can show specific feedback
+            return res.json({
+              ...updatedMeeting,
+              calendarEventError: calendarResult.error
+            });
           }
         }
       }

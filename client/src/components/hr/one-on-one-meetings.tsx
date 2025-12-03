@@ -14,7 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { format, startOfWeek, addWeeks } from "date-fns";
+import { format, startOfWeek, addWeeks, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { PositionKpisSection } from "@/components/hr/position-kpis-section";
 import {
@@ -243,11 +243,24 @@ export default function OneOnOneMeetings() {
         }),
       ]);
       
+      // Show appropriate toast based on calendar event result
+      let toastDescription = "Meeting created successfully";
+      if (createdMeeting.calendarEventId) {
+        toastDescription = "Meeting created and added to your Google Calendar";
+      } else if ((createdMeeting as any).calendarEventError) {
+        const errorMsg = (createdMeeting as any).calendarEventError;
+        if (errorMsg.includes("two-way sync")) {
+          toastDescription = "Meeting created. To sync with Google Calendar, enable two-way sync in Settings > Calendar.";
+        } else if (errorMsg.includes("No Google Calendar connection")) {
+          toastDescription = "Meeting created. Connect your Google Calendar in Settings to sync events.";
+        } else {
+          toastDescription = "Meeting created. Calendar sync was unavailable.";
+        }
+      }
+      
       toast({
         title: "Meeting Created",
-        description: createdMeeting.calendarEventId 
-          ? "Meeting created and added to your Google Calendar" 
-          : "Meeting created successfully",
+        description: toastDescription,
       });
     },
     onError: (error: Error) => {
@@ -428,10 +441,10 @@ export default function OneOnOneMeetings() {
                           <div className="flex items-center gap-4">
                             <div>
                               <p className="font-semibold">
-                                {format(new Date(meeting.meetingDate), "MMMM d, yyyy")}
+                                {format(parseISO(meeting.meetingDate), "MMMM d, yyyy")}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                Week of {format(new Date(meeting.weekOf), "MMM d, yyyy")}
+                                Week of {format(parseISO(meeting.weekOf), "MMM d, yyyy")}
                               </p>
                             </div>
                             {meeting.feeling && (
@@ -634,10 +647,10 @@ export default function OneOnOneMeetings() {
                               <CalendarIcon className="h-5 w-5 text-primary" />
                               <div>
                                 <p className="font-medium">
-                                  Week of {format(new Date(meeting.weekOf), "MMM d, yyyy")}
+                                  Week of {format(parseISO(meeting.weekOf), "MMM d, yyyy")}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  Meeting date: {format(new Date(meeting.meetingDate), "MMM d, yyyy")}
+                                  Meeting date: {format(parseISO(meeting.meetingDate), "MMM d, yyyy")}
                                 </p>
                               </div>
                             </div>
