@@ -2587,6 +2587,8 @@ export const calendarAppointments = pgTable("calendar_appointments", {
   cancelledAt: timestamp("cancelled_at"),
   cancelledBy: uuid("cancelled_by").references(() => staff.id),
   cancellationReason: text("cancellation_reason"),
+  // Time entry tracking
+  timeEntryCreated: boolean("time_entry_created").default(false), // Track if time entry was auto-created for Showed status
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

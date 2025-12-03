@@ -1,6 +1,7 @@
 import { getGoogleCalendarEventsForView } from "./googleCalendarEventsEndpoint";
 import { createCalendarEvent, updateCalendarEventStatus, getEventTimeEntries, createOneOnOneMeetingCalendarEvent } from "./googleCalendarCreateEvent";
 import { createOneOnOneMeetingCalendars } from "./oneOnOneMeetingService";
+import { findFathomRecording } from "./fathomService";
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
@@ -15365,6 +15366,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete calendar appointment
+
+  // Update calendar appointment status (auto-creates time entry when "Showed")
+  app.patch("/api/calendar-appointments/:id/status", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { id } = req.params;
+      const { appointmentStatus } = req.body;
+
+      if (!appointmentStatus || !['confirmed', 'showed', 'no_show', 'cancelled'].includes(appointmentStatus)) {
+        return res.status(400).json({ error: 'Valid appointment status is required (confirmed, showed, no_show, cancelled)' });
+      }
+
+      console.log('[UpdateAppointmentStatus] Updating internal appointment status:', { userId, id, appointmentStatus });
+
+      const [existingAppointment] = await db
+        .select()
+        .from(calendarAppointments)
+        .where(eq(calendarAppointments.id, id))
+        .limit(1);
+
+      if (!existingAppointment) {
+        return res.status(404).json({ error: 'Appointment not found' });
+      }
+
+      const isAdmin = await isCurrentUserAdmin(userId);
+      if (!isAdmin && existingAppointment.assignedTo !== userId) {
+        return res.status(403).json({ error: 'You do not have permission to update this appointment' });
+      }
+
+      const [updatedAppointment] = await db
+        .update(calendarAppointments)
+        .set({
+          status: appointmentStatus,
+          updatedAt: new Date(),
+        })
+        .where(eq(calendarAppointments.id, id))
+        .returning();
+
+      if (appointmentStatus === 'showed' && !existingAppointment.timeEntryCreated) {
+        try {
+          const startTime = new Date(existingAppointment.startTime);
+          const endTime = new Date(existingAppointment.endTime);
+          const durationMs = endTime.getTime() - startTime.getTime();
+          const durationMinutes = Math.round(durationMs / (1000 * 60));
+
+          const taskId = randomUUID();
+          const timeEntryId = randomUUID();
+          const eventTitle = existingAppointment.title || 'Untitled Appointment';
+          
+          const timeEntry = {
+            id: timeEntryId,
+            userId: userId,
+            userName: '',
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            duration: durationMinutes,
+            description: `Auto-logged from calendar appointment: ${eventTitle}`,
+            source: 'calendar_auto',
+          };
+
+          let fathomRecordingUrl: string | null = null;
+          try {
+            const [staffRecord] = await db
+              .select()
+              .from(staff)
+              .where(eq(staff.id, userId))
+              .limit(1);
+
+            if ((staffRecord as any)?.fathomApiKey) {
+              console.log('[UpdateAppointmentStatus] Searching for Fathom recording...');
+              fathomRecordingUrl = await findFathomRecording(
+                (staffRecord as any).fathomApiKey,
+                startTime,
+                endTime,
+                eventTitle
+              );
+              if (fathomRecordingUrl) {
+                console.log('[UpdateAppointmentStatus] Found Fathom recording:', fathomRecordingUrl);
+              }
+            }
+          } catch (fathomError) {
+            console.error('[UpdateAppointmentStatus] Error fetching Fathom recording:', fathomError);
+          }
+
+          const [createdTask] = await db
+            .insert(tasks)
+            .values({
+              id: taskId,
+              title: `Meeting: ${eventTitle}`,
+              description: existingAppointment.description || `Time tracked from calendar appointment on ${startTime.toLocaleDateString()}`,
+              status: 'completed',
+              priority: 'normal',
+              assignedTo: userId,
+              clientId: existingAppointment.clientId,
+              dueDate: startTime,
+              startDate: startTime,
+              timeEstimate: durationMinutes,
+              timeTracked: durationMinutes,
+              timeEntries: [timeEntry],
+              visibleToClient: false,
+              fathomRecordingUrl: fathomRecordingUrl,
+              calendarEventId: id,
+            } as any)
+            .returning();
+
+          await db
+            .insert(eventTimeEntries)
+            .values({
+              id: timeEntryId,
+              calendarEventId: id,
+              userId: userId,
+              clientId: existingAppointment.clientId,
+              title: eventTitle,
+              description: existingAppointment.description || null,
+              startTime: startTime,
+              endTime: endTime,
+              duration: durationMinutes,
+              source: 'auto',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+
+          await db
+            .update(calendarAppointments)
+            .set({
+              timeEntryCreated: true,
+              updatedAt: new Date(),
+            })
+            .where(eq(calendarAppointments.id, id));
+
+          console.log('[UpdateAppointmentStatus] Created task and time entry:', { taskId, timeEntryId, fathomRecordingUrl });
+
+          return res.json({
+            ...updatedAppointment,
+            timeEntryCreated: true,
+            task: createdTask,
+            timeEntry: { id: timeEntryId, duration: durationMinutes },
+            message: `Task created with ${durationMinutes} minutes of time tracked${fathomRecordingUrl ? ' (Fathom recording attached)' : ''}`
+          });
+        } catch (taskError) {
+          console.error('[UpdateAppointmentStatus] Error creating task/time entry:', taskError);
+          return res.json({
+            ...updatedAppointment,
+            taskCreationError: taskError instanceof Error ? taskError.message : 'Failed to create task'
+          });
+        }
+      }
+
+      res.json(updatedAppointment);
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      res.status(500).json({ error: 'Failed to update appointment status' });
+    }
+  });
+
   app.delete("/api/calendar-appointments/:id", async (req, res) => {
     try {
       const [existingAppointment] = await db

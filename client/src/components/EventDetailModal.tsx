@@ -211,10 +211,14 @@ export function EventDetailModal({
     },
   });
 
-  // Appointment status update mutation for Google events (auto-creates time entry when "Showed")
+  // Appointment status update mutation for all calendar events (auto-creates time entry when "Showed")
   const appointmentStatusMutation = useMutation({
     mutationFn: async (appointmentStatus: string) => {
-      const response = await apiRequest('PATCH', `/api/calendar/events/${eventId}/status`, { appointmentStatus });
+      // Use different endpoint for Google events vs internal appointments
+      const endpoint = isGoogleEvent 
+        ? `/api/calendar/events/${eventId}/status`
+        : `/api/calendar-appointments/${eventId}/status`;
+      const response = await apiRequest('PATCH', endpoint, { appointmentStatus });
       return response.json();
     },
     onSuccess: (data: any) => {
@@ -567,12 +571,12 @@ export function EventDetailModal({
                     </div>
                   )}
 
-                  {/* Appointment Status section with dropdown for Google events */}
+                  {/* Appointment Status section with dropdown for all calendar events */}
                   <div className="flex items-start gap-3 pt-2 border-t">
                     <CheckCircle2 className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div className="flex-1">
                       <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Appointment Status</div>
-                      {isGoogleEvent && isOwnEvent ? (
+                      {isOwnEvent ? (
                         <div className="space-y-2">
                           <Select
                             value={event.appointmentStatus || event.status || "confirmed"}
