@@ -7,16 +7,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfWeek, addWeeks } from "date-fns";
+import { cn } from "@/lib/utils";
 import { PositionKpisSection } from "@/components/hr/position-kpis-section";
 import {
   Users,
-  Calendar,
+  Calendar as CalendarIcon,
+  Clock,
   Plus,
   MessageSquare,
   CheckSquare,
@@ -56,6 +60,8 @@ interface Meeting {
   managerId: string;
   directReportId: string;
   meetingDate: string;
+  meetingTime: string;
+  meetingDuration: number;
   weekOf: string;
   feeling?: string;
   performanceFeedback?: string;
@@ -66,6 +72,7 @@ interface Meeting {
   family?: string;
   privateNotes?: string;
   recordingLink?: string;
+  calendarEventId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -145,6 +152,12 @@ export default function OneOnOneMeetings() {
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const meetingsPerPage = 10;
+  
+  // New meeting dialog state
+  const [showNewMeetingDialog, setShowNewMeetingDialog] = useState(false);
+  const [newMeetingDate, setNewMeetingDate] = useState<Date | undefined>(undefined);
+  const [newMeetingTime, setNewMeetingTime] = useState("09:00");
+  const [newMeetingDuration, setNewMeetingDuration] = useState(30);
 
   // Fetch progression statuses
   const { data: progressionStatuses = [] } = useQuery<any[]>({
@@ -192,13 +205,15 @@ export default function OneOnOneMeetings() {
     enabled: !!selectedMeeting,
   });
 
-  // Mutation to create a new meeting immediately
+  // Mutation to create a new meeting with mandatory date/time
   const createMeetingMutation = useMutation({
-    mutationFn: async (directReportId: string) => {
+    mutationFn: async (data: { directReportId: string; meetingDate: Date; meetingTime: string; meetingDuration: number }) => {
       const newMeetingData = {
-        directReportId,
-        meetingDate: format(new Date(), "yyyy-MM-dd"),
-        weekOf: format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"),
+        directReportId: data.directReportId,
+        meetingDate: format(data.meetingDate, "yyyy-MM-dd"),
+        meetingTime: data.meetingTime,
+        meetingDuration: data.meetingDuration,
+        weekOf: format(startOfWeek(data.meetingDate, { weekStartsOn: 1 }), "yyyy-MM-dd"),
       };
       
       const response = await apiRequest("POST", "/api/hr/one-on-one/meetings", newMeetingData);
@@ -208,6 +223,12 @@ export default function OneOnOneMeetings() {
       // Set the newly created meeting as selected so it opens in the editor
       setSelectedMeeting(createdMeeting);
       setIsCreatingMeeting(false);
+      setShowNewMeetingDialog(false);
+      
+      // Reset dialog form values
+      setNewMeetingDate(undefined);
+      setNewMeetingTime("09:00");
+      setNewMeetingDuration(30);
       
       // Invalidate and refetch queries to ensure fresh data
       await Promise.all([
@@ -221,6 +242,13 @@ export default function OneOnOneMeetings() {
           queryKey: [`/api/hr/one-on-one/meetings/${createdMeeting.id}/kpi-statuses`] 
         }),
       ]);
+      
+      toast({
+        title: "Meeting Created",
+        description: createdMeeting.calendarEventId 
+          ? "Meeting created and added to your Google Calendar" 
+          : "Meeting created successfully",
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -252,8 +280,34 @@ export default function OneOnOneMeetings() {
 
   const handleCreateNewMeeting = () => {
     if (!selectedReport?.id) return;
+    // Open the dialog to let user select date/time
+    setShowNewMeetingDialog(true);
+  };
+  
+  const handleConfirmCreateMeeting = () => {
+    if (!selectedReport?.id || !newMeetingDate) {
+      toast({
+        title: "Required Fields",
+        description: "Please select a date and time for the meeting",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsCreatingMeeting(true);
-    createMeetingMutation.mutate(selectedReport.id);
+    createMeetingMutation.mutate({
+      directReportId: selectedReport.id,
+      meetingDate: newMeetingDate,
+      meetingTime: newMeetingTime,
+      meetingDuration: newMeetingDuration,
+    });
+  };
+  
+  const handleCancelNewMeetingDialog = () => {
+    setShowNewMeetingDialog(false);
+    setNewMeetingDate(undefined);
+    setNewMeetingTime("09:00");
+    setNewMeetingDuration(30);
   };
 
   const handleSelectMeeting = (meeting: Meeting) => {
@@ -299,7 +353,7 @@ export default function OneOnOneMeetings() {
         style={viewMode === "my-meetings" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
         data-testid="tab-my-meetings"
       >
-        <Calendar className="h-4 w-4" />
+        <CalendarIcon className="h-4 w-4" />
         My 1v1 Meetings
       </button>
     </div>
@@ -345,7 +399,7 @@ export default function OneOnOneMeetings() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+              <CalendarIcon className="h-5 w-5" />
               My 1v1 Meetings
             </CardTitle>
             <CardDescription>
@@ -355,7 +409,7 @@ export default function OneOnOneMeetings() {
           <CardContent>
             {myMeetings.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No 1v1 meetings yet.</p>
                 <p className="text-sm mt-2">Your manager will create meetings for you.</p>
               </div>
@@ -558,7 +612,7 @@ export default function OneOnOneMeetings() {
               <div className="text-center py-8">Loading meetings...</div>
             ) : meetings.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No meetings yet.</p>
                 <p className="text-sm mt-2">Create your first 1-on-1 meeting to get started.</p>
               </div>
@@ -577,7 +631,7 @@ export default function OneOnOneMeetings() {
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                              <Calendar className="h-5 w-5 text-primary" />
+                              <CalendarIcon className="h-5 w-5 text-primary" />
                               <div>
                                 <p className="font-medium">
                                   Week of {format(new Date(meeting.weekOf), "MMM d, yyyy")}
@@ -666,6 +720,114 @@ export default function OneOnOneMeetings() {
             )}
           </CardContent>
         </Card>
+        
+        {/* New Meeting Dialog with mandatory date/time */}
+        <Dialog open={showNewMeetingDialog} onOpenChange={setShowNewMeetingDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5" />
+                Schedule 1v1 Meeting
+              </DialogTitle>
+              <DialogDescription>
+                Select a date and time for your meeting with {selectedReport?.firstName} {selectedReport?.lastName}. 
+                A calendar event will be created automatically.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              {/* Date Picker */}
+              <div className="grid gap-2">
+                <Label htmlFor="meeting-date" className="text-sm font-medium">
+                  Meeting Date <span className="text-red-500">*</span>
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="meeting-date"
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !newMeetingDate && "text-muted-foreground"
+                      )}
+                      data-testid="button-select-meeting-date"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newMeetingDate ? format(newMeetingDate, "PPP") : "Select a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newMeetingDate}
+                      onSelect={setNewMeetingDate}
+                      initialFocus
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              {/* Time Picker */}
+              <div className="grid gap-2">
+                <Label htmlFor="meeting-time" className="text-sm font-medium">
+                  Meeting Time <span className="text-red-500">*</span>
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="meeting-time"
+                    type="time"
+                    value={newMeetingTime}
+                    onChange={(e) => setNewMeetingTime(e.target.value)}
+                    className="flex-1"
+                    data-testid="input-meeting-time"
+                  />
+                </div>
+              </div>
+              
+              {/* Duration Picker */}
+              <div className="grid gap-2">
+                <Label htmlFor="meeting-duration" className="text-sm font-medium">
+                  Duration
+                </Label>
+                <Select
+                  value={newMeetingDuration.toString()}
+                  onValueChange={(value) => setNewMeetingDuration(parseInt(value))}
+                >
+                  <SelectTrigger id="meeting-duration" data-testid="select-meeting-duration">
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 minutes</SelectItem>
+                    <SelectItem value="30">30 minutes</SelectItem>
+                    <SelectItem value="45">45 minutes</SelectItem>
+                    <SelectItem value="60">1 hour</SelectItem>
+                    <SelectItem value="90">1.5 hours</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={handleCancelNewMeetingDialog}
+                data-testid="button-cancel-meeting"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmCreateMeeting}
+                disabled={!newMeetingDate || createMeetingMutation.isPending}
+                className="bg-primary hover:bg-primary/90"
+                data-testid="button-confirm-create-meeting"
+              >
+                {createMeetingMutation.isPending ? "Creating..." : "Create Meeting"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
