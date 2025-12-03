@@ -3940,7 +3940,12 @@ export const oneOnOneMeetings = pgTable("one_on_one_meetings", {
   managerId: uuid("manager_id").notNull().references(() => staff.id),
   directReportId: uuid("direct_report_id").notNull().references(() => staff.id),
   meetingDate: date("meeting_date").notNull(),
+  meetingTime: text("meeting_time").notNull().default("09:00"), // Time of meeting in HH:mm format
+  meetingDuration: integer("meeting_duration").notNull().default(30), // Duration in minutes
   weekOf: date("week_of").notNull(), // Week identifier (e.g., Monday of that week)
+  
+  // Google Calendar integration
+  calendarEventId: varchar("calendar_event_id"), // Reference to the created calendar event
   
   // Feeling rating (emoji picker)
   feeling: text("feeling"), // terrible, bad, okay, good, excellent
