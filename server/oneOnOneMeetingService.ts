@@ -7,6 +7,7 @@ import { fromZonedTime } from "date-fns-tz";
 interface CreateMeetingCalendarResult {
   success: boolean;
   calendarAppointmentId?: string;
+  directReportAppointmentId?: string;
   calendarEventId?: string;
   meetLink?: string;
   googleSyncError?: string;
@@ -25,10 +26,49 @@ interface CreateMeetingCalendarParams {
 
 const MEETING_TIMEZONE = 'America/New_York';
 
+async function findOrCreatePersonalCalendar(userId: string): Promise<string> {
+  const existingCalendar = await db.select()
+    .from(calendars)
+    .innerJoin(calendarStaff, eq(calendars.id, calendarStaff.calendarId))
+    .where(and(
+      eq(calendarStaff.staffId, userId),
+      eq(calendars.type, 'personal')
+    ))
+    .limit(1);
+
+  if (existingCalendar.length > 0) {
+    return existingCalendar[0].calendars.id;
+  }
+
+  const calendarUrl = `calendar-${userId.replace(/-/g, '').substring(0, 8)}-${Date.now().toString(36)}`;
+  const [newCalendar] = await db.insert(calendars)
+    .values({
+      name: "My Calendar",
+      type: "personal",
+      customUrl: calendarUrl,
+      duration: 60,
+      durationUnit: "minutes",
+      location: "google_meet",
+      createdBy: userId,
+    })
+    .returning();
+
+  await db.insert(calendarStaff)
+    .values({
+      calendarId: newCalendar.id,
+      staffId: userId,
+      isActive: true,
+    });
+
+  console.log(`[1-on-1 Meeting] Created default calendar for user ${userId}`);
+  return newCalendar.id;
+}
+
 export async function createOneOnOneMeetingCalendars(params: CreateMeetingCalendarParams): Promise<CreateMeetingCalendarResult> {
   const { meetingId, managerId, directReportId, meetingDate, meetingTime, meetingDuration } = params;
 
-  let appointmentId: string | null = null;
+  let managerAppointmentId: string | null = null;
+  let directReportAppointmentId: string | null = null;
   
   try {
     const [manager] = await db.select()
@@ -46,54 +86,21 @@ export async function createOneOnOneMeetingCalendars(params: CreateMeetingCalend
     const managerName = `${manager.firstName} ${manager.lastName}`;
     const directReportName = `${directReport.firstName} ${directReport.lastName}`;
     const appointmentTitle = `1-on-1: ${managerName} & ${directReportName}`;
+    const appointmentDescription = `1-on-1 meeting between ${managerName} (Manager) and ${directReportName} (Direct Report)`;
 
     const isoDateTimeString = `${meetingDate}T${meetingTime}:00`;
     const startTime = fromZonedTime(isoDateTimeString, MEETING_TIMEZONE);
     const endTime = new Date(startTime.getTime() + meetingDuration * 60 * 1000);
 
-    let defaultCalendar = await db.select()
-      .from(calendars)
-      .innerJoin(calendarStaff, eq(calendars.id, calendarStaff.calendarId))
-      .where(and(
-        eq(calendarStaff.staffId, managerId),
-        eq(calendars.type, 'personal')
-      ))
-      .limit(1);
+    const managerCalendarId = await findOrCreatePersonalCalendar(managerId);
+    const directReportCalendarId = await findOrCreatePersonalCalendar(directReportId);
 
-    let calendarId: string;
-    if (defaultCalendar.length > 0) {
-      calendarId = defaultCalendar[0].calendars.id;
-    } else {
-      const calendarUrl = `calendar-${managerId.replace(/-/g, '').substring(0, 8)}-${Date.now().toString(36)}`;
-      const [newCalendar] = await db.insert(calendars)
-        .values({
-          name: "My Calendar",
-          type: "personal",
-          customUrl: calendarUrl,
-          duration: 60,
-          durationUnit: "minutes",
-          location: "google_meet",
-          createdBy: managerId,
-        })
-        .returning();
-
-      await db.insert(calendarStaff)
-        .values({
-          calendarId: newCalendar.id,
-          staffId: managerId,
-          isActive: true,
-        });
-
-      calendarId = newCalendar.id;
-      console.log(`[1-on-1 Meeting] Created default calendar for user ${managerId}`);
-    }
-
-    const [appointment] = await db.insert(calendarAppointments)
+    const [managerAppointment] = await db.insert(calendarAppointments)
       .values({
-        calendarId,
+        calendarId: managerCalendarId,
         assignedTo: managerId,
         title: appointmentTitle,
-        description: `1-on-1 meeting between ${managerName} (Manager) and ${directReportName} (Direct Report)`,
+        description: appointmentDescription,
         startTime,
         endTime,
         status: 'confirmed',
@@ -104,20 +111,41 @@ export async function createOneOnOneMeetingCalendars(params: CreateMeetingCalend
       })
       .returning();
 
-    appointmentId = appointment.id;
-    console.log(`[1-on-1 Meeting] Created internal calendar appointment: ${appointmentId}`);
+    managerAppointmentId = managerAppointment.id;
+    console.log(`[1-on-1 Meeting] Created manager calendar appointment: ${managerAppointmentId}`);
+
+    const [drAppointment] = await db.insert(calendarAppointments)
+      .values({
+        calendarId: directReportCalendarId,
+        assignedTo: directReportId,
+        title: appointmentTitle,
+        description: appointmentDescription,
+        startTime,
+        endTime,
+        status: 'confirmed',
+        timezone: MEETING_TIMEZONE,
+        bookerEmail: directReport.email || 'noreply@agencyflow.com',
+        bookerName: directReportName,
+        bookingSource: 'admin',
+      })
+      .returning();
+
+    directReportAppointmentId = drAppointment.id;
+    console.log(`[1-on-1 Meeting] Created direct report calendar appointment: ${directReportAppointmentId}`);
 
     const [updatedMeeting] = await db.update(oneOnOneMeetings)
       .set({
-        calendarAppointmentId: appointment.id,
+        calendarAppointmentId: managerAppointment.id,
         updatedAt: new Date()
       })
       .where(eq(oneOnOneMeetings.id, meetingId))
       .returning();
 
     if (!updatedMeeting) {
-      await db.delete(calendarAppointments).where(eq(calendarAppointments.id, appointment.id));
-      appointmentId = null;
+      await db.delete(calendarAppointments).where(eq(calendarAppointments.id, managerAppointment.id));
+      await db.delete(calendarAppointments).where(eq(calendarAppointments.id, drAppointment.id));
+      managerAppointmentId = null;
+      directReportAppointmentId = null;
       return { success: false, error: "Failed to link appointment to meeting" };
     }
 
@@ -155,7 +183,14 @@ export async function createOneOnOneMeetingCalendars(params: CreateMeetingCalend
             meetingLink: googleResult.meetLink || null,
             updatedAt: new Date()
           })
-          .where(eq(calendarAppointments.id, appointment.id));
+          .where(eq(calendarAppointments.id, managerAppointment.id));
+
+        await db.update(calendarAppointments)
+          .set({
+            meetingLink: googleResult.meetLink || null,
+            updatedAt: new Date()
+          })
+          .where(eq(calendarAppointments.id, drAppointment.id));
 
         googleEventId = googleResult.calendarEventId;
         meetLink = googleResult.meetLink;
@@ -172,7 +207,8 @@ export async function createOneOnOneMeetingCalendars(params: CreateMeetingCalend
 
     return {
       success: true,
-      calendarAppointmentId: appointment.id,
+      calendarAppointmentId: managerAppointment.id,
+      directReportAppointmentId: drAppointment.id,
       calendarEventId: googleEventId,
       meetLink,
       googleSyncError,
@@ -182,12 +218,21 @@ export async function createOneOnOneMeetingCalendars(params: CreateMeetingCalend
   } catch (error) {
     console.error('[1-on-1 Meeting] Calendar creation failed:', error);
     
-    if (appointmentId) {
+    if (managerAppointmentId) {
       try {
-        await db.delete(calendarAppointments).where(eq(calendarAppointments.id, appointmentId));
-        console.log(`[1-on-1 Meeting] Cleaned up orphaned appointment: ${appointmentId}`);
+        await db.delete(calendarAppointments).where(eq(calendarAppointments.id, managerAppointmentId));
+        console.log(`[1-on-1 Meeting] Cleaned up orphaned manager appointment: ${managerAppointmentId}`);
       } catch (cleanupError) {
-        console.error('[1-on-1 Meeting] Failed to cleanup orphaned appointment:', cleanupError);
+        console.error('[1-on-1 Meeting] Failed to cleanup orphaned manager appointment:', cleanupError);
+      }
+    }
+    
+    if (directReportAppointmentId) {
+      try {
+        await db.delete(calendarAppointments).where(eq(calendarAppointments.id, directReportAppointmentId));
+        console.log(`[1-on-1 Meeting] Cleaned up orphaned direct report appointment: ${directReportAppointmentId}`);
+      } catch (cleanupError) {
+        console.error('[1-on-1 Meeting] Failed to cleanup orphaned direct report appointment:', cleanupError);
       }
     }
     
