@@ -156,8 +156,8 @@ export default function OneOnOneMeetings() {
   // New meeting dialog state
   const [showNewMeetingDialog, setShowNewMeetingDialog] = useState(false);
   const [newMeetingDate, setNewMeetingDate] = useState<Date | undefined>(undefined);
-  const [newMeetingTime, setNewMeetingTime] = useState("09:00");
-  const [newMeetingDuration, setNewMeetingDuration] = useState(30);
+  const [newMeetingTime, setNewMeetingTime] = useState("10:00");
+  const [newMeetingDuration, setNewMeetingDuration] = useState(60);
 
   // Fetch progression statuses
   const { data: progressionStatuses = [] } = useQuery<any[]>({
@@ -227,8 +227,8 @@ export default function OneOnOneMeetings() {
       
       // Reset dialog form values
       setNewMeetingDate(undefined);
-      setNewMeetingTime("09:00");
-      setNewMeetingDuration(30);
+      setNewMeetingTime("10:00");
+      setNewMeetingDuration(60);
       
       // Invalidate and refetch queries to ensure fresh data
       await Promise.all([
@@ -306,8 +306,8 @@ export default function OneOnOneMeetings() {
   const handleCancelNewMeetingDialog = () => {
     setShowNewMeetingDialog(false);
     setNewMeetingDate(undefined);
-    setNewMeetingTime("09:00");
-    setNewMeetingDuration(30);
+    setNewMeetingTime("10:00");
+    setNewMeetingDuration(60);
   };
 
   const handleSelectMeeting = (meeting: Meeting) => {
