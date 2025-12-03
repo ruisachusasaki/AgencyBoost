@@ -761,6 +761,9 @@ export const tasks = pgTable("tasks", {
   fathomRecordingUrl: text("fathom_recording_url"), // URL to Fathom meeting recording
   calendarEventId: varchar("calendar_event_id"), // Reference to the source calendar event
   
+  // 1-on-1 meeting integration
+  oneOnOneMeetingId: varchar("one_on_one_meeting_id"), // Reference to HR 1-on-1 meeting record
+  
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
