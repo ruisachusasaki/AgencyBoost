@@ -397,12 +397,13 @@ export async function updateCalendarEventStatus(req: Request, res: Response) {
         }
 
         // Find linked 1-on-1 meeting (if this Google event is from a 1-on-1 meeting)
+        // Note: 1-on-1 meetings store the google_event_id, not the internal database ID
         let linkedMeetingId: string | null = null;
         try {
           const [linkedMeeting] = await db
             .select({ id: oneOnOneMeetings.id, recordingLink: oneOnOneMeetings.recordingLink })
             .from(oneOnOneMeetings)
-            .where(eq(oneOnOneMeetings.calendarEventId, eventId))
+            .where(eq(oneOnOneMeetings.calendarEventId, existingEvent.googleEventId))
             .limit(1);
 
           if (linkedMeeting) {
