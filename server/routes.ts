@@ -15452,6 +15452,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error('[UpdateAppointmentStatus] Error fetching Fathom recording:', fathomError);
           }
 
+          // Find linked 1-on-1 meeting (if this appointment is from a 1-on-1 meeting)
+          let linkedMeetingId: string | null = null;
+          try {
+            const [linkedMeeting] = await db
+              .select({ id: oneOnOneMeetings.id, recordingLink: oneOnOneMeetings.recordingLink })
+              .from(oneOnOneMeetings)
+              .where(eq(oneOnOneMeetings.calendarAppointmentId, id))
+              .limit(1);
+
+            if (linkedMeeting) {
+              linkedMeetingId = linkedMeeting.id;
+              console.log('[UpdateAppointmentStatus] Found linked 1-on-1 meeting:', linkedMeetingId);
+
+              // If Fathom recording found and meeting doesn't already have a recording link, update it
+              if (fathomRecordingUrl && !linkedMeeting.recordingLink) {
+                await db
+                  .update(oneOnOneMeetings)
+                  .set({
+                    recordingLink: fathomRecordingUrl,
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(oneOnOneMeetings.id, linkedMeetingId));
+                console.log('[UpdateAppointmentStatus] Updated 1-on-1 meeting with Fathom recording link');
+              }
+            }
+          } catch (meetingLinkError) {
+            console.error('[UpdateAppointmentStatus] Error linking to 1-on-1 meeting:', meetingLinkError);
+          }
+
           const [createdTask] = await db
             .insert(tasks)
             .values({
@@ -15470,6 +15499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               visibleToClient: false,
               fathomRecordingUrl: fathomRecordingUrl,
               calendarEventId: id,
+              oneOnOneMeetingId: linkedMeetingId,
             } as any)
             .returning();
 
@@ -15498,14 +15528,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             })
             .where(eq(calendarAppointments.id, id));
 
-          console.log('[UpdateAppointmentStatus] Created task and time entry:', { taskId, timeEntryId, fathomRecordingUrl });
+          console.log('[UpdateAppointmentStatus] Created task and time entry:', { taskId, timeEntryId, fathomRecordingUrl, linkedMeetingId });
 
           return res.json({
             ...updatedAppointment,
             timeEntryCreated: true,
             task: createdTask,
             timeEntry: { id: timeEntryId, duration: durationMinutes },
-            message: `Task created with ${durationMinutes} minutes of time tracked${fathomRecordingUrl ? ' (Fathom recording attached)' : ''}`
+            linkedMeetingId: linkedMeetingId,
+            fathomRecordingLinkedToMeeting: linkedMeetingId && fathomRecordingUrl ? true : false,
+            message: `Task created with ${durationMinutes} minutes of time tracked${fathomRecordingUrl ? ' (Fathom recording attached)' : ''}${linkedMeetingId ? ' and linked to 1-on-1 meeting' : ''}`
           });
         } catch (taskError) {
           console.error('[UpdateAppointmentStatus] Error creating task/time entry:', taskError);

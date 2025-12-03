@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { google } from 'googleapis';
 import { db } from './db';
-import { calendarConnections, calendarEvents, calendarAppointments, calendars, eventTimeEntries, staff, tasks } from '@shared/schema';
+import { calendarConnections, calendarEvents, calendarAppointments, calendars, eventTimeEntries, staff, tasks, oneOnOneMeetings } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { EncryptionService } from './encryption';
@@ -396,6 +396,35 @@ export async function updateCalendarEventStatus(req: Request, res: Response) {
           // Continue without Fathom recording
         }
 
+        // Find linked 1-on-1 meeting (if this Google event is from a 1-on-1 meeting)
+        let linkedMeetingId: string | null = null;
+        try {
+          const [linkedMeeting] = await db
+            .select({ id: oneOnOneMeetings.id, recordingLink: oneOnOneMeetings.recordingLink })
+            .from(oneOnOneMeetings)
+            .where(eq(oneOnOneMeetings.calendarEventId, eventId))
+            .limit(1);
+
+          if (linkedMeeting) {
+            linkedMeetingId = linkedMeeting.id;
+            console.log('[UpdateEventStatus] Found linked 1-on-1 meeting:', linkedMeetingId);
+
+            // If Fathom recording found and meeting doesn't already have a recording link, update it
+            if (fathomRecordingUrl && !linkedMeeting.recordingLink) {
+              await db
+                .update(oneOnOneMeetings)
+                .set({
+                  recordingLink: fathomRecordingUrl,
+                  updatedAt: new Date(),
+                })
+                .where(eq(oneOnOneMeetings.id, linkedMeetingId));
+              console.log('[UpdateEventStatus] Updated 1-on-1 meeting with Fathom recording link');
+            }
+          }
+        } catch (meetingLinkError) {
+          console.error('[UpdateEventStatus] Error linking to 1-on-1 meeting:', meetingLinkError);
+        }
+
         // Create the task with time tracking
         const [createdTask] = await db
           .insert(tasks)
@@ -415,6 +444,7 @@ export async function updateCalendarEventStatus(req: Request, res: Response) {
             visibleToClient: false,
             fathomRecordingUrl: fathomRecordingUrl,
             calendarEventId: eventId,
+            oneOnOneMeetingId: linkedMeetingId,
           } as any)
           .returning();
 
@@ -449,14 +479,17 @@ export async function updateCalendarEventStatus(req: Request, res: Response) {
           taskId: createdTask.id,
           taskTitle: createdTask.title,
           duration: durationMinutes,
-          clientId: existingEvent.clientId 
+          clientId: existingEvent.clientId,
+          linkedMeetingId 
         });
 
         return res.json({
           success: true,
           event: { ...updatedEvent, timeEntryCreated: true },
           task: createdTask,
-          message: `Task "${createdTask.title}" created with ${durationMinutes} minutes tracked`,
+          linkedMeetingId: linkedMeetingId,
+          fathomRecordingLinkedToMeeting: linkedMeetingId && fathomRecordingUrl ? true : false,
+          message: `Task "${createdTask.title}" created with ${durationMinutes} minutes tracked${linkedMeetingId ? ' and linked to 1-on-1 meeting' : ''}`,
         });
       } catch (taskError: any) {
         console.error('[UpdateEventStatus] Error creating task:', taskError);
