@@ -528,3 +528,196 @@ export async function getEventTimeEntries(req: Request, res: Response) {
     return res.status(500).json({ error: 'Failed to fetch time entries', details: error.message });
   }
 }
+
+export interface CreateOneOnOneEventParams {
+  userId: string;
+  meetingDate: string; // YYYY-MM-DD
+  meetingTime: string; // HH:mm
+  meetingDuration: number; // minutes
+  managerName: string;
+  directReportName: string;
+  directReportEmail?: string;
+}
+
+export interface CreateOneOnOneEventResult {
+  success: boolean;
+  calendarEventId?: string;
+  meetLink?: string;
+  error?: string;
+}
+
+export async function createOneOnOneMeetingCalendarEvent(
+  params: CreateOneOnOneEventParams
+): Promise<CreateOneOnOneEventResult> {
+  const { userId, meetingDate, meetingTime, meetingDuration, managerName, directReportName, directReportEmail } = params;
+  
+  console.log('[CreateOneOnOneEvent] Creating calendar event for 1-on-1 meeting:', params);
+  
+  try {
+    // Check if user has a Google Calendar connection with two-way sync enabled
+    const [connection] = await db
+      .select()
+      .from(calendarConnections)
+      .where(and(
+        eq(calendarConnections.userId, userId),
+        eq(calendarConnections.syncEnabled, true),
+        eq(calendarConnections.twoWaySync, true)
+      ))
+      .limit(1);
+
+    if (!connection) {
+      console.log('[CreateOneOnOneEvent] No Google Calendar connection with two-way sync found for user');
+      return { success: false, error: 'No Google Calendar connection with two-way sync enabled' };
+    }
+
+    // Decrypt the stored tokens
+    const accessToken = EncryptionService.decrypt(connection.accessToken);
+    let refreshToken: string | null = null;
+    if (connection.refreshToken) {
+      refreshToken = EncryptionService.decrypt(connection.refreshToken);
+    }
+
+    // Create OAuth2 client with the user's decrypted tokens
+    const oauth2Client = createOAuth2Client();
+    oauth2Client.setCredentials({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+    // Handle token refresh - save new tokens to database
+    oauth2Client.on('tokens', async (tokens) => {
+      if (tokens.access_token) {
+        const updateData: any = {
+          accessToken: EncryptionService.encrypt(tokens.access_token),
+          updatedAt: new Date(),
+        };
+        if (tokens.refresh_token) {
+          updateData.refreshToken = EncryptionService.encrypt(tokens.refresh_token);
+        }
+        await db.update(calendarConnections)
+          .set(updateData)
+          .where(eq(calendarConnections.id, connection.id));
+        console.log('[CreateOneOnOneEvent] Updated tokens in database');
+      }
+    });
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    // Calculate start and end times
+    const [hours, minutes] = meetingTime.split(':').map(Number);
+    const startDateTime = new Date(meetingDate);
+    startDateTime.setHours(hours, minutes, 0, 0);
+    
+    const endDateTime = new Date(startDateTime);
+    endDateTime.setMinutes(endDateTime.getMinutes() + meetingDuration);
+
+    // Build the event object
+    const eventResource: any = {
+      summary: `1-on-1: ${managerName} & ${directReportName}`,
+      description: `1-on-1 meeting between ${managerName} (Manager) and ${directReportName}.\n\nCreated by AgencyFlow CRM.`,
+      start: {
+        dateTime: startDateTime.toISOString(),
+        timeZone: 'UTC',
+      },
+      end: {
+        dateTime: endDateTime.toISOString(),
+        timeZone: 'UTC',
+      },
+      conferenceData: {
+        createRequest: {
+          requestId: randomUUID(),
+          conferenceSolutionKey: {
+            type: 'hangoutsMeet'
+          }
+        }
+      }
+    };
+
+    // Add direct report as attendee if they have an email
+    if (directReportEmail) {
+      eventResource.attendees = [{
+        email: directReportEmail,
+        displayName: directReportName,
+      }];
+    }
+
+    console.log('[CreateOneOnOneEvent] Creating Google Calendar event:', eventResource);
+
+    // Create the event in Google Calendar
+    const googleEvent = await calendar.events.insert({
+      calendarId: 'primary',
+      requestBody: eventResource,
+      conferenceDataVersion: 1, // Always include Meet link for 1-on-1s
+      sendUpdates: directReportEmail ? 'all' : 'none', // Send invitation email if attendee added
+    });
+
+    if (googleEvent.data) {
+      const googleEventId = googleEvent.data.id || null;
+      const meetLink = googleEvent.data.hangoutLink || null;
+
+      console.log('[CreateOneOnOneEvent] Google Calendar event created:', {
+        id: googleEventId,
+        meetLink,
+        htmlLink: googleEvent.data.htmlLink
+      });
+
+      // Store the event in the calendar_events table
+      await db
+        .insert(calendarEvents)
+        .values({
+          id: randomUUID(),
+          connectionId: connection.id,
+          googleEventId: googleEventId!,
+          clientId: null,
+          summary: eventResource.summary,
+          description: eventResource.description,
+          location: null,
+          startTime: startDateTime,
+          endTime: endDateTime,
+          status: 'confirmed',
+          googleHangoutLink: meetLink,
+          googleHtmlLink: googleEvent.data.htmlLink || null,
+          organizerEmail: connection.email,
+          attendees: directReportEmail ? [directReportEmail] : [],
+          allDay: false,
+          transparency: 'opaque',
+          isRecurring: false,
+          createdInAgencyFlow: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+      return {
+        success: true,
+        calendarEventId: googleEventId || undefined,
+        meetLink: meetLink || undefined,
+      };
+    }
+
+    return { success: false, error: 'Failed to create Google Calendar event' };
+  } catch (error: any) {
+    console.error('[CreateOneOnOneEvent] Error creating calendar event:', error);
+    
+    // Check for authentication errors
+    const isInvalidGrant = error.message?.includes('invalid_grant') || 
+      error.response?.data?.error === 'invalid_grant';
+    const isTokenExpired = error.code === 401;
+    
+    if (isInvalidGrant || isTokenExpired) {
+      // Mark connection as needing re-authentication
+      await db.update(calendarConnections)
+        .set({ 
+          syncEnabled: false,
+          updatedAt: new Date() 
+        })
+        .where(and(
+          eq(calendarConnections.userId, userId),
+          eq(calendarConnections.syncEnabled, true)
+        ));
+      
+      return { success: false, error: 'Google Calendar authentication expired. Please reconnect your calendar.' };
+    }
+    
+    return { success: false, error: error.message || 'Unknown error' };
+  }
+}

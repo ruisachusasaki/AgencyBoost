@@ -1,5 +1,5 @@
 import { getGoogleCalendarEventsForView } from "./googleCalendarEventsEndpoint";
-import { createCalendarEvent, updateCalendarEventStatus, getEventTimeEntries } from "./googleCalendarCreateEvent";
+import { createCalendarEvent, updateCalendarEventStatus, getEventTimeEntries, createOneOnOneMeetingCalendarEvent } from "./googleCalendarCreateEvent";
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
@@ -20396,7 +20396,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json(newMeeting);
+      // Try to create Google Calendar event if meetingTime is provided
+      let updatedMeeting = newMeeting;
+      if (newMeeting.meetingTime && newMeeting.meetingDuration) {
+        // Get manager's info for the calendar event title
+        const [manager] = await db.select()
+          .from(staff)
+          .where(eq(staff.id, currentUserId));
+        
+        if (manager) {
+          const calendarResult = await createOneOnOneMeetingCalendarEvent({
+            userId: currentUserId,
+            meetingDate: newMeeting.meetingDate,
+            meetingTime: newMeeting.meetingTime,
+            meetingDuration: newMeeting.meetingDuration,
+            managerName: `${manager.firstName} ${manager.lastName}`,
+            directReportName: `${directReport.firstName} ${directReport.lastName}`,
+            directReportEmail: directReport.email || undefined,
+          });
+          
+          console.log('[1-on-1 Meeting] Calendar event creation result:', calendarResult);
+          
+          if (calendarResult.success && calendarResult.calendarEventId) {
+            // Update meeting with calendar event ID
+            const [updated] = await db.update(oneOnOneMeetings)
+              .set({ 
+                calendarEventId: calendarResult.calendarEventId,
+                updatedAt: new Date()
+              })
+              .where(eq(oneOnOneMeetings.id, newMeeting.id))
+              .returning();
+            
+            if (updated) {
+              updatedMeeting = updated;
+            }
+          }
+        }
+      }
+
+      res.json(updatedMeeting);
     } catch (error) {
       console.error("Error creating 1-on-1 meeting:", error);
       if (error instanceof z.ZodError) {
