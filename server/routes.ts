@@ -20403,7 +20403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const calendarResult = await createOneOnOneMeetingCalendars({
           meetingId: newMeeting.id,
           managerId: currentUserId,
-          directReportId: newMeeting.staffId,
+          directReportId: newMeeting.directReportId,
           meetingDate: newMeeting.meetingDate,
           meetingTime: newMeeting.meetingTime,
           meetingDuration: newMeeting.meetingDuration,
