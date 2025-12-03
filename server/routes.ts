@@ -1,5 +1,6 @@
 import { getGoogleCalendarEventsForView } from "./googleCalendarEventsEndpoint";
 import { createCalendarEvent, updateCalendarEventStatus, getEventTimeEntries, createOneOnOneMeetingCalendarEvent } from "./googleCalendarCreateEvent";
+import { createOneOnOneMeetingCalendars } from "./oneOnOneMeetingService";
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
@@ -20396,47 +20397,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Try to create Google Calendar event if meetingTime is provided
+      // Create internal calendar appointment and optionally sync to Google Calendar
       let updatedMeeting = newMeeting;
       if (newMeeting.meetingTime && newMeeting.meetingDuration) {
-        // Get manager's info for the calendar event title
-        const [manager] = await db.select()
-          .from(staff)
-          .where(eq(staff.id, currentUserId));
+        const calendarResult = await createOneOnOneMeetingCalendars({
+          meetingId: newMeeting.id,
+          managerId: currentUserId,
+          directReportId: newMeeting.staffId,
+          meetingDate: newMeeting.meetingDate,
+          meetingTime: newMeeting.meetingTime,
+          meetingDuration: newMeeting.meetingDuration,
+        });
         
-        if (manager) {
-          const calendarResult = await createOneOnOneMeetingCalendarEvent({
-            userId: currentUserId,
-            meetingDate: newMeeting.meetingDate,
-            meetingTime: newMeeting.meetingTime,
-            meetingDuration: newMeeting.meetingDuration,
-            managerName: `${manager.firstName} ${manager.lastName}`,
-            directReportName: `${directReport.firstName} ${directReport.lastName}`,
-            directReportEmail: directReport.email || undefined,
-          });
+        console.log('[1-on-1 Meeting] Calendar creation result:', calendarResult);
+        
+        if (calendarResult.success) {
+          // Use the updated meeting from the service result (guaranteed to have calendarAppointmentId)
+          if (calendarResult.updatedMeeting) {
+            updatedMeeting = calendarResult.updatedMeeting;
+          }
           
-          console.log('[1-on-1 Meeting] Calendar event creation result:', calendarResult);
-          
-          if (calendarResult.success && calendarResult.calendarEventId) {
-            // Update meeting with calendar event ID
-            const [updated] = await db.update(oneOnOneMeetings)
-              .set({ 
-                calendarEventId: calendarResult.calendarEventId,
-                updatedAt: new Date()
-              })
-              .where(eq(oneOnOneMeetings.id, newMeeting.id))
-              .returning();
-            
-            if (updated) {
-              updatedMeeting = updated;
-            }
-          } else if (!calendarResult.success) {
-            // Include calendar error reason in response so frontend can show specific feedback
+          // If Google sync failed but internal calendar succeeded, propagate the error for UI feedback
+          if (calendarResult.googleSyncError) {
             return res.json({
               ...updatedMeeting,
-              calendarEventError: calendarResult.error
+              calendarEventError: calendarResult.googleSyncError
             });
           }
+        } else if (!calendarResult.success && calendarResult.error) {
+          // Internal calendar creation failed - return 500 with error
+          console.error('[1-on-1 Meeting] Calendar creation failed:', calendarResult.error);
+          return res.status(500).json({
+            ...newMeeting,
+            calendarCreationFailed: true,
+            calendarEventError: calendarResult.error
+          });
         }
       }
 

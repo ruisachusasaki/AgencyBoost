@@ -3944,8 +3944,9 @@ export const oneOnOneMeetings = pgTable("one_on_one_meetings", {
   meetingDuration: integer("meeting_duration").notNull().default(30), // Duration in minutes
   weekOf: date("week_of").notNull(), // Week identifier (e.g., Monday of that week)
   
-  // Google Calendar integration
-  calendarEventId: varchar("calendar_event_id"), // Reference to the created calendar event
+  // Calendar integration
+  calendarAppointmentId: varchar("calendar_appointment_id").references(() => calendarAppointments.id, { onDelete: "set null" }), // Internal AgencyFlow calendar appointment
+  calendarEventId: varchar("calendar_event_id"), // Reference to Google Calendar event (for two-way sync)
   
   // Feeling rating (emoji picker)
   feeling: text("feeling"), // terrible, bad, okay, good, excellent
