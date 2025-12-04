@@ -196,6 +196,9 @@ export async function setupAuth(app: Express) {
 
       const oauth2Client = createOAuth2Client(req);
       
+      const redirectUri = getRedirectUri(req);
+      console.log("🔐 Using redirect URI:", redirectUri);
+      
       const authUrl = oauth2Client.generateAuthUrl({
         access_type: "offline",
         scope: [
@@ -207,7 +210,7 @@ export async function setupAuth(app: Express) {
         include_granted_scopes: true,
       });
 
-      console.log("🔐 Starting Google OAuth flow - redirecting to account selector");
+      console.log("🔐 Starting Google OAuth flow - redirecting to:", authUrl.substring(0, 100) + "...");
       res.redirect(authUrl);
     } catch (error) {
       console.error("Error starting OAuth flow:", error);
@@ -217,23 +220,37 @@ export async function setupAuth(app: Express) {
 
   // Callback route - handle Google's response
   app.get("/api/callback", async (req: Request, res: Response) => {
-    const { code, error } = req.query;
+    console.log("📥 OAuth callback received:", {
+      query: req.query,
+      url: req.url,
+      originalUrl: req.originalUrl,
+      host: req.hostname,
+    });
+    
+    const { code, error, error_description } = req.query;
 
     if (error) {
-      console.error("Google OAuth error:", error);
-      return res.redirect("/login?error=google_denied");
+      console.error("Google OAuth error:", error, error_description);
+      return res.redirect(`/login?error=google_denied&details=${encodeURIComponent(String(error_description || error))}`);
     }
 
     if (!code || typeof code !== "string") {
-      console.error("No authorization code received");
+      console.error("No authorization code received. Query params:", JSON.stringify(req.query));
       return res.redirect("/login?error=no_code");
     }
 
     try {
+      console.log("🔄 Exchanging authorization code for tokens...");
       const oauth2Client = createOAuth2Client(req);
+      console.log("🔄 Using redirect URI for token exchange:", getRedirectUri(req));
       
       // Exchange code for tokens
       const { tokens } = await oauth2Client.getToken(code);
+      console.log("✅ Tokens received:", {
+        hasAccessToken: !!tokens.access_token,
+        hasRefreshToken: !!tokens.refresh_token,
+        expiryDate: tokens.expiry_date,
+      });
       oauth2Client.setCredentials(tokens);
 
       // Get user info from Google
@@ -292,6 +309,10 @@ export async function setupAuth(app: Express) {
       });
     } catch (error: any) {
       console.error("Google OAuth callback error:", error.message);
+      console.error("Full error:", error);
+      if (error.response?.data) {
+        console.error("Error response data:", error.response.data);
+      }
       res.redirect("/login?error=auth_failed");
     }
   });
