@@ -230,8 +230,9 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    // Clear any existing session before starting new OAuth flow
+    // Clear any existing user data before starting new OAuth flow
     // This prevents stale session data (including impersonation) from persisting
+    // BUT we keep the session alive because passport needs it for OAuth state
     const startOAuth = () => {
       console.log("🔐 Starting OAuth flow - forcing fresh login");
       passport.authenticate(`replitauth:${req.hostname}`, {
@@ -242,18 +243,18 @@ export async function setupAuth(app: Express) {
     };
 
     if (req.session) {
-      // Destroy the session completely, then start fresh
-      req.session.destroy((err) => {
+      // Clear all user-related data from the session but keep session alive for OAuth
+      delete req.session.userId;
+      delete req.session.passport;
+      delete req.session.impersonatedUserId;
+      delete req.session.originalAdminUserId;
+      delete req.session.user;
+      
+      // Save the cleared session, then start OAuth
+      req.session.save((err) => {
         if (err) {
-          console.error("Session destroy error during login:", err);
+          console.error("Session save error during login cleanup:", err);
         }
-        // Clear the session cookie
-        res.clearCookie('connect.sid', {
-          path: '/',
-          httpOnly: true,
-          secure: true,
-          sameSite: 'none'
-        });
         startOAuth();
       });
     } else {
