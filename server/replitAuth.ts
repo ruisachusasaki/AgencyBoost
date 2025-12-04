@@ -230,10 +230,26 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      prompt: "login consent",
-      scope: ["openid", "email", "profile", "offline_access"],
-    })(req, res, next);
+    // Clear any existing session before starting new OAuth flow
+    // This prevents stale session data (including impersonation) from persisting
+    const startOAuth = () => {
+      passport.authenticate(`replitauth:${req.hostname}`, {
+        prompt: "login consent",
+        scope: ["openid", "email", "profile", "offline_access"],
+      })(req, res, next);
+    };
+
+    if (req.session) {
+      // Regenerate session to clear all stale data
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regenerate error during login:", err);
+        }
+        startOAuth();
+      });
+    } else {
+      startOAuth();
+    }
   });
 
   app.get("/api/callback", (req, res, next) => {
@@ -269,13 +285,34 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/logout", (req, res) => {
+    const endSessionUrl = client.buildEndSessionUrl(config, {
+      client_id: process.env.REPL_ID!,
+      post_logout_redirect_uri: `https://${req.hostname}`,
+    }).href;
+
+    // First logout from passport
     req.logout(() => {
-      res.redirect(
-        client.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-        }).href
-      );
+      // Then destroy the entire session to clear all data including impersonation
+      if (req.session) {
+        req.session.destroy((err) => {
+          if (err) {
+            console.error("Session destroy error during logout:", err);
+          }
+          
+          // Clear the session cookie
+          res.clearCookie('connect.sid', {
+            path: '/',
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none'
+          });
+          
+          console.log("✅ Session destroyed, redirecting to OIDC end session");
+          res.redirect(endSessionUrl);
+        });
+      } else {
+        res.redirect(endSessionUrl);
+      }
     });
   });
 }
