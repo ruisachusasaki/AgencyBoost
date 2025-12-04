@@ -103,14 +103,28 @@ async function upsertStaffFromGoogleProfile(profile: {
   if (existingByEmail.length > 0) {
     const existingStaffMember = existingByEmail[0];
 
-    // Security: Only link if staff doesn't have an existing Google identity
-    if (existingStaffMember.replitAuthSub) {
-      throw new Error(
-        "This email is already linked to a different Google account. Please contact your administrator."
-      );
+    // Check if we need to migrate from Replit Auth to Google Auth
+    // Replit Auth subs are short numeric strings (like "46893141")
+    // Google subs are long numeric strings (like "106262515489422760460")
+    const existingSub = existingStaffMember.replitAuthSub;
+    const isReplitAuthSub = existingSub && existingSub.length < 15 && /^\d+$/.test(existingSub);
+    const isGoogleSub = googleSub && googleSub.length >= 15 && /^\d+$/.test(googleSub);
+    
+    if (existingSub && existingSub !== googleSub) {
+      // If migrating from Replit Auth (short numeric) to Google Auth (long numeric), allow it
+      if (isReplitAuthSub && isGoogleSub) {
+        console.log(`🔄 Migrating user ${normalizedEmail} from Replit Auth to Google Auth`);
+        console.log(`   Old sub (Replit): ${existingSub}`);
+        console.log(`   New sub (Google): ${googleSub}`);
+      } else {
+        // Different Google accounts - don't allow
+        throw new Error(
+          "This email is already linked to a different Google account. Please contact your administrator."
+        );
+      }
     }
 
-    // Link Google identity to existing staff member
+    // Link/update Google identity to existing staff member
     const [updated] = await db
       .update(staff)
       .set({
