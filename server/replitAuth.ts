@@ -236,9 +236,8 @@ export async function setupAuth(app: Express) {
     const startOAuth = () => {
       console.log("🔐 Starting OAuth flow - forcing fresh login");
       passport.authenticate(`replitauth:${req.hostname}`, {
-        prompt: "login select_account", // Force account selection
+        prompt: "login", // Force re-login
         scope: ["openid", "email", "profile", "offline_access"],
-        max_age: 0, // Force re-authentication, don't use cached auth
       })(req, res, next);
     };
 
