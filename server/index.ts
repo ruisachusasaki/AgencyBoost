@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { setupAuth } from "./replitAuth";
+import { setupAuth } from "./googleAuth";
 import { setupGoogleCalendar } from "./googleCalendarSetup";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
