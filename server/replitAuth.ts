@@ -233,18 +233,27 @@ export async function setupAuth(app: Express) {
     // Clear any existing session before starting new OAuth flow
     // This prevents stale session data (including impersonation) from persisting
     const startOAuth = () => {
+      console.log("🔐 Starting OAuth flow - forcing fresh login");
       passport.authenticate(`replitauth:${req.hostname}`, {
-        prompt: "login consent",
+        prompt: "login select_account", // Force account selection
         scope: ["openid", "email", "profile", "offline_access"],
+        max_age: 0, // Force re-authentication, don't use cached auth
       })(req, res, next);
     };
 
     if (req.session) {
-      // Regenerate session to clear all stale data
-      req.session.regenerate((err) => {
+      // Destroy the session completely, then start fresh
+      req.session.destroy((err) => {
         if (err) {
-          console.error("Session regenerate error during login:", err);
+          console.error("Session destroy error during login:", err);
         }
+        // Clear the session cookie
+        res.clearCookie('connect.sid', {
+          path: '/',
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none'
+        });
         startOAuth();
       });
     } else {
@@ -258,6 +267,15 @@ export async function setupAuth(app: Express) {
         console.error("Authentication failed:", err || info);
         return res.redirect("/login?error=auth_failed");
       }
+      
+      // Log the claims received from OIDC for debugging
+      console.log("🔑 OIDC Claims received:", JSON.stringify({
+        sub: user.claims?.sub,
+        email: user.claims?.email,
+        firstName: user.claims?.first_name,
+        lastName: user.claims?.last_name,
+        staffId: user.staffId,
+      }));
       
       req.logIn(user, (loginErr) => {
         if (loginErr) {
@@ -277,7 +295,7 @@ export async function setupAuth(app: Express) {
             return res.redirect("/login?error=session_failed");
           }
           
-          console.log("✅ Google authentication successful, redirecting to dashboard");
+          console.log("✅ Authentication successful for:", user.claims?.email, "-> staffId:", user.staffId);
           res.redirect("/");
         });
       });
