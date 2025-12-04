@@ -37,7 +37,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - Responsive tab navigation with intelligent overflow menus for sections like HR, adapting to screen size breakpoints.
 
 ### Technical Implementations
-- **Authentication & Authorization**: Dual authentication system with email/password and Google login (via Replit Auth OIDC). Session management, role-based access control (Admin, Manager, User, Accounting), granular permissions system with templates and database schema.
+- **Authentication & Authorization**: Direct Google OAuth 2.0 authentication using google-auth-library (migrated from Replit Auth OIDC). Supports multi-user login where any user can authenticate with their own Google account. Automatic migration logic transitions existing Replit Auth users to Google Auth when email matches. Session management, role-based access control (Admin, Manager, User, Accounting), granular permissions system with templates and database schema. Note: OAuth flows work in incognito mode or production URL but may fail in Replit preview iframe due to third-party cookie restrictions.
 - **Data Management**: Relational schema, CRUD, audit logs, sorting, pagination, CSV import/export, custom fields.
 - **Task Management**: Hierarchical sub-tasks with scheduling, dependencies, recurring tasks, bulk actions, and dynamic project progress.
 - **Communication**: Smart Lists, Email/SMS, document management, notes, calendar management with dynamic merge tags, and unified templating. Lead appointment merge tags support server-side interpolation.
