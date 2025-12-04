@@ -68,6 +68,7 @@ import EditLesson from "@/pages/training/edit-lesson";
 import ClientPortalLogin from "@/pages/client-portal/login";
 import ClientPortalDashboard from "@/pages/client-portal/dashboard";
 import ClientPortalAuthGuard from "@/components/ClientPortalAuthGuard";
+import HelpSupport from "@/pages/help-support";
 
 function Router() {
   return (
@@ -414,6 +415,16 @@ function Router() {
           <AuthGate>
             <MainLayout>
               <BusinessProfile />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/help-support">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <HelpSupport />
             </MainLayout>
           </AuthGate>
         )}
