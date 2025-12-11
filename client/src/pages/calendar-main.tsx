@@ -1372,29 +1372,6 @@ export default function CalendarMain() {
                       {/* Week time grid with events - scrollable */}
                       <div ref={weekScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: '560px' }}>
                         <div className="flex relative">
-                          {/* Live Line - Current Time Indicator - spans full width Sunday to Saturday */}
-                          {isTodayVisible && (() => {
-                            const PIXELS_PER_HOUR = 60;
-                            const todayIndex = getTodayDayIndex();
-                            const liveLineTop = getLiveLinePosition(PIXELS_PER_HOUR);
-                            
-                            if (todayIndex === -1) return null;
-                            
-                            return (
-                              <div 
-                                className="absolute pointer-events-none z-30"
-                                style={{ 
-                                  top: `${liveLineTop}px`,
-                                  left: '48px',
-                                  right: 0
-                                }}
-                              >
-                                {/* Full-width red line from Sunday to Saturday */}
-                                <div className="h-0.5 bg-red-500 w-full" />
-                              </div>
-                            );
-                          })()}
-                          
                           {/* Time column */}
                           <div className="w-12 flex-shrink-0">
                             {Array.from({ length: 24 }, (_, hour) => {
@@ -1440,6 +1417,16 @@ export default function CalendarMain() {
                                       style={{ top: `${hour * PIXELS_PER_HOUR}px`, height: `${PIXELS_PER_HOUR}px` }}
                                     />
                                   ))}
+                                  
+                                  {/* Live Line - Current Time Indicator - only on today's column */}
+                                  {day.toDateString() === new Date().toDateString() && isTodayVisible && (
+                                    <div 
+                                      className="absolute left-0 right-0 pointer-events-none z-30"
+                                      style={{ top: `${getLiveLinePosition(PIXELS_PER_HOUR)}px` }}
+                                    >
+                                      <div className="h-0.5 bg-red-500 w-full" />
+                                    </div>
+                                  )}
                                   
                                   {/* Timed Events (non all-day) - with midnight splitting */}
                                   {dayLayouts.map((layout, layoutIndex) => {
