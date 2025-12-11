@@ -1259,8 +1259,9 @@ export default function CalendarMain() {
                     <div className="relative h-full flex flex-col">
                       {/* Week header with days - sticky */}
                       <div className="sticky top-0 z-20 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-700">
-                        <div className="grid grid-cols-8 gap-0">
-                          <div className="w-16 p-2 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950"></div>
+                        <div className="flex">
+                          <div className="w-12 flex-shrink-0 p-2 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950"></div>
+                          <div className="flex-1 flex">
                           {(() => {
                             const startOfWeek = new Date(currentDate);
                             startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
@@ -1270,7 +1271,7 @@ export default function CalendarMain() {
                               const isToday = day.toDateString() === new Date().toDateString();
                               
                               return (
-                                <div key={i} className={`p-2 text-center bg-white dark:bg-gray-950 ${
+                                <div key={i} className={`flex-1 p-2 text-center bg-white dark:bg-gray-950 ${
                                   i < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""
                                 } ${isToday ? "bg-primary/10 dark:bg-primary/20 text-primary font-semibold" : ""}`}>
                                   <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -1283,6 +1284,7 @@ export default function CalendarMain() {
                               );
                             });
                           })()}
+                          </div>
                         </div>
                       </div>
 
@@ -1302,10 +1304,11 @@ export default function CalendarMain() {
                         
                         return (
                           <div className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                            <div className="grid grid-cols-8 gap-0">
-                              <div className="w-16 p-1 text-[10px] text-gray-500 dark:text-gray-400 text-right border-r border-gray-200 dark:border-gray-700 flex items-center justify-end pr-2">
+                            <div className="flex">
+                              <div className="w-12 flex-shrink-0 p-1 text-[10px] text-gray-500 dark:text-gray-400 text-right border-r border-gray-200 dark:border-gray-700 flex items-center justify-end pr-2">
                                 All Day
                               </div>
+                              <div className="flex-1 flex">
                               {Array.from({ length: 7 }, (_, dayIndex) => {
                                 const day = new Date(startOfWeek);
                                 day.setDate(startOfWeek.getDate() + dayIndex);
@@ -1314,7 +1317,7 @@ export default function CalendarMain() {
                                 return (
                                   <div 
                                     key={dayIndex} 
-                                    className={`min-h-[28px] p-1 ${dayIndex < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""}`}
+                                    className={`flex-1 min-h-[28px] p-1 ${dayIndex < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""}`}
                                   >
                                     <div className="space-y-1">
                                       {allDayEvents.slice(0, 2).map((apt) => {
@@ -1360,6 +1363,7 @@ export default function CalendarMain() {
                                   </div>
                                 );
                               })}
+                              </div>
                             </div>
                           </div>
                         );
@@ -1367,7 +1371,7 @@ export default function CalendarMain() {
 
                       {/* Week time grid with events - scrollable */}
                       <div ref={weekScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ maxHeight: '560px' }}>
-                        <div className="grid grid-cols-8 gap-0 relative">
+                        <div className="flex relative">
                           {/* Live Line - Current Time Indicator - spans full width Sunday to Saturday */}
                           {isTodayVisible && (() => {
                             const PIXELS_PER_HOUR = 60;
@@ -1381,7 +1385,7 @@ export default function CalendarMain() {
                                 className="absolute pointer-events-none z-30"
                                 style={{ 
                                   top: `${liveLineTop}px`,
-                                  left: '64px', // After time column (w-16 = 64px)
+                                  left: '48px',
                                   right: 0
                                 }}
                               >
@@ -1392,7 +1396,7 @@ export default function CalendarMain() {
                           })()}
                           
                           {/* Time column */}
-                          <div className="w-16">
+                          <div className="w-12 flex-shrink-0">
                             {Array.from({ length: 24 }, (_, hour) => {
                               const timeSlot = new Date().setHours(hour, 0, 0, 0);
                               const timeDisplay = new Date(timeSlot).toLocaleTimeString('en-US', { 
@@ -1400,13 +1404,15 @@ export default function CalendarMain() {
                                 hour12: true 
                               });
                               return (
-                                <div key={hour} className="h-[60px] p-2 text-xs text-gray-500 dark:text-gray-400 text-right border-r border-gray-200 dark:border-gray-700 border-b border-gray-100 dark:border-gray-800">
+                                <div key={hour} className="h-[60px] px-1 py-2 text-xs text-gray-500 dark:text-gray-400 text-right border-r border-gray-200 dark:border-gray-700 border-b border-gray-100 dark:border-gray-800">
                                   {timeDisplay}
                                 </div>
                               );
                             })}
                           </div>
                           
+                          {/* Day columns container - fills remaining space */}
+                          <div className="flex-1 flex">
                           {/* Day columns with events */}
                           {(() => {
                             const startOfWeek = new Date(currentDate);
@@ -1423,7 +1429,7 @@ export default function CalendarMain() {
                               return (
                                 <div 
                                   key={dayIndex} 
-                                  className={`relative ${dayIndex < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""}`}
+                                  className={`relative flex-1 ${dayIndex < 6 ? "border-r border-gray-200 dark:border-gray-700" : ""}`}
                                   style={{ height: `${24 * PIXELS_PER_HOUR}px` }}
                                 >
                                   {/* Hour grid lines */}
@@ -1493,6 +1499,7 @@ export default function CalendarMain() {
                               );
                             });
                           })()}
+                          </div>
                         </div>
                       </div>
                     </div>
