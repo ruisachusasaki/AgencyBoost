@@ -185,7 +185,7 @@ export function EventDetailModal({
           method: 'DELETE',
         });
       } else {
-        return apiRequest(`/api/appointments/${eventId}`, {
+        return apiRequest(`/api/calendar-appointments/${eventId}`, {
           method: 'DELETE',
         });
       }
