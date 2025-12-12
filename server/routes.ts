@@ -495,43 +495,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(staff)
         .where(eq(staff.id, authUser.userId));
       
-      // Send reset email using notification service
-      const notificationService = await import("./notification-service");
+      // Send reset email using Mailgun directly
+      const Mailgun = (await import("mailgun.js")).default;
+      const formData = (await import("form-data")).default;
+      const mailgun = new Mailgun(formData);
+      
+      // Get email configuration from database
+      const [emailConfig] = await db.select()
+        .from(emailIntegrations)
+        .where(eq(emailIntegrations.isActive, true))
+        .limit(1);
+      
       const baseUrl = process.env.REPLIT_DEPLOYMENT_URL || 
-                      process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.repl.co` : 
-                      "http://localhost:5000";
+                      (process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.repl.co` : "http://localhost:5000");
       const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
       
-      try {
-        await notificationService.sendEmail({
-          to: email,
-          subject: "AgencyFlow - Password Reset Request",
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #00C9C6;">Password Reset Request</h2>
-              <p>Hi ${staffMember?.firstName || "there"},</p>
-              <p>We received a request to reset your AgencyFlow password. Click the button below to set a new password:</p>
-              <p style="margin: 30px 0;">
-                <a href="${resetUrl}" style="background-color: #00C9C6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                  Reset Password
-                </a>
-              </p>
-              <p>Or copy and paste this link into your browser:</p>
-              <p style="word-break: break-all; color: #666;">${resetUrl}</p>
-              <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
-              <p style="color: #666; font-size: 14px;">If you didn't request this password reset, you can safely ignore this email.</p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-              <p style="color: #999; font-size: 12px;">AgencyFlow CRM</p>
-            </div>
-          `,
-          text: `Password Reset Request\n\nHi ${staffMember?.firstName || "there"},\n\nWe received a request to reset your AgencyFlow password.\n\nClick this link to reset your password: ${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, you can safely ignore this email.\n\nAgencyFlow CRM`,
-        });
-        console.log(`Password reset email sent to ${email}`);
-      } catch (emailError) {
-        console.error("Failed to send password reset email:", emailError);
-        // Still return success to prevent email enumeration
+      if (emailConfig) {
+        try {
+          const mg = mailgun.client({ username: 'api', key: emailConfig.apiKey });
+          await mg.messages.create(emailConfig.domain, {
+            from: `${emailConfig.fromName} <${emailConfig.fromEmail}>`,
+            to: email,
+            subject: "AgencyFlow - Password Reset Request",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #00C9C6;">Password Reset Request</h2>
+                <p>Hi ${staffMember?.firstName || "there"},</p>
+                <p>We received a request to reset your AgencyFlow password. Click the button below to set a new password:</p>
+                <p style="margin: 30px 0;">
+                  <a href="${resetUrl}" style="background-color: #00C9C6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                    Reset Password
+                  </a>
+                </p>
+                <p>Or copy and paste this link into your browser:</p>
+                <p style="word-break: break-all; color: #666;">${resetUrl}</p>
+                <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
+                <p style="color: #666; font-size: 14px;">If you didn't request this password reset, you can safely ignore this email.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                <p style="color: #999; font-size: 12px;">AgencyFlow CRM</p>
+              </div>
+            `,
+            text: `Password Reset Request\n\nHi ${staffMember?.firstName || "there"},\n\nWe received a request to reset your AgencyFlow password.\n\nClick this link to reset your password: ${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, you can safely ignore this email.\n\nAgencyFlow CRM`,
+          });
+          console.log(`Password reset email sent to ${email}`);
+        } catch (emailError) {
+          console.error("Failed to send password reset email:", emailError);
+        }
+      } else {
+        console.error("No email integration configured - cannot send password reset email");
       }
-      
       res.json({ success: true, message: "If the email exists, a reset link will be sent" });
     } catch (error) {
       console.error("Error in forgot-password:", error);
