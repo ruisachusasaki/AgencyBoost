@@ -1,11 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ExternalLink, Video, Tag, AlertCircle } from "lucide-react";
+import { useState } from "react";
 
 export default function HelpSupport() {
-  const handleOpenTicket = () => {
-    window.open("https://forms.clickup.com/8550434/f/84y12-104257/DMM41Y8NJ85E7UOA2N", "_blank");
-  };
+  const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -92,7 +92,7 @@ export default function HelpSupport() {
       <div className="flex justify-center">
         <Button 
           size="lg" 
-          onClick={handleOpenTicket}
+          onClick={() => setIsTicketDialogOpen(true)}
           className="gap-2"
           data-testid="button-open-ticket"
         >
@@ -100,6 +100,21 @@ export default function HelpSupport() {
           Open Ticket in ClickUp
         </Button>
       </div>
+
+      <Dialog open={isTicketDialogOpen} onOpenChange={setIsTicketDialogOpen}>
+        <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Submit a Ticket</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            <iframe 
+              className="clickup-embed w-full h-full"
+              src="https://forms.clickup.com/8550434/f/84y12-104257/DMM41Y8NJ85E7UOA2N"
+              style={{ background: 'transparent', border: '1px solid #ccc', borderRadius: '8px' }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
