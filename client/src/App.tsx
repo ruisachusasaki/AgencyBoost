@@ -69,12 +69,16 @@ import ClientPortalLogin from "@/pages/client-portal/login";
 import ClientPortalDashboard from "@/pages/client-portal/dashboard";
 import ClientPortalAuthGuard from "@/components/ClientPortalAuthGuard";
 import HelpSupport from "@/pages/help-support";
+import ForgotPasswordPage from "@/pages/forgot-password";
+import ResetPasswordPage from "@/pages/reset-password";
 
 function Router() {
   return (
     <Switch>
       {/* Public routes - no authentication required */}
       <Route path="/login" component={LoginPage} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/client-portal/login" component={ClientPortalLogin} />
       <Route path="/client-portal/dashboard">
         {() => (

@@ -2168,6 +2168,8 @@ export const authUsers = pgTable("auth_users", {
   passwordHash: text("password_hash").notNull(),
   isActive: boolean("is_active").default(true),
   lastLogin: timestamp("last_login"),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetExpires: timestamp("password_reset_expires"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

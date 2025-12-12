@@ -458,6 +458,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // POST /api/auth/forgot-password - Request password reset
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      // Find auth user by email
+      const authUser = await appStorage.getAuthUserByEmail(email);
+      
+      // Always return success to prevent email enumeration
+      if (!authUser) {
+        console.log(`Password reset requested for non-existent email: ${email}`);
+        return res.json({ success: true, message: "If the email exists, a reset link will be sent" });
+      }
+      
+      // Generate secure reset token
+      const crypto = require("crypto");
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      const resetExpires = new Date(Date.now() + 3600000); // 1 hour from now
+      
+      // Store token in database
+      await db.update(authUsers)
+        .set({
+          passwordResetToken: resetToken,
+          passwordResetExpires: resetExpires,
+        })
+        .where(eq(authUsers.id, authUser.id));
+      
+      // Get staff info for the email
+      const [staffMember] = await db.select()
+        .from(staff)
+        .where(eq(staff.id, authUser.userId));
+      
+      // Send reset email using notification service
+      const notificationService = await import("./notification-service");
+      const baseUrl = process.env.REPLIT_DEPLOYMENT_URL || 
+                      process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.repl.co` : 
+                      "http://localhost:5000";
+      const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+      
+      try {
+        await notificationService.sendEmail({
+          to: email,
+          subject: "AgencyFlow - Password Reset Request",
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #00C9C6;">Password Reset Request</h2>
+              <p>Hi ${staffMember?.firstName || "there"},</p>
+              <p>We received a request to reset your AgencyFlow password. Click the button below to set a new password:</p>
+              <p style="margin: 30px 0;">
+                <a href="${resetUrl}" style="background-color: #00C9C6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                  Reset Password
+                </a>
+              </p>
+              <p>Or copy and paste this link into your browser:</p>
+              <p style="word-break: break-all; color: #666;">${resetUrl}</p>
+              <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
+              <p style="color: #666; font-size: 14px;">If you didn't request this password reset, you can safely ignore this email.</p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+              <p style="color: #999; font-size: 12px;">AgencyFlow CRM</p>
+            </div>
+          `,
+          text: `Password Reset Request\n\nHi ${staffMember?.firstName || "there"},\n\nWe received a request to reset your AgencyFlow password.\n\nClick this link to reset your password: ${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, you can safely ignore this email.\n\nAgencyFlow CRM`,
+        });
+        console.log(`Password reset email sent to ${email}`);
+      } catch (emailError) {
+        console.error("Failed to send password reset email:", emailError);
+        // Still return success to prevent email enumeration
+      }
+      
+      res.json({ success: true, message: "If the email exists, a reset link will be sent" });
+    } catch (error) {
+      console.error("Error in forgot-password:", error);
+      res.status(500).json({ error: "Failed to process request" });
+    }
+  });
+
+  // POST /api/auth/reset-password - Reset password with token
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ error: "Token and password are required" });
+      }
+      
+      if (password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+      
+      // Find user by reset token
+      const [authUser] = await db.select()
+        .from(authUsers)
+        .where(eq(authUsers.passwordResetToken, token));
+      
+      if (!authUser) {
+        return res.status(400).json({ error: "Invalid or expired reset link" });
+      }
+      
+      // Check if token has expired
+      if (!authUser.passwordResetExpires || new Date() > authUser.passwordResetExpires) {
+        return res.status(400).json({ error: "Reset link has expired. Please request a new one." });
+      }
+      
+      // Hash the new password
+      const bcrypt = require("bcrypt");
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Update password and clear reset token
+      await db.update(authUsers)
+        .set({
+          passwordHash,
+          passwordResetToken: null,
+          passwordResetExpires: null,
+        })
+        .where(eq(authUsers.id, authUser.id));
+      
+      await createAuditLog(
+        "updated",
+        "auth_user",
+        authUser.id,
+        "Password Reset",
+        authUser.userId,
+        "User reset their password via forgot password flow",
+        null,
+        null,
+        req
+      );
+      
+      console.log(`Password reset successful for user: ${authUser.email}`);
+      res.json({ success: true, message: "Password reset successful" });
+    } catch (error) {
+      console.error("Error in reset-password:", error);
+      res.status(500).json({ error: "Failed to reset password" });
+    }
+  });
   // POST /api/auth/logout - Destroy session
   app.post("/api/auth/logout", (req, res) => {
     req.session = null;
