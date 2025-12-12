@@ -5,7 +5,7 @@ import clickupBoardImage from "@assets/image_1764850167707.png";
 
 export default function HelpSupport() {
   const handleOpenTicket = () => {
-    window.open("https://app.clickup.com/8550434/v/b/84y12-100497", "_blank");
+    window.open("https://forms.clickup.com/8550434/f/84y12-104257/DMM41Y8NJ85E7UOA2N", "_blank");
   };
 
   return (
