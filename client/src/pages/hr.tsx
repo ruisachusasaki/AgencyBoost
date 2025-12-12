@@ -379,6 +379,64 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
     },
   });
 
+  // Delete Job Opening Mutation
+  const deleteJobOpeningMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/job-openings/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete job opening");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/job-openings"] });
+      toast({
+        title: "Job Opening Deleted",
+        description: "The job opening has been deleted successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete job opening. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mark as Filled Mutation
+  const markAsFilledMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/job-openings/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "filled" }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to mark job opening as filled");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/job-openings"] });
+      toast({
+        title: "Job Opening Updated",
+        description: "The job opening has been marked as filled.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update job opening. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Reset form function
   const resetJobOpeningForm = () => {
     setJobOpeningForm({
@@ -3094,6 +3152,51 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
                         >
                           Edit
                         </Button>
+                        {isAdmin && opening.status !== 'filled' && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => markAsFilledMutation.mutate(opening.id)}
+                            disabled={markAsFilledMutation.isPending}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            data-testid={`button-fill-${opening.id}`}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Mark Filled
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                data-testid={`button-delete-${opening.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Job Opening</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this job opening for "{opening.positionName}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteJobOpeningMutation.mutate(opening.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -21715,6 +21715,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Delete job opening (admin only)
+  app.delete("/api/job-openings/:id", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
+    try {
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return;
+
+      const [opening] = await db.select()
+        .from(jobOpenings)
+        .where(eq(jobOpenings.id, req.params.id));
+
+      if (!opening) {
+        return res.status(404).json({ error: "Job opening not found" });
+      }
+
+      await db.delete(jobOpenings).where(eq(jobOpenings.id, req.params.id));
+
+      await createAuditLog(
+        "deleted",
+        "job_opening",
+        req.params.id,
+        "Job opening deleted",
+        currentUserId,
+        "Deleted job opening",
+        opening,
+        null,
+        req
+      );
+
+      res.json({ success: true, message: "Job opening deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting job opening:", error);
+      res.status(500).json({ error: "Failed to delete job opening" });
+    }
+  });
   // Get departments for dropdown
   app.get("/api/departments", requireAuth(), requirePermission('departments', 'canView'), async (req, res) => {
     try {
