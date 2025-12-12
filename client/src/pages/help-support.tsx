@@ -1,7 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Video, Tag, ListTodo, AlertCircle } from "lucide-react";
-import clickupBoardImage from "@assets/image_1764850167707.png";
+import { ExternalLink, Video, Tag, AlertCircle } from "lucide-react";
 
 export default function HelpSupport() {
   const handleOpenTicket = () => {
@@ -35,11 +34,11 @@ export default function HelpSupport() {
               </div>
               <div>
                 <h3 className="font-medium flex items-center gap-2">
-                  <ListTodo className="h-4 w-4" />
-                  Create Task in Queue Column
+                  <ExternalLink className="h-4 w-4" />
+                  Open the Ticket Form
                 </h3>
                 <p className="text-muted-foreground text-sm mt-1">
-                  Your ticket must be placed in the <strong>"Queue"</strong> column as a new task.
+                  Open the ticket form from the button below.
                 </p>
               </div>
             </div>
@@ -86,24 +85,6 @@ export default function HelpSupport() {
             <p className="text-sm text-muted-foreground">
               <strong className="text-foreground">Tip:</strong> The more details you provide in your video, the faster we can address your ticket!
             </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>ClickUp Board Preview</CardTitle>
-          <CardDescription>
-            This is where your tickets will be managed
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-lg overflow-hidden border">
-            <img 
-              src={clickupBoardImage} 
-              alt="ClickUp AgencyFlow Tasks Board" 
-              className="w-full h-auto"
-            />
           </div>
         </CardContent>
       </Card>
