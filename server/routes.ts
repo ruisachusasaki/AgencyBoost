@@ -69,7 +69,7 @@ import {
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
 import bcrypt from "bcrypt";
 import { ObjectStorageService, ObjectNotFoundError, validateFileType, isForbiddenFileType, sanitizeFileName } from "./objectStorage";
 import { db } from "./db";
@@ -478,8 +478,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Generate secure reset token
-      const crypto = require("crypto");
-      const resetToken = crypto.randomBytes(32).toString("hex");
+      // Using imported randomBytes from crypto
+      const resetToken = randomBytes(32).toString("hex");
       const resetExpires = new Date(Date.now() + 3600000); // 1 hour from now
       
       // Store token in database
@@ -567,7 +567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Hash the new password
-      const bcrypt = require("bcrypt");
+      // Using imported bcrypt
       const passwordHash = await bcrypt.hash(password, 10);
       
       // Update password and clear reset token
