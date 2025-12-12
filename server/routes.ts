@@ -512,7 +512,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (emailConfig) {
         try {
-          const mg = mailgun.client({ username: 'api', key: emailConfig.apiKey });
+          const decryptedApiKey = EncryptionService.decrypt(emailConfig.apiKey);
+          const mg = mailgun.client({ username: 'api', key: decryptedApiKey });
           await mg.messages.create(emailConfig.domain, {
             from: `${emailConfig.fromName} <${emailConfig.fromEmail}>`,
             to: email,
