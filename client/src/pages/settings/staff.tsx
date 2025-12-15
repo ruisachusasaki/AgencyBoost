@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -51,6 +52,8 @@ export default function Staff() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isAddTeamDialogOpen, setIsAddTeamDialogOpen] = useState(false);
   const [isTeamSettingsDialogOpen, setIsTeamSettingsDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [staffToDelete, setStaffToDelete] = useState<{ id: string; name: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>('name');
@@ -232,10 +235,15 @@ export default function Staff() {
   };
 
   const handleDeleteStaff = (staffId: string, staffName: string) => {
-    const confirmed = window.confirm(`Are you sure you want to delete ${staffName}? This action will deactivate the staff member and cannot be undone.`);
-    
-    if (confirmed) {
-      deleteStaffMutation.mutate(staffId);
+    setStaffToDelete({ id: staffId, name: staffName });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteStaff = () => {
+    if (staffToDelete) {
+      deleteStaffMutation.mutate(staffToDelete.id);
+      setDeleteDialogOpen(false);
+      setStaffToDelete(null);
     }
   };
 
@@ -1564,6 +1572,27 @@ function CapacitySettingsTab() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Staff Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Staff Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {staffToDelete?.name}? This action will deactivate the staff member and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setStaffToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteStaff}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );
