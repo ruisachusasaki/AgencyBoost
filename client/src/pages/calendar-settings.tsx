@@ -809,7 +809,7 @@ export default function CalendarSettings() {
                   How Google Calendar Integration Works
                 </h4>
                 <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                  <li>• Bookings made in AgencyFlow appear automatically in your Google Calendar</li>
+                  <li>• Bookings made in AgencyBoost appear automatically in your Google Calendar</li>
                   <li>• Events in Google Calendar block availability to prevent double-bookings</li>
                   <li>• Each team member connects their own Google account</li>
                   <li>• Choose which calendars are used for booking and conflict checking</li>

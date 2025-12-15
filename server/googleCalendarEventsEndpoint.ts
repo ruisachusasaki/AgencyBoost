@@ -90,7 +90,7 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
               ? calendarEvents.attendees 
               : sql<any>`'[]'::jsonb`.as('attendees'),
             isRecurring: calendarEvents.isRecurring,
-            createdInAgencyFlow: calendarEvents.createdInAgencyFlow,
+            createdInAgencyBoost: calendarEvents.createdInAgencyBoost,
             appointmentStatus: calendarEvents.appointmentStatus,
             timeEntryCreated: calendarEvents.timeEntryCreated,
             // CRITICAL: Use the connection's userId (which is the staff ID who owns this calendar)
@@ -133,7 +133,7 @@ export async function getGoogleCalendarEventsForView(req: Request, res: Response
           organizer: calendarEvents.organizer,
           attendees: calendarEvents.attendees,
           isRecurring: calendarEvents.isRecurring,
-          createdInAgencyFlow: calendarEvents.createdInAgencyFlow,
+          createdInAgencyBoost: calendarEvents.createdInAgencyBoost,
             appointmentStatus: calendarEvents.appointmentStatus,
             timeEntryCreated: calendarEvents.timeEntryCreated,
           // Include userId and assignedTo

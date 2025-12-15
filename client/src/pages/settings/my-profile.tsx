@@ -121,7 +121,7 @@ export default function MyProfile() {
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
-    signature: `<p><strong>Best regards,</strong></p><p>${currentUser?.firstName || "John"} ${currentUser?.lastName || "Doe"}<br>AgencyFlow Marketing<br><a href="mailto:${currentUser?.email || "john@agencyflow.com"}">${currentUser?.email || "john@agencyflow.com"}</a><br>${currentUser?.phone || "(555) 123-4567"}</p>`
+    signature: `<p><strong>Best regards,</strong></p><p>${currentUser?.firstName || "John"} ${currentUser?.lastName || "Doe"}<br>AgencyBoost Marketing<br><a href="mailto:${currentUser?.email || "john@agencyflow.com"}">${currentUser?.email || "john@agencyflow.com"}</a><br>${currentUser?.phone || "(555) 123-4567"}</p>`
   });
 
   // Update staff mutation for personal info
@@ -166,7 +166,7 @@ export default function MyProfile() {
       setFormData(prev => ({
         ...prev,
         assignedCalendarId: currentUser.assignedCalendarId || "none",
-        signature: `<p><strong>Best regards,</strong></p><p>${currentUser.firstName} ${currentUser.lastName}<br>AgencyFlow Marketing<br><a href="mailto:${currentUser.email}">${currentUser.email}</a><br>${currentUser.phone}</p>`
+        signature: `<p><strong>Best regards,</strong></p><p>${currentUser.firstName} ${currentUser.lastName}<br>AgencyBoost Marketing<br><a href="mailto:${currentUser.email}">${currentUser.email}</a><br>${currentUser.phone}</p>`
       }));
     }
   }, [currentUser, personalForm, addressForm]);

@@ -578,7 +578,7 @@ export default function ClientPortalDashboard() {
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-foreground" data-testid="text-app-title">
-                  AgencyFlow Portal
+                  AgencyBoost Portal
                 </h1>
                 <p className="text-sm text-muted-foreground" data-testid="text-client-name">
                   {displayUser?.clientName}

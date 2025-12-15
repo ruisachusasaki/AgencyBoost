@@ -173,7 +173,7 @@ export async function createCalendarEvent(req: Request, res: Response) {
               allDay: false,
               transparency: 'opaque',
               isRecurring: false,
-              createdInAgencyFlow: true,
+              createdInAgencyBoost: true,
               createdAt: new Date(),
               updatedAt: new Date(),
             })
@@ -648,7 +648,7 @@ export async function createOneOnOneMeetingCalendarEvent(
     // Build the event object
     const eventResource: any = {
       summary: `1-on-1: ${managerName} & ${directReportName}`,
-      description: `1-on-1 meeting between ${managerName} (Manager) and ${directReportName}.\n\nCreated by AgencyFlow CRM.`,
+      description: `1-on-1 meeting between ${managerName} (Manager) and ${directReportName}.\n\nCreated by AgencyBoost CRM.`,
       start: {
         dateTime: startDateTime.toISOString(),
         timeZone: 'UTC',
@@ -716,7 +716,7 @@ export async function createOneOnOneMeetingCalendarEvent(
           allDay: false,
           transparency: 'opaque',
           isRecurring: false,
-          createdInAgencyFlow: true,
+          createdInAgencyBoost: true,
           createdAt: new Date(),
           updatedAt: new Date(),
         });

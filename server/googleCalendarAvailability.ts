@@ -45,8 +45,8 @@ export class GoogleCalendarAvailability {
       })));
     }
 
-    // Check AgencyFlow appointments
-    const agencyFlowConflicts = await this.checkAgencyFlowConflicts(
+    // Check AgencyBoost appointments
+    const agencyFlowConflicts = await this.checkAgencyBoostConflicts(
       userId, 
       startTime, 
       endTime,
@@ -148,8 +148,8 @@ export class GoogleCalendarAvailability {
     }));
   }
 
-  // Check AgencyFlow appointments for conflicts
-  private async checkAgencyFlowConflicts(
+  // Check AgencyBoost appointments for conflicts
+  private async checkAgencyBoostConflicts(
     userId: string,
     startTime: Date,
     endTime: Date,
@@ -278,8 +278,8 @@ export class GoogleCalendarAvailability {
     const googleBusy = await this.checkGoogleCalendarConflicts(userId, dayStart, dayEnd);
     busyTimes.push(...googleBusy.map(b => ({ start: b.start, end: b.end })));
 
-    // Get AgencyFlow appointment busy times
-    const agencyFlowBusy = await this.checkAgencyFlowConflicts(userId, dayStart, dayEnd);
+    // Get AgencyBoost appointment busy times
+    const agencyFlowBusy = await this.checkAgencyBoostConflicts(userId, dayStart, dayEnd);
     busyTimes.push(...agencyFlowBusy.map(b => ({ start: b.start, end: b.end })));
 
     // Merge overlapping time slots

@@ -44,7 +44,7 @@ export default function LoginPage() {
               <TrendingUp className="h-6 w-6 text-white" />
             </div>
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-              Agency<span className="text-primary">Flow</span>
+              Agency<span className="text-primary">Boost</span>
             </h1>
           </div>
           <p className="text-gray-600 dark:text-gray-400 mt-2">

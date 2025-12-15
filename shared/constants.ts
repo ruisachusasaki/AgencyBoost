@@ -1,4 +1,4 @@
-// Shared constants for AgencyFlow CRM
+// Shared constants for AgencyBoost CRM
 
 // Sales and Quotes Configuration
 export const SALES_CONFIG = {

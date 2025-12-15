@@ -1,6 +1,6 @@
 /**
  * Google Calendar Sync Service
- * Handles two-way synchronization between Google Calendar and AgencyFlow
+ * Handles two-way synchronization between Google Calendar and AgencyBoost
  */
 
 import { db } from './db';
@@ -26,7 +26,7 @@ interface SyncResult {
 }
 
 /**
- * Syncs a user's Google Calendar with AgencyFlow
+ * Syncs a user's Google Calendar with AgencyBoost
  */
 export async function syncUserCalendar(
   userId: string,
@@ -83,9 +83,9 @@ export async function syncUserCalendar(
     result.eventsUpdated += pullResult.eventsUpdated;
     result.eventsDeleted += pullResult.eventsDeleted;
     
-    // Push AgencyFlow appointments to Google Calendar (if two-way sync is enabled)
+    // Push AgencyBoost appointments to Google Calendar (if two-way sync is enabled)
     if (connection.twoWaySync) {
-      const pushResult = await pushAgencyFlowAppointments(calendar, connection);
+      const pushResult = await pushAgencyBoostAppointments(calendar, connection);
       result.eventsCreated += pushResult.eventsCreated;
       result.eventsUpdated += pushResult.eventsUpdated;
     }
@@ -266,9 +266,9 @@ async function pullGoogleEvents(
 }
 
 /**
- * Pushes AgencyFlow appointments to Google Calendar
+ * Pushes AgencyBoost appointments to Google Calendar
  */
-async function pushAgencyFlowAppointments(
+async function pushAgencyBoostAppointments(
   calendar: any,
   connection: CalendarConnection
 ): Promise<SyncResult> {

@@ -1210,7 +1210,7 @@ function CapacitySettingsTab() {
             <div className="flex-1">
               <h3 className="font-semibold text-blue-900 mb-1">Predictive Hiring Alerts</h3>
               <p className="text-sm text-blue-800">
-                AgencyFlow uses your pipeline data to predict when teams will reach capacity and need additional staff. 
+                AgencyBoost uses your pipeline data to predict when teams will reach capacity and need additional staff. 
                 Configure maximum clients per staff member and alert thresholds for each department.
               </p>
             </div>

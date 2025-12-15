@@ -1,4 +1,4 @@
-// Two-way sync: Push AgencyFlow appointments to Google Calendar
+// Two-way sync: Push AgencyBoost appointments to Google Calendar
 import { google, calendar_v3 } from 'googleapis';
 import { db } from './db';
 import { 
@@ -19,7 +19,7 @@ export class GoogleCalendarTwoWaySync {
     this.calendar = google.calendar('v3');
   }
 
-  // Push an AgencyFlow appointment to Google Calendar
+  // Push an AgencyBoost appointment to Google Calendar
   async pushAppointmentToGoogle(appointmentId: string): Promise<{ success: boolean; googleEventId?: string; error?: string }> {
     try {
       // Get appointment details
@@ -108,7 +108,7 @@ export class GoogleCalendarTwoWaySync {
         },
         attendees: attendees.length > 0 ? attendees : undefined,
         status: appt.status === 'cancelled' ? 'cancelled' : 'confirmed',
-        // Add AgencyFlow metadata
+        // Add AgencyBoost metadata
         extendedProperties: {
           private: {
             agencyFlowId: appointmentId,
@@ -288,7 +288,7 @@ export class GoogleCalendarTwoWaySync {
       etag: googleEvent.etag,
       lastModified: googleEvent.updated ? new Date(googleEvent.updated) : new Date(),
       isRecurring: !!googleEvent.recurringEventId,
-      createdInAgencyFlow: true,
+      createdInAgencyBoost: true,
       syncedAt: new Date(),
     };
 
@@ -314,7 +314,7 @@ export class GoogleCalendarTwoWaySync {
     }
   }
 
-  // Convert Google Calendar event to AgencyFlow appointment
+  // Convert Google Calendar event to AgencyBoost appointment
   async createAppointmentFromGoogleEvent(
     googleEvent: calendar_v3.Schema$Event,
     connectionId: string

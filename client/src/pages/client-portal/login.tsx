@@ -65,13 +65,13 @@ export default function ClientPortalLogin() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* AgencyFlow Branding */}
+        {/* AgencyBoost Branding */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center gap-3 mb-2">
             <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 rounded-xl">
               <ArrowRight className="w-6 h-6 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">AgencyFlow</h1>
+            <h1 className="text-2xl font-bold text-foreground">AgencyBoost</h1>
           </div>
           <p className="text-muted-foreground">Client Portal</p>
         </div>
@@ -182,7 +182,7 @@ export default function ClientPortalLogin() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-muted-foreground">
-          <p>© 2025 AgencyFlow. All rights reserved.</p>
+          <p>© 2025 AgencyBoost. All rights reserved.</p>
         </div>
       </div>
     </div>

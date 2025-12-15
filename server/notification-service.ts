@@ -444,7 +444,7 @@ export class NotificationService {
     ` : ''}
   </div>
   <div class="footer">
-    <p>You're receiving this because of your notification settings in AgencyFlow.</p>
+    <p>You're receiving this because of your notification settings in AgencyBoost.</p>
     <p><a href="${appUrl}/settings/my-profile">Manage your notification preferences</a></p>
   </div>
 </body>

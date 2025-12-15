@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
               <TrendingUp className="h-6 w-6 text-white" />
             </div>
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-              Agency<span className="text-primary">Flow</span>
+              Agency<span className="text-primary">Boost</span>
             </h1>
           </div>
         </div>

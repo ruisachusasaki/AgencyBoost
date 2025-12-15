@@ -481,7 +481,7 @@ export function EventDetailModal({
                     <div>
                       <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Calendar</div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {isGoogleEvent ? "Google Calendar" : "AgencyFlow Calendar"}
+                        {isGoogleEvent ? "Google Calendar" : "AgencyBoost Calendar"}
                       </div>
                     </div>
                   </div>

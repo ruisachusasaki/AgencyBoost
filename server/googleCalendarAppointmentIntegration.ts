@@ -1,4 +1,4 @@
-// Google Calendar Integration for AgencyFlow Appointments
+// Google Calendar Integration for AgencyBoost Appointments
 import { Router, Request, Response } from 'express';
 import { db } from './db';
 import { 

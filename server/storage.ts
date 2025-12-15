@@ -1038,7 +1038,7 @@ export class MemStorage implements IStorage {
 
     // Note: Triggers are now stored in the database, not in memory
 
-    // Comprehensive automation actions for AgencyFlow CRM
+    // Comprehensive automation actions for AgencyBoost CRM
     const actions: AutomationAction[] = [
       // 📧 Communication Actions
       {

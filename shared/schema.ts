@@ -3952,7 +3952,7 @@ export const oneOnOneMeetings = pgTable("one_on_one_meetings", {
   weekOf: date("week_of").notNull(), // Week identifier (e.g., Monday of that week)
   
   // Calendar integration
-  calendarAppointmentId: varchar("calendar_appointment_id").references(() => calendarAppointments.id, { onDelete: "set null" }), // Internal AgencyFlow calendar appointment
+  calendarAppointmentId: varchar("calendar_appointment_id").references(() => calendarAppointments.id, { onDelete: "set null" }), // Internal AgencyBoost calendar appointment
   calendarEventId: varchar("calendar_event_id"), // Reference to Google Calendar event (for two-way sync)
   
   // Feeling rating (emoji picker)
@@ -4238,7 +4238,7 @@ export const calendarEvents = pgTable("calendar_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   connectionId: varchar("connection_id").notNull().references(() => calendarConnections.id, { onDelete: "cascade" }),
   googleEventId: text("google_event_id").notNull(),
-  appointmentId: varchar("appointment_id").references(() => calendarAppointments.id, { onDelete: "set null" }), // Links to AgencyFlow appointment
+  appointmentId: varchar("appointment_id").references(() => calendarAppointments.id, { onDelete: "set null" }), // Links to AgencyBoost appointment
   clientId: varchar("client_id").references(() => clients.id, { onDelete: "set null" }), // Links to client for time tracking
   // Essential fields only for availability and display
   summary: text("summary"),
@@ -4264,7 +4264,7 @@ export const calendarEvents = pgTable("calendar_events", {
   updatedAt: timestamp("updated_at").defaultNow(),
   // Flags
   isRecurring: boolean("is_recurring").default(false), // Flag instead of full recurrence data
-  createdInAgencyFlow: boolean("created_in_agency_flow").default(false), // Track origin for two-way sync
+  createdInAgencyBoost: boolean("created_in_agency_flow").default(false), // Track origin for two-way sync
   // Appointment status for time tracking
   appointmentStatus: text("appointment_status").default("confirmed"), // confirmed, showed, no_show, cancelled
   timeEntryCreated: boolean("time_entry_created").default(false), // Track if time entry was auto-created

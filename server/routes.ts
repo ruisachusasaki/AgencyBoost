@@ -517,12 +517,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await mg.messages.create(emailConfig.domain, {
             from: `${emailConfig.fromName} <${emailConfig.fromEmail}>`,
             to: email,
-            subject: "AgencyFlow - Password Reset Request",
+            subject: "AgencyBoost - Password Reset Request",
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #00C9C6;">Password Reset Request</h2>
                 <p>Hi ${staffMember?.firstName || "there"},</p>
-                <p>We received a request to reset your AgencyFlow password. Click the button below to set a new password:</p>
+                <p>We received a request to reset your AgencyBoost password. Click the button below to set a new password:</p>
                 <p style="margin: 30px 0;">
                   <a href="${resetUrl}" style="background-color: #00C9C6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                     Reset Password
@@ -533,10 +533,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
                 <p style="color: #666; font-size: 14px;">If you didn't request this password reset, you can safely ignore this email.</p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                <p style="color: #999; font-size: 12px;">AgencyFlow CRM</p>
+                <p style="color: #999; font-size: 12px;">AgencyBoost CRM</p>
               </div>
             `,
-            text: `Password Reset Request\n\nHi ${staffMember?.firstName || "there"},\n\nWe received a request to reset your AgencyFlow password.\n\nClick this link to reset your password: ${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, you can safely ignore this email.\n\nAgencyFlow CRM`,
+            text: `Password Reset Request\n\nHi ${staffMember?.firstName || "there"},\n\nWe received a request to reset your AgencyBoost password.\n\nClick this link to reset your password: ${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, you can safely ignore this email.\n\nAgencyBoost CRM`,
           });
           console.log(`Password reset email sent to ${email}`);
         } catch (emailError) {
