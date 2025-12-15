@@ -186,7 +186,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <TrendingUp className="h-4 w-4 text-white" />
             </div>
-            {!isCollapsed && <h1 className="text-xl font-bold text-slate-900">AgencyBoost</h1>}
+            {!isCollapsed && <h1 className="text-xl font-bold">Agency<span className="text-primary">Boost</span></h1>}
           </div>
         </div>
         
@@ -229,7 +229,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                   <TrendingUp className="h-4 w-4 text-white" />
                 </div>
-                <h1 className="text-xl font-bold text-slate-900">AgencyBoost</h1>
+                <h1 className="text-xl font-bold">Agency<span className="text-primary">Boost</span></h1>
               </div>
               <button 
                 onClick={onClose}
