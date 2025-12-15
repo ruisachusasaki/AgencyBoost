@@ -8,6 +8,8 @@ import {
   type Quote, type InsertQuote, quotes,
   type Task, type InsertTask, tasks,
   type Invoice, type InsertInvoice, invoices,
+  clientNotes, clientTasks, clientDocuments, clientTransactions, clientProducts, clientBundles, deals,
+  socialMediaAccounts, socialMediaPosts, socialMediaTemplates, calendarEvents, eventTimeEntries,
   type User, type InsertUser,
   type AuditLog, type InsertAuditLog,
   type CustomField, type InsertCustomField,
@@ -4484,6 +4486,8 @@ export class DbStorage implements IStorage {
   async deleteClient(id: string): Promise<boolean> {
     try {
       // First delete all related records that reference this client
+      // Delete in order to avoid foreign key constraint issues
+      
       // Delete client brief values
       await db.delete(clientBriefValues).where(eq(clientBriefValues.clientId, id));
       
@@ -4492,6 +4496,81 @@ export class DbStorage implements IStorage {
       
       // Delete client health scores  
       await db.delete(clientHealthScores).where(eq(clientHealthScores.clientId, id));
+      
+      // Delete client notes
+      await db.delete(clientNotes).where(eq(clientNotes.clientId, id));
+      
+      // Delete client tasks (the client-specific tasks table)
+      await db.delete(clientTasks).where(eq(clientTasks.clientId, id));
+      
+      // Delete client appointments (legacy table)
+      await db.delete(appointments).where(eq(appointments.clientId, id));
+      
+      // Delete client documents
+      await db.delete(clientDocuments).where(eq(clientDocuments.clientId, id));
+      
+      // Delete client transactions
+      await db.delete(clientTransactions).where(eq(clientTransactions.clientId, id));
+      
+      // Delete client products
+      await db.delete(clientProducts).where(eq(clientProducts.clientId, id));
+      
+      // Delete client bundles
+      await db.delete(clientBundles).where(eq(clientBundles.clientId, id));
+      
+      // Delete activities related to client
+      await db.delete(activities).where(eq(activities.clientId, id));
+      
+      // Delete client team assignments
+      await db.delete(clientTeamAssignments).where(eq(clientTeamAssignments.clientId, id));
+      
+      // Delete custom field file uploads
+      await db.delete(customFieldFileUploads).where(eq(customFieldFileUploads.clientId, id));
+      
+      // Delete invoices
+      await db.delete(invoices).where(eq(invoices.clientId, id));
+      
+      // Delete scheduled emails
+      await db.delete(scheduledEmails).where(eq(scheduledEmails.clientId, id));
+      
+      // Delete notes (legacy table)
+      await db.delete(notes).where(eq(notes.clientId, id));
+      
+      // Delete client portal users
+      await db.delete(clientPortalUsers).where(eq(clientPortalUsers.clientId, id));
+      
+      // Delete social media accounts
+      await db.delete(socialMediaAccounts).where(eq(socialMediaAccounts.clientId, id));
+      
+      // Delete social media posts
+      await db.delete(socialMediaPosts).where(eq(socialMediaPosts.clientId, id));
+      
+      // Delete social media templates
+      await db.delete(socialMediaTemplates).where(eq(socialMediaTemplates.clientId, id));
+      
+      // Delete deals
+      await db.delete(deals).where(eq(deals.clientId, id));
+      
+      // Update tasks to remove client reference (set to null instead of deleting)
+      await db.update(tasks).set({ clientId: null }).where(eq(tasks.clientId, id));
+      
+      // Update quotes to remove client reference (set to null)
+      await db.update(quotes).set({ clientId: null }).where(eq(quotes.clientId, id));
+      
+      // Update calendar appointments to remove client reference (set to null)
+      await db.update(calendarAppointments).set({ clientId: null }).where(eq(calendarAppointments.clientId, id));
+      
+      // Update expense reports to remove client reference (set to null)
+      await db.update(expenseReportSubmissions).set({ clientId: null }).where(eq(expenseReportSubmissions.clientId, id));
+      
+      // Update calendar events to remove client reference (set to null)
+      await db.update(calendarEvents).set({ clientId: null }).where(eq(calendarEvents.clientId, id));
+      
+      // Update event time entries to remove client reference (set to null)
+      await db.update(eventTimeEntries).set({ clientId: null }).where(eq(eventTimeEntries.clientId, id));
+      
+      // Update workflow executions to remove contact reference (set to null)
+      await db.update(workflowExecutions).set({ contactId: null }).where(eq(workflowExecutions.contactId, id));
       
       // Then delete the client itself
       const result = await db.delete(clients).where(eq(clients.id, id)).returning();

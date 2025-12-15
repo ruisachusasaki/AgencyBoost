@@ -2439,15 +2439,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
-          // Check if the client has any related records
-          const counts = await appStorage.getClientRelationsCounts(clientId);
-          const totalRelated = counts.tasks + counts.campaigns + counts.healthScores;
+          // Related records are now handled by cascading delete in deleteClient
+          // const counts = await appStorage.getClientRelationsCounts(clientId);
+          // const totalRelated = counts.tasks + counts.campaigns + counts.healthScores;
 
-          if (totalRelated > 0) {
-            errors.push(`Client ${client.name} has ${totalRelated} associated records`);
-            errorCount++;
-            continue;
-          }
+          //           if (totalRelated > 0) {
+          //             errors.push(`Client ${client.name} has ${totalRelated} associated records`);
+          //             errorCount++;
+          //             continue;
+          //           }
 
           const deleted = await appStorage.deleteClient(clientId);
           if (!deleted) {
