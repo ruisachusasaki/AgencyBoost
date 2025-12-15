@@ -310,12 +310,17 @@ export default function MyProfile() {
                           const data = await response.json();
                           return { method: "PUT" as const, url: data.uploadURL };
                         }}
-                        onComplete={(result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+                        onComplete={async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
                           const uploadedFile = result.successful[0];
                           if (uploadedFile?.uploadURL) {
-                            // Update staff record with new profile image
+                            // Normalize the upload URL to get a persistent object path
+                            const normalizeResponse = await apiRequest("PUT", "/api/profile-images", {
+                              profileImageURL: uploadedFile.uploadURL as string
+                            });
+                            const { objectPath } = await normalizeResponse.json();
+                            // Update staff record with normalized profile image path
                             updateStaffMutation.mutate({
-                              profileImagePath: uploadedFile.uploadURL as string
+                              profileImagePath: objectPath
                             });
                           }
                         }}
