@@ -1202,17 +1202,17 @@ const ChecklistItem = ({ attributes, children, element }: any) => {
   };
 
   return (
-    <div {...attributes} className="checklist-item flex items-start gap-2 my-1">
+    <div {...attributes} className="checklist-item flex items-center gap-2 my-1">
       <input
         type="checkbox"
         checked={checked}
         onChange={handleCheckChange}
-        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
         contentEditable={false}
       />
-      <div className={`flex-1 ${checked ? 'line-through text-gray-500' : ''}`}>
+      <span className={`flex-1 ${checked ? 'line-through text-gray-500' : ''}`}>
         {children}
-      </div>
+      </span>
     </div>
   );
 };

@@ -24,6 +24,32 @@
   margin-bottom: 0.5rem !important;
 }
 
+/* Slate Checklist Styling */
+.checklist {
+  margin: 1rem 0;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.25rem 0;
+}
+
+.checklist-item > span {
+  flex: 1;
+  line-height: 1.5;
+}
+
+/* Remove paragraph margins inside checklist items */
+.checklist-item p,
+.checklist-item > span > p,
+.checklist-item > span > span > p {
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline;
+}
+
 /* Override for first child specifically */
 .slate-editor > h1:first-child,
 .slate-editor > h2:first-child,
@@ -41,6 +67,13 @@
   margin-top: 0 !important;
   padding-top: 0 !important;
   margin-block-start: 0 !important;
+}
+
+/* Hide empty paragraphs at start of content */
+.slate-editor > p:first-child:empty,
+.slate-editor > span:first-child > p:first-child:empty,
+[data-slate-editor] > p:first-child:empty {
+  display: none !important;
 }
 
 /* Enhanced Tiptap Editor Styling */
