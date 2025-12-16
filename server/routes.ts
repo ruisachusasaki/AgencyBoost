@@ -24747,7 +24747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         ...lesson, 
         isCompleted,
-        duration: lesson.videoDuration || 0 // Map videoDuration to duration for frontend
+        duration: lesson.videoDuration ? Math.round(lesson.videoDuration / 60) : 0 // Convert seconds to minutes for frontend
       });
     } catch (error) {
       console.error('Error fetching lesson:', error);
@@ -24759,9 +24759,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/training/courses/:courseId/lessons", requireAuth(), requirePermission('training', 'canCreate'), async (req, res) => {
     try {
       const { courseId } = req.params;
+      const { duration, ...lessonBody } = req.body;
       const newLesson = insertTrainingLessonSchema.parse({
-        ...req.body,
+        ...lessonBody,
         courseId,
+        videoDuration: duration ? duration * 60 : null, // Convert minutes to seconds
         createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
       });
       
@@ -24787,7 +24789,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updates = insertTrainingLessonSchema.partial().parse({
         ...otherData,
         videoUrl: contentUrl || null, // Map contentUrl to videoUrl
-        videoDuration: duration || null, // Map duration to videoDuration
+        courseId,
+        videoDuration: duration ? duration * 60 : null, // Convert minutes to seconds
+        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
         updatedBy: getAuthenticatedUserIdOrFail(req, res) || userId
       });
       
