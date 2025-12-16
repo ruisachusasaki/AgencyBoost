@@ -1166,7 +1166,7 @@ export default function Leads() {
         )}
 
         {activeTab === "list" && (
-          <div className="h-full overflow-y-auto p-6">
+          <div className="h-full overflow-y-auto py-6 pl-6 pr-0">
             <BulkActionsToolbar />
             <Card>
               <CardHeader className="border-b border-slate-200">
