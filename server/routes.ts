@@ -24789,10 +24789,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updates = insertTrainingLessonSchema.partial().parse({
         ...otherData,
         videoUrl: contentUrl || null, // Map contentUrl to videoUrl
-        courseId,
         videoDuration: duration ? duration * 60 : null, // Convert minutes to seconds
-        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId,
-        updatedBy: getAuthenticatedUserIdOrFail(req, res) || userId
+        updatedBy: req.session?.userId
       });
       
       const [oldLesson] = await db.select().from(trainingLessons).where(eq(trainingLessons.id, id));
