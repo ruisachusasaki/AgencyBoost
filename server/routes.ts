@@ -4417,6 +4417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Bulk Lead Operations - SECURED (Sales process management)
+  // Bulk Lead Operations - SECURED (Sales process management)
   app.post("/api/leads/bulk-delete", requireAuth(), requirePermission('leads', 'canDelete'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
@@ -4438,6 +4439,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
+          // Check if lead has associated deals (deals.leadId is NOT NULL, so we can't delete)
+          const leadDeals = await db.select({ id: deals.id }).from(deals).where(eq(deals.leadId, leadId));
+          if (leadDeals.length > 0) {
+            errors.push(`Lead "${lead.name || lead.email}" has ${leadDeals.length} deal(s) and cannot be deleted. Please remove the deals first.`);
+            continue;
+          }
+
+          // Delete or nullify related records that would block deletion
+          // Nullify leadId on quotes (leadId is nullable)
+          await db.update(quotes).set({ leadId: null }).where(eq(quotes.leadId, leadId));
+          
+          // Nullify leadId on tasks (leadId is nullable)
+          await db.update(tasks).set({ leadId: null }).where(eq(tasks.leadId, leadId));
+
+          // Now delete the lead (cascade will handle: leadStageTransitions, salesActivities, leadAppointments, leadNotes)
           await db.delete(leads).where(eq(leads.id, leadId));
           deletedCount++;
 
@@ -4453,6 +4469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             req
           );
         } catch (err) {
+          console.error(`Error deleting lead ${leadId}:`, err);
           errors.push(`Failed to delete lead ${leadId}`);
         }
       }
@@ -4467,6 +4484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to bulk delete leads" });
     }
   });
+
 
   app.post("/api/leads/bulk-update", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
     try {
