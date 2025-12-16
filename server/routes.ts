@@ -24485,7 +24485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newModule = insertTrainingModuleSchema.parse({
         ...req.body,
         courseId,
-        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
+        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId,
       });
       
       const [module] = await db.insert(trainingModules).values(newModule).returning();
@@ -24764,7 +24764,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...lessonBody,
         courseId,
         videoDuration: duration ? duration * 60 : null, // Convert minutes to seconds
-        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
+        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId,
       });
       
       const [lesson] = await db.insert(trainingLessons).values(newLesson).returning();
@@ -24791,7 +24791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         videoUrl: contentUrl || null, // Map contentUrl to videoUrl
         courseId,
         videoDuration: duration ? duration * 60 : null, // Convert minutes to seconds
-        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
+        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId,
         updatedBy: getAuthenticatedUserIdOrFail(req, res) || userId
       });
       
@@ -25212,7 +25212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           shuffleQuestions,
           showCorrectAnswers,
           isRequired,
-          createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
+          createdBy: getAuthenticatedUserIdOrFail(req, res) || userId,
         }).returning();
       }
       
@@ -25388,7 +25388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { type, title, description, url, fileName, fileSize } = insertTrainingLessonResourceSchema.parse({
         ...req.body,
         lessonId,
-        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
+        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId,
       });
       
       // Get existing resources count for order
@@ -25405,7 +25405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileName,
         fileSize,
         order: existingResources.length,
-        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId
+        createdBy: getAuthenticatedUserIdOrFail(req, res) || userId,
       }).returning();
       
       await createAuditLog("created", "training_lesson_resource", resource.id, resource.title, req.session?.userId,
