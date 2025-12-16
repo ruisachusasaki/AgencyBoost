@@ -26,6 +26,7 @@ const lessonSchema = z.object({
   duration: z.number().min(0, "Duration must be positive").optional(),
   order: z.number().min(0, "Order must be positive").default(0),
   isRequired: z.boolean().default(true),
+  moduleId: z.string().optional(),
 });
 
 type LessonFormData = z.infer<typeof lessonSchema>;
@@ -77,6 +78,12 @@ export default function EditLesson() {
     enabled: !!lessonId,
   });
 
+  // Fetch modules for the course
+  const { data: modules = [] } = useQuery({
+    queryKey: [`/api/training/courses/${courseId}/modules`],
+    enabled: !!courseId,
+  });
+
   const form = useForm<LessonFormData>({
     resolver: zodResolver(lessonSchema),
     defaultValues: {
@@ -88,6 +95,7 @@ export default function EditLesson() {
       duration: 0,
       order: 0,
       isRequired: true,
+      moduleId: undefined,
     },
   });
 
@@ -100,9 +108,10 @@ export default function EditLesson() {
         content: lesson.content || "",
         contentType: lesson.contentType || "video",
         contentUrl: lesson.videoUrl || "", // Map videoUrl from API to contentUrl for form
-        duration: lesson.duration || 0,
+        duration: lesson.videoDuration ? Math.round(lesson.videoDuration / 60) : 0, // Convert seconds to minutes
         order: lesson.order || 0,
         isRequired: lesson.isRequired ?? true,
+        moduleId: lesson.moduleId || undefined,
       });
     }
   }, [lesson, form]);
@@ -566,6 +575,38 @@ export default function EditLesson() {
                           <SelectItem value="assignment">Assignment</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="moduleId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Module</FormLabel>
+                      <Select 
+                        onValueChange={(value) => field.onChange(value === "unorganized" ? undefined : value)} 
+                        value={field.value || "unorganized"}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-module">
+                            <SelectValue placeholder="Select a module or leave unorganized" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="unorganized">Unorganized (No Module)</SelectItem>
+                          {modules.map((module: any) => (
+                            <SelectItem key={module.id} value={module.id}>
+                              {module.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Group this lesson under a module for better organization
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
