@@ -4415,6 +4415,199 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Bulk Lead Operations - SECURED (Sales process management)
+  app.post("/api/leads/bulk-delete", requireAuth(), requirePermission('leads', 'canDelete'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      const { leadIds } = req.body;
+      if (!Array.isArray(leadIds) || leadIds.length === 0) {
+        return res.status(400).json({ message: "No lead IDs provided" });
+      }
+
+      let deletedCount = 0;
+      const errors: string[] = [];
+
+      for (const leadId of leadIds) {
+        try {
+          const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+          if (!lead) {
+            errors.push(`Lead ${leadId} not found`);
+            continue;
+          }
+
+          await db.delete(leads).where(eq(leads.id, leadId));
+          deletedCount++;
+
+          await createAuditLog(
+            "deleted",
+            "lead",
+            leadId,
+            lead.name || lead.email,
+            userId,
+            `Lead bulk deleted: ${lead.name} (${lead.email})`,
+            { name: lead.name, email: lead.email },
+            null,
+            req
+          );
+        } catch (err) {
+          errors.push(`Failed to delete lead ${leadId}`);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        deleted: deletedCount, 
+        errors: errors.length > 0 ? errors : undefined 
+      });
+    } catch (error) {
+      console.error("Error bulk deleting leads:", error);
+      res.status(500).json({ message: "Failed to bulk delete leads" });
+    }
+  });
+
+  app.post("/api/leads/bulk-update", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      const { leadIds, updates } = req.body;
+      if (!Array.isArray(leadIds) || leadIds.length === 0) {
+        return res.status(400).json({ message: "No lead IDs provided" });
+      }
+
+      let updatedCount = 0;
+      const errors: string[] = [];
+
+      for (const leadId of leadIds) {
+        try {
+          const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+          if (!lead) {
+            errors.push(`Lead ${leadId} not found`);
+            continue;
+          }
+
+          await db.update(leads)
+            .set({ ...updates, updatedAt: new Date() })
+            .where(eq(leads.id, leadId));
+          updatedCount++;
+
+          await createAuditLog(
+            "updated",
+            "lead",
+            leadId,
+            lead.name || lead.email,
+            userId,
+            `Lead bulk updated: ${lead.name}`,
+            updates,
+            null,
+            req
+          );
+        } catch (err) {
+          errors.push(`Failed to update lead ${leadId}`);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        updated: updatedCount, 
+        errors: errors.length > 0 ? errors : undefined 
+      });
+    } catch (error) {
+      console.error("Error bulk updating leads:", error);
+      res.status(500).json({ message: "Failed to bulk update leads" });
+    }
+  });
+
+  app.post("/api/leads/bulk-add-tag", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      const { leadIds, tag } = req.body;
+      if (!Array.isArray(leadIds) || leadIds.length === 0 || !tag) {
+        return res.status(400).json({ message: "Lead IDs and tag are required" });
+      }
+
+      let updatedCount = 0;
+      const errors: string[] = [];
+
+      for (const leadId of leadIds) {
+        try {
+          const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+          if (!lead) {
+            errors.push(`Lead ${leadId} not found`);
+            continue;
+          }
+
+          const currentTags = lead.tags || [];
+          if (!currentTags.includes(tag)) {
+            await db.update(leads)
+              .set({ tags: [...currentTags, tag], updatedAt: new Date() })
+              .where(eq(leads.id, leadId));
+            updatedCount++;
+          }
+        } catch (err) {
+          errors.push(`Failed to add tag to lead ${leadId}`);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        updated: updatedCount, 
+        errors: errors.length > 0 ? errors : undefined 
+      });
+    } catch (error) {
+      console.error("Error bulk adding tag to leads:", error);
+      res.status(500).json({ message: "Failed to add tag to leads" });
+    }
+  });
+
+  app.post("/api/leads/bulk-remove-tag", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      const { leadIds, tag } = req.body;
+      if (!Array.isArray(leadIds) || leadIds.length === 0 || !tag) {
+        return res.status(400).json({ message: "Lead IDs and tag are required" });
+      }
+
+      let updatedCount = 0;
+      const errors: string[] = [];
+
+      for (const leadId of leadIds) {
+        try {
+          const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+          if (!lead) {
+            errors.push(`Lead ${leadId} not found`);
+            continue;
+          }
+
+          const currentTags = lead.tags || [];
+          if (currentTags.includes(tag)) {
+            await db.update(leads)
+              .set({ tags: currentTags.filter(t => t !== tag), updatedAt: new Date() })
+              .where(eq(leads.id, leadId));
+            updatedCount++;
+          }
+        } catch (err) {
+          errors.push(`Failed to remove tag from lead ${leadId}`);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        updated: updatedCount, 
+        errors: errors.length > 0 ? errors : undefined 
+      });
+    } catch (error) {
+      console.error("Error bulk removing tag from leads:", error);
+      res.status(500).json({ message: "Failed to remove tag from leads" });
+    }
+  });
   // Lead Pipeline Stage routes - SECURED (Sales process configuration)
   app.get("/api/lead-pipeline-stages", requireAuth(), requirePermission('leads', 'canView'), async (req, res) => {
     try {

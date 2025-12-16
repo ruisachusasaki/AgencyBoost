@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban, UserPlus, ChevronUp, ChevronDown, MoreHorizontal, Filter, X } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban, UserPlus, ChevronUp, ChevronDown, MoreHorizontal, Filter, X, User as UserIcon } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import CustomFieldsLeadForm from "@/components/forms/custom-fields-lead-form";
 import PipelineStageManager from "@/components/pipeline-stage-manager";
@@ -64,6 +64,7 @@ export default function Leads() {
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [filterVertical, setFilterVertical] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -126,6 +127,117 @@ export default function Leads() {
       });
     },
   });
+
+  // Bulk action mutations
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (leadIds: string[]) => {
+      return await apiRequest("POST", "/api/leads/bulk-delete", { leadIds });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      setSelectedLeads(new Set());
+      toast({
+        title: "Leads deleted",
+        description: `Successfully deleted ${data.deleted} lead(s).`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete leads. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async ({ leadIds, updates }: { leadIds: string[]; updates: any }) => {
+      return await apiRequest("POST", "/api/leads/bulk-update", { leadIds, updates });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      setSelectedLeads(new Set());
+      toast({
+        title: "Leads updated",
+        description: `Successfully updated ${data.updated} lead(s).`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update leads. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkAddTagMutation = useMutation({
+    mutationFn: async ({ leadIds, tag }: { leadIds: string[]; tag: string }) => {
+      return await apiRequest("POST", "/api/leads/bulk-add-tag", { leadIds, tag });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      setSelectedLeads(new Set());
+      toast({
+        title: "Tag added",
+        description: `Successfully added tag to ${data.updated} lead(s).`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add tag. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkRemoveTagMutation = useMutation({
+    mutationFn: async ({ leadIds, tag }: { leadIds: string[]; tag: string }) => {
+      return await apiRequest("POST", "/api/leads/bulk-remove-tag", { leadIds, tag });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      setSelectedLeads(new Set());
+      toast({
+        title: "Tag removed",
+        description: `Successfully removed tag from ${data.updated} lead(s).`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove tag. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allLeadIds = new Set(filteredAndSortedLeads.map(lead => lead.id));
+      setSelectedLeads(allLeadIds);
+    } else {
+      setSelectedLeads(new Set());
+    }
+  };
+
+  const handleSelectLead = (leadId: string, checked: boolean) => {
+    setSelectedLeads(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(leadId);
+      } else {
+        newSet.delete(leadId);
+      }
+      return newSet;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedLeads(new Set());
+  };
 
   // Get unique client verticals from custom field data
   const uniqueVerticals = Array.from(new Set(
@@ -379,6 +491,205 @@ export default function Leads() {
       default:
         return '-';
     }
+  };
+
+  // Bulk Actions Toolbar Component
+  const BulkActionsToolbar = () => {
+    const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+    const [bulkAssigneeDialogOpen, setBulkAssigneeDialogOpen] = useState(false);
+    const [bulkAddTagDialogOpen, setBulkAddTagDialogOpen] = useState(false);
+    const [bulkRemoveTagDialogOpen, setBulkRemoveTagDialogOpen] = useState(false);
+    const [tempAssignee, setTempAssignee] = useState("");
+    const [tempTagToAdd, setTempTagToAdd] = useState("");
+    const [tempTagToRemove, setTempTagToRemove] = useState("");
+
+    const handleBulkDelete = () => {
+      bulkDeleteMutation.mutate(Array.from(selectedLeads));
+      setBulkDeleteConfirmOpen(false);
+    };
+
+    const handleBulkAssignee = () => {
+      if (!tempAssignee) return;
+      bulkUpdateMutation.mutate({
+        leadIds: Array.from(selectedLeads),
+        updates: { assignedTo: tempAssignee }
+      });
+      setBulkAssigneeDialogOpen(false);
+      setTempAssignee("");
+    };
+
+    const handleBulkAddTag = () => {
+      if (!tempTagToAdd) return;
+      bulkAddTagMutation.mutate({
+        leadIds: Array.from(selectedLeads),
+        tag: tempTagToAdd
+      });
+      setBulkAddTagDialogOpen(false);
+      setTempTagToAdd("");
+    };
+
+    const handleBulkRemoveTag = () => {
+      if (!tempTagToRemove) return;
+      bulkRemoveTagMutation.mutate({
+        leadIds: Array.from(selectedLeads),
+        tag: tempTagToRemove
+      });
+      setBulkRemoveTagDialogOpen(false);
+      setTempTagToRemove("");
+    };
+
+    if (selectedLeads.size === 0) return null;
+
+    return (
+      <div className="flex items-center justify-between p-3 bg-primary/10 border border-primary/30 rounded-lg mb-4">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-primary">
+            {selectedLeads.size} lead{selectedLeads.size > 1 ? 's' : ''} selected
+          </span>
+          <Button variant="outline" size="sm" onClick={clearSelection} data-testid="button-clear-selection">
+            Clear Selection
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Delete Button */}
+          <Dialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" data-testid="button-bulk-delete">
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete {selectedLeads.size} lead(s)?</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete {selectedLeads.size} lead(s)? This action cannot be undone.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setBulkDeleteConfirmOpen(false)} data-testid="button-cancel-bulk-delete">
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleteMutation.isPending} data-testid="button-confirm-bulk-delete">
+                  {bulkDeleteMutation.isPending ? "Deleting..." : `Delete ${selectedLeads.size} Lead(s)`}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Assignee Button */}
+          <Dialog open={bulkAssigneeDialogOpen} onOpenChange={setBulkAssigneeDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-bulk-assignee">
+                <UserIcon className="h-4 w-4 mr-1" />
+                Assignee
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Change Assignee for {selectedLeads.size} lead(s)</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Select value={tempAssignee} onValueChange={setTempAssignee}>
+                  <SelectTrigger data-testid="select-bulk-assignee">
+                    <SelectValue placeholder="Select assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staff.map((member) => (
+                      <SelectItem key={member.id} value={member.id} data-testid={`option-assignee-${member.id}`}>
+                        {member.firstName} {member.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkAssigneeDialogOpen(false)} data-testid="button-cancel-bulk-assignee">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkAssignee} disabled={!tempAssignee} data-testid="button-update-bulk-assignee">
+                    Update Assignee
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Add Tag Button */}
+          <Dialog open={bulkAddTagDialogOpen} onOpenChange={setBulkAddTagDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-bulk-add-tag">
+                <Plus className="h-4 w-4 mr-1" />
+                Add Tag
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Tag to {selectedLeads.size} lead(s)</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Select value={tempTagToAdd} onValueChange={setTempTagToAdd}>
+                  <SelectTrigger data-testid="select-bulk-add-tag">
+                    <SelectValue placeholder="Select tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tags.map((tag) => (
+                      <SelectItem key={tag.id} value={tag.name} data-testid={`option-add-tag-${tag.id}`}>
+                        {tag.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkAddTagDialogOpen(false)} data-testid="button-cancel-bulk-add-tag">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkAddTag} disabled={!tempTagToAdd} data-testid="button-update-bulk-add-tag">
+                    Add Tag
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Remove Tag Button */}
+          <Dialog open={bulkRemoveTagDialogOpen} onOpenChange={setBulkRemoveTagDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-bulk-remove-tag">
+                <X className="h-4 w-4 mr-1" />
+                Remove Tag
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Remove Tag from {selectedLeads.size} lead(s)</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Select value={tempTagToRemove} onValueChange={setTempTagToRemove}>
+                  <SelectTrigger data-testid="select-bulk-remove-tag">
+                    <SelectValue placeholder="Select tag to remove" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tags.map((tag) => (
+                      <SelectItem key={tag.id} value={tag.name} data-testid={`option-remove-tag-${tag.id}`}>
+                        {tag.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkRemoveTagDialogOpen(false)} data-testid="button-cancel-bulk-remove-tag">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkRemoveTag} disabled={!tempTagToRemove} data-testid="button-update-bulk-remove-tag">
+                    Remove Tag
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+    );
   };
 
   const SortableHeader = ({ column, children }: { column: SortField; children: React.ReactNode }) => {
@@ -856,6 +1167,7 @@ export default function Leads() {
 
         {activeTab === "list" && (
           <div className="h-full overflow-y-auto p-6">
+            <BulkActionsToolbar />
             <Card>
               <CardHeader className="border-b border-slate-200">
                 <div className="flex items-center justify-between">
@@ -903,6 +1215,13 @@ export default function Leads() {
                     <Table className="min-w-full">
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-12">
+                            <Checkbox
+                              checked={selectedLeads.size > 0 && selectedLeads.size === filteredAndSortedLeads.length}
+                              onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                              data-testid="checkbox-select-all-leads"
+                            />
+                          </TableHead>
                           {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => {
                             if (column.sortable) {
                               return (
@@ -923,6 +1242,13 @@ export default function Leads() {
                       <TableBody>
                         {filteredAndSortedLeads.map((lead) => (
                           <TableRow key={lead.id} className="hover:bg-slate-50">
+                            <TableCell className="w-12">
+                              <Checkbox
+                                checked={selectedLeads.has(lead.id)}
+                                onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
+                                data-testid={`checkbox-lead-${lead.id}`}
+                              />
+                            </TableCell>
                             {AVAILABLE_COLUMNS.filter(col => visibleColumns.has(col.key)).map((column) => (
                               <TableCell key={column.key} className="py-3">
                                 {renderCellContent(lead, column.key)}
