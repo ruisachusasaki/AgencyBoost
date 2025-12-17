@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -118,6 +119,9 @@ export default function Clients() {
   // Smart list overflow handling
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
   const maxVisibleTabs = 4; // Show "All Clients" + up to 3 smart lists, then "More"
+  
+  // Smart list delete confirmation
+  const [smartListToDelete, setSmartListToDelete] = useState<SmartList | null>(null);
 
   // Get unique values for dropdown fields from actual client data or custom field options
   const getFieldOptions = (fieldName: string): string[] => {
@@ -1627,8 +1631,8 @@ export default function Clients() {
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           onClick={() => {
-                            if ('smartList' in tab && confirm(`Delete "${tab.smartList.name}"?`)) {
-                              handleDeleteSmartList(tab.smartList.id);
+                            if ('smartList' in tab) {
+                              setSmartListToDelete(tab.smartList);
                             }
                           }}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -1693,8 +1697,8 @@ export default function Clients() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     onClick={() => {
-                                      if ('smartList' in tab && confirm(`Delete "${tab.smartList.name}"?`)) {
-                                        handleDeleteSmartList(tab.smartList.id);
+                                      if ('smartList' in tab) {
+                                        setSmartListToDelete(tab.smartList);
                                       }
                                     }}
                                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -2019,11 +2023,7 @@ export default function Clients() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => {
-                              if (confirm(`Delete "${smartList.name}"?`)) {
-                                handleDeleteSmartList(smartList.id);
-                              }
-                            }}
+                            onClick={() => setSmartListToDelete(smartList)}
                             className="h-6 w-6 p-0 text-slate-400 hover:text-red-600"
                           >
                             <X className="h-3 w-3" />
@@ -2441,6 +2441,32 @@ export default function Clients() {
         client={clientToDelete}
         onSuccess={handleDeletionSuccess}
       />
+
+      {/* Smart List Delete Confirmation Dialog */}
+      <AlertDialog open={!!smartListToDelete} onOpenChange={(open) => !open && setSmartListToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Smart List</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{smartListToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSmartListToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (smartListToDelete) {
+                  handleDeleteSmartList(smartListToDelete.id);
+                  setSmartListToDelete(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
