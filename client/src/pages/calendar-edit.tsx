@@ -49,6 +49,7 @@ const calendarEditSchema = z.object({
   maxBookingsPerDay: z.number().min(1).max(50),
   maxBookersPerSlot: z.number().min(1).max(20),
   assignedStaff: z.string().optional(), // Staff member assigned to calendar
+  createdBy: z.string().min(1, "Owner is required"), // Calendar owner
 });
 
 type CalendarEditForm = z.infer<typeof calendarEditSchema>;
@@ -70,6 +71,7 @@ interface CalendarData {
   color: string;
   publicUrl: string;
   createdAt: string;
+  createdBy: string;
   // Additional fields not in schema but used for form
   meetingInviteTitle?: string;
   slotInterval?: number;
@@ -141,6 +143,7 @@ export default function CalendarEdit() {
       maxBookingsPerDay: 8,
       maxBookersPerSlot: 1,
       assignedStaff: "",
+      createdBy: "",
     },
   });
 
@@ -165,6 +168,7 @@ export default function CalendarEdit() {
         maxBookingsPerDay: calendar.maxBookingsPerDay || 8,
         maxBookersPerSlot: calendar.maxBookersPerSlot || 1,
         assignedStaff: (calendar as any).assignedStaff || "",
+        createdBy: calendar.createdBy || "",
       });
     }
   }, [calendar, form]);
@@ -441,6 +445,35 @@ export default function CalendarEdit() {
                         <FormMessage />
                         <p className="text-xs text-muted-foreground">
                           The staff member who will handle bookings from this calendar
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Calendar Owner */}
+                  <FormField
+                    control={form.control}
+                    name="createdBy"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Calendar Owner</FormLabel>
+                        <Select value={field.value || ""} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-calendar-owner">
+                              <SelectValue placeholder="Select calendar owner" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {staffList?.map((staff: any) => (
+                              <SelectItem key={staff.id} value={staff.id}>
+                                {staff.firstName} {staff.lastName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        <p className="text-xs text-muted-foreground">
+                          The owner of this calendar who has administrative access
                         </p>
                       </FormItem>
                     )}

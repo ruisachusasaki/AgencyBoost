@@ -15980,7 +15980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...calendarData,
         type: existingCalendar.type, // Keep existing type
         durationUnit: existingCalendar.durationUnit, // Keep existing duration unit
-        createdBy: existingCalendar.createdBy, // Keep existing creator
+        createdBy: calendarData.createdBy || existingCalendar.createdBy, // Use provided or keep existing creator
         customFieldIds: existingCalendar.customFieldIds || [], // Keep existing custom fields
       };
       
