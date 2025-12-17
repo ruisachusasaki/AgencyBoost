@@ -196,9 +196,11 @@ export default function Clients() {
 
   // Dynamically create columns including all custom fields
   const availableColumns = React.useMemo(() => {
-    const baseColumns = [...AVAILABLE_COLUMNS];
+    // Start with all columns except 'actions' (which should always be last)
+    const baseColumns = AVAILABLE_COLUMNS.filter(col => col.key !== 'actions');
+    const actionsColumn = AVAILABLE_COLUMNS.find(col => col.key === 'actions');
     
-    // Add all custom fields as columns
+    // Add all custom fields as columns (before actions)
     if (customFieldsData && customFieldsData.length > 0) {
       customFieldsData.forEach(field => {
         // Check if a column with this name already exists (like 'Client Vertical')
@@ -216,6 +218,11 @@ export default function Clients() {
           });
         }
       });
+    }
+    
+    // Always add actions column last
+    if (actionsColumn) {
+      baseColumns.push(actionsColumn);
     }
     
     return baseColumns;
