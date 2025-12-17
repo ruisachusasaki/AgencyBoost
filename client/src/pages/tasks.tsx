@@ -1186,13 +1186,14 @@ export default function Tasks() {
   const bulkDeleteMutation = useMutation({
     mutationFn: async (taskIds: string[]) => {
       await apiRequest('DELETE', '/api/tasks/bulk-delete', { taskIds });
+      return taskIds.length; // Return count for onSuccess
     },
-    onSuccess: () => {
+    onSuccess: (deletedCount) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       clearSelection();
       toast({
         title: "Tasks deleted",
-        description: `${selectedTasks.size} tasks have been successfully deleted.`,
+        description: `${deletedCount} tasks have been successfully deleted.`,
       });
     },
     onError: () => {
@@ -1207,13 +1208,14 @@ export default function Tasks() {
   const bulkUpdateMutation = useMutation({
     mutationFn: async ({ taskIds, updates }: { taskIds: string[], updates: any }) => {
       await apiRequest('PUT', '/api/tasks/bulk-update', { taskIds, updates });
+      return taskIds.length; // Return count for onSuccess
     },
-    onSuccess: () => {
+    onSuccess: (updatedCount) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       clearSelection();
       toast({
         title: "Tasks updated",
-        description: `${selectedTasks.size} tasks have been successfully updated.`,
+        description: `${updatedCount} tasks have been successfully updated.`,
       });
     },
     onError: () => {
