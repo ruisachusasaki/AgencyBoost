@@ -3110,7 +3110,7 @@ export const insertTaskDependencySchema = createInsertSchema(taskDependencies).o
 export type TaskDependency = typeof taskDependencies.$inferSelect;
 export type InsertTaskDependency = z.infer<typeof insertTaskDependencySchema>;
 
-// Team Positions - configurable positions that can be assigned to clients
+// Team Positions - configurable positions that can be assigned to clients AND used in org chart
 export const teamPositions = pgTable("team_positions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   key: text("key").notNull().unique(), // unique identifier like "setter", "bdr", "account_manager"
@@ -3118,6 +3118,10 @@ export const teamPositions = pgTable("team_positions", {
   description: text("description"), // optional description
   order: integer("order").default(0),
   isActive: boolean("is_active").default(true),
+  // Org Chart fields - positions can be added to the org chart hierarchy
+  inOrgChart: boolean("in_org_chart").default(false), // Track if position is in the org chart structure
+  parentPositionId: varchar("parent_position_id"), // self-referencing for org chart hierarchy
+  orgChartOrder: integer("org_chart_order").default(0), // ordering within parent in org chart
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
