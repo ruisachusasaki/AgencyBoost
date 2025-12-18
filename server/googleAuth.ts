@@ -78,14 +78,21 @@ async function upsertStaffFromGoogleProfile(profile: {
     .limit(1);
 
   if (existingStaff.length > 0) {
-    // Update existing staff member
+    // Update existing staff member, but preserve custom profile image if one exists
+    // Only use Google photo if user doesn't have a custom uploaded image
+    const existingProfileImage = existingStaff[0].profileImagePath;
+    const hasCustomProfileImage = existingProfileImage && 
+      !existingProfileImage.includes('googleusercontent.com') &&
+      !existingProfileImage.includes('lh3.google');
+    
     const [updated] = await db
       .update(staff)
       .set({
         email: normalizedEmail,
         firstName,
         lastName,
-        profileImagePath: profileImageUrl,
+        // Preserve custom profile image, only use Google photo as fallback
+        profileImagePath: hasCustomProfileImage ? existingProfileImage : profileImageUrl,
         updatedAt: new Date(),
       })
       .where(eq(staff.id, existingStaff[0].id))
