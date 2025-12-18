@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { TrainingCoursePermissionsModal } from "@/components/training-course-permissions-modal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, X, Plus } from "lucide-react";
+import { ArrowLeft, Save, X, Plus, Lock } from "lucide-react";
 import { Link } from "wouter";
 import { ThumbnailUpload } from "@/components/training/ThumbnailUpload";
 
@@ -41,6 +42,7 @@ export default function EditCourse() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newTag, setNewTag] = useState("");
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
 
   // Fetch course data
   const { data: course, isLoading } = useQuery({
@@ -440,6 +442,16 @@ export default function EditCourse() {
                         Cancel
                       </Link>
                     </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={() => setShowPermissionsModal(true)}
+                      data-testid="button-permissions"
+                    >
+                      <Lock className="h-4 w-4 mr-2" />
+                      Permissions
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -447,6 +459,15 @@ export default function EditCourse() {
           </div>
         </form>
       </Form>
+
+      {courseId && (
+        <TrainingCoursePermissionsModal
+          isOpen={showPermissionsModal}
+          onClose={() => setShowPermissionsModal(false)}
+          courseId={courseId}
+          courseTitle={course?.title || ""}
+        />
+      )}
     </div>
   );
 }
