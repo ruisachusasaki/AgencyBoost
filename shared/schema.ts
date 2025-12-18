@@ -3437,6 +3437,15 @@ export const trainingProgress = pgTable("training_progress", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Training Course Permissions - similar to knowledge base permissions
+export const trainingCoursePermissions = pgTable("training_course_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => trainingCourses.id, { onDelete: "cascade" }),
+  accessType: text("access_type").notNull(), // "team" or "user"
+  accessId: text("access_id").notNull(), // team/department id or user id
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Training Quizzes
 export const trainingQuizzes = pgTable("training_quizzes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3659,6 +3668,11 @@ export const insertTrainingProgressSchema = createInsertSchema(trainingProgress)
   createdAt: true,
 });
 
+export const insertTrainingCoursePermissionSchema = createInsertSchema(trainingCoursePermissions).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertTrainingQuizSchema = createInsertSchema(trainingQuizzes).omit({
   id: true,
   createdAt: true,
@@ -3808,6 +3822,8 @@ export type TrainingEnrollment = typeof trainingEnrollments.$inferSelect;
 export type InsertTrainingEnrollment = z.infer<typeof insertTrainingEnrollmentSchema>;
 
 export type TrainingProgress = typeof trainingProgress.$inferSelect;
+export type TrainingCoursePermission = typeof trainingCoursePermissions.$inferSelect;
+export type InsertTrainingCoursePermission = z.infer<typeof insertTrainingCoursePermissionSchema>;
 export type InsertTrainingProgress = z.infer<typeof insertTrainingProgressSchema>;
 
 export type TrainingQuiz = typeof trainingQuizzes.$inferSelect;
