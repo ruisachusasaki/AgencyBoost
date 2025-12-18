@@ -60,7 +60,7 @@ import {
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
   timeOffPolicies, timeOffTypes, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, jobApplicationWatchers, applicationStageHistory, timeOffBalances,
   jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, expenseReportFormConfig, expenseReportSubmissions, offboardingFormConfig, offboardingSubmissions, teamPositions, clientTeamAssignments,
-  trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress,
+  trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress, trainingCoursePermissions,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
   clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings,
@@ -24240,6 +24240,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting training course:', error);
       res.status(500).json({ error: "Failed to delete training course" });
+    }
+  });
+
+
+  // ===== TRAINING COURSE PERMISSIONS =====
+  
+  // Get course permissions
+  app.get("/api/training/courses/:id/permissions", requireAuth(), requirePermission('training', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      // Check if course exists
+      const [course] = await db.select().from(trainingCourses).where(eq(trainingCourses.id, req.params.id));
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      // Get current permissions
+      const permissionsResult = await db.execute(sql`
+        SELECT id, course_id, access_type, access_id, created_at 
+        FROM training_course_permissions
+        WHERE course_id = ${req.params.id}
+      `);
+      const permissionsRaw = Array.isArray(permissionsResult) ? permissionsResult : permissionsResult.rows;
+
+      // Convert snake_case to camelCase for frontend
+      const permissions = (permissionsRaw || []).map((p: any) => ({
+        id: p.id,
+        courseId: p.course_id,
+        accessType: p.access_type,
+        accessId: p.access_id,
+        createdAt: p.created_at
+      }));
+
+      // If no permissions, the course is available to everyone
+      res.json({
+        isRestricted: permissions.length > 0,
+        permissions: permissions
+      });
+    } catch (error) {
+      console.error('Error fetching course permissions:', error);
+      res.status(500).json({ message: "Failed to fetch permissions" });
+    }
+  });
+
+  // Update course permissions
+  app.put("/api/training/courses/:id/permissions", requireAuth(), requirePermission('training', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { isRestricted, permissions } = req.body;
+
+      // Check if course exists
+      const [course] = await db.select().from(trainingCourses).where(eq(trainingCourses.id, req.params.id));
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      // Delete existing permissions
+      await db.delete(trainingCoursePermissions)
+        .where(eq(trainingCoursePermissions.courseId, req.params.id));
+
+      // Only insert new permissions if the course is restricted
+      if (isRestricted && permissions && Array.isArray(permissions) && permissions.length > 0) {
+        const validPermissions = permissions.filter((p: any) => p.accessType && p.accessId);
+        
+        if (validPermissions.length > 0) {
+          await db.insert(trainingCoursePermissions).values(
+            validPermissions.map((permission: any) => ({
+              courseId: req.params.id,
+              accessType: permission.accessType,
+              accessId: permission.accessId,
+            }))
+          );
+        }
+      }
+
+      // Fetch updated permissions
+      const updatedPermissionsResult = await db.execute(sql`
+        SELECT id, course_id, access_type, access_id, created_at 
+        FROM training_course_permissions
+        WHERE course_id = ${req.params.id}
+      `);
+      const updatedPermissionsRaw = Array.isArray(updatedPermissionsResult) ? updatedPermissionsResult : updatedPermissionsResult.rows;
+
+      const updatedPermissions = (updatedPermissionsRaw || []).map((p: any) => ({
+        id: p.id,
+        courseId: p.course_id,
+        accessType: p.access_type,
+        accessId: p.access_id,
+        createdAt: p.created_at
+      }));
+
+      res.json({
+        isRestricted: updatedPermissions.length > 0,
+        permissions: updatedPermissions
+      });
+    } catch (error) {
+      console.error('Error updating course permissions:', error);
+      res.status(500).json({ message: "Failed to update permissions" });
     }
   });
 
