@@ -24054,11 +24054,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const courses = await query.orderBy(asc(trainingCourses.order), desc(trainingCourses.createdAt));
       
+      // Check if user is admin - admins see all courses
+      const userIsAdmin = await isCurrentUserAdmin(req);
+      
       // Get all course permissions
       const allPermissions = await db.select().from(trainingCoursePermissions);
       
-      // Filter courses based on permissions
-      const filteredCourses = courses.filter(course => {
+      // Filter courses based on permissions (admins bypass this)
+      const filteredCourses = userIsAdmin ? courses : courses.filter(course => {
         const coursePerms = allPermissions.filter(p => p.courseId === course.id);
         
         // If no permissions set, course is available to everyone
