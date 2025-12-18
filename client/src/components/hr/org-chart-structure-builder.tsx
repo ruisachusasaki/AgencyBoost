@@ -21,12 +21,15 @@ type OrgNode = {
   children: OrgNode[];
 };
 
-type Position = {
+type TeamPosition = {
   id: string;
-  name: string;
+  key: string;
+  label: string; // This is the display name
   description: string | null;
-  departmentId: string | null;
   isActive: boolean;
+  inOrgChart: boolean;
+  parentPositionId: string | null;
+  orgChartOrder: number;
 };
 
 export default function OrgChartStructureBuilder() {
@@ -41,9 +44,9 @@ export default function OrgChartStructureBuilder() {
     queryKey: ["/api/org-structure"],
   });
 
-  // Fetch all positions from all departments
-  const { data: allPositions = [] } = useQuery<Position[]>({
-    queryKey: ["/api/positions"],
+  // Fetch all team positions (from Settings > Staff > Teams)
+  const { data: allPositions = [] } = useQuery<TeamPosition[]>({
+    queryKey: ["/api/team-positions"],
   });
 
   // Toggle node expansion
@@ -62,14 +65,14 @@ export default function OrgChartStructureBuilder() {
   // Remove position from org chart mutation
   const removeFromOrgChartMutation = useMutation({
     mutationFn: async (positionId: string) => {
-      return await apiRequest("PUT", `/api/positions/${positionId}`, {
+      return await apiRequest("PATCH", `/api/team-positions/${positionId}/org-chart`, {
         inOrgChart: false,
         parentPositionId: null, // Clear parent when removing from chart
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/org-structure"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
       toast({
         title: "Success",
         description: "Position removed from org chart",
@@ -84,16 +87,12 @@ export default function OrgChartStructureBuilder() {
     },
   });
 
-  // Add position instance mutation
+  // Add position to org chart mutation - updates existing team position instead of creating duplicate
   const addPositionMutation = useMutation({
-    mutationFn: async (templatePosition: Position) => {
-      // Create position instance from template with parent context if available
+    mutationFn: async (teamPosition: TeamPosition) => {
+      // Update existing team position to add it to org chart
       const payload: any = {
-        name: templatePosition.name, // Use name from position
-        description: templatePosition.description,
-        isActive: true,
         inOrgChart: true, // Mark as part of org chart
-        departmentId: templatePosition.departmentId, // Keep department reference
       };
 
       // Set parent based on context
@@ -104,11 +103,11 @@ export default function OrgChartStructureBuilder() {
         payload.parentPositionId = null;
       }
 
-      return await apiRequest("POST", "/api/positions", payload);
+      return await apiRequest("PATCH", `/api/team-positions/${teamPosition.id}/org-chart`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/org-structure"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
       setAddPositionDialogOpen(false);
       setParentNodeContext(null); // Clear context
       const contextMessage = parentNodeContext 
@@ -122,22 +121,26 @@ export default function OrgChartStructureBuilder() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to add position",
+        description: error.message || "Failed to add position to org chart",
         variant: "destructive",
       });
     },
   });
 
-  // Move mutation (positions only)
+  // Move mutation (positions only) - uses team-positions org chart endpoint
   const moveMutation = useMutation({
     mutationFn: async ({ id, payload }: { 
       id: string; 
       payload: any;
     }) => {
-      return await apiRequest("PATCH", `/api/positions/${id}/hierarchy`, payload);
+      return await apiRequest("PATCH", `/api/team-positions/${id}/org-chart`, {
+        parentPositionId: payload.parentPositionId,
+        orgChartOrder: payload.destinationIndex,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/org-structure"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
       toast({
         title: "Success",
         description: "Org structure updated successfully",
@@ -350,12 +353,13 @@ export default function OrgChartStructureBuilder() {
                     />
                   </div>
 
-                  {/* Position List */}
+                  {/* Position List - shows positions NOT already in org chart */}
                   <div className="space-y-2">
                     {(() => {
                       const filteredPositions = allPositions.filter(p => 
                         p.isActive && 
-                        p.name.toLowerCase().includes(positionSearchQuery.toLowerCase())
+                        !p.inOrgChart && // Only show positions not already in org chart
+                        p.label.toLowerCase().includes(positionSearchQuery.toLowerCase())
                       );
 
                       if (filteredPositions.length === 0) {
@@ -363,7 +367,9 @@ export default function OrgChartStructureBuilder() {
                           <div className="text-center py-8 text-muted-foreground">
                             {positionSearchQuery 
                               ? "No positions match your search."
-                              : "No positions found. Create positions in Settings > Staff Management > Teams first."}
+                              : allPositions.filter(p => p.isActive).length === 0
+                                ? "No positions found. Create positions in Settings > Staff Management > Teams first."
+                                : "All positions are already in the org chart."}
                           </div>
                         );
                       }
@@ -379,7 +385,7 @@ export default function OrgChartStructureBuilder() {
                             <div className="flex items-center gap-3">
                               <Briefcase className="h-5 w-5 text-orange-500" />
                               <div className="flex-1">
-                                <div className="font-medium">{position.name}</div>
+                                <div className="font-medium">{position.label}</div>
                               </div>
                               <Plus className="h-4 w-4 text-muted-foreground" />
                             </div>

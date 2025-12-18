@@ -10217,6 +10217,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team Position Org Chart Hierarchy Update - for adding/moving positions in org chart
+  app.patch("/api/team-positions/:id/org-chart", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { inOrgChart, parentPositionId, orgChartOrder } = req.body;
+      
+      const oldPosition = await appStorage.getTeamPosition(req.params.id);
+      if (!oldPosition) {
+        return res.status(404).json({ message: "Team position not found" });
+      }
+
+      // Determine the target parent for sibling queries
+      const targetParentId = parentPositionId !== undefined ? parentPositionId : oldPosition.parentPositionId;
+      
+      // If adding to org chart without explicit order, find next available order
+      let effectiveOrgChartOrder = orgChartOrder;
+      if ((inOrgChart === true || (inOrgChart === undefined && oldPosition.inOrgChart)) && effectiveOrgChartOrder === undefined) {
+        // Get max order among siblings
+        const siblings = await db.select().from(teamPositions)
+          .where(
+            and(
+              eq(teamPositions.inOrgChart, true),
+              targetParentId === null 
+                ? sql`${teamPositions.parentPositionId} IS NULL`
+                : eq(teamPositions.parentPositionId, targetParentId)
+            )
+          );
+        const maxOrder = siblings.reduce((max, s) => Math.max(max, s.orgChartOrder || 0), -1);
+        effectiveOrgChartOrder = maxOrder + 1;
+      }
+
+      // Update org chart fields
+      const updateData: any = { updatedAt: new Date() };
+      if (typeof inOrgChart === 'boolean') updateData.inOrgChart = inOrgChart;
+      if (parentPositionId !== undefined) updateData.parentPositionId = parentPositionId;
+      if (typeof effectiveOrgChartOrder === 'number') updateData.orgChartOrder = effectiveOrgChartOrder;
+
+      const result = await db.update(teamPositions).set(updateData).where(eq(teamPositions.id, req.params.id)).returning();
+      const updatedPosition = result[0];
+
+      if (!updatedPosition) {
+        return res.status(404).json({ message: "Team position not found" });
+      }
+
+
+      // Compact old parent siblings when position moves to a different parent
+      const parentChanged = oldPosition.parentPositionId !== updatedPosition.parentPositionId;
+      if (parentChanged && oldPosition.inOrgChart === true) {
+        const oldSiblings = await db.select().from(teamPositions)
+          .where(
+            and(
+              eq(teamPositions.inOrgChart, true),
+              oldPosition.parentPositionId === null 
+                ? sql`${teamPositions.parentPositionId} IS NULL`
+                : eq(teamPositions.parentPositionId, oldPosition.parentPositionId)
+            )
+          )
+          .orderBy(asc(teamPositions.orgChartOrder));
+
+        // Compact old parent order indices
+        for (let i = 0; i < oldSiblings.length; i++) {
+          if (oldSiblings[i].id !== req.params.id && oldSiblings[i].orgChartOrder !== i) {
+            await db.update(teamPositions)
+              .set({ orgChartOrder: i })
+              .where(eq(teamPositions.id, oldSiblings[i].id));
+          }
+        }
+      }
+      // Reindex siblings if position is in org chart (based on result, not request)
+      if (updatedPosition.inOrgChart && typeof effectiveOrgChartOrder === 'number') {
+        const siblings = await db.select().from(teamPositions)
+          .where(
+            and(
+              eq(teamPositions.inOrgChart, true),
+              updatedPosition.parentPositionId === null 
+                ? sql`${teamPositions.parentPositionId} IS NULL`
+                : eq(teamPositions.parentPositionId, updatedPosition.parentPositionId)
+            )
+          )
+          .orderBy(asc(teamPositions.orgChartOrder));
+
+        // Reindex siblings - put the moved item at its order, shift others
+        let currentOrder = 0;
+        for (const sibling of siblings) {
+          if (sibling.id === req.params.id) continue; // Skip the moved item
+          // If we're at the target order, skip it for the moved item
+          if (currentOrder === effectiveOrgChartOrder) currentOrder++;
+          if (sibling.orgChartOrder !== currentOrder) {
+            await db.update(teamPositions)
+              .set({ orgChartOrder: currentOrder })
+              .where(eq(teamPositions.id, sibling.id));
+          }
+          currentOrder++;
+        }
+      }
+
+
+      // Reindex former siblings when removing from org chart
+      if (inOrgChart === false && oldPosition.inOrgChart === true) {
+        const formerSiblings = await db.select().from(teamPositions)
+          .where(
+            and(
+              eq(teamPositions.inOrgChart, true),
+              oldPosition.parentPositionId === null 
+                ? sql`${teamPositions.parentPositionId} IS NULL`
+                : eq(teamPositions.parentPositionId, oldPosition.parentPositionId)
+            )
+          )
+          .orderBy(asc(teamPositions.orgChartOrder));
+
+        // Compact the order indices
+        for (let i = 0; i < formerSiblings.length; i++) {
+          if (formerSiblings[i].orgChartOrder !== i) {
+            await db.update(teamPositions)
+              .set({ orgChartOrder: i })
+              .where(eq(teamPositions.id, formerSiblings[i].id));
+          }
+        }
+      }
+      await createAuditLog(
+        "updated",
+        "team_position",
+        updatedPosition.id,
+        updatedPosition.label,
+        userId,
+        inOrgChart === false ? "Removed from org chart" : "Updated org chart position",
+        oldPosition,
+        updatedPosition,
+        req
+      );
+
+      res.json(updatedPosition);
+    } catch (error) {
+      console.error('Error updating team position org chart:', error);
+      res.status(500).json({ message: "Failed to update org chart position" });
+    }
+  });
+
   // Client Team Assignments API - SECURED  
   app.get("/api/clients/:clientId/team", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
@@ -10685,21 +10825,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // HR Org Structure Hierarchy API - Position-only (people-based)
+  // HR Org Structure Hierarchy API - Uses Team Positions (unified with Settings > Staff > Teams)
   app.get("/api/org-structure", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
-      // Fetch only positions that are explicitly added to the org chart
-      const allPositions = await appStorage.getPositions();
-      const positions = allPositions.filter(p => p.inOrgChart === true);
+      // Fetch team positions that are explicitly added to the org chart
+      const allTeamPositions = await appStorage.getTeamPositions();
+      const positions = allTeamPositions.filter(p => p.inOrgChart === true);
       
       // Build hierarchical structure - positions only
       const buildTree = () => {
         const rootNodes: any[] = [];
         
-        // Create position nodes
+        // Create position nodes (map teamPosition fields to expected format)
         const posMap = new Map();
         positions.forEach(pos => {
-          posMap.set(pos.id, { ...pos, type: 'position', children: [] });
+          posMap.set(pos.id, { 
+            id: pos.id,
+            name: pos.label, // teamPositions use 'label' instead of 'name'
+            description: pos.description,
+            type: 'position', 
+            orderIndex: pos.orgChartOrder || 0,
+            parentPositionId: pos.parentPositionId,
+            isActive: pos.isActive,
+            children: [] 
+          });
         });
         
         // Build position hierarchy
