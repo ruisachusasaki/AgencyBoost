@@ -24002,12 +24002,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== TRAINING COURSES =====
   
-  // Get all training courses (with filtering and search)
-  app.get("/api/training/courses", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
-    try {
-      const { category, search, tags, difficulty, published } = req.query;
-      
-      let query = db.select({
   app.get("/api/training/courses", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
     try {
       const { category, search, tags, difficulty, published } = req.query;
