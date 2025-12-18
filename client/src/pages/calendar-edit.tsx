@@ -1,3 +1,4 @@
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, useLocation, Link } from "wouter";
@@ -86,6 +87,7 @@ export default function CalendarEdit() {
   const [match, params] = useRoute("/settings/calendar/:id/edit");
   const [activeTab, setActiveTab] = useState("details");
   const [embedCopied, setEmbedCopied] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [weeklyAvailability, setWeeklyAvailability] = useState<{[key: string]: {enabled: boolean, startTime: string, endTime: string}}>({
     monday: { enabled: true, startTime: "09:00", endTime: "17:00" },
     tuesday: { enabled: true, startTime: "09:00", endTime: "17:00" },
@@ -234,11 +236,14 @@ export default function CalendarEdit() {
   };
 
   const handleDelete = () => {
-    if (window.confirm("Are you sure you want to delete this calendar? This action cannot be undone.")) {
-      deleteCalendarMutation.mutate();
-    }
+    setShowDeleteDialog(true);
   };
 
+
+  const confirmDelete = () => {
+    setShowDeleteDialog(false);
+    deleteCalendarMutation.mutate();
+  };
   const copyEmbedCode = () => {
     const embedCode = `<iframe src="${window.location.origin}/embed/${calendar?.customUrl}" width="100%" height="600" frameborder="0" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></iframe>`;
     navigator.clipboard.writeText(embedCode);
@@ -1003,6 +1008,24 @@ export default function CalendarEdit() {
           </Form>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Calendar</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this calendar? This will also delete all associated appointments. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
