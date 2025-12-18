@@ -16047,6 +16047,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Calendar not found" });
       }
 
+      // Delete associated appointments first (due to foreign key constraint)
+      await db.delete(calendarAppointments).where(eq(calendarAppointments.calendarId, req.params.id));
+      
+      // Delete associated staff assignments
+      await db.delete(calendarStaff).where(eq(calendarStaff.calendarId, req.params.id));
+      
+      // Now delete the calendar
       await db.delete(calendars).where(eq(calendars.id, req.params.id));
 
       await createAuditLog(
