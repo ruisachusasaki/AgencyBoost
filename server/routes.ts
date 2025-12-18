@@ -24008,6 +24008,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { category, search, tags, difficulty, published } = req.query;
       
       let query = db.select({
+  app.get("/api/training/courses", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
+    try {
+      const { category, search, tags, difficulty, published } = req.query;
+      const userId = req.user?.id;
+      
+      // Get current user's department
+      const currentUser = await db.select({ departmentId: staff.departmentId })
+        .from(staff)
+        .where(eq(staff.id, userId))
+        .limit(1);
+      const userDepartmentId = currentUser[0]?.departmentId;
+      
+      let query = db.select({
         id: trainingCourses.id,
         title: trainingCourses.title,
         description: trainingCourses.description,
@@ -24047,8 +24060,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const courses = await query.orderBy(asc(trainingCourses.order), desc(trainingCourses.createdAt));
       
+      // Get all course permissions
+      const allPermissions = await db.select().from(trainingCoursePermissions);
+      
+      // Filter courses based on permissions
+      const filteredCourses = courses.filter(course => {
+        const coursePerms = allPermissions.filter(p => p.courseId === course.id);
+        
+        // If no permissions set, course is available to everyone
+        if (coursePerms.length === 0) {
+          return true;
+        }
+        
+        // Check if user has direct access
+        const hasUserAccess = coursePerms.some(p => 
+          p.accessType === 'user' && p.accessId === userId
+        );
+        if (hasUserAccess) return true;
+        
+        // Check if user's department has access
+        if (userDepartmentId) {
+          const hasDeptAccess = coursePerms.some(p => 
+            p.accessType === 'team' && p.accessId === userDepartmentId
+          );
+          if (hasDeptAccess) return true;
+        }
+        
+        return false;
+      });
+      
       // Get lesson counts for each course
-      const coursesWithCounts = await Promise.all(courses.map(async (course) => {
+      const coursesWithCounts = await Promise.all(filteredCourses.map(async (course) => {
         const [lessonCount] = await db.select({ count: sql<number>`count(*)` })
           .from(trainingLessons)
           .where(eq(trainingLessons.courseId, course.id));
