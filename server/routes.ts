@@ -24190,6 +24190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       `);
       
       let courses = coursesResult.rows as any[];
+      console.log("[DEBUG] Training courses fetched:", courses.length, "courses");
       
       // Apply filters in memory
       if (category) {
