@@ -24163,45 +24163,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1);
       const userDepartmentId = currentUser[0]?.departmentId;
       
-      // Build filter conditions first
-      const conditions: any[] = [];
-      if (category) conditions.push(eq(trainingCourses.categoryId, category as string));
-      if (published !== undefined) conditions.push(eq(trainingCourses.isPublished, published === 'true'));
-      if (difficulty) conditions.push(eq(trainingCourses.difficulty, difficulty as string));
-      if (search) {
-        conditions.push(or(
-          like(trainingCourses.title, `%${search}%`),
-          like(trainingCourses.description, `%${search}%`)
-        ));
+      // Fetch all courses with raw SQL to avoid Drizzle builder issues
+      const coursesResult = await db.execute(sql`
+        SELECT 
+          tc.id,
+          tc.title,
+          tc.description,
+          tc.short_description as "shortDescription",
+          tc.category_id as "categoryId",
+          tcat.name as "categoryName",
+          tcat.color as "categoryColor",
+          tc.tags,
+          tc.thumbnail_url as "thumbnailUrl",
+          tc.estimated_duration as "estimatedDuration",
+          tc.difficulty,
+          tc.is_published as "isPublished",
+          tc."order",
+          tc.created_by as "createdBy",
+          tc.created_at as "createdAt",
+          tc.updated_at as "updatedAt",
+          COALESCE(CONCAT(s.first_name, ' ', s.last_name), 'Unknown') as "creatorName"
+        FROM training_courses tc
+        LEFT JOIN training_categories tcat ON tc.category_id = tcat.id
+        LEFT JOIN staff s ON tc.created_by = s.id
+        ORDER BY tc."order" ASC NULLS LAST, tc.created_at DESC
+      `);
+      
+      let courses = coursesResult.rows as any[];
+      
+      // Apply filters in memory
+      if (category) {
+        courses = courses.filter(c => c.categoryId === category);
       }
-      
-      // Build base query
-      const baseQuery = db.select({
-        id: trainingCourses.id,
-        title: trainingCourses.title,
-        description: trainingCourses.description,
-        shortDescription: trainingCourses.shortDescription,
-        categoryId: trainingCourses.categoryId,
-        categoryName: trainingCategories.name,
-        categoryColor: trainingCategories.color,
-        tags: trainingCourses.tags,
-        thumbnailUrl: trainingCourses.thumbnailUrl,
-        estimatedDuration: trainingCourses.estimatedDuration,
-        difficulty: trainingCourses.difficulty,
-        isPublished: trainingCourses.isPublished,
-        order: trainingCourses.order,
-        createdBy: trainingCourses.createdBy,
-        createdAt: trainingCourses.createdAt,
-        updatedAt: trainingCourses.updatedAt,
-        creatorName: sql<string>`COALESCE(CONCAT(${staff.firstName}, ' ', ${staff.lastName}), 'Unknown')`,
-      }).from(trainingCourses)
-        .leftJoin(trainingCategories, eq(trainingCourses.categoryId, trainingCategories.id))
-        .leftJoin(staff, eq(trainingCourses.createdBy, staff.id));
-      
-      // Execute query with optional where clause
-      const courses = conditions.length > 0 
-        ? await baseQuery.where(and(...conditions)).orderBy(asc(trainingCourses.order), desc(trainingCourses.createdAt))
-        : await baseQuery.orderBy(asc(trainingCourses.order), desc(trainingCourses.createdAt));
+      if (published !== undefined) {
+        courses = courses.filter(c => c.isPublished === (published === 'true'));
+      }
+      if (difficulty) {
+        courses = courses.filter(c => c.difficulty === difficulty);
+      }
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        courses = courses.filter(c => 
+          c.title?.toLowerCase().includes(searchLower) ||
+          c.description?.toLowerCase().includes(searchLower)
+        );
+      }
       
       // Check if user is admin - admins see all courses
       const userIsAdmin = await isCurrentUserAdmin(req);
