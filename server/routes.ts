@@ -24218,8 +24218,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allPermissions = permResult.rows as any[];
       
       // Filter courses based on permissions (admins bypass this)
+      // Note: raw SQL returns snake_case column names (course_id, access_type, access_id)
       const filteredCourses = userIsAdmin ? courses : courses.filter(course => {
-        const coursePerms = allPermissions.filter(p => p.courseId === course.id);
+        const coursePerms = allPermissions.filter(p => p.course_id === course.id);
         
         // If no permissions set, course is available to everyone
         if (coursePerms.length === 0) {
@@ -24228,14 +24229,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Check if user has direct access
         const hasUserAccess = coursePerms.some(p => 
-          p.accessType === 'user' && p.accessId === userId
+          p.access_type === 'user' && p.access_id === userId
         );
         if (hasUserAccess) return true;
         
         // Check if user's department has access
         if (userDepartmentId) {
           const hasDeptAccess = coursePerms.some(p => 
-            p.accessType === 'team' && p.accessId === userDepartmentId
+            p.access_type === 'team' && p.access_id === userDepartmentId
           );
           if (hasDeptAccess) return true;
         }
