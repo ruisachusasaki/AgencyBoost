@@ -24214,7 +24214,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userIsAdmin = await isCurrentUserAdmin(req);
       
       // Get all course permissions
-      const allPermissions = await db.select().from(trainingCoursePermissions);
+      const permResult = await db.execute(sql`SELECT * FROM training_course_permissions`);
+      const allPermissions = permResult.rows as any[];
       
       // Filter courses based on permissions (admins bypass this)
       const filteredCourses = userIsAdmin ? courses : courses.filter(course => {
@@ -24244,13 +24245,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get lesson counts for each course
       const coursesWithCounts = await Promise.all(filteredCourses.map(async (course) => {
-        const [lessonCount] = await db.select({ count: sql<number>`count(*)` })
-          .from(trainingLessons)
-          .where(eq(trainingLessons.courseId, course.id));
+        const lessonCountResult = await db.execute(sql`SELECT COUNT(*) as count FROM training_lessons WHERE course_id = ${course.id}`);
+        const lessonCount = { count: Number(lessonCountResult.rows[0]?.count || 0) };
         
-        const [enrollmentCount] = await db.select({ count: sql<number>`count(*)` })
-          .from(trainingEnrollments)
-          .where(eq(trainingEnrollments.courseId, course.id));
+        const enrollCountResult = await db.execute(sql`SELECT COUNT(*) as count FROM training_enrollments WHERE course_id = ${course.id}`);
+        const enrollmentCount = { count: Number(enrollCountResult.rows[0]?.count || 0) };
         
         return {
           ...course,
