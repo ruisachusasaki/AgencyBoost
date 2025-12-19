@@ -24163,7 +24163,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1);
       const userDepartmentId = currentUser[0]?.departmentId;
       
-      let query = db.select({
+      // Build filter conditions first
+      const conditions: any[] = [];
+      if (category) conditions.push(eq(trainingCourses.categoryId, category as string));
+      if (published !== undefined) conditions.push(eq(trainingCourses.isPublished, published === 'true'));
+      if (difficulty) conditions.push(eq(trainingCourses.difficulty, difficulty as string));
+      if (search) {
+        conditions.push(or(
+          like(trainingCourses.title, `%${search}%`),
+          like(trainingCourses.description, `%${search}%`)
+        ));
+      }
+      
+      // Build base query
+      const baseQuery = db.select({
         id: trainingCourses.id,
         title: trainingCourses.title,
         description: trainingCourses.description,
@@ -24180,28 +24193,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: trainingCourses.createdBy,
         createdAt: trainingCourses.createdAt,
         updatedAt: trainingCourses.updatedAt,
-        creatorName: sql<string>`CONCAT(${staff.firstName}, ' ', ${staff.lastName})`,
+        creatorName: sql<string>`COALESCE(CONCAT(${staff.firstName}, ' ', ${staff.lastName}), 'Unknown')`,
       }).from(trainingCourses)
         .leftJoin(trainingCategories, eq(trainingCourses.categoryId, trainingCategories.id))
         .leftJoin(staff, eq(trainingCourses.createdBy, staff.id));
       
-      // Apply filters
-      const conditions = [];
-      if (category) conditions.push(eq(trainingCourses.categoryId, category as string));
-      if (published !== undefined) conditions.push(eq(trainingCourses.isPublished, published === 'true'));
-      if (difficulty) conditions.push(eq(trainingCourses.difficulty, difficulty as string));
-      if (search) {
-        conditions.push(or(
-          like(trainingCourses.title, `%${search}%`),
-          like(trainingCourses.description, `%${search}%`)
-        ));
-      }
-      
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-      }
-      
-      const courses = await query.orderBy(asc(trainingCourses.order), desc(trainingCourses.createdAt));
+      // Execute query with optional where clause
+      const courses = conditions.length > 0 
+        ? await baseQuery.where(and(...conditions)).orderBy(asc(trainingCourses.order), desc(trainingCourses.createdAt))
+        : await baseQuery.orderBy(asc(trainingCourses.order), desc(trainingCourses.createdAt));
       
       // Check if user is admin - admins see all courses
       const userIsAdmin = await isCurrentUserAdmin(req);
