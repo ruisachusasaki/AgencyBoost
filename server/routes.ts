@@ -24157,8 +24157,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id;
       
       // Get current user's department using raw SQL
-      const userResult = await db.execute(sql`SELECT department_id as "departmentId" FROM staff WHERE id = ${userId} LIMIT 1`);
-      const userDepartmentId = (userResult.rows[0] as any)?.departmentId;
+      let userDepartmentId: string | null = null;
+      if (userId) {
+        const userResult = await db.execute(sql`SELECT department_id FROM staff WHERE id = ${userId} LIMIT 1`);
+        userDepartmentId = (userResult.rows[0] as any)?.department_id || null;
+      }
       
       // Fetch all courses with raw SQL to avoid Drizzle builder issues
       const coursesResult = await db.execute(sql`
