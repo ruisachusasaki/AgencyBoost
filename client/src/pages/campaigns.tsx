@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, FolderOpen, MoreHorizontal, Copy, Tag, Megaphone, FileText, ChevronUp, ChevronDown, ExternalLink, ArrowLeft } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -59,6 +60,11 @@ export default function Campaigns() {
   const [selectedFormFolder, setSelectedFormFolder] = useState<string | null>(null);
   const [isEditFolderDialogOpen, setIsEditFolderDialogOpen] = useState(false);
   const [folderToEdit, setFolderToEdit] = useState<any>(null);
+  
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<{ id: string; type: string; name: string } | null>(null);
+  const [formToDelete, setFormToDelete] = useState<{ id: string; name: string } | null>(null);
   
   // Sorting state for each tab
   const [emailSortField, setEmailSortField] = useState<'name' | 'subject' | null>(null);
@@ -599,9 +605,16 @@ export default function Campaigns() {
     updateSmsTemplateMutation.mutate(data);
   };
 
-  const handleDeleteTemplate = (id: string, type: string) => {
-    if (confirm(`Are you sure you want to delete this ${type} template?`)) {
-      deleteTemplateMutation.mutate({ id, type });
+  const handleDeleteTemplate = (id: string, type: string, name: string) => {
+    setTemplateToDelete({ id, type, name });
+    setDeleteDialogOpen(true);
+  };
+  
+  const confirmDeleteTemplate = () => {
+    if (templateToDelete) {
+      deleteTemplateMutation.mutate({ id: templateToDelete.id, type: templateToDelete.type });
+      setDeleteDialogOpen(false);
+      setTemplateToDelete(null);
     }
   };
 
@@ -688,8 +701,15 @@ export default function Campaigns() {
   };
 
   const handleDeleteForm = (form: any) => {
-    if (confirm(`Are you sure you want to delete "${form.name}"? This action cannot be undone.`)) {
-      deleteFormMutation.mutate(form.id);
+    setFormToDelete({ id: form.id, name: form.name });
+    setDeleteDialogOpen(true);
+  };
+  
+  const confirmDeleteForm = () => {
+    if (formToDelete) {
+      deleteFormMutation.mutate(formToDelete.id);
+      setDeleteDialogOpen(false);
+      setFormToDelete(null);
     }
   };
 
@@ -1321,7 +1341,7 @@ export default function Campaigns() {
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
-                              onClick={() => handleDeleteTemplate(template.id, "email")}
+                              onClick={() => handleDeleteTemplate(template.id, "email", template.name)}
                               className="text-red-600"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -1609,7 +1629,7 @@ export default function Campaigns() {
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
-                              onClick={() => handleDeleteTemplate(template.id, "sms")}
+                              onClick={() => handleDeleteTemplate(template.id, "sms", template.name)}
                               className="text-red-600"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -2109,6 +2129,44 @@ export default function Campaigns() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+        setDeleteDialogOpen(open);
+        if (!open) {
+          setTemplateToDelete(null);
+          setFormToDelete(null);
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {templateToDelete 
+                ? `This will permanently delete the ${templateToDelete.type} template "${templateToDelete.name}". This action cannot be undone.`
+                : formToDelete 
+                  ? `This will permanently delete the form "${formToDelete.name}". This action cannot be undone.`
+                  : 'This action cannot be undone.'
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (templateToDelete) {
+                  confirmDeleteTemplate();
+                } else if (formToDelete) {
+                  confirmDeleteForm();
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Edit Folder Dialog */}
       <Dialog open={isEditFolderDialogOpen} onOpenChange={setIsEditFolderDialogOpen}>
