@@ -391,10 +391,19 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   };
 
   // Clean up HTML by removing unnecessary paragraph tags in list items
+  // and stripping leading/trailing empty paragraphs
   const cleanListHTML = (html: string) => {
-    return html
+    let cleaned = html
       .replace(/<li><p>(.*?)<\/p><\/li>/g, '<li>$1</li>')
       .replace(/<li>\s*<p>(.*?)<\/p>\s*<\/li>/g, '<li>$1</li>');
+    
+    // Strip leading empty paragraphs (with or without whitespace/br tags)
+    cleaned = cleaned.replace(/^(\s*<p>(\s|<br\s*\/?>)*<\/p>\s*)+/gi, '');
+    
+    // Strip trailing empty paragraphs
+    cleaned = cleaned.replace(/(\s*<p>(\s|<br\s*\/?>)*<\/p>\s*)+$/gi, '');
+    
+    return cleaned;
   };
 
   return (
