@@ -191,7 +191,7 @@ ul[data-type="taskList"],
 .tiptap ul[data-type="taskList"] {
   list-style: none !important;
   padding-left: 0 !important;
-  margin: 1rem 0 !important;
+  margin: 0.5rem 0 !important;
 }
 
 li[data-type="taskItem"],
@@ -200,10 +200,10 @@ li[data-type="taskItem"],
   display: flex !important;
   flex-direction: row !important;
   gap: 8px !important;
-  align-items: flex-start !important;
+  align-items: baseline !important;
   list-style: none !important;
-  margin: 0.25rem 0 !important;
-  padding-left: 0 !important;
+  margin: 0 !important;
+  padding: 0.125rem 0 !important;
   position: relative !important;
 }
 
@@ -217,15 +217,18 @@ li[data-type="taskItem"]:before,
 li[data-type="taskItem"] label,
 .ProseMirror li[data-type="taskItem"] label,
 .tiptap li[data-type="taskItem"] label {
-  display: flex !important;
+  display: inline-flex !important;
   align-items: center !important;
+  justify-content: center !important;
   user-select: none !important;
   cursor: pointer !important;
   margin: 0 !important;
-  padding-top: 2px !important;
-  width: auto !important;
-  height: auto !important;
+  padding: 0 !important;
+  width: 18px !important;
+  height: 18px !important;
   flex-shrink: 0 !important;
+  position: relative !important;
+  top: 0.15em !important;
 }
 
 li[data-type="taskItem"] label input[type="checkbox"],
@@ -235,13 +238,14 @@ li[data-type="taskItem"] label input[type="checkbox"],
   width: 16px !important;
   height: 16px !important;
   flex-shrink: 0 !important;
+  cursor: pointer !important;
 }
 
 li[data-type="taskItem"] > div,
 .ProseMirror li[data-type="taskItem"] > div,
 .tiptap li[data-type="taskItem"] > div {
   flex: 1 !important;
-  line-height: 1.5 !important;
+  line-height: 1.4 !important;
   margin: 0 !important;
   padding: 0 !important;
   min-width: 0 !important;
@@ -251,13 +255,15 @@ li[data-type="taskItem"] > div > *,
 .ProseMirror li[data-type="taskItem"] > div > *,
 .tiptap li[data-type="taskItem"] > div > * {
   margin: 0 !important;
+  padding: 0 !important;
 }
 
 li[data-type="taskItem"] > div p,
 .ProseMirror li[data-type="taskItem"] > div p,
 .tiptap li[data-type="taskItem"] > div p {
   margin: 0 !important;
-  line-height: inherit !important;
+  padding: 0 !important;
+  line-height: 1.4 !important;
 }
 
 li[data-type="taskItem"][data-checked="true"] > div,
@@ -299,6 +305,16 @@ li[data-type="taskItem"][data-checked="true"] > div,
   border-left-color: #ef4444;
 }
 
+.callout-success {
+  background: #f0fdf4;
+  border-left-color: #22c55e;
+}
+
+.callout-tip {
+  background: #fefce8;
+  border-left-color: #eab308;
+}
+
 .callout-icon {
   margin-right: 0.75rem;
   font-size: 1.25rem;
@@ -323,6 +339,123 @@ li[data-type="taskItem"][data-checked="true"] > div,
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
   background: #f9fafb;
+}
+
+.columns-container.columns-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* Highlight Box */
+.highlight-box {
+  background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%);
+  border: 1px solid #fcd34d;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+}
+
+.highlight-box p {
+  margin: 0;
+}
+
+/* Inline Button */
+.inline-button {
+  display: inline-block;
+  padding: 0.5rem 1.25rem;
+  background: hsl(179, 100%, 39%);
+  color: white !important;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  text-decoration: none !important;
+  transition: background 0.2s;
+}
+
+.inline-button:hover {
+  background: hsl(179, 100%, 32%);
+}
+
+/* Quote with Author */
+.quote-with-author {
+  border-left: 4px solid hsl(179, 100%, 39%);
+  background: #f8fafc;
+  padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.quote-with-author p {
+  font-style: italic;
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem 0;
+  color: #374151;
+}
+
+.quote-with-author footer {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-style: normal;
+}
+
+/* Embed Container Improvements */
+.embed-container {
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.youtube-embed-wrapper iframe,
+.loom-embed-wrapper iframe {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border: none;
+}
+
+.drive-embed-wrapper iframe,
+.docs-embed-wrapper iframe,
+.sheets-embed-wrapper iframe {
+  width: 100%;
+  height: 500px;
+  border: none;
+}
+
+.slides-embed-wrapper iframe {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border: none;
+}
+
+/* Table of Contents */
+.table-of-contents {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+}
+
+.table-of-contents h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.toc-content {
+  padding-left: 0.5rem;
+}
+
+.toc-item {
+  margin: 0.25rem 0;
+}
+
+.toc-item a {
+  color: hsl(179, 100%, 39%);
+  text-decoration: none;
+}
+
+.toc-item a:hover {
+  text-decoration: underline;
 }
 
 .column {
