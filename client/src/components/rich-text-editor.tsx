@@ -111,6 +111,16 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
     };
   }, [isLineHeightDropdownOpen]);
   
+  // Helper to strip leading/trailing empty paragraphs - defined before useEditor
+  const stripEmptyParagraphsHelper = (html: string) => {
+    let cleaned = html;
+    // Strip leading empty paragraphs (with or without whitespace/br tags)
+    cleaned = cleaned.replace(/^(\s*<p>(\s|<br\s*\/?>)*<\/p>\s*)+/gi, '');
+    // Strip trailing empty paragraphs
+    cleaned = cleaned.replace(/(\s*<p>(\s|<br\s*\/?>)*<\/p>\s*)+$/gi, '');
+    return cleaned;
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -141,9 +151,16 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
         inline: false,
         allowBase64: true,
       }),
-      TaskList,
+      TaskList.configure({
+        HTMLAttributes: {
+          class: 'task-list',
+        },
+      }),
       TaskItem.configure({
         nested: true,
+        HTMLAttributes: {
+          class: 'task-item',
+        },
       }),
       CalloutExtension,
       ToggleExtension,
@@ -152,7 +169,18 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
       ColumnsExtension,
       ColumnExtension,
     ],
-    content: htmlFormattedContent,
+    content: stripEmptyParagraphsHelper(htmlFormattedContent),
+    onCreate: ({ editor }) => {
+      // Clean up any empty paragraphs TipTap might have inserted on create
+      const currentHTML = editor.getHTML();
+      const cleaned = stripEmptyParagraphsHelper(currentHTML);
+      if (currentHTML !== cleaned) {
+        // Use setTimeout to avoid update-during-render issues
+        setTimeout(() => {
+          editor.commands.setContent(cleaned, false);
+        }, 0);
+      }
+    },
     onUpdate: ({ editor }) => {
       const rawHTML = editor.getHTML();
       const cleanedHTML = cleanListHTML(rawHTML);
@@ -170,26 +198,16 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
     },
   });
 
-  // Helper to strip leading/trailing empty paragraphs
-  const stripEmptyParagraphs = (html: string) => {
-    let cleaned = html;
-    // Strip leading empty paragraphs (with or without whitespace/br tags)
-    cleaned = cleaned.replace(/^(\s*<p>(\s|<br\s*\/?>)*<\/p>\s*)+/gi, '');
-    // Strip trailing empty paragraphs
-    cleaned = cleaned.replace(/(\s*<p>(\s|<br\s*\/?>)*<\/p>\s*)+$/gi, '');
-    return cleaned;
-  };
-
   // Update editor content when content prop changes
   React.useEffect(() => {
     if (editor && content !== undefined) {
       // Clean the content first to remove any leading empty paragraphs
-      const cleanedContent = stripEmptyParagraphs(convertTextToHtml(content));
+      const cleanedContent = stripEmptyParagraphsHelper(convertTextToHtml(content));
       const currentContent = editor.getHTML();
       
       // Only update if content is different to avoid cursor issues
-      if (currentContent !== cleanedContent && cleanedContent !== stripEmptyParagraphs(currentContent)) {
-        editor.commands.setContent(cleanedContent);
+      if (currentContent !== cleanedContent && cleanedContent !== stripEmptyParagraphsHelper(currentContent)) {
+        editor.commands.setContent(cleanedContent, false);
       }
     }
   }, [content, editor]);
