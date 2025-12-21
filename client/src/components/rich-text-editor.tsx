@@ -170,15 +170,26 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
     },
   });
 
+  // Helper to strip leading/trailing empty paragraphs
+  const stripEmptyParagraphs = (html: string) => {
+    let cleaned = html;
+    // Strip leading empty paragraphs (with or without whitespace/br tags)
+    cleaned = cleaned.replace(/^(\s*<p>(\s|<br\s*\/?>)*<\/p>\s*)+/gi, '');
+    // Strip trailing empty paragraphs
+    cleaned = cleaned.replace(/(\s*<p>(\s|<br\s*\/?>)*<\/p>\s*)+$/gi, '');
+    return cleaned;
+  };
+
   // Update editor content when content prop changes
   React.useEffect(() => {
     if (editor && content !== undefined) {
-      const newHtmlContent = convertTextToHtml(content);
+      // Clean the content first to remove any leading empty paragraphs
+      const cleanedContent = stripEmptyParagraphs(convertTextToHtml(content));
       const currentContent = editor.getHTML();
       
       // Only update if content is different to avoid cursor issues
-      if (currentContent !== newHtmlContent) {
-        editor.commands.setContent(newHtmlContent);
+      if (currentContent !== cleanedContent && cleanedContent !== stripEmptyParagraphs(currentContent)) {
+        editor.commands.setContent(cleanedContent);
       }
     }
   }, [content, editor]);

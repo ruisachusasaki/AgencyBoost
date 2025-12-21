@@ -188,7 +188,8 @@
 /* Task List Styling - Ultimate fix */
 ul[data-type="taskList"],
 .ProseMirror ul[data-type="taskList"],
-.tiptap ul[data-type="taskList"] {
+.tiptap ul[data-type="taskList"],
+.prose ul[data-type="taskList"] {
   list-style: none !important;
   padding-left: 0 !important;
   margin: 0.5rem 0 !important;
@@ -196,27 +197,30 @@ ul[data-type="taskList"],
 
 li[data-type="taskItem"],
 .ProseMirror li[data-type="taskItem"],
-.tiptap li[data-type="taskItem"] {
+.tiptap li[data-type="taskItem"],
+.prose li[data-type="taskItem"] {
   display: flex !important;
   flex-direction: row !important;
   gap: 8px !important;
-  align-items: baseline !important;
+  align-items: flex-start !important;
   list-style: none !important;
   margin: 0 !important;
-  padding: 0.125rem 0 !important;
+  padding: 0.25rem 0 !important;
   position: relative !important;
 }
 
 li[data-type="taskItem"]:before,
 .ProseMirror li[data-type="taskItem"]:before,
-.tiptap li[data-type="taskItem"]:before {
+.tiptap li[data-type="taskItem"]:before,
+.prose li[data-type="taskItem"]:before {
   content: none !important;
   display: none !important;
 }
 
-li[data-type="taskItem"] label,
-.ProseMirror li[data-type="taskItem"] label,
-.tiptap li[data-type="taskItem"] label {
+li[data-type="taskItem"] > label,
+.ProseMirror li[data-type="taskItem"] > label,
+.tiptap li[data-type="taskItem"] > label,
+.prose li[data-type="taskItem"] > label {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -226,49 +230,75 @@ li[data-type="taskItem"] label,
   padding: 0 !important;
   width: 18px !important;
   height: 18px !important;
+  min-width: 18px !important;
   flex-shrink: 0 !important;
   position: relative !important;
-  top: 0.15em !important;
+  top: 2px !important;
 }
 
-li[data-type="taskItem"] label input[type="checkbox"],
-.ProseMirror li[data-type="taskItem"] label input[type="checkbox"],
-.tiptap li[data-type="taskItem"] label input[type="checkbox"] {
+li[data-type="taskItem"] > label input[type="checkbox"],
+.ProseMirror li[data-type="taskItem"] > label input[type="checkbox"],
+.tiptap li[data-type="taskItem"] > label input[type="checkbox"],
+.prose li[data-type="taskItem"] > label input[type="checkbox"] {
   margin: 0 !important;
   width: 16px !important;
   height: 16px !important;
+  min-width: 16px !important;
   flex-shrink: 0 !important;
   cursor: pointer !important;
+  border-radius: 50% !important;
 }
 
 li[data-type="taskItem"] > div,
+li[data-type="taskItem"] > .content,
 .ProseMirror li[data-type="taskItem"] > div,
-.tiptap li[data-type="taskItem"] > div {
+.ProseMirror li[data-type="taskItem"] > .content,
+.tiptap li[data-type="taskItem"] > div,
+.tiptap li[data-type="taskItem"] > .content,
+.prose li[data-type="taskItem"] > div,
+.prose li[data-type="taskItem"] > .content {
   flex: 1 !important;
-  line-height: 1.4 !important;
+  display: block !important;
+  line-height: 1.5 !important;
   margin: 0 !important;
   padding: 0 !important;
   min-width: 0 !important;
 }
 
 li[data-type="taskItem"] > div > *,
+li[data-type="taskItem"] > .content > *,
 .ProseMirror li[data-type="taskItem"] > div > *,
-.tiptap li[data-type="taskItem"] > div > * {
+.ProseMirror li[data-type="taskItem"] > .content > *,
+.tiptap li[data-type="taskItem"] > div > *,
+.tiptap li[data-type="taskItem"] > .content > *,
+.prose li[data-type="taskItem"] > div > *,
+.prose li[data-type="taskItem"] > .content > * {
   margin: 0 !important;
   padding: 0 !important;
 }
 
 li[data-type="taskItem"] > div p,
+li[data-type="taskItem"] > .content p,
 .ProseMirror li[data-type="taskItem"] > div p,
-.tiptap li[data-type="taskItem"] > div p {
+.ProseMirror li[data-type="taskItem"] > .content p,
+.tiptap li[data-type="taskItem"] > div p,
+.tiptap li[data-type="taskItem"] > .content p,
+.prose li[data-type="taskItem"] > div p,
+.prose li[data-type="taskItem"] > .content p {
   margin: 0 !important;
   padding: 0 !important;
-  line-height: 1.4 !important;
+  line-height: 1.5 !important;
+  display: inline !important;
 }
 
 li[data-type="taskItem"][data-checked="true"] > div,
+li[data-type="taskItem"][data-checked="true"] > .content,
 .ProseMirror li[data-type="taskItem"][data-checked="true"] > div,
-.tiptap li[data-type="taskItem"][data-checked="true"] > div {
+.ProseMirror li[data-type="taskItem"][data-checked="true"] > .content,
+.tiptap li[data-type="taskItem"][data-checked="true"] > div,
+.tiptap li[data-type="taskItem"][data-checked="true"] > .content,
+.prose li[data-type="taskItem"][data-checked="true"] > div,
+.prose li[data-type="taskItem"][data-checked="true"] > .content {
   text-decoration: line-through !important;
   opacity: 0.6 !important;
 }
