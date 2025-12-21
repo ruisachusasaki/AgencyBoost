@@ -1,6 +1,53 @@
 import { Node, mergeAttributes } from '@tiptap/core';
-import { ReactNodeViewRenderer } from '@tiptap/react';
+import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent } from '@tiptap/react';
+import TaskItem from '@tiptap/extension-task-item';
 import React from 'react';
+
+// Custom TaskItem that renders without the problematic inline styles
+export const CustomTaskItem = TaskItem.extend({
+  addNodeView() {
+    return ({ node, updateAttributes, editor }) => {
+      const container = document.createElement('li');
+      container.dataset.type = 'taskItem';
+      container.dataset.checked = node.attrs.checked ? 'true' : 'false';
+      container.className = 'custom-task-item';
+      container.style.cssText = 'display: flex; flex-direction: row; align-items: flex-start; gap: 8px; list-style: none; margin: 0; padding: 4px 0;';
+
+      const label = document.createElement('label');
+      label.contentEditable = 'false';
+      label.style.cssText = 'display: flex; align-items: center; justify-content: center; width: 18px; height: 20px; flex-shrink: 0; cursor: pointer; margin: 0; padding: 0;';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = node.attrs.checked;
+      checkbox.style.cssText = 'width: 16px; height: 16px; margin: 0; cursor: pointer; border-radius: 50%; flex-shrink: 0;';
+      checkbox.addEventListener('change', () => {
+        if (!editor.isEditable) return;
+        updateAttributes({ checked: checkbox.checked });
+      });
+
+      label.appendChild(checkbox);
+
+      const content = document.createElement('div');
+      content.className = 'task-item-content';
+      content.style.cssText = 'flex: 1; min-width: 0; line-height: 1.5;';
+
+      container.appendChild(label);
+      container.appendChild(content);
+
+      return {
+        dom: container,
+        contentDOM: content,
+        update: (updatedNode: any) => {
+          if (updatedNode.type.name !== 'taskItem') return false;
+          checkbox.checked = updatedNode.attrs.checked;
+          container.dataset.checked = updatedNode.attrs.checked ? 'true' : 'false';
+          return true;
+        },
+      };
+    };
+  },
+});
 
 // Callout Extension
 export const CalloutExtension = Node.create({
