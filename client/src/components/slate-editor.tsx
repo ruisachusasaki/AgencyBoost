@@ -1059,8 +1059,6 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
   const [isOpen, setIsOpen] = useState(element.isOpen !== undefined ? element.isOpen : true);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(element.title || 'Click to toggle');
-  const [showContentForEditing, setShowContentForEditing] = useState(false);
-
   const handleTitleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsEditingTitle(true);
@@ -1099,16 +1097,14 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
     }
   };
 
-  const shouldShowContent = isOpen || showContentForEditing;
-
   return (
-    <div {...attributes} className="toggle-block my-4">
+    <div {...attributes} className="toggle-block my-1">
       <div
-        className="toggle-header p-2 flex items-center gap-2"
+        className="toggle-header flex items-center gap-1"
         contentEditable={false}
       >
         <ChevronRight 
-          className={`h-4 w-4 transition-transform cursor-pointer ${isOpen ? 'rotate-90' : ''}`} 
+          className={`h-4 w-4 transition-transform cursor-pointer text-gray-500 ${isOpen ? 'rotate-90' : ''}`} 
           onClick={handleToggle}
         />
         {isEditingTitle ? (
@@ -1118,75 +1114,22 @@ const ToggleBlock = ({ attributes, children, element }: any) => {
             onChange={handleTitleChange}
             onKeyDown={handleTitleKeyDown}
             onBlur={handleTitleBlur}
-            className="font-medium bg-transparent border-none outline-none flex-1"
+            className="bg-transparent border-none outline-none flex-1"
             autoFocus
           />
         ) : (
           <span 
-            className="font-medium cursor-text flex-1"
+            className="cursor-text flex-1"
             onClick={handleTitleClick}
           >
             {title}
           </span>
         )}
-        <div className="flex items-center gap-2">
-          {!isOpen && !showContentForEditing && (
-            <button
-              className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowContentForEditing(true);
-              }}
-            >
-              Edit Content
-            </button>
-          )}
-          <span 
-            className="text-xs text-gray-400 cursor-pointer hover:text-gray-600"
-            onClick={handleToggle}
-          >
-            {isOpen ? 'Hide' : 'Show'}
-          </span>
-        </div>
       </div>
-      {shouldShowContent && (
-        <div className={`toggle-content mt-2 pl-6 ${!isOpen ? 'p-3' : ''}`}>
-          {!isOpen && showContentForEditing && (
-            <div className="mb-2 text-xs text-gray-500 flex items-center gap-2">
-              Editing collapsed content
-              <button
-                className="text-blue-600 hover:text-blue-800"
-                onClick={() => setShowContentForEditing(false)}
-              >
-                Done
-              </button>
-            </div>
-          )}
+      {isOpen && (
+        <div className="toggle-content pl-5">
           {children}
         </div>
-      )}
-      {/* Add subtle clickable area after closed toggle */}
-      {!isOpen && (
-        <div
-          className="toggle-add-content mt-1 h-4 cursor-text hover:bg-gray-50 rounded"
-          onClick={() => {
-            try {
-              const togglePath = ReactEditor.findPath(editor, element);
-              const nextPath = Path.next(togglePath);
-              Transforms.insertNodes(
-                editor,
-                { type: 'paragraph', children: [{ text: '' }] },
-                { at: nextPath }
-              );
-              // Focus the new paragraph
-              Transforms.select(editor, nextPath);
-              // Focus the editor
-              ReactEditor.focus(editor);
-            } catch (error) {
-              console.log('Toggle navigation skipped:', error);
-            }
-          }}
-        />
       )}
     </div>
   );
