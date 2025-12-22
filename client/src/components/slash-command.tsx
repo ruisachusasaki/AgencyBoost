@@ -363,14 +363,20 @@ export const getSlashCommands = (editor: any): CommandItem[] => [
     category: 'Layout',
     keywords: ['collapse', 'expand', 'accordion', 'dropdown'],
     command: () => {
-      editor.chain().focus().insertContent(`
-        <details class="toggle-block" open>
-          <summary class="toggle-header">Click to toggle</summary>
-          <div class="toggle-content">
-            <p>Hidden content goes here. Edit this text.</p>
-          </div>
-        </details>
-      `).run();
+      editor.chain().focus().insertContent({
+        type: 'toggle',
+        attrs: { open: true },
+        content: [
+          {
+            type: 'toggleSummary',
+            content: [{ type: 'text', text: 'Click to expand...' }],
+          },
+          {
+            type: 'toggleContent',
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Toggle content goes here' }] }],
+          },
+        ],
+      }).run();
     },
   },
   {

@@ -102,7 +102,37 @@ export const CalloutExtension = Node.create({
   },
 });
 
-// Toggle Extension
+// Toggle Extension - Notion-style with collapsible content
+// Uses toggleSummary + toggleContent child nodes for header and body
+
+const ToggleWrapperComponent = ({ node, updateAttributes, deleteNode }: any) => {
+  const isOpen = node.attrs.open;
+  
+  const handleToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    updateAttributes({ open: !isOpen });
+  };
+
+  return (
+    <NodeViewWrapper className="toggle-wrapper" data-toggle="" data-open={isOpen ? 'true' : 'false'}>
+      <div className={`toggle-block ${isOpen ? 'is-open' : ''}`}>
+        <div className="toggle-header-row">
+          <button
+            type="button"
+            className="toggle-btn"
+            onClick={handleToggle}
+            contentEditable={false}
+          >
+            <span className={`toggle-icon ${isOpen ? 'open' : ''}`}>▶</span>
+          </button>
+        </div>
+        <NodeViewContent className="toggle-content-wrapper" />
+      </div>
+    </NodeViewWrapper>
+  );
+};
+
 export const ToggleExtension = Node.create({
   name: 'toggle',
 
@@ -110,72 +140,109 @@ export const ToggleExtension = Node.create({
 
   content: 'toggleSummary toggleContent',
 
+  addAttributes() {
+    return {
+      open: {
+        default: true,
+        parseHTML: element => element.getAttribute('data-open') !== 'false',
+        renderHTML: attributes => ({
+          'data-open': attributes.open ? 'true' : 'false',
+        }),
+      },
+    };
+  },
+
   parseHTML() {
     return [
-      {
-        tag: 'div[data-toggle]',
-      },
-      {
-        tag: 'details[data-toggle]', // Legacy support
-      },
+      { tag: 'div[data-toggle]' },
+      { tag: 'details[data-toggle]' },
+      { tag: 'div.toggle-wrapper' },
+      { tag: 'div.simple-toggle-block' },
     ];
   },
 
-  renderHTML({ HTMLAttributes }) {
+  renderHTML({ HTMLAttributes, node }) {
+    const isOpen = node.attrs.open;
     return [
-      'div',
+      'details',
       mergeAttributes(HTMLAttributes, {
         'data-toggle': '',
-        class: 'simple-toggle-block',
+        'data-open': isOpen ? 'true' : 'false',
+        open: isOpen ? 'open' : null,
+        class: 'toggle-block-view',
       }),
       0,
     ];
   },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ToggleWrapperComponent);
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      Backspace: ({ editor }) => {
+        const { selection } = editor.state;
+        const { $from } = selection;
+        
+        // Walk up the ancestor chain to find a toggle node
+        for (let depth = $from.depth; depth >= 0; depth--) {
+          const node = $from.node(depth);
+          if (node.type.name === 'toggle') {
+            // Check if the entire toggle is empty (both summary and content)
+            if (node.textContent.trim() === '' || node.textContent === 'Toggle content goes here') {
+              return editor.commands.deleteNode('toggle');
+            }
+            break;
+          }
+        }
+        return false;
+      },
+    };
+  },
 });
 
+// Toggle Summary - the clickable header
 export const ToggleSummary = Node.create({
   name: 'toggleSummary',
 
   content: 'inline*',
 
+  defining: true,
+
   parseHTML() {
     return [
-      {
-        tag: 'summary',
-      },
-      {
-        tag: 'div[data-toggle-summary]',
-      },
+      { tag: 'summary' },
+      { tag: 'div[data-toggle-summary]' },
+      { tag: 'div.simple-toggle-summary' },
     ];
   },
 
   renderHTML({ HTMLAttributes }) {
     return [
-      'div',
+      'summary',
       mergeAttributes(HTMLAttributes, {
         'data-toggle-summary': '',
-        class: 'simple-toggle-summary',
+        class: 'toggle-summary-view',
       }),
-      [
-        'span',
-        { class: 'toggle-arrow', style: 'margin-right: 8px; transition: transform 0.2s;' },
-        '▶',
-      ],
       0,
     ];
   },
 });
 
+// Toggle Content - the collapsible body
 export const ToggleContent = Node.create({
   name: 'toggleContent',
 
   content: 'block+',
 
+  defining: true,
+
   parseHTML() {
     return [
-      {
-        tag: 'div[data-toggle-content]',
-      },
+      { tag: 'div[data-toggle-content]' },
+      { tag: 'div.simple-toggle-content' },
+      { tag: 'div.toggle-content-view' },
     ];
   },
 
@@ -184,7 +251,7 @@ export const ToggleContent = Node.create({
       'div',
       mergeAttributes(HTMLAttributes, {
         'data-toggle-content': '',
-        class: 'simple-toggle-content',
+        class: 'toggle-content-view',
       }),
       0,
     ];
