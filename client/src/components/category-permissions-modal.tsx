@@ -291,7 +291,7 @@ export function CategoryPermissionsModal({
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="" disabled>No teams available</SelectItem>
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">No teams available</div>
                           )
                         ) : (
                           availableUsers.length > 0 ? (
@@ -301,7 +301,7 @@ export function CategoryPermissionsModal({
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="" disabled>No users available</SelectItem>
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">No users available</div>
                           )
                         )}
                       </SelectContent>
