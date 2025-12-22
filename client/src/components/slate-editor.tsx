@@ -490,6 +490,41 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
     }
 
 
+    // Handle Tab key for indenting/nesting list items
+    if (event.key === 'Tab') {
+      const { selection } = editor;
+      if (selection) {
+        // Check if we're inside a list
+        const [listMatch] = Editor.nodes(editor, {
+          match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && 
+            (n.type === 'bulleted-list' || n.type === 'numbered-list'),
+        });
+        
+        if (listMatch) {
+          event.preventDefault();
+          const [listItemMatch] = Editor.nodes(editor, {
+            match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'list-item',
+          });
+          
+          if (listItemMatch) {
+            const [listItemNode, listItemPath] = listItemMatch;
+            const [listNode] = listMatch;
+            
+            if (event.shiftKey) {
+              // Shift+Tab: Outdent - lift the list item out of nested list
+              Transforms.liftNodes(editor, { at: listItemPath });
+            } else {
+              // Tab: Indent - wrap in a nested list
+              const listType = (listNode as any).type;
+              const newList = { type: listType, children: [] };
+              Transforms.wrapNodes(editor, newList, { at: listItemPath });
+            }
+            return;
+          }
+        }
+      }
+    }
+
     // Handle slash commands
     if (event.key === '/') {
       const { selection } = editor;
@@ -920,18 +955,18 @@ const Element = (props: any) => {
       );
     case 'bulleted-list':
       return (
-        <ul {...attributes} className="list-disc list-inside my-4">
+        <ul {...attributes} className="list-disc list-inside my-1 [&_ul]:my-0 [&_ol]:my-0">
           {children}
         </ul>
       );
     case 'numbered-list':
       return (
-        <ol {...attributes} className="list-decimal list-inside my-4">
+        <ol {...attributes} className="list-decimal list-inside my-1 [&_ul]:my-0 [&_ol]:my-0">
           {children}
         </ol>
       );
     case 'list-item':
-      return <li {...attributes}>{children}</li>;
+      return <li {...attributes} className="my-0">{children}</li>;
     case 'code-block':
       return (
         <pre {...attributes} className="bg-gray-900 text-white p-4 rounded-md my-4 overflow-x-auto">
