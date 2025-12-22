@@ -117,19 +117,25 @@ export default function ArticleView() {
     return createEmptyDocument();
   };
 
-  // Helper function to check if Slate content has meaningful text
+  // Helper function to check if Slate content has meaningful text (recursive for nested elements like toggles)
   const hasContent = (slateValue: Descendant[]): boolean => {
-    return slateValue.some(node => {
-      if ('children' in node) {
-        return node.children.some(child => {
-          if ('text' in child) {
-            return child.text.trim().length > 0;
-          }
-          return false;
-        });
+    const checkNode = (node: any): boolean => {
+      // If it's a text node, check for content
+      if ('text' in node) {
+        return node.text.trim().length > 0;
+      }
+      // If it has children (like paragraph, toggle, etc.), recursively check
+      if ('children' in node && Array.isArray(node.children)) {
+        return node.children.some((child: any) => checkNode(child));
+      }
+      // For elements with a type (like toggle, callout), check their title/summary attributes too
+      if (node.type === 'toggle' && node.title && node.title.trim().length > 0) {
+        return true;
       }
       return false;
-    });
+    };
+    
+    return slateValue.some(node => checkNode(node));
   };
 
   // Helper function to normalize content (remove invalid properties but preserve structure)
@@ -139,28 +145,34 @@ export default function ArticleView() {
       return createEmptyDocument();
     }
     
-    // Clean up content and remove invalid properties but preserve paragraph structure
-    const cleanedContent = content.map(node => {
-      if ('children' in node) {
-        // Remove any invalid properties like "level" that aren't part of Slate
-        const { level, ...cleanNode } = node as any;
-        
-        // Clean up children as well
-        const cleanedChildren = cleanNode.children.map((child: any) => {
-          // For text nodes, keep only valid properties  
-          if ('text' in child) {
-            const { text, bold, italic, code } = child;
-            // Keep original text structure to preserve editor state
-            return { text, ...(bold && { bold }), ...(italic && { italic }), ...(code && { code }) };
-          }
-          return child;
-        });
-        
-        return { ...cleanNode, children: cleanedChildren };
+    // Recursively clean a node and its children
+    const cleanNode = (node: any): any => {
+      // Text nodes - keep valid properties
+      if ('text' in node) {
+        const { text, bold, italic, code, underline, strikethrough } = node;
+        return { 
+          text, 
+          ...(bold && { bold }), 
+          ...(italic && { italic }), 
+          ...(code && { code }),
+          ...(underline && { underline }),
+          ...(strikethrough && { strikethrough })
+        };
       }
+      
+      // Element nodes with children - recursively clean
+      if ('children' in node && Array.isArray(node.children)) {
+        const { level, ...restNode } = node; // Remove 'level' property
+        return {
+          ...restNode,
+          children: node.children.map((child: any) => cleanNode(child))
+        };
+      }
+      
       return node;
-    });
+    };
     
+    const cleanedContent = content.map(cleanNode);
     return cleanedContent.length > 0 ? cleanedContent : createEmptyDocument();
   }, []);
 
