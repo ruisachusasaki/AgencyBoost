@@ -31,6 +31,7 @@ import { format } from "date-fns";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { IconPicker } from "@/components/ui/icon-picker";
+import { CategoryPermissionsModal } from "@/components/category-permissions-modal";
 
 // Direct icon mapping with specific imports
 const iconMap: Record<string, any> = {
@@ -296,6 +297,8 @@ export default function KnowledgeBase() {
     icon: "",
     color: ""
   });
+  const [permissionsCategoryId, setPermissionsCategoryId] = useState<string | null>(null);
+  const [permissionsCategoryName, setPermissionsCategoryName] = useState("");
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -557,6 +560,17 @@ export default function KnowledgeBase() {
                     >
                       <Edit className="mr-2 h-4 w-4" />
                       Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPermissionsCategoryId(category.id);
+                        setPermissionsCategoryName(category.name);
+                      }}
+                      data-testid={`button-permissions-category-${category.id}`}
+                    >
+                      <Shield className="mr-2 h-4 w-4" />
+                      Manage Access
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={(e) => {
@@ -1195,6 +1209,17 @@ export default function KnowledgeBase() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Category Permissions Modal */}
+      <CategoryPermissionsModal
+        isOpen={!!permissionsCategoryId}
+        onClose={() => {
+          setPermissionsCategoryId(null);
+          setPermissionsCategoryName("");
+        }}
+        categoryId={permissionsCategoryId || ""}
+        categoryName={permissionsCategoryName}
+      />
     </div>
   );
 }
