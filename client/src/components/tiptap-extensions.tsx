@@ -216,15 +216,26 @@ export const ToggleExtension = Node.create({
     return {
       Backspace: ({ editor }) => {
         const { selection } = editor.state;
-        const { $from } = selection;
+        const { $from, empty } = selection;
         
+        // Only handle if selection is empty (just a cursor)
+        if (!empty) return false;
+        
+        // Check if cursor is at position 0 within a toggle
         for (let depth = $from.depth; depth >= 0; depth--) {
           const node = $from.node(depth);
           if (node.type.name === 'toggle') {
-            if (node.textContent.trim() === '') {
+            // Only delete if BOTH summary attribute AND content are empty
+            const summaryEmpty = !node.attrs.summary || node.attrs.summary.trim() === '';
+            const contentEmpty = node.textContent.trim() === '';
+            
+            // And cursor must be at the start of the toggle content
+            const posInNode = $from.pos - $from.start(depth);
+            if (posInNode === 0 && summaryEmpty && contentEmpty) {
               return editor.commands.deleteNode('toggle');
             }
-            break;
+            // Otherwise, let default behavior handle it
+            return false;
           }
         }
         return false;
