@@ -1141,19 +1141,19 @@ const ChecklistItem = ({ attributes, children, element }: any) => {
 
   const handleCheckChange = () => {
     setChecked(!checked);
-    // In a real implementation, you'd update the editor state here
   };
 
   return (
-    <div {...attributes} className="checklist-item flex items-center gap-2 my-1">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={handleCheckChange}
-        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
-        contentEditable={false}
-      />
-      <span className={`flex-1 ${checked ? 'line-through text-gray-500' : ''}`}>
+    <div {...attributes} style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '8px', margin: '2px 0' }}>
+      <label contentEditable={false} style={{ display: 'flex', alignItems: 'center', height: '24px', flexShrink: 0 }}>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={handleCheckChange}
+          style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer' }}
+        />
+      </label>
+      <span style={{ flex: 1, minWidth: 0, lineHeight: '24px' }} className={checked ? 'line-through text-gray-500' : ''}>
         {children}
       </span>
     </div>
