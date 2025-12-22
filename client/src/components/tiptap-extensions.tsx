@@ -102,11 +102,12 @@ export const CalloutExtension = Node.create({
   },
 });
 
-// Toggle Extension - Notion-style with collapsible content
-// Uses toggleSummary + toggleContent child nodes for header and body
+// Toggle Extension - Simple single-node implementation
+// Summary stored as attribute, body as block content
 
-const ToggleWrapperComponent = ({ node, updateAttributes, deleteNode }: any) => {
+const ToggleComponent = ({ node, updateAttributes, editor }: any) => {
   const isOpen = node.attrs.open;
+  const summary = node.attrs.summary || '';
   
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -114,19 +115,40 @@ const ToggleWrapperComponent = ({ node, updateAttributes, deleteNode }: any) => 
     updateAttributes({ open: !isOpen });
   };
 
+  const handleSummaryChange = (e: React.FormEvent<HTMLDivElement>) => {
+    updateAttributes({ summary: e.currentTarget.textContent || '' });
+  };
+
   return (
-    <NodeViewWrapper className="toggle-wrapper" data-toggle="" data-open={isOpen ? 'true' : 'false'}>
-      <div className="toggle-block">
+    <NodeViewWrapper className="simple-toggle" data-open={isOpen ? 'true' : 'false'}>
+      <div className="simple-toggle-header">
         <button
           type="button"
-          className="toggle-btn"
+          className="simple-toggle-arrow"
           onClick={handleToggle}
           contentEditable={false}
         >
-          <span className={`toggle-icon ${isOpen ? 'open' : ''}`}>▶</span>
+          <span style={{ 
+            display: 'inline-block', 
+            transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+            transition: 'transform 0.15s ease'
+          }}>▶</span>
         </button>
-        <NodeViewContent className="toggle-content-wrapper" />
+        <div
+          className="simple-toggle-summary"
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={handleSummaryChange}
+          data-placeholder="Toggle title..."
+        >
+          {summary}
+        </div>
       </div>
+      {isOpen && (
+        <div className="simple-toggle-body">
+          <NodeViewContent className="simple-toggle-content" />
+        </div>
+      )}
     </NodeViewWrapper>
   );
 };
@@ -136,45 +158,58 @@ export const ToggleExtension = Node.create({
 
   group: 'block',
 
-  content: 'toggleSummary toggleContent',
+  content: 'block+',
 
   addAttributes() {
     return {
       open: {
         default: true,
-        parseHTML: element => element.getAttribute('data-open') !== 'false',
+        parseHTML: element => {
+          if (element.tagName === 'DETAILS') {
+            return element.hasAttribute('open');
+          }
+          return element.getAttribute('data-open') !== 'false';
+        },
         renderHTML: attributes => ({
           'data-open': attributes.open ? 'true' : 'false',
         }),
+      },
+      summary: {
+        default: '',
+        parseHTML: element => {
+          const summaryEl = element.querySelector('summary');
+          return summaryEl ? summaryEl.textContent || '' : '';
+        },
+        renderHTML: () => ({}),
       },
     };
   },
 
   parseHTML() {
     return [
+      { tag: 'details' },
       { tag: 'div[data-toggle]' },
-      { tag: 'details[data-toggle]' },
       { tag: 'div.toggle-wrapper' },
-      { tag: 'div.simple-toggle-block' },
+      { tag: 'div.simple-toggle' },
     ];
   },
 
   renderHTML({ HTMLAttributes, node }) {
     const isOpen = node.attrs.open;
+    const summary = node.attrs.summary || 'Toggle';
     return [
       'details',
       mergeAttributes(HTMLAttributes, {
-        'data-toggle': '',
-        'data-open': isOpen ? 'true' : 'false',
         open: isOpen ? 'open' : null,
-        class: 'toggle-block-view',
+        class: 'toggle-view',
       }),
-      0,
+      ['summary', { class: 'toggle-view-summary' }, summary],
+      ['div', { class: 'toggle-view-content' }, 0],
     ];
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(ToggleWrapperComponent);
+    return ReactNodeViewRenderer(ToggleComponent);
   },
 
   addKeyboardShortcuts() {
@@ -183,12 +218,10 @@ export const ToggleExtension = Node.create({
         const { selection } = editor.state;
         const { $from } = selection;
         
-        // Walk up the ancestor chain to find a toggle node
         for (let depth = $from.depth; depth >= 0; depth--) {
           const node = $from.node(depth);
           if (node.type.name === 'toggle') {
-            // Check if the entire toggle is empty (both summary and content)
-            if (node.textContent.trim() === '' || node.textContent === 'Toggle content goes here') {
+            if (node.textContent.trim() === '') {
               return editor.commands.deleteNode('toggle');
             }
             break;
@@ -200,85 +233,26 @@ export const ToggleExtension = Node.create({
   },
 });
 
-// Toggle Summary - the clickable header
-const ToggleSummaryComponent = ({ node }: any) => {
-  return (
-    <NodeViewWrapper as="div" className="toggle-summary-editor">
-      <NodeViewContent />
-    </NodeViewWrapper>
-  );
-};
-
+// Legacy support - keep these minimal for parsing old content
 export const ToggleSummary = Node.create({
   name: 'toggleSummary',
-
   content: 'inline*',
-
-  defining: true,
-
   parseHTML() {
-    return [
-      { tag: 'summary' },
-      { tag: 'div[data-toggle-summary]' },
-      { tag: 'div.simple-toggle-summary' },
-      { tag: 'div.toggle-summary-editor' },
-    ];
+    return [{ tag: 'summary' }, { tag: 'div[data-toggle-summary]' }];
   },
-
-  renderHTML({ HTMLAttributes }) {
-    return [
-      'summary',
-      mergeAttributes(HTMLAttributes, {
-        'data-toggle-summary': '',
-        class: 'toggle-summary-view',
-      }),
-      0,
-    ];
-  },
-
-  addNodeView() {
-    return ReactNodeViewRenderer(ToggleSummaryComponent);
+  renderHTML() {
+    return ['div', { style: 'display: none' }, 0];
   },
 });
 
-// Toggle Content - the collapsible body
-const ToggleContentComponent = ({ node }: any) => {
-  return (
-    <NodeViewWrapper as="div" className="toggle-content-editor">
-      <NodeViewContent />
-    </NodeViewWrapper>
-  );
-};
-
 export const ToggleContent = Node.create({
   name: 'toggleContent',
-
   content: 'block+',
-
-  defining: true,
-
   parseHTML() {
-    return [
-      { tag: 'div[data-toggle-content]' },
-      { tag: 'div.simple-toggle-content' },
-      { tag: 'div.toggle-content-view' },
-      { tag: 'div.toggle-content-editor' },
-    ];
+    return [{ tag: 'div[data-toggle-content]' }];
   },
-
-  renderHTML({ HTMLAttributes }) {
-    return [
-      'div',
-      mergeAttributes(HTMLAttributes, {
-        'data-toggle-content': '',
-        class: 'toggle-content-view',
-      }),
-      0,
-    ];
-  },
-
-  addNodeView() {
-    return ReactNodeViewRenderer(ToggleContentComponent);
+  renderHTML() {
+    return ['div', 0];
   },
 });
 

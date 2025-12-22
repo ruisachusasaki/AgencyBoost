@@ -365,17 +365,8 @@ export const getSlashCommands = (editor: any): CommandItem[] => [
     command: () => {
       editor.chain().focus().insertContent({
         type: 'toggle',
-        attrs: { open: true },
-        content: [
-          {
-            type: 'toggleSummary',
-            content: [{ type: 'text', text: 'Click to expand...' }],
-          },
-          {
-            type: 'toggleContent',
-            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Toggle content goes here' }] }],
-          },
-        ],
+        attrs: { open: true, summary: 'Click to expand...' },
+        content: [{ type: 'paragraph' }],
       }).run();
     },
   },

@@ -504,19 +504,18 @@ li[data-type="taskItem"][data-checked="true"] > .content,
   margin: 0.5rem 0;
 }
 
-/* Notion-style Toggle System */
-.toggle-wrapper {
+/* Simple Toggle System */
+.simple-toggle {
   margin: 0.5rem 0;
 }
 
-.toggle-block {
+.simple-toggle-header {
   display: flex;
-  flex-direction: row;
   align-items: flex-start;
   gap: 4px;
 }
 
-.toggle-btn {
+.simple-toggle-arrow {
   flex-shrink: 0;
   width: 20px;
   height: 20px;
@@ -533,57 +532,37 @@ li[data-type="taskItem"][data-checked="true"] > .content,
   margin-top: 2px;
 }
 
-.toggle-btn:hover {
+.simple-toggle-arrow:hover {
   background: #e5e7eb;
 }
 
-.toggle-icon {
-  display: inline-block;
-  transition: transform 0.15s ease;
-}
-
-.toggle-icon.open {
-  transform: rotate(90deg);
-}
-
-.toggle-content-wrapper {
+.simple-toggle-summary {
   flex: 1;
-  min-width: 0;
-}
-
-/* Toggle Summary - the header/title (editor mode) */
-.toggle-summary-editor {
   outline: none;
   line-height: 1.5;
-  flex: 1;
+  min-height: 1.5em;
 }
 
-.toggle-summary-editor:empty::before {
-  content: 'Toggle heading...';
+.simple-toggle-summary:empty::before {
+  content: attr(data-placeholder);
   color: #9ca3af;
 }
 
-/* Toggle Content - the collapsible body (editor mode) */
-.toggle-content-editor {
-  margin-top: 4px;
+.simple-toggle-body {
   margin-left: 24px;
+  margin-top: 4px;
 }
 
-/* Hide toggle content when closed */
-.toggle-wrapper[data-open="false"] .toggle-content-editor {
-  display: none;
-}
-
-.toggle-content-editor p {
+.simple-toggle-content p {
   margin: 0.25rem 0;
 }
 
 /* View mode toggle (details/summary) */
-.toggle-block-view {
+.toggle-view {
   margin: 0.5rem 0;
 }
 
-.toggle-summary-view {
+.toggle-view-summary {
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -591,36 +570,36 @@ li[data-type="taskItem"][data-checked="true"] > .content,
   list-style: none;
 }
 
-.toggle-summary-view::-webkit-details-marker {
+.toggle-view-summary::-webkit-details-marker {
   display: none;
 }
 
-.toggle-summary-view::before {
+.toggle-view-summary::before {
   content: '▶';
   font-size: 10px;
   color: #6b7280;
   transition: transform 0.15s ease;
 }
 
-.toggle-block-view[open] .toggle-summary-view::before {
+.toggle-view[open] .toggle-view-summary::before {
   transform: rotate(90deg);
 }
 
-.toggle-content-view {
-  padding-left: 24px;
+.toggle-view-content {
+  margin-left: 24px;
   margin-top: 4px;
 }
 
-.toggle-content-view p {
+.toggle-view-content p {
   margin: 0.25rem 0;
 }
 
 /* Dark mode for toggle */
-.dark .toggle-btn {
+.dark .simple-toggle-arrow {
   color: #9ca3af;
 }
 
-.dark .toggle-btn:hover {
+.dark .simple-toggle-arrow:hover {
   background: #4b5563;
 }
 
