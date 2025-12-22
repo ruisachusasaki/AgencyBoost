@@ -21,9 +21,24 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, Eye, Heart, Bookmark, Calendar, User, Tag, 
-  MessageCircle, Send, Edit, Trash2, Save, X, Settings
+  MessageCircle, Send, Edit, Trash2, Save, X, Settings,
+  ChevronRight, FileText, List, History, Clock, Check, FileEdit
 } from "lucide-react";
 import { format } from "date-fns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiRequest } from "@/lib/queryClient";
 import type { KnowledgeBaseArticle } from "@shared/schema";
 import { SlateEditor, createEmptyDocument } from '@/components/slate-editor';
@@ -62,6 +77,87 @@ export default function ArticleView() {
   const { data: staff = [] } = useQuery({
     queryKey: ['/api/staff']
   });
+
+  // Fetch categories for breadcrumbs
+  const { data: categories = [] } = useQuery({
+    queryKey: ['/api/knowledge-base/categories']
+  });
+
+  // Fetch all articles for related articles
+  const { data: allArticles = [] } = useQuery({
+    queryKey: ['/api/knowledge-base/articles']
+  });
+
+  // Fetch version history
+  const { data: versions = [] } = useQuery({
+    queryKey: ['/api/knowledge-base/articles', id, 'versions'],
+    enabled: !!id
+  });
+
+  // Extract headings from Slate content for Table of Contents
+  const extractHeadings = useCallback((content: Descendant[]): { level: number; text: string; id: string }[] => {
+    const headings: { level: number; text: string; id: string }[] = [];
+    
+    const processNode = (node: any) => {
+      if (node.type === 'heading' && node.level) {
+        const text = node.children?.map((child: any) => child.text || '').join('') || '';
+        if (text.trim()) {
+          headings.push({
+            level: node.level,
+            text: text.trim(),
+            id: text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')
+          });
+        }
+      }
+      if (node.children) {
+        node.children.forEach(processNode);
+      }
+    };
+    
+    content.forEach(processNode);
+    return headings;
+  }, []);
+
+  // Get breadcrumb path from category
+  const getBreadcrumbPath = useCallback((categoryId: string | null): any[] => {
+    if (!categoryId || !categories.length) return [];
+    
+    const path: any[] = [];
+    let currentId: string | null = categoryId;
+    
+    while (currentId) {
+      const category = (categories as any[]).find((c: any) => c.id === currentId);
+      if (category) {
+        path.unshift(category);
+        currentId = category.parentId;
+      } else {
+        break;
+      }
+    }
+    
+    return path;
+  }, [categories]);
+
+  // Get related articles (same category or shared tags)
+  const getRelatedArticles = useCallback((article: any): any[] => {
+    if (!article || !allArticles.length) return [];
+    
+    return (allArticles as any[])
+      .filter((a: any) => {
+        if (a.id === article.id) return false;
+        if (a.status !== 'published') return false;
+        
+        // Same category
+        if (a.categoryId === article.categoryId) return true;
+        
+        // Shared tags
+        const articleTags = article.tags || [];
+        const aTags = a.tags || [];
+        const sharedTags = articleTags.filter((t: string) => aTags.includes(t));
+        return sharedTags.length > 0;
+      })
+      .slice(0, 5); // Max 5 related articles
+  }, [allArticles]);
 
   // Helper function to convert content between formats
   const parseContent = (content: any): Descendant[] => {
@@ -352,6 +448,29 @@ export default function ArticleView() {
     },
   });
 
+  // Status change mutation
+  const statusMutation = useMutation({
+    mutationFn: async (status: string) => {
+      const response = await apiRequest("PUT", `/api/knowledge-base/articles/${id}`, { status });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/knowledge-base/articles'] });
+      toast({
+        title: "Success",
+        description: "Article status updated",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update status",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Debounced auto-save function
   const debouncedAutoSave = useCallback(
     (content: Descendant[], title?: string) => {
@@ -471,8 +590,31 @@ export default function ArticleView() {
     );
   }
 
+  // Get computed values
+  const breadcrumbs = getBreadcrumbPath((article as any)?.categoryId);
+  const headings = extractHeadings(currentContent);
+  const relatedArticles = getRelatedArticles(article);
+  const articleStatus = (article as any)?.status || 'published';
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
+      {/* Breadcrumbs */}
+      <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-4 flex-wrap">
+        <RouterLink href="/resources">
+          <span className="hover:text-foreground cursor-pointer">Resources</span>
+        </RouterLink>
+        {breadcrumbs.map((cat: any, index: number) => (
+          <span key={cat.id} className="flex items-center gap-1">
+            <ChevronRight className="w-3 h-3" />
+            <RouterLink href={`/resources?category=${cat.id}`}>
+              <span className="hover:text-foreground cursor-pointer">{cat.name}</span>
+            </RouterLink>
+          </span>
+        ))}
+        <ChevronRight className="w-3 h-3" />
+        <span className="text-foreground font-medium truncate max-w-[200px]">{(article as any)?.title}</span>
+      </nav>
+
       {/* Header */}
       <div className="mb-6">
         <RouterLink href="/resources">
@@ -499,7 +641,22 @@ export default function ArticleView() {
                 placeholder="Click to edit title..."
               />
             )}
-            <div className="flex items-center gap-6 text-sm text-muted-foreground mb-4">
+            <div className="flex items-center gap-6 text-sm text-muted-foreground mb-4 flex-wrap">
+              {/* Status Badge */}
+              <Badge 
+                variant={articleStatus === 'published' ? 'default' : articleStatus === 'draft' ? 'secondary' : 'outline'}
+                className={
+                  articleStatus === 'published' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
+                  articleStatus === 'draft' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' :
+                  'bg-gray-100 text-gray-800 hover:bg-gray-100'
+                }
+              >
+                {articleStatus === 'published' && <Check className="w-3 h-3 mr-1" />}
+                {articleStatus === 'draft' && <FileEdit className="w-3 h-3 mr-1" />}
+                {articleStatus === 'archived' && <History className="w-3 h-3 mr-1" />}
+                {articleStatus.charAt(0).toUpperCase() + articleStatus.slice(1)}
+              </Badge>
+
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4" />
                 <span>{(article as any)?.authorName || 'Unknown'}</span>
@@ -513,6 +670,40 @@ export default function ArticleView() {
                   <Eye className="w-4 h-4" />
                   <span>{(article as any)?.viewCount || 0} views</span>
                 </div>
+              )}
+              
+              {/* Status Change Dropdown - only for Admins and Managers */}
+              {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                      Change Status
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem 
+                      onClick={() => statusMutation.mutate('draft')}
+                      disabled={articleStatus === 'draft'}
+                    >
+                      <FileEdit className="w-4 h-4 mr-2" />
+                      Set as Draft
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => statusMutation.mutate('published')}
+                      disabled={articleStatus === 'published'}
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Publish
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => statusMutation.mutate('archived')}
+                      disabled={articleStatus === 'archived'}
+                    >
+                      <History className="w-4 h-4 mr-2" />
+                      Archive
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
@@ -620,35 +811,111 @@ export default function ArticleView() {
 
       <Separator className="mb-6" />
 
-      {/* Article Content */}
-      <Card className="mb-8">
-        <CardContent className="p-8">
-          {(article as any)?.featuredImage ? (
-            <img 
-              src={(article as any)?.featuredImage}
-              alt={(article as any)?.title || ''}
-              className="w-full h-64 object-cover rounded-lg mb-6"
-            />
-          ) : null}
-          
-          <div className="prose prose-lg max-w-none">
-            {isEditing ? (
-              <SlateEditor
-                value={editContent}
-                onChange={setEditContent}
-                placeholder="Write your article content... Type '/' for commands"
-              />
-            ) : (
-              <SlateEditor
-                key={`article-${id}`}
-                value={currentContent}
-                onChange={handleContentChange}
-                placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
-              />
-            )}
+      {/* Main content with TOC sidebar */}
+      <div className="flex gap-6">
+        {/* Article Content */}
+        <div className="flex-1 min-w-0">
+          <Card className="mb-8">
+            <CardContent className="p-8">
+              {(article as any)?.featuredImage ? (
+                <img 
+                  src={(article as any)?.featuredImage}
+                  alt={(article as any)?.title || ''}
+                  className="w-full h-64 object-cover rounded-lg mb-6"
+                />
+              ) : null}
+              
+              <div className="prose prose-lg max-w-none">
+                {isEditing ? (
+                  <SlateEditor
+                    value={editContent}
+                    onChange={setEditContent}
+                    placeholder="Write your article content... Type '/' for commands"
+                  />
+                ) : (
+                  <SlateEditor
+                    key={`article-${id}`}
+                    value={currentContent}
+                    onChange={handleContentChange}
+                    placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
+                  />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Related Articles */}
+          {relatedArticles.length > 0 && (
+            <Card className="mb-8">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="w-5 h-5 text-[#00C9C6]" />
+                  <h3 className="text-lg font-semibold">Related Articles</h3>
+                </div>
+                <div className="grid gap-3">
+                  {relatedArticles.map((related: any) => (
+                    <RouterLink key={related.id} href={`/resources/${related.id}`}>
+                      <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group">
+                        <FileText className="w-4 h-4 mt-0.5 text-muted-foreground group-hover:text-[#00C9C6]" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm group-hover:text-[#00C9C6] truncate">
+                            {related.title}
+                          </p>
+                          {related.excerpt && (
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                              {related.excerpt}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </RouterLink>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Table of Contents Sidebar */}
+        {headings.length > 0 && (
+          <div className="hidden lg:block w-64 flex-shrink-0">
+            <div className="sticky top-6">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <List className="w-4 h-4 text-[#00C9C6]" />
+                    <h4 className="font-semibold text-sm">On This Page</h4>
+                  </div>
+                  <ScrollArea className="max-h-[60vh]">
+                    <nav className="space-y-1">
+                      {headings.map((heading, index) => (
+                        <a
+                          key={index}
+                          href={`#${heading.id}`}
+                          className={`block text-sm hover:text-[#00C9C6] transition-colors ${
+                            heading.level === 1 ? 'font-medium pl-0' :
+                            heading.level === 2 ? 'pl-3 text-muted-foreground' :
+                            'pl-6 text-muted-foreground text-xs'
+                          }`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const element = document.getElementById(heading.id);
+                            if (element) {
+                              element.scrollIntoView({ behavior: 'smooth' });
+                            }
+                          }}
+                        >
+                          {heading.text}
+                        </a>
+                      ))}
+                    </nav>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       {/* Comments Section */}
       <Card>

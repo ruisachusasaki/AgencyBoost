@@ -3268,6 +3268,18 @@ export const knowledgeBaseSettings = pgTable("knowledge_base_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Knowledge Base Article Versions - for version history
+export const knowledgeBaseArticleVersions = pgTable("knowledge_base_article_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  articleId: varchar("article_id").notNull().references(() => knowledgeBaseArticles.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  title: text("title").notNull(),
+  content: jsonb("content").notNull(),
+  changeDescription: text("change_description"), // optional description of what changed
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Knowledge Base schema exports
 export const insertKnowledgeBaseCategorySchema = createInsertSchema(knowledgeBaseCategories).omit({
   id: true,
@@ -3315,6 +3327,11 @@ export const insertKnowledgeBaseSettingSchema = createInsertSchema(knowledgeBase
   updatedAt: true,
 });
 
+export const insertKnowledgeBaseArticleVersionSchema = createInsertSchema(knowledgeBaseArticleVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type KnowledgeBaseCategory = typeof knowledgeBaseCategories.$inferSelect;
 export type InsertKnowledgeBaseCategory = z.infer<typeof insertKnowledgeBaseCategorySchema>;
 
@@ -3338,6 +3355,9 @@ export type InsertKnowledgeBaseView = z.infer<typeof insertKnowledgeBaseViewSche
 
 export type KnowledgeBaseSetting = typeof knowledgeBaseSettings.$inferSelect;
 export type InsertKnowledgeBaseSetting = z.infer<typeof insertKnowledgeBaseSettingSchema>;
+
+export type KnowledgeBaseArticleVersion = typeof knowledgeBaseArticleVersions.$inferSelect;
+export type InsertKnowledgeBaseArticleVersion = z.infer<typeof insertKnowledgeBaseArticleVersionSchema>;
 
 // =============================================================================
 // TRAINING/LMS SYSTEM SCHEMA

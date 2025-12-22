@@ -26,7 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown, Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, X, Check, Minus, CirclePlus, PlayCircle, Code, Sparkles, CheckSquare, Compass, ThumbsUp, Repeat1, Target, TrendingUp, Globe, Lock, Unlock, Clock, MessageCircle, UserCheck, DollarSign, Calculator, CreditCard, Banknote, HandCoins, PieChart, Receipt, Briefcase, Building, Building2, Store, ShoppingCart, Handshake, UserPlus, Phone as PhoneIcon, Megaphone, TrendingDown } from "lucide-react";
+import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown, Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, X, Check, Minus, CirclePlus, PlayCircle, Code, Sparkles, CheckSquare, Compass, ThumbsUp, Repeat1, Target, TrendingUp, Globe, Lock, Unlock, Clock, MessageCircle, UserCheck, DollarSign, Calculator, CreditCard, Banknote, HandCoins, PieChart, Receipt, Briefcase, Building, Building2, Store, ShoppingCart, Handshake, UserPlus, Phone as PhoneIcon, Megaphone, TrendingDown, Filter, SlidersHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -265,6 +265,11 @@ function CategoryOverview({
 
 export default function KnowledgeBase() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [authorFilter, setAuthorFilter] = useState<string>("all");
+  const [tagFilter, setTagFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<'articles' | 'bookmarks'>('articles');
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'views'>('recent');
@@ -433,9 +438,39 @@ export default function KnowledgeBase() {
   const searchMatcher = createSearchMatcher(searchTerm || '');
   const filteredArticles = (articles as any[])
     .filter((article: any) => {
-      // Apply search to all articles regardless of category selection
-      // CategoryOverview will handle its own filtering when a category is selected
-      return searchMatcher(article);
+      // Apply search filter
+      if (!searchMatcher(article)) return false;
+      
+      // Apply status filter
+      if (statusFilter !== 'all' && article.status !== statusFilter) return false;
+      
+      // Apply author filter
+      if (authorFilter !== 'all' && article.authorName !== authorFilter) return false;
+      
+      // Apply tag filter
+      if (tagFilter !== 'all' && (!article.tags || !article.tags.includes(tagFilter))) return false;
+      
+      // Apply date filter
+      if (dateFilter !== 'all') {
+        const articleDate = new Date(article.createdAt);
+        const now = new Date();
+        switch (dateFilter) {
+          case 'week':
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            if (articleDate < weekAgo) return false;
+            break;
+          case 'month':
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            if (articleDate < monthAgo) return false;
+            break;
+          case 'year':
+            const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+            if (articleDate < yearAgo) return false;
+            break;
+        }
+      }
+      
+      return true;
     })
     .sort((a: any, b: any) => {
       switch (sortBy) {
@@ -910,20 +945,30 @@ export default function KnowledgeBase() {
           </div>
         </div>
         
+        
         {/* Search and Sort - only show for articles view, aligned with articles column */}
         {currentView === 'articles' && (
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 space-y-3">
             <div className="flex items-center gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   data-testid="input-search"
-                  placeholder="Search articles..."
+                  placeholder="Search articles by title, content, or tags..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-full"
                 />
               </div>
+              <Button
+                variant={showFilters ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className={showFilters ? "bg-[#00C9C6] hover:bg-[#00b3b0]" : ""}
+              >
+                <SlidersHorizontal className="w-4 h-4 mr-2" />
+                Filters
+              </Button>
               <Select value={sortBy} onValueChange={(value: 'recent' | 'popular' | 'views') => setSortBy(value)}>
                 <SelectTrigger className="w-[180px]" data-testid="select-sort">
                   <SelectValue />
@@ -935,6 +980,79 @@ export default function KnowledgeBase() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Filter Controls */}
+            {showFilters && (
+              <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Status:</span>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[130px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="archived">Archived</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Author:</span>
+                  <Select value={authorFilter} onValueChange={setAuthorFilter}>
+                    <SelectTrigger className="w-[160px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Authors</SelectItem>
+                      {Array.from(new Set((articles || []).map((a: any) => a.authorName).filter(Boolean))).map((author: any) => (
+                        <SelectItem key={author} value={author}>{author}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Tag:</span>
+                  <Select value={tagFilter} onValueChange={setTagFilter}>
+                    <SelectTrigger className="w-[140px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Tags</SelectItem>
+                      {Array.from(new Set((articles || []).flatMap((a: any) => a.tags || []).filter(Boolean))).map((tag: any) => (
+                        <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Date:</span>
+                  <Select value={dateFilter} onValueChange={setDateFilter}>
+                    <SelectTrigger className="w-[130px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Any Time</SelectItem>
+                      <SelectItem value="week">Last 7 Days</SelectItem>
+                      <SelectItem value="month">Last 30 Days</SelectItem>
+                      <SelectItem value="year">Last Year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {(statusFilter !== 'all' || authorFilter !== 'all' || tagFilter !== 'all' || dateFilter !== 'all') && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => { setStatusFilter('all'); setAuthorFilter('all'); setTagFilter('all'); setDateFilter('all'); }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Clear
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

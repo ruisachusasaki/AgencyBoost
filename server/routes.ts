@@ -64,7 +64,7 @@ import {
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
   clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings,
-  knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseLikes, knowledgeBaseBookmarks, knowledgeBasePermissions,
+  knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseLikes, knowledgeBaseBookmarks, knowledgeBasePermissions, knowledgeBaseArticleVersions,
   oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments, oneOnOneMeetingKpiStatuses
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
@@ -24205,6 +24205,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // =============================================================================
+
+  // =============================================================================
+  // KNOWLEDGE BASE VERSION HISTORY
+  // =============================================================================
+
+  // Get version history for an article
+  app.get("/api/knowledge-base/articles/:id/versions", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
+    try {
+      const versions = await db.select()
+        .from(knowledgeBaseArticleVersions)
+        .where(eq(knowledgeBaseArticleVersions.articleId, req.params.id))
+        .orderBy(desc(knowledgeBaseArticleVersions.version));
+      
+      res.json(versions);
+    } catch (error) {
+      console.error('Error fetching article versions:', error);
+      res.status(500).json({ message: "Failed to fetch versions" });
+    }
+  });
+
+  // Get a specific version
+  app.get("/api/knowledge-base/articles/:id/versions/:versionId", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
+    try {
+      const [version] = await db.select()
+        .from(knowledgeBaseArticleVersions)
+        .where(eq(knowledgeBaseArticleVersions.id, req.params.versionId));
+      
+      if (!version) {
+        return res.status(404).json({ message: "Version not found" });
+      }
+      
+      res.json(version);
+    } catch (error) {
+      console.error('Error fetching article version:', error);
+      res.status(500).json({ message: "Failed to fetch version" });
+    }
+  });
+
+  // Restore a specific version
+  app.post("/api/knowledge-base/articles/:id/versions/:versionId/restore", requireAuth(), requirePermission('knowledge_base', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const [version] = await db.select()
+        .from(knowledgeBaseArticleVersions)
+        .where(eq(knowledgeBaseArticleVersions.id, req.params.versionId));
+      
+      if (!version) {
+        return res.status(404).json({ message: "Version not found" });
+      }
+      
+      // Get current article to save as a version before restoring
+      const [currentArticle] = await db.select()
+        .from(knowledgeBaseArticles)
+        .where(eq(knowledgeBaseArticles.id, req.params.id));
+      
+      if (currentArticle) {
+        // Get highest version number
+        const [maxVersion] = await db.select({ max: sql`MAX(version)` })
+          .from(knowledgeBaseArticleVersions)
+          .where(eq(knowledgeBaseArticleVersions.articleId, req.params.id));
+        
+        const nextVersion = (maxVersion?.max as number || 0) + 1;
+        
+        // Save current state as a version before restoring
+        await db.insert(knowledgeBaseArticleVersions).values({
+          articleId: req.params.id,
+          version: nextVersion,
+          title: currentArticle.title,
+          content: currentArticle.content,
+          changeDescription: 'Auto-saved before restore',
+          createdBy: userId,
+        });
+        
+        // Restore the selected version
+        await db.update(knowledgeBaseArticles)
+          .set({
+            title: version.title,
+            content: version.content,
+            updatedAt: new Date()
+          })
+          .where(eq(knowledgeBaseArticles.id, req.params.id));
+      }
+      
+      res.json({ message: "Version restored successfully" });
+    } catch (error) {
+      console.error('Error restoring article version:', error);
+      res.status(500).json({ message: "Failed to restore version" });
+    }
+  });
+
   // TRAINING/LMS API ROUTES
   // =============================================================================
 
