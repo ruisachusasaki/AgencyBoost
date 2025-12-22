@@ -59,7 +59,12 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Team Workload Reports**: Comprehensive analytics for staff workload.
 - **Activity & Comments**: Global timer, activity logging, and a threaded comments system with @mentions and emoji picker.
 - **File & Media**: Advanced uploads, inline media display, voice recording, secure object storage, and collaborative annotation.
-- **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, and search.
+- **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, and enhanced search. Features include:
+  - **Draft/Published Workflow**: Article status management (draft/published/archived) with color-coded badges and role-gated status changes. Full version history tracking with `knowledgeBaseArticleVersions` table and restore capability.
+  - **Enhanced Search & Filtering**: Full-text search across title, excerpt, and content. Multi-filter panel with status, author, tag, and date range filters (any time/last 7 days/last 30 days/last year).
+  - **Table of Contents**: Auto-generated sticky sidebar on desktop showing all headings (H1/H2/H3) extracted from Slate content with smooth scroll navigation.
+  - **Breadcrumb Navigation**: Category hierarchy path displayed at top of article view (Resources > Category > Sub-category > Article).
+  - **Related Articles**: Suggestions panel showing up to 5 articles from same category or with shared tags, displayed with excerpts below article content.
 - **User Preferences**: Per-user view customization system storing column visibility.
 - **Notification System**: Database-backed notification system with bell icon display, @mention detection in comments, notification settings panel, and My Mentions widget. Known limitation: duplicate staff names may cause incorrect notification routing (acceptable for CRM use case).
 - **User Profile Settings**: Rich text editor (TipTap) for email signature in Settings > My Profile > Profile tab, with HTML formatting support and enable/disable toggle.
