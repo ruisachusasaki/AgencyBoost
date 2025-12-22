@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, Eye, Heart, Bookmark, Calendar, User, Tag, 
   MessageCircle, Send, Edit, Trash2, Save, X, Settings,
-  ChevronRight, FileText, List, History, Clock, Check, FileEdit
+  ChevronRight, FileText, List, History, Clock, Check, FileEdit, Plus, ChevronDown
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -137,6 +137,32 @@ export default function ArticleView() {
     
     return path;
   }, [categories]);
+
+  // Get parent article breadcrumb path
+  const getArticleParentPath = useCallback((parentId: string | null): any[] => {
+    if (!parentId || !allArticles.length) return [];
+    
+    const path: any[] = [];
+    let currentId: string | null = parentId;
+    
+    while (currentId) {
+      const parentArticle = (allArticles as any[]).find((a: any) => a.id === currentId);
+      if (parentArticle) {
+        path.unshift(parentArticle);
+        currentId = parentArticle.parentId;
+      } else {
+        break;
+      }
+    }
+    
+    return path;
+  }, [allArticles]);
+
+  // Get child articles of current article
+  const getChildArticles = useCallback((articleId: string): any[] => {
+    if (!articleId || !allArticles.length) return [];
+    return (allArticles as any[]).filter((a: any) => a.parentId === articleId);
+  }, [allArticles]);
 
   // Get related articles (same category or shared tags)
   const getRelatedArticles = useCallback((article: any): any[] => {
@@ -471,6 +497,29 @@ export default function ArticleView() {
     },
   });
 
+  // Parent change mutation (for reparenting articles)
+  const parentMutation = useMutation({
+    mutationFn: async (parentId: string | null) => {
+      const response = await apiRequest("PUT", `/api/knowledge-base/articles/${id}`, { parentId });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/knowledge-base/articles'] });
+      toast({
+        title: "Success",
+        description: "Article moved successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to move article",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Debounced auto-save function
   const debouncedAutoSave = useCallback(
     (content: Descendant[], title?: string) => {
@@ -592,6 +641,8 @@ export default function ArticleView() {
 
   // Get computed values
   const breadcrumbs = getBreadcrumbPath((article as any)?.categoryId);
+  const articleParentPath = getArticleParentPath((article as any)?.parentId);
+  const childArticles = getChildArticles(id || '');
   const headings = extractHeadings(currentContent);
   const relatedArticles = getRelatedArticles(article);
   const articleStatus = (article as any)?.status || 'published';
@@ -603,11 +654,20 @@ export default function ArticleView() {
         <RouterLink href="/resources">
           <span className="hover:text-foreground cursor-pointer">Resources</span>
         </RouterLink>
-        {breadcrumbs.map((cat: any, index: number) => (
+        {breadcrumbs.map((cat: any) => (
           <span key={cat.id} className="flex items-center gap-1">
             <ChevronRight className="w-3 h-3" />
             <RouterLink href={`/resources?category=${cat.id}`}>
               <span className="hover:text-foreground cursor-pointer">{cat.name}</span>
+            </RouterLink>
+          </span>
+        ))}
+        {/* Parent articles in breadcrumb */}
+        {articleParentPath.map((parentArticle: any) => (
+          <span key={parentArticle.id} className="flex items-center gap-1">
+            <ChevronRight className="w-3 h-3" />
+            <RouterLink href={`/resources/articles/${parentArticle.id}`}>
+              <span className="hover:text-foreground cursor-pointer">{parentArticle.title}</span>
             </RouterLink>
           </span>
         ))}
@@ -705,6 +765,38 @@ export default function ArticleView() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+              {/* Move Article dropdown - only for Admins and Managers */}
+              {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" data-testid="button-move-article">
+                      Move To
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="max-h-64 overflow-y-auto">
+                    <DropdownMenuItem 
+                      onClick={() => parentMutation.mutate(null)}
+                      disabled={!(article as any)?.parentId}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Top Level (No Parent)
+                    </DropdownMenuItem>
+                    {(allArticles as any[])
+                      .filter((a: any) => a.id !== id) // Exclude current article
+                      .map((potentialParent: any) => (
+                        <DropdownMenuItem 
+                          key={potentialParent.id}
+                          onClick={() => parentMutation.mutate(potentialParent.id)}
+                          disabled={(article as any)?.parentId === potentialParent.id}
+                        >
+                          <FileText className="w-4 h-4 mr-2" />
+                          {potentialParent.title}
+                        </DropdownMenuItem>
+                      ))
+                    }
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
 
             {/* Action Buttons - Below metadata */}
@@ -763,6 +855,21 @@ export default function ArticleView() {
                 >
                   <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
                 </Button>
+
+                {/* Add Sub-page button - only for Admins and Managers */}
+                {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
+                  <RouterLink href={`/resources?createArticle=true&parentId=${id}&categoryId=${(article as any)?.categoryId || ''}`}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      data-testid="button-add-subpage"
+                      className="text-[#00C9C6] hover:text-[#00b3b0] hover:bg-[#00C9C6]/10"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Sub-page
+                    </Button>
+                  </RouterLink>
+                )}
 
                 {/* Settings button - only for Admins and Managers */}
                 {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
@@ -844,6 +951,41 @@ export default function ArticleView() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Child Articles (Sub-pages) */}
+          {childArticles.length > 0 && (
+            <Card className="mb-8">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="w-5 h-5 text-[#00C9C6]" />
+                  <h3 className="text-lg font-semibold">Sub-pages</h3>
+                  <Badge variant="secondary" className="text-xs">
+                    {childArticles.length}
+                  </Badge>
+                </div>
+                <div className="grid gap-3">
+                  {childArticles.map((child: any) => (
+                    <RouterLink key={child.id} href={`/resources/articles/${child.id}`}>
+                      <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group border border-border/50">
+                        <FileText className="w-4 h-4 mt-0.5 text-muted-foreground group-hover:text-[#00C9C6]" />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-medium group-hover:text-[#00C9C6] truncate">
+                            {child.title}
+                          </h4>
+                          {child.excerpt && (
+                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                              {child.excerpt}
+                            </p>
+                          )}
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-[#00C9C6]" />
+                      </div>
+                    </RouterLink>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Related Articles */}
           {relatedArticles.length > 0 && (

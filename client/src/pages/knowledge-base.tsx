@@ -200,49 +200,63 @@ function CategoryOverview({
             )}
           </h2>
           <div className="space-y-4">
-            {categoryArticles.map((article: any) => (
-              <Card key={article.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <Link href={`/resources/articles/${article.id}`}>
-                        <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
-                          {article.title}
-                        </h3>
-                      </Link>
-                      {article.excerpt && (
-                        <p className="text-muted-foreground mb-3 line-clamp-2">
-                          {article.excerpt}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <User className="w-4 h-4" />
-                          <span>{article.authorName || "Unknown"}</span>
+            {categoryArticles
+              .filter((article: any) => !article.parentId) // Only show top-level articles
+              .map((article: any) => {
+                const childArticles = categoryArticles.filter((a: any) => a.parentId === article.id);
+                const hasChildren = childArticles.length > 0;
+                
+                return (
+                  <Card key={article.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Link href={`/resources/articles/${article.id}`}>
+                              <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
+                                {article.title}
+                              </h3>
+                            </Link>
+                            {hasChildren && (
+                              <Badge variant="secondary" className="text-xs">
+                                {childArticles.length} sub-page{childArticles.length !== 1 ? 's' : ''}
+                              </Badge>
+                            )}
+                          </div>
+                          {article.excerpt && (
+                            <p className="text-muted-foreground mb-3 line-clamp-2">
+                              {article.excerpt}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <User className="w-4 h-4" />
+                              <span>{article.authorName || "Unknown"}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>{format(new Date(article.createdAt), "MMM d, yyyy")}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Eye className="w-4 h-4" />
+                              <span>{article.viewCount || 0} views</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          <span>{format(new Date(article.createdAt), "MMM d, yyyy")}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Eye className="w-4 h-4" />
-                          <span>{article.viewCount || 0} views</span>
-                        </div>
+                        {article.tags && article.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 ml-4">
+                            {article.tags.slice(0, 3).map((tag: string, index: number) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    {article.tags && article.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 ml-4">
-                        {article.tags.slice(0, 3).map((tag: string, index: number) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
           </div>
         </div>
       )}
@@ -289,9 +303,11 @@ export default function KnowledgeBase() {
     excerpt: "",
     categoryId: "",
     tags: "",
+    parentId: null as string | null,
   });
   
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set());
   const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [deletingCategory, setDeletingCategory] = useState<any>(null);
@@ -305,12 +321,31 @@ export default function KnowledgeBase() {
   const [permissionsCategoryId, setPermissionsCategoryId] = useState<string | null>(null);
   const [permissionsCategoryName, setPermissionsCategoryName] = useState("");
   
-  // Read category from URL query params on mount
+  // Read query params on mount (category, create article with parent)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const categoryParam = params.get('category');
     if (categoryParam) {
       setSelectedCategory(categoryParam);
+    }
+    
+    // Handle create article with parent ID (for sub-pages)
+    const createArticle = params.get('createArticle');
+    const parentId = params.get('parentId');
+    const categoryId = params.get('categoryId');
+    
+    if (createArticle === 'true') {
+      setNewArticle({
+        title: "",
+        content: "",
+        excerpt: "",
+        categoryId: categoryId || "",
+        tags: "",
+        parentId: parentId || null,
+      });
+      setShowArticleDialog(true);
+      // Clean up URL
+      window.history.replaceState({}, '', '/resources');
     }
   }, []);
   
@@ -374,7 +409,7 @@ export default function KnowledgeBase() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/knowledge-base/articles"] });
       setShowArticleDialog(false);
-      setNewArticle({ title: "", content: "", excerpt: "", categoryId: "", tags: "" });
+      setNewArticle({ title: "", content: "", excerpt: "", categoryId: "", tags: "", parentId: null });
       toast({
         title: "Success",
         description: "Article created successfully",
@@ -530,6 +565,160 @@ export default function KnowledgeBase() {
       }
       return newSet;
     });
+  };
+
+  const toggleArticle = (articleId: string) => {
+    setExpandedArticles(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(articleId)) {
+        newSet.delete(articleId);
+      } else {
+        newSet.add(articleId);
+      }
+      return newSet;
+    });
+  };
+
+  // Helper function to get child articles of a given article
+  const getChildArticles = (parentId: string) => {
+    return filteredArticles.filter((article: any) => article.parentId === parentId);
+  };
+
+  // Helper function to create a sub-page
+  const handleCreateSubPage = (parentArticle: any) => {
+    setNewArticle({
+      title: "",
+      content: "",
+      excerpt: "",
+      categoryId: parentArticle.categoryId || "",
+      tags: "",
+      parentId: parentArticle.id,
+    });
+    setShowArticleDialog(true);
+  };
+
+  // Get top-level articles (those without a parent)
+  const topLevelArticles = filteredArticles.filter((article: any) => !article.parentId);
+
+  // Render article with nested children recursively
+  const renderArticleWithChildren = (article: any, level = 0) => {
+    const childArticles = getChildArticles(article.id);
+    const hasChildren = childArticles.length > 0;
+    const isExpanded = expandedArticles.has(article.id);
+
+    return (
+      <div key={article.id} className="space-y-2">
+        <Card className={`hover:shadow-md transition-shadow ${level > 0 ? 'border-l-4 border-l-primary/30' : ''}`} style={{ marginLeft: level > 0 ? `${level * 24}px` : 0 }}>
+          <CardContent className="p-6">
+            <div className="flex items-start gap-2">
+              {/* Expand/Collapse button for articles with children */}
+              {hasChildren ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleArticle(article.id);
+                  }}
+                  className="p-1 hover:bg-muted rounded-sm transition-colors mt-1"
+                  data-testid={`button-toggle-article-${article.id}`}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </button>
+              ) : (
+                <div className="w-6" />
+              )}
+              
+              <div className="flex-1">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Link href={`/resources/articles/${article.id}`}>
+                        <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
+                          {article.title}
+                        </h3>
+                      </Link>
+                      {hasChildren && (
+                        <Badge variant="secondary" className="text-xs">
+                          {childArticles.length} sub-page{childArticles.length !== 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                    {article.excerpt && (
+                      <p className="text-muted-foreground mb-3 line-clamp-2">
+                        {article.excerpt}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <User className="w-4 h-4" />
+                        <span>{article.authorName || "Unknown"}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{format(new Date(article.createdAt), "MMM d, yyyy")}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Eye className="w-4 h-4" />
+                        <span>{article.viewCount || 0} views</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-4 h-4" />
+                        <span>{article.likeCount || 0} likes</span>
+                      </div>
+                      {/* Add Sub-page button */}
+                      {canManageCategories && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateSubPage(article);
+                          }}
+                          className="h-6 px-2 text-xs text-muted-foreground hover:text-primary"
+                          data-testid={`button-add-subpage-${article.id}`}
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          Add Sub-page
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {article.featuredImage && (
+                    <img 
+                      src={article.featuredImage}
+                      alt={article.title}
+                      className="w-16 h-16 object-cover rounded-md ml-4"
+                    />
+                  )}
+                </div>
+                {article.tags && article.tags.length > 0 && (
+                  <>
+                    <Separator className="my-3" />
+                    <div className="flex gap-2 flex-wrap">
+                      {article.tags.map((tag: string) => (
+                        <Badge key={tag} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Render child articles if expanded */}
+        {hasChildren && isExpanded && (
+          <div className="space-y-2 mt-2">
+            {childArticles.map((childArticle: any) => renderArticleWithChildren(childArticle, level + 1))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Render category tree recursively
@@ -688,6 +877,7 @@ export default function KnowledgeBase() {
       content: newArticle.content,
       excerpt: newArticle.excerpt || null,
       categoryId: newArticle.categoryId || null,
+      parentId: newArticle.parentId || null,
       tags: newArticle.tags ? newArticle.tags.split(',').map(tag => tag.trim()) : [],
     };
     
@@ -839,7 +1029,11 @@ export default function KnowledgeBase() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Create New Article</DialogTitle>
+                <DialogTitle>
+                  {newArticle.parentId 
+                    ? `Create Sub-page under "${(articles as any[]).find(a => a.id === newArticle.parentId)?.title || 'Parent'}"` 
+                    : "Create New Article"}
+                </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="grid gap-2">
@@ -862,24 +1056,45 @@ export default function KnowledgeBase() {
                     onChange={(e) => setNewArticle({ ...newArticle, excerpt: e.target.value })}
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="article-category">Category</Label>
-                  <Select 
-                    value={newArticle.categoryId} 
-                    onValueChange={(value) => setNewArticle({ ...newArticle, categoryId: value === "none" ? "" : value })}
-                  >
-                    <SelectTrigger data-testid="select-article-category">
-                      <SelectValue placeholder="Choose a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Category</SelectItem>
-                      {(categories || []).map((category: any) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="article-category">Category</Label>
+                    <Select 
+                      value={newArticle.categoryId} 
+                      onValueChange={(value) => setNewArticle({ ...newArticle, categoryId: value === "none" ? "" : value })}
+                    >
+                      <SelectTrigger data-testid="select-article-category">
+                        <SelectValue placeholder="Choose a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Category</SelectItem>
+                        {(categories || []).map((category: any) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="article-parent">Parent Article (optional)</Label>
+                    <Select 
+                      value={newArticle.parentId || "none"} 
+                      onValueChange={(value) => setNewArticle({ ...newArticle, parentId: value === "none" ? null : value })}
+                    >
+                      <SelectTrigger data-testid="select-article-parent">
+                        <SelectValue placeholder="Choose a parent article" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Parent (Top-level)</SelectItem>
+                        {(articles as any[] || []).map((article: any) => (
+                          <SelectItem key={article.id} value={article.id}>
+                            {article.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="article-content">Content *</Label>
@@ -1105,7 +1320,7 @@ export default function KnowledgeBase() {
               />
             ) : (
               <div className="space-y-4">
-                {filteredArticles.length === 0 ? (
+                {topLevelArticles.length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center">
                       <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -1116,63 +1331,7 @@ export default function KnowledgeBase() {
                     </CardContent>
                   </Card>
                 ) : (
-                  filteredArticles.map((article: any) => (
-                    <Card key={article.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <Link href={`/resources/articles/${article.id}`}>
-                              <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
-                                {article.title}
-                              </h3>
-                            </Link>
-                            {article.excerpt && (
-                              <p className="text-muted-foreground mb-3 line-clamp-2">
-                                {article.excerpt}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <User className="w-4 h-4" />
-                                <span>{article.authorName || "Unknown"}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-4 h-4" />
-                                <span>{format(new Date(article.createdAt), "MMM d, yyyy")}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Eye className="w-4 h-4" />
-                                <span>{article.viewCount || 0} views</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Heart className="w-4 h-4" />
-                                <span>{article.likeCount || 0} likes</span>
-                              </div>
-                            </div>
-                          </div>
-                          {article.featuredImage && (
-                            <img 
-                              src={article.featuredImage}
-                              alt={article.title}
-                              className="w-16 h-16 object-cover rounded-md ml-4"
-                            />
-                          )}
-                        </div>
-                        {article.tags && article.tags.length > 0 && (
-                          <>
-                            <Separator className="my-3" />
-                            <div className="flex gap-2 flex-wrap">
-                              {article.tags.map((tag: string) => (
-                                <Badge key={tag} variant="outline" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))
+                  topLevelArticles.map((article: any) => renderArticleWithChildren(article))
                 )}
               </div>
             )}
