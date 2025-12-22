@@ -5,6 +5,7 @@ import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import TaskList from '@tiptap/extension-task-list';
+import ListKeymap from '@tiptap/extension-list-keymap';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { FontFamily } from '@tiptap/extension-font-family';
@@ -157,6 +158,18 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
       }),
       CustomTaskItem.configure({
         nested: true,
+      }),
+      ListKeymap.configure({
+        listTypes: [
+          {
+            itemName: 'listItem',
+            wrapperNames: ['bulletList', 'orderedList'],
+          },
+          {
+            itemName: 'taskItem',
+            wrapperNames: ['taskList'],
+          },
+        ],
       }),
       CalloutExtension,
       ToggleExtension,
