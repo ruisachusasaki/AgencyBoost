@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -304,6 +304,15 @@ export default function KnowledgeBase() {
   });
   const [permissionsCategoryId, setPermissionsCategoryId] = useState<string | null>(null);
   const [permissionsCategoryName, setPermissionsCategoryName] = useState("");
+  
+  // Read category from URL query params on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const categoryParam = params.get('category');
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    }
+  }, []);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
