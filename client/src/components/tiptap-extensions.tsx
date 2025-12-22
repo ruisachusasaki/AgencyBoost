@@ -201,6 +201,14 @@ export const ToggleExtension = Node.create({
 });
 
 // Toggle Summary - the clickable header
+const ToggleSummaryComponent = ({ node }: any) => {
+  return (
+    <NodeViewWrapper as="div" className="toggle-summary-editor">
+      <NodeViewContent />
+    </NodeViewWrapper>
+  );
+};
+
 export const ToggleSummary = Node.create({
   name: 'toggleSummary',
 
@@ -213,6 +221,7 @@ export const ToggleSummary = Node.create({
       { tag: 'summary' },
       { tag: 'div[data-toggle-summary]' },
       { tag: 'div.simple-toggle-summary' },
+      { tag: 'div.toggle-summary-editor' },
     ];
   },
 
@@ -226,9 +235,21 @@ export const ToggleSummary = Node.create({
       0,
     ];
   },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ToggleSummaryComponent);
+  },
 });
 
 // Toggle Content - the collapsible body
+const ToggleContentComponent = ({ node }: any) => {
+  return (
+    <NodeViewWrapper as="div" className="toggle-content-editor">
+      <NodeViewContent />
+    </NodeViewWrapper>
+  );
+};
+
 export const ToggleContent = Node.create({
   name: 'toggleContent',
 
@@ -241,6 +262,7 @@ export const ToggleContent = Node.create({
       { tag: 'div[data-toggle-content]' },
       { tag: 'div.simple-toggle-content' },
       { tag: 'div.toggle-content-view' },
+      { tag: 'div.toggle-content-editor' },
     ];
   },
 
@@ -253,6 +275,10 @@ export const ToggleContent = Node.create({
       }),
       0,
     ];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ToggleContentComponent);
   },
 });
 

@@ -551,33 +551,30 @@ li[data-type="taskItem"][data-checked="true"] > .content,
   min-width: 0;
 }
 
-/* Toggle Summary - the header/title */
-.tiptap [data-toggle-summary],
-.ProseMirror [data-toggle-summary] {
+/* Toggle Summary - the header/title (editor mode) */
+.toggle-summary-editor {
   outline: none;
   line-height: 1.5;
+  flex: 1;
 }
 
-.tiptap [data-toggle-summary]:empty::before,
-.ProseMirror [data-toggle-summary]:empty::before {
+.toggle-summary-editor:empty::before {
   content: 'Toggle heading...';
   color: #9ca3af;
 }
 
-/* Toggle Content - the collapsible body */
-.tiptap [data-toggle-content],
-.ProseMirror [data-toggle-content] {
-  padding-left: 24px;
+/* Toggle Content - the collapsible body (editor mode) */
+.toggle-content-editor {
   margin-top: 4px;
+  margin-left: 24px;
 }
 
 /* Hide toggle content when closed */
-.toggle-wrapper[data-open="false"] [data-toggle-content] {
+.toggle-wrapper[data-open="false"] .toggle-content-editor {
   display: none;
 }
 
-.tiptap [data-toggle-content] p,
-.ProseMirror [data-toggle-content] p {
+.toggle-content-editor p {
   margin: 0.25rem 0;
 }
 
@@ -668,14 +665,6 @@ li[data-type="taskItem"][data-checked="true"] > .content,
   border-color: #4b5563;
 }
 
-.dark .toggle-summary {
-  background: #374151;
-  border-color: #4b5563;
-}
-
-.dark .toggle-summary:hover {
-  background: #4b5563;
-}
 
 .dark .slash-command-menu {
   background: #374151;
