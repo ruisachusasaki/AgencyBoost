@@ -23171,22 +23171,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Categories API
   app.get("/api/knowledge-base/categories", requireAuth(), requirePermission('knowledge_base', 'canView'), async (req, res) => {
     try {
-      const categories = await db.execute(sql`
-        SELECT 
-          id,
-          name,
-          description,
-          parent_id as "parentId",
-          "order",
-          icon,
-          color,
-          is_visible as "isVisible",
-          created_at as "createdAt",
-          updated_at as "updatedAt"
-        FROM knowledge_base_categories
-        WHERE is_visible = true
-        ORDER BY "order" ASC
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      // Check if user is admin
+      const userRoleResult = await db.execute(sql`
+        SELECT r.name as role FROM staff s 
+        JOIN roles r ON s.role_id = r.id 
+        WHERE s.id = ${userId}
       `);
+      const userRoleRows = Array.isArray(userRoleResult) ? userRoleResult : userRoleResult.rows;
+      const userRoleData = userRoleRows && userRoleRows.length > 0 ? userRoleRows[0] : null;
+      const isAdmin = userRoleData && userRoleData.role === 'Admin';
+      
+      // Get user's department for team-based permissions
+      const userTeamResult = await db.execute(sql`
+        SELECT department FROM staff WHERE id = ${userId}
+      `);
+      const userTeamRows = Array.isArray(userTeamResult) ? userTeamResult : userTeamResult.rows;
+      const userDepartment = userTeamRows && userTeamRows.length > 0 ? userTeamRows[0].department : null;
+      
+      let categories;
+      
+      if (isAdmin) {
+        // Admins see all visible categories
+        categories = await db.execute(sql`
+          SELECT 
+            id,
+            name,
+            description,
+            parent_id as "parentId",
+            "order",
+            icon,
+            color,
+            is_visible as "isVisible",
+            created_at as "createdAt",
+            updated_at as "updatedAt"
+          FROM knowledge_base_categories
+          WHERE is_visible = true
+          ORDER BY "order" ASC
+        `);
+      } else {
+        // Non-admins see: categories with no permissions (public) OR categories they have access to
+        categories = await db.execute(sql`
+          SELECT DISTINCT
+            c.id,
+            c.name,
+            c.description,
+            c.parent_id as "parentId",
+            c."order",
+            c.icon,
+            c.color,
+            c.is_visible as "isVisible",
+            c.created_at as "createdAt",
+            c.updated_at as "updatedAt"
+          FROM knowledge_base_categories c
+          WHERE c.is_visible = true
+            AND (
+              -- Categories with NO permissions are public (accessible to all)
+              NOT EXISTS (
+                SELECT 1 FROM knowledge_base_permissions p 
+                WHERE p.resource_type = 'category' AND p.resource_id = c.id
+              )
+              OR
+              -- Categories where user has specific access
+              EXISTS (
+                SELECT 1 FROM knowledge_base_permissions p 
+                WHERE p.resource_type = 'category' 
+                  AND p.resource_id = c.id
+                  AND (
+                    (p.access_type = 'user' AND p.access_id = ${userId})
+                    OR (p.access_type = 'team' AND p.access_id IN (
+                      SELECT id::text FROM departments WHERE name = ${userDepartment}
+                    ))
+                  )
+              )
+            )
+          ORDER BY c."order" ASC
+        `);
+      }
 
       const categoriesArray = Array.isArray(categories) ? categories : categories.rows;
       res.json(categoriesArray);
@@ -23281,6 +23344,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting category:', error);
       res.status(500).json({ message: "Failed to delete category" });
+    }
+  });
+
+  // Category Permissions API
+  app.get("/api/knowledge-base/categories/:id/permissions", requireAuth(), requirePermission('knowledge_base', 'canEdit'), async (req, res) => {
+    try {
+      const categoryId = req.params.id;
+      
+      // Get all permissions for this category
+      const permissionsResult = await db.execute(sql`
+        SELECT 
+          p.id,
+          p.resource_type as "resourceType",
+          p.resource_id as "resourceId",
+          p.access_type as "accessType",
+          p.access_id as "accessId",
+          p.permission,
+          p.created_at as "createdAt",
+          CASE 
+            WHEN p.access_type = 'user' THEN s.first_name || ' ' || s.last_name
+            WHEN p.access_type = 'team' THEN d.name
+            ELSE NULL
+          END as "accessName"
+        FROM knowledge_base_permissions p
+        LEFT JOIN staff s ON p.access_type = 'user' AND p.access_id = s.id::text
+        LEFT JOIN departments d ON p.access_type = 'team' AND p.access_id = d.id::text
+        WHERE p.resource_type = 'category' 
+          AND p.resource_id = ${categoryId}
+        ORDER BY p.access_type, p.created_at
+      `);
+      
+      const permissions = Array.isArray(permissionsResult) ? permissionsResult : permissionsResult.rows;
+      res.json(permissions);
+    } catch (error) {
+      console.error('Error fetching category permissions:', error);
+      res.status(500).json({ message: "Failed to fetch category permissions" });
+    }
+  });
+
+  app.put("/api/knowledge-base/categories/:id/permissions", requireAuth(), requirePermission('knowledge_base', 'canEdit'), async (req, res) => {
+    try {
+      const categoryId = req.params.id;
+      const { permissions } = req.body;
+      
+      // Validate permissions array
+      if (!Array.isArray(permissions)) {
+        return res.status(400).json({ message: "Permissions must be an array" });
+      }
+      
+      // Delete existing permissions for this category
+      await db.delete(knowledgeBasePermissions)
+        .where(and(
+          eq(knowledgeBasePermissions.resourceType, 'category'),
+          eq(knowledgeBasePermissions.resourceId, categoryId)
+        ));
+      
+      // Insert new permissions
+      for (const perm of permissions) {
+        if (perm.accessType && perm.accessId) {
+          await db.insert(knowledgeBasePermissions).values({
+            resourceType: 'category',
+            resourceId: categoryId,
+            accessType: perm.accessType,
+            accessId: perm.accessId,
+            permission: perm.permission || 'read'
+          });
+        }
+      }
+      
+      res.json({ message: "Category permissions updated successfully" });
+    } catch (error) {
+      console.error('Error updating category permissions:', error);
+      res.status(500).json({ message: "Failed to update category permissions" });
     }
   });
 
