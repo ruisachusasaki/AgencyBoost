@@ -509,6 +509,12 @@ li[data-type="taskItem"][data-checked="true"] > .content,
   margin: 0.5rem 0;
 }
 
+/* Remove large gap after toggles caused by following paragraph margins */
+.simple-toggle + p,
+.toggle-view + p {
+  margin-top: 0.25rem;
+}
+
 .simple-toggle-header {
   display: flex;
   align-items: flex-start;
