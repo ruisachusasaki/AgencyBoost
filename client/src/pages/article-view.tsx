@@ -641,8 +641,11 @@ export default function ArticleView() {
                 placeholder="Click to edit title..."
               />
             )}
-            <div className="flex items-center gap-6 text-sm text-muted-foreground mb-4 flex-wrap">
-              {/* Status Badge */}
+          </div>
+
+          <div className="flex flex-col items-end gap-3">
+            {/* Status, Author, Date - Top Right */}
+            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap justify-end">
               <Badge 
                 variant={articleStatus === 'published' ? 'default' : articleStatus === 'draft' ? 'secondary' : 'outline'}
                 className={
@@ -656,7 +659,6 @@ export default function ArticleView() {
                 {articleStatus === 'archived' && <History className="w-3 h-3 mr-1" />}
                 {articleStatus.charAt(0).toUpperCase() + articleStatus.slice(1)}
               </Badge>
-
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4" />
                 <span>{(article as any)?.authorName || 'Unknown'}</span>
@@ -671,8 +673,6 @@ export default function ArticleView() {
                   <span>{(article as any)?.viewCount || 0} views</span>
                 </div>
               )}
-              
-              {/* Status Change Dropdown - only for Admins and Managers */}
               {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -706,9 +706,9 @@ export default function ArticleView() {
                 </DropdownMenu>
               )}
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
+            {/* Action Buttons - Below metadata */}
+            <div className="flex items-center gap-2">
             {/* Auto-save indicator */}
             {isAutoSaving && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground mr-4">
@@ -793,6 +793,7 @@ export default function ArticleView() {
                 )}
               </>
             )}
+          </div>
           </div>
         </div>
 
