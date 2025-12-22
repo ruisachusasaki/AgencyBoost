@@ -510,20 +510,10 @@ li[data-type="taskItem"][data-checked="true"] > .content,
 }
 
 .toggle-block {
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #ffffff;
-  overflow: hidden;
   display: flex;
-  align-items: stretch;
-}
-
-.toggle-header-row {
-  flex-shrink: 0;
-  padding: 8px 0 8px 8px;
-  background: #f9fafb;
-  display: flex;
+  flex-direction: row;
   align-items: flex-start;
+  gap: 4px;
 }
 
 .toggle-btn {
@@ -540,6 +530,7 @@ li[data-type="taskItem"][data-checked="true"] > .content,
   border-radius: 3px;
   color: #6b7280;
   font-size: 10px;
+  margin-top: 2px;
 }
 
 .toggle-btn:hover {
@@ -558,18 +549,13 @@ li[data-type="taskItem"][data-checked="true"] > .content,
 .toggle-content-wrapper {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 /* Toggle Summary - the header/title */
 .tiptap [data-toggle-summary],
 .ProseMirror [data-toggle-summary] {
-  padding: 8px 12px 8px 4px;
-  background: #f9fafb;
   outline: none;
   line-height: 1.5;
-  font-weight: 500;
 }
 
 .tiptap [data-toggle-summary]:empty::before,
@@ -581,9 +567,8 @@ li[data-type="taskItem"][data-checked="true"] > .content,
 /* Toggle Content - the collapsible body */
 .tiptap [data-toggle-content],
 .ProseMirror [data-toggle-content] {
-  padding: 12px;
-  border-top: 1px solid #e5e7eb;
-  background: #ffffff;
+  padding-left: 24px;
+  margin-top: 4px;
 }
 
 /* Hide toggle content when closed */
@@ -598,21 +583,15 @@ li[data-type="taskItem"][data-checked="true"] > .content,
 
 /* View mode toggle (details/summary) */
 .toggle-block-view {
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
   margin: 0.5rem 0;
-  background: #ffffff;
 }
 
 .toggle-summary-view {
-  padding: 8px 12px;
-  background: #f9fafb;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   list-style: none;
-  font-weight: 500;
 }
 
 .toggle-summary-view::-webkit-details-marker {
@@ -631,8 +610,8 @@ li[data-type="taskItem"][data-checked="true"] > .content,
 }
 
 .toggle-content-view {
-  padding: 12px;
-  border-top: 1px solid #e5e7eb;
+  padding-left: 24px;
+  margin-top: 4px;
 }
 
 .toggle-content-view p {
@@ -640,45 +619,12 @@ li[data-type="taskItem"][data-checked="true"] > .content,
 }
 
 /* Dark mode for toggle */
-.dark .toggle-block {
-  background: #1f2937;
-  border-color: #374151;
-}
-
-.dark .toggle-header-row {
-  background: #374151;
-}
-
 .dark .toggle-btn {
   color: #9ca3af;
 }
 
 .dark .toggle-btn:hover {
   background: #4b5563;
-}
-
-.dark .tiptap [data-toggle-summary],
-.dark .ProseMirror [data-toggle-summary] {
-  background: #374151;
-}
-
-.dark .tiptap [data-toggle-content],
-.dark .ProseMirror [data-toggle-content] {
-  border-color: #374151;
-  background: #1f2937;
-}
-
-.dark .toggle-block-view {
-  background: #1f2937;
-  border-color: #374151;
-}
-
-.dark .toggle-summary-view {
-  background: #374151;
-}
-
-.dark .toggle-content-view {
-  border-color: #374151;
 }
 
 /* Slash Command Menu */

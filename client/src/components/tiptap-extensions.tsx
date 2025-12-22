@@ -116,17 +116,15 @@ const ToggleWrapperComponent = ({ node, updateAttributes, deleteNode }: any) => 
 
   return (
     <NodeViewWrapper className="toggle-wrapper" data-toggle="" data-open={isOpen ? 'true' : 'false'}>
-      <div className={`toggle-block ${isOpen ? 'is-open' : ''}`}>
-        <div className="toggle-header-row">
-          <button
-            type="button"
-            className="toggle-btn"
-            onClick={handleToggle}
-            contentEditable={false}
-          >
-            <span className={`toggle-icon ${isOpen ? 'open' : ''}`}>▶</span>
-          </button>
-        </div>
+      <div className="toggle-block">
+        <button
+          type="button"
+          className="toggle-btn"
+          onClick={handleToggle}
+          contentEditable={false}
+        >
+          <span className={`toggle-icon ${isOpen ? 'open' : ''}`}>▶</span>
+        </button>
         <NodeViewContent className="toggle-content-wrapper" />
       </div>
     </NodeViewWrapper>
