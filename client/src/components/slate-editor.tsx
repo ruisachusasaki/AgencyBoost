@@ -8,6 +8,17 @@ import {
   Bold, Italic, Underline, CheckSquare, Columns, Palette, Flag, FileText,
   Youtube, Image, Link, Minus, Highlighter, MoreHorizontal
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // Define our schema
 type ToggleElement = {
@@ -304,6 +315,17 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   const [showSelectionToolbar, setShowSelectionToolbar] = useState(false);
   const [selectionToolbarPosition, setSelectionToolbarPosition] = useState({ top: 0, left: 0 });
   const editorRef = useRef<HTMLDivElement>(null);
+  
+  // URL input dialog state
+  const [urlDialog, setUrlDialog] = useState<{
+    open: boolean;
+    type: 'embed' | 'image' | 'link' | null;
+    embedType?: string;
+    title: string;
+    url: string;
+    altText: string;
+    linkText: string;
+  }>({ open: false, type: null, title: '', url: '', altText: '', linkText: '' });
 
   const renderElement = useCallback((props: any) => <Element {...props} />, []);
   const renderLeaf = useCallback((props: any) => <Leaf {...props} />, []);
@@ -714,46 +736,40 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         break;
 
       case 'embed':
-        // Insert embed - will prompt for URL
-        const embedUrl = prompt(`Enter ${command.title} URL:`);
-        if (embedUrl) {
-          const embedBlock: EmbedElement = {
-            type: 'embed',
-            embedType: command.embedType,
-            url: embedUrl,
-            children: [{ text: '' }]
-          };
-          Transforms.insertNodes(editor, embedBlock);
-        }
+        // Show dialog for embed URL input
+        setUrlDialog({
+          open: true,
+          type: 'embed',
+          embedType: command.embedType,
+          title: command.title,
+          url: '',
+          altText: '',
+          linkText: ''
+        });
         break;
 
       case 'image':
-        // Insert image - will prompt for URL
-        const imageUrl = prompt('Enter image URL:');
-        const imageAlt = prompt('Enter image description (optional):') || '';
-        if (imageUrl) {
-          const imageBlock: ImageElement = {
-            type: 'image',
-            url: imageUrl,
-            alt: imageAlt,
-            children: [{ text: '' }]
-          };
-          Transforms.insertNodes(editor, imageBlock);
-        }
+        // Show dialog for image URL input
+        setUrlDialog({
+          open: true,
+          type: 'image',
+          title: 'Image',
+          url: '',
+          altText: '',
+          linkText: ''
+        });
         break;
 
       case 'link':
-        // Insert link - will prompt for URL and text
-        const linkUrl = prompt('Enter link URL:');
-        const linkText = prompt('Enter link text:') || 'Link';
-        if (linkUrl) {
-          const linkBlock: LinkElement = {
-            type: 'link',
-            url: linkUrl,
-            children: [{ text: linkText }]
-          };
-          Transforms.insertNodes(editor, linkBlock);
-        }
+        // Show dialog for link URL input
+        setUrlDialog({
+          open: true,
+          type: 'link',
+          title: 'Link',
+          url: '',
+          altText: '',
+          linkText: ''
+        });
         break;
 
       case 'divider':
@@ -944,6 +960,103 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           </button>
         </div>
       )}
+
+      {/* URL Input Dialog */}
+      <Dialog open={urlDialog.open} onOpenChange={(open) => !open && setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '' })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {urlDialog.type === 'embed' ? `Add ${urlDialog.title}` : 
+               urlDialog.type === 'image' ? 'Add Image' : 'Add Link'}
+            </DialogTitle>
+            <DialogDescription>
+              {urlDialog.type === 'embed' ? `Enter the URL for your ${urlDialog.title?.toLowerCase()}.` :
+               urlDialog.type === 'image' ? 'Enter the URL for your image.' : 'Enter the URL and text for your link.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="url">URL</Label>
+              <Input
+                id="url"
+                placeholder={urlDialog.type === 'embed' ? `https://www.youtube.com/watch?v=...` : 
+                            urlDialog.type === 'image' ? 'https://example.com/image.jpg' : 'https://example.com'}
+                value={urlDialog.url}
+                onChange={(e) => setUrlDialog(prev => ({ ...prev, url: e.target.value }))}
+                data-testid="input-url"
+              />
+            </div>
+            {urlDialog.type === 'image' && (
+              <div className="space-y-2">
+                <Label htmlFor="alt">Description (optional)</Label>
+                <Input
+                  id="alt"
+                  placeholder="Image description for accessibility"
+                  value={urlDialog.altText}
+                  onChange={(e) => setUrlDialog(prev => ({ ...prev, altText: e.target.value }))}
+                  data-testid="input-alt"
+                />
+              </div>
+            )}
+            {urlDialog.type === 'link' && (
+              <div className="space-y-2">
+                <Label htmlFor="linkText">Link Text</Label>
+                <Input
+                  id="linkText"
+                  placeholder="Click here"
+                  value={urlDialog.linkText}
+                  onChange={(e) => setUrlDialog(prev => ({ ...prev, linkText: e.target.value }))}
+                  data-testid="input-link-text"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '' })}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (!urlDialog.url) return;
+                
+                if (urlDialog.type === 'embed') {
+                  const embedBlock: EmbedElement = {
+                    type: 'embed',
+                    embedType: urlDialog.embedType as any,
+                    url: urlDialog.url,
+                    children: [{ text: '' }]
+                  };
+                  Transforms.insertNodes(editor, embedBlock);
+                } else if (urlDialog.type === 'image') {
+                  const imageBlock: ImageElement = {
+                    type: 'image',
+                    url: urlDialog.url,
+                    alt: urlDialog.altText || '',
+                    children: [{ text: '' }]
+                  };
+                  Transforms.insertNodes(editor, imageBlock);
+                } else if (urlDialog.type === 'link') {
+                  const linkBlock: LinkElement = {
+                    type: 'link',
+                    url: urlDialog.url,
+                    children: [{ text: urlDialog.linkText || 'Link' }]
+                  };
+                  Transforms.insertNodes(editor, linkBlock);
+                }
+                
+                setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '' });
+              }}
+              disabled={!urlDialog.url}
+              data-testid="button-insert"
+            >
+              Insert
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
