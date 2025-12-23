@@ -20,9 +20,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  ArrowLeft, Eye, Heart, Bookmark, Calendar, User, Tag, 
+  ArrowLeft, ArrowRight, Eye, Heart, Bookmark, Calendar, User, Tag, 
   MessageCircle, Send, Edit, Trash2, Save, X, Settings,
-  ChevronRight, FileText, List, History, Clock, Check, FileEdit, Plus, ChevronDown
+  ChevronRight, FileText, List, History, Clock, Check, FileEdit, Plus, ChevronDown, MoreHorizontal
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -37,6 +37,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiRequest } from "@/lib/queryClient";
@@ -684,224 +685,201 @@ export default function ArticleView() {
           </Button>
         </RouterLink>
 
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            {isEditing ? (
-              <Input
-                value={editTitle}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                className="text-3xl font-bold mb-4 text-3xl border-none px-0 shadow-none focus-visible:ring-0"
-                placeholder="Article title..."
-              />
-            ) : (
-              <Input
-                value={editTitle}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                className="text-3xl font-bold mb-4 text-3xl border-none px-0 shadow-none focus-visible:ring-0 bg-transparent hover:bg-muted/20 transition-colors"
-                placeholder="Click to edit title..."
-              />
-            )}
+        {/* Title Row - Large title with action buttons */}
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex-1 min-w-0">
+            <Input
+              value={editTitle}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              className="text-4xl font-bold border-none px-0 shadow-none focus-visible:ring-0 bg-transparent hover:bg-muted/20 transition-colors h-auto py-1"
+              placeholder="Article title..."
+            />
           </div>
 
-          <div className="flex flex-col items-end gap-3">
-            {/* Status, Author, Date - Top Right */}
-            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap justify-end">
-              <Badge 
-                variant={articleStatus === 'published' ? 'default' : articleStatus === 'draft' ? 'secondary' : 'outline'}
-                className={
-                  articleStatus === 'published' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
-                  articleStatus === 'draft' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' :
-                  'bg-gray-100 text-gray-800 hover:bg-gray-100'
-                }
-              >
-                {articleStatus === 'published' && <Check className="w-3 h-3 mr-1" />}
-                {articleStatus === 'draft' && <FileEdit className="w-3 h-3 mr-1" />}
-                {articleStatus === 'archived' && <History className="w-3 h-3 mr-1" />}
-                {articleStatus.charAt(0).toUpperCase() + articleStatus.slice(1)}
-              </Badge>
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                <span>{(article as any)?.authorName || 'Unknown'}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span>{(article as any)?.createdAt ? format(new Date((article as any).createdAt), 'MMMM d, yyyy') : ''}</span>
-              </div>
-              {((article as any)?.viewCount || 0) > 0 && (
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4" />
-                  <span>{(article as any)?.viewCount || 0} views</span>
-                </div>
-              )}
-              {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                      Change Status
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem 
-                      onClick={() => statusMutation.mutate('draft')}
-                      disabled={articleStatus === 'draft'}
-                    >
-                      <FileEdit className="w-4 h-4 mr-2" />
-                      Set as Draft
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => statusMutation.mutate('published')}
-                      disabled={articleStatus === 'published'}
-                    >
-                      <Check className="w-4 h-4 mr-2" />
-                      Publish
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => statusMutation.mutate('archived')}
-                      disabled={articleStatus === 'archived'}
-                    >
-                      <History className="w-4 h-4 mr-2" />
-                      Archive
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              {/* Move Article dropdown - only for Admins and Managers */}
-              {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" data-testid="button-move-article">
-                      Move To
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="max-h-64 overflow-y-auto">
-                    <DropdownMenuItem 
-                      onClick={() => parentMutation.mutate(null)}
-                      disabled={!(article as any)?.parentId}
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      Top Level (No Parent)
-                    </DropdownMenuItem>
-                    {(allArticles as any[])
-                      .filter((a: any) => a.id !== id) // Exclude current article
-                      .map((potentialParent: any) => (
-                        <DropdownMenuItem 
-                          key={potentialParent.id}
-                          onClick={() => parentMutation.mutate(potentialParent.id)}
-                          disabled={(article as any)?.parentId === potentialParent.id}
-                        >
-                          <FileText className="w-4 h-4 mr-2" />
-                          {potentialParent.title}
-                        </DropdownMenuItem>
-                      ))
-                    }
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-
-            {/* Action Buttons - Below metadata */}
-            <div className="flex items-center gap-2">
+          {/* Action Buttons - Clean, minimal */}
+          <div className="flex items-center gap-2 flex-shrink-0">
             {/* Auto-save indicator */}
             {isAutoSaving && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mr-4">
-                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                <span>Auto-saving...</span>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-4 h-4 border-2 border-[#00C9C6] border-t-transparent rounded-full animate-spin"></div>
+                <span>Saving...</span>
               </div>
             )}
-            
-            {isEditing ? (
-              <>
-                <Button
-                  onClick={saveEdit}
-                  disabled={updateArticleMutation.isPending || !editTitle.trim() || !hasContent(editContent)}
-                  size="sm"
-                  data-testid="button-save"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {updateArticleMutation.isPending ? "Saving..." : "Save"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={cancelEdit}
-                  size="sm"
-                  data-testid="button-cancel"
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Cancel
-                </Button>
-              </>
-            ) : (
-              <>
-                <div className="text-xs text-muted-foreground mr-3 hidden sm:block">
-                  💡 Click anywhere to edit - auto-saves as you type!
-                </div>
-                <Button
-                  data-testid="button-like"
-                  variant={isLiked ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => likeMutation.mutate()}
-                  disabled={likeMutation.isPending}
-                >
-                  <Heart className={`w-4 h-4 mr-2 ${isLiked ? 'fill-current' : ''}`} />
-                  {(article as any)?.likeCount || 0}
-                </Button>
 
+            {/* Like Button */}
+            <Button
+              data-testid="button-like"
+              variant={isLiked ? "default" : "ghost"}
+              size="sm"
+              onClick={() => likeMutation.mutate()}
+              disabled={likeMutation.isPending}
+              className={isLiked ? "" : "text-muted-foreground hover:text-foreground"}
+            >
+              <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+              {((article as any)?.likeCount || 0) > 0 && (
+                <span className="ml-1">{(article as any)?.likeCount}</span>
+              )}
+            </Button>
+
+            {/* Bookmark Button */}
+            <Button
+              data-testid="button-bookmark"
+              variant={isBookmarked ? "default" : "ghost"}
+              size="sm"
+              onClick={() => bookmarkMutation.mutate()}
+              disabled={bookmarkMutation.isPending}
+              className={isBookmarked ? "" : "text-muted-foreground hover:text-foreground"}
+            >
+              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+            </Button>
+
+            {/* Add Sub-page button - only for Admins and Managers */}
+            {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
+              <RouterLink href={`/resources?createArticle=true&parentId=${id}&categoryId=${(article as any)?.categoryId || ''}`}>
                 <Button
-                  data-testid="button-bookmark"
-                  variant={isBookmarked ? "default" : "outline"}
+                  variant="ghost"
                   size="sm"
-                  onClick={() => bookmarkMutation.mutate()}
-                  disabled={bookmarkMutation.isPending}
+                  data-testid="button-add-subpage"
+                  className="text-[#00C9C6] hover:text-[#00b3b0] hover:bg-[#00C9C6]/10"
                 >
-                  <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+                  <Plus className="w-4 h-4" />
                 </Button>
+              </RouterLink>
+            )}
 
-                {/* Add Sub-page button - only for Admins and Managers */}
-                {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
-                  <RouterLink href={`/resources?createArticle=true&parentId=${id}&categoryId=${(article as any)?.categoryId || ''}`}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      data-testid="button-add-subpage"
-                      className="text-[#00C9C6] hover:text-[#00b3b0] hover:bg-[#00C9C6]/10"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Sub-page
-                    </Button>
-                  </RouterLink>
-                )}
-
-                {/* Settings button - only for Admins and Managers */}
-                {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
-                  <Button
-                    variant="outline"
-                    size="sm"
+            {/* More Actions Dropdown - only for Admins and Managers */}
+            {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" data-testid="button-more-actions">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {/* Change Status Sub-menu */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <FileEdit className="w-4 h-4 mr-2" />
+                        Change Status
+                        <ChevronRight className="w-4 h-4 ml-auto" />
+                      </DropdownMenuItem>
+                    </DropdownMenuTrigger>
+                  </DropdownMenu>
+                  <DropdownMenuItem 
+                    onClick={() => statusMutation.mutate('draft')}
+                    disabled={articleStatus === 'draft'}
+                    className="pl-8"
+                  >
+                    <FileEdit className="w-4 h-4 mr-2" />
+                    Set as Draft
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => statusMutation.mutate('published')}
+                    disabled={articleStatus === 'published'}
+                    className="pl-8"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Publish
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => statusMutation.mutate('archived')}
+                    disabled={articleStatus === 'archived'}
+                    className="pl-8"
+                  >
+                    <History className="w-4 h-4 mr-2" />
+                    Archive
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  {/* Move To Sub-menu */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <ArrowRight className="w-4 h-4 mr-2" />
+                        Move To
+                        <ChevronRight className="w-4 h-4 ml-auto" />
+                      </DropdownMenuItem>
+                    </DropdownMenuTrigger>
+                  </DropdownMenu>
+                  <DropdownMenuItem 
+                    onClick={() => parentMutation.mutate(null)}
+                    disabled={!(article as any)?.parentId}
+                    className="pl-8"
+                  >
+                    Top Level (No Parent)
+                  </DropdownMenuItem>
+                  {(allArticles as any[])
+                    .filter((a: any) => a.id !== id)
+                    .slice(0, 10)
+                    .map((potentialParent: any) => (
+                      <DropdownMenuItem 
+                        key={potentialParent.id}
+                        onClick={() => parentMutation.mutate(potentialParent.id)}
+                        disabled={(article as any)?.parentId === potentialParent.id}
+                        className="pl-8 truncate"
+                      >
+                        {potentialParent.title}
+                      </DropdownMenuItem>
+                    ))
+                  }
+                  
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem 
                     onClick={() => setShowPermissionsModal(true)}
-                    data-testid="button-settings"
-                    className="text-[#00C9C6] hover:text-[#00b3b0] hover:bg-[#00C9C6]/10"
+                    data-testid="menu-settings"
                   >
                     <Settings className="w-4 h-4 mr-2" />
                     Settings
-                  </Button>
-                )}
-
-                {/* Delete button - only for Admins and Managers */}
-                {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem 
                     onClick={() => setShowDeleteDialog(true)}
-                    data-testid="button-delete"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    data-testid="menu-delete"
+                    className="text-red-600 focus:text-red-600"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete
-                  </Button>
-                )}
-              </>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
-          </div>
+        </div>
+
+        {/* Metadata Row - Clean, subtle */}
+        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+          <Badge 
+            variant={articleStatus === 'published' ? 'default' : articleStatus === 'draft' ? 'secondary' : 'outline'}
+            className={
+              articleStatus === 'published' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
+              articleStatus === 'draft' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' :
+              'bg-gray-100 text-gray-800 hover:bg-gray-100'
+            }
+          >
+            {articleStatus === 'published' && <Check className="w-3 h-3 mr-1" />}
+            {articleStatus === 'draft' && <FileEdit className="w-3 h-3 mr-1" />}
+            {articleStatus === 'archived' && <History className="w-3 h-3 mr-1" />}
+            {articleStatus.charAt(0).toUpperCase() + articleStatus.slice(1)}
+          </Badge>
+          <span className="flex items-center gap-1">
+            <User className="w-3.5 h-3.5" />
+            {(article as any)?.authorName || 'Unknown'}
+          </span>
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5" />
+            {(article as any)?.createdAt ? format(new Date((article as any).createdAt), 'MMM d, yyyy') : ''}
+          </span>
+          {((article as any)?.viewCount || 0) > 0 && (
+            <span className="flex items-center gap-1">
+              <Eye className="w-3.5 h-3.5" />
+              {(article as any)?.viewCount} views
+            </span>
+          )}
         </div>
 
         {/* Tags */}
