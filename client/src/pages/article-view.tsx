@@ -1021,7 +1021,7 @@ export default function ArticleView() {
 
         {/* Table of Contents Sidebar */}
         {headings.length > 0 && (
-          <div className="hidden lg:block w-64 flex-shrink-0">
+          <div className="w-64 flex-shrink-0">
             <div className="sticky top-6">
               <Card>
                 <CardContent className="p-4">
