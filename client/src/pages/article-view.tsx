@@ -649,7 +649,7 @@ export default function ArticleView() {
   const articleStatus = (article as any)?.status || 'published';
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 w-full max-w-[1600px] mx-auto 2xl:max-w-[1800px]">
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-4 flex-wrap">
         <RouterLink href="/resources">
