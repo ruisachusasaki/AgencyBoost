@@ -678,13 +678,6 @@ export default function ArticleView() {
 
       {/* Header */}
       <div className="mb-6">
-        <RouterLink href="/resources">
-          <Button variant="ghost" className="mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Knowledge Base
-          </Button>
-        </RouterLink>
-
         {/* Title Row - Large title with action buttons */}
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex-1 min-w-0">
