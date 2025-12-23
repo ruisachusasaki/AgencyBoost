@@ -23731,11 +23731,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/knowledge-base/articles/:id", requireAuth(), requirePermission('knowledge_base', 'canDelete'), async (req, res) => {
     try {
+      // Set child articles' parentId to null (orphan them rather than delete)
+      await db.update(knowledgeBaseArticles)
+        .set({ parentId: null })
+        .where(eq(knowledgeBaseArticles.parentId, req.params.id));
+      
       // Delete related data first
       await db.delete(knowledgeBaseViews).where(eq(knowledgeBaseViews.articleId, req.params.id));
       await db.delete(knowledgeBaseLikes).where(eq(knowledgeBaseLikes.articleId, req.params.id));
       await db.delete(knowledgeBaseBookmarks).where(eq(knowledgeBaseBookmarks.articleId, req.params.id));
       await db.delete(knowledgeBaseComments).where(eq(knowledgeBaseComments.articleId, req.params.id));
+      await db.delete(knowledgeBaseArticleVersions).where(eq(knowledgeBaseArticleVersions.articleId, req.params.id));
       
       await db.delete(knowledgeBaseArticles)
         .where(eq(knowledgeBaseArticles.id, req.params.id));
