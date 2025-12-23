@@ -578,15 +578,19 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
 
   // Role-based data filtering
   const filteredTimeOffRequests = useMemo(() => {
+    const currentUserId = (currentUser as any)?.id;
     if (canViewAllData) {
       return timeOffRequests; // Admins see all requests
     } else if (isManager) {
-      // Managers see requests from their team
+      // Managers see requests from their team plus their own
       const teamStaffIds = directReports.map(staff => staff.id);
-      return timeOffRequests.filter(request => teamStaffIds.includes(request.staffId));
+      return timeOffRequests.filter(request => 
+        teamStaffIds.includes(request.staffId) || request.staffId === currentUserId
+      );
     }
-    return []; // Regular users don't see time off requests in dashboard
-  }, [timeOffRequests, directReports, canViewAllData, isManager]);
+    // Regular users see only their own requests
+    return timeOffRequests.filter(request => request.staffId === currentUserId);
+  }, [timeOffRequests, directReports, canViewAllData, isManager, currentUser]);
 
   const filteredJobApplications = useMemo(() => {
     // Backend already filters applications based on hiring manager
