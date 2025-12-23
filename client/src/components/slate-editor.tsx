@@ -1242,51 +1242,51 @@ const EmbedBlock = ({ attributes, children, element }: any) => {
       const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1];
       if (videoId) {
         return (
-          <iframe
-            width="100%"
-            height="315"
-            src={`https://www.youtube.com/embed/${videoId}`}
-            title="YouTube video"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="rounded-md"
-          />
+          <div className="relative w-full max-w-2xl" style={{ aspectRatio: '16/9' }}>
+            <iframe
+              src={`https://www.youtube.com/embed/${videoId}`}
+              title="YouTube video"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full rounded-md"
+            />
+          </div>
         );
       }
     } else if (embedType === 'loom') {
       const loomId = url.match(/loom\.com\/share\/([^/?]+)/)?.[1];
       if (loomId) {
         return (
-          <iframe
-            width="100%"
-            height="315"
-            src={`https://www.loom.com/embed/${loomId}`}
-            title="Loom video"
-            frameBorder="0"
-            allowFullScreen
-            className="rounded-md"
-          />
+          <div className="relative w-full max-w-2xl" style={{ aspectRatio: '16/9' }}>
+            <iframe
+              src={`https://www.loom.com/embed/${loomId}`}
+              title="Loom video"
+              frameBorder="0"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full rounded-md"
+            />
+          </div>
         );
       }
     } else if (embedType.startsWith('google-')) {
-      // Generic Google embed handling
+      // Generic Google embed handling - slightly taller aspect ratio for docs
       return (
-        <iframe
-          width="100%"
-          height="400"
-          src={url}
-          title={`${embedType} embed`}
-          frameBorder="0"
-          allowFullScreen
-          className="rounded-md"
-        />
+        <div className="relative w-full max-w-3xl" style={{ aspectRatio: '4/3' }}>
+          <iframe
+            src={url}
+            title={`${embedType} embed`}
+            frameBorder="0"
+            allowFullScreen
+            className="absolute inset-0 w-full h-full rounded-md border border-gray-200"
+          />
+        </div>
       );
     }
 
     // Fallback for unsupported embeds
     return (
-      <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-md p-4 text-center">
+      <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-md p-4 text-center max-w-2xl">
         <p className="text-gray-600">
           <strong>{embedType} Embed</strong>
         </p>
