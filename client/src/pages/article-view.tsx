@@ -923,36 +923,7 @@ export default function ArticleView() {
       <div className="flex gap-6">
         {/* Article Content */}
         <div className="flex-1 min-w-0">
-          <Card className="mb-8">
-            <CardContent className="p-8">
-              {(article as any)?.featuredImage ? (
-                <img 
-                  src={(article as any)?.featuredImage}
-                  alt={(article as any)?.title || ''}
-                  className="w-full h-64 object-cover rounded-lg mb-6"
-                />
-              ) : null}
-              
-              <div className="prose prose-lg max-w-none">
-                {isEditing ? (
-                  <SlateEditor
-                    value={editContent}
-                    onChange={setEditContent}
-                    placeholder="Write your article content... Type '/' for commands"
-                  />
-                ) : (
-                  <SlateEditor
-                    key={`article-${id}`}
-                    value={currentContent}
-                    onChange={handleContentChange}
-                    placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
-                  />
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Child Articles (Sub-pages) */}
+          {/* Child Articles (Sub-pages) - At top */}
           {childArticles.length > 0 && (
             <Card className="mb-8">
               <CardContent className="p-6">
@@ -986,6 +957,35 @@ export default function ArticleView() {
               </CardContent>
             </Card>
           )}
+
+          <Card className="mb-8">
+            <CardContent className="p-8">
+              {(article as any)?.featuredImage ? (
+                <img 
+                  src={(article as any)?.featuredImage}
+                  alt={(article as any)?.title || ''}
+                  className="w-full h-64 object-cover rounded-lg mb-6"
+                />
+              ) : null}
+              
+              <div className="prose prose-lg max-w-none">
+                {isEditing ? (
+                  <SlateEditor
+                    value={editContent}
+                    onChange={setEditContent}
+                    placeholder="Write your article content... Type '/' for commands"
+                  />
+                ) : (
+                  <SlateEditor
+                    key={`article-${id}`}
+                    value={currentContent}
+                    onChange={handleContentChange}
+                    placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
+                  />
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Related Articles */}
           {relatedArticles.length > 0 && (
