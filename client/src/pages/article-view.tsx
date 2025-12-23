@@ -691,7 +691,7 @@ export default function ArticleView() {
             <Input
               value={editTitle}
               onChange={(e) => handleTitleChange(e.target.value)}
-              className="text-4xl font-bold border-none px-0 shadow-none focus-visible:ring-0 bg-transparent hover:bg-muted/20 transition-colors h-auto py-1"
+              className="text-5xl font-bold border-none px-0 shadow-none focus-visible:ring-0 bg-transparent hover:bg-muted/20 transition-colors h-auto py-1"
               placeholder="Article title..."
             />
           </div>
