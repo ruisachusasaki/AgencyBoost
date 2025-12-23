@@ -1273,9 +1273,11 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
             </CardHeader>
             <CardContent>
               {(() => {
+                // Apply role-based filtering first, then status filter
+                const roleFilteredRequests = filteredTimeOffRequests;
                 const filteredRequests = requestStatusFilter === "all" 
-                  ? timeOffRequests 
-                  : timeOffRequests.filter(request => request.status === requestStatusFilter);
+                  ? roleFilteredRequests 
+                  : roleFilteredRequests.filter(request => request.status === requestStatusFilter);
                   
                 return filteredRequests.length === 0 ? (
                   <p className="text-slate-500 text-center py-8">
