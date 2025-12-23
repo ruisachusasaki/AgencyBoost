@@ -627,6 +627,12 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
     // Handle different command types
     switch (command.type) {
       case 'paragraph':
+        // First unwrap from any list wrappers (bulleted-list, numbered-list, checklist)
+        Transforms.unwrapNodes(editor, {
+          match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && 
+            ['numbered-list', 'bulleted-list', 'checklist'].includes(n.type),
+          split: true,
+        });
         // Convert to normal paragraph
         Transforms.setNodes(editor, { type: 'paragraph' } as Partial<SlateElement>);
         break;
