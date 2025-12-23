@@ -5,7 +5,7 @@ import { withHistory } from 'slate-history';
 import { 
   Type, Heading1, Heading2, Heading3, List, ListOrdered, 
   Quote, Code, ChevronRight, AlertCircle, Info, AlertTriangle,
-  Bold, Italic, CheckSquare, Columns, Palette, Flag, FileText,
+  Bold, Italic, Underline, CheckSquare, Columns, Palette, Flag, FileText,
   Youtube, Image, Link, Minus, Highlighter, MoreHorizontal
 } from 'lucide-react';
 
@@ -205,6 +205,11 @@ const SLASH_COMMANDS = [
   { type: 'heading', level: 1, title: 'Heading 1', icon: <Heading1 className="h-4 w-4" /> },
   { type: 'heading', level: 2, title: 'Heading 2', icon: <Heading2 className="h-4 w-4" /> },
   { type: 'heading', level: 3, title: 'Heading 3', icon: <Heading3 className="h-4 w-4" /> },
+  
+  // Text styling
+  { type: 'bold', title: 'Bold', icon: <Bold className="h-4 w-4" /> },
+  { type: 'italic', title: 'Italic', icon: <Italic className="h-4 w-4" /> },
+  { type: 'underline', title: 'Underline', icon: <Underline className="h-4 w-4" /> },
   
   // Lists and organization
   { type: 'bulleted-list', title: 'Bullet List', icon: <List className="h-4 w-4" /> },
@@ -641,6 +646,21 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         // Insert heading
         toggleBlock(editor, 'heading');
         Transforms.setNodes(editor, { level: command.level } as Partial<SlateElement>);
+        break;
+
+      case 'bold':
+        // Toggle bold mark on selection
+        Editor.addMark(editor, 'bold', true);
+        break;
+
+      case 'italic':
+        // Toggle italic mark on selection
+        Editor.addMark(editor, 'italic', true);
+        break;
+
+      case 'underline':
+        // Toggle underline mark on selection
+        Editor.addMark(editor, 'underline', true);
         break;
 
       case 'checklist':
@@ -1300,6 +1320,10 @@ const Leaf = ({ attributes, children, leaf }: any) => {
 
   if (leaf.italic) {
     children = <em>{children}</em>;
+  }
+
+  if (leaf.underline) {
+    children = <u>{children}</u>;
   }
 
   if (leaf.code) {
