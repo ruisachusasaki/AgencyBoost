@@ -151,6 +151,13 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
   
   // Time off request form state
   const [isTimeOffRequestOpen, setIsTimeOffRequestOpen] = useState(false);
+  
+  // Delete time off confirmation dialog state
+  const [deleteTimeOffDialog, setDeleteTimeOffDialog] = useState<{
+    open: boolean;
+    requestId: string | null;
+    status: string;
+  }>({ open: false, requestId: null, status: '' });
 
   // Delete time off request mutation (ADMINS ONLY)
   const deleteTimeOffMutation = useMutation({
@@ -168,13 +175,14 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
   });
 
   const handleDeleteTimeOffRequest = (requestId: string, status: string) => {
-    const message = status === 'approved' 
-      ? "Are you sure you want to delete this APPROVED time off request? This will restore their time off balance."
-      : "Are you sure you want to delete this time off request? This action cannot be undone.";
-      
-    if (confirm(message)) {
-      deleteTimeOffMutation.mutate(requestId);
+    setDeleteTimeOffDialog({ open: true, requestId, status });
+  };
+  
+  const confirmDeleteTimeOffRequest = () => {
+    if (deleteTimeOffDialog.requestId) {
+      deleteTimeOffMutation.mutate(deleteTimeOffDialog.requestId);
     }
+    setDeleteTimeOffDialog({ open: false, requestId: null, status: '' });
   };
 
   // Helper function to format time off duration
@@ -3266,6 +3274,29 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
         open={isTimeOffRequestOpen} 
         onOpenChange={setIsTimeOffRequestOpen} 
       />
+      
+      {/* Delete Time Off Request Confirmation Dialog */}
+      <AlertDialog open={deleteTimeOffDialog.open} onOpenChange={(open) => !open && setDeleteTimeOffDialog({ open: false, requestId: null, status: '' })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Time Off Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTimeOffDialog.status === 'approved' 
+                ? "Are you sure you want to delete this APPROVED time off request? This will restore their time off balance."
+                : "Are you sure you want to delete this time off request? This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteTimeOffRequest}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
