@@ -23622,7 +23622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (userId) {
         try {
           await db.execute(sql`
-            INSERT INTO knowledge_base_views (article_id, user_id, created_at)
+            INSERT INTO knowledge_base_views (article_id, user_id, viewed_at)
             VALUES (${req.params.id}, ${userId}, NOW())
           `);
           
