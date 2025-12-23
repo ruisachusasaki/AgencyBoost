@@ -692,7 +692,7 @@ export default function ArticleView() {
               value={editTitle}
               onChange={(e) => handleTitleChange(e.target.value)}
               className="!text-5xl font-bold border-none px-0 shadow-none focus-visible:ring-0 bg-transparent hover:bg-muted/20 transition-colors h-auto py-2"
-              style={{ fontSize: '3rem', lineHeight: '1.1' }}
+              style={{ fontSize: '2.25rem', lineHeight: '1.2' }}
               placeholder="Article title..."
             />
           </div>
