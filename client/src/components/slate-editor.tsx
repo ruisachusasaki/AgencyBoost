@@ -201,7 +201,10 @@ const toggleBlock = (editor: Editor, format: string) => {
     type: isActive ? 'paragraph' : isList ? 'list-item' : format,
   } as Partial<SlateElement>;
 
-  Transforms.setNodes<SlateElement>(editor, newProperties);
+  Transforms.setNodes<SlateElement>(editor, newProperties, {
+    match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && Editor.isBlock(editor, n),
+    mode: 'lowest',
+  });
 
   if (!isActive && isList) {
     const block = { type: format, children: [] } as SlateElement;
