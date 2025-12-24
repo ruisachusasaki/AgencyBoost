@@ -773,7 +773,7 @@ export default function KnowledgeBase() {
     });
 
   // Organize categories into hierarchical structure
-  const organizeCategories = (cats: any[]) => {
+  const organizeCategories = (cats: any[], articlesList: any[]) => {
     const categoryMap = new Map();
     const topLevel: any[] = [];
     
@@ -802,10 +802,28 @@ export default function KnowledgeBase() {
       cat.children.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
     });
     
+    // Third pass: calculate article counts (including all descendants)
+    // Use bottom-up approach: calculate children first, then parents
+    const calculateArticleCount = (cat: any): number => {
+      // Count articles directly in this category
+      const directCount = (articlesList || []).filter((a: any) => a.categoryId === cat.id).length;
+      
+      // Add counts from all children (recursive)
+      const childrenCount = (cat.children || []).reduce((sum: number, child: any) => {
+        return sum + calculateArticleCount(child);
+      }, 0);
+      
+      cat.articleCount = directCount + childrenCount;
+      return cat.articleCount;
+    };
+    
+    // Calculate counts starting from top-level categories
+    topLevel.forEach(cat => calculateArticleCount(cat));
+    
     return topLevel;
   };
 
-  const hierarchicalCategories = organizeCategories(categories as any[]);
+  const hierarchicalCategories = organizeCategories(categories as any[], articles as any[]);
   
   // Flatten categories for drag-and-drop (get categories at a specific parent level)
   const getCategoriesAtLevel = (parentId: string | null): any[] => {
