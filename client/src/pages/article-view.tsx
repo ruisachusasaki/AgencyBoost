@@ -218,7 +218,12 @@ export default function ArticleView() {
       }
     }
     
-    return startIndex > 0 ? content.slice(startIndex) : content;
+    const result = startIndex > 0 ? content.slice(startIndex) : content;
+    // Ensure we never return an empty array (Slate requires at least one element)
+    if (result.length === 0) {
+      return [{ type: 'paragraph', children: [{ text: '' }] }] as Descendant[];
+    }
+    return result;
   };
 
   // Helper function to convert content between formats
@@ -619,15 +624,8 @@ export default function ArticleView() {
   useEffect(() => {
     if (article) {
       const parsedContent = parseContent(article.content);
-      // Double-ensure leading empty elements are stripped
+      // Strip leading empty elements
       const cleanedContent = stripLeadingEmptyElements(parsedContent);
-      console.log('Article content debug:', {
-        raw: JSON.stringify(article.content)?.substring(0, 200),
-        parsed: JSON.stringify(parsedContent)?.substring(0, 200),
-        cleaned: JSON.stringify(cleanedContent)?.substring(0, 200),
-        firstNodeType: (cleanedContent[0] as any)?.type,
-        firstNodeEmpty: isEmptyNode(cleanedContent[0])
-      });
       setCurrentContent(cleanedContent);
       setEditContent(cleanedContent);
       setEditTitle((article.title as string) || "");

@@ -76,6 +76,25 @@
   display: none !important;
 }
 
+/* Hide leading empty elements (marked with slate-empty-element class) */
+.slate-editor > .slate-empty-element:first-child,
+[data-slate-editor] > .slate-empty-element:first-child,
+[data-slate-editable] > .slate-empty-element:first-child {
+  display: none !important;
+}
+
+/* Hide consecutive empty elements following hidden first empty element */
+.slate-editor > .slate-empty-element:first-child + .slate-empty-element,
+.slate-editor > .slate-empty-element:first-child + .slate-empty-element + .slate-empty-element,
+.slate-editor > .slate-empty-element:first-child + .slate-empty-element + .slate-empty-element + .slate-empty-element,
+.slate-editor > .slate-empty-element:first-child + .slate-empty-element + .slate-empty-element + .slate-empty-element + .slate-empty-element,
+[data-slate-editor] > .slate-empty-element:first-child + .slate-empty-element,
+[data-slate-editor] > .slate-empty-element:first-child + .slate-empty-element + .slate-empty-element,
+[data-slate-editable] > .slate-empty-element:first-child + .slate-empty-element,
+[data-slate-editable] > .slate-empty-element:first-child + .slate-empty-element + .slate-empty-element {
+  display: none !important;
+}
+
 /* Enhanced Tiptap Editor Styling */
 .tiptap {
   outline: none;

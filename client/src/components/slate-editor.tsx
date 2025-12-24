@@ -826,7 +826,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           renderLeaf={renderLeaf}
           placeholder={placeholder || "Type '/' for commands..."}
           onKeyDown={handleKeyDown}
-          className="slate-editor first:mt-0 [&>*:first-child]:mt-0"
+          className="slate-editor first:mt-0 [&>*:first-child]:mt-0 [&>.slate-empty-element:first-child]:hidden [&>.slate-empty-element:first-child+.slate-empty-element]:hidden"
           data-slate-editable
           style={{
             minHeight: '200px',
@@ -1077,8 +1077,9 @@ const Element = (props: any) => {
     case 'heading':
       const level = element.level || 1; // Default to h1 if level is missing
       const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
+      const headingEmpty = isElementEmpty(element);
       return (
-        <HeadingTag {...attributes} className={`text-${level === 1 ? '2xl' : level === 2 ? 'xl' : 'lg'} font-bold my-4`}>
+        <HeadingTag {...attributes} className={`text-${level === 1 ? '2xl' : level === 2 ? 'xl' : 'lg'} font-bold my-4 ${headingEmpty ? 'slate-empty-element' : ''}`}>
           {children}
         </HeadingTag>
       );
@@ -1214,8 +1215,9 @@ const Element = (props: any) => {
       );
     
     default:
+      const paragraphEmpty = isElementEmpty(element);
       return (
-        <p {...attributes} className="my-2">
+        <p {...attributes} className={`my-2 ${paragraphEmpty ? 'slate-empty-element' : ''}`}>
           {children}
         </p>
       );
