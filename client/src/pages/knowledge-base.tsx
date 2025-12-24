@@ -176,8 +176,10 @@ function CategoryOverview({
           <h2 className="text-xl font-semibold mb-4">Sub-categories</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {subCategories.map((subCat: any) => {
+              // Get all articles in this sub-category AND all its descendants
+              const subCatDescendantIds = getAllDescendantIds(subCat.id, categories);
               const subCatArticles = articles
-                .filter(article => article.categoryId === subCat.id)
+                .filter(article => subCatDescendantIds.includes(article.categoryId))
                 .filter(searchMatcher);
               return (
                 <Card 
