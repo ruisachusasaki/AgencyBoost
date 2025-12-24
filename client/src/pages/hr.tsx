@@ -185,6 +185,20 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
     setDeleteTimeOffDialog({ open: false, requestId: null, status: '' });
   };
 
+  // Delete applicant mutation (ADMINS ONLY)
+  const deleteApplicantMutation = useMutation({
+    mutationFn: async (applicationId: string) => {
+      return await apiRequest("DELETE", `/api/hr/job-applications/${applicationId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/hr/job-applications'] });
+      setDeletingApplicant(null);
+    },
+    onError: (error: any) => {
+      console.error("Failed to delete applicant:", error);
+    },
+  });
+
   // Helper function to format time off duration
   const formatDuration = (totalHours: string, totalDays: number) => {
     const hours = parseFloat(totalHours || "0");
@@ -215,6 +229,9 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
   // Application sorting state
   const [applicationSortField, setApplicationSortField] = useState<'applicantName' | 'positionTitle' | 'stage' | 'rating' | 'appliedAt' | null>(null);
   const [applicationSortDirection, setApplicationSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Delete applicant state
+  const [deletingApplicant, setDeletingApplicant] = useState<JobApplication | null>(null);
 
   // Onboarding submissions sorting and pagination state
   const [onboardingSortField, setOnboardingSortField] = useState<'name' | 'startDate' | 'phone' | 'emergencyContact' | 'paymentPlatform' | 'submitted' | 'status' | null>(null);
@@ -1732,16 +1749,29 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.location.href = `/hr/applicant/${application.id}`}
-                          className="flex items-center gap-2"
-                          data-testid={`view-application-${application.id}`}
-                        >
-                          <Eye className="h-4 w-4" />
-                          VIEW
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.location.href = `/hr/applicant/${application.id}`}
+                            className="flex items-center gap-2"
+                            data-testid={`view-application-${application.id}`}
+                          >
+                            <Eye className="h-4 w-4" />
+                            VIEW
+                          </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setDeletingApplicant(application)}
+                              className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              data-testid={`delete-application-${application.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1751,6 +1781,28 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
           )}
         </div>
       )}
+
+      {/* Delete Applicant Confirmation Dialog */}
+      <AlertDialog open={!!deletingApplicant} onOpenChange={(open) => !open && setDeletingApplicant(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Applicant</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the application from "{deletingApplicant?.applicantName}"? 
+              This will permanently remove all their application data, comments, and attachments. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingApplicant && deleteApplicantMutation.mutate(deletingApplicant.id)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {activeTab === "time-off-calendar" && (
         <div className="space-y-6">

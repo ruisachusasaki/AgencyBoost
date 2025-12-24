@@ -22863,6 +22863,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete a job application (admin only)
+  app.delete('/api/hr/job-applications/:id', requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      // Check if user is admin
+      const [user] = await db.select({
+        role: roles.name
+      })
+      .from(staff)
+      .leftJoin(roles, eq(staff.roleId, roles.id))
+      .where(eq(staff.id, userId));
+
+      if (!user || user.role !== 'Admin') {
+        return res.status(403).json({ message: "Only admins can delete job applications" });
+      }
+
+      const { id } = req.params;
+
+      // Delete related comments first
+      await db.delete(jobApplicationComments).where(eq(jobApplicationComments.applicationId, id));
+
+      // Delete related watchers
+      await db.delete(jobApplicationWatchers).where(eq(jobApplicationWatchers.applicationId, id));
+
+      // Delete the application
+      const [deletedApplication] = await db
+        .delete(jobApplications)
+        .where(eq(jobApplications.id, id))
+        .returning();
+
+      if (!deletedApplication) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      res.json({ message: "Application deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting job application:", error);
+      res.status(500).json({ message: "Failed to delete application" });
+    }
+  });
+
   // Get comments for a job application
   app.get('/api/hr/job-applications/:id/comments', async (req, res) => {
     try {
