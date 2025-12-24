@@ -202,6 +202,25 @@ export default function ArticleView() {
     return true;
   };
 
+  // Helper function to strip leading empty paragraphs/headings before saving
+  const stripLeadingEmptyElements = (content: Descendant[]): Descendant[] => {
+    if (!content || content.length === 0) return content;
+    
+    let startIndex = 0;
+    for (let i = 0; i < content.length; i++) {
+      const node = content[i] as any;
+      const nodeType = node.type;
+      // Skip empty paragraphs and headings at the start
+      if ((nodeType === 'paragraph' || nodeType === 'heading') && isEmptyNode(node)) {
+        startIndex = i + 1;
+      } else {
+        break; // Stop at first non-empty element
+      }
+    }
+    
+    return startIndex > 0 ? content.slice(startIndex) : content;
+  };
+
   // Helper function to convert content between formats
   const parseContent = (content: any): Descendant[] => {
     if (!content || content === undefined || content === null) {
@@ -402,9 +421,11 @@ export default function ArticleView() {
 
   const updateArticleMutation = useMutation({
     mutationFn: async ({ title, content }: { title: string; content: Descendant[] }) => {
+      // Strip leading empty elements before saving
+      const cleanedContent = stripLeadingEmptyElements(content);
       const response = await apiRequest("PUT", `/api/knowledge-base/articles/${id}`, {
         title,
-        content,
+        content: cleanedContent,
       });
       return await response.json();
     },
@@ -455,9 +476,11 @@ export default function ArticleView() {
   // Auto-save mutation
   const autoSaveMutation = useMutation({
     mutationFn: async ({ title, content }: { title: string; content: Descendant[] }) => {
+      // Strip leading empty elements before saving
+      const cleanedContent = stripLeadingEmptyElements(content);
       const response = await apiRequest("PUT", `/api/knowledge-base/articles/${id}`, {
         title,
-        content,
+        content: cleanedContent,
       });
       return await response.json();
     },
