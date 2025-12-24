@@ -316,7 +316,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   const [selectionToolbarPosition, setSelectionToolbarPosition] = useState({ top: 0, left: 0 });
   const editorRef = useRef<HTMLDivElement>(null);
   
-  // URL input dialog state
+  // URL input dialog state - includes saved selection for proper inline insertion
   const [urlDialog, setUrlDialog] = useState<{
     open: boolean;
     type: 'embed' | 'image' | 'link' | null;
@@ -325,7 +325,8 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
     url: string;
     altText: string;
     linkText: string;
-  }>({ open: false, type: null, title: '', url: '', altText: '', linkText: '' });
+    savedSelection: Range | null;
+  }>({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null });
 
   const renderElement = useCallback((props: any) => <Element {...props} />, []);
   const renderLeaf = useCallback((props: any) => <Leaf {...props} />, []);
@@ -736,7 +737,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         break;
 
       case 'embed':
-        // Show dialog for embed URL input
+        // Show dialog for embed URL input - save selection for inline insertion
         setUrlDialog({
           open: true,
           type: 'embed',
@@ -744,31 +745,34 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           title: command.title,
           url: '',
           altText: '',
-          linkText: ''
+          linkText: '',
+          savedSelection: editor.selection ? { ...editor.selection } : null
         });
         break;
 
       case 'image':
-        // Show dialog for image URL input
+        // Show dialog for image URL input - save selection for inline insertion
         setUrlDialog({
           open: true,
           type: 'image',
           title: 'Image',
           url: '',
           altText: '',
-          linkText: ''
+          linkText: '',
+          savedSelection: editor.selection ? { ...editor.selection } : null
         });
         break;
 
       case 'link':
-        // Show dialog for link URL input
+        // Show dialog for link URL input - save selection for inline insertion
         setUrlDialog({
           open: true,
           type: 'link',
           title: 'Link',
           url: '',
           altText: '',
-          linkText: ''
+          linkText: '',
+          savedSelection: editor.selection ? { ...editor.selection } : null
         });
         break;
 
@@ -962,7 +966,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       )}
 
       {/* URL Input Dialog */}
-      <Dialog open={urlDialog.open} onOpenChange={(open) => !open && setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '' })}>
+      <Dialog open={urlDialog.open} onOpenChange={(open) => !open && setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null })}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -1014,13 +1018,18 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           <DialogFooter>
             <Button 
               variant="outline" 
-              onClick={() => setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '' })}
+              onClick={() => setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null })}
             >
               Cancel
             </Button>
             <Button 
               onClick={() => {
                 if (!urlDialog.url) return;
+                
+                // Restore the saved selection before inserting so content goes inline
+                if (urlDialog.savedSelection) {
+                  Transforms.select(editor, urlDialog.savedSelection);
+                }
                 
                 if (urlDialog.type === 'embed') {
                   const embedBlock: EmbedElement = {
@@ -1047,7 +1056,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
                   Transforms.insertNodes(editor, linkBlock);
                 }
                 
-                setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '' });
+                setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null });
               }}
               disabled={!urlDialog.url}
               data-testid="button-insert"
