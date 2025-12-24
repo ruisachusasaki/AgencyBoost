@@ -1083,7 +1083,8 @@ export default function KnowledgeBase() {
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="flex items-center">
+              <span className="flex items-center gap-2">
+                {category.icon ? renderIcon(category.icon, "w-4 h-4") : <Folder className="w-4 h-4" />}
                 {category.name}
               </span>
               {category.articleCount && (
