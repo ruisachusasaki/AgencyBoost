@@ -201,22 +201,8 @@ const toggleBlock = (editor: Editor, format: string) => {
     type: isActive ? 'paragraph' : isList ? 'list-item' : format,
   } as Partial<SlateElement>;
 
-  // When applying list formatting, only transform paragraphs and list-items, not headings
-  // This prevents headings from losing their level attribute
-  const transformableTypes = ['paragraph', 'list-item', 'block-quote', 'code-block'];
-  
   Transforms.setNodes<SlateElement>(editor, newProperties, {
-    match: n => {
-      if (Editor.isEditor(n) || !SlateElement.isElement(n) || !Editor.isBlock(editor, n)) {
-        return false;
-      }
-      // For list transformations, only transform specific block types, not headings
-      if (isList) {
-        return transformableTypes.includes(n.type) || n.type === format;
-      }
-      // For non-list transformations, match all blocks
-      return true;
-    },
+    match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && Editor.isBlock(editor, n),
     mode: 'lowest',
   });
 
@@ -640,8 +626,16 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   };
 
   const formatHeading = (level: 1 | 2 | 3) => {
-    toggleBlock(editor, 'heading');
-    Transforms.setNodes(editor, { level } as Partial<SlateElement>);
+    // First unwrap from any list wrappers
+    Transforms.unwrapNodes(editor, {
+      match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && ['numbered-list', 'bulleted-list'].includes(n.type),
+      split: true,
+    });
+    // Set both type and level in one operation to avoid toggle issues
+    Transforms.setNodes<SlateElement>(editor, { type: 'heading', level } as Partial<SlateElement>, {
+      match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && Editor.isBlock(editor, n),
+      mode: 'lowest',
+    });
     ReactEditor.focus(editor);
   };
 
@@ -700,9 +694,17 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         break;
 
       case 'heading':
-        // Insert heading
-        toggleBlock(editor, 'heading');
-        Transforms.setNodes(editor, { level: command.level } as Partial<SlateElement>);
+        // First unwrap from any list wrappers
+        Transforms.unwrapNodes(editor, {
+          match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && 
+            ['numbered-list', 'bulleted-list', 'checklist'].includes(n.type),
+          split: true,
+        });
+        // Set both type and level in one operation to preserve heading level
+        Transforms.setNodes<SlateElement>(editor, { type: 'heading', level: command.level } as Partial<SlateElement>, {
+          match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && Editor.isBlock(editor, n),
+          mode: 'lowest',
+        });
         break;
 
       case 'bold':
