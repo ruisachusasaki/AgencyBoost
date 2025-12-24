@@ -186,6 +186,22 @@ export default function ArticleView() {
       .slice(0, 5); // Max 5 related articles
   }, [allArticles]);
 
+  // Helper function to check if a node is empty (no meaningful text content)
+  const isEmptyNode = (node: any): boolean => {
+    if (!node) return true;
+    if ('text' in node) {
+      return !node.text || node.text.trim() === '';
+    }
+    if ('children' in node && Array.isArray(node.children)) {
+      return node.children.every((child: any) => isEmptyNode(child));
+    }
+    // For special elements like embeds, images, they're not empty
+    if (node.type === 'embed' || node.type === 'image' || node.type === 'video') {
+      return false;
+    }
+    return true;
+  };
+
   // Helper function to convert content between formats
   const parseContent = (content: any): Descendant[] => {
     if (!content || content === undefined || content === null) {
@@ -220,8 +236,23 @@ export default function ArticleView() {
         return node;
       });
       
+      // Filter out empty paragraphs and headings from the beginning
+      let startIndex = 0;
+      for (let i = 0; i < cleanedContent.length; i++) {
+        const node = cleanedContent[i];
+        const nodeType = (node as any).type;
+        // Skip empty paragraphs and headings at the start
+        if ((nodeType === 'paragraph' || nodeType === 'heading') && isEmptyNode(node)) {
+          startIndex = i + 1;
+        } else {
+          break; // Stop at first non-empty element
+        }
+      }
+      
+      const trimmedContent = startIndex > 0 ? cleanedContent.slice(startIndex) : cleanedContent;
+      
       // Don't filter out structural elements - let Slate handle normalization
-      return cleanedContent.length > 0 ? cleanedContent : createEmptyDocument();
+      return trimmedContent.length > 0 ? trimmedContent : createEmptyDocument();
     }
     
     // If it's a string (HTML), convert to basic Slate format
