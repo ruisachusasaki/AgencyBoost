@@ -7885,44 +7885,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/workflows/:id", requireAuth(), requirePermission('workflows', 'canDelete'), async (req, res) => {
-    try {
-      // Get the workflow data before deletion for audit logging
-      const [workflowToDelete] = await db.select()
-        .from(workflows)
-        .where(eq(workflows.id, req.params.id));
-      
-      if (!workflowToDelete) {
-        return res.status(404).json({ message: "Workflow not found" });
-      }
-      
-      const deletedRows = await db.delete(workflows)
-        .where(eq(workflows.id, req.params.id));
-      
-      if (deletedRows.rowCount === 0) {
-        return res.status(404).json({ message: "Workflow not found" });
-      }
-      
-      // Create audit log with authenticated user
-      const userId = getAuthenticatedUserIdOrFail(req, res);
-      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
-      
-      await createAuditLog(
-        "deleted",
-        "workflow",
-        req.params.id,
-        workflowToDelete.name,
-        userId, // SECURE: Use authenticated user ID only
-        `Deleted workflow: ${workflowToDelete.name}`,
-        { name: workflowToDelete.name, category: workflowToDelete.category, status: workflowToDelete.status },
-        null,
-        req
-      );
-      
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting workflow:", error);
-      res.status(500).json({ message: "Failed to delete workflow" });
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
     }
   });
 
