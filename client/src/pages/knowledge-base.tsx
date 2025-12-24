@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -26,7 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown, Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, X, Check, Minus, CirclePlus, PlayCircle, Code, Sparkles, CheckSquare, Compass, ThumbsUp, Repeat1, Target, TrendingUp, Globe, Lock, Unlock, Clock, MessageCircle, UserCheck, DollarSign, Calculator, CreditCard, Banknote, HandCoins, PieChart, Receipt, Briefcase, Building, Building2, Store, ShoppingCart, Handshake, UserPlus, Phone as PhoneIcon, Megaphone, TrendingDown, Filter, SlidersHorizontal } from "lucide-react";
+import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown, Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, X, Check, Minus, CirclePlus, PlayCircle, Code, Sparkles, CheckSquare, Compass, ThumbsUp, Repeat1, Target, TrendingUp, Globe, Lock, Unlock, Clock, MessageCircle, UserCheck, DollarSign, Calculator, CreditCard, Banknote, HandCoins, PieChart, Receipt, Briefcase, Building, Building2, Store, ShoppingCart, Handshake, UserPlus, Phone as PhoneIcon, Megaphone, TrendingDown, Filter, SlidersHorizontal, GripVertical } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -286,7 +287,7 @@ export default function KnowledgeBase() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<'articles' | 'bookmarks'>('articles');
-  const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'views'>('recent');
+  const [sortBy, setSortBy] = useState<'order' | 'recent' | 'popular' | 'views'>('order');
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [newCategory, setNewCategory] = useState({
     name: "",
@@ -366,6 +367,10 @@ export default function KnowledgeBase() {
   });
 
   const canManageCategories = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager');
+  const isAdmin = currentUser?.role === 'Admin';
+  
+  // Reorder mode state (admin only)
+  const [isReorderMode, setIsReorderMode] = useState(false);
 
   const { data: categories = [] } = useQuery<any[]>({
     queryKey: ["/api/knowledge-base/categories"],
@@ -483,6 +488,52 @@ export default function KnowledgeBase() {
     },
   });
 
+  // Reorder categories mutation (admin only)
+  const reorderCategoriesMutation = useMutation({
+    mutationFn: async (categoryOrders: { id: string; order: number }[]) => {
+      const response = await apiRequest("PUT", "/api/knowledge-base/categories/reorder", { categoryOrders });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/knowledge-base/categories"] });
+      toast({
+        title: "Success",
+        description: "Category order updated",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Category reorder error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reorder categories",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Reorder articles mutation (admin only)
+  const reorderArticlesMutation = useMutation({
+    mutationFn: async (articleOrders: { id: string; order: number }[]) => {
+      const response = await apiRequest("PUT", "/api/knowledge-base/articles/reorder", { articleOrders });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/knowledge-base/articles"] });
+      toast({
+        title: "Success",
+        description: "Article order updated",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Article reorder error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reorder articles",
+        variant: "destructive",
+      });
+    },
+  });
+
   const searchMatcher = createSearchMatcher(searchTerm || '');
   const filteredArticles = (articles as any[])
     .filter((article: any) => {
@@ -522,6 +573,8 @@ export default function KnowledgeBase() {
     })
     .sort((a: any, b: any) => {
       switch (sortBy) {
+        case 'order':
+          return (a.order || 0) - (b.order || 0);
         case 'popular':
           return (b.likeCount || 0) - (a.likeCount || 0);
         case 'views':
@@ -537,13 +590,16 @@ export default function KnowledgeBase() {
     const categoryMap = new Map();
     const topLevel: any[] = [];
     
+    // Sort categories by order first
+    const sortedCats = [...cats].sort((a, b) => (a.order || 0) - (b.order || 0));
+    
     // First pass: create map of all categories
-    cats.forEach(cat => {
+    sortedCats.forEach(cat => {
       categoryMap.set(cat.id, { ...cat, children: [] });
     });
     
     // Second pass: organize into hierarchy
-    cats.forEach(cat => {
+    sortedCats.forEach(cat => {
       const categoryWithChildren = categoryMap.get(cat.id);
       if (cat.parentId && categoryMap.has(cat.parentId)) {
         // This is a child category
@@ -554,10 +610,76 @@ export default function KnowledgeBase() {
       }
     });
     
+    // Sort children arrays by order
+    categoryMap.forEach((cat) => {
+      cat.children.sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+    });
+    
     return topLevel;
   };
 
   const hierarchicalCategories = organizeCategories(categories as any[]);
+  
+  // Flatten categories for drag-and-drop (get categories at a specific parent level)
+  const getCategoriesAtLevel = (parentId: string | null): any[] => {
+    return (categories as any[])
+      .filter((cat: any) => cat.parentId === parentId || (parentId === null && !cat.parentId))
+      .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+  };
+  
+  // Handle category drag end
+  const handleCategoryDragEnd = (result: any) => {
+    if (!result.destination) return;
+    
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+    
+    if (sourceIndex === destinationIndex) return;
+    
+    // Get the parent ID from the droppableId
+    // Format: "root-categories" for top level, "category-children-{parentId}" for nested
+    let parentId: string | null = null;
+    const droppableId = result.source.droppableId;
+    if (droppableId !== 'root-categories') {
+      parentId = droppableId.replace('category-children-', '');
+    }
+    
+    // Get categories at this level
+    const levelCategories = getCategoriesAtLevel(parentId);
+    const [movedCategory] = levelCategories.splice(sourceIndex, 1);
+    levelCategories.splice(destinationIndex, 0, movedCategory);
+    
+    // Update orders
+    const categoryOrders = levelCategories.map((cat, index) => ({
+      id: cat.id,
+      order: index
+    }));
+    
+    reorderCategoriesMutation.mutate(categoryOrders);
+  };
+  
+  // Handle article drag end
+  const handleArticleDragEnd = (result: any) => {
+    if (!result.destination) return;
+    
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+    
+    if (sourceIndex === destinationIndex) return;
+    
+    // Get articles in the current list
+    const articleList = [...topLevelArticles];
+    const [movedArticle] = articleList.splice(sourceIndex, 1);
+    articleList.splice(destinationIndex, 0, movedArticle);
+    
+    // Update orders
+    const articleOrders = articleList.map((article, index) => ({
+      id: article.id,
+      order: index
+    }));
+    
+    reorderArticlesMutation.mutate(articleOrders);
+  };
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev => {
@@ -609,7 +731,8 @@ export default function KnowledgeBase() {
   const totalPages = Math.ceil(totalArticles / articlesPerPage);
   const startIndex = (currentPage - 1) * articlesPerPage;
   const endIndex = startIndex + articlesPerPage;
-  const paginatedArticles = topLevelArticles.slice(startIndex, endIndex);
+  // In reorder mode, show all articles (no pagination) for accurate drag-and-drop
+  const paginatedArticles = isReorderMode ? topLevelArticles : topLevelArticles.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -737,109 +860,164 @@ export default function KnowledgeBase() {
     );
   };
 
+  // Render category item (used in both normal and drag-drop modes)
+  const renderCategoryItem = (category: any, level: number, dragHandleProps?: any) => {
+    const hasChildren = category.children?.length > 0;
+    const isExpanded = expandedCategories.has(category.id);
+    
+    return (
+      <div className="flex items-center" style={{ marginLeft: `${level * 16}px` }}>
+        {/* Drag handle (only in reorder mode) */}
+        {isReorderMode && dragHandleProps && (
+          <div {...dragHandleProps} className="cursor-grab p-1 hover:bg-muted rounded-sm mr-1">
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </div>
+        )}
+        {hasChildren ? (
+          <button
+            data-testid={`button-toggle-${category.id}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleCategory(category.id);
+            }}
+            className="p-1 hover:bg-muted rounded-sm transition-colors w-6 h-6 flex items-center justify-center"
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            )}
+          </button>
+        ) : (
+          <div className="w-6 h-6" />
+        )}
+        <div className="flex items-center flex-1">
+          <button
+            data-testid={`button-category-${category.id}`}
+            onClick={() => !isReorderMode && setSelectedCategory(category.id)}
+            className={`flex-1 text-left px-3 py-2 rounded-md transition-colors ${
+              selectedCategory === category.id 
+                ? 'bg-primary text-primary-foreground' 
+                : 'hover:bg-muted'
+            } ${isReorderMode ? 'cursor-default' : ''}`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="flex items-center">
+                {category.name}
+              </span>
+              {category.articleCount && (
+                <Badge variant="secondary" className="text-xs">
+                  {category.articleCount}
+                </Badge>
+              )}
+            </div>
+          </button>
+          
+          {/* Edit/Delete dropdown - only for Admins and Managers, hidden in reorder mode */}
+          {canManageCategories && !isReorderMode && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 ml-1"
+                  data-testid={`button-category-menu-${category.id}`}
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditCategory(category);
+                  }}
+                  data-testid={`button-edit-category-${category.id}`}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPermissionsCategoryId(category.id);
+                    setPermissionsCategoryName(category.name);
+                  }}
+                  data-testid={`button-permissions-category-${category.id}`}
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  Manage Access
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteCategory(category);
+                  }}
+                  className="text-red-600"
+                  data-testid={`button-delete-category-${category.id}`}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Render category tree recursively
-  const renderCategoryTree = (cats: any[], level = 0) => {
+  const renderCategoryTree = (cats: any[], level = 0, parentId: string | null = null) => {
+    if (isReorderMode) {
+      // In reorder mode, use Droppable for all category levels
+      const droppableId = parentId ? `category-children-${parentId}` : "root-categories";
+      
+      return (
+        <Droppable droppableId={droppableId}>
+          {(provided) => (
+            <div ref={provided.innerRef} {...provided.droppableProps}>
+              {(cats || []).map((category: any, index: number) => {
+                const hasChildren = category.children?.length > 0;
+                const isExpanded = expandedCategories.has(category.id);
+                
+                return (
+                  <Draggable key={category.id} draggableId={category.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div 
+                        ref={provided.innerRef} 
+                        {...provided.draggableProps}
+                        className={snapshot.isDragging ? "bg-muted rounded-md" : ""}
+                      >
+                        {renderCategoryItem(category, level, provided.dragHandleProps)}
+                        {hasChildren && isExpanded && (
+                          <div className="mt-1">
+                            {renderCategoryTree(category.children, level + 1, category.id)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      );
+    }
+    
+    // Normal mode
     return (cats || []).map((category: any) => {
-      const hasChildren = category.children.length > 0;
+      const hasChildren = category.children?.length > 0;
       const isExpanded = expandedCategories.has(category.id);
       
       return (
         <div key={category.id}>
-          <div className="flex items-center" style={{ marginLeft: `${level * 16}px` }}>
-            {hasChildren ? (
-              <button
-                data-testid={`button-toggle-${category.id}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleCategory(category.id);
-                }}
-                className="p-1 hover:bg-muted rounded-sm transition-colors w-6 h-6 flex items-center justify-center"
-              >
-                {isExpanded ? (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                )}
-              </button>
-            ) : (
-              <div className="w-6 h-6" />
-            )}
-            <div className="flex items-center flex-1">
-              <button
-                data-testid={`button-category-${category.id}`}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`flex-1 text-left px-3 py-2 rounded-md transition-colors ${
-                  selectedCategory === category.id 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'hover:bg-muted'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center">
-                    {category.name}
-                  </span>
-                  {category.articleCount && (
-                    <Badge variant="secondary" className="text-xs">
-                      {category.articleCount}
-                    </Badge>
-                  )}
-                </div>
-              </button>
-              
-              {/* Edit/Delete dropdown - only for Admins and Managers */}
-              {canManageCategories && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 ml-1"
-                      data-testid={`button-category-menu-${category.id}`}
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditCategory(category);
-                      }}
-                      data-testid={`button-edit-category-${category.id}`}
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPermissionsCategoryId(category.id);
-                        setPermissionsCategoryName(category.name);
-                      }}
-                      data-testid={`button-permissions-category-${category.id}`}
-                    >
-                      <Shield className="mr-2 h-4 w-4" />
-                      Manage Access
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteCategory(category);
-                      }}
-                      className="text-red-600"
-                      data-testid={`button-delete-category-${category.id}`}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          </div>
+          {renderCategoryItem(category, level)}
           {hasChildren && isExpanded && (
             <div className="mt-1">
-              {renderCategoryTree(category.children, level + 1)}
+              {renderCategoryTree(category.children, level + 1, category.id)}
             </div>
           )}
         </div>
@@ -1209,11 +1387,12 @@ export default function KnowledgeBase() {
                 <SlidersHorizontal className="w-4 h-4 mr-2" />
                 Filters
               </Button>
-              <Select value={sortBy} onValueChange={(value: 'recent' | 'popular' | 'views') => setSortBy(value)}>
+              <Select value={sortBy} onValueChange={(value: 'order' | 'recent' | 'popular' | 'views') => setSortBy(value)}>
                 <SelectTrigger className="w-[180px]" data-testid="select-sort">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="order">Custom Order</SelectItem>
                   <SelectItem value="recent">Most Recent</SelectItem>
                   <SelectItem value="popular">Most Popular</SelectItem>
                   <SelectItem value="views">Most Viewed</SelectItem>
@@ -1302,8 +1481,19 @@ export default function KnowledgeBase() {
           {/* Categories Sidebar */}
           <div className="lg:col-span-1">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg">Categories</CardTitle>
+                {isAdmin && (
+                  <Button
+                    variant={isReorderMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsReorderMode(!isReorderMode)}
+                    data-testid="button-toggle-reorder"
+                  >
+                    <GripVertical className="w-4 h-4 mr-1" />
+                    {isReorderMode ? "Done" : "Reorder"}
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -1318,7 +1508,13 @@ export default function KnowledgeBase() {
                   >
                     All Articles
                   </button>
-                  {renderCategoryTree(hierarchicalCategories)}
+                  {isReorderMode ? (
+                    <DragDropContext onDragEnd={handleCategoryDragEnd}>
+                      {renderCategoryTree(hierarchicalCategories)}
+                    </DragDropContext>
+                  ) : (
+                    renderCategoryTree(hierarchicalCategories)
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1348,10 +1544,52 @@ export default function KnowledgeBase() {
                   </Card>
                 ) : (
                   <>
-                    {paginatedArticles.map((article: any) => renderArticleWithChildren(article))}
+                    {isReorderMode && isAdmin ? (
+                      <DragDropContext onDragEnd={handleArticleDragEnd}>
+                        <Droppable droppableId="articles-list">
+                          {(provided) => (
+                            <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-4">
+                              {paginatedArticles.map((article: any, index: number) => (
+                                <Draggable key={article.id} draggableId={article.id} index={index}>
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      className={snapshot.isDragging ? "opacity-80" : ""}
+                                    >
+                                      <Card className="hover:shadow-md transition-shadow">
+                                        <CardContent className="p-6">
+                                          <div className="flex items-start gap-3">
+                                            <div {...provided.dragHandleProps} className="cursor-grab p-1 hover:bg-muted rounded-sm mt-1">
+                                              <GripVertical className="w-5 h-5 text-muted-foreground" />
+                                            </div>
+                                            <div className="flex-1">
+                                              <h3 className="font-medium">{article.title}</h3>
+                                              {article.excerpt && (
+                                                <p className="text-sm text-muted-foreground mt-1">{article.excerpt}</p>
+                                              )}
+                                            </div>
+                                            <Badge variant="secondary" className="text-xs">
+                                              Order: {article.order || 0}
+                                            </Badge>
+                                          </div>
+                                        </CardContent>
+                                      </Card>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      </DragDropContext>
+                    ) : (
+                      paginatedArticles.map((article: any) => renderArticleWithChildren(article))
+                    )}
                     
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
+                    {/* Pagination Controls - hidden in reorder mode */}
+                    {totalPages > 1 && !isReorderMode && (
                       <div className="flex items-center justify-between pt-4 border-t">
                         <div className="text-sm text-muted-foreground">
                           Showing {startIndex + 1}-{Math.min(endIndex, totalArticles)} of {totalArticles} articles

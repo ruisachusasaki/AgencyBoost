@@ -23463,6 +23463,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Reorder categories (admin only)
+  app.put("/api/knowledge-base/categories/reorder", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { categoryOrders } = req.body; // Array of {id, order}
+      
+      if (!Array.isArray(categoryOrders)) {
+        return res.status(400).json({ message: "categoryOrders must be an array" });
+      }
+      
+      // Update each category's order
+      for (const { id, order } of categoryOrders) {
+        await db.update(knowledgeBaseCategories)
+          .set({ order })
+          .where(eq(knowledgeBaseCategories.id, id));
+      }
+      
+      res.json({ message: "Category order updated successfully" });
+    } catch (error) {
+      console.error("Error reordering categories:", error);
+      res.status(500).json({ message: "Failed to reorder categories" });
+    }
+  });
+
+  // Reorder articles within a category (admin only)
+  app.put("/api/knowledge-base/articles/reorder", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { articleOrders } = req.body; // Array of {id, order}
+      
+      if (!Array.isArray(articleOrders)) {
+        return res.status(400).json({ message: "articleOrders must be an array" });
+      }
+      
+      // Update each article's order
+      for (const { id, order } of articleOrders) {
+        await db.update(knowledgeBaseArticles)
+          .set({ order })
+          .where(eq(knowledgeBaseArticles.id, id));
+      }
+      
+      res.json({ message: "Article order updated successfully" });
+    } catch (error) {
+      console.error("Error reordering articles:", error);
+      res.status(500).json({ message: "Failed to reorder articles" });
+    }
+  });
   // Helper function to check if user has access to an article
   async function canUserAccessArticle(userId: string, articleId: string, userRole: string): Promise<boolean> {
     try {
