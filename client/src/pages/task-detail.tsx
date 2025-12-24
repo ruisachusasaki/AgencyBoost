@@ -515,9 +515,9 @@ export default function TaskDetail() {
       {/* Task Path - Breadcrumb Navigation for Sub-tasks */}
       <TaskPath taskId={taskId!} className="mb-4" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ minHeight: 'calc(100vh - 12rem)' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch" style={{ minHeight: 'calc(100vh - 12rem)' }}>
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 flex flex-col">
           {/* Task Details */}
           <Card>
               <CardHeader>
@@ -942,9 +942,9 @@ export default function TaskDetail() {
 
         </div>
 
-        {/* Sidebar - Tabbed Interface with Dynamic Height */}
-        <div className="h-full">
-          <Card className="w-full flex flex-col sticky top-6" style={{ height: 'calc(100vh - 10rem)' }}>
+        {/* Sidebar - Tabbed Interface with Dynamic Height matching left pane */}
+        <div className="flex flex-col h-full">
+          <Card className="w-full flex flex-col flex-1">
             <CardHeader className="pb-0 flex-shrink-0">
               {/* Tabs Navigation */}
               <div className="border-b border-gray-200">
@@ -975,7 +975,7 @@ export default function TaskDetail() {
               </div>
             </CardHeader>
 
-            <CardContent className="pt-6 flex-1 overflow-y-auto min-h-0">
+            <CardContent className="pt-6 flex-1 overflow-y-auto">
               {/* Tab Content */}
               {activeTab === "comments" && (
                 <TaskComments taskId={taskId!} highlightedCommentId={highlightedCommentId} />
