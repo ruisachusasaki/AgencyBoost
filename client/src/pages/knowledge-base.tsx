@@ -321,6 +321,10 @@ export default function KnowledgeBase() {
   const [permissionsCategoryId, setPermissionsCategoryId] = useState<string | null>(null);
   const [permissionsCategoryName, setPermissionsCategoryName] = useState("");
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const articlesPerPage = 20;
+  
   // Read query params on mount (category, create article with parent)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -599,6 +603,18 @@ export default function KnowledgeBase() {
 
   // Get top-level articles (those without a parent)
   const topLevelArticles = filteredArticles.filter((article: any) => !article.parentId);
+
+  // Pagination calculations
+  const totalArticles = topLevelArticles.length;
+  const totalPages = Math.ceil(totalArticles / articlesPerPage);
+  const startIndex = (currentPage - 1) * articlesPerPage;
+  const endIndex = startIndex + articlesPerPage;
+  const paginatedArticles = topLevelArticles.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, authorFilter, tagFilter, dateFilter, sortBy, selectedCategory]);
 
   // Render article with nested children recursively
   const renderArticleWithChildren = (article: any, level = 0) => {
@@ -1331,7 +1347,82 @@ export default function KnowledgeBase() {
                     </CardContent>
                   </Card>
                 ) : (
-                  topLevelArticles.map((article: any) => renderArticleWithChildren(article))
+                  <>
+                    {paginatedArticles.map((article: any) => renderArticleWithChildren(article))}
+                    
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between pt-4 border-t">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {startIndex + 1}-{Math.min(endIndex, totalArticles)} of {totalArticles} articles
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            data-testid="button-first-page"
+                          >
+                            First
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            data-testid="button-prev-page"
+                          >
+                            Previous
+                          </Button>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                              let pageNum: number;
+                              if (totalPages <= 5) {
+                                pageNum = i + 1;
+                              } else if (currentPage <= 3) {
+                                pageNum = i + 1;
+                              } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + i;
+                              } else {
+                                pageNum = currentPage - 2 + i;
+                              }
+                              return (
+                                <Button
+                                  key={pageNum}
+                                  variant={currentPage === pageNum ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  className="w-8 h-8 p-0"
+                                  data-testid={`button-page-${pageNum}`}
+                                >
+                                  {pageNum}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            data-testid="button-next-page"
+                          >
+                            Next
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                            data-testid="button-last-page"
+                          >
+                            Last
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
