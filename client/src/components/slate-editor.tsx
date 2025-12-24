@@ -201,8 +201,22 @@ const toggleBlock = (editor: Editor, format: string) => {
     type: isActive ? 'paragraph' : isList ? 'list-item' : format,
   } as Partial<SlateElement>;
 
+  // When applying list formatting, only transform paragraphs and list-items, not headings
+  // This prevents headings from losing their level attribute
+  const transformableTypes = ['paragraph', 'list-item', 'block-quote', 'code-block'];
+  
   Transforms.setNodes<SlateElement>(editor, newProperties, {
-    match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && Editor.isBlock(editor, n),
+    match: n => {
+      if (Editor.isEditor(n) || !SlateElement.isElement(n) || !Editor.isBlock(editor, n)) {
+        return false;
+      }
+      // For list transformations, only transform specific block types, not headings
+      if (isList) {
+        return transformableTypes.includes(n.type) || n.type === format;
+      }
+      // For non-list transformations, match all blocks
+      return true;
+    },
     mode: 'lowest',
   });
 
