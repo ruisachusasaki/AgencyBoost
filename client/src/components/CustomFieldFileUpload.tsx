@@ -81,7 +81,6 @@ export default function CustomFieldFileUpload({
     if (validationError) {
       toast({
         title: "Upload Error",
-        variant: "success",
         description: validationError,
         variant: "destructive",
       });
@@ -145,7 +144,6 @@ export default function CustomFieldFileUpload({
       console.error('Upload error:', error);
       toast({
         title: "Upload Error",
-        variant: "success",
         description: error instanceof Error ? error.message : "Failed to upload file",
         variant: "destructive",
       });

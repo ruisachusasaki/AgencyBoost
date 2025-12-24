@@ -9,7 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { CheckCircle, DollarSign, Upload } from "lucide-react";
+import { CheckCircle, DollarSign, Upload, CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -237,11 +241,29 @@ export default function ExpenseReportForm() {
                             data-testid={`input-${field.id}`}
                           />
                         ) : field.type === 'date' ? (
-                          <Input
-                            {...formField}
-                            type="date"
-                            data-testid={`input-${field.id}`}
-                          />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !formField.value && "text-muted-foreground"
+                                )}
+                                data-testid={`input-${field.id}`}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {formField.value ? format(new Date(formField.value), "PPP") : <span>Pick a date</span>}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={formField.value ? new Date(formField.value) : undefined}
+                                onSelect={(date) => formField.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
                         ) : field.type === 'currency' ? (
                           <div className="relative">
                             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

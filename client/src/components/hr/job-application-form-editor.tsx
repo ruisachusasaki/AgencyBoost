@@ -206,7 +206,6 @@ export default function JobApplicationFormEditor() {
     if (fieldId === 'job_opening') {
       toast({
         title: "Cannot Delete",
-        variant: "success",
         description: "The job position selection field is required and cannot be deleted.",
         variant: "destructive",
       });

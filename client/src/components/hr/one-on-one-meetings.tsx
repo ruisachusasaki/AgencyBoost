@@ -302,7 +302,6 @@ export default function OneOnOneMeetings() {
     if (!selectedReport?.id || !newMeetingDate) {
       toast({
         title: "Required Fields",
-        variant: "success",
         description: "Please select a date and time for the meeting",
         variant: "destructive",
       });

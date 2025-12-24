@@ -181,7 +181,6 @@ export function EventCreateModal({
     onError: (error: any) => {
       toast({
         title: "Failed to create event",
-        variant: "success",
         description: error.message || "An error occurred while creating the event.",
         variant: "destructive",
       });
@@ -194,7 +193,6 @@ export function EventCreateModal({
     if (!title.trim()) {
       toast({
         title: "Title required",
-        variant: "success",
         description: "Please enter a title for the event.",
         variant: "destructive",
       });

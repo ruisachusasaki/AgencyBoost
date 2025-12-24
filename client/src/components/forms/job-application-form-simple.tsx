@@ -109,7 +109,6 @@ export default function JobApplicationFormSimple({ onSuccess, preSelectedPositio
       console.error("Application submission error:", error);
       toast({
         title: "Submission Failed",
-        variant: "success",
         description: error instanceof Error ? error.message : "There was an error submitting your application. Please try again.",
         variant: "destructive",
       });
