@@ -53,6 +53,7 @@ export default function EditLesson() {
     fileSize: 0
   });
   const [isUploadingResource, setIsUploadingResource] = useState(false);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
 
   // Fetch lesson data
   const { data: lesson, isLoading } = useQuery({
@@ -99,9 +100,9 @@ export default function EditLesson() {
     },
   });
 
-  // Update form when lesson data loads
+  // Update form when lesson data loads - only once on initial load to prevent overwriting user input
   useEffect(() => {
-    if (lesson) {
+    if (lesson && !isFormInitialized) {
       form.reset({
         title: lesson.title || "",
         description: lesson.description || "",
@@ -113,8 +114,9 @@ export default function EditLesson() {
         isRequired: lesson.isRequired ?? true,
         moduleId: lesson.moduleId || undefined,
       });
+      setIsFormInitialized(true);
     }
-  }, [lesson, form]);
+  }, [lesson, form, isFormInitialized]);
 
   // Update quiz data when quiz loads
   useEffect(() => {
