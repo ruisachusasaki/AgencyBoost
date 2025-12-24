@@ -239,23 +239,34 @@ export default function ArticleView() {
         return createEmptyDocument();
       }
       
-      // Clean up the content and remove invalid properties
+      // Clean up the content while preserving valid properties
       const cleanedContent = content.map(node => {
         if ('children' in node) {
-          // Remove any invalid properties like "level" that aren't part of Slate
-          const { level, ...cleanNode } = node as any;
+          const nodeAny = node as any;
           
-          // Clean up children as well
-          const cleanedChildren = cleanNode.children.map((child: any) => {
+          // Clean up children
+          const cleanedChildren = nodeAny.children.map((child: any) => {
             // For text nodes, keep only valid properties
             if ('text' in child) {
-              const { text, bold, italic, code } = child;
-              return { text, ...(bold && { bold }), ...(italic && { italic }), ...(code && { code }) };
+              const { text, bold, italic, code, underline, strikethrough } = child;
+              return { 
+                text, 
+                ...(bold && { bold }), 
+                ...(italic && { italic }), 
+                ...(code && { code }),
+                ...(underline && { underline }),
+                ...(strikethrough && { strikethrough })
+              };
             }
             return child;
           });
           
-          return { ...cleanNode, children: cleanedChildren };
+          // Preserve level for headings, it's a valid Slate property for heading elements
+          if (nodeAny.type === 'heading' && nodeAny.level) {
+            return { ...nodeAny, children: cleanedChildren };
+          }
+          
+          return { ...nodeAny, children: cleanedChildren };
         }
         return node;
       });
@@ -340,9 +351,9 @@ export default function ArticleView() {
       
       // Element nodes with children - recursively clean
       if ('children' in node && Array.isArray(node.children)) {
-        const { level, ...restNode } = node; // Remove 'level' property
+        // Preserve level for heading elements
         return {
-          ...restNode,
+          ...node,
           children: node.children.map((child: any) => cleanNode(child))
         };
       }
