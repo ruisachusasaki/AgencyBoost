@@ -1075,12 +1075,16 @@ const Element = (props: any) => {
 
   switch (element.type) {
     case 'heading':
-      // Skip rendering empty headings
-      if (isElementEmpty(element)) {
-        return null;
-      }
       const level = element.level || 1; // Default to h1 if level is missing
       const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
+      // Hide empty headings but still render for Slate structure
+      if (isElementEmpty(element)) {
+        return (
+          <HeadingTag {...attributes} className="hidden">
+            {children}
+          </HeadingTag>
+        );
+      }
       return (
         <HeadingTag {...attributes} className={`text-${level === 1 ? '2xl' : level === 2 ? 'xl' : 'lg'} font-bold my-4`}>
           {children}
@@ -1218,6 +1222,14 @@ const Element = (props: any) => {
       );
     
     default:
+      // Hide empty paragraphs but still render for Slate structure
+      if (isElementEmpty(element)) {
+        return (
+          <p {...attributes} className="hidden">
+            {children}
+          </p>
+        );
+      }
       return (
         <p {...attributes} className="my-2">
           {children}
