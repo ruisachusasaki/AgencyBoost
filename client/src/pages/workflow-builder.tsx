@@ -437,7 +437,6 @@ export default function WorkflowBuilderPage() {
       console.log('Available trigger types:', Array.isArray(availableTriggers) ? availableTriggers.map((t: any) => t.type) : []);
       toast({
         title: "Configuration Error",
-        variant: "success",
         description: `Trigger type "${trigger.type}" is not supported for configuration.`,
         variant: "destructive"
       });

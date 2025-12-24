@@ -301,7 +301,6 @@ export default function TaskDetail() {
         
         toast({
           title: "Cannot Complete Task",
-          variant: "success",
           description: details || "This task has dependencies that need to be completed first",
           variant: "destructive",
         });

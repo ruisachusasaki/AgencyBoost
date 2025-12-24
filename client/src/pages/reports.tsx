@@ -187,7 +187,6 @@ export default function Reports() {
     if (exportFormat === 'admin-summary' && !isAdmin) {
       toast({
         title: "Access Denied",
-        variant: "success",
         description: "Admin summary export is only available to administrators.",
         variant: "destructive"
       });
@@ -238,7 +237,6 @@ export default function Reports() {
 
       toast({
         title: "Export Successful",
-        variant: "success",
         description: `${formatName} has been downloaded successfully.`,
         variant: "default"
       });
@@ -247,7 +245,6 @@ export default function Reports() {
       console.error('CSV Export Error:', error);
       toast({
         title: "Export Failed",
-        variant: "success",
         description: error instanceof Error ? error.message : "An error occurred while exporting the data.",
         variant: "destructive"
       });

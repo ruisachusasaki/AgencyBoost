@@ -130,7 +130,6 @@ export function ClientDeletionModal({ isOpen, onClose, client, onSuccess }: Clie
       if (error?.status === 409) {
         toast({
           title: "Cannot delete client",
-          variant: "success",
           description: error.message || "Client has associated records. Please archive or reassign tasks first.",
           variant: "destructive",
         });

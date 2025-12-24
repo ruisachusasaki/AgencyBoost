@@ -125,7 +125,6 @@ export default function Integrations() {
     } else if (params.get('error') === 'connection-failed') {
       toast({
         title: "Connection Failed",
-        variant: "success",
         description: "Failed to connect to Google Calendar. Please try again.",
         variant: "destructive",
       });
@@ -304,7 +303,6 @@ export default function Integrations() {
       console.error('Sync error:', error);
       toast({
         title: "Sync Failed",
-        variant: "success",
         description: "Failed to sync with Google Calendar. Please try again.",
         variant: "destructive",
       });
@@ -478,7 +476,6 @@ export default function Integrations() {
         } else {
           toast({
             title: "Connection Issue",
-            variant: "success",
             description: "Google Calendar is not properly connected. Please reconnect.",
             variant: "destructive",
           });
@@ -509,7 +506,6 @@ export default function Integrations() {
         } else {
           toast({
             title: "Connection Issue",
-            variant: "success",
             description: "Twilio SMS is not properly connected. Please check your credentials.",
             variant: "destructive",
           });
@@ -611,7 +607,6 @@ export default function Integrations() {
     if (!twilioSettings.accountSid || !twilioSettings.authToken || !twilioSettings.phoneNumber || !twilioSettings.name) {
       toast({
         title: "Missing Information",
-        variant: "success",
         description: "Please fill in all required fields (Account SID, Auth Token, Phone Number, and Name).",
         variant: "destructive",
       });
@@ -663,7 +658,6 @@ export default function Integrations() {
       console.error('Twilio connection error:', error);
       toast({
         title: "Connection Failed",
-        variant: "success",
         description: "Failed to connect to Twilio. Please check your credentials.",
         variant: "destructive",
       });
@@ -676,7 +670,6 @@ export default function Integrations() {
     if (!twilioSettings.testPhoneNumber) {
       toast({
         title: "Missing Phone Number",
-        variant: "success",
         description: "Please enter a test phone number.",
         variant: "destructive",
       });
@@ -699,7 +692,6 @@ export default function Integrations() {
       console.error('Twilio test error:', error);
       toast({
         title: "Test Failed",
-        variant: "success",
         description: "Failed to send test SMS. Please check your configuration.",
         variant: "destructive",
       });
@@ -715,7 +707,6 @@ export default function Integrations() {
     if (!isMaskedApiKey && (!mailgunSettings.apiKey || !mailgunSettings.domain || !mailgunSettings.fromEmail || !mailgunSettings.fromName)) {
       toast({
         title: "Missing Information",
-        variant: "success", 
         description: "Please fill in all required fields (API Key, Domain, From Name, and From Email).",
         variant: "destructive",
       });
@@ -725,7 +716,6 @@ export default function Integrations() {
     if (isMaskedApiKey && (!mailgunSettings.domain || !mailgunSettings.fromEmail || !mailgunSettings.fromName)) {
       toast({
         title: "Missing Information",
-        variant: "success",
         description: "Please fill in all required fields (Domain, From Name, and From Email).",
         variant: "destructive", 
       });
@@ -779,7 +769,6 @@ export default function Integrations() {
       console.error('Mailgun connection error:', error);
       toast({
         title: "Connection Failed",
-        variant: "success",
         description: "Failed to connect to Mailgun. Please check your credentials.",
         variant: "destructive",
       });
@@ -792,7 +781,6 @@ export default function Integrations() {
     if (!mailgunSettings.testEmail) {
       toast({
         title: "Missing Test Email",
-        variant: "success",
         description: "Please enter a test email address.",
         variant: "destructive",
       });
@@ -817,7 +805,6 @@ export default function Integrations() {
       console.error('Mailgun test error:', error);
       toast({
         title: "Test Failed",
-        variant: "success",
         description: "Failed to send test email. Please check your configuration.",
         variant: "destructive",
       });

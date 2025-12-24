@@ -114,7 +114,6 @@ export function TimerProvider({ children }: TimerProviderProps) {
     if (currentTimer) {
       toast({
         title: "Timer Already Running",
-        variant: "success",
         description: `Please stop the current timer for "${currentTimer.taskTitle}" first.`,
         variant: "destructive",
       });
@@ -125,7 +124,6 @@ export function TimerProvider({ children }: TimerProviderProps) {
     if (!currentUser?.id) {
       toast({
         title: "Please Wait",
-        variant: "success",
         description: "Loading user information...",
         variant: "destructive",
       });

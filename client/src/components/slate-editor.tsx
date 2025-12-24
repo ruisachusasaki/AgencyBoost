@@ -278,8 +278,25 @@ interface SlateEditorProps {
   placeholder?: string;
 }
 
+// Custom editor with inline and void element handling
+const withInlines = (editor: Editor) => {
+  const { isInline, isVoid } = editor;
+
+  // Links are inline elements
+  editor.isInline = (element) => {
+    return element.type === 'link' ? true : isInline(element);
+  };
+
+  // Images, embeds, and dividers are void elements
+  editor.isVoid = (element) => {
+    return ['image', 'embed', 'divider'].includes(element.type) ? true : isVoid(element);
+  };
+
+  return editor;
+};
+
 export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, placeholder }) => {
-  const editor = useMemo(() => withHistory(withReact(createEditor())), []);
+  const editor = useMemo(() => withInlines(withHistory(withReact(createEditor()))), []);
   
   // Ensure we always have a valid value
   const safeValue = useMemo(() => {
@@ -1026,7 +1043,8 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
               onClick={() => {
                 if (!urlDialog.url) return;
                 
-                // Restore the saved selection before inserting so content goes inline
+                // Focus editor and restore the saved selection before inserting so content goes inline
+                ReactEditor.focus(editor);
                 if (urlDialog.savedSelection) {
                   Transforms.select(editor, urlDialog.savedSelection);
                 }

@@ -641,7 +641,6 @@ export default function Sales() {
       if (isLowMargin) {
         toast({
           title: "Quote Requires Approval",
-          variant: "success",
           description: `Quote submitted with ${quoteData.margin}% desired margin. Sales Manager approval required before proceeding.`,
           variant: "default",
         });

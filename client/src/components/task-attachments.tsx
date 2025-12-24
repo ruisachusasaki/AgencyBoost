@@ -160,7 +160,6 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
       console.error('Upload error:', error);
       toast({
         title: "Upload failed",
-        variant: "success",
         description: "There was an error uploading the files.",
         variant: "destructive"
       });

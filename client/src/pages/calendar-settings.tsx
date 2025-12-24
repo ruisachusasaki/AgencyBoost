@@ -214,7 +214,6 @@ export default function CalendarSettings() {
       console.error('Failed to connect Google Calendar:', error);
       toast({
         title: "Connection Failed",
-        variant: "success",
         description: "Failed to connect to Google Calendar. Please try again.",
         variant: "destructive",
       });
@@ -272,7 +271,6 @@ export default function CalendarSettings() {
                   } else if (conn.lastSyncError) {
                     toast({
                       title: "Sync Error",
-                      variant: "success",
                       description: conn.lastSyncError,
                       variant: "destructive",
                     });
@@ -309,7 +307,6 @@ export default function CalendarSettings() {
         // Sync failed to start
         toast({
           title: "Sync Failed",
-          variant: "success",
           description: result.error || "Failed to start sync. Please try again.",
           variant: "destructive",
         });
@@ -319,7 +316,6 @@ export default function CalendarSettings() {
       console.error('Sync error:', error);
       toast({
         title: "Sync Failed",
-        variant: "success",
         description: "Failed to sync with Google Calendar. Please try again.",
         variant: "destructive",
       });

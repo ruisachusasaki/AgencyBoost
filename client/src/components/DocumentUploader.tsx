@@ -141,7 +141,6 @@ export function DocumentUploader({
           console.error('File registration error:', error);
           toast({
             title: "Upload error",
-            variant: "success",
             description: `Failed to register ${file.name}. Please try again.`,
             variant: "destructive",
           });
@@ -157,7 +156,6 @@ export function DocumentUploader({
         console.error('Upload error:', error);
         toast({
           title: "Upload failed",
-          variant: "success",
           description: error.message || `Failed to upload ${file?.name || 'file'}`,
           variant: "destructive",
         });

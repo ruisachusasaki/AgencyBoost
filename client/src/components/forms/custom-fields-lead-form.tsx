@@ -167,7 +167,6 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
     onError: (error: any) => {
       toast({
         title: "Conversion failed",
-        variant: "success",
         description: error.message || "Failed to convert lead to client. Please try again.",
         variant: "destructive",
       });

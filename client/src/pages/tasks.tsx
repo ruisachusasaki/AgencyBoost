@@ -236,7 +236,6 @@ export default function Tasks() {
         
         toast({
           title: "Cannot Complete Task",
-          variant: "success",
           description: details || "This task has dependencies that need to be completed first",
           variant: "destructive",
         });
@@ -723,7 +722,6 @@ export default function Tasks() {
       if (!canDelete) {
         toast({
           title: "Permission Denied",
-          variant: "success",
           description: "You can only delete Smart Lists you created.",
           variant: "destructive"
         });

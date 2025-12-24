@@ -2551,7 +2551,6 @@ export default function EnhancedClientDetail() {
     if (!checked && !isAdmin) {
       toast({
         title: "Access Denied",
-        variant: "success",
         description: "Only Administrators can disable Do Not Disturb settings",
         variant: "destructive",
       });
@@ -2613,7 +2612,6 @@ export default function EnhancedClientDetail() {
     onError: (error: Error) => {
       toast({
         title: "Delete failed",
-        variant: "success",
         description: error.message,
         variant: "destructive",
       });
@@ -2708,7 +2706,6 @@ export default function EnhancedClientDetail() {
     if (!canDeleteProducts) {
       toast({
         title: "Access Denied",
-        variant: "success",
         description: "You don't have permission to delete products",
         variant: "destructive",
       });
@@ -3497,7 +3494,6 @@ export default function EnhancedClientDetail() {
       if (!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email) {
         toast({
           title: "Missing Information",
-          variant: "success",
           description: "Please fill in all required fields: from email, subject, and message.",
           variant: "destructive",
         });
@@ -3508,7 +3504,6 @@ export default function EnhancedClientDetail() {
       if (client?.dndAll || client?.dndEmail) {
         toast({
           title: "Cannot Send Email",
-          variant: "success",
           description: `${client?.name} has email communications disabled (DND active)`,
           variant: "destructive",
         });
@@ -3549,7 +3544,6 @@ export default function EnhancedClientDetail() {
       console.error('Error sending email:', error);
       toast({
         title: "Failed to Send Email",
-        variant: "success",
         description: "There was an error sending your email. Please try again or check your MailGun configuration.",
         variant: "destructive",
       });
@@ -3572,7 +3566,6 @@ export default function EnhancedClientDetail() {
         console.log("❌ Validation failed - missing fields");
         toast({
           title: "Missing Information",
-          variant: "success",
           description: "Please fill in all required fields: from email, subject, message, date, and time.",
           variant: "destructive",
         });
@@ -3583,7 +3576,6 @@ export default function EnhancedClientDetail() {
       if (client?.dndAll || client?.dndEmail) {
         toast({
           title: "Cannot Schedule Email",
-          variant: "success",
           description: `${client?.name} has email communications disabled (DND active)`,
           variant: "destructive",
         });
@@ -3640,7 +3632,6 @@ export default function EnhancedClientDetail() {
       console.error('Error scheduling email:', error);
       toast({
         title: "Failed to Schedule Email",
-        variant: "success",
         description: "There was an error scheduling your email. Please try again.",
         variant: "destructive",
       });
@@ -3676,7 +3667,6 @@ export default function EnhancedClientDetail() {
     // 2. Store in database and have a cron job process scheduled messages
     toast({
       title: "SMS Scheduled",
-      variant: "success",
       description: `SMS scheduling feature will be available soon. For now, please send immediately or use your phone's scheduled text feature.`,
       variant: "destructive"
     });
@@ -3704,7 +3694,6 @@ export default function EnhancedClientDetail() {
     if (client?.dndAll || client?.dndSms) {
       toast({
         title: "Cannot Send SMS",
-        variant: "success",
         description: `${client?.name} has SMS communications disabled (DND active)`,
         variant: "destructive",
       });
@@ -3726,7 +3715,6 @@ export default function EnhancedClientDetail() {
     if (client?.dndAll || client?.dndEmail) {
       toast({
         title: "Cannot Send Email",
-        variant: "success",
         description: `${client?.name} has email communications disabled (DND active)`,
         variant: "destructive",
       });
@@ -3750,7 +3738,6 @@ export default function EnhancedClientDetail() {
       if (currentTags.includes(tagName)) {
         toast({
           title: "Tag already exists",
-          variant: "success",
           description: `"${tagName}" is already assigned to this client`,
           variant: "destructive"
         });
@@ -3848,7 +3835,6 @@ export default function EnhancedClientDetail() {
       if (isAlreadyAssigned) {
         toast({
           title: "Product already exists",
-          variant: "success",
           description: `"${productName}" is already assigned to this client`,
           variant: "destructive"
         });
@@ -3983,7 +3969,6 @@ export default function EnhancedClientDetail() {
     onError: (error: any) => {
       toast({
         title: "Update Failed",
-        variant: "success",
         description: error.message || "Failed to update field value.",
         variant: "destructive"
       });
