@@ -93,13 +93,17 @@ function CategoryOverview({
   categories, 
   articles, 
   onCategorySelect,
-  searchTerm 
+  searchTerm,
+  isAdmin,
+  onArticleReorder
 }: { 
   categoryId: string;
   categories: any[];
   articles: any[];
   onCategorySelect: (id: string) => void;
   searchTerm?: string;
+  isAdmin?: boolean;
+  onArticleReorder?: (categoryId: string, articleIds: { id: string; order: number }[]) => void;
 }) {
   const selectedCategory = categories.find(cat => cat.id === categoryId);
   const subCategories = categories.filter(cat => cat.parentId === categoryId);
@@ -113,9 +117,28 @@ function CategoryOverview({
     .filter(searchMatcher);
   
   // Get articles directly in this category (not in sub-categories) - also apply search filter
+  // Sort by order for proper drag-and-drop
   const directCategoryArticles = articles
-    .filter(article => article.categoryId === categoryId)
-    .filter(searchMatcher);
+    .filter(article => article.categoryId === categoryId && !article.parentId)
+    .filter(searchMatcher)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  
+  // Handle article drag end
+  const handleArticleDragEnd = (result: any) => {
+    if (!result.destination || !onArticleReorder) return;
+    
+    const items = [...directCategoryArticles];
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    // Create order updates
+    const updates = items.map((item, index) => ({
+      id: item.id,
+      order: index
+    }));
+    
+    onArticleReorder(categoryId, updates);
+  };
 
   if (!selectedCategory) return null;
 
@@ -200,65 +223,224 @@ function CategoryOverview({
               </span>
             )}
           </h2>
-          <div className="space-y-4">
-            {categoryArticles
-              .filter((article: any) => !article.parentId) // Only show top-level articles
-              .map((article: any) => {
-                const childArticles = categoryArticles.filter((a: any) => a.parentId === article.id);
-                const hasChildren = childArticles.length > 0;
-                
-                return (
-                  <Card key={article.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <Link href={`/resources/articles/${article.id}`}>
-                              <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
-                                {article.title}
-                              </h3>
-                            </Link>
-                            {hasChildren && (
-                              <Badge variant="secondary" className="text-xs">
-                                {childArticles.length} sub-page{childArticles.length !== 1 ? 's' : ''}
-                              </Badge>
+          {isAdmin && directCategoryArticles.length > 0 ? (
+            <>
+              {/* Direct articles in this category - draggable */}
+              <DragDropContext onDragEnd={handleArticleDragEnd}>
+                <Droppable droppableId={`category-articles-${categoryId}`}>
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-4">
+                      {directCategoryArticles.map((article: any, index: number) => {
+                        const childArticles = categoryArticles.filter((a: any) => a.parentId === article.id);
+                        const hasChildren = childArticles.length > 0;
+                        
+                        return (
+                          <Draggable key={article.id} draggableId={article.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={snapshot.isDragging ? "opacity-80" : ""}
+                              >
+                                <Card className="hover:shadow-md transition-shadow">
+                                  <CardContent className="p-6">
+                                    <div className="flex items-start gap-3">
+                                      <div {...provided.dragHandleProps} className="cursor-grab p-1 hover:bg-muted rounded-sm mt-1">
+                                        <GripVertical className="w-5 h-5 text-muted-foreground" />
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <Link href={`/resources/articles/${article.id}`}>
+                                            <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
+                                              {article.title}
+                                            </h3>
+                                          </Link>
+                                          {hasChildren && (
+                                            <Badge variant="secondary" className="text-xs">
+                                              {childArticles.length} sub-page{childArticles.length !== 1 ? 's' : ''}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        {article.excerpt && (
+                                          <p className="text-muted-foreground mb-3 line-clamp-2">
+                                            {article.excerpt}
+                                          </p>
+                                        )}
+                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                          <div className="flex items-center gap-1">
+                                            <User className="w-4 h-4" />
+                                            <span>{article.authorName || "Unknown"}</span>
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            <Calendar className="w-4 h-4" />
+                                            <span>{format(new Date(article.createdAt), "MMM d, yyyy")}</span>
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            <Eye className="w-4 h-4" />
+                                            <span>{article.viewCount || 0} views</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      {article.tags && article.tags.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 ml-4">
+                                          {article.tags.slice(0, 3).map((tag: string, idx: number) => (
+                                            <Badge key={idx} variant="outline" className="text-xs">
+                                              {tag}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </div>
                             )}
-                          </div>
-                          {article.excerpt && (
-                            <p className="text-muted-foreground mb-3 line-clamp-2">
-                              {article.excerpt}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <User className="w-4 h-4" />
-                              <span>{article.authorName || "Unknown"}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              <span>{format(new Date(article.createdAt), "MMM d, yyyy")}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Eye className="w-4 h-4" />
-                              <span>{article.viewCount || 0} views</span>
-                            </div>
-                          </div>
-                        </div>
-                        {article.tags && article.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 ml-4">
-                            {article.tags.slice(0, 3).map((tag: string, index: number) => (
-                              <Badge key={index} variant="outline" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                          </Draggable>
+                        );
+                      })}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+              
+              {/* Articles from sub-categories - read-only display */}
+              {(() => {
+                const subCategoryArticles = categoryArticles.filter(
+                  (a: any) => a.categoryId !== categoryId && !a.parentId
                 );
-              })}
-          </div>
+                if (subCategoryArticles.length === 0) return null;
+                return (
+                  <div className="mt-6 pt-6 border-t">
+                    <h3 className="text-lg font-medium mb-4 text-muted-foreground">From sub-categories</h3>
+                    <div className="space-y-4">
+                      {subCategoryArticles.map((article: any) => {
+                        const childArticles = categoryArticles.filter((a: any) => a.parentId === article.id);
+                        const hasChildren = childArticles.length > 0;
+                        const articleCategory = categories.find((c: any) => c.id === article.categoryId);
+                        
+                        return (
+                          <Card key={article.id} className="hover:shadow-md transition-shadow">
+                            <CardContent className="p-6">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <Link href={`/resources/articles/${article.id}`}>
+                                      <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
+                                        {article.title}
+                                      </h3>
+                                    </Link>
+                                    {hasChildren && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {childArticles.length} sub-page{childArticles.length !== 1 ? 's' : ''}
+                                      </Badge>
+                                    )}
+                                    {articleCategory && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {articleCategory.name}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {article.excerpt && (
+                                    <p className="text-muted-foreground mb-3 line-clamp-2">
+                                      {article.excerpt}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                    <div className="flex items-center gap-1">
+                                      <User className="w-4 h-4" />
+                                      <span>{article.authorName || "Unknown"}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Calendar className="w-4 h-4" />
+                                      <span>{format(new Date(article.createdAt), "MMM d, yyyy")}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Eye className="w-4 h-4" />
+                                      <span>{article.viewCount || 0} views</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                {article.tags && article.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 ml-4">
+                                    {article.tags.slice(0, 3).map((tag: string, idx: number) => (
+                                      <Badge key={idx} variant="outline" className="text-xs">
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
+          ) : (
+            <div className="space-y-4">
+              {categoryArticles
+                .filter((article: any) => !article.parentId) // Only show top-level articles
+                .map((article: any) => {
+                  const childArticles = categoryArticles.filter((a: any) => a.parentId === article.id);
+                  const hasChildren = childArticles.length > 0;
+                  
+                  return (
+                    <Card key={article.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Link href={`/resources/articles/${article.id}`}>
+                                <h3 className="text-lg font-semibold hover:text-primary cursor-pointer mb-2">
+                                  {article.title}
+                                </h3>
+                              </Link>
+                              {hasChildren && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {childArticles.length} sub-page{childArticles.length !== 1 ? 's' : ''}
+                                </Badge>
+                              )}
+                            </div>
+                            {article.excerpt && (
+                              <p className="text-muted-foreground mb-3 line-clamp-2">
+                                {article.excerpt}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <User className="w-4 h-4" />
+                                <span>{article.authorName || "Unknown"}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                <span>{format(new Date(article.createdAt), "MMM d, yyyy")}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Eye className="w-4 h-4" />
+                                <span>{article.viewCount || 0} views</span>
+                              </div>
+                            </div>
+                          </div>
+                          {article.tags && article.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 ml-4">
+                              {article.tags.slice(0, 3).map((tag: string, index: number) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+            </div>
+          )}
         </div>
       )}
 
@@ -369,8 +551,7 @@ export default function KnowledgeBase() {
   const canManageCategories = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager');
   const isAdmin = currentUser?.role === 'Admin';
   
-  // Reorder mode state (admin only)
-  const [isReorderMode, setIsReorderMode] = useState(false);
+  // Admins can always drag-and-drop to reorder (no toggle needed)
 
   const { data: categories = [] } = useQuery<any[]>({
     queryKey: ["/api/knowledge-base/categories"],
@@ -731,8 +912,8 @@ export default function KnowledgeBase() {
   const totalPages = Math.ceil(totalArticles / articlesPerPage);
   const startIndex = (currentPage - 1) * articlesPerPage;
   const endIndex = startIndex + articlesPerPage;
-  // In reorder mode, show all articles (no pagination) for accurate drag-and-drop
-  const paginatedArticles = isReorderMode ? topLevelArticles : topLevelArticles.slice(startIndex, endIndex);
+  // Admins see all articles (no pagination) for accurate drag-and-drop ordering
+  const paginatedArticles = isAdmin ? topLevelArticles : topLevelArticles.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -868,7 +1049,7 @@ export default function KnowledgeBase() {
     return (
       <div className="flex items-center" style={{ marginLeft: `${level * 16}px` }}>
         {/* Drag handle (only in reorder mode) */}
-        {isReorderMode && dragHandleProps && (
+        {isAdmin && dragHandleProps && (
           <div {...dragHandleProps} className="cursor-grab p-1 hover:bg-muted rounded-sm mr-1">
             <GripVertical className="w-4 h-4 text-muted-foreground" />
           </div>
@@ -894,12 +1075,12 @@ export default function KnowledgeBase() {
         <div className="flex items-center flex-1">
           <button
             data-testid={`button-category-${category.id}`}
-            onClick={() => !isReorderMode && setSelectedCategory(category.id)}
+            onClick={() => setSelectedCategory(category.id)}
             className={`flex-1 text-left px-3 py-2 rounded-md transition-colors ${
               selectedCategory === category.id 
                 ? 'bg-primary text-primary-foreground' 
                 : 'hover:bg-muted'
-            } ${isReorderMode ? 'cursor-default' : ''}`}
+            }`}
           >
             <div className="flex items-center justify-between">
               <span className="flex items-center">
@@ -914,7 +1095,7 @@ export default function KnowledgeBase() {
           </button>
           
           {/* Edit/Delete dropdown - only for Admins and Managers, hidden in reorder mode */}
-          {canManageCategories && !isReorderMode && (
+          {canManageCategories && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -969,8 +1150,8 @@ export default function KnowledgeBase() {
 
   // Render category tree recursively
   const renderCategoryTree = (cats: any[], level = 0, parentId: string | null = null) => {
-    if (isReorderMode) {
-      // In reorder mode, use Droppable for all category levels
+    if (isAdmin) {
+      // Admin mode: use Droppable for drag-and-drop reordering of all category levels
       const droppableId = parentId ? `category-children-${parentId}` : "root-categories";
       
       return (
@@ -1483,17 +1664,6 @@ export default function KnowledgeBase() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg">Categories</CardTitle>
-                {isAdmin && (
-                  <Button
-                    variant={isReorderMode ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setIsReorderMode(!isReorderMode)}
-                    data-testid="button-toggle-reorder"
-                  >
-                    <GripVertical className="w-4 h-4 mr-1" />
-                    {isReorderMode ? "Done" : "Reorder"}
-                  </Button>
-                )}
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -1508,7 +1678,7 @@ export default function KnowledgeBase() {
                   >
                     All Articles
                   </button>
-                  {isReorderMode ? (
+                  {isAdmin ? (
                     <DragDropContext onDragEnd={handleCategoryDragEnd}>
                       {renderCategoryTree(hierarchicalCategories)}
                     </DragDropContext>
@@ -1529,6 +1699,10 @@ export default function KnowledgeBase() {
                 articles={articles as any[]}
                 onCategorySelect={setSelectedCategory}
                 searchTerm={searchTerm}
+                isAdmin={isAdmin}
+                onArticleReorder={(categoryId, updates) => {
+                  reorderArticlesMutation.mutate(updates);
+                }}
               />
             ) : (
               <div className="space-y-4">
@@ -1544,7 +1718,7 @@ export default function KnowledgeBase() {
                   </Card>
                 ) : (
                   <>
-                    {isReorderMode && isAdmin ? (
+                    {isAdmin ? (
                       <DragDropContext onDragEnd={handleArticleDragEnd}>
                         <Droppable droppableId="articles-list">
                           {(provided) => (
@@ -1588,8 +1762,8 @@ export default function KnowledgeBase() {
                       paginatedArticles.map((article: any) => renderArticleWithChildren(article))
                     )}
                     
-                    {/* Pagination Controls - hidden in reorder mode */}
-                    {totalPages > 1 && !isReorderMode && (
+                    {/* Pagination Controls - hidden for admins who always have reorder capability */}
+                    {totalPages > 1 && !isAdmin && (
                       <div className="flex items-center justify-between pt-4 border-t">
                         <div className="text-sm text-muted-foreground">
                           Showing {startIndex + 1}-{Math.min(endIndex, totalArticles)} of {totalArticles} articles
