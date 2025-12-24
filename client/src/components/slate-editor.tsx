@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { createEditor, Descendant, Element as SlateElement, Transforms, Editor, Point, Range, Path } from 'slate';
+import { createEditor, Descendant, Element as SlateElement, Transforms, Editor, Point, Range, Path, Text } from 'slate';
 import { Slate, Editable, withReact, ReactEditor, useSlateStatic } from 'slate-react';
 import { withHistory } from 'slate-history';
 import { 
@@ -1019,7 +1019,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
                 />
               </div>
             )}
-            {urlDialog.type === 'link' && (
+            {urlDialog.type === 'link' && urlDialog.savedSelection && Range.isCollapsed(urlDialog.savedSelection) && (
               <div className="space-y-2">
                 <Label htmlFor="linkText">Link Text</Label>
                 <Input
@@ -1030,6 +1030,9 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
                   data-testid="input-link-text"
                 />
               </div>
+            )}
+            {urlDialog.type === 'link' && urlDialog.savedSelection && !Range.isCollapsed(urlDialog.savedSelection) && (
+              <p className="text-sm text-muted-foreground">The selected text will become a clickable link.</p>
             )}
           </div>
           <DialogFooter>
@@ -1066,12 +1069,38 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
                   };
                   Transforms.insertNodes(editor, imageBlock);
                 } else if (urlDialog.type === 'link') {
-                  const linkBlock: LinkElement = {
-                    type: 'link',
-                    url: urlDialog.url,
-                    children: [{ text: urlDialog.linkText || 'Link' }]
-                  };
-                  Transforms.insertNodes(editor, linkBlock);
+                  const selection = editor.selection;
+                  const isCollapsed = selection ? Range.isCollapsed(selection) : true;
+                  
+                  if (isCollapsed) {
+                    const linkBlock: LinkElement = {
+                      type: 'link',
+                      url: urlDialog.url,
+                      children: [{ text: urlDialog.linkText || urlDialog.url }]
+                    };
+                    Transforms.insertNodes(editor, linkBlock);
+                  } else {
+                    const isLinkActive = (() => {
+                      const [link] = Editor.nodes(editor, {
+                        match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'link',
+                      });
+                      return !!link;
+                    })();
+                    
+                    if (isLinkActive) {
+                      Transforms.unwrapNodes(editor, {
+                        match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'link',
+                      });
+                    }
+                    
+                    const link: LinkElement = {
+                      type: 'link',
+                      url: urlDialog.url,
+                      children: []
+                    };
+                    Transforms.wrapNodes(editor, link, { split: true });
+                    Transforms.collapse(editor, { edge: 'end' });
+                  }
                 }
                 
                 setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null });
