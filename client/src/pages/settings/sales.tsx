@@ -37,6 +37,7 @@ export default function SalesSettings() {
       queryClient.invalidateQueries({ queryKey: ['/api/sales-settings'] });
       toast({
         title: "Settings Updated",
+        variant: "success",
         description: "Sales settings have been successfully updated.",
       });
     },
@@ -60,6 +61,7 @@ export default function SalesSettings() {
     if (!minimumMargin || parseFloat(minimumMargin) < 0 || parseFloat(minimumMargin) > 100) {
       toast({
         title: "Invalid Value",
+        variant: "success",
         description: "Minimum margin must be between 0 and 100",
         variant: "destructive",
       });

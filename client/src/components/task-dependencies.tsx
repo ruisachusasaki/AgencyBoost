@@ -137,6 +137,7 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
       setSelectedDependencyType("finish_to_start");
       toast({
         title: "Success",
+        variant: "success",
         description: "Task dependency added successfully",
       });
     },
@@ -160,6 +161,7 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Task dependency removed successfully",
       });
     },

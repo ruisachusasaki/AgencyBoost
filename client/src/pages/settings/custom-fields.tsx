@@ -234,6 +234,7 @@ export default function CustomFields() {
       queryClient.invalidateQueries({ queryKey: ["/api/custom-fields"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Field order updated successfully",
       });
     },

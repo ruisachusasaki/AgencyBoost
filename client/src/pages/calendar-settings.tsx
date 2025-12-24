@@ -123,6 +123,7 @@ export default function CalendarSettings() {
     onSuccess: () => {
       toast({
         title: "Calendar Created",
+        variant: "success",
         description: "New calendar has been created successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/calendars"] });
@@ -140,6 +141,7 @@ export default function CalendarSettings() {
     navigator.clipboard.writeText(url);
     toast({
       title: "Copied",
+      variant: "success",
       description: "Public booking URL copied to clipboard.",
     });
   };
@@ -212,6 +214,7 @@ export default function CalendarSettings() {
       console.error('Failed to connect Google Calendar:', error);
       toast({
         title: "Connection Failed",
+        variant: "success",
         description: "Failed to connect to Google Calendar. Please try again.",
         variant: "destructive",
       });
@@ -232,11 +235,13 @@ export default function CalendarSettings() {
         if (result.status === 'in_progress') {
           toast({
             title: "Sync In Progress",
+            variant: "success",
             description: result.message || "The sync is already running. Please wait.",
           });
         } else {
           toast({
             title: "Sync Started",
+            variant: "success",
             description: result.message || "Syncing your Google Calendar. This may take a few moments for large calendars.",
           });
           
@@ -261,11 +266,13 @@ export default function CalendarSettings() {
                   if (conn.syncStatus === 'success') {
                     toast({
                       title: "Sync Complete",
+                      variant: "success",
                       description: "Your Google Calendar has been synced successfully!",
                     });
                   } else if (conn.lastSyncError) {
                     toast({
                       title: "Sync Error",
+                      variant: "success",
                       description: conn.lastSyncError,
                       variant: "destructive",
                     });
@@ -288,6 +295,7 @@ export default function CalendarSettings() {
                 setIsSyncing(null);
                 toast({
                   title: "Sync Status Unknown",
+                  variant: "success",
                   description: "The sync is taking longer than expected. Please check back later.",
                 });
               }
@@ -301,6 +309,7 @@ export default function CalendarSettings() {
         // Sync failed to start
         toast({
           title: "Sync Failed",
+          variant: "success",
           description: result.error || "Failed to start sync. Please try again.",
           variant: "destructive",
         });
@@ -310,6 +319,7 @@ export default function CalendarSettings() {
       console.error('Sync error:', error);
       toast({
         title: "Sync Failed",
+        variant: "success",
         description: "Failed to sync with Google Calendar. Please try again.",
         variant: "destructive",
       });
@@ -325,6 +335,7 @@ export default function CalendarSettings() {
       
       toast({
         title: "Disconnected",
+        variant: "success",
         description: "Google Calendar has been disconnected.",
       });
       
@@ -352,6 +363,7 @@ export default function CalendarSettings() {
       
       toast({
         title: "Settings Updated",
+        variant: "success",
         description: "Google Calendar sync settings have been updated.",
       });
     } catch (error) {

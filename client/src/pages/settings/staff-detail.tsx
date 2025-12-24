@@ -154,6 +154,7 @@ export default function StaffDetail() {
       setIsEditing(false);
       toast({
         title: "Success",
+        variant: "success",
         description: "Staff member updated successfully",
       });
     },
@@ -209,7 +210,8 @@ export default function StaffDetail() {
         updateMutation.mutate(staffUpdateData);
         
         toast({
-          title: "Success", 
+          title: "Success",
+          variant: "success", 
           description: "Profile image updated successfully",
         });
       } catch (error) {

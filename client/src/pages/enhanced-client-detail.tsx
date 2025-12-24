@@ -196,6 +196,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
       queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Team assignment created successfully",
       });
     },
@@ -218,6 +219,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
       queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Team assignment removed successfully",
       });
     },
@@ -630,6 +632,7 @@ function WorkflowSelectionModal({
       
       toast({
         title: "Workflow Started",
+        variant: "success",
         description: `${workflowName} has been triggered for this client.`,
       });
 
@@ -1050,6 +1053,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
     setIsHealthModalOpen(false);
     toast({
       title: "Health Score Recorded",
+      variant: "success",
       description: `Weekly health score for ${weekRange.displayRange} has been saved successfully.`,
     });
   }, [queryClient, clientId, weekRange, toast]);
@@ -1841,6 +1845,7 @@ export default function EnhancedClientDetail() {
       });
       toast({
         title: "SMS Sent",
+        variant: "success",
         description: "Your message has been sent successfully.",
       });
       setShowSmsSendModal(false);
@@ -2108,6 +2113,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/brief`] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Client brief section updated successfully",
       });
       setEditingSections(prev => {
@@ -2545,6 +2551,7 @@ export default function EnhancedClientDetail() {
     if (!checked && !isAdmin) {
       toast({
         title: "Access Denied",
+        variant: "success",
         description: "Only Administrators can disable Do Not Disturb settings",
         variant: "destructive",
       });
@@ -2571,6 +2578,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Product removed successfully",
       });
     },
@@ -2597,6 +2605,7 @@ export default function EnhancedClientDetail() {
     onSuccess: () => {
       toast({
         title: "Document deleted",
+        variant: "success",
         description: "The document has been successfully removed.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] });
@@ -2604,6 +2613,7 @@ export default function EnhancedClientDetail() {
     onError: (error: Error) => {
       toast({
         title: "Delete failed",
+        variant: "success",
         description: error.message,
         variant: "destructive",
       });
@@ -2626,6 +2636,7 @@ export default function EnhancedClientDetail() {
       setNewNote("");
       toast({
         title: "Success",
+        variant: "success",
         description: "Note created successfully",
       });
     },
@@ -2653,6 +2664,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'notes'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Note updated successfully",
       });
     },
@@ -2678,6 +2690,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'notes'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Note deleted successfully",
       });
     },
@@ -2695,6 +2708,7 @@ export default function EnhancedClientDetail() {
     if (!canDeleteProducts) {
       toast({
         title: "Access Denied",
+        variant: "success",
         description: "You don't have permission to delete products",
         variant: "destructive",
       });
@@ -2739,6 +2753,7 @@ export default function EnhancedClientDetail() {
       setIsTaskDialogOpen(false);
       toast({
         title: "Success",
+        variant: "success",
         description: "Task created successfully",
       });
     },
@@ -2766,6 +2781,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'tasks'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Task updated successfully",
       });
     },
@@ -2815,6 +2831,7 @@ export default function EnhancedClientDetail() {
       setEditFilteredAssignees([]);
       toast({
         title: "Success",
+        variant: "success",
         description: "Task updated successfully",
       });
     },
@@ -2846,6 +2863,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] }); // Also invalidate global tasks
       toast({
         title: "Success",
+        variant: "success",
         description: "Task deleted successfully",
       });
     },
@@ -2873,6 +2891,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Appointment deleted successfully",
       });
     },
@@ -2901,6 +2920,7 @@ export default function EnhancedClientDetail() {
       setNewComment("");
       toast({
         title: "Success",
+        variant: "success",
         description: "Comment added successfully",
       });
     },
@@ -2930,6 +2950,7 @@ export default function EnhancedClientDetail() {
       setEditCommentContent("");
       toast({
         title: "Success",
+        variant: "success",
         description: "Comment updated successfully",
       });
     },
@@ -2955,6 +2976,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks', variables.taskId, 'comments'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Comment deleted successfully",
       });
     },
@@ -3012,6 +3034,7 @@ export default function EnhancedClientDetail() {
       setTempQuantities({});
       toast({
         title: "Bundle customized",
+        variant: "success",
         description: canViewCosts 
           ? `Bundle quantities updated. New cost: $${data.newCost?.toFixed(2)}` 
           : "Bundle quantities updated successfully",
@@ -3059,6 +3082,7 @@ export default function EnhancedClientDetail() {
       setOwnerSearchTerm("");
       toast({
         title: "Owner assigned",
+        variant: "success",
         description: "Contact owner has been updated successfully",
       });
     },
@@ -3097,6 +3121,7 @@ export default function EnhancedClientDetail() {
       setFollowerSearchTerm("");
       toast({
         title: "Followers updated",
+        variant: "success",
         description: "Client followers have been updated successfully",
       });
     },
@@ -3235,6 +3260,7 @@ export default function EnhancedClientDetail() {
       setLogActivityType('general');
       toast({
         title: "Activity logged",
+        variant: "success",
         description: "Manual activity has been logged successfully",
       });
     },
@@ -3271,6 +3297,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/audit-logs/entity/contact', clientId] });
       toast({
         title: "Communication preferences updated",
+        variant: "success",
         description: "DND settings have been updated successfully",
       });
     },
@@ -3452,6 +3479,7 @@ export default function EnhancedClientDetail() {
     setShowTemplateModal(false);
     toast({
       title: "Template Applied",
+      variant: "success",
       description: `"${templateName}" template has been loaded into your email.`,
     });
   };
@@ -3469,6 +3497,7 @@ export default function EnhancedClientDetail() {
       if (!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email) {
         toast({
           title: "Missing Information",
+          variant: "success",
           description: "Please fill in all required fields: from email, subject, and message.",
           variant: "destructive",
         });
@@ -3479,6 +3508,7 @@ export default function EnhancedClientDetail() {
       if (client?.dndAll || client?.dndEmail) {
         toast({
           title: "Cannot Send Email",
+          variant: "success",
           description: `${client?.name} has email communications disabled (DND active)`,
           variant: "destructive",
         });
@@ -3500,6 +3530,7 @@ export default function EnhancedClientDetail() {
       
       toast({
         title: "Email Sent Successfully",
+        variant: "success",
         description: `Email sent to ${client?.name} (${client?.email})`,
       });
       
@@ -3518,6 +3549,7 @@ export default function EnhancedClientDetail() {
       console.error('Error sending email:', error);
       toast({
         title: "Failed to Send Email",
+        variant: "success",
         description: "There was an error sending your email. Please try again or check your MailGun configuration.",
         variant: "destructive",
       });
@@ -3540,6 +3572,7 @@ export default function EnhancedClientDetail() {
         console.log("❌ Validation failed - missing fields");
         toast({
           title: "Missing Information",
+          variant: "success",
           description: "Please fill in all required fields: from email, subject, message, date, and time.",
           variant: "destructive",
         });
@@ -3550,6 +3583,7 @@ export default function EnhancedClientDetail() {
       if (client?.dndAll || client?.dndEmail) {
         toast({
           title: "Cannot Schedule Email",
+          variant: "success",
           description: `${client?.name} has email communications disabled (DND active)`,
           variant: "destructive",
         });
@@ -3587,6 +3621,7 @@ export default function EnhancedClientDetail() {
       
       toast({
         title: "Email Scheduled Successfully",
+        variant: "success",
         description: `Email scheduled for ${client?.name} on ${scheduledDate} at ${scheduledTime} (${scheduledTimezone})`,
       });
       
@@ -3605,6 +3640,7 @@ export default function EnhancedClientDetail() {
       console.error('Error scheduling email:', error);
       toast({
         title: "Failed to Schedule Email",
+        variant: "success",
         description: "There was an error scheduling your email. Please try again.",
         variant: "destructive",
       });
@@ -3640,6 +3676,7 @@ export default function EnhancedClientDetail() {
     // 2. Store in database and have a cron job process scheduled messages
     toast({
       title: "SMS Scheduled",
+      variant: "success",
       description: `SMS scheduling feature will be available soon. For now, please send immediately or use your phone's scheduled text feature.`,
       variant: "destructive"
     });
@@ -3667,6 +3704,7 @@ export default function EnhancedClientDetail() {
     if (client?.dndAll || client?.dndSms) {
       toast({
         title: "Cannot Send SMS",
+        variant: "success",
         description: `${client?.name} has SMS communications disabled (DND active)`,
         variant: "destructive",
       });
@@ -3675,6 +3713,7 @@ export default function EnhancedClientDetail() {
     
     toast({
       title: "SMS Sent",
+      variant: "success",
       description: `Message sent to ${client?.name}`,
     });
     setSmsMessage("");
@@ -3687,6 +3726,7 @@ export default function EnhancedClientDetail() {
     if (client?.dndAll || client?.dndEmail) {
       toast({
         title: "Cannot Send Email",
+        variant: "success",
         description: `${client?.name} has email communications disabled (DND active)`,
         variant: "destructive",
       });
@@ -3695,6 +3735,7 @@ export default function EnhancedClientDetail() {
     
     toast({
       title: "Email Sent",
+      variant: "success",
       description: `Email sent to ${client?.name}`,
     });
     setEmailMessage("");
@@ -3709,6 +3750,7 @@ export default function EnhancedClientDetail() {
       if (currentTags.includes(tagName)) {
         toast({
           title: "Tag already exists",
+          variant: "success",
           description: `"${tagName}" is already assigned to this client`,
           variant: "destructive"
         });
@@ -3722,6 +3764,7 @@ export default function EnhancedClientDetail() {
 
       toast({
         title: "Tag added",
+        variant: "success",
         description: `"${tagName}" has been added to ${client.name}`,
       });
 
@@ -3759,6 +3802,7 @@ export default function EnhancedClientDetail() {
 
       toast({
         title: "Tag created",
+        variant: "success",
         description: `"${newTagName}" has been created and added to ${client?.name}`,
       });
     } catch (error) {
@@ -3804,6 +3848,7 @@ export default function EnhancedClientDetail() {
       if (isAlreadyAssigned) {
         toast({
           title: "Product already exists",
+          variant: "success",
           description: `"${productName}" is already assigned to this client`,
           variant: "destructive"
         });
@@ -3816,6 +3861,7 @@ export default function EnhancedClientDetail() {
 
       toast({
         title: "Product added",
+        variant: "success",
         description: `"${productName}" has been added to ${client.name}`,
       });
 
@@ -3855,6 +3901,7 @@ export default function EnhancedClientDetail() {
 
       toast({
         title: "Product created",
+        variant: "success",
         description: `"${newServiceName}" has been created and added to ${client?.name}`,
       });
     } catch (error) {
@@ -3927,6 +3974,7 @@ export default function EnhancedClientDetail() {
       
       toast({
         title: "Field Updated",
+        variant: "success",
         description: "Field value has been saved successfully.",
       });
       setEditingField(null);
@@ -3935,6 +3983,7 @@ export default function EnhancedClientDetail() {
     onError: (error: any) => {
       toast({
         title: "Update Failed",
+        variant: "success",
         description: error.message || "Failed to update field value.",
         variant: "destructive"
       });
@@ -4878,6 +4927,7 @@ export default function EnhancedClientDetail() {
                                       // Show success message
                                       toast({
                                         title: "Success",
+                                        variant: "success",
                                         description: "Bundle quantities updated successfully."
                                       });
                                     } catch (error) {
@@ -6423,6 +6473,7 @@ export default function EnhancedClientDetail() {
                             setShowAddProductModal(false);
                             toast({
                               title: "Success",
+                              variant: "success",
                               description: `${product.name} added successfully!`
                             });
                           } catch (error) {
@@ -6480,6 +6531,7 @@ export default function EnhancedClientDetail() {
                             setShowAddProductModal(false);
                             toast({
                               title: "Success",
+                              variant: "success",
                               description: `${bundle.name} bundle added successfully!`
                             });
                           } catch (error) {

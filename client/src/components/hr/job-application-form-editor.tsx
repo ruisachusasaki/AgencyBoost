@@ -150,6 +150,7 @@ export default function JobApplicationFormEditor() {
       queryClient.invalidateQueries({ queryKey: ['/api/job-application-form-config'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Form configuration saved successfully",
       });
     },
@@ -205,6 +206,7 @@ export default function JobApplicationFormEditor() {
     if (fieldId === 'job_opening') {
       toast({
         title: "Cannot Delete",
+        variant: "success",
         description: "The job position selection field is required and cannot be deleted.",
         variant: "destructive",
       });
@@ -215,6 +217,7 @@ export default function JobApplicationFormEditor() {
       setFields(prev => prev.filter(field => field.id !== fieldId));
       toast({
         title: "Success",
+        variant: "success",
         description: "Field deleted successfully",
       });
     }
@@ -245,6 +248,7 @@ export default function JobApplicationFormEditor() {
     setIsDialogOpen(false);
     toast({
       title: "Success",
+      variant: "success",
       description: `Field ${editingField ? 'updated' : 'added'} successfully`,
     });
   };
@@ -272,7 +276,8 @@ export default function JobApplicationFormEditor() {
 
     // Note: Auto-save will handle persisting the reorder
     toast({
-      title: "Success", 
+      title: "Success",
+      variant: "success", 
       description: "Field order updated successfully",
     });
   };
@@ -282,6 +287,7 @@ export default function JobApplicationFormEditor() {
     navigator.clipboard.writeText(careersUrl);
     toast({
       title: "Success",
+      variant: "success",
       description: "Careers URL copied to clipboard",
     });
   };

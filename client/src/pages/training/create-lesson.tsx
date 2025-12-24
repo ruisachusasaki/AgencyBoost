@@ -90,6 +90,7 @@ export default function CreateLesson() {
     onSuccess: () => {
       toast({
         title: "Success!",
+        variant: "success",
         description: "Lesson created successfully.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/lessons`] });
@@ -181,6 +182,7 @@ export default function CreateLesson() {
 
       toast({
         title: "PDF uploaded",
+        variant: "success",
         description: "PDF file has been uploaded successfully"
       });
 
@@ -236,6 +238,7 @@ export default function CreateLesson() {
 
       toast({
         title: "Success!",
+        variant: "success",
         description: "Lesson and quiz created successfully.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/lessons`] });

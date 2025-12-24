@@ -210,6 +210,7 @@ export default function OnboardingPage() {
       setSubmissionComplete(true);
       toast({
         title: "Success",
+        variant: "success",
         description: "Your onboarding information has been submitted successfully!",
       });
     },

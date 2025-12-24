@@ -98,6 +98,7 @@ export default function EditCourse() {
       if (response.ok) {
         toast({
           title: "Success",
+          variant: "success",
           description: "Course updated successfully!",
         });
         queryClient.invalidateQueries({ queryKey: ["/api/training/courses"] });

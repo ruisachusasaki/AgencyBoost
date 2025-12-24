@@ -73,6 +73,7 @@ export function CategoryPermissionsModal({
     onSuccess: () => {
       toast({
         title: "Success",
+        variant: "success",
         description: "Category access updated successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/knowledge-base/categories'] });

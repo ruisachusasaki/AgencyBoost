@@ -296,6 +296,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       const isPublishing = savedForm?.status === "published";
       toast({
         title: "Success",
+        variant: "success",
         description: isPublishing 
           ? "Form published successfully! It's now live and ready to accept submissions." 
           : formId ? "Form updated successfully" : "Form created successfully",

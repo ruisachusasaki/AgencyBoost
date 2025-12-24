@@ -698,6 +698,7 @@ export default function CalendarMain() {
       refetchAppointments();
       toast({
         title: "Appointment updated",
+        variant: "success",
         description: "Status updated successfully",
       });
     },
@@ -727,6 +728,7 @@ export default function CalendarMain() {
       refetchAppointments();
       toast({
         title: "Appointment deleted",
+        variant: "success",
         description: "Appointment has been deleted successfully",
       });
     },

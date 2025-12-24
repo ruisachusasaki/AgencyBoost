@@ -320,6 +320,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
 
         toast({
           title: "Image uploaded",
+          variant: "success",
           description: "Image has been added to your content"
         });
 

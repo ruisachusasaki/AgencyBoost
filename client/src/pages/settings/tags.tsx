@@ -98,6 +98,7 @@ export default function TagsPage() {
       setShowAddDialog(false);
       toast({
         title: "Success",
+        variant: "success",
         description: "Tag created successfully.",
       });
     },
@@ -126,6 +127,7 @@ export default function TagsPage() {
       setEditingTag(null);
       toast({
         title: "Success",
+        variant: "success",
         description: "Tag updated successfully.",
       });
     },
@@ -153,6 +155,7 @@ export default function TagsPage() {
       setDeletingTag(null);
       toast({
         title: "Success",
+        variant: "success",
         description: "Tag deleted successfully.",
       });
     },

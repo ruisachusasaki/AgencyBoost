@@ -162,6 +162,7 @@ export default function ProductsSettings() {
       setIsCreateProductOpen(false);
       toast({
         title: "Success",
+        variant: "success",
         description: "Product created successfully",
       });
     },
@@ -190,6 +191,7 @@ export default function ProductsSettings() {
       setEditingProduct(null);
       toast({
         title: "Success",
+        variant: "success",
         description: "Product updated successfully",
       });
     },
@@ -209,6 +211,7 @@ export default function ProductsSettings() {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Product deleted successfully",
       });
     },
@@ -249,6 +252,7 @@ export default function ProductsSettings() {
       setBundleProductSearch("");
       toast({
         title: "Success",
+        variant: "success",
         description: "Bundle created successfully",
       });
     },
@@ -279,6 +283,7 @@ export default function ProductsSettings() {
       setBundleProducts([]);
       toast({
         title: "Success",
+        variant: "success",
         description: "Bundle updated successfully",
       });
     },
@@ -304,6 +309,7 @@ export default function ProductsSettings() {
       queryClient.invalidateQueries({ queryKey: ["/api/product-bundles"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Bundle deleted successfully",
       });
     },
@@ -324,6 +330,7 @@ export default function ProductsSettings() {
       setIsCreateCategoryOpen(false);
       toast({
         title: "Success",
+        variant: "success",
         description: "Category created successfully",
       });
     },
@@ -346,6 +353,7 @@ export default function ProductsSettings() {
       setEditingCategory(null);
       toast({
         title: "Success",
+        variant: "success",
         description: "Category updated successfully",
       });
     },
@@ -372,6 +380,7 @@ export default function ProductsSettings() {
       queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Category deleted successfully",
       });
     },

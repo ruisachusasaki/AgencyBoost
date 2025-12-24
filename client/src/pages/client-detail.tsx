@@ -59,6 +59,7 @@ export default function ClientDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       toast({
         title: "Client deleted",
+        variant: "success",
         description: "The client has been successfully deleted.",
       });
       setLocation("/clients");
@@ -494,6 +495,7 @@ export default function ClientDetail() {
                   setIsEditDialogOpen(false);
                   toast({
                     title: "Client updated",
+                    variant: "success",
                     description: "The client has been successfully updated.",
                   });
                 }}

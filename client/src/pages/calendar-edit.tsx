@@ -183,6 +183,7 @@ export default function CalendarEdit() {
     onSuccess: () => {
       toast({
         title: "Calendar Updated",
+        variant: "success",
         description: "Calendar has been updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/calendars"] });
@@ -206,6 +207,7 @@ export default function CalendarEdit() {
     onSuccess: () => {
       toast({
         title: "Calendar Deleted",
+        variant: "success",
         description: "Calendar has been deleted successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/calendars"] });
@@ -230,6 +232,7 @@ export default function CalendarEdit() {
       navigator.clipboard.writeText(bookingUrl);
       toast({
         title: "Copied",
+        variant: "success",
         description: "Public booking URL copied to clipboard.",
       });
     }
@@ -251,6 +254,7 @@ export default function CalendarEdit() {
     setTimeout(() => setEmbedCopied(false), 2000);
     toast({
       title: "Copied",
+      variant: "success",
       description: "Embed code copied to clipboard.",
     });
   };

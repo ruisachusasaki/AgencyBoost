@@ -50,6 +50,7 @@ export default function PipelineStageManager({ onClose }: PipelineStageManagerPr
       setIsCreateDialogOpen(false);
       toast({
         title: "Stage Created",
+        variant: "success",
         description: "Pipeline stage has been created successfully.",
       });
     },
@@ -72,6 +73,7 @@ export default function PipelineStageManager({ onClose }: PipelineStageManagerPr
       setEditingStage(null);
       toast({
         title: "Stage Updated",
+        variant: "success",
         description: "Pipeline stage has been updated successfully.",
       });
     },
@@ -91,6 +93,7 @@ export default function PipelineStageManager({ onClose }: PipelineStageManagerPr
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
         title: "Stage Deleted",
+        variant: "success",
         description: "Pipeline stage has been deleted successfully.",
       });
     },

@@ -411,6 +411,7 @@ export default function ArticleView() {
       setIsBookmarked(data.bookmarked);
       toast({
         title: "Success",
+        variant: "success",
         description: data.bookmarked ? "Article bookmarked" : "Bookmark removed",
       });
     },
@@ -439,6 +440,7 @@ export default function ArticleView() {
       setIsEditing(false);
       toast({
         title: "Success",
+        variant: "success",
         description: "Article updated successfully",
       });
     },
@@ -466,6 +468,7 @@ export default function ArticleView() {
       queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}/comments`] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Comment added successfully",
       });
     },
@@ -519,6 +522,7 @@ export default function ArticleView() {
     onSuccess: () => {
       toast({
         title: "Success",
+        variant: "success",
         description: "Article deleted successfully",
       });
       // Navigate back to knowledge base
@@ -545,6 +549,7 @@ export default function ArticleView() {
       queryClient.invalidateQueries({ queryKey: ['/api/knowledge-base/articles'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Article status updated",
       });
     },
@@ -568,6 +573,7 @@ export default function ArticleView() {
       queryClient.invalidateQueries({ queryKey: ['/api/knowledge-base/articles'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Article moved successfully",
       });
     },

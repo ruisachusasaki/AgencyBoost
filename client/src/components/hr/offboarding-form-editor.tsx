@@ -117,6 +117,7 @@ export default function OffboardingFormEditor() {
     onSuccess: () => {
       toast({
         title: "Success",
+        variant: "success",
         description: "Offboarding form configuration saved successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/offboarding-form-config'] });

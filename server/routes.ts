@@ -7885,44 +7885,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
+  app.delete("/api/workflows/:id", requireAuth(), requirePermission('workflows', 'canDelete'), async (req, res) => {
+    try {
+      const workflowId = req.params.id;
+      
+      // Get the workflow data before deletion for audit logging
+      const [workflowToDelete] = await db.select()
+        .from(workflows)
+        .where(eq(workflows.id, workflowId));
+      
+      if (!workflowToDelete) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      
+      // Check if any tasks are using this workflow
+      const tasksUsingWorkflow = await db.select({ count: sql<number>`count(*)` })
+        .from(tasks)
+        .where(eq(tasks.workflowId, workflowId));
+      
+      if (tasksUsingWorkflow[0]?.count > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete workflow: ${tasksUsingWorkflow[0].count} task(s) are using this workflow. Please reassign them first.` 
+        });
+      }
+      
+      // Delete related records in proper order to avoid FK constraint violations
+      // 1. Delete workflow action analytics
+      await db.delete(workflowActionAnalytics)
+        .where(eq(workflowActionAnalytics.workflowId, workflowId));
+      
+      // 2. Delete workflow executions
+      await db.delete(workflowExecutions)
+        .where(eq(workflowExecutions.workflowId, workflowId));
+      
+      // 3. Delete workflow templates that reference this workflow
+      await db.delete(workflowTemplates)
+        .where(eq(workflowTemplates.workflowId, workflowId));
+      
+      // 4. Now delete the workflow itself
+      const deletedRows = await db.delete(workflows)
+        .where(eq(workflows.id, workflowId));
+      
+      if (deletedRows.rowCount === 0) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      
+      // Create audit log with authenticated user
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      
+      await createAuditLog(
+        "deleted",
+        "workflow",
+        workflowId,
+        workflowToDelete.name,
+        userId, // SECURE: Use authenticated user ID only
+        `Deleted workflow: ${workflowToDelete.name}`,
+        { name: workflowToDelete.name, category: workflowToDelete.category, status: workflowToDelete.status },
+        null,
+        req
+      );
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting workflow:", error);
+      res.status(500).json({ message: "Failed to delete workflow" });
     }
   });
 

@@ -87,6 +87,7 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
       queryClient.invalidateQueries({ queryKey: [`/api/lead-notes/${leadId}`] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Note added successfully",
       });
       form.reset();
@@ -122,6 +123,7 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
       queryClient.invalidateQueries({ queryKey: [`/api/lead-notes/${leadId}`] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Note updated successfully",
       });
       setEditingNote(null);
@@ -150,6 +152,7 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
       queryClient.invalidateQueries({ queryKey: [`/api/lead-notes/${leadId}`] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Note deleted successfully",
       });
     },
@@ -181,6 +184,7 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
       queryClient.invalidateQueries({ queryKey: [`/api/lead-notes/${leadId}`] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Note lock status updated",
       });
     },

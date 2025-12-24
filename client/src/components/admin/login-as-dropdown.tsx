@@ -48,6 +48,7 @@ export default function LoginAsDropdown({ isOpen, onClose }: LoginAsDropdownProp
     onSuccess: (data) => {
       toast({
         title: "Success",
+        variant: "success",
         description: `Now logged in as ${data.impersonatedUser.firstName} ${data.impersonatedUser.lastName}`,
       });
       queryClient.invalidateQueries();

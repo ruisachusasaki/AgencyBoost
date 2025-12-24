@@ -195,6 +195,7 @@ export default function Tasks() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({
         title: "Task deleted",
+        variant: "success",
         description: "The task has been successfully deleted.",
       });
     },
@@ -235,6 +236,7 @@ export default function Tasks() {
         
         toast({
           title: "Cannot Complete Task",
+          variant: "success",
           description: details || "This task has dependencies that need to be completed first",
           variant: "destructive",
         });
@@ -468,6 +470,7 @@ export default function Tasks() {
     
     toast({
       title: "Filters Cleared",
+      variant: "success",
       description: "All filters have been reset to default."
     });
   };
@@ -626,6 +629,7 @@ export default function Tasks() {
       queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Smart List saved successfully."
       });
       setSmartListName('');
@@ -651,6 +655,7 @@ export default function Tasks() {
       queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
       toast({
         title: "Smart List Deleted",
+        variant: "success",
         description: "Smart List removed successfully."
       });
     },
@@ -674,6 +679,7 @@ export default function Tasks() {
       queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
       toast({
         title: "Sharing Updated",
+        variant: "success",
         description: "Smart List sharing settings updated successfully."
       });
       setIsShareSmartListOpen(false);
@@ -717,6 +723,7 @@ export default function Tasks() {
       if (!canDelete) {
         toast({
           title: "Permission Denied",
+          variant: "success",
           description: "You can only delete Smart Lists you created.",
           variant: "destructive"
         });
@@ -1193,6 +1200,7 @@ export default function Tasks() {
       clearSelection();
       toast({
         title: "Tasks deleted",
+        variant: "success",
         description: `${deletedCount} tasks have been successfully deleted.`,
       });
     },
@@ -1215,6 +1223,7 @@ export default function Tasks() {
       clearSelection();
       toast({
         title: "Tasks updated",
+        variant: "success",
         description: `${updatedCount} tasks have been successfully updated.`,
       });
     },

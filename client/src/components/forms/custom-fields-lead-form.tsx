@@ -93,6 +93,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
         title: "Lead created",
+        variant: "success",
         description: "The lead has been successfully created with custom fields.",
       });
       onSuccess?.();
@@ -114,6 +115,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
         title: "Lead updated",
+        variant: "success",
         description: "The lead has been successfully updated with custom fields.",
       });
       onSuccess?.();
@@ -156,6 +158,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       toast({
         title: "Lead converted successfully!",
+        variant: "success",
         description: `${lead?.name} has been converted to a client and moved to Won status.`,
       });
       setShowConvertDialog(false);
@@ -164,6 +167,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
     onError: (error: any) => {
       toast({
         title: "Conversion failed",
+        variant: "success",
         description: error.message || "Failed to convert lead to client. Please try again.",
         variant: "destructive",
       });
@@ -178,6 +182,7 @@ export default function CustomFieldsLeadForm({ lead, onSuccess }: CustomFieldsLe
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
         title: "Lead deleted",
+        variant: "success",
         description: "The lead has been successfully deleted.",
       });
       onSuccess?.();

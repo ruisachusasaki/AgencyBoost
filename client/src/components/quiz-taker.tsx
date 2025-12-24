@@ -165,6 +165,7 @@ export function QuizTaker({ quiz, onComplete }: QuizTakerProps) {
       console.error('Error submitting quiz:', error);
       toast({
         title: "Submission Error",
+        variant: "success",
         description: error instanceof Error ? error.message : "Failed to submit quiz. Please try again.",
         variant: "destructive"
       });

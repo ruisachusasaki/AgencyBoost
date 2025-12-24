@@ -82,6 +82,7 @@ export default function AutomationTriggers() {
       resetForm();
       toast({
         title: "Success",
+        variant: "success",
         description: "Automation trigger created successfully",
       });
     },
@@ -111,6 +112,7 @@ export default function AutomationTriggers() {
       resetForm();
       toast({
         title: "Success",
+        variant: "success",
         description: "Automation trigger updated successfully",
       });
     },
@@ -136,6 +138,7 @@ export default function AutomationTriggers() {
       setDeletingTrigger(null);
       toast({
         title: "Success",
+        variant: "success",
         description: "Automation trigger deleted successfully",
       });
     },
@@ -165,6 +168,7 @@ export default function AutomationTriggers() {
       resetForm();
       toast({
         title: "Success",
+        variant: "success",
         description: "Automation action created successfully",
       });
     },
@@ -194,6 +198,7 @@ export default function AutomationTriggers() {
       resetForm();
       toast({
         title: "Success",
+        variant: "success",
         description: "Automation action updated successfully",
       });
     },
@@ -219,6 +224,7 @@ export default function AutomationTriggers() {
       setDeletingAction(null);
       toast({
         title: "Success",
+        variant: "success",
         description: "Automation action deleted successfully",
       });
     },

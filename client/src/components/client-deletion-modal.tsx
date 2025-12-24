@@ -65,6 +65,7 @@ export function ClientDeletionModal({ isOpen, onClose, client, onSuccess }: Clie
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       toast({
         title: "Client archived",
+        variant: "success",
         description: "The client has been successfully archived and removed from the main list.",
       });
       onSuccess();
@@ -94,6 +95,7 @@ export function ClientDeletionModal({ isOpen, onClose, client, onSuccess }: Clie
       
       toast({
         title: "Tasks reassigned",
+        variant: "success",
         description: `Successfully reassigned ${data.movedCount} tasks. You can now delete the client if needed.`,
       });
       // After successful reassignment, automatically select delete action
@@ -118,6 +120,7 @@ export function ClientDeletionModal({ isOpen, onClose, client, onSuccess }: Clie
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       toast({
         title: "Client deleted",
+        variant: "success",
         description: "The client has been permanently deleted.",
       });
       onSuccess();
@@ -127,6 +130,7 @@ export function ClientDeletionModal({ isOpen, onClose, client, onSuccess }: Clie
       if (error?.status === 409) {
         toast({
           title: "Cannot delete client",
+          variant: "success",
           description: error.message || "Client has associated records. Please archive or reassign tasks first.",
           variant: "destructive",
         });

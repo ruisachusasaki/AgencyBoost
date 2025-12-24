@@ -88,6 +88,7 @@ export default function BusinessProfile() {
     onSuccess: () => {
       toast({
         title: "Success",
+        variant: "success",
         description: "Business profile updated successfully.",
       });
     },
@@ -189,6 +190,7 @@ export default function BusinessProfile() {
                               
                               toast({
                                 title: "Success",
+                                variant: "success",
                                 description: "Company logo uploaded and saved successfully.",
                               });
                               

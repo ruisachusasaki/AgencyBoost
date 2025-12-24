@@ -338,6 +338,7 @@ export default function Clients() {
       queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Smart List saved successfully."
       });
       setSmartListName('');
@@ -364,6 +365,7 @@ export default function Clients() {
       queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
       toast({
         title: "Smart List Deleted",
+        variant: "success",
         description: "Smart List removed successfully."
       });
     },
@@ -388,6 +390,7 @@ export default function Clients() {
       queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
       toast({
         title: "Sharing Updated",
+        variant: "success",
         description: "Smart List sharing settings updated successfully."
       });
       setIsShareSmartListOpen(false);
@@ -414,12 +417,14 @@ export default function Clients() {
       if (data.errorCount > 0) {
         toast({
           title: "Partially completed",
+          variant: "success",
           description: `${data.successCount} client(s) deleted successfully. ${data.errorCount} failed. ${data.errors?.slice(0, 2).join('. ')}`,
           variant: "destructive",
         });
       } else {
         toast({
           title: "Clients deleted",
+          variant: "success",
           description: `${data.successCount} client(s) have been successfully deleted.`,
         });
       }
@@ -446,12 +451,14 @@ export default function Clients() {
       if (data.errorCount > 0) {
         toast({
           title: "Partially completed",
+          variant: "success",
           description: `${data.successCount} client(s) updated successfully. ${data.errorCount} failed. ${data.errors?.slice(0, 2).join('. ')}`,
           variant: "destructive",
         });
       } else {
         toast({
           title: "Clients updated",
+          variant: "success",
           description: `${data.successCount} client(s) have been successfully updated.`,
         });
       }
@@ -478,12 +485,14 @@ export default function Clients() {
       if (data.errorCount > 0) {
         toast({
           title: "Partially completed",
+          variant: "success",
           description: `Tag added to ${data.successCount} client(s). ${data.errorCount} failed. ${data.errors?.slice(0, 2).join('. ')}`,
           variant: "destructive",
         });
       } else {
         toast({
           title: "Tag added",
+          variant: "success",
           description: `Tag added to ${data.successCount} client(s).`,
         });
       }
@@ -510,12 +519,14 @@ export default function Clients() {
       if (data.errorCount > 0) {
         toast({
           title: "Partially completed",
+          variant: "success",
           description: `Tag removed from ${data.successCount} client(s). ${data.errorCount} failed. ${data.errors?.slice(0, 2).join('. ')}`,
           variant: "destructive",
         });
       } else {
         toast({
           title: "Tag removed",
+          variant: "success",
           description: `Tag removed from ${data.successCount} client(s).`,
         });
       }
@@ -542,12 +553,14 @@ export default function Clients() {
       if (data.errorCount > 0) {
         toast({
           title: "Partially completed",
+          variant: "success",
           description: `${data.successCount} client(s) added to workflow. ${data.errorCount} failed. ${data.errors?.slice(0, 2).join('. ')}`,
           variant: "destructive",
         });
       } else {
         toast({
           title: "Added to workflow",
+          variant: "success",
           description: `${data.successCount} client(s) added to workflow.`,
         });
       }
@@ -862,11 +875,13 @@ export default function Clients() {
 
         toast({
           title: "Export successful",
+          variant: "success",
           description: "Clients have been exported to CSV"
         });
       } catch (error) {
         toast({
           title: "Export failed",
+          variant: "success",
           description: "Failed to export clients",
           variant: "destructive"
         });
@@ -1110,6 +1125,7 @@ export default function Clients() {
     if (!file.name.endsWith('.csv')) {
       toast({
         title: "Invalid file type",
+        variant: "success",
         description: "Please select a CSV file",
         variant: "destructive",
       });
@@ -1132,6 +1148,7 @@ export default function Clients() {
       if (response.ok) {
         toast({
           title: "Import successful",
+          variant: "success",
           description: `${result.imported} clients imported successfully`,
         });
         // Refresh the clients data
@@ -1139,6 +1156,7 @@ export default function Clients() {
       } else {
         toast({
           title: "Import failed",
+          variant: "success",
           description: result.message || "Failed to import clients",
           variant: "destructive",
         });
@@ -1146,6 +1164,7 @@ export default function Clients() {
     } catch (error) {
       toast({
         title: "Import error",
+        variant: "success",
         description: "An error occurred while importing clients",
         variant: "destructive",
       });
@@ -1178,12 +1197,14 @@ export default function Clients() {
         
         toast({
           title: "Export successful",
+          variant: "success",
           description: "Clients exported successfully",
         });
       } else {
         const result = await response.json();
         toast({
           title: "Export failed",
+          variant: "success",
           description: result.message || "Failed to export clients",
           variant: "destructive",
         });
@@ -1191,6 +1212,7 @@ export default function Clients() {
     } catch (error) {
       toast({
         title: "Export error",
+        variant: "success",
         description: "An error occurred while exporting clients",
         variant: "destructive",
       });
@@ -1240,6 +1262,7 @@ export default function Clients() {
     setActiveTab(smartList.id);
     toast({
       title: "Smart List Applied",
+      variant: "success",
       description: `Applied "${smartList.name}" filter.`
     });
   };
@@ -1313,6 +1336,7 @@ export default function Clients() {
     if (listToDelete.createdBy !== currentUser?.id && !isAdmin) {
       toast({
         title: "Permission Denied",
+        variant: "success",
         description: "You can only delete Smart Lists you created.",
         variant: "destructive"
       });
@@ -1344,6 +1368,7 @@ export default function Clients() {
     if (!smartListName.trim()) {
       toast({
         title: "Validation Error",
+        variant: "success",
         description: "Smart List name is required.",
         variant: "destructive"
       });
@@ -1353,6 +1378,7 @@ export default function Clients() {
     if (shareVisibility === 'shared' && (!shareWithUsers || shareWithUsers.length === 0)) {
       toast({
         title: "Validation Error",
+        variant: "success",
         description: "Please select at least one user to share with.",
         variant: "destructive"
       });

@@ -260,6 +260,7 @@ export default function OneOnOneMeetings() {
       
       toast({
         title: "Meeting Created",
+        variant: "success",
         description: toastDescription,
       });
     },
@@ -301,6 +302,7 @@ export default function OneOnOneMeetings() {
     if (!selectedReport?.id || !newMeetingDate) {
       toast({
         title: "Required Fields",
+        variant: "success",
         description: "Please select a date and time for the meeting",
         variant: "destructive",
       });
@@ -1072,6 +1074,7 @@ function MeetingEditor({
       
       toast({
         title: "Success",
+        variant: "success",
         description: meeting ? "Meeting updated successfully" : "Meeting created successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });

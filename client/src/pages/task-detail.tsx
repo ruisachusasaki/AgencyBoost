@@ -86,6 +86,7 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
       toast({
         title: "Template Created",
+        variant: "success",
         description: "Task template has been created successfully.",
       });
       templateForm.reset();
@@ -182,6 +183,7 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Task deleted successfully",
       });
       setLocation("/tasks");
@@ -274,6 +276,7 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] }); // Invalidate tasks list
       toast({
         title: "Task updated",
+        variant: "success",
         description: "Task has been updated successfully",
       });
     },
@@ -298,6 +301,7 @@ export default function TaskDetail() {
         
         toast({
           title: "Cannot Complete Task",
+          variant: "success",
           description: details || "This task has dependencies that need to be completed first",
           variant: "destructive",
         });

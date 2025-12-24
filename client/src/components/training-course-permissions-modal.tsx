@@ -67,6 +67,7 @@ export function TrainingCoursePermissionsModal({
     onSuccess: () => {
       toast({
         title: "Success",
+        variant: "success",
         description: "Course permissions updated successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/training/courses', courseId, 'permissions'] });

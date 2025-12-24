@@ -111,6 +111,7 @@ export default function Integrations() {
     if (params.get('connected') === 'google-calendar') {
       toast({
         title: "Success",
+        variant: "success",
         description: "Google Calendar connected successfully!",
       });
       // Update the integration status
@@ -124,6 +125,7 @@ export default function Integrations() {
     } else if (params.get('error') === 'connection-failed') {
       toast({
         title: "Connection Failed",
+        variant: "success",
         description: "Failed to connect to Google Calendar. Please try again.",
         variant: "destructive",
       });
@@ -252,6 +254,7 @@ export default function Integrations() {
       await apiRequest('DELETE', `/api/integrations/twilio/numbers/${id}`);
       toast({
         title: "Success",
+        variant: "success",
         description: `Phone number "${name}" deleted successfully`,
       });
       
@@ -274,6 +277,7 @@ export default function Integrations() {
     if (integrationId !== "google-calendar") {
       toast({
         title: "Coming Soon",
+        variant: "success",
         description: "This integration is not yet available.",
       });
       return;
@@ -293,12 +297,14 @@ export default function Integrations() {
       
       toast({
         title: "Sync Complete",
+        variant: "success",
         description: `Synced ${result.syncedEvents} new events from Google Calendar`,
       });
     } catch (error) {
       console.error('Sync error:', error);
       toast({
         title: "Sync Failed",
+        variant: "success",
         description: "Failed to sync with Google Calendar. Please try again.",
         variant: "destructive",
       });
@@ -340,6 +346,7 @@ export default function Integrations() {
       // Slack is already connected via environment variables
       toast({
         title: "Already Connected",
+        variant: "success",
         description: "Slack integration is configured via environment variables and ready to use!",
       });
       return;
@@ -354,6 +361,7 @@ export default function Integrations() {
 
     toast({
       title: "Coming Soon",
+      variant: "success",
       description: "This integration is not yet available.",
     });
   };
@@ -375,6 +383,7 @@ export default function Integrations() {
         
         toast({
           title: "Success",
+          variant: "success",
           description: `Disconnected from ${integrationName}`,
         });
       } catch (error) {
@@ -402,6 +411,7 @@ export default function Integrations() {
         
         toast({
           title: "Success",
+          variant: "success",
           description: `Disconnected from ${integrationName}`,
         });
       } catch (error) {
@@ -429,6 +439,7 @@ export default function Integrations() {
         
         toast({
           title: "Success",
+          variant: "success",
           description: `Disconnected from ${integrationName}`,
         });
       } catch (error) {
@@ -446,6 +457,7 @@ export default function Integrations() {
 
     toast({
       title: "Coming Soon",
+      variant: "success",
       description: "This integration is not yet available.",
     });
   };
@@ -460,11 +472,13 @@ export default function Integrations() {
         if (status.connected) {
           toast({
             title: "Success",
+            variant: "success",
             description: "Google Calendar connection is working correctly!",
           });
         } else {
           toast({
             title: "Connection Issue",
+            variant: "success",
             description: "Google Calendar is not properly connected. Please reconnect.",
             variant: "destructive",
           });
@@ -489,11 +503,13 @@ export default function Integrations() {
         if (status.connected) {
           toast({
             title: "Success",
+            variant: "success",
             description: "Twilio SMS connection is working correctly!",
           });
         } else {
           toast({
             title: "Connection Issue",
+            variant: "success",
             description: "Twilio SMS is not properly connected. Please check your credentials.",
             variant: "destructive",
           });
@@ -517,6 +533,7 @@ export default function Integrations() {
         
         toast({
           title: "Success",
+          variant: "success",
           description: "Test message sent to Slack successfully!",
         });
       } catch (error) {
@@ -538,6 +555,7 @@ export default function Integrations() {
         
         toast({
           title: "Success",
+          variant: "success",
           description: "Test email sent successfully via MailGun!",
         });
       } catch (error) {
@@ -555,6 +573,7 @@ export default function Integrations() {
 
     toast({
       title: "Coming Soon",
+      variant: "success",
       description: "This integration is not yet available.",
     });
   };
@@ -592,6 +611,7 @@ export default function Integrations() {
     if (!twilioSettings.accountSid || !twilioSettings.authToken || !twilioSettings.phoneNumber || !twilioSettings.name) {
       toast({
         title: "Missing Information",
+        variant: "success",
         description: "Please fill in all required fields (Account SID, Auth Token, Phone Number, and Name).",
         variant: "destructive",
       });
@@ -621,6 +641,7 @@ export default function Integrations() {
       
       toast({
         title: "Success",
+        variant: "success",
         description: result.message || "Twilio SMS phone number added successfully!",
       });
       
@@ -642,6 +663,7 @@ export default function Integrations() {
       console.error('Twilio connection error:', error);
       toast({
         title: "Connection Failed",
+        variant: "success",
         description: "Failed to connect to Twilio. Please check your credentials.",
         variant: "destructive",
       });
@@ -654,6 +676,7 @@ export default function Integrations() {
     if (!twilioSettings.testPhoneNumber) {
       toast({
         title: "Missing Phone Number",
+        variant: "success",
         description: "Please enter a test phone number.",
         variant: "destructive",
       });
@@ -669,12 +692,14 @@ export default function Integrations() {
       
       toast({
         title: "Test SMS Sent",
+        variant: "success",
         description: `Test message sent successfully to ${twilioSettings.testPhoneNumber}`,
       });
     } catch (error) {
       console.error('Twilio test error:', error);
       toast({
         title: "Test Failed",
+        variant: "success",
         description: "Failed to send test SMS. Please check your configuration.",
         variant: "destructive",
       });
@@ -689,7 +714,8 @@ export default function Integrations() {
     
     if (!isMaskedApiKey && (!mailgunSettings.apiKey || !mailgunSettings.domain || !mailgunSettings.fromEmail || !mailgunSettings.fromName)) {
       toast({
-        title: "Missing Information", 
+        title: "Missing Information",
+        variant: "success", 
         description: "Please fill in all required fields (API Key, Domain, From Name, and From Email).",
         variant: "destructive",
       });
@@ -699,6 +725,7 @@ export default function Integrations() {
     if (isMaskedApiKey && (!mailgunSettings.domain || !mailgunSettings.fromEmail || !mailgunSettings.fromName)) {
       toast({
         title: "Missing Information",
+        variant: "success",
         description: "Please fill in all required fields (Domain, From Name, and From Email).",
         variant: "destructive", 
       });
@@ -731,6 +758,7 @@ export default function Integrations() {
       
       toast({
         title: "Success",
+        variant: "success",
         description: result.message || "Mailgun connected successfully!",
       });
       
@@ -751,6 +779,7 @@ export default function Integrations() {
       console.error('Mailgun connection error:', error);
       toast({
         title: "Connection Failed",
+        variant: "success",
         description: "Failed to connect to Mailgun. Please check your credentials.",
         variant: "destructive",
       });
@@ -763,6 +792,7 @@ export default function Integrations() {
     if (!mailgunSettings.testEmail) {
       toast({
         title: "Missing Test Email",
+        variant: "success",
         description: "Please enter a test email address.",
         variant: "destructive",
       });
@@ -780,12 +810,14 @@ export default function Integrations() {
       
       toast({
         title: "Test Email Sent",
+        variant: "success",
         description: `Test message sent successfully to ${mailgunSettings.testEmail}`,
       });
     } catch (error) {
       console.error('Mailgun test error:', error);
       toast({
         title: "Test Failed",
+        variant: "success",
         description: "Failed to send test email. Please check your configuration.",
         variant: "destructive",
       });

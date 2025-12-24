@@ -641,12 +641,14 @@ export default function Sales() {
       if (isLowMargin) {
         toast({
           title: "Quote Requires Approval",
+          variant: "success",
           description: `Quote submitted with ${quoteData.margin}% desired margin. Sales Manager approval required before proceeding.`,
           variant: "default",
         });
       } else {
         toast({
           title: "Success",
+          variant: "success",
           description: "Quote saved successfully",
         });
       }
@@ -669,6 +671,7 @@ export default function Sales() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       toast({
         title: "Quote Approved",
+        variant: "success",
         description: "The quote has been successfully approved.",
       });
     },
@@ -690,6 +693,7 @@ export default function Sales() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       toast({
         title: "Quote Rejected",
+        variant: "success",
         description: "The quote has been rejected.",
       });
     },
@@ -711,6 +715,7 @@ export default function Sales() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       toast({
         title: "Status Updated",
+        variant: "success",
         description: "Quote status has been updated successfully.",
       });
     },
@@ -733,6 +738,7 @@ export default function Sales() {
       setDeleteConfirmQuoteId(null);
       toast({
         title: "Success",
+        variant: "success",
         description: "Quote deleted successfully",
       });
     },

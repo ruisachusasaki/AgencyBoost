@@ -170,7 +170,8 @@ export default function Staff() {
       setIsAddDialogOpen(false);
       form.reset();
       toast({
-        title: "Success", 
+        title: "Success",
+        variant: "success", 
         description: "Staff member created successfully",
       });
     },
@@ -214,6 +215,7 @@ export default function Staff() {
       teamForm.reset();
       toast({
         title: "Success",
+        variant: "success",
         description: "Team created successfully",
       });
     },
@@ -1097,6 +1099,7 @@ function CapacitySettingsTab() {
       form.reset();
       toast({
         title: "Success",
+        variant: "success",
         description: "Capacity setting created successfully.",
       });
     },
@@ -1122,6 +1125,7 @@ function CapacitySettingsTab() {
       form.reset();
       toast({
         title: "Success",
+        variant: "success",
         description: "Capacity setting updated successfully.",
       });
     },
@@ -1144,6 +1148,7 @@ function CapacitySettingsTab() {
       queryClient.invalidateQueries({ queryKey: ['/api/capacity-settings'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Capacity setting deleted successfully.",
       });
     },

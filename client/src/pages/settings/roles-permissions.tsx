@@ -382,6 +382,7 @@ export default function RolesPermissions() {
       queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Role created successfully.",
       });
       setIsAddRoleDialogOpen(false);
@@ -406,6 +407,7 @@ export default function RolesPermissions() {
       queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Role updated successfully.",
       });
       setEditingRole(null);
@@ -429,6 +431,7 @@ export default function RolesPermissions() {
       queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Role deleted successfully.",
       });
     },

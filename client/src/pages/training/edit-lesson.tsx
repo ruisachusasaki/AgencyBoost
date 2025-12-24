@@ -149,6 +149,7 @@ export default function EditLesson() {
     onSuccess: () => {
       toast({
         title: "Success!",
+        variant: "success",
         description: "Lesson updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}`] });
@@ -243,6 +244,7 @@ export default function EditLesson() {
 
       toast({
         title: "PDF uploaded",
+        variant: "success",
         description: "PDF file has been uploaded successfully"
       });
 
@@ -295,6 +297,7 @@ export default function EditLesson() {
 
       toast({
         title: "Success!",
+        variant: "success",
         description: "Lesson and quiz updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}`] });
@@ -349,6 +352,7 @@ export default function EditLesson() {
       });
       toast({
         title: "Success!",
+        variant: "success",
         description: "Resource added successfully.",
       });
     },
@@ -377,6 +381,7 @@ export default function EditLesson() {
       });
       toast({
         title: "Success!",
+        variant: "success",
         description: "Resource updated successfully.",
       });
     },
@@ -394,6 +399,7 @@ export default function EditLesson() {
       refetchResources();
       toast({
         title: "Success!",
+        variant: "success",
         description: "Resource deleted successfully.",
       });
     },
@@ -480,6 +486,7 @@ export default function EditLesson() {
       
       toast({
         title: "File uploaded successfully!",
+        variant: "success",
         description: "You can edit the title and click 'Save Resource' to save."
       });
       
@@ -963,6 +970,7 @@ export default function EditLesson() {
 
                               toast({
                                 title: "Success!",
+                                variant: "success",
                                 description: "Assignment updated successfully.",
                               });
                               

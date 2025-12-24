@@ -107,6 +107,7 @@ export function SimpleAddClientForm({ onSuccess }: SimpleAddClientFormProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       toast({
         title: "Client created",
+        variant: "success",
         description: "The client has been successfully created.",
       });
       form.reset();

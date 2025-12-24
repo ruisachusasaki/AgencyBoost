@@ -185,6 +185,7 @@ export default function LeadAppointmentBooking({ leadId, editingAppointment, onS
       queryClient.invalidateQueries({ queryKey: ["/api/calendar-appointments"] });
       toast({
         title: "Success",
+        variant: "success",
         description: editingAppointment ? "Appointment updated successfully!" : "Appointment booked successfully!",
       });
       form.reset();

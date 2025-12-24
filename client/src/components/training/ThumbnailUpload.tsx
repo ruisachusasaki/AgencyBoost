@@ -22,6 +22,7 @@ export function ThumbnailUpload({ value, onChange, onRemove }: ThumbnailUploadPr
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Invalid file type",
+        variant: "success",
         description: "Please select an image file (JPG, PNG, GIF, WebP)",
         variant: "destructive",
       });
@@ -33,6 +34,7 @@ export function ThumbnailUpload({ value, onChange, onRemove }: ThumbnailUploadPr
     if (file.size > maxSize) {
       toast({
         title: "File too large",
+        variant: "success",
         description: "Please select an image smaller than 10MB",
         variant: "destructive",
       });
@@ -84,6 +86,7 @@ export function ThumbnailUpload({ value, onChange, onRemove }: ThumbnailUploadPr
               
               toast({
                 title: "Upload successful",
+                variant: "success",
                 description: "Course thumbnail uploaded successfully",
               });
             } else {
@@ -93,6 +96,7 @@ export function ThumbnailUpload({ value, onChange, onRemove }: ThumbnailUploadPr
             console.error('Error setting ACL:', error);
             toast({
               title: "Upload warning",
+              variant: "success",
               description: "Image uploaded but permissions may not be set correctly",
               variant: "destructive",
             });
@@ -107,6 +111,7 @@ export function ThumbnailUpload({ value, onChange, onRemove }: ThumbnailUploadPr
       xhr.addEventListener('error', () => {
         toast({
           title: "Upload failed",
+          variant: "success",
           description: "Failed to upload image. Please try again.",
           variant: "destructive",
         });
@@ -122,6 +127,7 @@ export function ThumbnailUpload({ value, onChange, onRemove }: ThumbnailUploadPr
       console.error('Upload error:', error);
       toast({
         title: "Upload failed",
+        variant: "success",
         description: "Failed to upload image. Please try again.",
         variant: "destructive",
       });

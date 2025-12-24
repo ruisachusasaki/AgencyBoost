@@ -34,6 +34,7 @@ export default function ImpersonationBanner() {
     onSuccess: () => {
       toast({
         title: "Success",
+        variant: "success",
         description: "Returned to admin account",
       });
       queryClient.invalidateQueries();

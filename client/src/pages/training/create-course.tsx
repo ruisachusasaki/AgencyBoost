@@ -61,6 +61,7 @@ export default function CreateCourse() {
         const newCategory = await response.json();
         toast({
           title: "Success",
+          variant: "success",
           description: "Category created successfully!",
         });
         queryClient.invalidateQueries({ queryKey: ["/api/training/categories"] });
@@ -130,6 +131,7 @@ export default function CreateCourse() {
         const course = await response.json();
         toast({
           title: "Success",
+          variant: "success",
           description: "Course created successfully!",
         });
         queryClient.invalidateQueries({ queryKey: ["/api/training/courses"] });

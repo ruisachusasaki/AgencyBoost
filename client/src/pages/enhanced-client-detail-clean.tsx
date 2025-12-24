@@ -153,6 +153,7 @@ export default function EnhancedClientDetail() {
     if (!smsMessage.trim()) return;
     toast({
       title: "SMS Sent",
+      variant: "success",
       description: `Message sent to ${client?.name}`,
     });
     setSmsMessage("");
@@ -162,6 +163,7 @@ export default function EnhancedClientDetail() {
     if (!emailMessage.trim()) return;
     toast({
       title: "Email Sent",
+      variant: "success",
       description: `Email sent to ${client?.name}`,
     });
     setEmailMessage("");

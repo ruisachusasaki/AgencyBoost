@@ -227,6 +227,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
     onSuccess: () => {
       toast({
         title: "Appointment Created",
+        variant: "success",
         description: "The appointment has been scheduled successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
@@ -263,6 +264,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
     onSuccess: () => {
       toast({
         title: "Appointment Updated",
+        variant: "success",
         description: "The appointment has been updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
@@ -354,6 +356,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
       });
       toast({
         title: "Validation Error",
+        variant: "success",
         description: "Please fill in all required fields (Calendar, Title, Team Member, Date, and Time).",
         variant: "destructive",
       });
@@ -365,6 +368,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
     if (!finalBookerEmail || finalBookerEmail === 'noemail@example.com') {
       toast({
         title: "Email Required",
+        variant: "success",
         description: "A valid email address is required for the appointment.",
         variant: "destructive",
       });

@@ -134,6 +134,7 @@ export default function MyProfile() {
       queryClient.invalidateQueries({ queryKey: ["/api/staff", currentUserId] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Profile updated successfully.",
       });
     },

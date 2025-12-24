@@ -57,6 +57,7 @@ export default function OffboardingSubmissionsView() {
       setSelectedSubmissionId(null); // Close the dialog
       toast({
         title: "Success",
+        variant: "success",
         description: "Status updated successfully",
       });
     },

@@ -187,6 +187,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
       setShowToolbar(false);
       toast({
         title: "Success",
+        variant: "success",
         description: "Comment added successfully",
       });
     },
@@ -362,8 +363,9 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
             type: 'audio/webm'
           }]);
           
-          toast({ 
-            title: "Voice recording saved", 
+          toast({
+            title: "Voice recording saved",
+            variant: "success", 
             description: "Audio will be attached to your comment" 
           });
         }
@@ -897,8 +899,9 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
                       size: file.size,
                       type: file.type
                     }]);
-                    toast({ 
-                      title: "File uploaded successfully", 
+                    toast({
+                      title: "File uploaded successfully",
+                      variant: "success", 
                       description: "File will be attached to your comment"
                     });
                   }

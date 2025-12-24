@@ -117,6 +117,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/team`] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Team assignment updated successfully",
       });
     },
@@ -1145,6 +1146,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Product removed successfully",
       });
     },
@@ -1171,6 +1173,7 @@ export default function EnhancedClientDetail() {
     onSuccess: () => {
       toast({
         title: "Document deleted",
+        variant: "success",
         description: "The document has been successfully removed.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] });
@@ -1178,6 +1181,7 @@ export default function EnhancedClientDetail() {
     onError: (error: Error) => {
       toast({
         title: "Delete failed",
+        variant: "success",
         description: error.message,
         variant: "destructive",
       });
@@ -1200,6 +1204,7 @@ export default function EnhancedClientDetail() {
       setNewNote("");
       toast({
         title: "Success",
+        variant: "success",
         description: "Note created successfully",
       });
     },
@@ -1227,6 +1232,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'notes'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Note updated successfully",
       });
     },
@@ -1252,6 +1258,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'notes'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Note deleted successfully",
       });
     },
@@ -1299,6 +1306,7 @@ export default function EnhancedClientDetail() {
       setIsTaskDialogOpen(false);
       toast({
         title: "Success",
+        variant: "success",
         description: "Task created successfully",
       });
     },
@@ -1326,6 +1334,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'tasks'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Task updated successfully",
       });
     },
@@ -1375,6 +1384,7 @@ export default function EnhancedClientDetail() {
       setEditFilteredAssignees([]);
       toast({
         title: "Success",
+        variant: "success",
         description: "Task updated successfully",
       });
     },
@@ -1406,6 +1416,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] }); // Also invalidate global tasks
       toast({
         title: "Success",
+        variant: "success",
         description: "Task deleted successfully",
       });
     },
@@ -1434,6 +1445,7 @@ export default function EnhancedClientDetail() {
       setNewComment("");
       toast({
         title: "Success",
+        variant: "success",
         description: "Comment added successfully",
       });
     },
@@ -1463,6 +1475,7 @@ export default function EnhancedClientDetail() {
       setEditCommentContent("");
       toast({
         title: "Success",
+        variant: "success",
         description: "Comment updated successfully",
       });
     },
@@ -1488,6 +1501,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks', variables.taskId, 'comments'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Comment deleted successfully",
       });
     },
@@ -1518,6 +1532,7 @@ export default function EnhancedClientDetail() {
       setTempQuantities({});
       toast({
         title: "Bundle customized",
+        variant: "success",
         description: `Bundle quantities updated. New price: $${data.newPrice?.toFixed(2)}`,
       });
     },
@@ -1555,6 +1570,7 @@ export default function EnhancedClientDetail() {
       setOwnerSearchTerm("");
       toast({
         title: "Owner assigned",
+        variant: "success",
         description: "Contact owner has been updated successfully",
       });
     },
@@ -1593,6 +1609,7 @@ export default function EnhancedClientDetail() {
       setFollowerSearchTerm("");
       toast({
         title: "Followers updated",
+        variant: "success",
         description: "Client followers have been updated successfully",
       });
     },
@@ -1629,6 +1646,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
       toast({
         title: "Communication preferences updated",
+        variant: "success",
         description: "DND settings have been updated successfully",
       });
     },
@@ -1824,6 +1842,7 @@ export default function EnhancedClientDetail() {
     setShowTemplateModal(false);
     toast({
       title: "Template Applied",
+      variant: "success",
       description: `"${templateName}" template has been loaded into your email.`,
     });
   };
@@ -1836,6 +1855,7 @@ export default function EnhancedClientDetail() {
     // Implementation for sending email immediately
     toast({
       title: "Email Sent",
+      variant: "success",
       description: "Your email has been sent successfully.",
     });
     setShowSendModal(false);
@@ -1845,6 +1865,7 @@ export default function EnhancedClientDetail() {
     // Implementation for scheduling email
     toast({
       title: "Email Scheduled",
+      variant: "success",
       description: `Your email has been scheduled for ${scheduledDate} at ${scheduledTime} (${scheduledTimezone}).`,
     });
     setShowSendModal(false);
@@ -1878,6 +1899,7 @@ export default function EnhancedClientDetail() {
     if (client?.dndAll || client?.dndSms) {
       toast({
         title: "Cannot Send SMS",
+        variant: "success",
         description: `${client?.name} has SMS communications disabled (DND active)`,
         variant: "destructive",
       });
@@ -1886,6 +1908,7 @@ export default function EnhancedClientDetail() {
     
     toast({
       title: "SMS Sent",
+      variant: "success",
       description: `Message sent to ${client?.name}`,
     });
     setSmsMessage("");
@@ -1898,6 +1921,7 @@ export default function EnhancedClientDetail() {
     if (client?.dndAll || client?.dndEmail) {
       toast({
         title: "Cannot Send Email",
+        variant: "success",
         description: `${client?.name} has email communications disabled (DND active)`,
         variant: "destructive",
       });
@@ -1906,6 +1930,7 @@ export default function EnhancedClientDetail() {
     
     toast({
       title: "Email Sent",
+      variant: "success",
       description: `Email sent to ${client?.name}`,
     });
     setEmailMessage("");
@@ -1920,6 +1945,7 @@ export default function EnhancedClientDetail() {
       if (currentTags.includes(tagName)) {
         toast({
           title: "Tag already exists",
+          variant: "success",
           description: `"${tagName}" is already assigned to this client`,
           variant: "destructive"
         });
@@ -1933,6 +1959,7 @@ export default function EnhancedClientDetail() {
 
       toast({
         title: "Tag added",
+        variant: "success",
         description: `"${tagName}" has been added to ${client.name}`,
       });
 
@@ -1970,6 +1997,7 @@ export default function EnhancedClientDetail() {
 
       toast({
         title: "Tag created",
+        variant: "success",
         description: `"${newTagName}" has been created and added to ${client?.name}`,
       });
     } catch (error) {
@@ -2015,6 +2043,7 @@ export default function EnhancedClientDetail() {
       if (isAlreadyAssigned) {
         toast({
           title: "Product already exists",
+          variant: "success",
           description: `"${productName}" is already assigned to this client`,
           variant: "destructive"
         });
@@ -2027,6 +2056,7 @@ export default function EnhancedClientDetail() {
 
       toast({
         title: "Product added",
+        variant: "success",
         description: `"${productName}" has been added to ${client.name}`,
       });
 
@@ -2066,6 +2096,7 @@ export default function EnhancedClientDetail() {
 
       toast({
         title: "Product created",
+        variant: "success",
         description: `"${newServiceName}" has been created and added to ${client?.name}`,
       });
     } catch (error) {
@@ -2133,6 +2164,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
       toast({
         title: "Field Updated",
+        variant: "success",
         description: "Field value has been saved successfully.",
       });
       setEditingField(null);
@@ -2141,6 +2173,7 @@ export default function EnhancedClientDetail() {
     onError: (error: any) => {
       toast({
         title: "Update Failed",
+        variant: "success",
         description: error.message || "Failed to update field value.",
         variant: "destructive"
       });
@@ -5574,6 +5607,7 @@ function TaskComments({ taskId }: { taskId: string }) {
       setNewComment("");
       toast({
         title: "Success",
+        variant: "success",
         description: "Comment added successfully",
       });
     },
@@ -5603,6 +5637,7 @@ function TaskComments({ taskId }: { taskId: string }) {
       setEditCommentContent("");
       toast({
         title: "Success",
+        variant: "success",
         description: "Comment updated successfully",
       });
     },
@@ -5628,6 +5663,7 @@ function TaskComments({ taskId }: { taskId: string }) {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId, 'comments'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Comment deleted successfully",
       });
     },

@@ -127,6 +127,7 @@ export default function Campaigns() {
       setIsCreateFolderDialogOpen(false);
       toast({
         title: "Folder created",
+        variant: "success",
         description: "Template folder has been created successfully.",
       });
     },
@@ -149,6 +150,7 @@ export default function Campaigns() {
       handleDialogClose();
       toast({
         title: "Email template created",
+        variant: "success",
         description: "Email template has been created successfully.",
       });
     },
@@ -170,6 +172,7 @@ export default function Campaigns() {
       handleDialogClose();
       toast({
         title: "SMS template created",
+        variant: "success",
         description: "SMS template has been created successfully.",
       });
     },
@@ -191,6 +194,7 @@ export default function Campaigns() {
       queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
       toast({
         title: "Template deleted",
+        variant: "success",
         description: "Email template has been deleted successfully.",
       });
     },
@@ -204,6 +208,7 @@ export default function Campaigns() {
       queryClient.invalidateQueries({ queryKey: ["/api/sms-templates"] });
       toast({
         title: "Template deleted",
+        variant: "success",
         description: "SMS template has been deleted successfully.",
       });
     },
@@ -220,6 +225,7 @@ export default function Campaigns() {
       handleEditDialogClose();
       toast({
         title: "Email template updated",
+        variant: "success",
         description: "Email template has been updated successfully.",
       });
     },
@@ -235,6 +241,7 @@ export default function Campaigns() {
       handleEditDialogClose();
       toast({
         title: "SMS template updated",
+        variant: "success",
         description: "SMS template has been updated successfully.",
       });
     },

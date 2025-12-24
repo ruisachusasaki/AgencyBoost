@@ -103,6 +103,7 @@ export default function LessonManagement() {
       moduleForm.reset();
       toast({
         title: "Module created",
+        variant: "success",
         description: "The module has been created successfully.",
       });
     },
@@ -138,6 +139,7 @@ export default function LessonManagement() {
       queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/lessons`] });
       toast({
         title: "Lesson updated",
+        variant: "success",
         description: data.message,
       });
     },
@@ -171,6 +173,7 @@ export default function LessonManagement() {
       moduleForm.reset();
       toast({
         title: "Module updated",
+        variant: "success",
         description: "The module has been updated successfully.",
       });
     },
@@ -198,6 +201,7 @@ export default function LessonManagement() {
       setDeleteModuleId(null);
       toast({
         title: "Module deleted",
+        variant: "success",
         description: "The module has been deleted successfully.",
       });
     },
@@ -245,6 +249,7 @@ export default function LessonManagement() {
       setDeleteLessonId(null);
       toast({
         title: "Lesson deleted",
+        variant: "success",
         description: "The lesson has been deleted successfully.",
       });
     },
@@ -280,6 +285,7 @@ export default function LessonManagement() {
       queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/modules`] });
       toast({
         title: "Modules reordered",
+        variant: "success",
         description: "The modules have been reordered successfully.",
       });
     },
@@ -310,6 +316,7 @@ export default function LessonManagement() {
       queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}/lessons`] });
       toast({
         title: "Lessons reordered",
+        variant: "success",
         description: "The lessons have been reordered successfully.",
       });
     },

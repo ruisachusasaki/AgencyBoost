@@ -162,6 +162,7 @@ export default function ExpenseReportForm() {
       queryClient.invalidateQueries({ queryKey: ['/api/expense-report-submissions'] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Your expense report has been submitted successfully!",
       });
     },

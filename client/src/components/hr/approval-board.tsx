@@ -152,6 +152,7 @@ export default function ApprovalBoard() {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests/pending-for-approval"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Time off request deleted successfully",
       });
     },
@@ -181,6 +182,7 @@ export default function ApprovalBoard() {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests/pending-for-approval"] });
       toast({
         title: "Success",
+        variant: "success",
         description: `Time off request ${action === "approve" ? "approved" : "rejected"} successfully`,
       });
       handleCloseDialog();

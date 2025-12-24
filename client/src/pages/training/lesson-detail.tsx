@@ -77,6 +77,7 @@ export default function LessonDetail() {
     onSuccess: () => {
       toast({
         title: "Great job!",
+        variant: "success",
         description: "Lesson marked as completed!",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}`] });
@@ -114,6 +115,7 @@ export default function LessonDetail() {
     onSuccess: () => {
       toast({
         title: "Success!",
+        variant: "success",
         description: "Assignment submitted successfully!",
       });
       refetchSubmission();

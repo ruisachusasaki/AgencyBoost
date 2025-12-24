@@ -51,6 +51,7 @@ export default function CampaignForm({ campaign, onSuccess }: CampaignFormProps)
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       toast({
         title: "Campaign created",
+        variant: "success",
         description: "The campaign has been successfully created.",
       });
       onSuccess?.();
@@ -72,6 +73,7 @@ export default function CampaignForm({ campaign, onSuccess }: CampaignFormProps)
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       toast({
         title: "Campaign updated",
+        variant: "success",
         description: "The campaign has been successfully updated.",
       });
       onSuccess?.();

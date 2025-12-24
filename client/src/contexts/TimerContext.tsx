@@ -114,6 +114,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
     if (currentTimer) {
       toast({
         title: "Timer Already Running",
+        variant: "success",
         description: `Please stop the current timer for "${currentTimer.taskTitle}" first.`,
         variant: "destructive",
       });
@@ -124,6 +125,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
     if (!currentUser?.id) {
       toast({
         title: "Please Wait",
+        variant: "success",
         description: "Loading user information...",
         variant: "destructive",
       });
@@ -160,6 +162,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
       toast({
         title: "Timer Started",
+        variant: "success",
         description: `Started tracking time for "${taskTitle}"`,
       });
     } catch (error) {
@@ -207,6 +210,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
       toast({
         title: "Timer Stopped",
+        variant: "success",
         description: `Logged ${duration} minutes for "${currentTimer.taskTitle}"`,
       });
 

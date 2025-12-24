@@ -92,6 +92,7 @@ export default function CourseDetail() {
     onSuccess: () => {
       toast({
         title: "Success",
+        variant: "success",
         description: "Successfully enrolled in the course!",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}`] });
@@ -123,6 +124,7 @@ export default function CourseDetail() {
     onSuccess: () => {
       toast({
         title: "Success",
+        variant: "success",
         description: "Lesson marked as incomplete",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/training/courses/${courseId}`] });

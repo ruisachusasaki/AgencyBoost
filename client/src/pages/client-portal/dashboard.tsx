@@ -126,6 +126,7 @@ function TaskCard({ task }: { task: ClientTask }) {
       setApprovalNotes("");
       toast({
         title: "Task Approved",
+        variant: "success",
         description: "Your approval has been recorded successfully.",
       });
     },
@@ -152,6 +153,7 @@ function TaskCard({ task }: { task: ClientTask }) {
       setChangesNotes("");
       toast({
         title: "Changes Requested",
+        variant: "success",
         description: "Your feedback has been sent to the team.",
       });
     },

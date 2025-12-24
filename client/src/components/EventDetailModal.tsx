@@ -160,6 +160,7 @@ export function EventDetailModal({
     onSuccess: () => {
       toast({
         title: "Event updated",
+        variant: "success",
         description: "Your changes have been saved.",
       });
       setIsEditing(false);
@@ -193,6 +194,7 @@ export function EventDetailModal({
     onSuccess: () => {
       toast({
         title: "Event deleted",
+        variant: "success",
         description: "The event has been removed from your calendar.",
       });
       setShowDeleteConfirm(false);
@@ -225,11 +227,13 @@ export function EventDetailModal({
       if (data.task || data.timeEntry) {
         toast({
           title: "Appointment marked as Showed",
+          variant: "success",
           description: data.message || "Time has been automatically tracked for this meeting.",
         });
       } else {
         toast({
           title: "Status updated",
+          variant: "success",
           description: "Appointment status has been updated.",
         });
       }

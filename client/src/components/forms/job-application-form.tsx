@@ -95,6 +95,7 @@ export default function JobApplicationForm({ onSuccess, preSelectedPosition }: J
     onSuccess: () => {
       toast({
         title: "Application Submitted!",
+        variant: "success",
         description: "Your job application has been submitted successfully. We'll be in touch soon!",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/job-applications"] });
@@ -105,6 +106,7 @@ export default function JobApplicationForm({ onSuccess, preSelectedPosition }: J
       console.error("Application submission error:", error);
       toast({
         title: "Submission Failed",
+        variant: "success",
         description: error instanceof Error ? error.message : "There was an error submitting your application. Please try again.",
         variant: "destructive",
       });

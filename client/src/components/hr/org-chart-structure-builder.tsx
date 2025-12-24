@@ -75,6 +75,7 @@ export default function OrgChartStructureBuilder() {
       queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Position removed from org chart",
       });
     },
@@ -115,6 +116,7 @@ export default function OrgChartStructureBuilder() {
         : "Position added to org chart. You can now drag it to place it in the hierarchy.";
       toast({
         title: "Success",
+        variant: "success",
         description: contextMessage,
       });
     },
@@ -143,6 +145,7 @@ export default function OrgChartStructureBuilder() {
       queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
       toast({
         title: "Success",
+        variant: "success",
         description: "Org structure updated successfully",
       });
     },
