@@ -381,7 +381,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[60vh] overflow-y-auto px-1 pr-4">
         {/* 1. Task Title */}
         <FormField
           control={form.control}
