@@ -619,8 +619,17 @@ export default function ArticleView() {
   useEffect(() => {
     if (article) {
       const parsedContent = parseContent(article.content);
-      setCurrentContent(parsedContent);
-      setEditContent(parsedContent);
+      // Double-ensure leading empty elements are stripped
+      const cleanedContent = stripLeadingEmptyElements(parsedContent);
+      console.log('Article content debug:', {
+        raw: JSON.stringify(article.content)?.substring(0, 200),
+        parsed: JSON.stringify(parsedContent)?.substring(0, 200),
+        cleaned: JSON.stringify(cleanedContent)?.substring(0, 200),
+        firstNodeType: (cleanedContent[0] as any)?.type,
+        firstNodeEmpty: isEmptyNode(cleanedContent[0])
+      });
+      setCurrentContent(cleanedContent);
+      setEditContent(cleanedContent);
       setEditTitle((article.title as string) || "");
     }
   }, [article]);
