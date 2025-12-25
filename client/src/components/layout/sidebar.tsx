@@ -146,7 +146,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
         "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
         isActive
           ? "text-white bg-primary"
-          : "text-slate-700 hover:bg-slate-100",
+          : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800",
         isCollapsed && !isMobile && "justify-center"
       )}>
         <Icon className="h-4 w-4" />
@@ -174,7 +174,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
     <TooltipProvider>
       {/* Desktop sidebar */}
       <aside className={cn(
-        "bg-white shadow-sm border-r border-slate-200 transition-all duration-300 relative min-h-screen",
+        "bg-white dark:bg-slate-900 shadow-sm border-r border-slate-200 dark:border-slate-700 transition-all duration-300 relative min-h-screen",
         isMobile ? "hidden" : "block",
         isCollapsed ? "w-16" : "w-64"
       )}>
@@ -186,7 +186,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <TrendingUp className="h-4 w-4 text-white" />
             </div>
-            {!isCollapsed && <h1 className="text-xl font-bold">Agency<span className="text-primary">Boost</span></h1>}
+            {!isCollapsed && <h1 className="text-xl font-bold text-slate-900 dark:text-white">Agency<span className="text-primary">Boost</span></h1>}
           </div>
         </div>
         
@@ -194,15 +194,15 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
         <button
           onClick={onToggleCollapse}
           className={cn(
-            "absolute top-6 -right-3 w-6 h-6 bg-white border border-slate-200 rounded-full flex items-center justify-center hover:bg-slate-50 transition-colors z-10",
+            "absolute top-6 -right-3 w-6 h-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-full flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors z-10",
             "shadow-sm"
           )}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {isCollapsed ? (
-            <ChevronRight className="h-3 w-3 text-slate-600" />
+            <ChevronRight className="h-3 w-3 text-slate-600 dark:text-slate-300" />
           ) : (
-            <ChevronLeft className="h-3 w-3 text-slate-600" />
+            <ChevronLeft className="h-3 w-3 text-slate-600 dark:text-slate-300" />
           )}
         </button>
         
@@ -220,22 +220,22 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       {/* Mobile sidebar */}
       {isMobile && (
         <aside className={cn(
-          "fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-50 transition-transform duration-300",
+          "fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-900 shadow-lg z-50 transition-transform duration-300",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-          <div className="p-6 border-b border-slate-200">
+          <div className="p-6 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                   <TrendingUp className="h-4 w-4 text-white" />
                 </div>
-                <h1 className="text-xl font-bold">Agency<span className="text-primary">Boost</span></h1>
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white">Agency<span className="text-primary">Boost</span></h1>
               </div>
               <button 
                 onClick={onClose}
-                className="p-1 rounded-lg hover:bg-slate-100"
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                <X className="h-5 w-5 text-slate-600" />
+                <X className="h-5 w-5 text-slate-600 dark:text-slate-300" />
               </button>
             </div>
           </div>
@@ -254,7 +254,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
                         "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
                         isActive
                           ? "text-white bg-primary"
-                          : "text-slate-700 hover:bg-slate-100"
+                          : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                       )}
                     >
                       <Icon className="h-4 w-4" />
