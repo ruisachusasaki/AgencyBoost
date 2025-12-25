@@ -182,6 +182,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comments`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/activities`] });
       setNewComment("");
       setPendingFiles([]);
       setShowToolbar(false);
