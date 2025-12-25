@@ -868,7 +868,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
 
       {/* Add Comment Form */}
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="flex flex-col">
+        <div className={`flex flex-col rounded-md border transition-colors ${showToolbar ? 'border-primary ring-1 ring-primary' : 'border-input'}`}>
           <Textarea
             ref={textareaRef}
             placeholder="Add a comment... Use @name to mention someone"
@@ -876,13 +876,13 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
             onChange={(e) => handleTextChange(e.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={() => setShowToolbar(true)}
-            className="min-h-[80px] resize-none rounded-b-none border-b-0"
+            className="min-h-[80px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-b-none"
             rows={3}
           />
           
           {/* Comment Input Toolbar - Below textarea */}
           {showToolbar && (
-            <div className="flex items-center gap-2 px-3 py-2 border border-t-0 border-input rounded-b-md bg-slate-50">
+            <div className="flex items-center gap-2 px-3 py-2 border-t border-slate-200 bg-slate-50 rounded-b-md">
               {/* File Upload */}
               <FileUploader
                 onGetUploadParameters={async () => {
