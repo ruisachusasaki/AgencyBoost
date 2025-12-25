@@ -6,8 +6,9 @@ import {
   Type, Heading1, Heading2, Heading3, List, ListOrdered, 
   Quote, Code, ChevronRight, AlertCircle, Info, AlertTriangle,
   Bold, Italic, Underline, CheckSquare, Columns, Palette, Flag, FileText,
-  Youtube, Image, Link, Minus, Highlighter, MoreHorizontal, Table2, Plus, Trash2
+  Youtube, Image, Link, Minus, Highlighter, MoreHorizontal, Table2, Plus, Trash2, Upload, Loader2
 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -365,7 +366,54 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
     altText: string;
     linkText: string;
     savedSelection: Range | null;
-  }>({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null });
+    imageMode: 'url' | 'upload';
+    isUploading: boolean;
+  }>({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null, imageMode: 'url', isUploading: false });
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Handle image file upload
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      console.error('Please select an image file');
+      return;
+    }
+    
+    setUrlDialog(prev => ({ ...prev, isUploading: true }));
+    
+    try {
+      // Get upload URL from server
+      const uploadResponse = await fetch('/api/objects/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to get upload URL');
+      }
+      
+      const { uploadURL } = await uploadResponse.json();
+      
+      // Upload file directly to object storage
+      const uploadFileResponse = await fetch(uploadURL, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+      
+      if (!uploadFileResponse.ok) {
+        throw new Error('Failed to upload image');
+      }
+      
+      // The uploadURL contains the file path, extract just the path portion for displaying
+      const imageUrl = uploadURL.split('?')[0]; // Remove query params
+      
+      setUrlDialog(prev => ({ ...prev, url: imageUrl, isUploading: false }));
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      setUrlDialog(prev => ({ ...prev, isUploading: false }));
+    }
+  };
 
   const renderElement = useCallback((props: any) => <Element {...props} />, []);
   const renderLeaf = useCallback((props: any) => <Leaf {...props} />, []);
@@ -1038,7 +1086,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       )}
 
       {/* URL Input Dialog */}
-      <Dialog open={urlDialog.open} onOpenChange={(open) => !open && setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null })}>
+      <Dialog open={urlDialog.open} onOpenChange={(open) => !open && setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null, imageMode: 'url', isUploading: false })}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -1047,53 +1095,126 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
             </DialogTitle>
             <DialogDescription>
               {urlDialog.type === 'embed' ? `Enter the URL for your ${urlDialog.title?.toLowerCase()}.` :
-               urlDialog.type === 'image' ? 'Enter the URL for your image.' : 'Enter the URL and text for your link.'}
+               urlDialog.type === 'image' ? 'Add an image by URL or upload from your computer.' : 'Enter the URL and text for your link.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="url">URL</Label>
-              <Input
-                id="url"
-                placeholder={urlDialog.type === 'embed' ? `https://www.youtube.com/watch?v=...` : 
-                            urlDialog.type === 'image' ? 'https://example.com/image.jpg' : 'https://example.com'}
-                value={urlDialog.url}
-                onChange={(e) => setUrlDialog(prev => ({ ...prev, url: e.target.value }))}
-                data-testid="input-url"
-              />
-            </div>
-            {urlDialog.type === 'image' && (
-              <div className="space-y-2">
-                <Label htmlFor="alt">Description (optional)</Label>
-                <Input
-                  id="alt"
-                  placeholder="Image description for accessibility"
-                  value={urlDialog.altText}
-                  onChange={(e) => setUrlDialog(prev => ({ ...prev, altText: e.target.value }))}
-                  data-testid="input-alt"
-                />
-              </div>
-            )}
-            {urlDialog.type === 'link' && urlDialog.savedSelection && Range.isCollapsed(urlDialog.savedSelection) && (
-              <div className="space-y-2">
-                <Label htmlFor="linkText">Link Text</Label>
-                <Input
-                  id="linkText"
-                  placeholder="Click here"
-                  value={urlDialog.linkText}
-                  onChange={(e) => setUrlDialog(prev => ({ ...prev, linkText: e.target.value }))}
-                  data-testid="input-link-text"
-                />
-              </div>
-            )}
-            {urlDialog.type === 'link' && urlDialog.savedSelection && !Range.isCollapsed(urlDialog.savedSelection) && (
-              <p className="text-sm text-muted-foreground">The selected text will become a clickable link.</p>
+            {/* Image type with tabs for URL and Upload */}
+            {urlDialog.type === 'image' ? (
+              <Tabs value={urlDialog.imageMode} onValueChange={(v) => setUrlDialog(prev => ({ ...prev, imageMode: v as 'url' | 'upload', url: '' }))}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="url" data-testid="tab-url">
+                    <Link className="h-4 w-4 mr-2" />
+                    URL
+                  </TabsTrigger>
+                  <TabsTrigger value="upload" data-testid="tab-upload">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="url" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="url">Image URL</Label>
+                    <Input
+                      id="url"
+                      placeholder="https://example.com/image.jpg"
+                      value={urlDialog.url}
+                      onChange={(e) => setUrlDialog(prev => ({ ...prev, url: e.target.value }))}
+                      data-testid="input-image-url"
+                    />
+                  </div>
+                </TabsContent>
+                <TabsContent value="upload" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label>Upload Image</Label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload(file);
+                      }}
+                      data-testid="input-image-file"
+                    />
+                    <div 
+                      className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file && file.type.startsWith('image/')) handleImageUpload(file);
+                      }}
+                    >
+                      {urlDialog.isUploading ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          <p className="text-sm text-muted-foreground">Uploading...</p>
+                        </div>
+                      ) : urlDialog.url ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <img src={urlDialog.url} alt="Preview" className="max-h-32 rounded" />
+                          <p className="text-sm text-muted-foreground">Click or drag to replace</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <Upload className="h-8 w-8 text-gray-400" />
+                          <p className="text-sm font-medium">Click to upload or drag and drop</p>
+                          <p className="text-xs text-muted-foreground">PNG, JPG, GIF up to 10MB</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+                <div className="space-y-2 mt-4">
+                  <Label htmlFor="alt">Description (optional)</Label>
+                  <Input
+                    id="alt"
+                    placeholder="Image description for accessibility"
+                    value={urlDialog.altText}
+                    onChange={(e) => setUrlDialog(prev => ({ ...prev, altText: e.target.value }))}
+                    data-testid="input-alt"
+                  />
+                </div>
+              </Tabs>
+            ) : (
+              <>
+                {/* Non-image types (embed, link) */}
+                <div className="space-y-2">
+                  <Label htmlFor="url">URL</Label>
+                  <Input
+                    id="url"
+                    placeholder={urlDialog.type === 'embed' ? `https://www.youtube.com/watch?v=...` : 'https://example.com'}
+                    value={urlDialog.url}
+                    onChange={(e) => setUrlDialog(prev => ({ ...prev, url: e.target.value }))}
+                    data-testid="input-url"
+                  />
+                </div>
+                {urlDialog.type === 'link' && urlDialog.savedSelection && Range.isCollapsed(urlDialog.savedSelection) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="linkText">Link Text</Label>
+                    <Input
+                      id="linkText"
+                      placeholder="Click here"
+                      value={urlDialog.linkText}
+                      onChange={(e) => setUrlDialog(prev => ({ ...prev, linkText: e.target.value }))}
+                      data-testid="input-link-text"
+                    />
+                  </div>
+                )}
+                {urlDialog.type === 'link' && urlDialog.savedSelection && !Range.isCollapsed(urlDialog.savedSelection) && (
+                  <p className="text-sm text-muted-foreground">The selected text will become a clickable link.</p>
+                )}
+              </>
             )}
           </div>
           <DialogFooter>
             <Button 
               variant="outline" 
-              onClick={() => setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null })}
+              onClick={() => setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null, imageMode: 'url', isUploading: false })}
             >
               Cancel
             </Button>
@@ -1158,7 +1279,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
                   }
                 }
                 
-                setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null });
+                setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null, imageMode: 'url', isUploading: false });
               }}
               disabled={!urlDialog.url}
               data-testid="button-insert"
