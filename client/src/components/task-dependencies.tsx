@@ -197,12 +197,12 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
   return (
     <div className="space-y-6">
       {/* Dependencies Section - Tasks this task depends on */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Link2 className="h-5 w-5" />
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-medium flex items-center gap-2">
+            <Link2 className="h-4 w-4" />
             Dependencies ({dependencies.length})
-          </CardTitle>
+          </h3>
           <Button 
             onClick={() => setShowAddForm(!showAddForm)} 
             size="sm"
@@ -210,10 +210,10 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
             data-testid="button-add-dependency"
           >
             <Plus className="h-4 w-4 mr-1" />
-            Add Dependency
+            Add
           </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        </div>
+        <div className="space-y-4">
           {/* Add Dependency Form */}
           {showAddForm && (
             <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 space-y-4">
@@ -313,20 +313,17 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Dependent Tasks Section - Tasks that depend on this task */}
       {dependentTasks.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Link2 className="h-5 w-5 rotate-180" />
-              Dependent Tasks ({dependentTasks.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+        <div>
+          <h3 className="text-sm font-medium flex items-center gap-2 mb-4">
+            <Link2 className="h-4 w-4 rotate-180" />
+            Dependent Tasks ({dependentTasks.length})
+          </h3>
+          <div className="space-y-3">
               {dependentTasks.map((dependentTask) => (
                 <div 
                   key={dependentTask.id} 
@@ -350,8 +347,7 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+        </div>
       )}
     </div>
   );
