@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link2, Plus, X, AlertCircle, Clock, CheckCircle } from "lucide-react";
+import { Link2, Plus, X, AlertCircle, Clock, CheckCircle, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -54,11 +55,23 @@ interface TaskDependenciesProps {
   taskId: string;
 }
 
-const dependencyTypeLabels = {
-  finish_to_start: "Finish to Start",
-  start_to_start: "Start to Start", 
-  finish_to_finish: "Finish to Finish",
-  start_to_finish: "Start to Finish"
+const dependencyTypeLabels: Record<string, { label: string; description: string }> = {
+  finish_to_start: {
+    label: "Must finish first",
+    description: "The other task must be completed before this task can start"
+  },
+  start_to_start: {
+    label: "Must start first",
+    description: "The other task must be started before this task can start"
+  },
+  finish_to_finish: {
+    label: "Must finish together",
+    description: "The other task must be completed before this task can be completed"
+  },
+  start_to_finish: {
+    label: "Blocks my completion",
+    description: "The other task must start before this task can be completed (rare)"
+  }
 };
 
 const getStatusIcon = (status: string, completedAt: string | null) => {
@@ -237,15 +250,30 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Dependency Type</label>
+                  <div className="flex items-center gap-1 mb-2">
+                    <label className="text-sm font-medium">Dependency Type</label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3.5 w-3.5 text-gray-400 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p className="text-xs">Choose how the selected task relates to this one. The most common is "Must finish first" - meaning the other task must be done before this task can begin.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Select value={selectedDependencyType} onValueChange={setSelectedDependencyType}>
                     <SelectTrigger data-testid="select-dependency-type">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(dependencyTypeLabels).map(([value, label]) => (
+                      {Object.entries(dependencyTypeLabels).map(([value, config]) => (
                         <SelectItem key={value} value={value}>
-                          {label}
+                          <div className="flex flex-col">
+                            <span>{config.label}</span>
+                            <span className="text-xs text-gray-500">{config.description}</span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -289,7 +317,7 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
                       <h4 className="font-medium text-sm">{dependency.task.title}</h4>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="secondary" className="text-xs">
-                          {dependencyTypeLabels[dependency.dependencyType]}
+                          {dependencyTypeLabels[dependency.dependencyType]?.label}
                         </Badge>
                         <Badge 
                           variant="secondary" 
@@ -334,7 +362,7 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
                     <h4 className="font-medium text-sm">{dependentTask.task.title}</h4>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="secondary" className="text-xs">
-                        {dependencyTypeLabels[dependentTask.dependencyType]}
+                        {dependencyTypeLabels[dependentTask.dependencyType]?.label}
                       </Badge>
                       <Badge 
                         variant="secondary" 
