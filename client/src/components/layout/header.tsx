@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import TimerIndicator from "@/components/timer-indicator";
 import LoginAsDropdown from "@/components/admin/login-as-dropdown";
+import { ThemeToggleButton } from "@/components/theme-toggle";
 import type { Staff } from "@shared/schema";
 
 interface HeaderProps {
@@ -394,7 +395,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
   });
 
   return (
-    <header className="bg-white border-b border-slate-200 px-6 py-4">
+    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           {isMobile && (
@@ -416,15 +417,17 @@ export default function Header({ onMenuClick }: HeaderProps) {
           {/* Global search */}
           <GlobalSearch />
           
+          <ThemeToggleButton />
+          
           <NotificationButton />
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button 
-                className="flex items-center gap-3 hover:bg-slate-50 rounded-lg px-2 py-1 transition-colors cursor-pointer"
+                className="flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg px-2 py-1 transition-colors cursor-pointer"
                 data-testid="button-user-menu"
               >
-                <span className="text-sm font-medium text-slate-700 hidden sm:block">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200 hidden sm:block">
                   {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'}
                 </span>
                 <Avatar className="w-8 h-8" data-testid="img-avatar">
