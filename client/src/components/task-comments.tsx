@@ -868,7 +868,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
 
       {/* Add Comment Form */}
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="relative">
+        <div className="flex flex-col">
           <Textarea
             ref={textareaRef}
             placeholder="Add a comment... Use @name to mention someone"
@@ -876,13 +876,13 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
             onChange={(e) => handleTextChange(e.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={() => setShowToolbar(true)}
-            className="min-h-[80px] resize-none"
+            className="min-h-[80px] resize-none rounded-b-none border-b-0"
             rows={3}
           />
           
-          {/* Comment Input Toolbar */}
+          {/* Comment Input Toolbar - Below textarea */}
           {showToolbar && (
-            <div className="absolute bottom-2 left-2 flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-2 border border-t-0 border-input rounded-b-md bg-slate-50">
               {/* File Upload */}
               <FileUploader
                 onGetUploadParameters={async () => {
@@ -939,20 +939,22 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
           
           {/* Mention Dropdown */}
           {showMentionDropdown && filteredStaff.length > 0 && (
-            <div className="absolute z-10 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
-              {filteredStaff.slice(0, 5).map((staff: any, index: number) => (
-                <button
-                  key={staff.id}
-                  type="button"
-                  className={`w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 ${
-                    index === selectedMentionIndex ? 'bg-blue-100 text-blue-900' : ''
-                  }`}
-                  onClick={() => insertMention(staff.id, staff.name || `${staff.firstName} ${staff.lastName}`.trim())}
-                >
-                  <AtSign className={`h-4 w-4 ${index === selectedMentionIndex ? 'text-blue-600' : 'text-slate-400'}`} />
-                  <span>{staff.name || `${staff.firstName} ${staff.lastName}`.trim()}</span>
-                </button>
-              ))}
+            <div className="relative">
+              <div className="absolute z-10 bottom-full mb-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-40 overflow-y-auto w-full">
+                {filteredStaff.slice(0, 5).map((staff: any, index: number) => (
+                  <button
+                    key={staff.id}
+                    type="button"
+                    className={`w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 ${
+                      index === selectedMentionIndex ? 'bg-blue-100 text-blue-900' : ''
+                    }`}
+                    onClick={() => insertMention(staff.id, staff.name || `${staff.firstName} ${staff.lastName}`.trim())}
+                  >
+                    <AtSign className={`h-4 w-4 ${index === selectedMentionIndex ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span>{staff.name || `${staff.firstName} ${staff.lastName}`.trim()}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
