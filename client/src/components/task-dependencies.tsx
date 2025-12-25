@@ -270,10 +270,7 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
                     <SelectContent>
                       {Object.entries(dependencyTypeLabels).map(([value, config]) => (
                         <SelectItem key={value} value={value}>
-                          <div className="flex flex-col">
-                            <span>{config.label}</span>
-                            <span className="text-xs text-gray-500">{config.description}</span>
-                          </div>
+                          {config.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
