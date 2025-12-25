@@ -257,8 +257,13 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
                         <TooltipTrigger asChild>
                           <HelpCircle className="h-3.5 w-3.5 text-gray-400 cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p className="text-xs">Choose how the selected task relates to this one. The most common is "Must finish first" - meaning the other task must be done before this task can begin.</p>
+                        <TooltipContent side="top" className="max-w-sm p-3">
+                          <div className="space-y-2 text-xs">
+                            <div><span className="font-medium">Must finish first</span> - Other task must complete before this one can start</div>
+                            <div><span className="font-medium">Must start first</span> - Other task must start before this one can start</div>
+                            <div><span className="font-medium">Must finish together</span> - Other task must complete before this one can complete</div>
+                            <div><span className="font-medium">Blocks my completion</span> - Other task must start before this one can complete</div>
+                          </div>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
