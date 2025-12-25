@@ -1174,7 +1174,7 @@ export default function ActionConfigPanel({
                     onClick={() => handleQuickCreateTag(tagSearchQuery)}
                   >
                     <div className="flex items-center gap-2">
-                      <Plus className="h-4 w-4 text-[#46a1a0]" />
+                      <Plus className="h-4 w-4 text-primary" />
                       <span className="text-sm">Create tag: "{tagSearchQuery}"</span>
                     </div>
                     {createTagMutation.isPending && (
@@ -1192,7 +1192,7 @@ export default function ActionConfigPanel({
                         key={tag.id} 
                         className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
                           isSelected 
-                            ? 'bg-[#46a1a0]/10 border border-[#46a1a0]/20' 
+                            ? 'bg-primary/10 border border-primary/20' 
                             : 'hover:bg-muted'
                         }`}
                         onClick={() => {
@@ -1214,7 +1214,7 @@ export default function ActionConfigPanel({
                             <span className="text-xs text-muted-foreground">• {tag.description}</span>
                           )}
                         </div>
-                        {isSelected && <Check className="h-4 w-4 text-[#46a1a0]" />}
+                        {isSelected && <Check className="h-4 w-4 text-primary" />}
                       </div>
                     );
                   })
@@ -1228,7 +1228,7 @@ export default function ActionConfigPanel({
                             variant="outline"
                             size="sm"
                             onClick={() => handleQuickCreateTag(tagSearchQuery)}
-                            className="text-[#46a1a0] border-[#46a1a0] hover:bg-[#46a1a0]/10"
+                            className="text-primary border-primary hover:bg-primary/10"
                             disabled={createTagMutation.isPending}
                           >
                             <Plus className="h-4 w-4 mr-1" />
@@ -1247,7 +1247,7 @@ export default function ActionConfigPanel({
                   variant="outline"
                   size="sm"
                   onClick={() => setShowCreateTagDialog(true)}
-                  className="text-[#46a1a0] border-[#46a1a0] hover:bg-[#46a1a0]/10"
+                  className="text-primary border-primary hover:bg-primary/10"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Create Custom Tag
@@ -1342,7 +1342,7 @@ export default function ActionConfigPanel({
                   <Button 
                     onClick={createTagForm.handleSubmit(handleCreateTagSubmit)}
                     disabled={createTagMutation.isPending}
-                    className="bg-[#46a1a0] hover:bg-[#3a8a89]"
+                    className="bg-primary hover:bg-primary/90"
                   >
                     {createTagMutation.isPending ? 'Creating...' : 'Create Tag'}
                   </Button>
@@ -3643,7 +3643,7 @@ export default function ActionConfigPanel({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSave} className="bg-[#46a1a0] hover:bg-[#3a8a89]">
+          <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">
             Save Configuration
           </Button>
         </div>

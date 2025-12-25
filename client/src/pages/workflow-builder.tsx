@@ -642,7 +642,7 @@ export default function WorkflowBuilderPage() {
           <Button 
             onClick={handleSave}
             disabled={isSaving || createWorkflowMutation.isPending}
-            className="bg-[#00C9C6] hover:bg-[#00b0ad]"
+            className="bg-primary hover:bg-primary/90"
             data-testid="button-save-workflow"
           >
             <Save className="h-4 w-4 mr-2" />
