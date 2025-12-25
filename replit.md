@@ -102,3 +102,6 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 ### Session Management
 - **Connect PG Simple**: PostgreSQL session store for Express.
 - **Express Session**: Session middleware.
+
+## Future Enhancements
+- **Customizable Theme Colors**: Allow agencies to customize their branding colors (primary theme color) from Settings > Business Profile. Would involve storing color preferences in database, loading at runtime, and updating CSS variables dynamically while ensuring accessibility/contrast requirements are met.
