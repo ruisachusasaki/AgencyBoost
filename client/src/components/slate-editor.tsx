@@ -1482,7 +1482,9 @@ const ColumnsBlock = ({ attributes, children, element }: any) => {
 const TableBlock = ({ attributes, children, element }: any) => {
   const editor = useSlateStatic();
   
-  const addRow = () => {
+  const addRow = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     const path = ReactEditor.findPath(editor, element);
     const columnCount = element.children[0]?.children?.length || 3;
     const newRow: TableRowElement = {
@@ -1495,7 +1497,9 @@ const TableBlock = ({ attributes, children, element }: any) => {
     Transforms.insertNodes(editor, newRow, { at: [...path, element.children.length] });
   };
   
-  const addColumn = () => {
+  const addColumn = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     const path = ReactEditor.findPath(editor, element);
     element.children.forEach((_: any, rowIndex: number) => {
       const newCell: TableCellElement = {
@@ -1507,43 +1511,40 @@ const TableBlock = ({ attributes, children, element }: any) => {
     });
   };
   
-  const deleteTable = () => {
+  const deleteTable = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     const path = ReactEditor.findPath(editor, element);
     Transforms.removeNodes(editor, { at: path });
   };
   
   return (
-    <div {...attributes} className="table-block my-4" contentEditable={false}>
-      <div className="flex items-center gap-2 mb-2">
+    <div {...attributes} className="table-block my-4">
+      <div contentEditable={false} className="flex items-center gap-2 mb-2">
         <button
-          onClick={addRow}
+          onMouseDown={addRow}
           className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-          contentEditable={false}
         >
           <Plus className="h-3 w-3" /> Row
         </button>
         <button
-          onClick={addColumn}
+          onMouseDown={addColumn}
           className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-          contentEditable={false}
         >
           <Plus className="h-3 w-3" /> Column
         </button>
         <button
-          onClick={deleteTable}
+          onMouseDown={deleteTable}
           className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 text-red-600 dark:text-red-300 rounded transition-colors ml-auto"
-          contentEditable={false}
         >
           <Trash2 className="h-3 w-3" /> Delete
         </button>
       </div>
-      <div contentEditable={true} suppressContentEditableWarning>
-        <table className="w-full border-collapse border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
-          <tbody>
-            {children}
-          </tbody>
-        </table>
-      </div>
+      <table className="w-full border-collapse border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+        <tbody>
+          {children}
+        </tbody>
+      </table>
     </div>
   );
 };
