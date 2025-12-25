@@ -259,10 +259,10 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-sm p-3">
                           <div className="space-y-2 text-xs">
-                            <div><span className="font-medium">Must finish first</span> - Other task must complete before this one can start</div>
-                            <div><span className="font-medium">Must start first</span> - Other task must start before this one can start</div>
-                            <div><span className="font-medium">Must finish together</span> - Other task must complete before this one can complete</div>
-                            <div><span className="font-medium">Blocks my completion</span> - Other task must start before this one can complete</div>
+                            <div><span className="font-bold">Must finish first</span> - Other task must complete before this one can start</div>
+                            <div><span className="font-bold">Must start first</span> - Other task must start before this one can start</div>
+                            <div><span className="font-bold">Must finish together</span> - Other task must complete before this one can complete</div>
+                            <div><span className="font-bold">Blocks my completion</span> - Other task must start before this one can complete</div>
                           </div>
                         </TooltipContent>
                       </Tooltip>
