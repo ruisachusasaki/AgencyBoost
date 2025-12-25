@@ -6,7 +6,7 @@ import {
   Type, Heading1, Heading2, Heading3, List, ListOrdered, 
   Quote, Code, ChevronRight, AlertCircle, Info, AlertTriangle,
   Bold, Italic, Underline, CheckSquare, Columns, Palette, Flag, FileText,
-  Youtube, Image, Link, Minus, Highlighter, MoreHorizontal
+  Youtube, Image, Link, Minus, Highlighter, MoreHorizontal, Table2, Plus, Trash2
 } from 'lucide-react';
 import {
   Dialog,
@@ -129,6 +129,21 @@ type HighlightElement = {
   children: Descendant[];
 };
 
+type TableElement = {
+  type: 'table';
+  children: TableRowElement[];
+};
+
+type TableRowElement = {
+  type: 'table-row';
+  children: TableCellElement[];
+};
+
+type TableCellElement = {
+  type: 'table-cell';
+  children: Descendant[];
+};
+
 type CustomElement = 
   | ParagraphElement 
   | HeadingElement 
@@ -148,7 +163,10 @@ type CustomElement =
   | ImageElement
   | LinkElement
   | DividerElement
-  | HighlightElement;
+  | HighlightElement
+  | TableElement
+  | TableRowElement
+  | TableCellElement;
 
 type CustomText = {
   text: string;
@@ -236,6 +254,7 @@ const SLASH_COMMANDS = [
   { type: 'columns', columnCount: 3, title: '3 Columns', icon: <Columns className="h-4 w-4" /> },
   { type: 'columns', columnCount: 4, title: '4 Columns', icon: <Columns className="h-4 w-4" /> },
   { type: 'columns', columnCount: 5, title: '5 Columns', icon: <Columns className="h-4 w-4" /> },
+  { type: 'table', title: 'Table', icon: <Table2 className="h-4 w-4" /> },
   
   // Media and links
   { type: 'image', title: 'Image', icon: <Image className="h-4 w-4" /> },
@@ -752,6 +771,23 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         Transforms.insertNodes(editor, columnsBlock);
         break;
 
+      case 'table':
+        // Insert a 3x3 table by default
+        const tableRows: TableRowElement[] = Array.from({ length: 3 }, (_, rowIndex) => ({
+          type: 'table-row',
+          children: Array.from({ length: 3 }, (_, colIndex) => ({
+            type: 'table-cell',
+            children: [{ type: 'paragraph', children: [{ text: rowIndex === 0 ? `Header ${colIndex + 1}` : '' }] }]
+          })) as TableCellElement[]
+        }));
+        
+        const tableBlock: TableElement = {
+          type: 'table',
+          children: tableRows
+        };
+        Transforms.insertNodes(editor, tableBlock);
+        break;
+
       case 'colored-text':
         // Insert colored text
         const coloredTextBlock: ColoredTextElement = {
@@ -1225,6 +1261,23 @@ const Element = (props: any) => {
         </div>
       );
     
+    case 'table':
+      return <TableBlock {...props} />;
+    
+    case 'table-row':
+      return (
+        <tr {...attributes} className="border-b border-gray-200 dark:border-gray-700">
+          {children}
+        </tr>
+      );
+    
+    case 'table-cell':
+      return (
+        <td {...attributes} className="border border-gray-200 dark:border-gray-700 px-3 py-2 min-w-[100px]">
+          {children}
+        </td>
+      );
+    
     case 'colored-text':
       return (
         <span {...attributes} style={{ color: element.color }} className="inline">
@@ -1420,6 +1473,76 @@ const ColumnsBlock = ({ attributes, children, element }: any) => {
     <div {...attributes} className="columns-block my-4">
       <div className="flex gap-4">
         {children}
+      </div>
+    </div>
+  );
+};
+
+// Table block component with add/remove row/column functionality
+const TableBlock = ({ attributes, children, element }: any) => {
+  const editor = useSlateStatic();
+  
+  const addRow = () => {
+    const path = ReactEditor.findPath(editor, element);
+    const columnCount = element.children[0]?.children?.length || 3;
+    const newRow: TableRowElement = {
+      type: 'table-row',
+      children: Array.from({ length: columnCount }, () => ({
+        type: 'table-cell',
+        children: [{ type: 'paragraph', children: [{ text: '' }] }]
+      })) as TableCellElement[]
+    };
+    Transforms.insertNodes(editor, newRow, { at: [...path, element.children.length] });
+  };
+  
+  const addColumn = () => {
+    const path = ReactEditor.findPath(editor, element);
+    element.children.forEach((_: any, rowIndex: number) => {
+      const newCell: TableCellElement = {
+        type: 'table-cell',
+        children: [{ type: 'paragraph', children: [{ text: '' }] }]
+      };
+      const cellCount = element.children[rowIndex]?.children?.length || 0;
+      Transforms.insertNodes(editor, newCell, { at: [...path, rowIndex, cellCount] });
+    });
+  };
+  
+  const deleteTable = () => {
+    const path = ReactEditor.findPath(editor, element);
+    Transforms.removeNodes(editor, { at: path });
+  };
+  
+  return (
+    <div {...attributes} className="table-block my-4" contentEditable={false}>
+      <div className="flex items-center gap-2 mb-2">
+        <button
+          onClick={addRow}
+          className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+          contentEditable={false}
+        >
+          <Plus className="h-3 w-3" /> Row
+        </button>
+        <button
+          onClick={addColumn}
+          className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+          contentEditable={false}
+        >
+          <Plus className="h-3 w-3" /> Column
+        </button>
+        <button
+          onClick={deleteTable}
+          className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 dark:bg-red-900 hover:bg-red-200 dark:hover:bg-red-800 text-red-600 dark:text-red-300 rounded transition-colors ml-auto"
+          contentEditable={false}
+        >
+          <Trash2 className="h-3 w-3" /> Delete
+        </button>
+      </div>
+      <div contentEditable={true} suppressContentEditableWarning>
+        <table className="w-full border-collapse border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+          <tbody>
+            {children}
+          </tbody>
+        </table>
       </div>
     </div>
   );
