@@ -1148,13 +1148,20 @@ const Element = (props: any) => {
     );
   };
 
+  // Generate heading ID from text content (matches extractHeadings in article-view.tsx)
+  const getHeadingId = (elem: any): string => {
+    const text = elem.children?.map((child: any) => child.text || '').join('') || '';
+    return text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+  };
+
   switch (element.type) {
     case 'heading':
       const level = element.level || 1; // Default to h1 if level is missing
       const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
       const headingEmpty = isElementEmpty(element);
+      const headingId = getHeadingId(element);
       return (
-        <HeadingTag {...attributes} className={`text-${level === 1 ? '2xl' : level === 2 ? 'xl' : 'lg'} font-bold my-4 ${headingEmpty ? 'slate-empty-element' : ''}`}>
+        <HeadingTag {...attributes} id={headingId} className={`text-${level === 1 ? '2xl' : level === 2 ? 'xl' : 'lg'} font-bold my-4 ${headingEmpty ? 'slate-empty-element' : ''}`}>
           {children}
         </HeadingTag>
       );
