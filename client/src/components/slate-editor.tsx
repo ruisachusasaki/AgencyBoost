@@ -405,16 +405,16 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         throw new Error('Failed to upload image');
       }
       
-      // Extract the object path from the signed URL and convert to our API endpoint
+      // Extract the object path from the signed URL and convert to our endpoint
       // The uploadURL format: https://storage.googleapis.com/bucket-name/.private/uploads/uuid?signature...
-      // We need to convert it to: /api/objects/uploads/uuid
+      // We need to convert it to: /objects/uploads/uuid (no /api prefix)
       const url = new URL(uploadURL);
       const pathParts = url.pathname.split('/');
       // Find the uploads/ part and everything after
       const uploadsIndex = pathParts.findIndex(part => part === 'uploads');
       if (uploadsIndex !== -1) {
         const objectPath = pathParts.slice(uploadsIndex).join('/');
-        const imageUrl = `/api/objects/${objectPath}`;
+        const imageUrl = `/objects/${objectPath}`;
         setUrlDialog(prev => ({ ...prev, url: imageUrl, isUploading: false }));
       } else {
         throw new Error('Invalid upload URL format');
