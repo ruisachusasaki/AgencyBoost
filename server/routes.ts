@@ -14778,15 +14778,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       // Log task activity for the comment
+      const authorName = `${author.firstName} ${author.lastName}`.trim();
       await db.insert(taskActivities).values({
         taskId: taskId,
         actionType: "comment_added",
-        description: `Added a comment`,
+        fieldName: "comment",
+        newValue: content.trim().substring(0, 100),
         userId,
-        details: {
-          commentId: newComment.id,
-          contentPreview: content.trim().substring(0, 100),
-        },
+        userName: authorName,
       });
 
       // Return comment with author info
