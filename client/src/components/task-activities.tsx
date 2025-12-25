@@ -232,6 +232,60 @@ export default function TaskActivities({ taskId, showCard = true }: TaskActiviti
           </div>
         );
         
+      case 'comment_added':
+        return (
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-teal-100 rounded-full flex-shrink-0">
+              <MessageSquare className="h-4 w-4 text-teal-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-slate-700">
+                <span className="font-medium">{activity.userName}</span> added a comment
+                {activity.newValue && (
+                  <>: <span className="italic text-slate-600">"{activity.newValue}"</span></>
+                )}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
+            </div>
+          </div>
+        );
+        
+      case 'file_uploaded':
+        return (
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 rounded-full flex-shrink-0">
+              <Activity className="h-4 w-4 text-indigo-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-slate-700">
+                <span className="font-medium">{activity.userName}</span> uploaded a file
+                {activity.newValue && (
+                  <>: <span className="font-medium">{activity.newValue}</span></>
+                )}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
+            </div>
+          </div>
+        );
+        
+      case 'file_deleted':
+        return (
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-red-100 rounded-full flex-shrink-0">
+              <Activity className="h-4 w-4 text-red-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-slate-700">
+                <span className="font-medium">{activity.userName}</span> deleted a file
+                {activity.newValue && (
+                  <>: <span className="font-medium">{activity.newValue}</span></>
+                )}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
+            </div>
+          </div>
+        );
+        
       default:
         return (
           <div className="flex items-start gap-3">
