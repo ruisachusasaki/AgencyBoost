@@ -14777,6 +14777,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req
       );
 
+      // Log task activity for the comment
+      await db.insert(taskActivities).values({
+        taskId: taskId,
+        actionType: "comment_added",
+        description: `Added a comment`,
+        userId,
+        details: {
+          commentId: newComment.id,
+          contentPreview: content.trim().substring(0, 100),
+        },
+      });
+
       // Return comment with author info
       res.status(201).json({
         ...newComment,
