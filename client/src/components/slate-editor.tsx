@@ -1679,24 +1679,35 @@ const ResizableImage = ({ attributes, children, element }: any) => {
   const [isResizing, setIsResizing] = useState(false);
   const [startX, setStartX] = useState(0);
   const [startWidth, setStartWidth] = useState(0);
+  const [localWidth, setLocalWidth] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const pathRef = useRef<number[] | null>(null);
   
-  const currentWidth = element.widthPx;
+  const currentWidth = localWidth ?? element.widthPx;
   
   const handleMouseDown = (e: React.MouseEvent, direction: 'left' | 'right') => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Store the path at the start of resize - this is stable
+    try {
+      pathRef.current = ReactEditor.findPath(editor, element);
+    } catch {
+      return; // Can't find path, don't start resize
+    }
+    
     setIsResizing(true);
     setStartX(e.clientX);
     
     // Get current width from element or image natural width
-    const imgWidth = currentWidth || imageRef.current?.offsetWidth || 400;
+    const imgWidth = element.widthPx || imageRef.current?.offsetWidth || 400;
     setStartWidth(imgWidth);
+    setLocalWidth(imgWidth);
   };
   
   useEffect(() => {
-    if (!isResizing) return;
+    if (!isResizing || !pathRef.current) return;
     
     const handleMouseMove = (e: MouseEvent) => {
       const containerWidth = containerRef.current?.parentElement?.offsetWidth || 800;
@@ -1706,13 +1717,22 @@ const ResizableImage = ({ attributes, children, element }: any) => {
       // Clamp width between 100px and container width
       newWidth = Math.max(100, Math.min(newWidth, containerWidth));
       
-      // Update the Slate node with new width
-      const path = ReactEditor.findPath(editor, element);
-      Transforms.setNodes(editor, { widthPx: Math.round(newWidth) } as Partial<ImageElement>, { at: path });
+      // Update local state for immediate visual feedback
+      setLocalWidth(Math.round(newWidth));
     };
     
     const handleMouseUp = () => {
+      // Apply the final width to Slate on mouse up
+      if (pathRef.current && localWidth !== null) {
+        try {
+          Transforms.setNodes(editor, { widthPx: localWidth } as Partial<ImageElement>, { at: pathRef.current });
+        } catch (err) {
+          console.warn('Could not update image width:', err);
+        }
+      }
       setIsResizing(false);
+      setLocalWidth(null);
+      pathRef.current = null;
     };
     
     document.addEventListener('mousemove', handleMouseMove);
@@ -1722,7 +1742,7 @@ const ResizableImage = ({ attributes, children, element }: any) => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, startX, startWidth, editor, element]);
+  }, [isResizing, startX, startWidth, localWidth, editor]);
   
   return (
     <div {...attributes} className="image-block my-4" ref={containerRef}>
