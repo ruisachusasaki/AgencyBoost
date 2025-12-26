@@ -306,9 +306,9 @@ interface SlateEditorProps {
 const withInlines = (editor: Editor) => {
   const { isInline, isVoid } = editor;
 
-  // Links are inline elements
+  // Links and highlights are inline elements
   editor.isInline = (element) => {
-    return element.type === 'link' ? true : isInline(element);
+    return ['link', 'highlight'].includes(element.type) ? true : isInline(element);
   };
 
   // Images, embeds, and dividers are void elements
@@ -919,13 +919,18 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         break;
 
       case 'highlight':
-        // Insert highlighted text
-        const highlightBlock: HighlightElement = {
+        // Insert highlighted inline text - wraps selection or inserts at cursor
+        const highlightElement: HighlightElement = {
           type: 'highlight',
           backgroundColor: command.backgroundColor,
-          children: [{ text: 'Highlighted text' }]
+          children: [{ text: 'highlighted text' }]
         };
-        Transforms.insertNodes(editor, highlightBlock);
+        // If there's a selection with text, wrap it in highlight
+        if (editor.selection && !Range.isCollapsed(editor.selection)) {
+          Transforms.wrapNodes(editor, highlightElement, { split: true });
+        } else {
+          Transforms.insertNodes(editor, highlightElement);
+        }
         break;
 
       case 'toggle':
