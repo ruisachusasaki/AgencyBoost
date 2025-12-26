@@ -110,6 +110,7 @@ type ImageElement = {
   type: 'image';
   url: string;
   alt?: string;
+  widthPx?: number;
   children: Descendant[];
 };
 
@@ -889,7 +890,9 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           url: '',
           altText: '',
           linkText: '',
-          savedSelection: editor.selection ? { ...editor.selection } : null
+          savedSelection: editor.selection ? { ...editor.selection } : null,
+          imageMode: 'url',
+          isUploading: false
         });
         break;
 
@@ -1434,17 +1437,7 @@ const Element = (props: any) => {
       return <EmbedBlock {...props} />;
     
     case 'image':
-      return (
-        <div {...attributes} className="image-block my-4">
-          <img 
-            src={element.url} 
-            alt={element.alt || ''} 
-            className="max-w-full h-auto rounded-md shadow-sm"
-            contentEditable={false}
-          />
-          <div className="mt-2 text-sm text-gray-500">{children}</div>
-        </div>
-      );
+      return <ResizableImage attributes={attributes} element={element}>{children}</ResizableImage>;
     
     case 'link':
       return (
@@ -1676,6 +1669,97 @@ const TableBlock = ({ attributes, children, element }: any) => {
           {children}
         </tbody>
       </table>
+    </div>
+  );
+};
+
+// Resizable Image component with drag handles
+const ResizableImage = ({ attributes, children, element }: any) => {
+  const editor = useSlateStatic();
+  const [isResizing, setIsResizing] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [startWidth, setStartWidth] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  
+  const currentWidth = element.widthPx;
+  
+  const handleMouseDown = (e: React.MouseEvent, direction: 'left' | 'right') => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    setStartX(e.clientX);
+    
+    // Get current width from element or image natural width
+    const imgWidth = currentWidth || imageRef.current?.offsetWidth || 400;
+    setStartWidth(imgWidth);
+  };
+  
+  useEffect(() => {
+    if (!isResizing) return;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const containerWidth = containerRef.current?.parentElement?.offsetWidth || 800;
+      const deltaX = e.clientX - startX;
+      let newWidth = startWidth + deltaX;
+      
+      // Clamp width between 100px and container width
+      newWidth = Math.max(100, Math.min(newWidth, containerWidth));
+      
+      // Update the Slate node with new width
+      const path = ReactEditor.findPath(editor, element);
+      Transforms.setNodes(editor, { widthPx: Math.round(newWidth) } as Partial<ImageElement>, { at: path });
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, startX, startWidth, editor, element]);
+  
+  return (
+    <div {...attributes} className="image-block my-4" ref={containerRef}>
+      <div 
+        contentEditable={false}
+        className="relative inline-block group"
+        style={{ width: currentWidth ? `${currentWidth}px` : 'auto', maxWidth: '100%' }}
+      >
+        <img 
+          ref={imageRef}
+          src={element.url} 
+          alt={element.alt || ''} 
+          className="w-full h-auto rounded-md shadow-sm"
+          draggable={false}
+        />
+        {/* Left resize handle */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+          onMouseDown={(e) => handleMouseDown(e, 'left')}
+        >
+          <div className="w-1 h-12 bg-primary rounded-full" />
+        </div>
+        {/* Right resize handle */}
+        <div
+          className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+          onMouseDown={(e) => handleMouseDown(e, 'right')}
+        >
+          <div className="w-1 h-12 bg-primary rounded-full" />
+        </div>
+        {/* Width indicator when resizing */}
+        {isResizing && currentWidth && (
+          <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded">
+            {Math.round(currentWidth)}px
+          </div>
+        )}
+      </div>
+      <div className="mt-2 text-sm text-gray-500">{children}</div>
     </div>
   );
 };
