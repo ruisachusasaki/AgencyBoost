@@ -1746,8 +1746,6 @@ const ResizableImage = ({ attributes, children, element }: any) => {
   
   return (
     <div {...attributes} className="image-block my-4" ref={containerRef}>
-      {/* Required by Slate for void elements - must be direct child with no styling */}
-      <span style={{ display: 'none' }}>{children}</span>
       <div 
         contentEditable={false}
         className="relative inline-block group"
@@ -1781,6 +1779,8 @@ const ResizableImage = ({ attributes, children, element }: any) => {
           </div>
         )}
       </div>
+      {/* Required by Slate for void elements - hidden but in DOM */}
+      <div style={{ height: 0, overflow: 'hidden' }}>{children}</div>
     </div>
   );
 };
