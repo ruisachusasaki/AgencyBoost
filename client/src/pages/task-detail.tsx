@@ -14,6 +14,7 @@ import { ArrowLeft, Calendar as CalendarIcon, User, Building, FolderOpen, Target
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -895,15 +896,24 @@ export default function TaskDetail() {
                         )}
                       </Button>
                       {canAddManualTime && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setShowManualTimeDialog(true)}
-                          className="h-8 px-3"
-                          data-testid="button-add-manual-time"
-                        >
-                          <Plus className="h-3 w-3 mr-1" />Add Time
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setShowManualTimeDialog(true)}
+                                className="h-8 w-8 p-0"
+                                data-testid="button-add-manual-time"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Add Time</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                       <span className="text-sm text-slate-600">
                         {task.timeTracked ? `${Math.floor(task.timeTracked / 60)}h ${task.timeTracked % 60}m` : '0m'} tracked
