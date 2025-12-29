@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -179,6 +179,47 @@ export default function Tasks() {
     queryKey: ["/api/smart-lists", { entityType: "tasks" }],
     enabled: !!currentUser,
   });
+
+  // Fetch user's saved column preferences
+  const { data: savedPreferences } = useQuery<{ preferences: { columns?: { id: string; visible: boolean }[] } }>({
+    queryKey: ["/api/user-view-preferences/tasks-columns"],
+    enabled: !!currentUser,
+  });
+
+  // Track if preferences have been initially loaded
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+
+  // Mutation to save column preferences
+  const saveColumnPreferencesMutation = useMutation({
+    mutationFn: async (columnPrefs: { id: string; visible: boolean }[]) => {
+      const response = await apiRequest("POST", "/api/user-view-preferences/tasks-columns", {
+        preferences: { columns: columnPrefs }
+      });
+      if (!response.ok) {
+        throw new Error("Failed to save column preferences");
+      }
+      return response.json();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save column preferences",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Load saved column preferences when they're fetched (only once)
+  useEffect(() => {
+    if (savedPreferences?.preferences?.columns && !preferencesLoaded) {
+      const savedCols = savedPreferences.preferences.columns;
+      setColumns(prev => prev.map(col => {
+        const savedCol = savedCols.find((s: { id: string; visible: boolean }) => s.id === col.id);
+        return savedCol ? { ...col, visible: savedCol.visible } : col;
+      }));
+      setPreferencesLoaded(true);
+    }
+  }, [savedPreferences, preferencesLoaded]);
 
   // Check if current user is admin
   const isAdmin = currentUser?.role === 'Admin';
@@ -899,9 +940,15 @@ export default function Tasks() {
     // Don't allow hiding the name column
     if (columnId === "name") return;
     
-    setColumns(prev => prev.map(col => 
-      col.id === columnId ? { ...col, visible: !col.visible } : col
-    ));
+    setColumns(prev => {
+      const updated = prev.map(col => 
+        col.id === columnId ? { ...col, visible: !col.visible } : col
+      );
+      // Save to API
+      const columnPrefs = updated.map(col => ({ id: col.id, visible: col.visible }));
+      saveColumnPreferencesMutation.mutate(columnPrefs);
+      return updated;
+    });
   };
 
   // Get only visible columns
