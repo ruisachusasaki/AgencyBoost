@@ -6849,7 +6849,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Task Template CRUD routes
+  app.post("/api/task-templates", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const validatedData = insertTaskTemplateSchema.parse({
+        ...req.body,
+        createdBy: userId
+      });
+
+      const [newTemplate] = await db.insert(taskTemplates)
+        .values(validatedData)
+        .returning();
+
+      res.json(newTemplate);
+    } catch (error) {
+      console.error("Error creating task template:", error);
+      res.status(500).json({ message: "Failed to create task template" });
+    }
+  });
+
+  app.get("/api/task-templates/:id", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
+    try {
+      const [template] = await db.select()
+        .from(taskTemplates)
+        .where(eq(taskTemplates.id, req.params.id));
+
+      if (!template) {
+        return res.status(404).json({ message: "Task template not found" });
+      }
+
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching task template:", error);
+      res.status(500).json({ message: "Failed to fetch task template" });
+    }
+  });
+
+  app.put("/api/task-templates/:id", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
+    try {
+      const partialData = insertTaskTemplateSchema.partial().parse(req.body);
+
+      const [updatedTemplate] = await db.update(taskTemplates)
+        .set({ ...partialData, updatedAt: new Date() })
+        .where(eq(taskTemplates.id, req.params.id))
+        .returning();
+
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Task template not found" });
+      }
+
+      res.json(updatedTemplate);
+    } catch (error) {
+      console.error("Error updating task template:", error);
+      res.status(500).json({ message: "Failed to update task template" });
+    }
+  });
+
+  app.delete("/api/task-templates/:id", requireAuth(), requirePermission('tasks', 'canDelete'), async (req, res) => {
+
   // Social Media Account routes - SECURED (Brand reputation management)
+    try {
+      const [deletedTemplate] = await db.delete(taskTemplates)
+        .where(eq(taskTemplates.id, req.params.id))
+        .returning();
+
+      if (!deletedTemplate) {
+        return res.status(404).json({ message: "Task template not found" });
+      }
+
+      res.json({ message: "Task template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting task template:", error);
+      res.status(500).json({ message: "Failed to delete task template" });
+    }
+  });
+
   app.get("/api/social-media-accounts", requireAuth(), requirePermission('social_media', 'canView'), async (req, res) => {
     try {
       const { clientId } = req.query;
