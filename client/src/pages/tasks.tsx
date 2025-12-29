@@ -2725,6 +2725,19 @@ export default function Tasks() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Task Templates Manager */}
+      <Dialog open={isTaskTemplatesOpen} onOpenChange={setIsTaskTemplatesOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Task Templates</DialogTitle>
+            <DialogDescription>
+              Create and manage reusable task templates to speed up task creation.
+            </DialogDescription>
+          </DialogHeader>
+          <TaskTemplatesManager onClose={() => setIsTaskTemplatesOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
