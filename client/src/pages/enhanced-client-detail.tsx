@@ -6899,6 +6899,150 @@ export default function EnhancedClientDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Owner Assignment Dialog */}
+      <Dialog open={isAssigningOwner} onOpenChange={setIsAssigningOwner}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Owner</DialogTitle>
+            <DialogDescription>
+              Select a team member to be the owner of this client.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search team members..."
+                value={ownerSearchTerm}
+                onChange={(e) => setOwnerSearchTerm(e.target.value)}
+                className="pl-9"
+                data-testid="input-owner-search"
+              />
+            </div>
+            <div className="max-h-64 overflow-y-auto space-y-1">
+              {(ownerSearchTerm ? filteredStaff : staffData?.filter((s: any) => s.isActive !== false) || []).map((staff: any) => (
+                <button
+                  key={staff.id}
+                  onClick={() => updateOwnerMutation.mutate(staff.id)}
+                  disabled={updateOwnerMutation.isPending}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors text-left ${
+                    client?.contactOwner === staff.id ? 'bg-primary/10 border border-primary' : ''
+                  }`}
+                  data-testid={`button-select-owner-${staff.id}`}
+                >
+                  <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-medium">
+                    {staff.firstName?.[0]}{staff.lastName?.[0]}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{staff.firstName} {staff.lastName}</p>
+                    <p className="text-xs text-muted-foreground">{staff.email}</p>
+                  </div>
+                  {client?.contactOwner === staff.id && (
+                    <Badge variant="outline" className="text-xs">Current</Badge>
+                  )}
+                </button>
+              ))}
+              {ownerSearchTerm && filteredStaff.length === 0 && (
+                <p className="text-center text-muted-foreground py-4 text-sm">No team members found</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Followers Assignment Dialog */}
+      <Dialog open={isAddingFollowers} onOpenChange={setIsAddingFollowers}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage Followers</DialogTitle>
+            <DialogDescription>
+              Add or remove team members who follow this client.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search team members..."
+                value={followerSearchTerm}
+                onChange={(e) => setFollowerSearchTerm(e.target.value)}
+                className="pl-9"
+                data-testid="input-follower-search"
+              />
+            </div>
+            
+            {/* Current Followers */}
+            {client?.followers && client.followers.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Current Followers</p>
+                <div className="space-y-1">
+                  {client.followers.map((followerId: string) => {
+                    const follower = staffData?.find((s: any) => s.id === followerId);
+                    if (!follower) return null;
+                    return (
+                      <div key={followerId} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                        <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-medium">
+                          {follower.firstName?.[0]}{follower.lastName?.[0]}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{follower.firstName} {follower.lastName}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newFollowers = client.followers.filter((id: string) => id !== followerId);
+                            updateFollowersMutation.mutate(newFollowers);
+                          }}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          data-testid={`button-remove-follower-${followerId}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            
+            {/* Add New Followers */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Add Followers</p>
+              <div className="max-h-48 overflow-y-auto space-y-1">
+                {(followerSearchTerm ? filteredFollowers : staffData?.filter((s: any) => 
+                  s.isActive !== false && 
+                  !client?.followers?.includes(s.id) && 
+                  s.id !== client?.contactOwner
+                ) || []).map((staff: any) => (
+                  <button
+                    key={staff.id}
+                    onClick={() => {
+                      const newFollowers = [...(client?.followers || []), staff.id];
+                      updateFollowersMutation.mutate(newFollowers);
+                    }}
+                    disabled={updateFollowersMutation.isPending}
+                    className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors text-left"
+                    data-testid={`button-add-follower-${staff.id}`}
+                  >
+                    <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs font-medium">
+                      {staff.firstName?.[0]}{staff.lastName?.[0]}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm">{staff.firstName} {staff.lastName}</p>
+                    </div>
+                    <Plus className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                ))}
+                {followerSearchTerm && filteredFollowers.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4 text-sm">No team members found</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </>
   );
 };
