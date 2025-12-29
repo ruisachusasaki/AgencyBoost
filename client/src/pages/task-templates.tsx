@@ -1,25 +1,22 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, FileText, Clock, Flag, AlertCircle } from "lucide-react";
+import { Plus, Edit, Trash2, FileText, Clock, ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { TaskTemplate, TaskCategory } from "@shared/schema";
 import { format } from "date-fns";
 
-interface TaskTemplatesManagerProps {
-  onClose: () => void;
-}
-
-export function TaskTemplatesManager({ onClose }: TaskTemplatesManagerProps) {
+export default function TaskTemplatesPage() {
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
@@ -104,7 +101,7 @@ export function TaskTemplatesManager({ onClose }: TaskTemplatesManagerProps) {
 
   const handleEdit = (template: TaskTemplate) => {
     setFormData({
-      name: template.name || "",
+      name: template.name,
       description: template.description || "",
       priority: template.priority || "medium",
       estimatedDuration: template.estimatedDuration?.toString() || "",
@@ -120,7 +117,7 @@ export function TaskTemplatesManager({ onClose }: TaskTemplatesManagerProps) {
       return;
     }
 
-    const submitData = {
+    const payload = {
       name: formData.name.trim(),
       description: formData.description.trim() || null,
       priority: formData.priority,
@@ -130,13 +127,19 @@ export function TaskTemplatesManager({ onClose }: TaskTemplatesManagerProps) {
     };
 
     if (editingTemplate) {
-      updateMutation.mutate({ id: editingTemplate.id, data: submitData });
+      updateMutation.mutate({ id: editingTemplate.id, data: payload });
     } else {
-      createMutation.mutate(submitData);
+      createMutation.mutate(payload);
     }
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return "-";
+    const category = categories.find((c) => c.id === categoryId);
+    return category?.name || "-";
+  };
+
+  const getPriorityColor = (priority: string | null) => {
     switch (priority) {
       case "urgent": return "bg-red-100 text-red-800";
       case "high": return "bg-orange-100 text-orange-800";
@@ -144,12 +147,6 @@ export function TaskTemplatesManager({ onClose }: TaskTemplatesManagerProps) {
       case "low": return "bg-green-100 text-green-800";
       default: return "bg-slate-100 text-slate-800";
     }
-  };
-
-  const getCategoryName = (categoryId: string | null) => {
-    if (!categoryId) return "-";
-    const category = categories.find(c => c.id === categoryId);
-    return category?.name || "-";
   };
 
   const formatDuration = (minutes: number | null) => {
@@ -162,18 +159,29 @@ export function TaskTemplatesManager({ onClose }: TaskTemplatesManagerProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-slate-500">
-          {templates.length} template{templates.length !== 1 ? "s" : ""} available
-        </p>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/tasks">
+            <Button variant="ghost" size="sm" data-testid="button-back-to-tasks">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Tasks
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Task Templates</h1>
+            <p className="text-sm text-slate-500">
+              Create and manage reusable task templates to speed up task creation.
+            </p>
+          </div>
+        </div>
         <Button onClick={handleCreate} data-testid="button-create-template">
           <Plus className="h-4 w-4 mr-2" />
           New Template
@@ -182,85 +190,93 @@ export function TaskTemplatesManager({ onClose }: TaskTemplatesManagerProps) {
 
       {templates.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center p-8 text-center">
-            <FileText className="h-12 w-12 text-slate-300 mb-4" />
-            <h3 className="font-medium text-slate-900 mb-1">No templates yet</h3>
-            <p className="text-sm text-slate-500 mb-4">
-              Create your first task template to streamline recurring workflows.
+          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+            <FileText className="h-16 w-16 text-slate-300 mb-4" />
+            <h3 className="font-medium text-slate-900 text-lg mb-2">No templates yet</h3>
+            <p className="text-sm text-slate-500 mb-6 max-w-md">
+              Create your first task template to streamline recurring workflows. Templates save time by pre-filling task details.
             </p>
             <Button onClick={handleCreate} data-testid="button-create-template-empty">
               <Plus className="h-4 w-4 mr-2" />
-              Create Template
+              Create Your First Template
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {templates.map((template) => (
-                <TableRow key={template.id} data-testid={`row-template-${template.id}`}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{template.name}</div>
-                      {template.description && (
-                        <div className="text-sm text-slate-500 truncate max-w-xs">
-                          {template.description}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{getCategoryName(template.categoryId)}</TableCell>
-                  <TableCell>
-                    <Badge className={getPriorityColor(template.priority)}>
-                      {template.priority}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-slate-600">
-                      <Clock className="h-3 w-3" />
-                      {formatDuration(template.estimatedDuration)}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-slate-500">
-                    {template.createdAt ? format(new Date(template.createdAt), "MMM d, yyyy") : "-"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(template)}
-                        data-testid={`button-edit-template-${template.id}`}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteConfirmId(template.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        data-testid={`button-delete-template-${template.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+        <Card>
+          <CardHeader>
+            <CardTitle>All Templates</CardTitle>
+            <CardDescription>
+              {templates.length} template{templates.length !== 1 ? "s" : ""} available
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {templates.map((template) => (
+                  <TableRow key={template.id} data-testid={`row-template-${template.id}`}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{template.name}</div>
+                        {template.description && (
+                          <div className="text-sm text-slate-500 truncate max-w-xs">
+                            {template.description}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{getCategoryName(template.categoryId)}</TableCell>
+                    <TableCell>
+                      <Badge className={getPriorityColor(template.priority)}>
+                        {template.priority || "medium"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-slate-600">
+                        <Clock className="h-3 w-3" />
+                        {formatDuration(template.estimatedDuration)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-500">
+                      {template.createdAt ? format(new Date(template.createdAt), "MMM d, yyyy") : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(template)}
+                          data-testid={`button-edit-template-${template.id}`}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteConfirmId(template.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          data-testid={`button-delete-template-${template.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
 
       {/* Create/Edit Template Dialog */}

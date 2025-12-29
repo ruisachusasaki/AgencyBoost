@@ -15,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2, FileText, Settings2, Clock, Eye, EyeOff } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import TaskForm from "@/components/forms/task-form";
-import { TaskTemplatesManager } from "@/components/task-templates-manager";
 import { TaskDependencyIcons } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -123,7 +122,6 @@ export default function Tasks() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const [isTaskTemplatesOpen, setIsTaskTemplatesOpen] = useState(false);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -1927,10 +1925,12 @@ export default function Tasks() {
         </h1>
         <div className="flex items-center gap-2">
           {canManageTaskTemplates && (
-            <Button variant="outline" onClick={() => setIsTaskTemplatesOpen(true)} data-testid="button-task-templates">
-              <FileText className="h-4 w-4 mr-2" />
-              Task Templates
-            </Button>
+            <Link href="/task-templates">
+              <Button variant="outline" data-testid="button-task-templates">
+                <FileText className="h-4 w-4 mr-2" />
+                Task Templates
+              </Button>
+            </Link>
           )}
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
@@ -2726,18 +2726,6 @@ export default function Tasks() {
         </DialogContent>
       </Dialog>
 
-      {/* Task Templates Manager */}
-      <Dialog open={isTaskTemplatesOpen} onOpenChange={setIsTaskTemplatesOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Task Templates</DialogTitle>
-            <DialogDescription>
-              Create and manage reusable task templates to speed up task creation.
-            </DialogDescription>
-          </DialogHeader>
-          <TaskTemplatesManager onClose={() => setIsTaskTemplatesOpen(false)} />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

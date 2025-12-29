@@ -19,6 +19,7 @@ import Leads from "@/pages/leads";
 import LeadDetail from "@/pages/lead-detail";
 import Tasks from "@/pages/tasks";
 import TaskDetail from "@/pages/task-detail";
+import TaskTemplatesPage from "@/pages/task-templates";
 import Reports from "@/pages/reports";
 import Workflows from "@/pages/workflows";
 import WorkflowBuilder from "@/pages/workflow-builder";
@@ -188,6 +189,16 @@ function Router() {
           <AuthGate>
             <MainLayout>
               <TaskDetail />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/task-templates">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <TaskTemplatesPage />
             </MainLayout>
           </AuthGate>
         )}
