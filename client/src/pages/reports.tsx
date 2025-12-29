@@ -659,7 +659,7 @@ export default function Reports() {
       .slice(0, 5)
       .map(task => ({
         ...task,
-        clientName: clients.find(c => c.id === task.clientId)?.name || 'Unknown Client'
+        clientName: (() => { const c = clients.find(c => c.id === task.clientId); return c?.company || c?.name || 'Unknown Client'; })()
       }))
   };
 
@@ -1208,7 +1208,7 @@ export default function Reports() {
           actualTime: task.timeTracked ? formatDuration(task.timeTracked, timeDisplayMode) : null,
           variance: task.timeEstimate && task.timeTracked ? 
             ((task.timeTracked - task.timeEstimate) / task.timeEstimate * 100).toFixed(1) : null,
-          clientName: clients.find(c => c.id === task.clientId)?.name || 'Unknown Client',
+          clientName: (() => { const c = clients.find(c => c.id === task.clientId); return c?.company || c?.name || 'Unknown Client'; })(),
           assignedTo: task.assignedTo,
           createdAt: task.createdAt,
           dueDate: task.dueDate
@@ -1218,7 +1218,7 @@ export default function Reports() {
           title: task.title,
           status: task.status,
           priority: task.priority,
-          clientName: clients.find(c => c.id === task.clientId)?.name || 'Unknown Client',
+          clientName: (() => { const c = clients.find(c => c.id === task.clientId); return c?.company || c?.name || 'Unknown Client'; })(),
           createdAt: task.createdAt,
           dueDate: task.dueDate
         }))

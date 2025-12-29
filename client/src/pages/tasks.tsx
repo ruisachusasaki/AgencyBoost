@@ -257,10 +257,10 @@ export default function Tasks() {
 
   // Helper functions - moved above sorting logic
   const getClientOrLeadName = (task: Task) => {
-    // Check if task has a client
+    // Check if task has a client - show business name first
     if (task.clientId) {
       const client = clients.find((c: Client) => c.id === task.clientId);
-      return client?.name || "Unknown Client";
+      return client?.company || client?.name || "Unknown Client";
     }
     // Check if task has a lead
     if (task.leadId) {
@@ -270,11 +270,11 @@ export default function Tasks() {
     return null;
   };
 
-  // Keep old function for backward compatibility
+  // Keep old function for backward compatibility - show business name first
   const getClientName = (clientId: string | null) => {
     if (!clientId) return null;
     const client = clients.find((c: Client) => c.id === clientId);
-    return client?.name || "Unknown Client";
+    return client?.company || client?.name || "Unknown Client";
   };
 
 

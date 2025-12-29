@@ -221,7 +221,7 @@ export default function TaskDetail() {
   const getClientName = (clientId: string | null) => {
     if (!clientId) return null;
     const client = clients.find((c: Client) => c.id === clientId);
-    return client?.name || "Unknown Client";
+    return client?.company || client?.name || "Unknown Client";
   };
 
 
