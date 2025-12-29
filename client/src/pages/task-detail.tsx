@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy, Video, ExternalLink } from "lucide-react";
+import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy, Video, ExternalLink, Plus } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,6 +50,11 @@ export default function TaskDetail() {
   const { startTimer, stopTimer, isTimerRunning, currentTimer } = useTimer();
   const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null);
   const [highlightedAnnotationId, setHighlightedAnnotationId] = useState<string | null>(null);
+  const [showManualTimeDialog, setShowManualTimeDialog] = useState(false);
+  const [manualTimeDate, setManualTimeDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualTimeHours, setManualTimeHours] = useState("");
+  const [manualTimeMinutes, setManualTimeMinutes] = useState("");
+  const [manualTimeNotes, setManualTimeNotes] = useState("");
   
   // Get URL search parameters
   const searchParams = new URLSearchParams(window.location.search);
@@ -161,6 +167,14 @@ export default function TaskDetail() {
   const { data: userPermissions } = useQuery({
     queryKey: ["/api/auth/permissions"],
   });
+
+  // Get current user for role-based features
+  const { data: currentUser } = useQuery<{ id: string; role: string; firstName: string; lastName: string }>({
+    queryKey: ['/api/auth/current-user'],
+  });
+
+  // Check if user can add manual time (Admins and Managers only)
+  const canAddManualTime = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
 
   // Get workflow-specific statuses for this task
   const selectedWorkflow = teamWorkflows.find(w => w.id === task?.workflowId);
@@ -328,6 +342,83 @@ export default function TaskDetail() {
 
   const stopTimeTracking = () => {
     stopTimer();
+  };
+
+  // Add manual time entry mutation
+  const addManualTimeMutation = useMutation({
+    mutationFn: async (data: { date: string; hours: number; minutes: number; notes: string }) => {
+      if (!task || !currentUser) return;
+      
+      const totalMinutes = (data.hours * 60) + data.minutes;
+      if (totalMinutes <= 0) {
+        throw new Error("Please enter a valid duration");
+      }
+      
+      // Create the time entry with the selected date
+      const entryDate = new Date(data.date);
+      entryDate.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
+      
+      const newEntry = {
+        id: Date.now().toString(),
+        taskId: task.id,
+        taskTitle: task.title,
+        startTime: entryDate.toISOString(),
+        endTime: entryDate.toISOString(),
+        userId: currentUser.id,
+        userName: `${currentUser.firstName} ${currentUser.lastName}`,
+        isRunning: false,
+        duration: totalMinutes,
+        source: 'manual',
+        notes: data.notes || undefined
+      };
+      
+      // Merge with existing entries
+      const existingEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+      const mergedEntries = [...existingEntries, newEntry];
+      
+      // Calculate new total
+      const totalTracked = mergedEntries.reduce((total: number, entry: any) => 
+        total + (entry.duration || 0), 0
+      );
+      
+      await apiRequest("PUT", `/api/tasks/${task.id}`, {
+        timeEntries: mergedEntries,
+        timeTracked: totalTracked
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/activities`] });
+      toast({
+        title: "Time Added",
+        variant: "success",
+        description: "Manual time entry has been added successfully.",
+      });
+      // Reset form
+      setShowManualTimeDialog(false);
+      setManualTimeDate(new Date().toISOString().split('T')[0]);
+      setManualTimeHours("");
+      setManualTimeMinutes("");
+      setManualTimeNotes("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to add time entry.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddManualTime = () => {
+    const hours = parseInt(manualTimeHours) || 0;
+    const minutes = parseInt(manualTimeMinutes) || 0;
+    addManualTimeMutation.mutate({
+      date: manualTimeDate,
+      hours,
+      minutes,
+      notes: manualTimeNotes
+    });
   };
 
   const getStaffName = (staffId: string | null) => {
@@ -771,6 +862,7 @@ export default function TaskDetail() {
                         onClick={isThisTaskTimerRunning ? stopTimeTracking : startTimeTracking}
                         className="h-8 px-3"
                         disabled={isTimerRunning && !isThisTaskTimerRunning}
+                        data-testid="button-timer-toggle"
                       >
                         {isThisTaskTimerRunning ? (
                           <><Pause className="h-3 w-3 mr-1" />Stop</>
@@ -778,6 +870,17 @@ export default function TaskDetail() {
                           <><Play className="h-3 w-3 mr-1" />{isTimerRunning ? "Switch" : "Start"}</>
                         )}
                       </Button>
+                      {canAddManualTime && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowManualTimeDialog(true)}
+                          className="h-8 px-3"
+                          data-testid="button-add-manual-time"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />Add Time
+                        </Button>
+                      )}
                       <span className="text-sm text-slate-600">
                         {task.timeTracked ? `${Math.floor(task.timeTracked / 60)}h ${task.timeTracked % 60}m` : '0m'} tracked
                       </span>
@@ -1061,6 +1164,93 @@ export default function TaskDetail() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Time Entry Dialog */}
+      <Dialog open={showManualTimeDialog} onOpenChange={setShowManualTimeDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Time Manually</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="manual-time-date">Date</Label>
+              <Input
+                id="manual-time-date"
+                type="date"
+                value={manualTimeDate}
+                onChange={(e) => setManualTimeDate(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+                data-testid="input-manual-time-date"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Duration</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="23"
+                    placeholder="0"
+                    value={manualTimeHours}
+                    onChange={(e) => setManualTimeHours(e.target.value)}
+                    className="w-20"
+                    data-testid="input-manual-time-hours"
+                  />
+                  <span className="text-sm text-slate-600">hours</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="59"
+                    placeholder="0"
+                    value={manualTimeMinutes}
+                    onChange={(e) => setManualTimeMinutes(e.target.value)}
+                    className="w-20"
+                    data-testid="input-manual-time-minutes"
+                  />
+                  <span className="text-sm text-slate-600">minutes</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="manual-time-notes">Notes (Optional)</Label>
+              <Textarea
+                id="manual-time-notes"
+                placeholder="What were you working on?"
+                value={manualTimeNotes}
+                onChange={(e) => setManualTimeNotes(e.target.value)}
+                rows={3}
+                data-testid="input-manual-time-notes"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowManualTimeDialog(false)}
+              disabled={addManualTimeMutation.isPending}
+              data-testid="button-manual-time-cancel"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAddManualTime}
+              disabled={addManualTimeMutation.isPending || (!manualTimeHours && !manualTimeMinutes)}
+              data-testid="button-manual-time-save"
+            >
+              {addManualTimeMutation.isPending ? "Adding..." : "Add Time"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
