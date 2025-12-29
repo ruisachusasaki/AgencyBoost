@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -2753,9 +2754,19 @@ export default function Reports() {
                               <TableRow key={row.id} data-testid={`timesheet-row-${rowIndex}`}>
                                 <TableCell className="sticky left-0 bg-white border-r-2 border-slate-300 z-10">
                                   <div className="space-y-1">
-                                    <p className="font-medium text-slate-900 text-sm" data-testid={`row-name-${rowIndex}`}>
-                                      {row.name}
-                                    </p>
+                                    {isAllUsers ? (
+                                      <p className="font-medium text-slate-900 text-sm" data-testid={`row-name-${rowIndex}`}>
+                                        {row.name}
+                                      </p>
+                                    ) : (
+                                      <Link 
+                                        href={`/tasks/${row.id}`}
+                                        className="font-medium text-sm text-primary hover:underline cursor-pointer"
+                                        data-testid={`link-task-${row.id}`}
+                                      >
+                                        {row.name}
+                                      </Link>
+                                    )}
                                     <p className="text-xs text-slate-500 capitalize">
                                       {row.subtitle}
                                     </p>
