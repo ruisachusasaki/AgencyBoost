@@ -12,7 +12,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2, FileText } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2, FileText, Settings2, Clock, Eye, EyeOff } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import TaskForm from "@/components/forms/task-form";
 import { TaskTemplatesManager } from "@/components/task-templates-manager";
 import { TaskDependencyIcons } from "@/components/task-dependency-icons";
@@ -29,7 +30,25 @@ interface Column {
   id: string;
   label: string;
   width?: string;
+  visible: boolean;
 }
+
+// All available columns that can be shown/hidden
+const ALL_AVAILABLE_COLUMNS: Column[] = [
+  { id: "name", label: "Task Name", width: "w-1/6", visible: true },
+  { id: "assignee", label: "Assignee", width: "w-1/8", visible: true },
+  { id: "startDate", label: "Start Date", width: "w-1/8", visible: false },
+  { id: "dueDate", label: "Due Date", width: "w-1/8", visible: true },
+  { id: "status", label: "Status", width: "w-1/10", visible: true },
+  { id: "priority", label: "Priority", width: "w-1/10", visible: true },
+  { id: "category", label: "Category", width: "w-1/10", visible: true },
+  { id: "approval", label: "Approval", width: "w-1/10", visible: true },
+  { id: "client", label: "Client/Lead", width: "w-1/8", visible: true },
+  { id: "project", label: "Project", width: "w-1/8", visible: false },
+  { id: "timeEstimate", label: "Time Estimate", width: "w-1/10", visible: false },
+  { id: "timeTracked", label: "Time Tracked", width: "w-1/10", visible: false },
+  { id: "createdAt", label: "Created", width: "w-1/10", visible: false },
+];
 
 interface TaskFilterCondition {
   field: string;
@@ -72,16 +91,8 @@ export default function Tasks() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [columns, setColumns] = useState<Column[]>([
-    { id: "name", label: "Task Name", width: "w-1/6" },
-    { id: "assignee", label: "Assignee", width: "w-1/8" },
-    { id: "dueDate", label: "Due Date", width: "w-1/8" },
-    { id: "status", label: "Status", width: "w-1/10" },
-    { id: "priority", label: "Priority", width: "w-1/10" },
-    { id: "category", label: "Category", width: "w-1/10" },
-    { id: "approval", label: "Approval", width: "w-1/10" },
-    { id: "client", label: "Client/Lead", width: "w-1/8" },
-  ]);
+  const [columns, setColumns] = useState<Column[]>(ALL_AVAILABLE_COLUMNS);
+  const [isColumnConfigOpen, setIsColumnConfigOpen] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [showCompleted, setShowCompleted] = useState(false);
@@ -883,6 +894,19 @@ export default function Tasks() {
     setColumns([columns[0], ...items]);
   };
 
+  // Toggle column visibility
+  const toggleColumnVisibility = (columnId: string) => {
+    // Don't allow hiding the name column
+    if (columnId === "name") return;
+    
+    setColumns(prev => prev.map(col => 
+      col.id === columnId ? { ...col, visible: !col.visible } : col
+    ));
+  };
+
+  // Get only visible columns
+  const visibleColumns = useMemo(() => columns.filter(col => col.visible), [columns]);
+
   const toggleTaskExpansion = (taskId: string) => {
     setExpandedTasks(prev => {
       const newSet = new Set(prev);
@@ -1095,6 +1119,48 @@ export default function Tasks() {
           <div className="flex items-center gap-1">
             {getApprovalBadge()}
           </div>
+        );
+      
+      case "startDate":
+        return task.startDate ? (
+          <span className="text-sm text-slate-600">
+            {format(new Date(task.startDate), "MMM d, yyyy")}
+          </span>
+        ) : (
+          <span className="text-slate-400 text-sm">No start date</span>
+        );
+      
+      case "timeEstimate":
+        if (!task.timeEstimate) {
+          return <span className="text-slate-400 text-sm">Not set</span>;
+        }
+        const estHours = Math.floor(task.timeEstimate / 60);
+        const estMinutes = task.timeEstimate % 60;
+        return (
+          <span className="text-sm text-slate-600">
+            {estHours > 0 ? `${estHours}h ` : ''}{estMinutes > 0 ? `${estMinutes}m` : estHours > 0 ? '' : '0m'}
+          </span>
+        );
+      
+      case "timeTracked":
+        if (!task.timeTracked) {
+          return <span className="text-slate-400 text-sm">0m</span>;
+        }
+        const trackHours = Math.floor(task.timeTracked / 60);
+        const trackMinutes = task.timeTracked % 60;
+        return (
+          <span className="text-sm text-slate-600">
+            {trackHours > 0 ? `${trackHours}h ` : ''}{trackMinutes > 0 ? `${trackMinutes}m` : trackHours > 0 ? '' : '0m'}
+          </span>
+        );
+      
+      case "createdAt":
+        return task.createdAt ? (
+          <span className="text-sm text-slate-600">
+            {format(new Date(task.createdAt), "MMM d, yyyy")}
+          </span>
+        ) : (
+          <span className="text-slate-400 text-sm">Unknown</span>
         );
       
       default:
@@ -2020,31 +2086,82 @@ export default function Tasks() {
             </div>
             
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-0 bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode("table")}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-                  viewMode === "table"
-                    ? "text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-                style={viewMode === "table" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
-              >
-                <TableIcon className="h-4 w-4" />
-                Table
-              </button>
-              <button
-                onClick={() => setViewMode("kanban")}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-                  viewMode === "kanban"
-                    ? "text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-                style={viewMode === "kanban" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
-              >
-                <Columns className="h-4 w-4" />
-                Kanban
-              </button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-0 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode("table")}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                    viewMode === "table"
+                      ? "text-white shadow-sm"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                  style={viewMode === "table" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
+                >
+                  <TableIcon className="h-4 w-4" />
+                  Table
+                </button>
+                <button
+                  onClick={() => setViewMode("kanban")}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                    viewMode === "kanban"
+                      ? "text-white shadow-sm"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                  style={viewMode === "kanban" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
+                >
+                  <Columns className="h-4 w-4" />
+                  Kanban
+                </button>
+              </div>
+              
+              {/* Column Configuration */}
+              {viewMode === "table" && (
+                <Popover open={isColumnConfigOpen} onOpenChange={setIsColumnConfigOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2" data-testid="button-column-config">
+                      <Settings2 className="h-4 w-4" />
+                      Columns
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-3" align="end">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm">Show/Hide Columns</h4>
+                        <span className="text-xs text-muted-foreground">
+                          {visibleColumns.length} visible
+                        </span>
+                      </div>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {columns.map((column) => (
+                          <div 
+                            key={column.id} 
+                            className="flex items-center gap-2 py-1"
+                          >
+                            <Checkbox
+                              id={`col-${column.id}`}
+                              checked={column.visible}
+                              onCheckedChange={() => toggleColumnVisibility(column.id)}
+                              disabled={column.id === "name"}
+                              data-testid={`checkbox-column-${column.id}`}
+                            />
+                            <label 
+                              htmlFor={`col-${column.id}`}
+                              className={`text-sm cursor-pointer flex-1 ${
+                                column.id === "name" ? "text-muted-foreground" : ""
+                              }`}
+                            >
+                              {column.label}
+                              {column.id === "name" && (
+                                <span className="text-xs text-muted-foreground ml-1">(required)</span>
+                              )}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
             </div>
             
             {/* Filter Controls */}
@@ -2253,23 +2370,25 @@ export default function Tasks() {
                         
                         {/* Fixed Task Name column (non-draggable) */}
                         <SortableHeader 
-                          column={columns[0]}
+                          column={visibleColumns[0]}
                           sortField="title"
                         >
-                          {columns[0].label}
+                          {visibleColumns[0].label}
                         </SortableHeader>
                         
-                        {/* Draggable columns (all except Task Name) */}
-                        {columns.slice(1).map((column, index) => {
+                        {/* Draggable columns (all visible except Task Name) */}
+                        {visibleColumns.slice(1).map((column, index) => {
                           // Map column IDs to their corresponding sort fields
                           const sortFieldMap: Record<string, SortField> = {
                             name: 'title',
                             assignee: 'assignedTo', 
+                            startDate: 'dueDate',
                             dueDate: 'dueDate',
                             status: 'status',
                             priority: 'priority',
                             client: 'clientId',
-                            project: 'projectId'
+                            project: 'projectId',
+                            createdAt: 'createdAt'
                           };
                           
                           return (
@@ -2342,7 +2461,7 @@ export default function Tasks() {
                         </div>
                       </TableCell>
                       
-                      {columns.map((column) => (
+                      {visibleColumns.map((column) => (
                         <TableCell key={column.id} className="py-3">
                           {renderCellContent(column, task)}
                         </TableCell>
