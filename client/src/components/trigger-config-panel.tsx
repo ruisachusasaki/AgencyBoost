@@ -878,9 +878,9 @@ export default function TriggerConfigPanel({
                     clients.map((client: any) => (
                       <SelectItem key={client.id} value={client.id}>
                         <div className="flex flex-col">
-                          <span className="font-medium">{client.name}</span>
-                          {client.company && (
-                            <span className="text-xs text-muted-foreground">{client.company}</span>
+                          <span className="font-medium">{client.company || client.name}</span>
+                          {client.company && client.name && (
+                            <span className="text-xs text-muted-foreground">Contact: {client.name}</span>
                           )}
                         </div>
                       </SelectItem>
@@ -907,7 +907,7 @@ export default function TriggerConfigPanel({
                         <div className="flex flex-col">
                           <span className="font-medium">{project.name}</span>
                           {project.client && (
-                            <span className="text-xs text-muted-foreground">Client: {project.client.name}</span>
+                            <span className="text-xs text-muted-foreground">Client: {project.client.company || project.client.name}</span>
                           )}
                         </div>
                       </SelectItem>
@@ -1680,9 +1680,9 @@ export default function TriggerConfigPanel({
                 clients.map((client: any) => (
                   <SelectItem key={client.id} value={client.id}>
                     <div className="flex flex-col">
-                      <span className="font-medium">{client.name}</span>
-                      {client.company && (
-                        <span className="text-xs text-muted-foreground">{client.company}</span>
+                      <span className="font-medium">{client.company || client.name}</span>
+                      {client.company && client.name && (
+                        <span className="text-xs text-muted-foreground">Contact: {client.name}</span>
                       )}
                     </div>
                   </SelectItem>

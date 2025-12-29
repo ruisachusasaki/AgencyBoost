@@ -740,7 +740,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                           </div>
                           {clients.map((client: Client) => (
                             <SelectItem key={`client-${client.id}`} value={`client:${client.id}`}>
-                              {client.name}
+                              {client.company || client.name}
                             </SelectItem>
                           ))}
                         </>

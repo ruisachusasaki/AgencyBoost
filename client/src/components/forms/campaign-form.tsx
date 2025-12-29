@@ -158,7 +158,7 @@ export default function CampaignForm({ campaign, onSuccess }: CampaignFormProps)
                   <SelectContent>
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
-                        {client.name}
+                        {client.company || client.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

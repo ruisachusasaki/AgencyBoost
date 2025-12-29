@@ -215,7 +215,7 @@ export default function Reports() {
       // Prepare clients list for detailed exports
       const clientsList = clients.map(client => ({
         id: client.id,
-        name: client.name
+        name: client.company || client.name
       }));
 
       // Perform the export
@@ -1360,7 +1360,7 @@ export default function Reports() {
                     <SelectItem value="all">All Clients</SelectItem>
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
-                        {client.name}
+                        {client.company || client.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1636,7 +1636,7 @@ export default function Reports() {
                         <SelectItem value="all">All Clients</SelectItem>
                         {clients.map((client) => (
                           <SelectItem key={client.id} value={client.id}>
-                            {client.name}
+                            {client.company || client.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -2120,7 +2120,7 @@ export default function Reports() {
                         <SelectItem value="all">All Clients</SelectItem>
                         {clients.map((client) => (
                           <SelectItem key={client.id} value={client.id}>
-                            {client.name}
+                            {client.company || client.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -4071,7 +4071,7 @@ export default function Reports() {
                       <>
                         {paginatedClients.map((client: any) => (
                           <TableRow key={client.id} data-testid={`mrr-client-${client.id}`}>
-                            <TableCell className="font-medium">{client.name}</TableCell>
+                            <TableCell className="font-medium">{client.company || client.name}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">{client.email}</TableCell>
                             <TableCell>
                               <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>

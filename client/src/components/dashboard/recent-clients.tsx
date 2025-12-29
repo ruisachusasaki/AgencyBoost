@@ -101,12 +101,12 @@ export default function RecentClients() {
               <div key={client.id} className="flex items-center gap-4 py-3 border-b border-slate-100 last:border-b-0">
                 <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
                   <span className="text-sm font-medium text-slate-600">
-                    {getInitials(client.name)}
+                    {getInitials(client.company || client.name)}
                   </span>
                 </div>
                 <div className="flex-1">
                   <Link href={`/clients/${client.id}`}>
-                    <p className="font-medium text-slate-900 hover:text-blue-600 cursor-pointer transition-colors">{client.name}</p>
+                    <p className="font-medium text-slate-900 hover:text-blue-600 cursor-pointer transition-colors">{client.company || client.name}</p>
                   </Link>
                   <p className="text-sm text-slate-600">{client.email}</p>
                 </div>

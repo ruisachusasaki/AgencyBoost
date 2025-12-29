@@ -1228,7 +1228,7 @@ export default function Sales() {
                               <SelectItem value="clients-header" disabled>--- CLIENTS ---</SelectItem>
                               {clients.map((client: any) => (
                                 <SelectItem key={client.id} value={`client:${client.id}`}>
-                                  {client.name} - {client.company || 'No Company'}
+                                  {client.company || client.name}
                                 </SelectItem>
                               ))}
                               <SelectItem value="leads-header" disabled>--- LEADS ---</SelectItem>
@@ -1598,7 +1598,7 @@ export default function Sales() {
                         <SelectItem value="all">All Clients/Leads</SelectItem>
                         {clients.map((client: any) => (
                           <SelectItem key={client.id} value={client.id}>
-                            {client.name}
+                            {client.company || client.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

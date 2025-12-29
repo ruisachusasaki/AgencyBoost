@@ -1969,7 +1969,7 @@ export default function ActionConfigPanel({
                   <SelectContent>
                     {clients.map((client: any) => (
                       <SelectItem key={client.id} value={client.id}>
-                        {client.name} ({client.email})
+                        {client.company || client.name} ({client.email})
                       </SelectItem>
                     ))}
                   </SelectContent>

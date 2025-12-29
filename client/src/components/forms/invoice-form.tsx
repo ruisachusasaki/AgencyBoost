@@ -176,7 +176,7 @@ export default function InvoiceForm({ invoice, onSuccess }: InvoiceFormProps) {
                   <SelectContent>
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
-                        {client.name}
+                        {client.company || client.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

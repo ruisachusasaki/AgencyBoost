@@ -227,8 +227,8 @@ export default function EnhancedClientDetail() {
               <User className="h-6 w-6 text-[#46a1a0]" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">{client.name}</h1>
-              <p className="text-sm text-gray-600">{client.company}</p>
+              <h1 className="text-lg font-semibold text-gray-900">{client.company || client.name}</h1>
+              <p className="text-sm text-gray-600">{client.company ? `Contact: ${client.name}` : ""}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">

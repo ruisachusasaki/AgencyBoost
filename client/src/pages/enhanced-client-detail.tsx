@@ -2486,40 +2486,49 @@ export default function EnhancedClientDetail() {
   }, [bundleDetailsData]);
 
   // Helper functions to get dynamic names from custom fields - memoized to prevent infinite re-renders
+  // Note: clientDisplayName returns the CLIENT (business) name, contactDisplayName returns the contact person's name
   const clientDisplayName = useMemo(() => {
     if (!client) return "";
     
-    // If custom fields are still loading, show database name as fallback
+    // If custom fields are still loading, show business name as fallback
     if (customFieldsLoading || !customFieldsData) {
-      return client.name || client.email || "Loading...";
+      return client.company || client.name || client.email || "Loading...";
     }
+    
+    // Primary display should be the business name
+    if (client.company) {
+      return client.company;
+    }
+    
+    // Fall back to contact name if no company
+    return client.name || client.email || "Unnamed Client";
+  }, [client, customFieldsData, customFieldsLoading]);
+
+  // Contact person's name (for secondary display)
+  const contactDisplayName = useMemo(() => {
+    if (!client) return "";
     
     // Find First Name and Last Name fields by exact name match
-    const firstNameField = customFieldsData.find(field => 
-      field.name === 'First Name' || field.name === 'FirstName' || field.name === 'first name'
-    );
-    const lastNameField = customFieldsData.find(field => 
-      field.name === 'Last Name' || field.name === 'LastName' || field.name === 'last name'
-    );
+    if (!customFieldsLoading && customFieldsData) {
+      const firstNameField = customFieldsData.find(field => 
+        field.name === 'First Name' || field.name === 'FirstName' || field.name === 'first name'
+      );
+      const lastNameField = customFieldsData.find(field => 
+        field.name === 'Last Name' || field.name === 'LastName' || field.name === 'last name'
+      );
+      
+      const customFieldValues = client.customFieldValues as Record<string, any> || {};
+      const firstName = firstNameField ? customFieldValues[firstNameField.id] || "" : "";
+      const lastName = lastNameField ? customFieldValues[lastNameField.id] || "" : "";
+      
+      if (firstName && lastName) {
+        return `${firstName} ${lastName}`.trim();
+      }
+      if (firstName) return firstName;
+      if (lastName) return lastName;
+    }
     
-    const customFieldValues = client.customFieldValues as Record<string, any> || {};
-    const firstName = firstNameField ? customFieldValues[firstNameField.id] || "" : "";
-    const lastName = lastNameField ? customFieldValues[lastNameField.id] || "" : "";
-    
-    // If we have both first and last name from custom fields, use them
-    if (firstName && lastName) {
-      return `${firstName} ${lastName}`.trim();
-    }
-    // If we only have first name, use it
-    if (firstName) {
-      return firstName;
-    }
-    // If we only have last name, use it
-    if (lastName) {
-      return lastName;
-    }
-    // Otherwise fall back to database name or email
-    return client.name || client.email || "Unnamed Client";
+    return client.name || "";
   }, [client, customFieldsData, customFieldsLoading]);
 
   const businessDisplayName = useMemo(() => {
@@ -3724,7 +3733,7 @@ export default function EnhancedClientDetail() {
     toast({
       title: "Email Sent",
       variant: "success",
-      description: `Email sent to ${client?.name}`,
+      description: `Email sent to ${client?.company || client?.name}`,
     });
     setEmailMessage("");
   };
@@ -3752,7 +3761,7 @@ export default function EnhancedClientDetail() {
       toast({
         title: "Tag added",
         variant: "success",
-        description: `"${tagName}" has been added to ${client.name}`,
+        description: `"${tagName}" has been added to ${client.company || client.name}`,
       });
 
       // Refresh client data
@@ -3848,7 +3857,7 @@ export default function EnhancedClientDetail() {
       toast({
         title: "Product added",
         variant: "success",
-        description: `"${productName}" has been added to ${client.name}`,
+        description: `"${productName}" has been added to ${client.company || client.name}`,
       });
 
       // Refresh client products data

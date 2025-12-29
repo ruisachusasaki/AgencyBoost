@@ -372,9 +372,7 @@ export function EventCreateModal({
                 <SelectItem value="none">No client</SelectItem>
                 {clientsResponse?.clients?.map((client) => (
                   <SelectItem key={client.id} value={client.id}>
-                    {client.company 
-                      ? `${client.name} - ${client.company}`
-                      : client.name}
+                    {client.company || client.name}
                   </SelectItem>
                 ))}
               </SelectContent>

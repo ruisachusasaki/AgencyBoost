@@ -182,7 +182,7 @@ export function ClientDeletionModal({ isOpen, onClose, client, onSuccess }: Clie
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-orange-500" />
-            Manage Client: {client.name}
+            Manage Client: {client.company || client.name}
           </DialogTitle>
         </DialogHeader>
 

@@ -352,7 +352,7 @@ function PortalAccessManagement() {
                     <SelectItem value="all">All clients</SelectItem>
                     {clients.map((client: any) => (
                       <SelectItem key={client.id} value={client.id}>
-                        {client.name}
+                        {client.company || client.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -588,7 +588,7 @@ function PortalAccessManagement() {
                       <SelectContent>
                         {clients.map((client: any) => (
                           <SelectItem key={client.id} value={client.id}>
-                            {client.name}
+                            {client.company || client.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

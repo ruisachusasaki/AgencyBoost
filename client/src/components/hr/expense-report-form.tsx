@@ -330,7 +330,7 @@ export default function ExpenseReportForm() {
                                 // Fallback to clients data if no options configured
                                 clients.map((client: any) => (
                                   <SelectItem key={client.id} value={client.id}>
-                                    {client.name}
+                                    {client.company || client.name}
                                   </SelectItem>
                                 ))
                               ) : null}

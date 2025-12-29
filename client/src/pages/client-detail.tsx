@@ -471,8 +471,10 @@ export default function ClientDetail() {
             Back to Clients
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{client.name}</h1>
-            <p className="text-slate-600">{client.company || "No company specified"}</p>
+            <h1 className="text-2xl font-bold text-slate-900">{client.company || client.name}</h1>
+            {client.company && client.name && (
+              <p className="text-slate-600">Contact: {client.name}</p>
+            )}
           </div>
         </div>
         

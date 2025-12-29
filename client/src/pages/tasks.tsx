@@ -1496,7 +1496,7 @@ export default function Tasks() {
                     <SelectItem value="none" data-testid="option-no-client">No Client/Lead</SelectItem>
                     {clients.map((client) => (
                       <SelectItem key={`client-${client.id}`} value={`client-${client.id}`} data-testid={`option-client-${client.id}`}>
-                        {client.name} (Client)
+                        {client.company || client.name} (Client)
                       </SelectItem>
                     ))}
                     {leads.map((lead) => (
@@ -2117,7 +2117,7 @@ export default function Tasks() {
                   <SelectItem value="none">No Client/Lead</SelectItem>
                   {clients.map((client) => (
                     <SelectItem key={`client-${client.id}`} value={`client-${client.id}`}>
-                      {client.name} (Client)
+                      {client.company || client.name} (Client)
                     </SelectItem>
                   ))}
                   {leads.map((lead) => (

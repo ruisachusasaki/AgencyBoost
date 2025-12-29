@@ -70,7 +70,7 @@ export default function RecentClientsWidget({ userWidget, onRemove }: WidgetProp
                   data-testid={`client-item-${client.id}`}
                 >
                   <div>
-                    <p className="text-sm font-medium">{client.name}</p>
+                    <p className="text-sm font-medium">{client.company || client.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(client.createdAt), { addSuffix: true })}
                     </p>
