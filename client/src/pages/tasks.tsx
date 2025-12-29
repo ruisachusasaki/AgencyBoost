@@ -1143,7 +1143,7 @@ export default function Tasks() {
   const handleTaskToggle = (taskId: string, completed: boolean) => {
     updateTaskMutation.mutate({
       id: taskId,
-      status: completed ? "completed" : "pending"
+      status: completed ? "completed" : "todo"
     });
   };
 

@@ -659,10 +659,10 @@ export default function TaskDetail() {
                         ) : (
                           // Show default statuses when no workflow selected
                           <>
-                            <SelectItem value="pending">
+                            <SelectItem value="todo">
                               <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                                <span>Pending</span>
+                                <span>Todo</span>
                               </div>
                             </SelectItem>
                             <SelectItem value="in_progress">
