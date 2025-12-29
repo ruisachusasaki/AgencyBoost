@@ -12,12 +12,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2, FileText } from "lucide-react";
 import TaskForm from "@/components/forms/task-form";
+import { TaskTemplatesManager } from "@/components/task-templates-manager";
 import { TaskDependencyIcons } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Task, Client, Campaign, Staff, TaskStatus, TaskPriority, TaskCategory } from "@shared/schema";
+import { useHasPermission } from "@/hooks/use-has-permission";
+import type { Task, Client, Campaign, Staff, TaskStatus, TaskPriority, TaskCategory, TaskTemplate } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -110,6 +112,7 @@ export default function Tasks() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [isTaskTemplatesOpen, setIsTaskTemplatesOpen] = useState(false);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -168,6 +171,9 @@ export default function Tasks() {
 
   // Check if current user is admin
   const isAdmin = currentUser?.role === 'Admin';
+  const isManager = currentUser?.role === 'Manager';
+  const { hasPermission: hasTaskTemplatesPermission } = useHasPermission('tasks.manage_task_templates');
+  const canManageTaskTemplates = isAdmin || isManager || hasTaskTemplatesPermission;
 
   // Auto-select first workflow if none selected and workflows are available
   React.useEffect(() => {
@@ -1806,22 +1812,30 @@ export default function Tasks() {
           <CheckCircle className="h-8 w-8 text-primary" />
           Tasks
         </h1>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Task
+        <div className="flex items-center gap-2">
+          {canManageTaskTemplates && (
+            <Button variant="outline" onClick={() => setIsTaskTemplatesOpen(true)} data-testid="button-task-templates">
+              <FileText className="h-4 w-4 mr-2" />
+              Task Templates
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add New Task</DialogTitle>
-            </DialogHeader>
-            <TaskForm
-              onSuccess={() => setIsCreateDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+          )}
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-task">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Task
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Add New Task</DialogTitle>
+              </DialogHeader>
+              <TaskForm
+                onSuccess={() => setIsCreateDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Task Statistics - Dynamic based on workflow */}
