@@ -10,8 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Calendar, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy, Video, ExternalLink, Plus } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy, Video, ExternalLink, Plus } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -55,6 +59,8 @@ export default function TaskDetail() {
   const [manualTimeHours, setManualTimeHours] = useState("");
   const [manualTimeMinutes, setManualTimeMinutes] = useState("");
   const [manualTimeNotes, setManualTimeNotes] = useState("");
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [dueDateOpen, setDueDateOpen] = useState(false);
   
   // Get URL search parameters
   const searchParams = new URLSearchParams(window.location.search);
@@ -714,60 +720,78 @@ export default function TaskDetail() {
                   {/* Dates - Left Side */}
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-slate-400" />
+                      <CalendarIcon className="h-4 w-4 text-slate-400" />
                       <span className="text-sm font-medium text-slate-700">Dates</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {/* Start Date */}
-                      <div className="flex items-center gap-1">
-                        {task.startDate ? (
-                          <Input
-                            type="date"
-                            value={task.startDate ? new Date(task.startDate).toISOString().split('T')[0] : ""}
-                            onChange={(e) => updateTaskMutation.mutate({ 
-                              startDate: e.target.value ? new Date(e.target.value) : null 
-                            })}
-                            className="w-32 h-7 text-xs border-0 bg-transparent p-1 hover:bg-slate-50 focus:bg-white focus:border-slate-200"
+                      <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={cn(
+                              "h-8 px-3 text-left font-normal",
+                              !task.startDate && "text-muted-foreground"
+                            )}
+                            data-testid="button-start-date"
+                          >
+                            {task.startDate ? (
+                              format(new Date(task.startDate), "MMM d, yyyy")
+                            ) : (
+                              <span>Start date</span>
+                            )}
+                            <CalendarIcon className="ml-2 h-3 w-3 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={task.startDate ? new Date(task.startDate) : undefined}
+                            onSelect={(date) => {
+                              updateTaskMutation.mutate({ startDate: date || null });
+                              setStartDateOpen(false);
+                            }}
+                            initialFocus
                           />
-                        ) : (
-                          <Input
-                            type="date"
-                            placeholder="Start date"
-                            onChange={(e) => updateTaskMutation.mutate({ 
-                              startDate: e.target.value ? new Date(e.target.value) : null 
-                            })}
-                            className="w-32 h-7 text-xs border-dashed border-slate-300 p-1 hover:bg-slate-50 focus:bg-white focus:border-slate-400"
-                          />
-                        )}
-                      </div>
+                        </PopoverContent>
+                      </Popover>
                       
                       <ChevronRight className="h-3 w-3 text-slate-400" />
                       
                       {/* Due Date */}
-                      <div className="flex items-center gap-1">
-                        {task.dueDate ? (
-                          <Input
-                            type="date"
-                            value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ""}
-                            onChange={(e) => updateTaskMutation.mutate({ 
-                              dueDate: e.target.value ? new Date(e.target.value) : null 
-                            })}
-                            className={`w-32 h-7 text-xs border-0 bg-transparent p-1 hover:bg-slate-50 focus:bg-white focus:border-slate-200 ${
-                              new Date(task.dueDate) < new Date() && new Date(task.dueDate).toDateString() !== new Date().toDateString() 
-                                ? 'text-red-600 font-medium' : ''
-                            }`}
+                      <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={cn(
+                              "h-8 px-3 text-left font-normal",
+                              !task.dueDate && "text-muted-foreground",
+                              task.dueDate && new Date(task.dueDate) < new Date() && new Date(task.dueDate).toDateString() !== new Date().toDateString() && "text-red-600 border-red-300"
+                            )}
+                            data-testid="button-due-date"
+                          >
+                            {task.dueDate ? (
+                              format(new Date(task.dueDate), "MMM d, yyyy")
+                            ) : (
+                              <span>Due date</span>
+                            )}
+                            <CalendarIcon className="ml-2 h-3 w-3 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={task.dueDate ? new Date(task.dueDate) : undefined}
+                            onSelect={(date) => {
+                              updateTaskMutation.mutate({ dueDate: date || null });
+                              setDueDateOpen(false);
+                            }}
+                            initialFocus
                           />
-                        ) : (
-                          <Input
-                            type="date"
-                            placeholder="Due date"
-                            onChange={(e) => updateTaskMutation.mutate({ 
-                              dueDate: e.target.value ? new Date(e.target.value) : null 
-                            })}
-                            className="w-32 h-7 text-xs border-dashed border-slate-300 p-1 hover:bg-slate-50 focus:bg-white focus:border-slate-400"
-                          />
-                        )}
-                      </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
                   
