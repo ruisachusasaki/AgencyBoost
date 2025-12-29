@@ -326,6 +326,12 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
         description: 'Add, edit, and delete task comments',
         type: 'view_manage',
       },
+      {
+        key: 'tasks.manage_task_templates',
+        label: 'Manage task templates',
+        description: 'Create, edit, and delete task templates',
+        type: 'manage',
+      },
     ],
   },
   {
