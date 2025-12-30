@@ -743,6 +743,225 @@ li[data-type="taskItem"][data-checked="true"] > .content,
   }
 }
 
+/* Global Dark Mode Overrides */
+/* These styles ensure proper dark mode appearance for elements using hardcoded light mode colors */
+
+/* Background overrides for common white/gray backgrounds */
+.dark .bg-white:not(.dark\:bg-slate-900):not(.dark\:bg-slate-800):not(.dark\:bg-gray-900):not(.dark\:bg-gray-800) {
+  background-color: hsl(222, 47%, 11%) !important;
+}
+
+.dark .bg-gray-50:not([class*="dark:"]) {
+  background-color: hsl(217, 33%, 17%) !important;
+}
+
+.dark .bg-gray-100:not([class*="dark:"]) {
+  background-color: hsl(217, 33%, 17%) !important;
+}
+
+.dark .bg-slate-50:not([class*="dark:"]) {
+  background-color: hsl(217, 33%, 17%) !important;
+}
+
+.dark .bg-slate-100:not([class*="dark:"]) {
+  background-color: hsl(217, 33%, 20%) !important;
+}
+
+/* Text color overrides */
+.dark .text-gray-900:not([class*="dark:"]) {
+  color: hsl(210, 40%, 98%) !important;
+}
+
+.dark .text-gray-800:not([class*="dark:"]) {
+  color: hsl(210, 40%, 95%) !important;
+}
+
+.dark .text-gray-700:not([class*="dark:"]) {
+  color: hsl(215, 20%, 85%) !important;
+}
+
+.dark .text-gray-600:not([class*="dark:"]) {
+  color: hsl(215, 20%, 75%) !important;
+}
+
+.dark .text-gray-500:not([class*="dark:"]) {
+  color: hsl(215, 20%, 65%) !important;
+}
+
+.dark .text-slate-900:not([class*="dark:"]) {
+  color: hsl(210, 40%, 98%) !important;
+}
+
+.dark .text-slate-800:not([class*="dark:"]) {
+  color: hsl(210, 40%, 95%) !important;
+}
+
+.dark .text-slate-700:not([class*="dark:"]) {
+  color: hsl(215, 20%, 85%) !important;
+}
+
+.dark .text-slate-600:not([class*="dark:"]) {
+  color: hsl(215, 20%, 75%) !important;
+}
+
+.dark .text-slate-500:not([class*="dark:"]) {
+  color: hsl(215, 20%, 65%) !important;
+}
+
+/* Border color overrides */
+.dark .border-gray-200:not([class*="dark:"]) {
+  border-color: hsl(217, 19%, 27%) !important;
+}
+
+.dark .border-gray-100:not([class*="dark:"]) {
+  border-color: hsl(217, 19%, 25%) !important;
+}
+
+.dark .border-gray-300:not([class*="dark:"]) {
+  border-color: hsl(217, 19%, 35%) !important;
+}
+
+.dark .border-slate-200:not([class*="dark:"]) {
+  border-color: hsl(217, 19%, 27%) !important;
+}
+
+.dark .border-slate-100:not([class*="dark:"]) {
+  border-color: hsl(217, 19%, 25%) !important;
+}
+
+.dark .border-slate-300:not([class*="dark:"]) {
+  border-color: hsl(217, 19%, 35%) !important;
+}
+
+/* Divider overrides */
+.dark .divide-gray-100:not([class*="dark:"]) > :not([hidden]) ~ :not([hidden]) {
+  border-color: hsl(217, 19%, 25%) !important;
+}
+
+.dark .divide-gray-200:not([class*="dark:"]) > :not([hidden]) ~ :not([hidden]) {
+  border-color: hsl(217, 19%, 27%) !important;
+}
+
+/* Hover state overrides */
+.dark .hover\:bg-gray-50:hover:not([class*="dark:"]) {
+  background-color: hsl(217, 33%, 20%) !important;
+}
+
+.dark .hover\:bg-gray-100:hover:not([class*="dark:"]) {
+  background-color: hsl(217, 33%, 23%) !important;
+}
+
+.dark .hover\:bg-slate-50:hover:not([class*="dark:"]) {
+  background-color: hsl(217, 33%, 20%) !important;
+}
+
+.dark .hover\:bg-slate-100:hover:not([class*="dark:"]) {
+  background-color: hsl(217, 33%, 23%) !important;
+}
+
+/* Ring color overrides */
+.dark .ring-gray-200:not([class*="dark:"]) {
+  --tw-ring-color: hsl(217, 19%, 27%) !important;
+}
+
+.dark .ring-slate-200:not([class*="dark:"]) {
+  --tw-ring-color: hsl(217, 19%, 27%) !important;
+}
+
+/* Shadow adjustments for dark mode */
+.dark .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Status badge adjustments for dark mode */
+.dark .bg-blue-50:not([class*="dark:"]) {
+  background-color: hsl(217, 91%, 20%) !important;
+}
+
+.dark .bg-green-50:not([class*="dark:"]) {
+  background-color: hsl(140, 70%, 15%) !important;
+}
+
+.dark .bg-yellow-50:not([class*="dark:"]) {
+  background-color: hsl(40, 70%, 15%) !important;
+}
+
+.dark .bg-red-50:not([class*="dark:"]) {
+  background-color: hsl(0, 70%, 18%) !important;
+}
+
+.dark .bg-purple-50:not([class*="dark:"]) {
+  background-color: hsl(270, 70%, 18%) !important;
+}
+
+.dark .bg-orange-50:not([class*="dark:"]) {
+  background-color: hsl(25, 70%, 18%) !important;
+}
+
+.dark .bg-teal-50:not([class*="dark:"]) {
+  background-color: hsl(179, 70%, 15%) !important;
+}
+
+/* Badge text colors */
+.dark .text-blue-700:not([class*="dark:"]) {
+  color: hsl(217, 91%, 75%) !important;
+}
+
+.dark .text-green-700:not([class*="dark:"]) {
+  color: hsl(140, 70%, 70%) !important;
+}
+
+.dark .text-yellow-700:not([class*="dark:"]) {
+  color: hsl(40, 70%, 70%) !important;
+}
+
+.dark .text-red-700:not([class*="dark:"]) {
+  color: hsl(0, 70%, 70%) !important;
+}
+
+.dark .text-purple-700:not([class*="dark:"]) {
+  color: hsl(270, 70%, 75%) !important;
+}
+
+.dark .text-orange-700:not([class*="dark:"]) {
+  color: hsl(25, 70%, 70%) !important;
+}
+
+/* Input and form element dark mode */
+.dark input:not([class*="dark:"]),
+.dark textarea:not([class*="dark:"]),
+.dark select:not([class*="dark:"]) {
+  background-color: hsl(217, 33%, 17%);
+  color: hsl(210, 40%, 98%);
+  border-color: hsl(217, 19%, 27%);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: hsl(215, 20%, 55%);
+}
+
+/* Placeholder text color */
+.dark .placeholder\:text-gray-400::placeholder:not([class*="dark:"]) {
+  color: hsl(215, 20%, 55%) !important;
+}
+
+.dark .placeholder\:text-slate-400::placeholder:not([class*="dark:"]) {
+  color: hsl(215, 20%, 55%) !important;
+}
+
 /* Custom scrollbar for webkit browsers */
 ::-webkit-scrollbar {
   width: 6px;
