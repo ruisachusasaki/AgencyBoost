@@ -386,6 +386,9 @@ export default function CalendarMain() {
   const dayScrollRef = useRef<HTMLDivElement>(null);
   const hasScrolledToCurrentTime = useRef(false);
   
+  // Dark mode detection for event colors
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
   // Update current time every minute for live line
   useEffect(() => {
     const timer = setInterval(() => {
@@ -393,6 +396,29 @@ export default function CalendarMain() {
     }, 60000); // Update every minute
     
     return () => clearInterval(timer);
+  }, []);
+  
+  // Detect dark mode changes
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    
+    // Initial check
+    checkDarkMode();
+    
+    // Watch for class changes on html element
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          checkDarkMode();
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, { attributes: true });
+    
+    return () => observer.disconnect();
   }, []);
   
   // Calculate live line position based on current time
@@ -821,6 +847,7 @@ export default function CalendarMain() {
   };
 
   // Helper function to get user color for an event based on assignedTo
+  // Returns appropriate colors based on current dark/light mode
   const getUserColorForEvent = (apt: Appointment) => {
     const userId = apt.assignedTo || (apt as any).userId;
     if (!userId) return null;
@@ -828,7 +855,30 @@ export default function CalendarMain() {
     const userIndex = selectedUsers.indexOf(userId);
     if (userIndex === -1) return null;
     
-    return USER_COLOR_PALETTE[userIndex % USER_COLOR_PALETTE.length];
+    const palette = USER_COLOR_PALETTE[userIndex % USER_COLOR_PALETTE.length];
+    
+    // Return dark mode colors if in dark mode
+    if (isDarkMode && palette.dark) {
+      return {
+        bg: palette.dark.bg,
+        text: palette.dark.text,
+        border: palette.border // Keep border consistent
+      };
+    }
+    
+    return palette;
+  };
+  
+  // Get default event colors based on dark mode
+  const getDefaultEventColors = (type?: string) => {
+    if (isDarkMode) {
+      return type === 'google' 
+        ? { bg: 'rgba(59, 130, 246, 0.25)', text: '#93c5fd', border: '#3b82f6' }
+        : { bg: 'rgba(0, 201, 198, 0.2)', text: '#5eead4', border: 'hsl(179, 100%, 39%)' };
+    }
+    return type === 'google'
+      ? { bg: '#dbeafe', text: '#1e40af', border: '#93c5fd' }
+      : { bg: 'hsl(179, 100%, 39%, 0.1)', text: 'hsl(179, 100%, 39%)', border: 'hsl(179, 100%, 39%, 0.3)' };
   };
 
   // Helper component for appointment tooltip content
@@ -1201,9 +1251,9 @@ export default function CalendarMain() {
                             <div
                               key={index}
                               onClick={() => handleGridClick(day)}
-                              className={`min-h-[100px] p-2 border border-gray-100 dark:border-gray-800 cursor-pointer ${
-                                !isCurrentMonth ? "bg-gray-50 dark:bg-gray-900 text-gray-400" : ""
-                              } ${isToday ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200" : ""}`}
+                              className={`min-h-[100px] p-2 border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 ${
+                                !isCurrentMonth ? "bg-gray-50 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500" : ""
+                              } ${isToday ? "bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-600" : ""}`}
                             >
                               <div className={`text-sm font-medium mb-1 ${isToday ? "text-blue-600 dark:text-blue-400" : ""}`}>
                                 {day.getDate()}
@@ -1217,8 +1267,8 @@ export default function CalendarMain() {
                                         <div
                                           className="text-xs p-1 rounded truncate cursor-pointer"
                                           style={{
-                                            backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.1)'),
-                                            color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
+                                            backgroundColor: userColor?.bg || getDefaultEventColors(apt.type).bg,
+                                            color: userColor?.text || getDefaultEventColors(apt.type).text
                                           }}
                                           onClick={(e) => handleEventClick(apt, e)}
                                           data-testid={`event-month-${apt.id}`}
@@ -1330,8 +1380,8 @@ export default function CalendarMain() {
                                               <div 
                                                 className="text-[10px] px-1 py-0.5 rounded truncate cursor-pointer"
                                                 style={{
-                                                  backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.2)'),
-                                                  color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
+                                                  backgroundColor: userColor?.bg || getDefaultEventColors(apt.type).bg,
+                                                  color: userColor?.text || getDefaultEventColors(apt.type).text
                                                 }}
                                                 onClick={(e) => handleEventClick(apt, e)}
                                                 data-testid={`event-allday-week-${apt.id}`}
@@ -1383,7 +1433,7 @@ export default function CalendarMain() {
                                 hour12: true 
                               });
                               return (
-                                <div key={hour} className="h-[60px] px-1 py-2 text-xs text-gray-500 dark:text-gray-400 text-right border-r border-gray-200 dark:border-gray-700 border-b border-gray-100 dark:border-gray-800">
+                                <div key={hour} className="h-[60px] px-1 py-2 text-xs text-gray-500 dark:text-gray-400 text-right border-r border-gray-200 dark:border-gray-600 border-b border-gray-100 dark:border-gray-700/50">
                                   {timeDisplay}
                                 </div>
                               );
@@ -1415,7 +1465,7 @@ export default function CalendarMain() {
                                   {Array.from({ length: 24 }, (_, hour) => (
                                     <div 
                                       key={hour} 
-                                      className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onClick={() => handleGridClick(day, hour)}
+                                      className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer" onClick={() => handleGridClick(day, hour)}
                                       style={{ top: `${hour * PIXELS_PER_HOUR}px`, height: `${PIXELS_PER_HOUR}px` }}
                                     />
                                   ))}
@@ -1457,9 +1507,9 @@ export default function CalendarMain() {
                                               left: `${leftPercent + 1}%`,
                                               width: `${widthPercent - 1}%`,
                                               zIndex: 10 + column,
-                                              backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.2)'),
-                                              borderColor: userColor?.border || (apt.type === 'google' ? '#93c5fd' : 'hsl(179, 100%, 39%, 0.3)'),
-                                              color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
+                                              backgroundColor: userColor?.bg || getDefaultEventColors(apt.type).bg,
+                                              borderColor: userColor?.border || getDefaultEventColors(apt.type).border,
+                                              color: userColor?.text || getDefaultEventColors(apt.type).text
                                             }}
                                             onClick={(e) => handleEventClick(apt, e)}
                                             data-testid={`event-week-${apt.id}`}
@@ -1533,8 +1583,8 @@ export default function CalendarMain() {
                                         <div 
                                           className="text-xs px-2 py-1 rounded cursor-pointer"
                                           style={{
-                                            backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.2)'),
-                                            color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
+                                            backgroundColor: userColor?.bg || getDefaultEventColors(apt.type).bg,
+                                            color: userColor?.text || getDefaultEventColors(apt.type).text
                                           }}
                                           onClick={(e) => handleEventClick(apt, e)}
                                           data-testid={`event-allday-day-${apt.id}`}
@@ -1606,7 +1656,7 @@ export default function CalendarMain() {
                                     hour12: true 
                                   });
                                   return (
-                                    <div key={hour} className="h-[80px] p-3 text-sm text-gray-500 dark:text-gray-400 text-right border-r border-gray-100 dark:border-gray-800 border-b border-gray-100 dark:border-gray-800">
+                                    <div key={hour} className="h-[80px] p-3 text-sm text-gray-500 dark:text-gray-400 text-right border-r border-gray-100 dark:border-gray-600 border-b border-gray-100 dark:border-gray-700/50">
                                       {timeDisplay}
                                     </div>
                                   );
@@ -1622,7 +1672,7 @@ export default function CalendarMain() {
                                 {Array.from({ length: 24 }, (_, hour) => (
                                   <div 
                                     key={hour} 
-                                    className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onClick={() => handleGridClick(currentDate, hour)}
+                                    className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer" onClick={() => handleGridClick(currentDate, hour)}
                                     style={{ top: `${hour * PIXELS_PER_HOUR}px`, height: `${PIXELS_PER_HOUR}px` }}
                                   />
                                 ))}
@@ -1654,9 +1704,9 @@ export default function CalendarMain() {
                                             left: `${leftPercent}%`,
                                             width: `${widthPercent}%`,
                                             zIndex: 10 + column,
-                                            backgroundColor: userColor?.bg || (apt.type === 'google' ? '#dbeafe' : 'hsl(179, 100%, 39%, 0.1)'),
-                                            borderLeftColor: userColor?.border || (apt.type === 'google' ? '#3b82f6' : 'hsl(179, 100%, 39%)'),
-                                            color: userColor?.text || (apt.type === 'google' ? '#1e40af' : 'hsl(179, 100%, 39%)')
+                                            backgroundColor: userColor?.bg || getDefaultEventColors(apt.type).bg,
+                                            borderLeftColor: userColor?.border || getDefaultEventColors(apt.type).border,
+                                            color: userColor?.text || getDefaultEventColors(apt.type).text
                                           }}
                                           onClick={(e) => handleEventClick(apt, e)}
                                           data-testid={`event-day-${apt.id}`}
