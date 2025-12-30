@@ -962,6 +962,145 @@ li[data-type="taskItem"][data-checked="true"] > .content,
   color: hsl(215, 20%, 55%) !important;
 }
 
+/* Additional status/info badge backgrounds for dark mode */
+.dark .bg-blue-100:not([class*="dark:"]) {
+  background-color: hsl(217, 91%, 20%) !important;
+}
+
+.dark .bg-green-100:not([class*="dark:"]) {
+  background-color: hsl(140, 70%, 15%) !important;
+}
+
+.dark .bg-yellow-100:not([class*="dark:"]) {
+  background-color: hsl(40, 70%, 15%) !important;
+}
+
+.dark .bg-red-100:not([class*="dark:"]) {
+  background-color: hsl(0, 70%, 18%) !important;
+}
+
+.dark .bg-purple-100:not([class*="dark:"]) {
+  background-color: hsl(270, 70%, 18%) !important;
+}
+
+.dark .bg-orange-100:not([class*="dark:"]) {
+  background-color: hsl(25, 70%, 18%) !important;
+}
+
+.dark .bg-teal-100:not([class*="dark:"]) {
+  background-color: hsl(179, 70%, 15%) !important;
+}
+
+.dark .bg-pink-100:not([class*="dark:"]) {
+  background-color: hsl(330, 70%, 18%) !important;
+}
+
+.dark .bg-indigo-100:not([class*="dark:"]) {
+  background-color: hsl(230, 70%, 20%) !important;
+}
+
+/* Text colors for colored badges */
+.dark .text-blue-600:not([class*="dark:"]) {
+  color: hsl(217, 91%, 70%) !important;
+}
+
+.dark .text-blue-800:not([class*="dark:"]) {
+  color: hsl(217, 91%, 80%) !important;
+}
+
+.dark .text-green-600:not([class*="dark:"]) {
+  color: hsl(140, 70%, 65%) !important;
+}
+
+.dark .text-green-800:not([class*="dark:"]) {
+  color: hsl(140, 70%, 75%) !important;
+}
+
+.dark .text-yellow-600:not([class*="dark:"]) {
+  color: hsl(40, 70%, 65%) !important;
+}
+
+.dark .text-yellow-800:not([class*="dark:"]) {
+  color: hsl(40, 70%, 75%) !important;
+}
+
+.dark .text-red-600:not([class*="dark:"]) {
+  color: hsl(0, 70%, 65%) !important;
+}
+
+.dark .text-red-800:not([class*="dark:"]) {
+  color: hsl(0, 70%, 75%) !important;
+}
+
+.dark .text-purple-600:not([class*="dark:"]) {
+  color: hsl(270, 70%, 70%) !important;
+}
+
+.dark .text-purple-800:not([class*="dark:"]) {
+  color: hsl(270, 70%, 80%) !important;
+}
+
+.dark .text-orange-600:not([class*="dark:"]) {
+  color: hsl(25, 70%, 65%) !important;
+}
+
+.dark .text-orange-800:not([class*="dark:"]) {
+  color: hsl(25, 70%, 75%) !important;
+}
+
+.dark .text-teal-600:not([class*="dark:"]) {
+  color: hsl(179, 70%, 60%) !important;
+}
+
+.dark .text-teal-800:not([class*="dark:"]) {
+  color: hsl(179, 70%, 70%) !important;
+}
+
+.dark .text-pink-600:not([class*="dark:"]) {
+  color: hsl(330, 70%, 65%) !important;
+}
+
+.dark .text-pink-800:not([class*="dark:"]) {
+  color: hsl(330, 70%, 75%) !important;
+}
+
+.dark .text-indigo-600:not([class*="dark:"]) {
+  color: hsl(230, 70%, 70%) !important;
+}
+
+.dark .text-indigo-800:not([class*="dark:"]) {
+  color: hsl(230, 70%, 80%) !important;
+}
+
+/* Border colors for colored elements */
+.dark .border-blue-200:not([class*="dark:"]) {
+  border-color: hsl(217, 70%, 30%) !important;
+}
+
+.dark .border-green-200:not([class*="dark:"]) {
+  border-color: hsl(140, 70%, 25%) !important;
+}
+
+.dark .border-yellow-200:not([class*="dark:"]) {
+  border-color: hsl(40, 70%, 25%) !important;
+}
+
+.dark .border-red-200:not([class*="dark:"]) {
+  border-color: hsl(0, 70%, 25%) !important;
+}
+
+.dark .border-purple-200:not([class*="dark:"]) {
+  border-color: hsl(270, 70%, 25%) !important;
+}
+
+.dark .border-orange-200:not([class*="dark:"]) {
+  border-color: hsl(25, 70%, 25%) !important;
+}
+
+.dark .border-teal-200:not([class*="dark:"]) {
+  border-color: hsl(179, 70%, 20%) !important;
+}
+
 /* Custom scrollbar for webkit browsers */
 ::-webkit-scrollbar {
   width: 6px;
