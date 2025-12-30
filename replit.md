@@ -35,7 +35,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - Enhanced visual design for pipeline views and an icon picker.
 - Component-scoped CSS with design system variables.
 - Responsive tab navigation with intelligent overflow menus for sections like HR, adapting to screen size breakpoints.
-- **Dark/Light Mode**: Theme toggle in header (next to notifications) with localStorage persistence and system preference detection. Uses Tailwind's class-based dark mode with CSS variables defined in index.css.
+- **Dark/Light Mode**: Theme toggle in header (next to notifications) with localStorage persistence and system preference detection. Uses Tailwind's class-based dark mode with CSS variables defined in index.css. Global CSS overrides in index.css automatically handle elements with hardcoded light mode colors (bg-white, bg-gray-*, text-gray-*, border-gray-*, etc.) using `.dark .selector:not([class*="dark:"])` patterns. When adding new components with explicit light mode colors, add corresponding `dark:` variants to override the global rules.
 
 ### Technical Implementations
 - **Authentication & Authorization**: Direct Google OAuth 2.0 authentication using google-auth-library (migrated from Replit Auth OIDC). Supports multi-user login where any user can authenticate with their own Google account. Automatic migration logic transitions existing Replit Auth users to Google Auth when email matches. Session management, role-based access control (Admin, Manager, User, Accounting), granular permissions system with templates and database schema. Note: OAuth flows work in incognito mode or production URL but may fail in Replit preview iframe due to third-party cookie restrictions.
