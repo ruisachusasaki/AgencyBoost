@@ -77,7 +77,7 @@ function NotificationButton() {
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm" className="relative p-2">
-          <Bell className="h-5 w-5 text-slate-600" />
+          <Bell className="h-5 w-5 text-slate-600 dark:text-slate-300" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
               {unreadCount > 9 ? '9+' : unreadCount}
@@ -86,9 +86,9 @@ function NotificationButton() {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
-        <div className="border-b border-gray-200 px-4 py-3">
+        <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Notifications</h3>
             {notifications.length > 0 && (
               <Button
                 variant="ghost"
@@ -105,42 +105,42 @@ function NotificationButton() {
         
         <div className="max-h-96 overflow-y-auto">
           {isLoading ? (
-            <div className="p-4 text-center text-sm text-gray-500">
+            <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
               Loading notifications...
             </div>
           ) : notifications.length === 0 ? (
             <div className="p-8 text-center">
-              <Bell className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">No notifications</p>
+              <Bell className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">No notifications</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
               {notifications.map((notification: any) => (
                 <div
                   key={notification.id}
-                  className={`p-4 hover:bg-gray-50 transition-colors ${
-                    !notification.isRead ? 'bg-blue-50' : ''
+                  className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
+                    !notification.isRead ? 'bg-blue-50 dark:bg-blue-900/30' : ''
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 mt-0.5">
                       {notification.type === 'mention' ? (
-                        <MessageSquare className="h-4 w-4 text-blue-600" />
+                        <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       ) : (
-                        <Bell className="h-4 w-4 text-gray-400" />
+                        <Bell className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       )}
                     </div>
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {notification.title}
                           </p>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                             {notification.message}
                           </p>
-                          <p className="text-xs text-gray-400 mt-2">
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                             {format(new Date(notification.createdAt), 'MMM d, h:mm a')}
                           </p>
                         </div>
@@ -181,7 +181,7 @@ function NotificationButton() {
         </div>
         
         {notifications.length > 0 && (
-          <div className="border-t border-gray-200 p-3">
+          <div className="border-t border-gray-200 dark:border-gray-700 p-3">
             <Button
               variant="ghost"
               size="sm"
@@ -235,26 +235,26 @@ function GlobalSearch() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'client':
-        return <Users className="h-4 w-4 text-blue-600" />;
+        return <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />;
       case 'lead':
-        return <User className="h-4 w-4 text-purple-600" />;
+        return <User className="h-4 w-4 text-purple-600 dark:text-purple-400" />;
       case 'task':
-        return <CheckSquare className="h-4 w-4 text-orange-600" />;
+        return <CheckSquare className="h-4 w-4 text-orange-600 dark:text-orange-400" />;
       default:
-        return <FileText className="h-4 w-4 text-gray-600" />;
+        return <FileText className="h-4 w-4 text-gray-600 dark:text-gray-400" />;
     }
   };
 
   const getTypeBadgeColor = (type: string) => {
     switch (type) {
       case 'client':
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300';
       case 'lead':
-        return 'bg-purple-100 text-purple-700';
+        return 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300';
       case 'task':
-        return 'bg-orange-100 text-orange-700';
+        return 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
@@ -284,7 +284,7 @@ function GlobalSearch() {
         ref={inputRef}
         type="search"
         placeholder="Search clients, leads, tasks..."
-        className="w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm"
+        className="w-64 pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm"
         value={searchQuery}
         onChange={(e) => {
           setSearchQuery(e.target.value);
@@ -310,30 +310,30 @@ function GlobalSearch() {
       <PopoverContent className="w-80 p-0" align="end" onOpenAutoFocus={(e) => e.preventDefault()}>
         <div className="max-h-96 overflow-y-auto">
           {isLoading ? (
-            <div className="p-4 text-center text-sm text-gray-500">
+            <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
               Searching...
             </div>
           ) : isError ? (
             <div className="p-8 text-center">
-              <X className="h-8 w-8 text-red-300 mx-auto mb-2" />
-              <p className="text-sm text-red-600">
+              <X className="h-8 w-8 text-red-300 dark:text-red-400 mx-auto mb-2" />
+              <p className="text-sm text-red-600 dark:text-red-400">
                 Search failed. Please try again.
               </p>
             </div>
           ) : results.length === 0 ? (
             <div className="p-8 text-center">
-              <Search className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">
+              <Search className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 {debouncedQuery.length >= 2 ? "No results found" : "Start typing to search..."}
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
               {results.map((result: any) => (
                 <button
                   key={`${result.type}-${result.id}`}
                   onClick={() => handleResultClick(result)}
-                  className="w-full p-3 hover:bg-gray-50 transition-colors text-left"
+                  className="w-full p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
                   data-testid={`search-result-${result.type}-${result.id}`}
                 >
                   <div className="flex items-start gap-3">
@@ -342,7 +342,7 @@ function GlobalSearch() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                           {result.name}
                         </p>
                         <Badge className={`text-xs ${getTypeBadgeColor(result.type)}`}>
@@ -350,7 +350,7 @@ function GlobalSearch() {
                         </Badge>
                       </div>
                       {result.description && (
-                        <p className="text-xs text-gray-500 mt-1 truncate">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
                           {result.description}
                         </p>
                       )}
@@ -405,7 +405,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               onClick={onMenuClick}
               className="lg:hidden p-2"
             >
-              <Menu className="h-5 w-5 text-slate-600" />
+              <Menu className="h-5 w-5 text-slate-600 dark:text-slate-300" />
             </Button>
           )}
         </div>
