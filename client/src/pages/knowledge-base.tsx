@@ -1765,7 +1765,9 @@ export default function KnowledgeBase() {
                                               <GripVertical className="w-5 h-5 text-muted-foreground" />
                                             </div>
                                             <div className="flex-1">
-                                              <h3 className="font-medium">{article.title}</h3>
+                                              <Link href={`/resources/articles/${article.id}`}>
+                                                <h3 className="font-medium hover:text-primary cursor-pointer">{article.title}</h3>
+                                              </Link>
                                               {article.excerpt && (
                                                 <p className="text-sm text-muted-foreground mt-1">{article.excerpt}</p>
                                               )}
