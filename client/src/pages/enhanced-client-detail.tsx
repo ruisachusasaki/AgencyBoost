@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 
 
@@ -1723,17 +1723,45 @@ const EditableField = ({
       ) : (
         <div className="group cursor-pointer" onClick={() => startEditing(fieldId, value)}>
           {type === 'email' && value ? (
-            <a href={`mailto:${value}`} className={`${className} hover:underline group-hover:bg-gray-50 p-1 rounded block`} onClick={(e) => e.stopPropagation()}>
-              {value}
-            </a>
+            <div className="flex items-center gap-2 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 p-1 rounded">
+              <a href={`mailto:${value}`} className={`${className} hover:underline flex-1`} onClick={(e) => e.stopPropagation()}>
+                {value}
+              </a>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:text-primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startEditing(fieldId, value);
+                }}
+                title="Edit email"
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            </div>
           ) : type === 'phone' && value ? (
             <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
               {formatPhoneNumber(value)}
             </p>
           ) : type === 'url' && value ? (
-            <a href={value} target="_blank" rel="noopener noreferrer" className={`${className} hover:underline group-hover:bg-gray-50 p-1 rounded block break-all`} style={{ wordWrap: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }} onClick={(e) => e.stopPropagation()}>
-              {value.length > 60 ? `${value.substring(0, 60)}...` : value}
-            </a>
+            <div className="flex items-center gap-2 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 p-1 rounded">
+              <a href={value} target="_blank" rel="noopener noreferrer" className={`${className} hover:underline flex-1 break-all`} style={{ wordWrap: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }} onClick={(e) => e.stopPropagation()}>
+                {value.length > 60 ? `${value.substring(0, 60)}...` : value}
+              </a>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:text-primary flex-shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startEditing(fieldId, value);
+                }}
+                title="Edit URL"
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            </div>
           ) : type === 'currency' && value ? (
             <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
               ${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
