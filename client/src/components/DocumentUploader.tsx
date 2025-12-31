@@ -100,6 +100,11 @@ export function DocumentUploader({
             }
 
             const { uploadURL } = await response.json();
+            
+            // Store the upload URL in file metadata for later retrieval
+            file.meta = file.meta || {};
+            file.meta.uploadURL = uploadURL;
+            
             return {
               method: 'PUT' as const,
               url: uploadURL,
@@ -112,6 +117,15 @@ export function DocumentUploader({
       })
       .on('upload-success', async (file: any, response: any) => {
         try {
+          // Get the upload URL from file metadata (stored during getUploadParameters)
+          // or fall back to response.uploadURL
+          const fileUrl = file.meta?.uploadURL || response?.uploadURL;
+          
+          if (!fileUrl) {
+            console.error('No upload URL found for file:', file.name);
+            throw new Error('Upload URL not found');
+          }
+          
           // Register the uploaded file with the database
           const registerResponse = await fetch('/api/documents', {
             method: 'POST',
@@ -122,7 +136,7 @@ export function DocumentUploader({
               fileName: file.name,
               fileType: file.type,
               fileSize: file.size,
-              fileUrl: response.uploadURL,
+              fileUrl: fileUrl,
               clientId,
             }),
           });
