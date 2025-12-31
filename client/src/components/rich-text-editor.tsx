@@ -204,6 +204,47 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
         class: 'tiptap focus:outline-none min-h-[200px] p-4 w-full max-w-none prose prose-sm',
         placeholder,
       },
+      // Clean up pasted HTML to remove excessive empty paragraphs
+      transformPastedHTML(html) {
+        let cleaned = html;
+        
+        // Remove empty paragraphs that are just whitespace or breaks
+        cleaned = cleaned.replace(/<p>\s*<\/p>/gi, '');
+        cleaned = cleaned.replace(/<p><br\s*\/?><\/p>/gi, '');
+        cleaned = cleaned.replace(/<p>\s*<br\s*\/?>\s*<\/p>/gi, '');
+        
+        // Remove multiple consecutive br tags (more than 2)
+        cleaned = cleaned.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>');
+        
+        // Clean up list-related empty content
+        cleaned = cleaned.replace(/<li>\s*<\/li>/gi, '');
+        cleaned = cleaned.replace(/<ul>\s*<\/ul>/gi, '');
+        cleaned = cleaned.replace(/<ol>\s*<\/ol>/gi, '');
+        
+        // Remove empty paragraphs between list items
+        cleaned = cleaned.replace(/<\/li>\s*(<p>\s*<\/p>\s*)+<li>/gi, '</li><li>');
+        
+        // Remove spans with only whitespace
+        cleaned = cleaned.replace(/<span[^>]*>\s*<\/span>/gi, '');
+        
+        // Convert bullet characters to proper list items if not already in a list
+        // Common bullet characters: •, ●, ○, ■, □, ▪, ▫, ‣, ⁃
+        const bulletPattern = /^[\s]*[•●○■□▪▫‣⁃\-\*]\s*/gm;
+        if (bulletPattern.test(cleaned) && !cleaned.includes('<ul>') && !cleaned.includes('<ol>')) {
+          // Split by lines, convert bullets to list items
+          const lines = cleaned.split(/<br\s*\/?>/i);
+          const listItems = lines
+            .map(line => line.replace(/^[\s]*[•●○■□▪▫‣⁃\-\*]\s*/, '').trim())
+            .filter(line => line.length > 0)
+            .map(line => `<li>${line}</li>`)
+            .join('');
+          if (listItems) {
+            cleaned = `<ul>${listItems}</ul>`;
+          }
+        }
+        
+        return cleaned;
+      },
     },
   });
 
@@ -430,9 +471,10 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   };
 
   // Clean up HTML by removing unnecessary paragraph tags in list items
-  // and stripping leading/trailing empty paragraphs
+  // and stripping leading/trailing/consecutive empty paragraphs
   const cleanListHTML = (html: string) => {
     let cleaned = html
+      // Clean up paragraph tags inside list items
       .replace(/<li><p>(.*?)<\/p><\/li>/g, '<li>$1</li>')
       .replace(/<li>\s*<p>(.*?)<\/p>\s*<\/li>/g, '<li>$1</li>');
     
@@ -441,6 +483,16 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
     
     // Strip trailing empty paragraphs
     cleaned = cleaned.replace(/(\s*<p>(\s|<br\s*\/?>)*<\/p>\s*)+$/gi, '');
+    
+    // Replace multiple consecutive empty paragraphs with a single one (max 2 for spacing)
+    cleaned = cleaned.replace(/(<p>(\s|<br\s*\/?>)*<\/p>\s*){3,}/gi, '<p></p><p></p>');
+    
+    // Remove empty paragraphs between list items
+    cleaned = cleaned.replace(/<\/li>\s*(<p>(\s|<br\s*\/?>)*<\/p>\s*)+<li>/gi, '</li><li>');
+    
+    // Remove empty paragraphs before/after lists
+    cleaned = cleaned.replace(/(<p>(\s|<br\s*\/?>)*<\/p>\s*)+(<[ou]l)/gi, '$3');
+    cleaned = cleaned.replace(/(<\/[ou]l>)\s*(<p>(\s|<br\s*\/?>)*<\/p>\s*)+/gi, '$1');
     
     return cleaned;
   };
