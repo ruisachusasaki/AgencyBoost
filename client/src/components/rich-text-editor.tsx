@@ -755,12 +755,17 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
           onChange={(e) => handleHtmlChange(e.target.value)}
           className="w-full min-h-[200px] p-4 font-mono text-sm border-0 resize-none focus:outline-none"
           placeholder="Enter HTML content..."
+          onKeyDown={(e) => e.stopPropagation()}
         />
       ) : (
-        <EditorContent 
-          editor={editor} 
-          className={`min-h-[200px] ${lineHeightClasses[currentLineHeight as keyof typeof lineHeightClasses] || ''}`} 
-        />
+        <div 
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <EditorContent 
+            editor={editor} 
+            className={`min-h-[200px] ${lineHeightClasses[currentLineHeight as keyof typeof lineHeightClasses] || ''}`} 
+          />
+        </div>
       )}
     </div>
   );
