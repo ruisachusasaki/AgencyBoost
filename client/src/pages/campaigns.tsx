@@ -857,7 +857,7 @@ export default function Campaigns() {
             description: form.description,
             status: form.status,
             lastUpdated: form.updatedAt || form.createdAt,
-            updatedBy: form.updatedBy || 'System',
+            updatedBy: form.updatedByName || 'System',
             originalForm: form
           });
         }
@@ -887,7 +887,7 @@ export default function Campaigns() {
             description: form.description,
             status: form.status,
             lastUpdated: form.updatedAt || form.createdAt,
-            updatedBy: form.updatedBy || 'System',
+            updatedBy: form.updatedByName || 'System',
             originalForm: form
           });
         }

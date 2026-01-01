@@ -18533,7 +18533,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Form Routes - Direct database operations (workaround for storage class compilation issue)
   app.get("/api/forms", requireAuth(), requirePermission('campaigns', 'canView'), async (req, res) => {
     try {
-      const formsResult = await db.select().from(forms).orderBy(desc(forms.createdAt));
+      const formsResult = await db
+        .select({
+          id: forms.id,
+          name: forms.name,
+          description: forms.description,
+          status: forms.status,
+          folderId: forms.folderId,
+          settings: forms.settings,
+          createdBy: forms.createdBy,
+          updatedBy: forms.updatedBy,
+          createdAt: forms.createdAt,
+          updatedAt: forms.updatedAt,
+          updatedByName: sql`CONCAT(${staff.firstName}, ' ', ${staff.lastName})`.as('updated_by_name'),
+        })
+        .from(forms)
+        .leftJoin(staff, eq(forms.updatedBy, staff.id))
+        .orderBy(desc(forms.createdAt));
       res.json(formsResult);
     } catch (error) {
       console.error("Error fetching forms:", error);
@@ -18644,6 +18660,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description = COALESCE(${cleanFormData.description}, description),
           status = COALESCE(${cleanFormData.status}, status),
           settings = COALESCE(${cleanFormData.settings ? JSON.stringify(cleanFormData.settings) : null}, settings),
+          updated_by = ${userId},
           updated_at = NOW()
         WHERE id = ${req.params.id}
         RETURNING *

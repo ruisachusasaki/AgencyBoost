@@ -2886,6 +2886,7 @@ export const forms = pgTable("forms", {
   folderId: varchar("folder_id").references(() => formFolders.id),
   settings: jsonb("settings").default({}), // form settings like submit text, redirect url, etc.
   createdBy: uuid("created_by").notNull().references(() => staff.id),
+  updatedBy: uuid("updated_by").references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
