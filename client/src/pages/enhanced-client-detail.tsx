@@ -3111,7 +3111,7 @@ export default function EnhancedClientDetail() {
     },
     onSuccess: (data) => {
       console.log('Owner mutation success, invalidating queries');
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
       setIsAssigningOwner(false);
       setOwnerSearchTerm("");
       toast({
@@ -3150,7 +3150,7 @@ export default function EnhancedClientDetail() {
     },
     onSuccess: (data) => {
       console.log('Followers mutation success, invalidating queries');
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
       setIsAddingFollowers(false);
       setFollowerSearchTerm("");
       toast({
