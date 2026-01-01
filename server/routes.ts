@@ -3599,6 +3599,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { totalScore, averageScore, healthIndicator },
         req
       );
+
+      // Notify client followers about the health score
+      try {
+        const clientData = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
+        const clientRecord = clientData[0];
+        
+        if (clientRecord && clientRecord.followers && clientRecord.followers.length > 0) {
+          const clientName = clientRecord.company || clientRecord.name || 'Unknown Client';
+          const userInfo = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+          const authorName = userInfo[0] ? `${userInfo[0].firstName} ${userInfo[0].lastName}` : 'A team member';
+          
+          // Create notifications for each follower (except the author)
+          for (const followerId of clientRecord.followers) {
+            if (followerId !== userId) {
+              await db.insert(notifications).values({
+                userId: followerId,
+                type: "client_health_update",
+                title: "Health score recorded for followed client",
+                message: `${authorName} recorded a ${healthIndicator} health score for ${clientName} (${averageScore.toFixed(1)}/3.0)`,
+                entityType: "client",
+                entityId: clientId,
+                priority: healthIndicator === 'good' ? 'normal' : 'high',
+                actionUrl: `/clients/${clientId}`,
+                actionText: "View Client",
+                metadata: {
+                  healthScoreId: healthScore.id,
+                  healthIndicator: healthIndicator,
+                  averageScore: averageScore,
+                  authorId: userId,
+                  authorName: authorName
+                }
+              });
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error("Failed to create follower health notifications:", notificationError);
+        // Don't fail the request if notification creation fails
+      }
       
       res.status(201).json(healthScore);
     } catch (error) {
@@ -3896,6 +3935,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (triggerError) {
         console.error("Automation trigger failed but health score update was successful:", triggerError);
+      }
+
+      // Notify client followers about the health score update (only if indicator changed)
+      try {
+        if (oldHealthScore.healthIndicator !== healthScore.healthIndicator) {
+          const clientData = await db.select().from(clients).where(eq(clients.id, healthScore.clientId)).limit(1);
+          const clientRecord = clientData[0];
+          
+          if (clientRecord && clientRecord.followers && clientRecord.followers.length > 0) {
+            const clientName = clientRecord.company || clientRecord.name || 'Unknown Client';
+            const userInfo = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+            const authorName = userInfo[0] ? `${userInfo[0].firstName} ${userInfo[0].lastName}` : 'A team member';
+            const direction = (healthScore.totalScore || 0) > (oldHealthScore.totalScore || 0) ? 'improved' : 'declined';
+            
+            // Create notifications for each follower (except the author)
+            for (const followerId of clientRecord.followers) {
+              if (followerId !== userId) {
+                await db.insert(notifications).values({
+                  userId: followerId,
+                  type: "client_health_change",
+                  title: `Health status ${direction} for followed client`,
+                  message: `${clientName}'s health status ${direction} from ${oldHealthScore.healthIndicator} to ${healthScore.healthIndicator}`,
+                  entityType: "client",
+                  entityId: healthScore.clientId,
+                  priority: healthScore.healthIndicator === 'critical' || healthScore.healthIndicator === 'at_risk' ? 'high' : 'normal',
+                  actionUrl: `/clients/${healthScore.clientId}`,
+                  actionText: "View Client",
+                  metadata: {
+                    healthScoreId: healthScore.id,
+                    oldIndicator: oldHealthScore.healthIndicator,
+                    newIndicator: healthScore.healthIndicator,
+                    direction: direction,
+                    authorId: userId,
+                    authorName: authorName
+                  }
+                });
+              }
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error("Failed to create follower health change notifications:", notificationError);
+        // Don't fail the request if notification creation fails
       }
       
       res.json(healthScore);
@@ -13820,6 +13902,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { content, clientId },
         req
       );
+
+      // Notify client followers about the new note
+      try {
+        const clientData = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
+        const clientRecord = clientData[0];
+        
+        if (clientRecord && clientRecord.followers && clientRecord.followers.length > 0) {
+          const clientName = clientRecord.company || clientRecord.name || 'Unknown Client';
+          const authorName = `${user.firstName} ${user.lastName}`;
+          
+          // Create notifications for each follower (except the author)
+          for (const followerId of clientRecord.followers) {
+            if (followerId !== databaseUserId && followerId !== userId) {
+              await db.insert(notifications).values({
+                userId: followerId,
+                type: "client_note",
+                title: "New note on followed client",
+                message: `${authorName} added a note to ${clientName}: "${content.substring(0, 80)}${content.length > 80 ? '...' : ''}"`,
+                entityType: "client",
+                entityId: clientId,
+                priority: "normal",
+                actionUrl: `/clients/${clientId}`,
+                actionText: "View Client",
+                metadata: {
+                  noteId: createdNote.id,
+                  authorId: databaseUserId,
+                  authorName: authorName
+                }
+              });
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error("Failed to create follower notifications:", notificationError);
+        // Don't fail the request if notification creation fails
+      }
 
       // Return note with user information for UI
       const noteResponse = {

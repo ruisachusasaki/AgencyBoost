@@ -100,6 +100,7 @@ export default function Clients() {
   const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
   
   // Filtering state
+  const [showFollowedOnly, setShowFollowedOnly] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [currentFilter, setCurrentFilter] = useState<ClientFilter>({
     conditions: [],
@@ -717,6 +718,13 @@ export default function Clients() {
     // First apply filters
     let filtered = applyClientFilter(clients, currentFilter);
     
+    // Apply 'My Followed Clients' filter
+    if (showFollowedOnly && currentUser?.id) {
+      filtered = filtered.filter(client => 
+        client.followers && client.followers.includes(currentUser.id)
+      );
+    }
+    
     // Then apply search term filtering
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase().trim();
@@ -786,7 +794,7 @@ export default function Clients() {
     });
 
     return sorted;
-  }, [clients, sortField, sortDirection, staff, customFieldsData, currentFilter, searchTerm]);
+  }, [clients, sortField, sortDirection, staff, customFieldsData, currentFilter, searchTerm, showFollowedOnly, currentUser]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -1259,6 +1267,7 @@ export default function Clients() {
   const handleLoadSmartList = (smartList: SmartList) => {
     setCurrentFilter(smartList.filters);
     setActiveSmartList(smartList.id);
+    setShowFollowedOnly(false);
     setActiveTab(smartList.id);
     toast({
       title: "Smart List Applied",
@@ -1272,11 +1281,13 @@ export default function Clients() {
     if (tabId === "all-clients") {
       setActiveSmartList(null);
       setCurrentFilter({ conditions: [], logic: 'AND' });
+      setShowFollowedOnly(false);
     } else {
       const smartList = getVisibleSmartLists().find(list => list.id === tabId);
       if (smartList) {
         setCurrentFilter(smartList.filters);
-        setActiveSmartList(smartList.id);
+    setActiveSmartList(smartList.id);
+    setShowFollowedOnly(false);
       }
     }
   };
@@ -1785,6 +1796,16 @@ export default function Clients() {
             {isExporting ? 'Exporting...' : 'Export'}
           </Button>
           
+          <Button
+            variant="outline"
+            onClick={() => setShowFollowedOnly(!showFollowedOnly)}
+            className={`${showFollowedOnly ? 'bg-primary/10 border-primary text-primary' : ''}`}
+            data-testid="button-my-followed-clients"
+          >
+            <Users className="h-4 w-4 mr-2" />
+            My Followed
+          </Button>
+          
           <Button 
             variant="outline"
             onClick={() => setIsFilterOpen(true)}
@@ -2008,7 +2029,8 @@ export default function Clients() {
                     variant={activeSmartList === null ? "default" : "outline"}
                     onClick={() => {
                       setActiveSmartList(null);
-                      setCurrentFilter({ conditions: [], logic: 'AND' });
+      setCurrentFilter({ conditions: [], logic: 'AND' });
+      setShowFollowedOnly(false);
                     }}
                     className="justify-start"
                   >
