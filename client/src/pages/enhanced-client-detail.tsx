@@ -3790,7 +3790,7 @@ export default function EnhancedClientDetail() {
       });
 
       // Refresh client data
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
     } catch (error) {
       toast({
         title: "Error adding tag",
