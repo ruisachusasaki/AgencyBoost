@@ -4422,6 +4422,70 @@ export default function EnhancedClientDetail() {
                       ) : (
                         <p className="text-sm text-gray-500">No tags assigned</p>
                       )}
+
+                      {/* Tag Input */}
+                      {isAddingTag && (
+                        <div className="relative mt-2">
+                          <Input
+                            placeholder="Type tag name..."
+                            value={newTagName}
+                            onChange={(e) => handleTagInputChange(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && newTagName.trim()) {
+                                e.preventDefault();
+                                createNewTag();
+                              } else if (e.key === 'Escape') {
+                                setIsAddingTag(false);
+                                setNewTagName('');
+                                setShowSuggestions(false);
+                              }
+                            }}
+                            autoFocus
+                            className="text-sm"
+                            data-testid="input-add-tag"
+                          />
+                          {showSuggestions && filteredTags.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                              {filteredTags.map((tag: Tag) => (
+                                <div
+                                  key={tag.id}
+                                  onClick={() => selectExistingTag(tag.name)}
+                                  className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm flex items-center gap-2"
+                                >
+                                  <div 
+                                    className="w-3 h-3 rounded-full" 
+                                    style={{ backgroundColor: tag.color || '#3B82F6' }}
+                                  />
+                                  {tag.name}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex gap-2 mt-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setIsAddingTag(false);
+                                setNewTagName('');
+                                setShowSuggestions(false);
+                              }}
+                              data-testid="button-cancel-add-tag"
+                            >
+                              Cancel
+                            </Button>
+                            {newTagName.trim() && !filteredTags.some((t: Tag) => t.name.toLowerCase() === newTagName.toLowerCase()) && (
+                              <Button
+                                size="sm"
+                                onClick={createNewTag}
+                                data-testid="button-create-tag"
+                              >
+                                Create "{newTagName}"
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
