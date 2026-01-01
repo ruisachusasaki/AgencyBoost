@@ -348,7 +348,7 @@ export const documents = pgTable("documents", {
   fileSize: integer("file_size"),
   fileUrl: text("file_url").notNull(),
   clientId: varchar("client_id").notNull().references(() => clients.id),
-  uploadedBy: varchar("uploaded_by").notNull().references(() => users.id),
+  uploadedBy: varchar("uploaded_by").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
