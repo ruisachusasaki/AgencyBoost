@@ -203,7 +203,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
     settings?: { styling?: FormStyling; [key: string]: any };
     fields: FormField[];
   }>({
-    queryKey: ['/api/forms', formId],
+    queryKey: [`/api/forms/${formId}`],
     enabled: !!formId,
   });
 
