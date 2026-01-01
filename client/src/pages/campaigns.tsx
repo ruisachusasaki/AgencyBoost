@@ -1890,7 +1890,13 @@ export default function Campaigns() {
                             <div className="flex items-center gap-2">
                               <FileText className="h-4 w-4 text-green-500" />
                               <div>
-                                <div className="font-medium">{item.name}</div>
+                                <a 
+                                  href={`/form-builder/${item.id}`} 
+                                  className="font-medium text-primary hover:underline cursor-pointer"
+                                  data-testid={`link-edit-form-${item.id}`}
+                                >
+                                  {item.name}
+                                </a>
                                 {item.description && (
                                   <div className="text-sm text-gray-500 truncate max-w-xs">
                                     {item.description}
