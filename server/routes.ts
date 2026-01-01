@@ -15553,10 +15553,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fileUrl: documents.fileUrl,
           uploadedBy: documents.uploadedBy,
           createdAt: documents.createdAt,
-          uploaderName: sql<string>`concat(${users.firstName}, ' ', ${users.lastName})`
+          uploaderName: sql<string>`concat(${staff.firstName}, ' ', ${staff.lastName})`
         })
         .from(documents)
-        .leftJoin(users, sql`${documents.uploadedBy} = ${users.id}`)
+        .leftJoin(staff, sql`${documents.uploadedBy}::uuid = ${staff.id}`)
         .where(eq(documents.clientId, clientId))
         .orderBy(desc(documents.createdAt));
 
