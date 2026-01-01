@@ -625,10 +625,7 @@ function WorkflowSelectionModal({
   // Handle workflow selection and trigger
   const handleSelectWorkflow = async (workflowId: string, workflowName: string) => {
     try {
-      await apiRequest(`/api/workflows/${workflowId}/trigger`, {
-        method: 'POST',
-        body: { clientId }
-      });
+      await apiRequest('POST', `/api/workflows/${workflowId}/trigger`, { clientId });
       
       toast({
         title: "Workflow Started",
