@@ -4233,9 +4233,40 @@ export default function EnhancedClientDetail() {
 
             {/* Status Badges */}
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-primary border-primary">
-                {client.status}
-              </Badge>
+              {isAdmin ? (
+                <Select
+                  value={client.status}
+                  onValueChange={async (newStatus) => {
+                    try {
+                      await apiRequest('PUT', `/api/clients/${clientId}`, { status: newStatus });
+                      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
+                      toast({
+                        title: "Status updated",
+                        description: `Client status changed to ${newStatus}`,
+                        variant: "success"
+                      });
+                    } catch (error) {
+                      toast({
+                        title: "Error updating status",
+                        description: "Failed to update client status",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[120px] h-8 text-sm border-primary text-primary" data-testid="select-client-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Badge variant="outline" className="text-primary border-primary">
+                  {client.status}
+                </Badge>
+              )}
               <Badge variant="outline">
                 {client.contactType}
               </Badge>
