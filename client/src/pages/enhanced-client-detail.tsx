@@ -6231,7 +6231,7 @@ export default function EnhancedClientDetail() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900">Documents</h3>
-                      <DocumentUploader clientId={clientId!} />
+                      <DocumentUploader clientId={clientId!} onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] })} />
                     </div>
                     
                     {/* Search bar */}
