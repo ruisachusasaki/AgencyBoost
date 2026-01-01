@@ -151,11 +151,11 @@ export function DocumentUploader({
             variant: "success",
             description: `${file.name} has been uploaded and attached to the client.`,
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error('File registration error:', error);
           toast({
             title: "Upload error",
-            description: `Failed to register ${file.name}. Please try again.`,
+            description: error?.message || `Failed to register ${file.name}. Please try again.`,
             variant: "destructive",
           });
         }

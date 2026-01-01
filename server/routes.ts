@@ -15439,9 +15439,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/documents", requireAuth(), requirePermission('clients', 'canCreate'), async (req, res) => {
     try {
       const { fileName, fileType, fileSize, fileUrl, clientId } = req.body;
+      
+      console.log('[Document Registration] Request body:', { fileName, fileType, fileSize, fileUrl: fileUrl?.substring(0, 100), clientId });
 
       // Validate required fields
       if (!fileName || !fileType || !fileSize || !fileUrl || !clientId) {
+        console.log('[Document Registration] Missing required fields:', { hasFileName: !!fileName, hasFileType: !!fileType, hasFileSize: !!fileSize, hasFileUrl: !!fileUrl, hasClientId: !!clientId });
         return res.status(400).json({ message: "All fields are required" });
       }
 
