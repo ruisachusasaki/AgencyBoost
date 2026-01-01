@@ -6073,6 +6073,24 @@ export default function EnhancedClientDetail() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Clear Filters Button */}
+                    {(taskStatusFilter !== "all" || taskPriorityFilter !== "all" || taskAssigneeFilter !== "all") && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setTaskStatusFilter("all");
+                          setTaskPriorityFilter("all");
+                          setTaskAssigneeFilter("all");
+                        }}
+                        className="text-primary hover:text-primary/80"
+                        data-testid="button-clear-task-filters"
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        Clear Filters
+                      </Button>
+                    )}
                     
                     <div className="flex items-center gap-2 mb-4">
                       <Switch
@@ -6080,7 +6098,7 @@ export default function EnhancedClientDetail() {
                         checked={showCompletedTasks}
                         onCheckedChange={setShowCompletedTasks}
                       />
-                      <Label htmlFor="show-completed" className="text-sm text-gray-600">
+                      <Label htmlFor="show-completed" className="text-sm text-gray-600 dark:text-gray-400">
                         Show completed tasks
                       </Label>
                     </div>
