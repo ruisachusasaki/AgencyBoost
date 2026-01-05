@@ -93,6 +93,16 @@ export default function Staff() {
     return () => subscription.unsubscribe();
   }, [form]);
 
+  // Set default roleId to "User" role when roles are loaded and dialog opens
+  useEffect(() => {
+    if (isAddDialogOpen && roles.length > 0 && !form.getValues('roleId')) {
+      const userRole = roles.find(role => role.name === 'User');
+      if (userRole) {
+        form.setValue('roleId', userRole.id);
+      }
+    }
+  }, [isAddDialogOpen, roles, form]);
+
   const teamForm = useForm<TeamFormData>({
     resolver: zodResolver(teamFormSchema),
     defaultValues: {
