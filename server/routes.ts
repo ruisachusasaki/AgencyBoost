@@ -8371,6 +8371,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to create task category" });
     }
   });
+  app.put("/api/task-categories/:id", requireAuth(), requirePermission('tasks', 'canEdit'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const category = await appStorage.updateTaskCategory(id, req.body);
+      if (!category) {
+        return res.status(404).json({ message: "Task category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      console.error("Error updating task category:", error);
+      res.status(500).json({ message: "Failed to update task category" });
+    }
+  });
+
+  app.delete("/api/task-categories/:id", requireAuth(), requirePermission('tasks', 'canDelete'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await appStorage.deleteTaskCategory(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Task category not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting task category:", error);
+      res.status(500).json({ message: "Failed to delete task category" });
+    }
+  });
+
 
   // Automation Triggers routes - SECURED
   app.get("/api/automation-triggers", requireAuth(), requirePermission('workflows', 'canView'), async (req, res) => {
