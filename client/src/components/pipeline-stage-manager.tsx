@@ -43,7 +43,7 @@ export default function PipelineStageManager({ onClose }: PipelineStageManagerPr
   });
 
   const createStageMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/lead-pipeline-stages", "POST", data),
+    mutationFn: (data: any) => apiRequest("POST", "/api/lead-pipeline-stages", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/lead-pipeline-stages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -65,7 +65,7 @@ export default function PipelineStageManager({ onClose }: PipelineStageManagerPr
 
   const updateStageMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => 
-      apiRequest(`/api/lead-pipeline-stages/${id}`, "PUT", data),
+      apiRequest("PUT", `/api/lead-pipeline-stages/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/lead-pipeline-stages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -87,7 +87,7 @@ export default function PipelineStageManager({ onClose }: PipelineStageManagerPr
   });
 
   const deleteStageMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/lead-pipeline-stages/${id}`, "DELETE"),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/lead-pipeline-stages/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/lead-pipeline-stages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -108,7 +108,7 @@ export default function PipelineStageManager({ onClose }: PipelineStageManagerPr
 
   const reorderStagesMutation = useMutation({
     mutationFn: (stageOrders: Array<{ id: string; order: number }>) => 
-      apiRequest("/api/lead-pipeline-stages/reorder", "PUT", { stageOrders }),
+      apiRequest("PUT", "/api/lead-pipeline-stages/reorder", { stageOrders }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/lead-pipeline-stages"] });
     },
