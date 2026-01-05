@@ -63,6 +63,7 @@ export default function TaskDetail() {
   const [manualTimeNotes, setManualTimeNotes] = useState("");
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [dueDateOpen, setDueDateOpen] = useState(false);
+  const [manualTimeDateOpen, setManualTimeDateOpen] = useState(false);
   
   // Get URL search parameters
   const searchParams = new URLSearchParams(window.location.search);
@@ -1224,15 +1225,40 @@ export default function TaskDetail() {
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="manual-time-date">Date</Label>
-              <Input
-                id="manual-time-date"
-                type="date"
-                value={manualTimeDate}
-                onChange={(e) => setManualTimeDate(e.target.value)}
-                max={new Date().toISOString().split('T')[0]}
-                data-testid="input-manual-time-date"
-              />
+              <Label>Date</Label>
+              <Popover open={manualTimeDateOpen} onOpenChange={setManualTimeDateOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !manualTimeDate && "text-muted-foreground"
+                    )}
+                    data-testid="input-manual-time-date"
+                  >
+                    {manualTimeDate ? (
+                      format(new Date(manualTimeDate), "MMM d, yyyy")
+                    ) : (
+                      "Select date"
+                    )}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={manualTimeDate ? new Date(manualTimeDate) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        setManualTimeDate(date.toISOString().split('T')[0]);
+                      }
+                      setManualTimeDateOpen(false);
+                    }}
+                    disabled={(date) => date > new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             
             <div className="space-y-2">
