@@ -107,9 +107,34 @@ export default function PipelineStageManager({ onClose }: PipelineStageManagerPr
   });
 
   const reorderStagesMutation = useMutation({
-    mutationFn: (stageOrders: Array<{ id: string; order: number }>) => 
+    mutationFn: ({ stageOrders }: { stageOrders: Array<{ id: string; order: number }>; optimisticData: LeadPipelineStage[] }) => 
       apiRequest("PUT", "/api/lead-pipeline-stages/reorder", { stageOrders }),
-    onSuccess: () => {
+    onMutate: async ({ optimisticData }) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ["/api/lead-pipeline-stages"] });
+      
+      // Snapshot the previous value
+      const previousStages = queryClient.getQueryData<LeadPipelineStage[]>(["/api/lead-pipeline-stages"]);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(["/api/lead-pipeline-stages"], optimisticData);
+      
+      // Return a context object with the snapshotted value
+      return { previousStages };
+    },
+    onError: (error: any, variables, context) => {
+      // Rollback to previous order on error
+      if (context?.previousStages) {
+        queryClient.setQueryData(["/api/lead-pipeline-stages"], context.previousStages);
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reorder pipeline stages",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      // Refetch to ensure data consistency after mutation completes
       queryClient.invalidateQueries({ queryKey: ["/api/lead-pipeline-stages"] });
     },
   });
@@ -153,18 +178,25 @@ export default function PipelineStageManager({ onClose }: PipelineStageManagerPr
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
+    if (result.source.index === result.destination.index) return;
 
     const items = Array.from(stages);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
     // Update order numbers based on new positions
-    const stageOrders = items.map((stage, index) => ({
-      id: stage.id,
+    const reorderedStages = items.map((stage, index) => ({
+      ...stage,
       order: index + 1
     }));
 
-    reorderStagesMutation.mutate(stageOrders);
+    const stageOrders = reorderedStages.map((stage) => ({
+      id: stage.id,
+      order: stage.order
+    }));
+
+    // Mutation handles optimistic update via onMutate
+    reorderStagesMutation.mutate({ stageOrders, optimisticData: reorderedStages });
   };
 
   if (isLoading) {
