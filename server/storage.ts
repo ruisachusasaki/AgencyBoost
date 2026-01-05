@@ -12,10 +12,10 @@ import {
   socialMediaAccounts, socialMediaPosts, socialMediaTemplates, calendarEvents, eventTimeEntries,
   type User, type InsertUser,
   type AuditLog, type InsertAuditLog,
-  type CustomField, type InsertCustomField,
-  type CustomFieldFolder, type InsertCustomFieldFolder,
+  type CustomField, type InsertCustomField, customFields,
+  type CustomFieldFolder, type InsertCustomFieldFolder, customFieldFolders,
   type ClientGroup, type InsertClientGroup,
-  type Product, type InsertProduct,
+  type Product, type InsertProduct, products,
   type ClientProduct, type InsertClientProduct,
   type Note, type InsertNote, notes,
   type ClientAppointment, type InsertClientAppointment, appointments,
@@ -5226,12 +5226,66 @@ export class DbStorage implements IStorage {
   async updateCampaign(id: string, campaign: Partial<InsertCampaign>): Promise<Campaign | undefined> { return this.memStorage.updateCampaign(id, campaign); }
   async deleteCampaign(id: string): Promise<boolean> { return this.memStorage.deleteCampaign(id); }
 
-  // Leads
-  async getLeads(): Promise<Lead[]> { return this.memStorage.getLeads(); }
-  async getLead(id: string): Promise<Lead | undefined> { return this.memStorage.getLead(id); }
-  async createLead(lead: InsertLead): Promise<Lead> { return this.memStorage.createLead(lead); }
-  async updateLead(id: string, lead: Partial<InsertLead>): Promise<Lead | undefined> { return this.memStorage.updateLead(id, lead); }
-  async deleteLead(id: string): Promise<boolean> { return this.memStorage.deleteLead(id); }
+  // Leads - Database implementation
+  async getLeads(): Promise<Lead[]> {
+    try {
+      const result = await db.select().from(leads).orderBy(desc(leads.createdAt));
+      return result;
+    } catch (error) {
+      console.error("Error fetching leads from database:", error);
+      return [];
+    }
+  }
+  
+  async getLead(id: string): Promise<Lead | undefined> {
+    try {
+      const result = await db.select().from(leads).where(eq(leads.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching lead from database:", error);
+      return undefined;
+    }
+  }
+  
+  async createLead(lead: InsertLead): Promise<Lead> {
+    try {
+      const now = new Date();
+      const result = await db.insert(leads).values({
+        ...lead,
+        id: sql`gen_random_uuid()`,
+        createdAt: now,
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating lead in database:", error);
+      throw error;
+    }
+  }
+  
+  async updateLead(id: string, lead: Partial<InsertLead>): Promise<Lead | undefined> {
+    try {
+      const result = await db.update(leads)
+        .set({
+          ...lead,
+        })
+        .where(eq(leads.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating lead in database:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteLead(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(leads).where(eq(leads.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting lead from database:", error);
+      return false;
+    }
+  }
 
   // Lead Sources
   async getLeadSources(): Promise<LeadSource[]> {
@@ -5305,17 +5359,76 @@ export class DbStorage implements IStorage {
     }
   }
 
-  // Tasks
-  async getTasks(): Promise<Task[]> { return this.memStorage.getTasks(); }
-  async getTask(id: string): Promise<Task | undefined> { return this.memStorage.getTask(id); }
-  async getTasksByClient(clientId: string): Promise<Task[]> {
-    // Query database directly for client tasks
-    const clientTasks = await db.select().from(tasks).where(eq(tasks.clientId, clientId));
-    return clientTasks;
+  // Tasks - Database implementation
+  async getTasks(): Promise<Task[]> {
+    try {
+      const result = await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+      return result;
+    } catch (error) {
+      console.error("Error fetching tasks from database:", error);
+      return [];
+    }
   }
-  async createTask(task: InsertTask): Promise<Task> { return this.memStorage.createTask(task); }
-  async updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined> { return this.memStorage.updateTask(id, task); }
-  async deleteTask(id: string): Promise<boolean> { return this.memStorage.deleteTask(id); }
+  
+  async getTask(id: string): Promise<Task | undefined> {
+    try {
+      const result = await db.select().from(tasks).where(eq(tasks.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching task from database:", error);
+      return undefined;
+    }
+  }
+  
+  async getTasksByClient(clientId: string): Promise<Task[]> {
+    try {
+      const result = await db.select().from(tasks).where(eq(tasks.clientId, clientId));
+      return result;
+    } catch (error) {
+      console.error("Error fetching tasks by client:", error);
+      return [];
+    }
+  }
+  
+  async createTask(task: InsertTask): Promise<Task> {
+    try {
+      const now = new Date();
+      const result = await db.insert(tasks).values({
+        ...task,
+        id: sql`gen_random_uuid()`,
+        createdAt: now,
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating task in database:", error);
+      throw error;
+    }
+  }
+  
+  async updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined> {
+    try {
+      const result = await db.update(tasks)
+        .set({
+          ...task,
+        })
+        .where(eq(tasks.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating task in database:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteTask(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(tasks).where(eq(tasks.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting task from database:", error);
+      return false;
+    }
+  }
   
   async updateTasksStatusForClient(
     clientId: string, 
@@ -5366,30 +5479,134 @@ export class DbStorage implements IStorage {
     };
   }
   
-  // Client Approval Operations
+  // Client Approval Operations - Database implementation
   async updateTaskClientApproval(
     taskId: string, 
     status: 'pending' | 'approved' | 'rejected' | 'changes_requested',
     notes?: string
   ): Promise<Task | undefined> { 
-    return this.memStorage.updateTaskClientApproval(taskId, status, notes); 
+    try {
+      const result = await db.update(tasks)
+        .set({
+          clientApprovalStatus: status,
+          clientApprovalNotes: notes,
+          clientApprovalDate: new Date(),
+        })
+        .where(eq(tasks.id, taskId))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating task client approval:", error);
+      return undefined;
+    }
   }
+  
   async approveTask(taskId: string, notes?: string): Promise<Task | undefined> { 
-    return this.memStorage.approveTask(taskId, notes); 
+    try {
+      const result = await db.update(tasks)
+        .set({
+          clientApprovalStatus: 'approved',
+          clientApprovalNotes: notes,
+          clientApprovalDate: new Date(),
+        })
+        .where(eq(tasks.id, taskId))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error approving task:", error);
+      return undefined;
+    }
   }
+  
   async requestTaskChanges(taskId: string, notes: string): Promise<Task | undefined> { 
-    return this.memStorage.requestTaskChanges(taskId, notes); 
+    try {
+      const result = await db.update(tasks)
+        .set({
+          clientApprovalStatus: 'changes_requested',
+          clientApprovalNotes: notes,
+          clientApprovalDate: new Date(),
+        })
+        .where(eq(tasks.id, taskId))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error requesting task changes:", error);
+      return undefined;
+    }
   }
 
   // Smart Lists - using database implementation at end of file
 
-  // Invoices  
-  async getInvoices(): Promise<Invoice[]> { return this.memStorage.getInvoices(); }
-  async getInvoice(id: string): Promise<Invoice | undefined> { return this.memStorage.getInvoice(id); }
-  async getInvoicesByClient(clientId: string): Promise<Invoice[]> { return this.memStorage.getInvoicesByClient(clientId); }
-  async createInvoice(invoice: InsertInvoice): Promise<Invoice> { return this.memStorage.createInvoice(invoice); }
-  async updateInvoice(id: string, invoice: Partial<InsertInvoice>): Promise<Invoice | undefined> { return this.memStorage.updateInvoice(id, invoice); }
-  async deleteInvoice(id: string): Promise<boolean> { return this.memStorage.deleteInvoice(id); }
+  // Invoices - Database implementation
+  async getInvoices(): Promise<Invoice[]> {
+    try {
+      const result = await db.select().from(invoices).orderBy(desc(invoices.createdAt));
+      return result;
+    } catch (error) {
+      console.error("Error fetching invoices from database:", error);
+      return [];
+    }
+  }
+  
+  async getInvoice(id: string): Promise<Invoice | undefined> {
+    try {
+      const result = await db.select().from(invoices).where(eq(invoices.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching invoice from database:", error);
+      return undefined;
+    }
+  }
+  
+  async getInvoicesByClient(clientId: string): Promise<Invoice[]> {
+    try {
+      const result = await db.select().from(invoices).where(eq(invoices.clientId, clientId));
+      return result;
+    } catch (error) {
+      console.error("Error fetching invoices by client:", error);
+      return [];
+    }
+  }
+  
+  async createInvoice(invoice: InsertInvoice): Promise<Invoice> {
+    try {
+      const now = new Date();
+      const result = await db.insert(invoices).values({
+        ...invoice,
+        id: sql`gen_random_uuid()`,
+        createdAt: now,
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating invoice in database:", error);
+      throw error;
+    }
+  }
+  
+  async updateInvoice(id: string, invoice: Partial<InsertInvoice>): Promise<Invoice | undefined> {
+    try {
+      const result = await db.update(invoices)
+        .set({
+          ...invoice,
+        })
+        .where(eq(invoices.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating invoice in database:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteInvoice(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(invoices).where(eq(invoices.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting invoice from database:", error);
+      return false;
+    }
+  }
 
   // Social Media
   async getSocialMediaAccounts(): Promise<SocialMediaAccount[]> { return this.memStorage.getSocialMediaAccounts(); }
@@ -5965,20 +6182,146 @@ export class DbStorage implements IStorage {
     return result.length > 0;
   }
 
-  // Custom Fields
-  async getCustomFields(): Promise<CustomField[]> { return this.memStorage.getCustomFields(); }
-  async getCustomField(id: string): Promise<CustomField | undefined> { return this.memStorage.getCustomField(id); }
-  async createCustomField(field: InsertCustomField): Promise<CustomField> { return this.memStorage.createCustomField(field); }
-  async updateCustomField(id: string, field: Partial<InsertCustomField>): Promise<CustomField | undefined> { return this.memStorage.updateCustomField(id, field); }
-  async deleteCustomField(id: string): Promise<boolean> { return this.memStorage.deleteCustomField(id); }
-  async reorderCustomFields(fieldOrders: Array<{id: string, order: number}>): Promise<void> { return this.memStorage.reorderCustomFields(fieldOrders); }
+  // Custom Fields - Database implementation
+  async getCustomFields(): Promise<CustomField[]> {
+    try {
+      const result = await db.select().from(customFields).orderBy(asc(customFields.order));
+      return result;
+    } catch (error) {
+      console.error("Error fetching custom fields from database:", error);
+      return [];
+    }
+  }
+  
+  async getCustomField(id: string): Promise<CustomField | undefined> {
+    try {
+      const result = await db.select().from(customFields).where(eq(customFields.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching custom field from database:", error);
+      return undefined;
+    }
+  }
+  
+  async createCustomField(field: InsertCustomField): Promise<CustomField> {
+    try {
+      const result = await db.insert(customFields).values({
+        ...field,
+        id: sql`gen_random_uuid()`,
+        createdAt: new Date(),
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating custom field in database:", error);
+      throw error;
+    }
+  }
+  
+  async updateCustomField(id: string, field: Partial<InsertCustomField>): Promise<CustomField | undefined> {
+    try {
+      const result = await db.update(customFields)
+        .set(field)
+        .where(eq(customFields.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating custom field in database:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteCustomField(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(customFields).where(eq(customFields.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting custom field from database:", error);
+      return false;
+    }
+  }
+  
+  async reorderCustomFields(fieldOrders: Array<{id: string, order: number}>): Promise<void> {
+    try {
+      for (const { id, order } of fieldOrders) {
+        await db.update(customFields)
+          .set({ order })
+          .where(eq(customFields.id, id));
+      }
+    } catch (error) {
+      console.error("Error reordering custom fields:", error);
+      throw error;
+    }
+  }
 
-  async getCustomFieldFolders(): Promise<CustomFieldFolder[]> { return this.memStorage.getCustomFieldFolders(); }
-  async getCustomFieldFolder(id: string): Promise<CustomFieldFolder | undefined> { return this.memStorage.getCustomFieldFolder(id); }
-  async createCustomFieldFolder(folder: InsertCustomFieldFolder): Promise<CustomFieldFolder> { return this.memStorage.createCustomFieldFolder(folder); }
-  async updateCustomFieldFolder(id: string, folder: Partial<InsertCustomFieldFolder>): Promise<CustomFieldFolder | undefined> { return this.memStorage.updateCustomFieldFolder(id, folder); }
-  async deleteCustomFieldFolder(id: string): Promise<boolean> { return this.memStorage.deleteCustomFieldFolder(id); }
-  async reorderCustomFieldFolders(folderOrders: Array<{id: string, order: number}>): Promise<void> { return this.memStorage.reorderCustomFieldFolders(folderOrders); }
+  async getCustomFieldFolders(): Promise<CustomFieldFolder[]> {
+    try {
+      const result = await db.select().from(customFieldFolders).orderBy(asc(customFieldFolders.order));
+      return result;
+    } catch (error) {
+      console.error("Error fetching custom field folders from database:", error);
+      return [];
+    }
+  }
+  
+  async getCustomFieldFolder(id: string): Promise<CustomFieldFolder | undefined> {
+    try {
+      const result = await db.select().from(customFieldFolders).where(eq(customFieldFolders.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching custom field folder from database:", error);
+      return undefined;
+    }
+  }
+  
+  async createCustomFieldFolder(folder: InsertCustomFieldFolder): Promise<CustomFieldFolder> {
+    try {
+      const result = await db.insert(customFieldFolders).values({
+        ...folder,
+        id: sql`gen_random_uuid()`,
+        createdAt: new Date(),
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating custom field folder in database:", error);
+      throw error;
+    }
+  }
+  
+  async updateCustomFieldFolder(id: string, folder: Partial<InsertCustomFieldFolder>): Promise<CustomFieldFolder | undefined> {
+    try {
+      const result = await db.update(customFieldFolders)
+        .set(folder)
+        .where(eq(customFieldFolders.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating custom field folder in database:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteCustomFieldFolder(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(customFieldFolders).where(eq(customFieldFolders.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting custom field folder from database:", error);
+      return false;
+    }
+  }
+  
+  async reorderCustomFieldFolders(folderOrders: Array<{id: string, order: number}>): Promise<void> {
+    try {
+      for (const { id, order } of folderOrders) {
+        await db.update(customFieldFolders)
+          .set({ order })
+          .where(eq(customFieldFolders.id, id));
+      }
+    } catch (error) {
+      console.error("Error reordering custom field folders:", error);
+      throw error;
+    }
+  }
 
   // Staff
   async getStaff(): Promise<Staff[]> {
@@ -6485,12 +6828,67 @@ export class DbStorage implements IStorage {
     return result.length > 0;
   }
 
-  // Products
-  async getProducts(): Promise<Product[]> { return this.memStorage.getProducts(); }
-  async getProduct(id: string): Promise<Product | undefined> { return this.memStorage.getProduct(id); }
-  async createProduct(product: InsertProduct): Promise<Product> { return this.memStorage.createProduct(product); }
-  async updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined> { return this.memStorage.updateProduct(id, product); }
-  async deleteProduct(id: string): Promise<boolean> { return this.memStorage.deleteProduct(id); }
+  // Products - Database implementation
+  async getProducts(): Promise<Product[]> {
+    try {
+      const result = await db.select().from(products).orderBy(asc(products.name));
+      return result;
+    } catch (error) {
+      console.error("Error fetching products from database:", error);
+      return [];
+    }
+  }
+  
+  async getProduct(id: string): Promise<Product | undefined> {
+    try {
+      const result = await db.select().from(products).where(eq(products.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching product from database:", error);
+      return undefined;
+    }
+  }
+  
+  async createProduct(product: InsertProduct): Promise<Product> {
+    try {
+      const result = await db.insert(products).values({
+        ...product,
+        id: sql`gen_random_uuid()`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating product in database:", error);
+      throw error;
+    }
+  }
+  
+  async updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined> {
+    try {
+      const result = await db.update(products)
+        .set({
+          ...product,
+          updatedAt: new Date(),
+        })
+        .where(eq(products.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating product in database:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteProduct(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(products).where(eq(products.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting product from database:", error);
+      return false;
+    }
+  }
 
   // SECURITY: Audit Logs - MUST use database for security compliance
   async getAuditLogs(): Promise<AuditLog[]> {
