@@ -2804,20 +2804,21 @@ export class MemStorage implements IStorage {
     const allTasks = Array.from(this.tasks.values());
     
     return allTasks.filter(task => {
-      // Filter by user if specified
-      if (userId && task.assignedTo !== userId) return false;
-      
       // Filter by client if specified  
       if (clientId && task.clientId !== clientId) return false;
       
       // Check if task has time entries
       if (!task.timeEntries || task.timeEntries.length === 0) return false;
       
-      // Check if task has time entries in the date range
+      // Check if task has time entries in the date range (and by user if specified)
+      // Note: We filter by userId on time entries, NOT on task.assignedTo
+      // This ensures we show tasks where the user logged time, even if they're not the assignee
       const hasEntriesInRange = (task.timeEntries as any[]).some((entry: any) => {
         if (!entry.startTime) return false;
         const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
-        return entryDate >= dateFrom && entryDate <= dateTo;
+        const dateMatch = entryDate >= dateFrom && entryDate <= dateTo;
+        const userMatch = !userId || entry.userId === userId;
+        return dateMatch && userMatch;
       });
       
       return hasEntriesInRange;
@@ -2826,7 +2827,9 @@ export class MemStorage implements IStorage {
       timeEntries: (task.timeEntries as any[]).filter((entry: any) => {
         if (!entry.startTime) return false;
         const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
-        return entryDate >= dateFrom && entryDate <= dateTo;
+        const dateMatch = entryDate >= dateFrom && entryDate <= dateTo;
+        const userMatch = !userId || entry.userId === userId;
+        return dateMatch && userMatch;
       }) as import("@shared/schema").TimeEntry[]
     }));
   }
