@@ -38,7 +38,7 @@ import {
   type TaskCategory, type InsertTaskCategory, taskCategories,
   type TaskTemplate, type InsertTaskTemplate,
   type EnhancedTask, type InsertEnhancedTask,
-  type TaskHistory, type InsertTaskHistory,
+  type TaskHistory, type InsertTaskHistory, taskHistory,
   type AutomationTrigger, type InsertAutomationTrigger,
   type AutomationAction, type InsertAutomationAction,
   type Notification, type InsertNotification,
@@ -5824,24 +5824,124 @@ export class DbStorage implements IStorage {
   async updateEnhancedTask(id: string, task: Partial<InsertEnhancedTask>): Promise<EnhancedTask | undefined> { return this.memStorage.updateEnhancedTask(id, task); }
   async deleteEnhancedTask(id: string): Promise<boolean> { return this.memStorage.deleteEnhancedTask(id); }
 
-  // Task History
-  async getTaskHistories(): Promise<TaskHistory[]> { return this.memStorage.getTaskHistories(); }
-  async getTaskHistory(id: string): Promise<TaskHistory | undefined> { return this.memStorage.getTaskHistory(id); }
-  async getTaskHistoriesByTask(taskId: string): Promise<TaskHistory[]> { return this.memStorage.getTaskHistoriesByTask(taskId); }
-  async createTaskHistory(history: InsertTaskHistory): Promise<TaskHistory> { return this.memStorage.createTaskHistory(history); }
 
-  // Automation
-  async getAutomationTriggers(): Promise<AutomationTrigger[]> { return this.memStorage.getAutomationTriggers(); }
-  async getAutomationTrigger(id: string): Promise<AutomationTrigger | undefined> { return this.memStorage.getAutomationTrigger(id); }
-  async createAutomationTrigger(trigger: InsertAutomationTrigger): Promise<AutomationTrigger> { return this.memStorage.createAutomationTrigger(trigger); }
-  async updateAutomationTrigger(id: string, trigger: Partial<InsertAutomationTrigger>): Promise<AutomationTrigger | undefined> { return this.memStorage.updateAutomationTrigger(id, trigger); }
-  async deleteAutomationTrigger(id: string): Promise<boolean> { return this.memStorage.deleteAutomationTrigger(id); }
+  async createTaskHistory(history: InsertTaskHistory): Promise<TaskHistory> {
+    try {
+      const result = await db.insert(taskHistory).values(history).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating task history in database:", error);
+      throw error;
+    }
+  }
 
-  async getAutomationActions(): Promise<AutomationAction[]> { return this.memStorage.getAutomationActions(); }
-  async getAutomationAction(id: string): Promise<AutomationAction | undefined> { return this.memStorage.getAutomationAction(id); }
-  async createAutomationAction(action: InsertAutomationAction): Promise<AutomationAction> { return this.memStorage.createAutomationAction(action); }
-  async updateAutomationAction(id: string, action: Partial<InsertAutomationAction>): Promise<AutomationAction | undefined> { return this.memStorage.updateAutomationAction(id, action); }
-  async deleteAutomationAction(id: string): Promise<boolean> { return this.memStorage.deleteAutomationAction(id); }
+  // Automation Triggers - Database operations
+  async getAutomationTriggers(): Promise<AutomationTrigger[]> {
+    try {
+      const result = await db.select().from(automationTriggers).orderBy(asc(automationTriggers.createdAt));
+      return result;
+    } catch (error) {
+      console.error("Error fetching automation triggers from database:", error);
+      return [];
+    }
+  }
+  
+  async getAutomationTrigger(id: string): Promise<AutomationTrigger | undefined> {
+    try {
+      const result = await db.select().from(automationTriggers).where(eq(automationTriggers.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching automation trigger from database:", error);
+      return undefined;
+    }
+  }
+  
+  async createAutomationTrigger(trigger: InsertAutomationTrigger): Promise<AutomationTrigger> {
+    try {
+      const result = await db.insert(automationTriggers).values(trigger).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating automation trigger in database:", error);
+      throw error;
+    }
+  }
+  
+  async updateAutomationTrigger(id: string, trigger: Partial<InsertAutomationTrigger>): Promise<AutomationTrigger | undefined> {
+    try {
+      const result = await db.update(automationTriggers)
+        .set(trigger)
+        .where(eq(automationTriggers.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating automation trigger in database:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteAutomationTrigger(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(automationTriggers).where(eq(automationTriggers.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting automation trigger from database:", error);
+      return false;
+    }
+  }
+
+  // Automation Actions - Database operations
+  async getAutomationActions(): Promise<AutomationAction[]> {
+    try {
+      const result = await db.select().from(automationActions).orderBy(asc(automationActions.createdAt));
+      return result;
+    } catch (error) {
+      console.error("Error fetching automation actions from database:", error);
+      return [];
+    }
+  }
+  
+  async getAutomationAction(id: string): Promise<AutomationAction | undefined> {
+    try {
+      const result = await db.select().from(automationActions).where(eq(automationActions.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching automation action from database:", error);
+      return undefined;
+    }
+  }
+  
+  async createAutomationAction(action: InsertAutomationAction): Promise<AutomationAction> {
+    try {
+      const result = await db.insert(automationActions).values(action).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating automation action in database:", error);
+      throw error;
+    }
+  }
+  
+  async updateAutomationAction(id: string, action: Partial<InsertAutomationAction>): Promise<AutomationAction | undefined> {
+    try {
+      const result = await db.update(automationActions)
+        .set(action)
+        .where(eq(automationActions.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating automation action in database:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteAutomationAction(id: string): Promise<boolean> {
+    try {
+      const result = await db.delete(automationActions).where(eq(automationActions.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting automation action from database:", error);
+      return false;
+    }
+  }
 
   // Templates
   async getTemplateFolders(): Promise<TemplateFolder[]> {
