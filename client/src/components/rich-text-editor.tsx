@@ -90,6 +90,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
   const [htmlContent, setHtmlContent] = useState(content);
   const [isLineHeightDropdownOpen, setIsLineHeightDropdownOpen] = useState(false);
   const lineHeightDropdownRef = useRef<HTMLDivElement>(null);
+  const lastEmittedContent = useRef<string | null>(null);
   
   // Convert plain text content to HTML format
   const htmlFormattedContent = convertTextToHtml(content);
@@ -193,6 +194,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
     onUpdate: ({ editor }) => {
       const rawHTML = editor.getHTML();
       const cleanedHTML = cleanListHTML(rawHTML);
+      lastEmittedContent.current = cleanedHTML;
       onChange(cleanedHTML);
     },
     onSelectionUpdate: ({ editor }) => {
@@ -248,14 +250,20 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
     },
   });
 
-  // Update editor content when content prop changes
+  // Update editor content when content prop changes from external source
   React.useEffect(() => {
     if (editor && content !== undefined) {
       // Clean the content first to remove any leading empty paragraphs
       const cleanedContent = stripEmptyParagraphsHelper(convertTextToHtml(content));
+      
+      // Skip if this is the same content we just emitted (user typing) - prevents cursor jump
+      if (content === lastEmittedContent.current || cleanedContent === lastEmittedContent.current) {
+        return;
+      }
+      
       const currentContent = editor.getHTML();
       
-      // Only update if content is different to avoid cursor issues
+      // Only update if content is significantly different to avoid cursor issues
       if (currentContent !== cleanedContent && cleanedContent !== stripEmptyParagraphsHelper(currentContent)) {
         editor.commands.setContent(cleanedContent, false);
       }
