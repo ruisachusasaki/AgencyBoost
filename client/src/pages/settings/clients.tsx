@@ -1326,8 +1326,8 @@ export default function ClientsSettings() {
       apiRequest('POST', '/api/client-brief-sections', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
-      // Also invalidate client brief data
-      queryClient.invalidateQueries({
+      // Remove all client brief data from cache to force refetch with new section
+      queryClient.removeQueries({
         predicate: (query) => {
           const key = query.queryKey[0]?.toString() || '';
           return key.includes('/api/clients/') && key.includes('/brief');
@@ -1347,8 +1347,8 @@ export default function ClientsSettings() {
       apiRequest('PUT', `/api/client-brief-sections/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
-      // Also invalidate all client brief data to update icons on client detail pages  
-      queryClient.invalidateQueries({
+      // Remove all client brief data from cache to force refetch with updated icons
+      queryClient.removeQueries({
         predicate: (query) => {
           const key = query.queryKey[0]?.toString() || '';
           return key.includes('/api/clients/') && key.includes('/brief');
@@ -1369,8 +1369,8 @@ export default function ClientsSettings() {
       apiRequest('DELETE', `/api/client-brief-sections/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
-      // Also invalidate client brief data
-      queryClient.invalidateQueries({
+      // Remove all client brief data from cache to force refetch after deletion
+      queryClient.removeQueries({
         predicate: (query) => {
           const key = query.queryKey[0]?.toString() || '';
           return key.includes('/api/clients/') && key.includes('/brief');
@@ -1391,8 +1391,8 @@ export default function ClientsSettings() {
       apiRequest('PUT', '/api/client-brief-sections/reorder', { sectionIds }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/client-brief-sections'] });
-      // Also invalidate client brief data
-      queryClient.invalidateQueries({
+      // Remove all client brief data from cache to force refetch with new order
+      queryClient.removeQueries({
         predicate: (query) => {
           const key = query.queryKey[0]?.toString() || '';
           return key.includes('/api/clients/') && key.includes('/brief');
