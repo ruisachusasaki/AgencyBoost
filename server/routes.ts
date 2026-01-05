@@ -18928,33 +18928,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Timer endpoints for global timer functionality
-  app.get("/api/time-entries/running", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
-    try {
-      // Check all tasks for incomplete time entries (running timers)
-      const allTasks = await appStorage.getTasks();
-      
-      for (const task of allTasks) {
-        if (task.timeEntries && Array.isArray(task.timeEntries)) {
-          const runningEntry = task.timeEntries.find((entry: any) => entry.isRunning);
-          if (runningEntry) {
-            res.json({
-              ...runningEntry,
-              taskId: task.id,
-              taskTitle: task.title
-            });
-            return;
-          }
-        }
-      }
-      
-      res.json(null); // No running timer found
-    } catch (error) {
-      console.error("Error checking for running timer:", error);
-      res.status(500).json({ error: "Failed to check for running timer" });
-    }
-  });
-
   // Task Settings Management API Routes
 
   // Task Statuses Routes
@@ -26932,42 +26905,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get running time entries - SECURED
+  // Get running time entries - SECURED to current user only
   app.get("/api/time-entries/running", requireAuth(), async (req, res) => {
     try {
       const authenticatedUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!authenticatedUserId) return;
       
-      // Get all running time entries
-      const runningEntries = await appStorage.getRunningTimeEntries();
+      // Search all tasks for a running time entry that belongs to the current user
+      const allTasks = await appStorage.getTasks();
       
-      // Role-based filtering
-      const isAdmin = await isCurrentUserAdmin(req);
-      const hasManagerPermission = await hasPermission(authenticatedUserId, 'staff', 'canView');
-      
-      let filteredEntries = runningEntries;
-      
-      if (!isAdmin && !hasManagerPermission) {
-        // Regular users can only see their own running entries
-        filteredEntries = runningEntries.filter(entry => entry.userId === authenticatedUserId);
-      }
-      // Admins and managers can see all running entries
-      
-      res.json({
-        success: true,
-        runningEntries: filteredEntries,
-        meta: {
-          totalRunning: filteredEntries.length,
-          viewingAs: isAdmin ? 'admin' : hasManagerPermission ? 'manager' : 'user'
+      for (const task of allTasks) {
+        if (task.timeEntries && Array.isArray(task.timeEntries)) {
+          // Find running entry for the CURRENT USER only
+          const runningEntry = task.timeEntries.find((entry: any) => 
+            entry.isRunning && entry.userId === authenticatedUserId
+          );
+          if (runningEntry) {
+            res.json({
+              ...runningEntry,
+              taskId: task.id,
+              taskTitle: task.title
+            });
+            return;
+          }
         }
-      });
+      }
       
+      res.json(null); // No running timer found for this user
     } catch (error) {
-      console.error("Error fetching running time entries:", error);
-      res.status(500).json({
-        error: "Failed to fetch running time entries",
-        message: error instanceof Error ? error.message : "Unknown error occurred"
-      });
+      console.error("Error checking for running timer:", error);
+      res.status(500).json({ error: "Failed to check for running timer" });
     }
   });
 
