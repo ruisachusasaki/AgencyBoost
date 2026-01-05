@@ -22,7 +22,7 @@ import { useHasPermission } from "@/hooks/use-has-permission";
 import type { Task, Client, Campaign, Staff, TaskStatus, TaskPriority, TaskCategory, TaskTemplate } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, startOfDay, startOfWeek, endOfWeek, addDays, addWeeks, isSameDay, isWithinInterval } from "date-fns";
 
 
 interface Column {
@@ -97,6 +97,7 @@ export default function Tasks() {
   const [showCompleted, setShowCompleted] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
   const [workflowFilter, setWorkflowFilter] = useState<string>("all");
+  const [timeFilter, setTimeFilter] = useState<string>("all");
   
   // Smart Lists state
   const [currentFilter, setCurrentFilter] = useState<TaskFilter>({
@@ -502,6 +503,7 @@ export default function Tasks() {
       clientFilter !== "all" ||
       categoryFilter !== "all" ||
       workflowFilter !== "all" ||
+      timeFilter !== "all" ||
       showCompleted ||
       showCancelled ||
       currentFilter.conditions.length > 0
@@ -517,6 +519,7 @@ export default function Tasks() {
     setClientFilter("all");
     setCategoryFilter("all");
     setWorkflowFilter("all");
+    setTimeFilter("all");
     setShowCompleted(false);
     setShowCancelled(false);
     setCurrentFilter({ conditions: [], logic: 'AND' });
@@ -863,11 +866,59 @@ export default function Tasks() {
         (workflowFilter === "none" && !task.workflowId) ||
         task.workflowId === workflowFilter;
 
+      // Time filter based on due date
+      let matchesTime = true;
+      if (timeFilter !== "all" && task.dueDate) {
+        const taskDueDate = startOfDay(new Date(task.dueDate));
+        const today = startOfDay(new Date());
+        const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday
+        const currentWeekEnd = endOfWeek(today, { weekStartsOn: 0 }); // Saturday
+        const nextWeekStart = addWeeks(currentWeekStart, 1);
+        const nextWeekEnd = addWeeks(currentWeekEnd, 1);
+        
+        switch (timeFilter) {
+          case "today":
+            matchesTime = isSameDay(taskDueDate, today);
+            break;
+          case "monday":
+            matchesTime = isSameDay(taskDueDate, addDays(currentWeekStart, 1));
+            break;
+          case "tuesday":
+            matchesTime = isSameDay(taskDueDate, addDays(currentWeekStart, 2));
+            break;
+          case "wednesday":
+            matchesTime = isSameDay(taskDueDate, addDays(currentWeekStart, 3));
+            break;
+          case "thursday":
+            matchesTime = isSameDay(taskDueDate, addDays(currentWeekStart, 4));
+            break;
+          case "friday":
+            matchesTime = isSameDay(taskDueDate, addDays(currentWeekStart, 5));
+            break;
+          case "saturday":
+            matchesTime = isSameDay(taskDueDate, addDays(currentWeekStart, 6));
+            break;
+          case "sunday":
+            matchesTime = isSameDay(taskDueDate, currentWeekStart);
+            break;
+          case "this_week":
+            matchesTime = isWithinInterval(taskDueDate, { start: currentWeekStart, end: currentWeekEnd });
+            break;
+          case "next_week":
+            matchesTime = isWithinInterval(taskDueDate, { start: nextWeekStart, end: nextWeekEnd });
+            break;
+          default:
+            matchesTime = true;
+        }
+      } else if (timeFilter !== "all" && !task.dueDate) {
+        matchesTime = false; // Tasks without due dates don't match time filters
+      }
+
       // Show/hide completed and cancelled tasks based on toggle settings
       const shouldShowCompleted = showCompleted || task.status !== "completed";
       const shouldShowCancelled = showCancelled || task.status !== "cancelled";
       
-      return matchesSearch && matchesStatus && matchesAssignee && matchesPriority && matchesClient && matchesProject && matchesCategory && matchesWorkflow && shouldShowCompleted && shouldShowCancelled;
+      return matchesSearch && matchesStatus && matchesAssignee && matchesPriority && matchesClient && matchesProject && matchesCategory && matchesWorkflow && matchesTime && shouldShowCompleted && shouldShowCancelled;
     })
     .sort((a, b) => {
       let aValue: any = '';
@@ -917,7 +968,7 @@ export default function Tasks() {
     });
 
     return filtered;
-  }, [tasks, currentFilter, searchTerm, statusFilter, assigneeFilter, priorityFilter, clientFilter, categoryFilter, workflowFilter, showCompleted, showCancelled, sortField, sortDirection, staff, clients, taskCategories]);
+  }, [tasks, currentFilter, searchTerm, statusFilter, assigneeFilter, priorityFilter, clientFilter, categoryFilter, workflowFilter, timeFilter, showCompleted, showCancelled, sortField, sortDirection, staff, clients, taskCategories]);
 
   // Handle column reordering (excluding name column)
   const handleColumnDragEnd = (result: any) => {
@@ -2212,7 +2263,7 @@ export default function Tasks() {
             </div>
             
             {/* Filter Controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
               {/* Status Filter */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
@@ -2330,6 +2381,26 @@ export default function Tasks() {
                   ))}
                 </SelectContent>
               </Select>
+              
+              {/* Time Filter */}
+              <Select value={timeFilter} onValueChange={setTimeFilter}>
+                <SelectTrigger data-testid="select-time-filter">
+                  <SelectValue placeholder="All Time" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="sunday">Sunday (This Week)</SelectItem>
+                  <SelectItem value="monday">Monday (This Week)</SelectItem>
+                  <SelectItem value="tuesday">Tuesday (This Week)</SelectItem>
+                  <SelectItem value="wednesday">Wednesday (This Week)</SelectItem>
+                  <SelectItem value="thursday">Thursday (This Week)</SelectItem>
+                  <SelectItem value="friday">Friday (This Week)</SelectItem>
+                  <SelectItem value="saturday">Saturday (This Week)</SelectItem>
+                  <SelectItem value="this_week">This Week</SelectItem>
+                  <SelectItem value="next_week">Next Week</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             {/* Action Buttons */}
@@ -2375,12 +2446,12 @@ export default function Tasks() {
           {viewMode === "table" && filteredAndSortedTasks.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-500 mb-4">
-                {searchTerm || statusFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all" || clientFilter !== "all" || categoryFilter !== "all" || workflowFilter !== "all"
+                {searchTerm || statusFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all" || clientFilter !== "all" || categoryFilter !== "all" || workflowFilter !== "all" || timeFilter !== "all"
                   ? "No tasks found matching your criteria." 
                   : "No tasks found."
                 }
               </p>
-              {!searchTerm && statusFilter === "all" && assigneeFilter === "all" && priorityFilter === "all" && clientFilter === "all" && categoryFilter === "all" && workflowFilter === "all" && (
+              {!searchTerm && statusFilter === "all" && assigneeFilter === "all" && priorityFilter === "all" && clientFilter === "all" && categoryFilter === "all" && workflowFilter === "all" && timeFilter === "all" && (
                 <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>Create Your First Task</Button>
