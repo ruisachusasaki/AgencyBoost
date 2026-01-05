@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Calendar as CalendarIcon, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy, Video, ExternalLink, Plus } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy, Video, ExternalLink, Plus, Tag as TagIcon } from "lucide-react";
+import { TagSelector, TagDisplay } from "@/components/ui/tag-selector";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -827,6 +828,19 @@ export default function TaskDetail() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                {/* Row 2.5: Tags */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <TagIcon className="h-4 w-4 text-slate-400" />
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Tags</span>
+                  </div>
+                  <TagSelector
+                    value={task.tags || []}
+                    onChange={(tags) => updateTaskMutation.mutate({ tags })}
+                    placeholder="Add tags..."
+                  />
                 </div>
 
                 {/* Row 3: Time Estimate and Time Tracking */}

@@ -22,6 +22,7 @@ import { useHasPermission } from "@/hooks/use-has-permission";
 import type { Task, Client, Campaign, Staff, TaskStatus, TaskPriority, TaskCategory, TaskTemplate } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TagDisplay } from "@/components/ui/tag-selector";
 import { format, startOfDay, startOfWeek, endOfWeek, addDays, addWeeks, isSameDay, isWithinInterval } from "date-fns";
 
 
@@ -41,6 +42,7 @@ const ALL_AVAILABLE_COLUMNS: Column[] = [
   { id: "status", label: "Status", width: "w-1/10", visible: true },
   { id: "priority", label: "Priority", width: "w-1/10", visible: true },
   { id: "category", label: "Category", width: "w-1/10", visible: true },
+  { id: "tags", label: "Tags", width: "w-1/8", visible: true },
   { id: "approval", label: "Approval", width: "w-1/10", visible: true },
   { id: "client", label: "Client/Lead", width: "w-1/8", visible: true },
   { id: "project", label: "Project", width: "w-1/8", visible: false },
@@ -1189,6 +1191,13 @@ export default function Tasks() {
           </div>
         ) : (
           <span className="text-slate-400 text-sm">No category</span>
+        );
+
+      case "tags":
+        return task.tags && task.tags.length > 0 ? (
+          <TagDisplay tags={task.tags} />
+        ) : (
+          <span className="text-slate-400 dark:text-slate-500 text-sm">No tags</span>
         );
 
       case "approval":

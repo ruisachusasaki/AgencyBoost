@@ -10,7 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Flag, Repeat, FileText, Users, CalendarDays, CalendarIcon } from "lucide-react";
+import { Flag, Repeat, FileText, Users, CalendarDays, CalendarIcon, Tag as TagIcon } from "lucide-react";
+import { TagSelector } from "@/components/ui/tag-selector";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -154,6 +155,8 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       recurringEndDate: task?.recurringEndDate ? new Date(task.recurringEndDate) : null,
       recurringEndOccurrences: task?.recurringEndOccurrences || 10,
       createIfOverdue: task?.createIfOverdue || false,
+      // Tags
+      tags: task?.tags || [],
       // Template-related fields (only for create mode)
       templateId: "",
     },
@@ -188,6 +191,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
         recurringEndDate: task.recurringEndDate ? new Date(task.recurringEndDate) : null,
         recurringEndOccurrences: task.recurringEndOccurrences || 10,
         createIfOverdue: task.createIfOverdue || false,
+        tags: task.tags || [],
       });
     }
   }, [task, teamWorkflows, defaultPriority, defaultCategory, form]);
@@ -664,6 +668,28 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     })}
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* 6.5 Tags */}
+          <FormField
+            control={form.control}
+            name="tags"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-1.5">
+                  <TagIcon className="h-4 w-4" />
+                  Tags
+                </FormLabel>
+                <FormControl>
+                  <TagSelector
+                    value={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Add tags..."
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

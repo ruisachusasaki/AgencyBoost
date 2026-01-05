@@ -764,6 +764,9 @@ export const tasks = pgTable("tasks", {
   // 1-on-1 meeting integration
   oneOnOneMeetingId: varchar("one_on_one_meeting_id"), // Reference to HR 1-on-1 meeting record
   
+  // Tags
+  tags: text("tags").array().default([]), // array of tag names
+  
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
