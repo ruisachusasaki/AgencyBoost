@@ -4749,6 +4749,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update stage order (for drag-and-drop reordering) - MUST be before /:id route
+  app.put("/api/lead-pipeline-stages/reorder", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
+    try {
+      const { stageOrders } = req.body; // Array of {id, order}
+      
+      if (!Array.isArray(stageOrders)) {
+        return res.status(400).json({ message: "stageOrders must be an array" });
+      }
+      
+      // Update each stage's order
+      for (const { id, order } of stageOrders) {
+        await db.update(leadPipelineStages)
+          .set({ order })
+          .where(eq(leadPipelineStages.id, id));
+      }
+      
+      res.json({ message: "Stage order updated successfully" });
+    } catch (error) {
+      console.error("Error reordering stages:", error);
+      res.status(500).json({ message: "Failed to reorder stages" });
+    }
+  });
   app.put("/api/lead-pipeline-stages/:id", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
     try {
       const validatedData = insertLeadPipelineStagSchema.partial().parse(req.body);
@@ -4797,30 +4819,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete pipeline stage" });
     }
   });
-
-  // Update stage order (for drag-and-drop reordering)
-  app.put("/api/lead-pipeline-stages/reorder", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
-    try {
-      const { stageOrders } = req.body; // Array of {id, order}
-      
-      if (!Array.isArray(stageOrders)) {
-        return res.status(400).json({ message: "stageOrders must be an array" });
-      }
-      
-      // Update each stage's order
-      for (const { id, order } of stageOrders) {
-        await db.update(leadPipelineStages)
-          .set({ order })
-          .where(eq(leadPipelineStages.id, id));
-      }
-      
-      res.json({ message: "Stage order updated successfully" });
-    } catch (error) {
-      console.error("Error reordering stages:", error);
-      res.status(500).json({ message: "Failed to reorder stages" });
-    }
-  });
-
   // Lead Sources API routes
   app.get("/api/lead-sources", requireAuth(), async (req, res) => {
     try {
