@@ -47,10 +47,12 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
   const isTimerRunning = !!currentTimer;
 
-  // Check for existing running timers on app start
+  // Check for existing running timers when user data is loaded
   useEffect(() => {
-    checkForRunningTimer();
-  }, []);
+    if (currentUser?.id) {
+      checkForRunningTimer(currentUser.id);
+    }
+  }, [currentUser?.id]);
 
   // Update elapsed time every second when timer is running
   useEffect(() => {
@@ -73,26 +75,35 @@ export function TimerProvider({ children }: TimerProviderProps) {
     };
   }, [currentTimer]);
 
-  // Save timer state to localStorage
+  // Save timer state to localStorage (user-specific key)
   useEffect(() => {
-    if (currentTimer) {
-      localStorage.setItem('activeTimer', JSON.stringify(currentTimer));
-    } else {
-      localStorage.removeItem('activeTimer');
+    if (currentTimer && currentUser?.id) {
+      localStorage.setItem(`activeTimer_${currentUser.id}`, JSON.stringify(currentTimer));
     }
-  }, [currentTimer]);
+  }, [currentTimer, currentUser?.id]);
 
-  const checkForRunningTimer = async () => {
-    // First check localStorage for persisted timer
-    const savedTimer = localStorage.getItem('activeTimer');
+  // Clear old non-user-specific timer on first load (migration cleanup)
+  useEffect(() => {
+    localStorage.removeItem('activeTimer');
+  }, []);
+
+  const checkForRunningTimer = async (userId: string) => {
+    // First check user-specific localStorage for persisted timer
+    const savedTimer = localStorage.getItem(`activeTimer_${userId}`);
     if (savedTimer) {
       try {
         const timer = JSON.parse(savedTimer);
-        setCurrentTimer(timer);
-        return;
+        // Verify the timer belongs to this user
+        if (timer.userId === userId) {
+          setCurrentTimer(timer);
+          return;
+        } else {
+          // Timer belongs to different user, remove it
+          localStorage.removeItem(`activeTimer_${userId}`);
+        }
       } catch (error) {
         console.error('Error parsing saved timer:', error);
-        localStorage.removeItem('activeTimer');
+        localStorage.removeItem(`activeTimer_${userId}`);
       }
     }
 
@@ -101,8 +112,10 @@ export function TimerProvider({ children }: TimerProviderProps) {
       const response = await fetch('/api/time-entries/running');
       if (response.ok) {
         const runningEntry = await response.json();
-        if (runningEntry) {
+        if (runningEntry && runningEntry.userId === userId) {
           setCurrentTimer(runningEntry);
+          // Save to user-specific localStorage
+          localStorage.setItem(`activeTimer_${userId}`, JSON.stringify(runningEntry));
         }
       }
     } catch (error) {
@@ -212,6 +225,11 @@ export function TimerProvider({ children }: TimerProviderProps) {
         description: `Logged ${duration} minutes for "${currentTimer.taskTitle}"`,
       });
 
+      // Clear user-specific localStorage when stopping timer
+      if (currentUser?.id) {
+        localStorage.removeItem(`activeTimer_${currentUser.id}`);
+      }
+      
       setCurrentTimer(null);
       setElapsedTime(0);
     } catch (error) {
