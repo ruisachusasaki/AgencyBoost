@@ -187,7 +187,7 @@ export default function PipelineStageManager({ onClose }: PipelineStageManagerPr
         <div className="flex items-center gap-2">
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-[#46a1a0] hover:bg-[#3a8b8a]">
+              <Button className="bg-primary hover:bg-primary/90">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Stage
               </Button>
