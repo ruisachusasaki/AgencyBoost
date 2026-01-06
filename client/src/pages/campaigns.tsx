@@ -65,6 +65,8 @@ export default function Campaigns() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<{ id: string; type: string; name: string } | null>(null);
   const [formToDelete, setFormToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<{ id: string; name: string; type: string } | null>(null);
+  const [deleteFolderDialogOpen, setDeleteFolderDialogOpen] = useState(false);
   
   // Sorting state for each tab
   const [emailSortField, setEmailSortField] = useState<'name' | 'subject' | null>(null);
@@ -478,6 +480,30 @@ export default function Campaigns() {
     },
     onError: () => {
       toast({ variant: "destructive", title: "Error", description: "Failed to update folder" });
+    }
+  });
+
+  // Delete folder mutation
+  const deleteFolderMutation = useMutation({
+    mutationFn: async (folderId: string) => {
+      return await apiRequest("DELETE", `/api/template-folders/${folderId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/template-folders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/email-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sms-templates"] });
+      toast({ title: "Success", description: "Folder deleted successfully" });
+      setDeleteFolderDialogOpen(false);
+      setFolderToDelete(null);
+      // Reset folder selection if deleted folder was selected
+      if (folderToDelete?.type === 'email') {
+        setSelectedFolder(null);
+      } else if (folderToDelete?.type === 'sms') {
+        setSelectedSmsFolder(null);
+      }
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete folder" });
     }
   });
 
@@ -1260,12 +1286,21 @@ export default function Campaigns() {
                               <FolderOpen className="h-4 w-4 mr-2" />
                               View Folder
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setFolderToEdit(folder);
+                              setIsEditFolderDialogOpen(true);
+                            }}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Folder
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => {
+                                setFolderToDelete({ id: folder.id, name: folder.name, type: 'email' });
+                                setDeleteFolderDialogOpen(true);
+                              }}
+                            >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete Folder
                             </DropdownMenuItem>
@@ -1543,7 +1578,7 @@ export default function Campaigns() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setSelectedFolder(folder.id)}>
+                            <DropdownMenuItem onClick={() => setSelectedSmsFolder(folder.id)}>
                               <FolderOpen className="h-4 w-4 mr-2" />
                               View Folder
                             </DropdownMenuItem>
@@ -1555,7 +1590,13 @@ export default function Campaigns() {
                               Edit Folder
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => {
+                                setFolderToDelete({ id: folder.id, name: folder.name, type: 'sms' });
+                                setDeleteFolderDialogOpen(true);
+                              }}
+                            >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete Folder
                             </DropdownMenuItem>
@@ -2203,6 +2244,39 @@ export default function Campaigns() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Folder Confirmation Dialog */}
+      <AlertDialog open={deleteFolderDialogOpen} onOpenChange={(open) => {
+        setDeleteFolderDialogOpen(open);
+        if (!open) {
+          setFolderToDelete(null);
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Folder</AlertDialogTitle>
+            <AlertDialogDescription>
+              {folderToDelete 
+                ? `This will permanently delete the folder "${folderToDelete.name}". Templates in this folder will be moved to no folder. This action cannot be undone.`
+                : 'This action cannot be undone.'
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (folderToDelete) {
+                  deleteFolderMutation.mutate(folderToDelete.id);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Folder
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
