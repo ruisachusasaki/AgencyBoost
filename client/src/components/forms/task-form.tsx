@@ -673,28 +673,6 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
             )}
           />
 
-          {/* 6.5 Tags */}
-          <FormField
-            control={form.control}
-            name="tags"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-1.5">
-                  <TagIcon className="h-4 w-4" />
-                  Tags
-                </FormLabel>
-                <FormControl>
-                  <TagSelector
-                    value={field.value || []}
-                    onChange={field.onChange}
-                    placeholder="Add tags..."
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           {/* 7. Assigned To */}
           <FormField
             control={form.control}
@@ -876,6 +854,28 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
                     />
                   </PopoverContent>
                 </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* 11. Tags */}
+          <FormField
+            control={form.control}
+            name="tags"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-1.5">
+                  <TagIcon className="h-4 w-4" />
+                  Tags
+                </FormLabel>
+                <FormControl>
+                  <TagSelector
+                    value={field.value || []}
+                    onChange={field.onChange}
+                    placeholder="Add tags..."
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
