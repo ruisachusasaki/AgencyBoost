@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, Map } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 
 
@@ -821,6 +821,137 @@ function ClientWorkflowsSection({ clientId, actionsExpanded, setActionsExpanded 
         }}
       />
     </div>
+  );
+}
+
+// RoadmapTabContent Component
+function RoadmapTabContent({ client, queryClient }: { client: Client; queryClient: any }) {
+  const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [roadmapContent, setRoadmapContent] = useState(client?.roadmap || "");
+
+  // Sync state when client data changes
+  useEffect(() => {
+    setRoadmapContent(client?.roadmap || "");
+  }, [client?.roadmap]);
+
+  const updateRoadmapMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const response = await apiRequest("PATCH", `/api/clients/${client.id}`, {
+        roadmap: content
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', client.id] });
+      toast({
+        title: "Roadmap saved",
+        description: "Client roadmap has been updated successfully."
+      });
+      setIsEditing(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save roadmap. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSave = () => {
+    updateRoadmapMutation.mutate(roadmapContent);
+  };
+
+  const handleCancel = () => {
+    setRoadmapContent(client?.roadmap || "");
+    setIsEditing(false);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Map className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold text-gray-900">Client Roadmap</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isEditing ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                data-testid="button-edit-roadmap"
+              >
+                <Edit2 className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancel}
+                  data-testid="button-cancel-roadmap"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={updateRoadmapMutation.isPending}
+                  data-testid="button-save-roadmap"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {updateRoadmapMutation.isPending ? "Saving..." : "Save"}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isEditing ? (
+          <div className="border rounded-md">
+            <RichTextEditor
+              content={roadmapContent}
+              onChange={(content) => setRoadmapContent(content)}
+              placeholder="Add roadmap information, milestones, and strategic plans for this client..."
+              className="min-h-[400px]"
+              data-testid="editor-roadmap"
+            />
+          </div>
+        ) : (
+          <div className="min-h-[300px]">
+            {roadmapContent ? (
+              <div 
+                className="prose prose-sm max-w-none text-gray-700"
+                dangerouslySetInnerHTML={{ __html: roadmapContent }}
+                data-testid="content-roadmap"
+              />
+            ) : (
+              <div className="text-center py-12">
+                <Map className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Roadmap Added Yet</h3>
+                <p className="text-gray-500 mb-4" data-testid="placeholder-roadmap">
+                  Click Edit to add roadmap information, milestones, and strategic plans for this client.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditing(true)}
+                  data-testid="button-add-roadmap"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Roadmap
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -4278,7 +4409,7 @@ export default function EnhancedClientDetail() {
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="border-b border-gray-200">
-            <TabsList className="grid w-full grid-cols-6 bg-transparent border-0 rounded-none h-auto p-0">
+            <TabsList className="grid w-full grid-cols-7 bg-transparent border-0 rounded-none h-auto p-0">
               <TabsTrigger 
                 value="contact" 
                 className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
@@ -4292,6 +4423,14 @@ export default function EnhancedClientDetail() {
               >
                 <Zap className="h-4 w-4" />
                 Client Hub
+              </TabsTrigger>
+              <TabsTrigger 
+                value="roadmap" 
+                className="flex items-center gap-2 border-b-2 border-transparent rounded-none bg-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 -mb-0.5"
+                data-testid="tab-roadmap"
+              >
+                <Map className="h-4 w-4" />
+                Roadmap
               </TabsTrigger>
               <TabsTrigger 
                 value="health" 
@@ -5836,6 +5975,10 @@ export default function EnhancedClientDetail() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="roadmap" className="space-y-6 mt-6">
+            <RoadmapTabContent client={client} queryClient={queryClient} />
           </TabsContent>
 
           <TabsContent value="health" className="space-y-6 mt-6">
