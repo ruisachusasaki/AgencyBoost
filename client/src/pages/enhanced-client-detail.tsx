@@ -4238,18 +4238,8 @@ export default function EnhancedClientDetail() {
             </Button>
           </CardContent>
     </Card>
-    
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
-    </Card>
   );
 
-        </Card>
-      </div>
-    );
-  }
 
 
   return (
@@ -4556,14 +4546,7 @@ export default function EnhancedClientDetail() {
               </CardContent>
     </Card>
     
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
-    </Card>
-  );
 
-            </Card>
 
             {/* Actions Section */}
             <Card className="mt-6">
@@ -4698,15 +4681,8 @@ export default function EnhancedClientDetail() {
                 
               </CardContent>
     </Card>
-    
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
-    </Card>
   );
 
-            </Card>
 
 
           </div>
@@ -4723,12 +4699,6 @@ export default function EnhancedClientDetail() {
                 </CardContent>
     </Card>
     
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
-    </Card>
-  );
 
               </Card>
             ) : briefSections.length === 0 ? (
@@ -4740,12 +4710,6 @@ export default function EnhancedClientDetail() {
                     <p className="text-gray-500">Contact your administrator to configure client brief sections.</p>
                   </div>
                 </CardContent>
-    </Card>
-    
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
     </Card>
   );
 
@@ -4862,12 +4826,6 @@ export default function EnhancedClientDetail() {
                 </CardContent>
     </Card>
     
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
-    </Card>
-  );
 
               </Card>
             )}
@@ -5296,15 +5254,8 @@ export default function EnhancedClientDetail() {
                 )}
               </CardContent>
     </Card>
-    
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
-    </Card>
   );
 
-            </Card>
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-6 mt-6">
@@ -5454,12 +5405,6 @@ export default function EnhancedClientDetail() {
             </CardContent>
     </Card>
     
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
-    </Card>
-  );
 
           </Card>
         </TabsContent>
@@ -5530,15 +5475,8 @@ export default function EnhancedClientDetail() {
                 </div>
               </CardContent>
     </Card>
-    
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
-    </Card>
   );
 
-            </Card>
 
             {/* Communication Tabs for SMS and Email */}
             <Card>
@@ -5897,14 +5835,7 @@ export default function EnhancedClientDetail() {
               </CardContent>
     </Card>
     
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
-    </Card>
-  );
 
-            </Card>
 
             {/* Communication History */}
             <Card>
@@ -6075,15 +6006,8 @@ export default function EnhancedClientDetail() {
                 </div>
               </CardContent>
     </Card>
-    
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
-    </Card>
   );
 
-            </Card>
           </TabsContent>
 
           <TabsContent value="roadmap" className="space-y-6 mt-6">
@@ -6692,14 +6616,7 @@ export default function EnhancedClientDetail() {
               </CardContent>
     </Card>
     
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
-    </Card>
-  );
 
-            </Card>
           </TabsContent>
 
 
