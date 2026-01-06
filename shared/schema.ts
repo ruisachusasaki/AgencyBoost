@@ -437,6 +437,26 @@ export const clients = pgTable("clients", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Client Roadmap Comments - Comments on client roadmaps with @mention support
+export const clientRoadmapComments = pgTable("client_roadmap_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  authorId: uuid("author_id").notNull().references(() => staff.id),
+  mentions: text("mentions").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertClientRoadmapCommentSchema = createInsertSchema(clientRoadmapComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ClientRoadmapComment = typeof clientRoadmapComments.$inferSelect;
+export type InsertClientRoadmapComment = z.infer<typeof insertClientRoadmapCommentSchema>;
+
 // Client Portal Users - Manages access to client-facing portal
 export const clientPortalUsers = pgTable("client_portal_users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
