@@ -21,6 +21,7 @@ import { DocumentUploader } from "@/components/DocumentUploader";
 import { AppointmentModal } from "@/components/AppointmentModal";
 import { ProductSearchResults } from "@/components/ProductSearchResults";
 import { RichTextEditor } from "@/components/rich-text-editor";
+import RoadmapComments from "@/components/roadmap-comments";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -869,6 +870,7 @@ function RoadmapTabContent({ client, queryClient }: { client: Client; queryClien
   };
 
   return (
+    <>
     <Card>
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
@@ -952,7 +954,15 @@ function RoadmapTabContent({ client, queryClient }: { client: Client; queryClien
         )}
       </CardContent>
     </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+    </>
   );
+
 }
 
 // ClientHealthTabContent Component
@@ -4227,6 +4237,15 @@ export default function EnhancedClientDetail() {
               Back to Clients
             </Button>
           </CardContent>
+    </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+  );
+
         </Card>
       </div>
     );
@@ -4535,6 +4554,15 @@ export default function EnhancedClientDetail() {
                   </div>
                 ))}
               </CardContent>
+    </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+  );
+
             </Card>
 
             {/* Actions Section */}
@@ -4669,6 +4697,15 @@ export default function EnhancedClientDetail() {
                 
                 
               </CardContent>
+    </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+  );
+
             </Card>
 
 
@@ -4684,6 +4721,15 @@ export default function EnhancedClientDetail() {
                     <div className="text-gray-500">Loading client brief sections...</div>
                   </div>
                 </CardContent>
+    </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+  );
+
               </Card>
             ) : briefSections.length === 0 ? (
               <Card>
@@ -4694,6 +4740,15 @@ export default function EnhancedClientDetail() {
                     <p className="text-gray-500">Contact your administrator to configure client brief sections.</p>
                   </div>
                 </CardContent>
+    </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+  );
+
               </Card>
             ) : (
               <Card>
@@ -4805,6 +4860,15 @@ export default function EnhancedClientDetail() {
                       })}
                   </Accordion>
                 </CardContent>
+    </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+  );
+
               </Card>
             )}
 
@@ -5231,6 +5295,15 @@ export default function EnhancedClientDetail() {
                   </div>
                 )}
               </CardContent>
+    </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+  );
+
             </Card>
         </TabsContent>
 
@@ -5379,6 +5452,15 @@ export default function EnhancedClientDetail() {
                 )}
               </div>
             </CardContent>
+    </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+  );
+
           </Card>
         </TabsContent>
 
@@ -5447,6 +5529,15 @@ export default function EnhancedClientDetail() {
                   </div>
                 </div>
               </CardContent>
+    </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+  );
+
             </Card>
 
             {/* Communication Tabs for SMS and Email */}
@@ -5804,6 +5895,15 @@ export default function EnhancedClientDetail() {
                   </TabsContent>
                 </Tabs>
               </CardContent>
+    </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+  );
+
             </Card>
 
             {/* Communication History */}
@@ -5974,6 +6074,15 @@ export default function EnhancedClientDetail() {
                   )}
                 </div>
               </CardContent>
+    </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+  );
+
             </Card>
           </TabsContent>
 
@@ -6581,6 +6690,15 @@ export default function EnhancedClientDetail() {
                 )}
 
               </CardContent>
+    </Card>
+    
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <RoadmapComments clientId={client.id} />
+      </CardContent>
+    </Card>
+  );
+
             </Card>
           </TabsContent>
 
