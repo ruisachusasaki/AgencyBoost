@@ -320,18 +320,15 @@ async function initializeCoreClientBriefSections() {
         });
         log(`Created core brief section: ${section.title}`);
       } else {
-        // Update existing core section to ensure it has latest configuration
+        // Section already exists - only update placeholder and scope, preserve user customizations (icon, displayOrder, title)
+        // This ensures user's icon and ordering changes are NOT overwritten on server restart
         await db.update(clientBriefSections)
           .set({
-            title: section.title,
             placeholder: section.placeholder,
-            icon: section.icon,
-            displayOrder: section.displayOrder,
-            scope: section.scope,
-            type: 'text'
+            scope: section.scope
           })
           .where(eq(clientBriefSections.key, section.key));
-        log(`Updated core brief section: ${section.title}`);
+        log(`Preserved core brief section: ${section.title} (icon and order kept)`);
       }
     }
     
