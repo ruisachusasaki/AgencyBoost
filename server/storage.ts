@@ -5195,6 +5195,7 @@ export class DbStorage implements IStorage {
     const tasksData = await db
       .select({
         task: tasks,
+        clientCompany: clients.company,
         clientName: clients.name
       })
       .from(tasks)
@@ -5202,9 +5203,9 @@ export class DbStorage implements IStorage {
       .where(and(...conditions));
     
     // Filter time entries to only include those in the date range and for the specified user
-    return tasksData.map(({ task, clientName }) => ({
+    return tasksData.map(({ task, clientCompany, clientName }) => ({
       ...task,
-      clientName: clientName || undefined,
+      clientName: clientCompany || clientName || undefined,
       timeEntries: task.timeEntries && Array.isArray(task.timeEntries) 
         ? (task.timeEntries as any[]).filter((entry: any) => {
             if (!entry.startTime) return false;
