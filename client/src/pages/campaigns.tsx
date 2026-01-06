@@ -1914,14 +1914,16 @@ export default function Campaigns() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           {item.type === 'folder' ? (
-                            <div 
-                              className="flex items-center gap-2 cursor-pointer hover:text-primary"
-                              onClick={() => handleViewFolder(item.id)}
-                              data-testid={`folder-${item.id}`}
-                            >
-                              <Folder className="h-4 w-4 text-primary" />
+                            <div className="flex items-center gap-2">
+                              <FolderOpen className="h-4 w-4 text-blue-500" />
                               <div>
-                                <div className="font-medium">{item.name}</div>
+                                <button
+                                  onClick={() => handleViewFolder(item.id)}
+                                  className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                  data-testid={`folder-${item.id}`}
+                                >
+                                  {item.name}
+                                </button>
                                 <div className="text-sm text-gray-500">
                                   {item.itemCount} {item.itemCount === 1 ? 'form' : 'forms'}
                                 </div>
