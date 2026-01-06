@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { X, Plus, ChevronDown, Tag as TagIcon } from "lucide-react";
+import { X, Plus, ChevronDown, Tag as TagIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Tag } from "@shared/schema";
 
 interface TagSelectorProps {
@@ -14,6 +15,15 @@ interface TagSelectorProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+}
+
+function generateRandomColor(): string {
+  const colors = [
+    "#46a1a0", "#e74c3c", "#3498db", "#9b59b6", "#f39c12", 
+    "#1abc9c", "#e91e63", "#00bcd4", "#ff5722", "#607d8b",
+    "#8bc34a", "#673ab7", "#2196f3", "#ff9800", "#795548"
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
 }
 
 export function TagSelector({
@@ -28,6 +38,24 @@ export function TagSelector({
 
   const { data: tags = [] } = useQuery<Tag[]>({
     queryKey: ["/api/tags"],
+  });
+
+  const createTagMutation = useMutation({
+    mutationFn: async (tagName: string) => {
+      const response = await apiRequest("POST", "/api/tags", {
+        name: tagName,
+        color: generateRandomColor(),
+      });
+      return response.json();
+    },
+    onSuccess: (newTag: Tag) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tags"] });
+      if (!value.includes(newTag.name)) {
+        onChange([...value, newTag.name]);
+      }
+      setSearch("");
+      setOpen(false);
+    },
   });
 
   const selectedTags = tags.filter((tag) => value.includes(tag.name));
@@ -48,6 +76,11 @@ export function TagSelector({
   const filteredTags = availableTags.filter((tag) =>
     tag.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const exactMatchExists = tags.some(
+    (tag) => tag.name.toLowerCase() === search.trim().toLowerCase()
+  );
+  const showCreateOption = search.trim() && !exactMatchExists && !value.includes(search.trim());
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
@@ -124,9 +157,24 @@ export function TagSelector({
               />
               <CommandList>
                 <CommandEmpty>
-                  {search ? (
-                    <div className="p-2 text-center text-sm text-muted-foreground">
-                      No tags found
+                  {search && search.trim() ? (
+                    <div className="p-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start gap-2 text-sm"
+                        onClick={() => createTagMutation.mutate(search.trim())}
+                        disabled={createTagMutation.isPending}
+                        data-testid="create-new-tag-button"
+                      >
+                        {createTagMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Plus className="h-4 w-4" />
+                        )}
+                        Create "{search.trim()}"
+                      </Button>
                     </div>
                   ) : (
                     <div className="p-2 text-center text-sm text-muted-foreground">
@@ -150,6 +198,21 @@ export function TagSelector({
                       <span>{tag.name}</span>
                     </CommandItem>
                   ))}
+                  {showCreateOption && filteredTags.length > 0 && (
+                    <CommandItem
+                      value={`create-${search.trim()}`}
+                      onSelect={() => createTagMutation.mutate(search.trim())}
+                      className="flex items-center gap-2 cursor-pointer border-t mt-1 pt-1"
+                      data-testid="create-new-tag-option"
+                    >
+                      {createTagMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4 text-primary" />
+                      )}
+                      <span>Create "{search.trim()}"</span>
+                    </CommandItem>
+                  )}
                 </CommandGroup>
               </CommandList>
             </Command>
