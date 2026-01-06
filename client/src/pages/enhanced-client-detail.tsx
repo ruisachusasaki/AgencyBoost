@@ -837,7 +837,7 @@ function RoadmapTabContent({ client, queryClient }: { client: Client; queryClien
 
   const updateRoadmapMutation = useMutation({
     mutationFn: async (content: string) => {
-      const response = await apiRequest("PATCH", `/api/clients/${client.id}`, {
+      const response = await apiRequest("PUT", `/api/clients/${client.id}`, {
         roadmap: content
       });
       return response.json();
@@ -928,7 +928,7 @@ function RoadmapTabContent({ client, queryClient }: { client: Client; queryClien
             {roadmapContent ? (
               <div 
                 className="prose prose-sm max-w-none text-gray-700"
-                dangerouslySetInnerHTML={{ __html: roadmapContent }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(roadmapContent) }}
                 data-testid="content-roadmap"
               />
             ) : (
