@@ -213,7 +213,7 @@ export default function EditFolder() {
                   <Button 
                     type="submit" 
                     disabled={updateFolderMutation.isPending}
-                    className="bg-[#46a1a0] hover:bg-[#3a8b8a]"
+                    className="bg-primary hover:bg-primary/90"
                   >
                     <Save className="h-4 w-4 mr-2" />
                     {updateFolderMutation.isPending ? "Saving..." : "Save Changes"}
