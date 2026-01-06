@@ -421,6 +421,9 @@ export const clients = pgTable("clients", {
   // Group assignment
   groupId: varchar("group_id").references(() => clientGroups.id),
   
+  // Roadmap - rich text field for client roadmap
+  roadmap: text("roadmap"),
+  
   // Custom field values (JSON object)
   customFieldValues: jsonb("custom_field_values"),
   
