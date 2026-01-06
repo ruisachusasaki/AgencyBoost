@@ -65,7 +65,8 @@ import {
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
   clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings,
   knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseLikes, knowledgeBaseBookmarks, knowledgeBasePermissions, knowledgeBaseArticleVersions,
-  oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments, oneOnOneMeetingKpiStatuses
+  oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments, oneOnOneMeetingKpiStatuses,
+  clientRoadmapComments, insertClientRoadmapCommentSchema
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
@@ -3544,6 +3545,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error setting client brief value:", error);
       res.status(500).json({ message: "Failed to set client brief value" });
+    }
+  });
+
+
+  // Client Roadmap Comments routes
+  app.get("/api/clients/:clientId/roadmap-comments", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      
+      const comments = await db.select({
+        id: clientRoadmapComments.id,
+        clientId: clientRoadmapComments.clientId,
+        content: clientRoadmapComments.content,
+        authorId: clientRoadmapComments.authorId,
+        mentions: clientRoadmapComments.mentions,
+        createdAt: clientRoadmapComments.createdAt,
+        updatedAt: clientRoadmapComments.updatedAt,
+        authorFirstName: staff.firstName,
+        authorLastName: staff.lastName,
+        authorProfileImage: staff.profileImage,
+      })
+      .from(clientRoadmapComments)
+      .leftJoin(staff, eq(staff.id, clientRoadmapComments.authorId))
+      .where(eq(clientRoadmapComments.clientId, clientId))
+      .orderBy(desc(clientRoadmapComments.createdAt));
+
+      const formattedComments = comments.map(c => ({
+        id: c.id,
+        clientId: c.clientId,
+        content: c.content,
+        authorId: c.authorId,
+        mentions: c.mentions || [],
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        author: {
+          firstName: c.authorFirstName || 'Unknown',
+          lastName: c.authorLastName || '',
+          profileImage: c.authorProfileImage,
+        }
+      }));
+
+      res.json(formattedComments);
+    } catch (error) {
+      console.error("Error fetching roadmap comments:", error);
+      res.status(500).json({ message: "Failed to fetch roadmap comments" });
+    }
+  });
+
+  app.post("/api/clients/:clientId/roadmap-comments", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { clientId } = req.params;
+      const { content, mentions } = req.body;
+
+      if (!content || typeof content !== 'string' || content.trim() === '') {
+        return res.status(400).json({ message: "Content is required" });
+      }
+
+      const [newComment] = await db.insert(clientRoadmapComments).values({
+        clientId,
+        content: content.trim(),
+        authorId: userId,
+        mentions: mentions || [],
+      }).returning();
+
+      // Get author info
+      const [author] = await db.select({
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        profileImage: staff.profileImage,
+      }).from(staff).where(eq(staff.id, userId));
+
+      res.status(201).json({
+        ...newComment,
+        mentions: newComment.mentions || [],
+        author: author || { firstName: 'Unknown', lastName: '' },
+      });
+    } catch (error) {
+      console.error("Error creating roadmap comment:", error);
+      res.status(500).json({ message: "Failed to create roadmap comment" });
+    }
+  });
+
+  app.delete("/api/clients/:clientId/roadmap-comments/:commentId", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { clientId, commentId } = req.params;
+
+      // Check if comment exists and belongs to this client
+      const [existingComment] = await db.select()
+        .from(clientRoadmapComments)
+        .where(and(
+          eq(clientRoadmapComments.id, commentId),
+          eq(clientRoadmapComments.clientId, clientId)
+        ));
+
+      if (!existingComment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+
+      // Only allow deletion by the author or admin
+      const userRoles = await db.select({ roleName: roles.name })
+        .from(userRoles as any)
+        .innerJoin(roles, eq(roles.id, (userRoles as any).roleId))
+        .where(eq((userRoles as any).userId, userId));
+      
+      const isAdmin = userRoles.some((r: any) => r.roleName === 'Admin');
+      
+      if (existingComment.authorId !== userId && !isAdmin) {
+        return res.status(403).json({ message: "You can only delete your own comments" });
+      }
+
+      await db.delete(clientRoadmapComments).where(eq(clientRoadmapComments.id, commentId));
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting roadmap comment:", error);
+      res.status(500).json({ message: "Failed to delete roadmap comment" });
     }
   });
 
