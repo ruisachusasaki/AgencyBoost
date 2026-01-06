@@ -486,7 +486,12 @@ export default function Campaigns() {
   // Delete folder mutation
   const deleteFolderMutation = useMutation({
     mutationFn: async (folderId: string) => {
-      return await apiRequest("DELETE", `/api/template-folders/${folderId}`);
+      const response = await apiRequest("DELETE", `/api/template-folders/${folderId}`);
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to delete folder");
+      }
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/template-folders"] });
@@ -502,8 +507,8 @@ export default function Campaigns() {
         setSelectedSmsFolder(null);
       }
     },
-    onError: () => {
-      toast({ variant: "destructive", title: "Error", description: "Failed to delete folder" });
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to delete folder" });
     }
   });
 
