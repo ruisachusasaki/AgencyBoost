@@ -2052,78 +2052,104 @@ export default function Tasks() {
       <Card>
         <CardHeader className="border-b border-slate-200">
           <div className="space-y-4">
-            {/* Smart Lists Tabs */}
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-1 h-auto">
-                <div className="flex items-center gap-1 overflow-x-auto">
-                  <TabsTrigger value="all-tasks" className="whitespace-nowrap" data-testid="tab-all-tasks">
-                    All Tasks
-                  </TabsTrigger>
-                  <TabsTrigger value="my-tasks" className="whitespace-nowrap" data-testid="tab-my-tasks">
-                    My Tasks
-                  </TabsTrigger>
-                  {getVisibleSmartLists().slice(0, maxVisibleTabs - 2).map((smartList) => (
-                    <div key={smartList.id} className="relative flex items-center">
-                      <TabsTrigger 
-                        value={smartList.id} 
-                        className="whitespace-nowrap pr-6"
-                        data-testid={`tab-smart-list-${smartList.id}`}
+            {/* Smart Lists Tabs - styled like 1v1 Meetings tabs */}
+            <div className="flex items-center gap-0 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 overflow-x-auto" style={{ width: 'fit-content' }}>
+              <button
+                onClick={() => handleTabChange("all-tasks")}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
+                  activeTab === "all-tasks"
+                    ? "text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                }`}
+                style={activeTab === "all-tasks" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
+                data-testid="tab-all-tasks"
+              >
+                All Tasks
+              </button>
+              <button
+                onClick={() => handleTabChange("my-tasks")}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
+                  activeTab === "my-tasks"
+                    ? "text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                }`}
+                style={activeTab === "my-tasks" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
+                data-testid="tab-my-tasks"
+              >
+                My Tasks
+              </button>
+              {getVisibleSmartLists().slice(0, maxVisibleTabs - 2).map((smartList) => (
+                <div key={smartList.id} className="relative flex items-center">
+                  <button
+                    onClick={() => handleTabChange(smartList.id)}
+                    className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap pr-6 ${
+                      activeTab === smartList.id
+                        ? "text-white shadow-sm"
+                        : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                    }`}
+                    style={activeTab === smartList.id ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
+                    data-testid={`tab-smart-list-${smartList.id}`}
+                  >
+                    {smartList.name}
+                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 h-4 w-4 p-0 hover:bg-slate-100 dark:hover:bg-slate-700 z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShareListId(smartList.id);
+                        }}
+                      >
+                        <MoreHorizontal className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSmartList(smartList.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ))}
+              {getVisibleSmartLists().length > maxVisibleTabs - 2 && (
+                <DropdownMenu open={isMoreDropdownOpen} onOpenChange={setIsMoreDropdownOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
+                        getVisibleSmartLists().slice(maxVisibleTabs - 2).some(s => s.id === activeTab)
+                          ? "text-white shadow-sm"
+                          : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                      }`}
+                      style={getVisibleSmartLists().slice(maxVisibleTabs - 2).some(s => s.id === activeTab) ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
+                    >
+                      More
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {getVisibleSmartLists().slice(maxVisibleTabs - 2).map((smartList) => (
+                      <DropdownMenuItem
+                        key={smartList.id}
+                        onClick={() => {
+                          handleTabChange(smartList.id);
+                          setIsMoreDropdownOpen(false);
+                        }}
                       >
                         {smartList.name}
-                      </TabsTrigger>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-1 h-4 w-4 p-0 hover:bg-slate-100 z-10"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShareListId(smartList.id);
-                            }}
-                          >
-                            <MoreHorizontal className="h-3 w-3" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteSmartList(smartList.id);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  ))}
-                  {getVisibleSmartLists().length > maxVisibleTabs - 2 && (
-                    <DropdownMenu open={isMoreDropdownOpen} onOpenChange={setIsMoreDropdownOpen}>
-                      <DropdownMenuTrigger asChild>
-                        <TabsTrigger value="more" className="whitespace-nowrap">
-                          More
-                        </TabsTrigger>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        {getVisibleSmartLists().slice(maxVisibleTabs - 2).map((smartList) => (
-                          <DropdownMenuItem
-                            key={smartList.id}
-                            onClick={() => {
-                              handleTabChange(smartList.id);
-                              setIsMoreDropdownOpen(false);
-                            }}
-                          >
-                            {smartList.name}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-              </TabsList>
-            </Tabs>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
 
             {/* Search Bar */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
