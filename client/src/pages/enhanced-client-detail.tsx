@@ -4237,7 +4237,6 @@ export default function EnhancedClientDetail() {
               Back to Clients
             </Button>
           </CardContent>
-    </Card>
   );
 
 
@@ -4544,9 +4543,7 @@ export default function EnhancedClientDetail() {
                   </div>
                 ))}
               </CardContent>
-    </Card>
-    
-
+            </Card>
 
             {/* Actions Section */}
             <Card className="mt-6">
@@ -4680,11 +4677,7 @@ export default function EnhancedClientDetail() {
                 
                 
               </CardContent>
-    </Card>
-  );
-
-
-
+            </Card>
           </div>
 
           {/* Middle Column - Client Brief & Communication */}
@@ -4697,7 +4690,6 @@ export default function EnhancedClientDetail() {
                     <div className="text-gray-500">Loading client brief sections...</div>
                   </div>
                 </CardContent>
-    </Card>
     
 
               </Card>
@@ -4710,9 +4702,6 @@ export default function EnhancedClientDetail() {
                     <p className="text-gray-500">Contact your administrator to configure client brief sections.</p>
                   </div>
                 </CardContent>
-    </Card>
-  );
-
               </Card>
             ) : (
               <Card>
@@ -4824,7 +4813,6 @@ export default function EnhancedClientDetail() {
                       })}
                   </Accordion>
                 </CardContent>
-    </Card>
     
 
               </Card>
@@ -5253,9 +5241,7 @@ export default function EnhancedClientDetail() {
                   </div>
                 )}
               </CardContent>
-    </Card>
-  );
-
+            </Card>
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-6 mt-6">
@@ -5403,7 +5389,6 @@ export default function EnhancedClientDetail() {
                 )}
               </div>
             </CardContent>
-    </Card>
     
 
           </Card>
@@ -5474,9 +5459,7 @@ export default function EnhancedClientDetail() {
                   </div>
                 </div>
               </CardContent>
-    </Card>
-  );
-
+            </Card>
 
             {/* Communication Tabs for SMS and Email */}
             <Card>
@@ -5833,7 +5816,6 @@ export default function EnhancedClientDetail() {
                   </TabsContent>
                 </Tabs>
               </CardContent>
-    </Card>
     
 
 
@@ -6005,21 +5987,19 @@ export default function EnhancedClientDetail() {
                   )}
                 </div>
               </CardContent>
-    </Card>
-  );
+            </Card>
+        </TabsContent>
 
-          </TabsContent>
+        <TabsContent value="roadmap" className="space-y-6 mt-6">
+          <RoadmapTabContent client={client} queryClient={queryClient} />
+        </TabsContent>
 
-          <TabsContent value="roadmap" className="space-y-6 mt-6">
-            <RoadmapTabContent client={client} queryClient={queryClient} />
-          </TabsContent>
+        <TabsContent value="health" className="space-y-6 mt-6">
+          <ClientHealthTabContent clientId={clientId} />
+        </TabsContent>
 
-          <TabsContent value="health" className="space-y-6 mt-6">
-            <ClientHealthTabContent clientId={clientId} />
-          </TabsContent>
-
-          <TabsContent value="hub" className="space-y-6 mt-6">
-            <Card>
+        <TabsContent value="hub" className="space-y-6 mt-6">
+          <Card>
               <CardHeader className="pb-4">
                 {/* Horizontal Icons Navigation */}
                 <div className="flex items-center justify-between mb-4">
@@ -6614,7 +6594,6 @@ export default function EnhancedClientDetail() {
                 )}
 
               </CardContent>
-    </Card>
     
 
           </TabsContent>
