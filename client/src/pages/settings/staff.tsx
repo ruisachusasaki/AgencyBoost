@@ -262,6 +262,7 @@ export default function Staff() {
   };
 
   const confirmDeleteStaff = () => {
+    alert("Confirm delete button clicked!");
     console.log("confirmDeleteStaff called, staffToDelete:", staffToDelete);
     if (staffToDelete) {
       console.log("Calling deleteStaffMutation.mutate with id:", staffToDelete.id);
