@@ -1630,7 +1630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // New client for this staff member
           existingClient = {
             clientId,
-            clientName: client?.name || 'Unknown Client',
+            clientName: client?.company || client?.name || 'Unknown Client',
             positions: []
           };
           staffWorkload.clients.push(existingClient);
