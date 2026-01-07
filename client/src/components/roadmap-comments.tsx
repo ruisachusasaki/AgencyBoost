@@ -44,6 +44,7 @@ export default function RoadmapComments({ clientId }: RoadmapCommentsProps) {
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [trackedMentions, setTrackedMentions] = useState<Array<{ name: string; id: string }>>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -67,28 +68,28 @@ export default function RoadmapComments({ clientId }: RoadmapCommentsProps) {
 
   const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
-      const mentionRegex = /@([\p{L}\p{M}\p{N}\s'-]+)\[([a-f0-9-]+)\]/gu;
-      const mentionMatches = Array.from(content.matchAll(mentionRegex));
+      // Extract mention IDs from tracked mentions that are still in the content
+      // Use word boundary matching to avoid partial matches
       const mentions: string[] = [];
-      
-      mentionMatches.forEach(match => {
-        const userId = match[2];
-        if (userId && !mentions.includes(userId)) {
-          mentions.push(userId);
+      trackedMentions.forEach(mention => {
+        // Create a regex that matches @Name with word boundary or punctuation after
+        const mentionPattern = new RegExp(`@${mention.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=[\\s.,!?;:\\)\\]\\n]|$)`, 'g');
+        const matches = content.match(mentionPattern);
+        if (matches && matches.length > 0 && !mentions.includes(mention.id)) {
+          mentions.push(mention.id);
         }
       });
       
-      const cleanContent = content.replace(/@([\p{L}\p{M}\p{N}\s'-]+)\[([a-f0-9-]+)\]/gu, '@$1');
-      
       const response = await apiRequest(`/api/clients/${clientId}/roadmap-comments`, {
         method: 'POST',
-        body: JSON.stringify({ content: cleanContent, mentions }),
+        body: JSON.stringify({ content, mentions }),
       });
       return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'roadmap-comments'] });
       setNewComment("");
+      setTrackedMentions([]);
       toast({ title: "Comment added", description: "Your comment has been posted." });
     },
     onError: () => {
@@ -160,7 +161,14 @@ export default function RoadmapComments({ clientId }: RoadmapCommentsProps) {
     const mentionStart = textBeforeCursor.lastIndexOf("@");
     
     const fullName = `${staffMember.firstName} ${staffMember.lastName}`;
-    const mentionText = `@${fullName}[${staffMember.id}] `;
+    const mentionText = `@${fullName} `;
+    
+    // Track the mention for later ID extraction
+    setTrackedMentions(prev => {
+      const exists = prev.some(m => m.id === staffMember.id);
+      if (exists) return prev;
+      return [...prev, { name: fullName, id: staffMember.id }];
+    });
     
     const newText = textBeforeCursor.substring(0, mentionStart) + mentionText + textAfterCursor;
     setNewComment(newText);

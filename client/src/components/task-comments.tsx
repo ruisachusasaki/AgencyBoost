@@ -55,6 +55,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [trackedMentions, setTrackedMentions] = useState<Array<{ name: string; id: string }>>([]);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [emojiButtonRect, setEmojiButtonRect] = useState<DOMRect | null>(null);
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
@@ -156,26 +157,22 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
 
   const addCommentMutation = useMutation({
     mutationFn: async ({ content, parentId }: { content: string; parentId?: string }) => {
-      // Extract mention IDs from embedded markers: @Name[userId]
-      const mentionRegex = /@([\p{L}\p{M}\p{N}\s'-]+)\[([a-f0-9-]+)\]/gu;
-      const mentionMatches = Array.from(content.matchAll(mentionRegex));
+      // Extract mention IDs from tracked mentions that are still in the content
+      // Use word boundary matching to avoid partial matches
       const mentions: string[] = [];
-      
-      // Extract user IDs from the markers
-      mentionMatches.forEach(match => {
-        const userId = match[2]; // The ID from [userId]
-        if (userId && !mentions.includes(userId)) {
-          mentions.push(userId);
+      trackedMentions.forEach(mention => {
+        // Create a regex that matches @Name with word boundary or punctuation after
+        const mentionPattern = new RegExp(`@${mention.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=[\\s.,!?;:\\)\\]\\n]|$)`, 'g');
+        const matches = content.match(mentionPattern);
+        if (matches && matches.length > 0 && !mentions.includes(mention.id)) {
+          mentions.push(mention.id);
         }
       });
-      
-      // Strip the ID markers from content before sending to backend
-      const cleanContent = content.replace(/@([\p{L}\p{M}\p{N}\s'-]+)\[([a-f0-9-]+)\]/gu, '@$1');
       
       const response = await fetch(`/api/tasks/${taskId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: cleanContent, mentions, parentId, fileUrls: pendingFiles }),
+        body: JSON.stringify({ content, mentions, parentId, fileUrls: pendingFiles }),
       });
       if (!response.ok) throw new Error('Failed to add comment');
       return response.json();
@@ -184,6 +181,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/comments`] });
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/activities`] });
       setNewComment("");
+      setTrackedMentions([]);
       setPendingFiles([]);
       setShowToolbar(false);
       toast({
@@ -263,11 +261,17 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
     const textAfterCursor = newComment.slice(cursorPos);
     const words = textBeforeCursor.split(/\s/);
     
-    // Embed a hidden ID marker in the mention text: @Name[id]
-    // The [id] part will be stripped for display but preserved for submission
-    const mentionText = `@${staffName}[${staffId}]`;
+    // Just show @Name without the ID - track the ID separately
+    const mentionText = `@${staffName}`;
     words[words.length - 1] = mentionText;
     const newText = words.join(' ') + ' ' + textAfterCursor;
+    
+    // Track the mention for later ID extraction
+    setTrackedMentions(prev => {
+      const exists = prev.some(m => m.id === staffId);
+      if (exists) return prev;
+      return [...prev, { name: staffName, id: staffId }];
+    });
     
     setNewComment(newText);
     setShowMentionDropdown(false);
