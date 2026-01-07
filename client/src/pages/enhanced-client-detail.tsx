@@ -839,9 +839,10 @@ function RoadmapTabContent({ client, queryClient }: { client: Client; queryClien
   const [savingEntryId, setSavingEntryId] = useState<string | null>(null);
 
   // Fetch roadmap entries for this client
-  const { data: roadmapEntries = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/clients', client.id, 'roadmap-entries'],
+  const { data: roadmapEntriesData, isLoading } = useQuery<any[]>({
+    queryKey: [`/api/clients/${client.id}/roadmap-entries`],
   });
+  const roadmapEntries = Array.isArray(roadmapEntriesData) ? roadmapEntriesData : [];
 
   // Create new roadmap entry mutation
   const createEntryMutation = useMutation({
@@ -858,7 +859,7 @@ function RoadmapTabContent({ client, queryClient }: { client: Client; queryClien
       return response.json();
     },
     onSuccess: (newEntry) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', client.id, 'roadmap-entries'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${client.id}/roadmap-entries`] });
       setIsAddDialogOpen(false);
       setExpandedEntryId(newEntry.id);
       toast({ title: "Success", description: "Monthly roadmap created successfully" });
@@ -880,7 +881,7 @@ function RoadmapTabContent({ client, queryClient }: { client: Client; queryClien
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', client.id, 'roadmap-entries'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${client.id}/roadmap-entries`] });
       setSavingEntryId(null);
       toast({ title: "Success", description: "Roadmap saved successfully" });
     },
@@ -899,7 +900,7 @@ function RoadmapTabContent({ client, queryClient }: { client: Client; queryClien
       if (!response.ok) throw new Error('Failed to delete roadmap entry');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', client.id, 'roadmap-entries'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${client.id}/roadmap-entries`] });
       toast({ title: "Success", description: "Roadmap entry deleted" });
     },
     onError: () => {
