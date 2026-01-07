@@ -72,6 +72,15 @@ import {
 } from "recharts";
 import type { Client, Campaign, Lead, Task, ClientHealthScore } from "@shared/schema";
 
+// Helper function to format date in local time (not UTC)
+// This prevents timezone shift issues where toISOString() converts to UTC
+const formatLocalDateStr = (d: Date): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Utility function for user-friendly time formatting
 const formatDuration = (minutes: number, mode: 'friendly' | 'decimal' = 'friendly'): string => {
   if (mode === 'decimal') {
@@ -277,29 +286,30 @@ export default function Reports() {
   });
   
   // Time tracking data query for client breakdowns - fixed filter logic with memoization
+  // Note: Using formatLocalDateStr to avoid UTC timezone shift issues
   const timeTrackingFilters = useMemo(() => ({
-    dateFrom: taskDateRange === "today" ? new Date().toISOString().split('T')[0] :
+    dateFrom: taskDateRange === "today" ? formatLocalDateStr(new Date()) :
               taskDateRange === "this-week" ? (() => {
                 const startOfWeek = new Date();
                 const dayOfWeek = startOfWeek.getDay();
                 const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
                 startOfWeek.setDate(startOfWeek.getDate() + diff);
-                return startOfWeek.toISOString().split('T')[0];
+                return formatLocalDateStr(startOfWeek);
               })() :
-              taskDateRange === "this-month" ? new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0] :
+              taskDateRange === "this-month" ? formatLocalDateStr(new Date(new Date().getFullYear(), new Date().getMonth(), 1)) :
               (taskDateRange === "custom" || taskDateRange === "Custom Range" || taskDateRange.toLowerCase().includes("custom")) && customTaskDateFrom ? customTaskDateFrom :
-              new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    dateTo: taskDateRange === "today" ? new Date().toISOString().split('T')[0] :
+              formatLocalDateStr(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
+    dateTo: taskDateRange === "today" ? formatLocalDateStr(new Date()) :
             taskDateRange === "this-week" ? (() => {
               const endOfWeek = new Date();
               const dayOfWeek = endOfWeek.getDay();
               const diff = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
               endOfWeek.setDate(endOfWeek.getDate() + diff);
-              return endOfWeek.toISOString().split('T')[0];
+              return formatLocalDateStr(endOfWeek);
             })() :
-            taskDateRange === "this-month" ? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0] :
+            taskDateRange === "this-month" ? formatLocalDateStr(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)) :
             (taskDateRange === "custom" || taskDateRange === "Custom Range" || taskDateRange.toLowerCase().includes("custom")) && customTaskDateTo ? customTaskDateTo :
-            new Date().toISOString().split('T')[0],
+            formatLocalDateStr(new Date()),
     userId: userIdFilter !== "all" ? userIdFilter : undefined,
     clientId: clientFilter !== "all" ? clientFilter : undefined,
     reportType: taskReportType
@@ -2613,10 +2623,24 @@ export default function Reports() {
               </CardHeader>
               <CardContent className="p-0">
                 {(() => {
+                  // Helper function to format date in local time (not UTC)
+                  const formatLocalDate = (d: Date): string => {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                  };
+                  
+                  // Parse date string as local date (not UTC)
+                  const parseLocalDate = (dateStr: string): Date => {
+                    const [year, month, day] = dateStr.split('-').map(Number);
+                    return new Date(year, month - 1, day);
+                  };
+                  
                   // Generate date range for columns from timeTrackingFilters
                   const dateRange: Date[] = [];
-                  const startDate = new Date(timeTrackingFilters.dateFrom);
-                  const endDate = new Date(timeTrackingFilters.dateTo);
+                  const startDate = parseLocalDate(timeTrackingFilters.dateFrom);
+                  const endDate = parseLocalDate(timeTrackingFilters.dateTo);
                   const currentDate = new Date(startDate);
                   
                   while (currentDate <= endDate) {
@@ -2665,7 +2689,7 @@ export default function Reports() {
                       if (task.timeEntries) {
                         task.timeEntries.forEach((entry: any) => {
                           if (entry.userId === userIdFilter) {
-                            const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+                            const entryDate = formatLocalDate(new Date(entry.startTime));
                             const minutes = entry.duration || 0; // Assuming duration in minutes
                             taskDailyTotals[entryDate] = (taskDailyTotals[entryDate] || 0) + minutes;
                             taskTotal += minutes;
@@ -2701,7 +2725,7 @@ export default function Reports() {
                   // Calculate column totals based on rows
                   const columnTotals: Record<string, number> = {};
                   dateRange.forEach(date => {
-                    const dateString = date.toISOString().split('T')[0];
+                    const dateString = formatLocalDate(date);
                     columnTotals[dateString] = rows.reduce((sum, row) => {
                       const dailyTime = row.dailyTotals?.[dateString] || 0;
                       return sum + dailyTime;
@@ -2712,7 +2736,7 @@ export default function Reports() {
                   const grandTotal = Object.values(columnTotals).reduce((sum, dayTotal) => sum + dayTotal, 0);
                   
                   // Get current date for highlighting
-                  const today = new Date().toISOString().split('T')[0];
+                  const today = formatLocalDate(new Date());
                   
                   return (
                     <div className="overflow-x-auto">
@@ -2723,12 +2747,12 @@ export default function Reports() {
                               {isAllUsers ? "User" : "Task"}
                             </TableHead>
                             {dateRange.map((date) => {
-                              const dateString = date.toISOString().split('T')[0];
+                              const dateString = formatLocalDate(date);
                               const isToday = dateString === today;
                               
                               return (
                                 <TableHead 
-                                  key={date.toISOString()} 
+                                  key={formatLocalDate(date)} 
                                   className={`text-center min-w-[100px] border-r border-slate-200 font-medium ${
                                     isToday ? 'bg-blue-50 border-blue-200' : ''
                                   }`}
@@ -2776,13 +2800,13 @@ export default function Reports() {
                                   </div>
                                 </TableCell>
                                 {dateRange.map((date) => {
-                                  const dateString = date.toISOString().split('T')[0];
+                                  const dateString = formatLocalDate(date);
                                   const isToday = dateString === today;
                                   const dailyTimeMinutes = row.dailyTotals?.[dateString] || 0;
                                   
                                   return (
                                     <TableCell 
-                                      key={`${row.id}-${date.toISOString()}`} 
+                                      key={`${row.id}-${formatLocalDate(date)}`} 
                                       className={`text-center border-r border-slate-200 py-3 ${
                                         isToday ? 'bg-blue-50' : ''
                                       }`}
@@ -2821,13 +2845,13 @@ export default function Reports() {
                               </div>
                             </TableCell>
                             {dateRange.map((date) => {
-                              const dateString = date.toISOString().split('T')[0];
+                              const dateString = formatLocalDate(date);
                               const isToday = dateString === today;
                               const dailyTotal = columnTotals[dateString] || 0;
                               
                               return (
                                 <TableCell 
-                                  key={`total-${date.toISOString()}`} 
+                                  key={`total-${formatLocalDate(date)}`} 
                                   className={`text-center border-r border-slate-200 font-semibold ${
                                     isToday ? 'bg-blue-100' : 'bg-slate-100'
                                   }`}

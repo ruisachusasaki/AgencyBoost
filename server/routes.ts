@@ -1194,6 +1194,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // This is a minimal, working endpoint with all logic inline
   app.post("/api/reports/time-tracking", requireAuth(), async (req, res) => {
     try {
+    // Helper function to format date in local time (not UTC)
+    // This prevents timezone shift issues where toISOString() converts to UTC
+    const formatLocalDate = (dateInput: Date | string): string => {
+      const d = new Date(dateInput);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
       console.log("🚀🚀🚀 SELF-CONTAINED TIME TRACKING ENDPOINT CALLED! 🚀🚀🚀");
       console.log("SELF-CONTAINED TIME TRACKING ENDPOINT: Request received:", req.body);
       
@@ -1274,7 +1283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const hasEntriesInRange = task.timeEntries.some(entry => {
           if (!entry.startTime) return false;
-          const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+          const entryDate = formatLocalDate(entry.startTime);
           return entryDate >= dateFrom && entryDate <= dateTo;
         });
         
@@ -1287,7 +1296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         task.timeEntries.forEach(entry => {
           if (!entry.startTime) return;
-          const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+          const entryDate = formatLocalDate(entry.startTime);
           if (entryDate >= dateFrom && entryDate <= dateTo) {
             if (!timeEntriesByDate[entryDate]) {
               timeEntriesByDate[entryDate] = [];
@@ -1341,7 +1350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!task.timeEntries) return;
         task.timeEntries.forEach(entry => {
           if (!entry.startTime || !entry.userId) return;
-          const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+          const entryDate = formatLocalDate(entry.startTime);
           if (entryDate >= dateFrom && entryDate <= dateTo) {
             let resolvedEntryUserId = entry.userId;
             if (IS_DEVELOPMENT && entry.userId === 'current-user') {
@@ -1363,7 +1372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         task.timeEntries.forEach(entry => {
           if (!entry.startTime || !entry.userId) return;
           
-          const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+          const entryDate = formatLocalDate(entry.startTime);
           if (entryDate < dateFrom || entryDate > dateTo) return;
           
           // Handle development mode user ID mapping
@@ -1411,7 +1420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Also add event time entries to user summaries
       console.log("PROCESSING EVENT TIME ENTRIES FOR USER SUMMARIES...");
       for (const eventEntry of eventTimeEntriesResult) {
-        const entryDate = new Date(eventEntry.startTime).toISOString().split('T')[0];
+        const entryDate = formatLocalDate(eventEntry.startTime);
         
         // Lookup user name
         await getUserName(eventEntry.userId);
@@ -1469,7 +1478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         task.timeEntries.forEach(entry => {
           if (!entry.startTime || !entry.userId) return;
           
-          const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+          const entryDate = formatLocalDate(entry.startTime);
           if (entryDate < dateFrom || entryDate > dateTo) return;
           
           // Handle development mode user ID mapping
