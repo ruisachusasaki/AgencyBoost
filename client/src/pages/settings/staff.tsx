@@ -256,6 +256,7 @@ export default function Staff() {
 
   const handleDeleteStaff = (staffId: string, staffName: string) => {
     console.log("handleDeleteStaff called:", { staffId, staffName });
+    alert(`Delete button clicked for: ${staffName}`);
     setStaffToDelete({ id: staffId, name: staffName });
     setDeleteDialogOpen(true);
   };
