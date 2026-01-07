@@ -975,8 +975,13 @@ export default function LeadDetail() {
       {activeTab === "tasks" && (
         <div className="mt-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Tasks</CardTitle>
+              <Link href={`/tasks?openModal=true&leadId=${leadId}`}>
+                <Button size="sm" data-testid="button-add-lead-task">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </Link>
             </CardHeader>
             <CardContent>
               {tasksLoading ? (

@@ -75,9 +75,10 @@ type TemplateFormData = {
 interface TaskFormProps {
   task?: Task | null;
   onSuccess?: () => void;
+  defaultLeadId?: string;
 }
 
-export default function TaskForm({ task, onSuccess }: TaskFormProps) {
+export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [startDateOpen, setStartDateOpen] = useState(false);
@@ -142,7 +143,7 @@ export default function TaskForm({ task, onSuccess }: TaskFormProps) {
       startDate: task?.startDate ? new Date(task.startDate) : null,
       dueDate: task?.dueDate ? new Date(task.dueDate) : null,
       clientId: task?.clientId || "",
-      leadId: task?.leadId || "",
+      leadId: task?.leadId || defaultLeadId || "",
       // projectId removed
       // Client portal visibility
       visibleToClient: task?.visibleToClient || false,

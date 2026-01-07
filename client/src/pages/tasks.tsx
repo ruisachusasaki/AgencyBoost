@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -89,6 +89,7 @@ export default function Tasks() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [defaultLeadId, setDefaultLeadId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -125,6 +126,24 @@ export default function Tasks() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  
+  const [location, setLocation] = useLocation();
+  
+  // Handle URL parameters for opening modal with pre-filled lead
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const openModal = urlParams.get('openModal');
+    const leadIdParam = urlParams.get('leadId');
+    
+    if (openModal === 'true') {
+      if (leadIdParam) {
+        setDefaultLeadId(leadIdParam);
+      }
+      setIsCreateDialogOpen(true);
+      // Clean up URL params
+      window.history.replaceState({}, '', '/tasks');
+    }
+  }, []);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -2004,7 +2023,11 @@ export default function Tasks() {
                 <DialogTitle>Add New Task</DialogTitle>
               </DialogHeader>
               <TaskForm
-                onSuccess={() => setIsCreateDialogOpen(false)}
+                onSuccess={() => {
+                  setIsCreateDialogOpen(false);
+                  setDefaultLeadId(null);
+                }}
+                defaultLeadId={defaultLeadId || undefined}
               />
             </DialogContent>
           </Dialog>
