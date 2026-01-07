@@ -255,12 +255,15 @@ export default function Staff() {
   };
 
   const handleDeleteStaff = (staffId: string, staffName: string) => {
+    console.log("handleDeleteStaff called:", { staffId, staffName });
     setStaffToDelete({ id: staffId, name: staffName });
     setDeleteDialogOpen(true);
   };
 
   const confirmDeleteStaff = () => {
+    console.log("confirmDeleteStaff called, staffToDelete:", staffToDelete);
     if (staffToDelete) {
+      console.log("Calling deleteStaffMutation.mutate with id:", staffToDelete.id);
       deleteStaffMutation.mutate(staffToDelete.id);
       setDeleteDialogOpen(false);
       setStaffToDelete(null);
