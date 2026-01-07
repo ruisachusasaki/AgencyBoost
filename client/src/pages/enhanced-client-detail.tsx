@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, Map } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 
 
@@ -21,7 +21,6 @@ import { DocumentUploader } from "@/components/DocumentUploader";
 import { AppointmentModal } from "@/components/AppointmentModal";
 import { ProductSearchResults } from "@/components/ProductSearchResults";
 import { RichTextEditor } from "@/components/rich-text-editor";
-import RoadmapComments from "@/components/roadmap-comments";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -34,6 +33,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import ClientHealthModal from "@/components/client-health-modal";
 import type { HealthStatusResult } from "@shared/utils/healthAnalysis";
 import DOMPurify from "dompurify";
+import RoadmapComments from "@/components/roadmap-comments";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+import TiptapLink from "@tiptap/extension-link";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+import { Map } from "lucide-react";
 
 // MergeTagSelector Component for Email and SMS
 function MergeTagSelector({ searchValue, onSearchChange, onSelectTag, customFields }: {
@@ -825,144 +832,173 @@ function ClientWorkflowsSection({ clientId, actionsExpanded, setActionsExpanded 
   );
 }
 
-// RoadmapTabContent Component
+// RoadmapTabContent Component - Rich text editor for client roadmap
 function RoadmapTabContent({ client, queryClient }: { client: Client; queryClient: any }) {
   const { toast } = useToast();
-  const [isEditing, setIsEditing] = useState(false);
-  const [roadmapContent, setRoadmapContent] = useState(client?.roadmap || "");
-
-  // Sync state when client data changes
-  useEffect(() => {
-    setRoadmapContent(client?.roadmap || "");
-  }, [client?.roadmap]);
-
-  const updateRoadmapMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const response = await apiRequest("PUT", `/api/clients/${client.id}`, {
-        roadmap: content
-      });
-      return response.json();
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder: 'Start documenting the client roadmap, strategic plans, and key milestones...',
+      }),
+      TiptapLink.configure({
+        openOnClick: false,
+      }),
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+    ],
+    content: client?.roadmap || '',
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm max-w-none min-h-[300px] p-4 focus:outline-none',
+      },
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', client.id] });
-      toast({
-        title: "Roadmap saved",
-        description: "Client roadmap has been updated successfully."
-      });
-      setIsEditing(false);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to save roadmap. Please try again.",
-        variant: "destructive"
-      });
-    }
   });
 
-  const handleSave = () => {
-    updateRoadmapMutation.mutate(roadmapContent);
-  };
+  // Update editor content when client data changes
+  useEffect(() => {
+    if (editor && client?.roadmap && editor.getHTML() !== client.roadmap) {
+      editor.commands.setContent(client.roadmap);
+    }
+  }, [client?.roadmap, editor]);
 
-  const handleCancel = () => {
-    setRoadmapContent(client?.roadmap || "");
-    setIsEditing(false);
+  const saveRoadmap = async () => {
+    if (!editor) return;
+    
+    setIsSaving(true);
+    try {
+      const content = editor.getHTML();
+      await apiRequest("PATCH", `/api/clients/${client.id}`, { roadmap: content });
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', client.id] });
+      toast({
+        title: "Success",
+        description: "Roadmap saved successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save roadmap",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
-    <>
-    <Card>
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
             <Map className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold text-gray-900">Client Roadmap</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            {!isEditing ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-                data-testid="button-edit-roadmap"
-              >
-                <Edit2 className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
+            Client Roadmap
+          </CardTitle>
+          <Button onClick={saveRoadmap} disabled={isSaving} data-testid="btn-save-roadmap">
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
             ) : (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCancel}
-                  data-testid="button-cancel-roadmap"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={updateRoadmapMutation.isPending}
-                  data-testid="button-save-roadmap"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {updateRoadmapMutation.isPending ? "Saving..." : "Save"}
-                </Button>
+                <Save className="h-4 w-4 mr-2" />
+                Save Roadmap
               </>
             )}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-lg overflow-hidden bg-white dark:bg-gray-900">
+            {/* Toolbar */}
+            <div className="border-b p-2 flex flex-wrap gap-1 bg-gray-50 dark:bg-gray-800">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => editor?.chain().focus().toggleBold().run()}
+                className={editor?.isActive('bold') ? 'bg-gray-200 dark:bg-gray-700' : ''}
+                data-testid="btn-bold"
+              >
+                <Bold className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => editor?.chain().focus().toggleItalic().run()}
+                className={editor?.isActive('italic') ? 'bg-gray-200 dark:bg-gray-700' : ''}
+                data-testid="btn-italic"
+              >
+                <Italic className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+                className={editor?.isActive('heading', { level: 1 }) ? 'bg-gray-200 dark:bg-gray-700' : ''}
+                data-testid="btn-h1"
+              >
+                H1
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+                className={editor?.isActive('heading', { level: 2 }) ? 'bg-gray-200 dark:bg-gray-700' : ''}
+                data-testid="btn-h2"
+              >
+                H2
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                className={editor?.isActive('bulletList') ? 'bg-gray-200 dark:bg-gray-700' : ''}
+                data-testid="btn-bullet-list"
+              >
+                • List
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+                className={editor?.isActive('orderedList') ? 'bg-gray-200 dark:bg-gray-700' : ''}
+                data-testid="btn-ordered-list"
+              >
+                1. List
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => editor?.chain().focus().toggleTaskList().run()}
+                className={editor?.isActive('taskList') ? 'bg-gray-200 dark:bg-gray-700' : ''}
+                data-testid="btn-task-list"
+              >
+                ☑ Tasks
+              </Button>
+            </div>
+            {/* Editor */}
+            <EditorContent editor={editor} data-testid="roadmap-editor" />
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isEditing ? (
-          <div className="border rounded-md">
-            <RichTextEditor
-              content={roadmapContent}
-              onChange={(content) => setRoadmapContent(content)}
-              placeholder="Add roadmap information, milestones, and strategic plans for this client..."
-              className="min-h-[400px]"
-              data-testid="editor-roadmap"
-            />
-          </div>
-        ) : (
-          <div className="min-h-[300px]">
-            {roadmapContent ? (
-              <div 
-                className="prose prose-sm max-w-none text-gray-700"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(roadmapContent) }}
-                data-testid="content-roadmap"
-              />
-            ) : (
-              <div className="text-center py-12">
-                <Map className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Roadmap Added Yet</h3>
-                <p className="text-gray-500 mb-4" data-testid="placeholder-roadmap">
-                  Click Edit to add roadmap information, milestones, and strategic plans for this client.
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditing(true)}
-                  data-testid="button-add-roadmap"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Roadmap
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-    
-    <Card className="mt-6">
-      <CardContent className="pt-6">
-        <RoadmapComments clientId={client.id} />
-      </CardContent>
-    </Card>
-    </>
-  );
+        </CardContent>
+      </Card>
 
+      {/* Comments Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            Discussion
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RoadmapComments clientId={client.id} />
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 
 // ClientHealthTabContent Component
@@ -4237,8 +4273,10 @@ export default function EnhancedClientDetail() {
               Back to Clients
             </Button>
           </CardContent>
-  );
-
+        </Card>
+      </div>
+    );
+  }
 
 
   return (
@@ -4678,6 +4716,8 @@ export default function EnhancedClientDetail() {
                 
               </CardContent>
             </Card>
+
+
           </div>
 
           {/* Middle Column - Client Brief & Communication */}
@@ -4690,8 +4730,6 @@ export default function EnhancedClientDetail() {
                     <div className="text-gray-500">Loading client brief sections...</div>
                   </div>
                 </CardContent>
-    
-
               </Card>
             ) : briefSections.length === 0 ? (
               <Card>
@@ -4813,8 +4851,6 @@ export default function EnhancedClientDetail() {
                       })}
                   </Accordion>
                 </CardContent>
-    
-
               </Card>
             )}
 
@@ -5389,8 +5425,6 @@ export default function EnhancedClientDetail() {
                 )}
               </div>
             </CardContent>
-    
-
           </Card>
         </TabsContent>
 
@@ -5816,8 +5850,7 @@ export default function EnhancedClientDetail() {
                   </TabsContent>
                 </Tabs>
               </CardContent>
-    
-
+            </Card>
 
             {/* Communication History */}
             <Card>
@@ -5988,18 +6021,18 @@ export default function EnhancedClientDetail() {
                 </div>
               </CardContent>
             </Card>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="roadmap" className="space-y-6 mt-6">
-          <RoadmapTabContent client={client} queryClient={queryClient} />
-        </TabsContent>
+          <TabsContent value="roadmap" className="space-y-6 mt-6">
+            <RoadmapTabContent client={client} queryClient={queryClient} />
+          </TabsContent>
 
-        <TabsContent value="health" className="space-y-6 mt-6">
-          <ClientHealthTabContent clientId={clientId} />
-        </TabsContent>
+          <TabsContent value="health" className="space-y-6 mt-6">
+            <ClientHealthTabContent clientId={clientId} />
+          </TabsContent>
 
-        <TabsContent value="hub" className="space-y-6 mt-6">
-          <Card>
+          <TabsContent value="hub" className="space-y-6 mt-6">
+            <Card>
               <CardHeader className="pb-4">
                 {/* Horizontal Icons Navigation */}
                 <div className="flex items-center justify-between mb-4">
@@ -6594,8 +6627,7 @@ export default function EnhancedClientDetail() {
                 )}
 
               </CardContent>
-    
-
+            </Card>
           </TabsContent>
 
 
