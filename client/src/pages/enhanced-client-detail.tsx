@@ -829,7 +829,7 @@ function ClientWorkflowsSection({ clientId, actionsExpanded, setActionsExpanded 
 }
 
 // RoadmapTabContent Component - Monthly roadmap entries for clients
-function RoadmapTabContent({ client, queryClient }: { client: Client; queryClient: any }) {
+function RoadmapTabContent({ client, queryClient, currentUser }: { client: Client; queryClient: any; currentUser: any }) {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -1070,6 +1070,7 @@ function RoadmapTabContent({ client, queryClient }: { client: Client; queryClien
                       <><Save className="h-4 w-4 mr-2" />Save</>
                     )}
                   </Button>
+                  {currentUser?.role === 'Admin' && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" data-testid={`btn-delete-roadmap-${entry.id}`}>
@@ -1092,6 +1093,7 @@ function RoadmapTabContent({ client, queryClient }: { client: Client; queryClien
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                  )}
                 </div>
                 <RichTextEditor
                   content={editingContent[entry.id] ?? convertTextToHtml(entry.content || '')}
@@ -6140,7 +6142,7 @@ export default function EnhancedClientDetail() {
           </TabsContent>
 
           <TabsContent value="roadmap" className="space-y-6 mt-6">
-            <RoadmapTabContent client={client} queryClient={queryClient} />
+            <RoadmapTabContent client={client} queryClient={queryClient} currentUser={currentUser} />
           </TabsContent>
 
           <TabsContent value="health" className="space-y-6 mt-6">

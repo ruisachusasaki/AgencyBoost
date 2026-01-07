@@ -3779,6 +3779,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/clients/:clientId/roadmap-entries/:entryId", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
     try {
       const { clientId, entryId } = req.params;
+      // Only admins can delete monthly roadmaps
+      const user = req.user as any;
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: "Only administrators can delete monthly roadmaps" });
+      }
       
       // First delete associated comments
       await db.delete(clientRoadmapComments)
