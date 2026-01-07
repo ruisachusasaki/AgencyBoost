@@ -8758,16 +8758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Task category not found" });
       }
       res.json(category);
-      console.error("Error updating task category:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Validation error: " + error.errors.map(e => e.message).join(", ") });
-      }
-      res.status(500).json({ message: "Failed to update task category: " + (error instanceof Error ? error.message : "Unknown error") });
-      console.error("Error updating task category:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Validation error: " + error.errors.map(e => e.message).join(", ") });
-      }
-      res.status(500).json({ message: "Failed to update task category: " + (error instanceof Error ? error.message : "Unknown error") });
+    } catch (error) {
       console.error("Error updating task category:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error: " + error.errors.map(e => e.message).join(", ") });
@@ -8775,7 +8766,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update task category: " + (error instanceof Error ? error.message : "Unknown error") });
     }
   });
-
   app.delete("/api/task-categories/:id", requireAuth(), requirePermission('tasks', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
