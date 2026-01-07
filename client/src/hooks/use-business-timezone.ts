@@ -56,38 +56,45 @@ export function getTodayInTimezone(timezone: string): string {
   return getLocalDateString(new Date(), timezone);
 }
 
-export function getStartOfWeekInTimezone(timezone: string): string {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat('en-US', {
+function getDatePartsInTimezone(date: Date, timezone: string): { year: number; month: number; day: number; weekday: number } {
+  const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     weekday: 'short'
-  }).formatToParts(now);
+  });
   
+  const parts = formatter.formatToParts(date);
   const weekdayAbbr = parts.find(p => p.type === 'weekday')?.value || '';
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const dayOfWeek = weekdays.indexOf(weekdayAbbr);
   
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(startOfWeek.getDate() + diff);
-  
-  return getLocalDateString(startOfWeek, timezone);
+  return {
+    year: parseInt(parts.find(p => p.type === 'year')?.value || '0', 10),
+    month: parseInt(parts.find(p => p.type === 'month')?.value || '0', 10),
+    day: parseInt(parts.find(p => p.type === 'day')?.value || '0', 10),
+    weekday: weekdays.indexOf(weekdayAbbr)
+  };
+}
+
+function addDaysToDateInTimezone(year: number, month: number, day: number, daysToAdd: number): string {
+  const date = new Date(Date.UTC(year, month - 1, day + daysToAdd, 12, 0, 0));
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+export function getStartOfWeekInTimezone(timezone: string): string {
+  const now = new Date();
+  const { year, month, day, weekday } = getDatePartsInTimezone(now, timezone);
+  const diff = weekday === 0 ? -6 : 1 - weekday;
+  return addDaysToDateInTimezone(year, month, day, diff);
 }
 
 export function getEndOfWeekInTimezone(timezone: string): string {
   const now = new Date();
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    weekday: 'short'
-  }).formatToParts(now);
-  
-  const weekdayAbbr = parts.find(p => p.type === 'weekday')?.value || '';
-  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const dayOfWeek = weekdays.indexOf(weekdayAbbr);
-  
-  const diff = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-  const endOfWeek = new Date(now);
-  endOfWeek.setDate(endOfWeek.getDate() + diff);
-  
-  return getLocalDateString(endOfWeek, timezone);
+  const { year, month, day, weekday } = getDatePartsInTimezone(now, timezone);
+  const diff = weekday === 0 ? 0 : 7 - weekday;
+  return addDaysToDateInTimezone(year, month, day, diff);
 }
