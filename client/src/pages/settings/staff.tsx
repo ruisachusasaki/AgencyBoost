@@ -198,14 +198,19 @@ export default function Staff() {
   const deleteStaffMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetch(`/api/staff/${id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error('Failed to delete staff member');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to delete staff member (${response.status})`);
+      }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      setStaffToDelete(null);
       toast({ title: "Success", description: "Staff member deleted successfully" });
     },
     onError: (error: any) => {
+      setStaffToDelete(null);
       toast({
         variant: "destructive",
         title: "Error",
