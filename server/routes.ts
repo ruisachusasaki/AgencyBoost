@@ -11870,6 +11870,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Business Timezone API - lightweight endpoint for frequent use throughout the app
+  app.get("/api/business-timezone", requireAuth(), async (req, res) => {
+    try {
+      const profile = await db.select({ timezone: businessProfile.timezone }).from(businessProfile).limit(1);
+      
+      if (profile.length === 0) {
+        return res.json({ timezone: "America/New_York" });
+      }
+      
+      return res.json({ timezone: profile[0].timezone || "America/New_York" });
+    } catch (error) {
+      console.error("Error fetching business timezone:", error);
+      return res.json({ timezone: "America/New_York" });
+    }
+  });
+
   // Business Profile API
   app.get("/api/business-profile", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
     try {
