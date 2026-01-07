@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
+import { useBusinessTimezone, getLocalDateString, getTodayInTimezone, getStartOfWeekInTimezone, getEndOfWeekInTimezone } from "@/hooks/use-business-timezone";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -104,6 +105,9 @@ const formatDuration = (minutes: number, mode: 'friendly' | 'decimal' = 'friendl
 export default function Reports() {
   const [dateRange, setDateRange] = useState("30");
   const [clientFilter, setClientFilter] = useState("all");
+  
+  // Business timezone for consistent date handling across the team
+  const { timezone: businessTimezone } = useBusinessTimezone();
   
   // Time display mode state
   const [timeDisplayMode, setTimeDisplayMode] = useState<'friendly' | 'decimal'>('friendly');
@@ -286,34 +290,22 @@ export default function Reports() {
   });
   
   // Time tracking data query for client breakdowns - fixed filter logic with memoization
-  // Note: Using formatLocalDateStr to avoid UTC timezone shift issues
+  // Note: Using business timezone helpers to ensure consistent date handling across the team
   const timeTrackingFilters = useMemo(() => ({
-    dateFrom: taskDateRange === "today" ? formatLocalDateStr(new Date()) :
-              taskDateRange === "this-week" ? (() => {
-                const startOfWeek = new Date();
-                const dayOfWeek = startOfWeek.getDay();
-                const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                startOfWeek.setDate(startOfWeek.getDate() + diff);
-                return formatLocalDateStr(startOfWeek);
-              })() :
-              taskDateRange === "this-month" ? formatLocalDateStr(new Date(new Date().getFullYear(), new Date().getMonth(), 1)) :
+    dateFrom: taskDateRange === "today" ? getTodayInTimezone(businessTimezone) :
+              taskDateRange === "this-week" ? getStartOfWeekInTimezone(businessTimezone) :
+              taskDateRange === "this-month" ? getLocalDateString(new Date(new Date().getFullYear(), new Date().getMonth(), 1), businessTimezone) :
               (taskDateRange === "custom" || taskDateRange === "Custom Range" || taskDateRange.toLowerCase().includes("custom")) && customTaskDateFrom ? customTaskDateFrom :
-              formatLocalDateStr(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
-    dateTo: taskDateRange === "today" ? formatLocalDateStr(new Date()) :
-            taskDateRange === "this-week" ? (() => {
-              const endOfWeek = new Date();
-              const dayOfWeek = endOfWeek.getDay();
-              const diff = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-              endOfWeek.setDate(endOfWeek.getDate() + diff);
-              return formatLocalDateStr(endOfWeek);
-            })() :
-            taskDateRange === "this-month" ? formatLocalDateStr(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)) :
+              getLocalDateString(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), businessTimezone),
+    dateTo: taskDateRange === "today" ? getTodayInTimezone(businessTimezone) :
+            taskDateRange === "this-week" ? getEndOfWeekInTimezone(businessTimezone) :
+            taskDateRange === "this-month" ? getLocalDateString(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0), businessTimezone) :
             (taskDateRange === "custom" || taskDateRange === "Custom Range" || taskDateRange.toLowerCase().includes("custom")) && customTaskDateTo ? customTaskDateTo :
-            formatLocalDateStr(new Date()),
+            getTodayInTimezone(businessTimezone),
     userId: userIdFilter !== "all" ? userIdFilter : undefined,
     clientId: clientFilter !== "all" ? clientFilter : undefined,
     reportType: taskReportType
-  }), [taskDateRange, customTaskDateFrom, customTaskDateTo, userIdFilter, clientFilter, taskReportType]);
+  }), [taskDateRange, customTaskDateFrom, customTaskDateTo, userIdFilter, clientFilter, taskReportType, businessTimezone]);
   
   const { data: timeTrackingData, isLoading: timeTrackingLoading } = useQuery<{
     tasks: any[];
