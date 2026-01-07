@@ -34,12 +34,7 @@ import ClientHealthModal from "@/components/client-health-modal";
 import type { HealthStatusResult } from "@shared/utils/healthAnalysis";
 import DOMPurify from "dompurify";
 import RoadmapComments from "@/components/roadmap-comments";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import TiptapLink from "@tiptap/extension-link";
-import TaskList from "@tiptap/extension-task-list";
-import TaskItem from "@tiptap/extension-task-item";
+import { convertTextToHtml } from "@/components/rich-text-editor";
 import { Map } from "lucide-react";
 
 // MergeTagSelector Component for Email and SMS
@@ -836,43 +831,20 @@ function ClientWorkflowsSection({ clientId, actionsExpanded, setActionsExpanded 
 function RoadmapTabContent({ client, queryClient }: { client: Client; queryClient: any }) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
-  
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Placeholder.configure({
-        placeholder: 'Start documenting the client roadmap, strategic plans, and key milestones...',
-      }),
-      TiptapLink.configure({
-        openOnClick: false,
-      }),
-      TaskList,
-      TaskItem.configure({
-        nested: true,
-      }),
-    ],
-    content: client?.roadmap || '',
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm max-w-none min-h-[300px] p-4 focus:outline-none',
-      },
-    },
-  });
+  // Normalize plain text to HTML for consistent editor behavior
+  const [roadmapContent, setRoadmapContent] = useState(() => convertTextToHtml(client?.roadmap || ''));
 
-  // Update editor content when client data changes
+  // Update local content when client data changes (normalize to HTML)
   useEffect(() => {
-    if (editor && client?.roadmap && editor.getHTML() !== client.roadmap) {
-      editor.commands.setContent(client.roadmap);
+    if (client?.roadmap !== undefined) {
+      setRoadmapContent(convertTextToHtml(client.roadmap || ''));
     }
-  }, [client?.roadmap, editor]);
+  }, [client?.roadmap]);
 
   const saveRoadmap = async () => {
-    if (!editor) return;
-    
     setIsSaving(true);
     try {
-      const content = editor.getHTML();
-      await apiRequest("PATCH", `/api/clients/${client.id}`, { roadmap: content });
+      await apiRequest("PATCH", `/api/clients/${client.id}`, { roadmap: roadmapContent });
       queryClient.invalidateQueries({ queryKey: ['/api/clients', client.id] });
       toast({
         title: "Success",
@@ -912,76 +884,12 @@ function RoadmapTabContent({ client, queryClient }: { client: Client; queryClien
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg overflow-hidden bg-white dark:bg-gray-900">
-            {/* Toolbar */}
-            <div className="border-b p-2 flex flex-wrap gap-1 bg-gray-50 dark:bg-gray-800">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => editor?.chain().focus().toggleBold().run()}
-                className={editor?.isActive('bold') ? 'bg-gray-200 dark:bg-gray-700' : ''}
-                data-testid="btn-bold"
-              >
-                <Bold className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => editor?.chain().focus().toggleItalic().run()}
-                className={editor?.isActive('italic') ? 'bg-gray-200 dark:bg-gray-700' : ''}
-                data-testid="btn-italic"
-              >
-                <Italic className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
-                className={editor?.isActive('heading', { level: 1 }) ? 'bg-gray-200 dark:bg-gray-700' : ''}
-                data-testid="btn-h1"
-              >
-                H1
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-                className={editor?.isActive('heading', { level: 2 }) ? 'bg-gray-200 dark:bg-gray-700' : ''}
-                data-testid="btn-h2"
-              >
-                H2
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => editor?.chain().focus().toggleBulletList().run()}
-                className={editor?.isActive('bulletList') ? 'bg-gray-200 dark:bg-gray-700' : ''}
-                data-testid="btn-bullet-list"
-              >
-                • List
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-                className={editor?.isActive('orderedList') ? 'bg-gray-200 dark:bg-gray-700' : ''}
-                data-testid="btn-ordered-list"
-              >
-                1. List
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => editor?.chain().focus().toggleTaskList().run()}
-                className={editor?.isActive('taskList') ? 'bg-gray-200 dark:bg-gray-700' : ''}
-                data-testid="btn-task-list"
-              >
-                ☑ Tasks
-              </Button>
-            </div>
-            {/* Editor */}
-            <EditorContent editor={editor} data-testid="roadmap-editor" />
-          </div>
+          <RichTextEditor
+            content={roadmapContent}
+            onChange={setRoadmapContent}
+            placeholder="Start documenting the client roadmap, strategic plans, and key milestones..."
+            className="min-h-[400px]"
+          />
         </CardContent>
       </Card>
 

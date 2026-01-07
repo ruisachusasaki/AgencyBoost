@@ -53,7 +53,7 @@ const lineHeightClasses = {
 };
 
 // Helper function to convert plain text to HTML
-const convertTextToHtml = (text: string): string => {
+export const convertTextToHtml = (text: string): string => {
   if (!text) return '';
   
   // If content already looks like HTML (contains tags), return as is
