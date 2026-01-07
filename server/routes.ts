@@ -10453,6 +10453,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const insertData = insertStaffSchema.parse(req.body);
       const [newStaff] = await db.insert(staff).values(insertData).returning();
       
+      // CRITICAL: Add entry to user_roles junction table for permissions to work
+      if (insertData.roleId) {
+        await db.insert(userRoles).values({
+          userId: newStaff.id,
+          roleId: insertData.roleId,
+          assignedBy: userId
+        });
+      }
+      
       // Log the creation for audit
       await createAuditLog(
         "created",
