@@ -848,6 +848,7 @@ function RoadmapTabContent({ client, queryClient, currentUser }: { client: Clien
   const createEntryMutation = useMutation({
     mutationFn: async (data: { year: number; month: number; content?: string }) => {
       const response = await fetch(`/api/clients/${client.id}/roadmap-entries`, {
+        credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -873,6 +874,7 @@ function RoadmapTabContent({ client, queryClient, currentUser }: { client: Clien
   const updateEntryMutation = useMutation({
     mutationFn: async ({ entryId, content }: { entryId: string; content: string }) => {
       const response = await fetch(`/api/clients/${client.id}/roadmap-entries/${entryId}`, {
+        credentials: 'include',
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
@@ -895,6 +897,7 @@ function RoadmapTabContent({ client, queryClient, currentUser }: { client: Clien
   const deleteEntryMutation = useMutation({
     mutationFn: async (entryId: string) => {
       const response = await fetch(`/api/clients/${client.id}/roadmap-entries/${entryId}`, {
+        credentials: 'include',
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete roadmap entry');
