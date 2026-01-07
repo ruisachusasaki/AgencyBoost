@@ -100,6 +100,11 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
     queryKey: ["/api/staff"],
   });
 
+  // Get current logged-in user to default assignee
+  const { data: currentUser } = useQuery<{ id: string }>({
+    queryKey: ["/api/auth/current-user"],
+  });
+
   const { data: taskPriorities = [] } = useQuery<TaskPriority[]>({
     queryKey: ["/api/task-priorities"],
   });
@@ -139,7 +144,7 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
       workflowId: task?.workflowId || "",
       status: task?.status || defaultStatus,
       priority: task?.priority || defaultPriority,
-      assignedTo: task?.assignedTo || null,
+      assignedTo: task?.assignedTo || (task ? null : currentUser?.id) || null,
       startDate: task?.startDate ? new Date(task.startDate) : null,
       dueDate: task?.dueDate ? new Date(task.dueDate) : null,
       clientId: task?.clientId || "",
@@ -196,6 +201,13 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
       });
     }
   }, [task, teamWorkflows, defaultPriority, defaultCategory, form]);
+
+  // Set default assignee to current user when creating new task
+  useEffect(() => {
+    if (!task && currentUser?.id && !form.getValues('assignedTo')) {
+      form.setValue('assignedTo', currentUser.id);
+    }
+  }, [task, currentUser, form]);
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: InsertTask) => {
