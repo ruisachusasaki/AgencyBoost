@@ -5808,7 +5808,12 @@ export class DbStorage implements IStorage {
   }
 
   async updateTaskCategory(id: string, category: Partial<InsertTaskCategory>): Promise<TaskCategory | undefined> {
-    const result = await db.update(taskCategories).set(category).where(eq(taskCategories.id, id)).returning();
+    // Sanitize workflowId - convert empty string to null to avoid FK constraint violation
+    const sanitizedCategory = { ...category };
+    if ('workflowId' in sanitizedCategory && (sanitizedCategory.workflowId === '' || sanitizedCategory.workflowId === undefined)) {
+      sanitizedCategory.workflowId = null;
+    }
+    const result = await db.update(taskCategories).set(sanitizedCategory).where(eq(taskCategories.id, id)).returning();
     return result[0];
   }
 
