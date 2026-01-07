@@ -197,7 +197,10 @@ export default function Staff() {
   // Delete staff mutation
   const deleteStaffMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/staff/${id}`, { method: "DELETE" });
+      const response = await fetch(`/api/staff/${id}`, { 
+        method: "DELETE",
+        credentials: 'include'
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `Failed to delete staff member (${response.status})`);
