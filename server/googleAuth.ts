@@ -104,7 +104,7 @@ async function upsertStaffFromGoogleProfile(profile: {
   let existingByEmail = await db
     .select()
     .from(staff)
-    .where(eq(staff.email, normalizedEmail))
+    .where(sql`LOWER(${staff.email}) = ${normalizedEmail}`)
     .limit(1);
 
   if (existingByEmail.length > 0) {

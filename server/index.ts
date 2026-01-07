@@ -4,8 +4,8 @@ import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./googleAuth";
 import { setupGoogleCalendar } from "./googleCalendarSetup";
 import { db } from "./db";
-import { sql, eq } from "drizzle-orm";
-import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses, timeOffPolicies, timeOffTypes } from "@shared/schema";
+import { sql, eq, and } from "drizzle-orm";
+import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses, timeOffPolicies, timeOffTypes, userRoles } from "@shared/schema";
 
 /**
  * Startup migration to ensure client brief columns exist
@@ -1076,6 +1076,62 @@ app.use((req, res, next) => {
   next();
 });
 
+
+
+/**
+ * Sync staff.roleId to user_roles junction table
+ * This ensures all staff members have proper role assignments for permissions
+ */
+async function syncStaffRolesToUserRoles() {
+  try {
+    log("Running startup migration: syncStaffRolesToUserRoles");
+    
+    // Get all active staff with roleId but missing from user_roles
+    const staffWithRoles = await db
+      .select({
+        id: staff.id,
+        roleId: staff.roleId,
+        email: staff.email
+      })
+      .from(staff)
+      .where(
+        and(
+          eq(staff.isActive, true),
+          sql`${staff.roleId} IS NOT NULL`
+        )
+      );
+    
+    let syncedCount = 0;
+    for (const staffMember of staffWithRoles) {
+      // Check if user_roles entry already exists
+      const existing = await db
+        .select()
+        .from(userRoles)
+        .where(eq(userRoles.userId, staffMember.id))
+        .limit(1);
+      
+      if (existing.length === 0 && staffMember.roleId) {
+        // Add missing user_roles entry
+        await db.insert(userRoles).values({
+          userId: staffMember.id,
+          roleId: staffMember.roleId,
+          assignedBy: staffMember.id // Self-assigned for migration
+        });
+        syncedCount++;
+        log(`Synced role for staff: ${staffMember.email}`);
+      }
+    }
+    
+    if (syncedCount > 0) {
+      log(`Staff roles sync completed - synced ${syncedCount} users`);
+    } else {
+      log("All staff roles already synced - no action needed");
+    }
+  } catch (error) {
+    console.error("Error syncing staff roles to user_roles:", error);
+  }
+}
+
 (async () => {
   // Run startup migrations before setting up routes
   await ensureClientBriefColumns();
@@ -1090,6 +1146,7 @@ app.use((req, res, next) => {
   await initializeActivityAlertsWidgets();
   await initializeDefaultProgressionStatuses();
   await initializeDefaultTimeOffTypes();
+  await syncStaffRolesToUserRoles();
   
   // Setup Replit Auth
   await setupAuth(app);
