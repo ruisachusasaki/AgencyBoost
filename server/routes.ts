@@ -3748,7 +3748,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(newEntry);
     } catch (error) {
       console.error("Error creating roadmap entry:", error); console.error("Error details:", JSON.stringify(error, null, 2));
-      res.status(500).json({ message: "Failed to create roadmap entry" });
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error: " + error.errors.map(e => e.message).join(", ") });
+      }
+      res.status(500).json({ message: "Failed to create roadmap entry: " + (error instanceof Error ? error.message : "Unknown error") });
     }
   });
 
