@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,7 @@ import { RichTextEditor } from "@/components/rich-text-editor";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate, ClientHealthScore } from "@shared/schema";
 import { format, formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -827,84 +828,290 @@ function ClientWorkflowsSection({ clientId, actionsExpanded, setActionsExpanded 
   );
 }
 
-// RoadmapTabContent Component - Rich text editor for client roadmap
+// RoadmapTabContent Component - Monthly roadmap entries for clients
 function RoadmapTabContent({ client, queryClient }: { client: Client; queryClient: any }) {
   const { toast } = useToast();
-  const [isSaving, setIsSaving] = useState(false);
-  // Normalize plain text to HTML for consistent editor behavior
-  const [roadmapContent, setRoadmapContent] = useState(() => convertTextToHtml(client?.roadmap || ''));
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState<Record<string, string>>({});
+  const [savingEntryId, setSavingEntryId] = useState<string | null>(null);
 
-  // Update local content when client data changes (normalize to HTML)
-  useEffect(() => {
-    if (client?.roadmap !== undefined) {
-      setRoadmapContent(convertTextToHtml(client.roadmap || ''));
+  // Fetch roadmap entries for this client
+  const { data: roadmapEntries = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/clients', client.id, 'roadmap-entries'],
+  });
+
+  // Create new roadmap entry mutation
+  const createEntryMutation = useMutation({
+    mutationFn: async (data: { year: number; month: number; content?: string }) => {
+      const response = await fetch(`/api/clients/${client.id}/roadmap-entries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to create roadmap entry');
+      }
+      return response.json();
+    },
+    onSuccess: (newEntry) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', client.id, 'roadmap-entries'] });
+      setIsAddDialogOpen(false);
+      setExpandedEntryId(newEntry.id);
+      toast({ title: "Success", description: "Monthly roadmap created successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
-  }, [client?.roadmap]);
+  });
 
-  const saveRoadmap = async () => {
-    setIsSaving(true);
-    try {
-      await apiRequest("PATCH", `/api/clients/${client.id}`, { roadmap: roadmapContent });
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', client.id] });
-      toast({
-        title: "Success",
-        description: "Roadmap saved successfully",
+  // Update roadmap entry mutation
+  const updateEntryMutation = useMutation({
+    mutationFn: async ({ entryId, content }: { entryId: string; content: string }) => {
+      const response = await fetch(`/api/clients/${client.id}/roadmap-entries/${entryId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
       });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save roadmap",
-        variant: "destructive",
+      if (!response.ok) throw new Error('Failed to update roadmap entry');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', client.id, 'roadmap-entries'] });
+      setSavingEntryId(null);
+      toast({ title: "Success", description: "Roadmap saved successfully" });
+    },
+    onError: () => {
+      setSavingEntryId(null);
+      toast({ title: "Error", description: "Failed to save roadmap", variant: "destructive" });
+    }
+  });
+
+  // Delete roadmap entry mutation
+  const deleteEntryMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      const response = await fetch(`/api/clients/${client.id}/roadmap-entries/${entryId}`, {
+        method: 'DELETE',
       });
-    } finally {
-      setIsSaving(false);
+      if (!response.ok) throw new Error('Failed to delete roadmap entry');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', client.id, 'roadmap-entries'] });
+      toast({ title: "Success", description: "Roadmap entry deleted" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete roadmap entry", variant: "destructive" });
+    }
+  });
+
+  const handleAddEntry = () => {
+    createEntryMutation.mutate({ year: selectedYear, month: selectedMonth, content: '' });
+  };
+
+  const handleSaveContent = (entryId: string) => {
+    const content = editingContent[entryId];
+    if (content !== undefined) {
+      setSavingEntryId(entryId);
+      updateEntryMutation.mutate({ entryId, content });
     }
   };
 
+  const getMonthName = (month: number) => {
+    return new Date(2000, month - 1).toLocaleString('default', { month: 'long' });
+  };
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  // Check if a month/year already has an entry
+  const existingEntries = new Set(roadmapEntries.map((e: any) => `${e.year}-${e.month}`));
+  const canAddSelectedMonth = !existingEntries.has(`${selectedYear}-${selectedMonth}`);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Map className="h-5 w-5 text-primary" />
-            Client Roadmap
-          </CardTitle>
-          <Button onClick={saveRoadmap} disabled={isSaving} data-testid="btn-save-roadmap">
-            {isSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Roadmap
-              </>
-            )}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <RichTextEditor
-            content={roadmapContent}
-            onChange={setRoadmapContent}
-            placeholder="Start documenting the client roadmap, strategic plans, and key milestones..."
-            className="min-h-[400px]"
-          />
-        </CardContent>
-      </Card>
+      {/* Header with Add Button */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Map className="h-5 w-5 text-primary" />
+          <h3 className="text-lg font-semibold">Monthly Roadmaps</h3>
+        </div>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="btn-add-monthly-roadmap">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Monthly Roadmap
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Monthly Roadmap</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Month</Label>
+                  <Select value={selectedMonth.toString()} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
+                    <SelectTrigger data-testid="select-roadmap-month">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {months.map((m) => (
+                        <SelectItem key={m} value={m.toString()}>{getMonthName(m)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Year</Label>
+                  <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                    <SelectTrigger data-testid="select-roadmap-year">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {years.map((y) => (
+                        <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {!canAddSelectedMonth && (
+                <p className="text-sm text-destructive">A roadmap for {getMonthName(selectedMonth)} {selectedYear} already exists.</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+              <Button 
+                onClick={handleAddEntry} 
+                disabled={!canAddSelectedMonth || createEntryMutation.isPending}
+                data-testid="btn-confirm-add-roadmap"
+              >
+                {createEntryMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Create Roadmap
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-      {/* Comments Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-primary" />
-            Discussion
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RoadmapComments clientId={client.id} />
-        </CardContent>
-      </Card>
+      {/* Empty State */}
+      {roadmapEntries.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Map className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No Roadmaps Yet</h3>
+            <p className="text-muted-foreground mb-4">Create a monthly roadmap to track strategic plans and milestones for this client.</p>
+            <Button onClick={() => setIsAddDialogOpen(true)} data-testid="btn-add-first-roadmap">
+              <Plus className="h-4 w-4 mr-2" />
+              Add First Roadmap
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* List of Monthly Roadmap Entries */}
+      {roadmapEntries.map((entry: any) => (
+        <Card key={entry.id} className="overflow-hidden">
+          <Collapsible open={expandedEntryId === entry.id} onOpenChange={(open) => setExpandedEntryId(open ? entry.id : null)}>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <div>
+                      <CardTitle className="text-base">
+                        {getMonthName(entry.month)} {entry.year}
+                      </CardTitle>
+                      {entry.author && (
+                        <p className="text-sm text-muted-foreground">
+                          Created by {entry.author.firstName} {entry.author.lastName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(entry.createdAt).toLocaleDateString()}
+                    </span>
+                    {expandedEntryId === entry.id ? (
+                      <ChevronUp className="h-5 w-5" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5" />
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0 space-y-4">
+                <div className="flex justify-end gap-2 mb-2">
+                  <Button 
+                    onClick={() => handleSaveContent(entry.id)} 
+                    disabled={savingEntryId === entry.id}
+                    size="sm"
+                    data-testid={`btn-save-roadmap-${entry.id}`}
+                  >
+                    {savingEntryId === entry.id ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
+                    ) : (
+                      <><Save className="h-4 w-4 mr-2" />Save</>
+                    )}
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" data-testid={`btn-delete-roadmap-${entry.id}`}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Roadmap Entry?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete the roadmap for {getMonthName(entry.month)} {entry.year} and all associated comments. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteEntryMutation.mutate(entry.id)}>
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+                <RichTextEditor
+                  content={editingContent[entry.id] ?? convertTextToHtml(entry.content || '')}
+                  onChange={(content) => setEditingContent(prev => ({ ...prev, [entry.id]: content }))}
+                  placeholder={`Document the roadmap for ${getMonthName(entry.month)} ${entry.year}...`}
+                  className="min-h-[300px]"
+                />
+                
+                {/* Comments Section for this entry */}
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="flex items-center gap-2 font-medium mb-4">
+                    <MessageSquare className="h-4 w-4 text-primary" />
+                    Discussion
+                  </h4>
+                  <RoadmapComments clientId={client.id} roadmapEntryId={entry.id} />
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+      ))}
     </div>
   );
 }

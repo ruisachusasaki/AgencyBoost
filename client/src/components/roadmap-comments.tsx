@@ -35,9 +35,10 @@ interface RoadmapComment {
 
 interface RoadmapCommentsProps {
   clientId: string;
+  roadmapEntryId?: string;
 }
 
-export default function RoadmapComments({ clientId }: RoadmapCommentsProps) {
+export default function RoadmapComments({ clientId, roadmapEntryId }: RoadmapCommentsProps) {
   const [newComment, setNewComment] = useState("");
   const [mentionQuery, setMentionQuery] = useState("");
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
@@ -49,10 +50,19 @@ export default function RoadmapComments({ clientId }: RoadmapCommentsProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Use entry-specific endpoint if roadmapEntryId is provided, otherwise use client-level endpoint
+  const apiEndpoint = roadmapEntryId 
+    ? `/api/roadmap-entries/${roadmapEntryId}/comments`
+    : `/api/clients/${clientId}/roadmap-comments`;
+  
+  const queryKey = roadmapEntryId
+    ? ['/api/roadmap-entries', roadmapEntryId, 'comments']
+    : ['/api/clients', clientId, 'roadmap-comments'];
+
   const { data: comments = [], isLoading } = useQuery<RoadmapComment[]>({
-    queryKey: ['/api/clients', clientId, 'roadmap-comments'],
+    queryKey,
     queryFn: async () => {
-      const response = await fetch(`/api/clients/${clientId}/roadmap-comments`);
+      const response = await fetch(apiEndpoint);
       if (!response.ok) throw new Error('Failed to fetch comments');
       return response.json();
     }
@@ -80,14 +90,14 @@ export default function RoadmapComments({ clientId }: RoadmapCommentsProps) {
         }
       });
       
-      const response = await apiRequest(`/api/clients/${clientId}/roadmap-comments`, {
+      const response = await apiRequest(apiEndpoint, {
         method: 'POST',
         body: JSON.stringify({ content, mentions }),
       });
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'roadmap-comments'] });
+      queryClient.invalidateQueries({ queryKey });
       setNewComment("");
       setTrackedMentions([]);
       toast({ title: "Comment added", description: "Your comment has been posted." });
@@ -99,12 +109,16 @@ export default function RoadmapComments({ clientId }: RoadmapCommentsProps) {
 
   const deleteCommentMutation = useMutation({
     mutationFn: async (commentId: string) => {
-      await apiRequest(`/api/clients/${clientId}/roadmap-comments/${commentId}`, {
+      // Use entry-specific delete endpoint if roadmapEntryId is provided
+      const deleteEndpoint = roadmapEntryId
+        ? `/api/roadmap-entries/${roadmapEntryId}/comments/${commentId}`
+        : `/api/clients/${clientId}/roadmap-comments/${commentId}`;
+      await apiRequest(deleteEndpoint, {
         method: 'DELETE',
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'roadmap-comments'] });
+      queryClient.invalidateQueries({ queryKey });
       toast({ title: "Comment deleted", description: "Your comment has been removed." });
     },
     onError: () => {

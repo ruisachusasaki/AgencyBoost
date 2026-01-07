@@ -66,7 +66,7 @@ import {
   clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings,
   knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseLikes, knowledgeBaseBookmarks, knowledgeBasePermissions, knowledgeBaseArticleVersions,
   oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments, oneOnOneMeetingKpiStatuses,
-  clientRoadmapComments, insertClientRoadmapCommentSchema
+  clientRoadmapComments, insertClientRoadmapCommentSchema, clientRoadmapEntries, insertClientRoadmapEntrySchema
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
@@ -3679,6 +3679,247 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Client Roadmap Entries routes - Monthly roadmaps
+  app.get("/api/clients/:clientId/roadmap-entries", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      
+      const entries = await db.select({
+        id: clientRoadmapEntries.id,
+        clientId: clientRoadmapEntries.clientId,
+        year: clientRoadmapEntries.year,
+        month: clientRoadmapEntries.month,
+        content: clientRoadmapEntries.content,
+        authorId: clientRoadmapEntries.authorId,
+        createdAt: clientRoadmapEntries.createdAt,
+        updatedAt: clientRoadmapEntries.updatedAt,
+        authorFirstName: staff.firstName,
+        authorLastName: staff.lastName,
+      })
+      .from(clientRoadmapEntries)
+      .leftJoin(staff, eq(staff.id, clientRoadmapEntries.authorId))
+      .where(eq(clientRoadmapEntries.clientId, clientId))
+      .orderBy(desc(clientRoadmapEntries.year), desc(clientRoadmapEntries.month));
+      
+      const formattedEntries = entries.map(entry => ({
+        ...entry,
+        author: entry.authorFirstName && entry.authorLastName 
+          ? { firstName: entry.authorFirstName, lastName: entry.authorLastName }
+          : null
+      }));
+      
+      res.json(formattedEntries);
+    } catch (error) {
+      console.error("Error fetching roadmap entries:", error);
+      res.status(500).json({ message: "Failed to fetch roadmap entries" });
+    }
+  });
+
+  app.post("/api/clients/:clientId/roadmap-entries", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      const validatedData = insertClientRoadmapEntrySchema.parse({
+        ...req.body,
+        clientId,
+        authorId: userId,
+      });
+      
+      // Check if entry already exists for this month/year
+      const existing = await db.select()
+        .from(clientRoadmapEntries)
+        .where(and(
+          eq(clientRoadmapEntries.clientId, clientId),
+          eq(clientRoadmapEntries.year, validatedData.year),
+          eq(clientRoadmapEntries.month, validatedData.month)
+        ));
+      
+      if (existing.length > 0) {
+        return res.status(400).json({ 
+          message: `A roadmap for ${validatedData.month}/${validatedData.year} already exists for this client` 
+        });
+      }
+      
+      const [newEntry] = await db.insert(clientRoadmapEntries).values(validatedData).returning();
+      
+      res.status(201).json(newEntry);
+    } catch (error) {
+      console.error("Error creating roadmap entry:", error);
+      res.status(500).json({ message: "Failed to create roadmap entry" });
+    }
+  });
+
+  app.patch("/api/clients/:clientId/roadmap-entries/:entryId", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId, entryId } = req.params;
+      const { content } = req.body;
+      
+      const [updatedEntry] = await db.update(clientRoadmapEntries)
+        .set({ content, updatedAt: new Date() })
+        .where(and(
+          eq(clientRoadmapEntries.id, entryId),
+          eq(clientRoadmapEntries.clientId, clientId)
+        ))
+        .returning();
+      
+      if (!updatedEntry) {
+        return res.status(404).json({ message: "Roadmap entry not found" });
+      }
+      
+      res.json(updatedEntry);
+    } catch (error) {
+      console.error("Error updating roadmap entry:", error);
+      res.status(500).json({ message: "Failed to update roadmap entry" });
+    }
+  });
+
+  app.delete("/api/clients/:clientId/roadmap-entries/:entryId", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
+    try {
+      const { clientId, entryId } = req.params;
+      
+      // First delete associated comments
+      await db.delete(clientRoadmapComments)
+        .where(eq(clientRoadmapComments.roadmapEntryId, entryId));
+      
+      // Then delete the entry
+      const deleted = await db.delete(clientRoadmapEntries)
+        .where(and(
+          eq(clientRoadmapEntries.id, entryId),
+          eq(clientRoadmapEntries.clientId, clientId)
+        ))
+        .returning();
+      
+      if (deleted.length === 0) {
+        return res.status(404).json({ message: "Roadmap entry not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting roadmap entry:", error);
+      res.status(500).json({ message: "Failed to delete roadmap entry" });
+    }
+  });
+
+  // Get comments for a specific roadmap entry
+  app.get("/api/roadmap-entries/:entryId/comments", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const { entryId } = req.params;
+      
+      const comments = await db.select({
+        id: clientRoadmapComments.id,
+        clientId: clientRoadmapComments.clientId,
+        roadmapEntryId: clientRoadmapComments.roadmapEntryId,
+        content: clientRoadmapComments.content,
+        authorId: clientRoadmapComments.authorId,
+        mentions: clientRoadmapComments.mentions,
+        createdAt: clientRoadmapComments.createdAt,
+        updatedAt: clientRoadmapComments.updatedAt,
+        authorFirstName: staff.firstName,
+        authorLastName: staff.lastName,
+        authorProfileImage: staff.profileImagePath,
+      })
+      .from(clientRoadmapComments)
+      .leftJoin(staff, eq(staff.id, clientRoadmapComments.authorId))
+      .where(eq(clientRoadmapComments.roadmapEntryId, entryId))
+      .orderBy(desc(clientRoadmapComments.createdAt));
+      
+      const formattedComments = comments.map(comment => ({
+        ...comment,
+        author: comment.authorFirstName && comment.authorLastName 
+          ? { firstName: comment.authorFirstName, lastName: comment.authorLastName, profileImagePath: comment.authorProfileImage }
+          : null
+      }));
+      
+      res.json(formattedComments);
+    } catch (error) {
+      console.error("Error fetching roadmap entry comments:", error);
+      res.status(500).json({ message: "Failed to fetch comments" });
+    }
+  });
+
+  app.post("/api/roadmap-entries/:entryId/comments", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { entryId } = req.params;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      // Get the entry to find clientId
+      const [entry] = await db.select().from(clientRoadmapEntries).where(eq(clientRoadmapEntries.id, entryId));
+      if (!entry) {
+        return res.status(404).json({ message: "Roadmap entry not found" });
+      }
+      
+      const { content, mentions } = req.body;
+      
+      const [newComment] = await db.insert(clientRoadmapComments).values({
+        clientId: entry.clientId,
+        roadmapEntryId: entryId,
+        content,
+        authorId: userId,
+        mentions: mentions || [],
+      }).returning();
+      
+      // Create notifications for mentioned users
+      if (mentions && mentions.length > 0) {
+        for (const mentionedUserId of mentions) {
+          try {
+            await db.insert(notifications).values({
+              userId: mentionedUserId,
+              type: 'mention',
+              title: 'You were mentioned in a roadmap comment',
+              message: content.substring(0, 100),
+              entityType: 'roadmap_comment',
+              entityId: newComment.id,
+              isRead: false,
+            });
+          } catch (notificationError) {
+            console.error('Failed to create mention notification:', notificationError);
+          }
+        }
+      }
+      
+      res.status(201).json(newComment);
+    } catch (error) {
+      console.error("Error creating roadmap entry comment:", error);
+      res.status(500).json({ message: "Failed to create comment" });
+    }
+  });
+
+
+  app.delete("/api/roadmap-entries/:entryId/comments/:commentId", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { entryId, commentId } = req.params;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      // Verify the comment belongs to this entry
+      const [comment] = await db.select()
+        .from(clientRoadmapComments)
+        .where(and(
+          eq(clientRoadmapComments.id, commentId),
+          eq(clientRoadmapComments.roadmapEntryId, entryId)
+        ));
+      
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      // Only allow deleting own comments (unless admin)
+      if (comment.authorId !== userId) {
+        return res.status(403).json({ message: "You can only delete your own comments" });
+      }
+      
+      await db.delete(clientRoadmapComments).where(eq(clientRoadmapComments.id, commentId));
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting roadmap entry comment:", error);
+      res.status(500).json({ message: "Failed to delete comment" });
+    }
+  });
   // Client Health Score routes - SECURED
   app.post("/api/clients/:clientId/health-scores", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     console.log('DEBUG - Health score POST route called with clientId:', req.params.clientId);

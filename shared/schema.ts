@@ -437,10 +437,37 @@ export const clients = pgTable("clients", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Client Roadmap Entries - Monthly roadmap entries for clients
+export const clientRoadmapEntries = pgTable("client_roadmap_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(), // 1-12
+  content: text("content"), // Rich text content
+  authorId: uuid("author_id").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique().on(table.clientId, table.year, table.month),
+]);
+
+export const insertClientRoadmapEntrySchema = createInsertSchema(clientRoadmapEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  year: z.number().int().min(2000).max(2100),
+  month: z.number().int().min(1).max(12),
+});
+
+export type ClientRoadmapEntry = typeof clientRoadmapEntries.$inferSelect;
+export type InsertClientRoadmapEntry = z.infer<typeof insertClientRoadmapEntrySchema>;
+
 // Client Roadmap Comments - Comments on client roadmaps with @mention support
 export const clientRoadmapComments = pgTable("client_roadmap_comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  roadmapEntryId: varchar("roadmap_entry_id").references(() => clientRoadmapEntries.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   authorId: uuid("author_id").notNull().references(() => staff.id),
   mentions: text("mentions").array(),
