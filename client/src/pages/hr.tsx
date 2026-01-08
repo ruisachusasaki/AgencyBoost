@@ -986,7 +986,7 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
             <UserCheck className="h-8 w-8 text-primary" />
-            <span>Human Resources</span>
+            <span>People Experience</span>
           </h1>
           <p className="text-slate-600">Manage staff, time off, and recruitment</p>
         </div>
