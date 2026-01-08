@@ -507,8 +507,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(emailIntegrations.isActive, true))
         .limit(1);
       
-      const baseUrl = process.env.REPLIT_DEPLOYMENT_URL || 
-                      (process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.repl.co` : "http://localhost:5000");
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : (process.env.REPLIT_DOMAINS?.split(',')[0] 
+          ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+          : 'http://localhost:5000');
       const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
       
       if (emailConfig) {
@@ -716,8 +719,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(emailIntegrations.isActive, true))
         .limit(1);
       
-      const baseUrl = process.env.REPLIT_DEPLOYMENT_URL || 
-                      (process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.repl.co` : "http://localhost:5000");
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : (process.env.REPLIT_DOMAINS?.split(',')[0] 
+          ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+          : 'http://localhost:5000');
       const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
       
       if (emailConfig) {
