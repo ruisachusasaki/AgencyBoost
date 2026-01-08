@@ -556,6 +556,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/admin/cleanup-orphaned-auth - Clean up orphaned auth records so emails can be reused
+  app.post("/api/admin/cleanup-orphaned-auth", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      // Find auth record with this email
+      const [authRecord] = await db.select().from(authUsers).where(eq(authUsers.email, email));
+      
+      if (!authRecord) {
+        return res.status(404).json({ error: "No authentication record found with this email" });
+      }
+      
+      // Check if the linked staff member is inactive or doesn't exist
+      const [linkedStaff] = await db.select().from(staff).where(eq(staff.id, authRecord.userId));
+      
+      if (linkedStaff && linkedStaff.isActive) {
+        return res.status(400).json({ 
+          error: "This email belongs to an active staff member. Deactivate the staff member first." 
+        });
+      }
+      
+      // Clean up the auth record by modifying the email and deactivating
+      const deletedEmail = `deleted_${Date.now()}_${authRecord.email}`;
+      await db.update(authUsers)
+        .set({ 
+          isActive: false, 
+          email: deletedEmail,
+          passwordHash: '',
+          passwordResetToken: null,
+          passwordResetExpires: null
+        })
+        .where(eq(authUsers.id, authRecord.id));
+      
+      // Remove from user_roles
+      await db.delete(userRoles).where(eq(userRoles.userId, authRecord.id));
+      
+      console.log(`Admin cleaned up orphaned auth record for email: ${email}`);
+      
+      res.json({ 
+        success: true, 
+        message: `Email '${email}' has been freed up and can now be used for a new account.` 
+      });
+    } catch (error) {
+      console.error('Error cleaning up orphaned auth record:', error);
+      res.status(500).json({ error: "Failed to clean up authentication record" });
+    }
+  });
+
   // POST /api/auth/reset-password - Reset password with token
   app.post("/api/auth/reset-password", async (req, res) => {
     try {
