@@ -743,10 +743,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Staff member not found" });
       }
       
-      // Find or create auth user
+      // Find or create auth user - create one if it doesn't exist so staff can set their password
       let authUser = await appStorage.getAuthUserByEmail(staffMember.email);
       if (!authUser) {
-        return res.status(404).json({ error: "No authentication account found for this staff member. They may be using Google sign-in only." });
+        // Create auth account for this staff member so they can set a password
+        const [newAuthUser] = await db.insert(authUsers).values({
+          email: staffMember.email,
+          userId: staffMember.id,
+          passwordHash: '', // Empty - they'll set it via reset link
+          googleId: null,
+          isActive: true,
+        }).returning();
+        authUser = newAuthUser;
+        console.log(`Created new auth account for staff member: ${staffMember.email}`);
       }
       
       // Generate secure reset token
