@@ -1996,7 +1996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Security check for DND changes - Only Admin users can UNCHECK (disable) DND settings
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const dndFieldsBeingDisabled = [];
@@ -14005,7 +14005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all permissions for a user across all modules - SECURED
   app.get("/api/users/:userId/permissions", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const { userId } = req.params;
@@ -14107,7 +14107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Permission Audit Log API Routes - SECURED (Admin only)
   app.get("/api/permission-audit-logs", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const filters = {
@@ -14145,7 +14145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/permission-audit-logs/:id", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const auditLog = await permissionAuditService.getAuditLogDetails(req.params.id);
@@ -14214,7 +14214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/notification-settings/:userId", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const { userId } = req.params;
@@ -16025,7 +16025,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
 
       // Get current user with proper authentication
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
 
       // Check if user has permission to delete documents (Admin only)
@@ -20829,7 +20829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/hr/time-off-requests", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       
       // Get staffId (auto-set to current user if not provided)
@@ -20896,7 +20896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get direct reports for managers - SECURED
   app.get("/api/hr/direct-reports", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Development mode: Mock admin user has no direct reports
@@ -20932,7 +20932,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get pending time off requests for manager's direct reports (or all for admins) - SECURED
   app.get("/api/hr/time-off-requests/pending-for-approval", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
 
       // Check if current user is admin
@@ -21121,8 +21121,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/hr/time-off-requests/:requestId", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const { requestId } = req.params;
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // Authentication failed
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return; // Authentication failed
+
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
 
       // Admin check already enforced by requireAdmin() middleware
 
@@ -21171,8 +21173,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { requestId } = req.params;
       const { action, rejectionReason } = req.body;
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // Authentication failed
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return; // Authentication failed
+
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
 
       if (!["approve", "reject"].includes(action)) {
         return res.status(400).json({ error: "Invalid action. Must be 'approve' or 'reject'" });
@@ -21240,8 +21244,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       res.json(updatedRequest);
-    } catch (error) {
-      console.error("Error processing time off request approval:", error);
+    } catch (error: any) {
+      console.error("Error processing time off request approval:", {
+        error: error?.message || error,
+        stack: error?.stack,
+        requestId: req.params.requestId,
+        action: req.body?.action
+      });
       res.status(500).json({ error: "Failed to process approval" });
     }
   });
@@ -21481,8 +21490,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/job-application-form-config", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // Authentication failed
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return; // Authentication failed
+
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
       const validatedData = insertJobApplicationFormConfigSchema.parse({
         ...req.body,
         updatedBy: currentUserId
@@ -21542,8 +21553,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/new-hire-onboarding-form-config", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // Authentication failed
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return; // Authentication failed
+
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
       const validatedData = insertNewHireOnboardingFormConfigSchema.parse({
         ...req.body,
         updatedBy: currentUserId
@@ -21600,8 +21613,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/new-hire-onboarding-submissions/:id", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const { id } = req.params;
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // Authentication failed
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return; // Authentication failed
+
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
 
       const validatedData = insertNewHireOnboardingSubmissionSchema.partial().parse({
         ...req.body,
@@ -21631,8 +21646,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/new-hire-onboarding-submissions/:id", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const { id } = req.params;
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // Authentication failed
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return; // Authentication failed
+
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
 
       const [deletedSubmission] = await db.delete(newHireOnboardingSubmissions)
         .where(eq(newHireOnboardingSubmissions.id, Number(id)))
@@ -21682,7 +21699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/expense-report-form-config", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       
       // Check if user is admin OR has settings/hr management permission
@@ -21720,7 +21737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Expense Report Submission Routes
   app.post("/api/expense-report-submissions", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       
       const validatedData = insertExpenseReportSubmissionSchema.parse({
@@ -21745,7 +21762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/expense-report-submissions", requireAuth(), async (req, res) => {
     try {
       // Check if user has admin or accounting role to view all submissions
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       
       const isAdmin = await isCurrentUserAdmin(currentUserId);
@@ -21776,7 +21793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { status } = req.body;
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       
       const isAdmin = await isCurrentUserAdmin(currentUserId);
@@ -21815,7 +21832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/expense-report-submissions/:id", requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       
       const isAdmin = await isCurrentUserAdmin(currentUserId);
@@ -21852,7 +21869,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get manager's direct reports for 1-on-1 meetings
   app.get("/api/hr/one-on-one/direct-reports", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
 
       // Get direct reports
@@ -21881,7 +21898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SECURITY: Private notes are excluded from this endpoint
   app.get("/api/hr/one-on-one/my-meetings", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
 
       // Get meetings where current user is the direct report
@@ -21918,7 +21935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all meetings for a direct report
   app.get("/api/hr/one-on-one/meetings/:directReportId", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       const { directReportId } = req.params;
 
@@ -21948,7 +21965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get full meeting details with all related data
   app.get("/api/hr/one-on-one/meetings/:meetingId/details", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       const { meetingId } = req.params;
 
@@ -22017,7 +22034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new 1-on-1 meeting
   app.post("/api/hr/one-on-one/meetings", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
 
       const validatedData = insertOneOnOneMeetingSchema.parse({
@@ -22110,7 +22127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update a 1-on-1 meeting
   app.put("/api/hr/one-on-one/meetings/:meetingId", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       const { meetingId } = req.params;
 
@@ -22149,7 +22166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a 1-on-1 meeting
   app.delete("/api/hr/one-on-one/meetings/:meetingId", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       const { meetingId } = req.params;
 
@@ -22181,7 +22198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Talking Points Routes
   app.post("/api/hr/one-on-one/talking-points", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
 
       const validatedData = insertOneOnOneTalkingPointSchema.parse({
@@ -22399,7 +22416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comments Routes
   app.post("/api/hr/one-on-one/comments", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
 
       const validatedData = insertOneOnOneCommentSchema.parse({
@@ -22438,7 +22455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/hr/one-on-one/comments/:id", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       const { id } = req.params;
 
@@ -22481,7 +22498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/hr/one-on-one/progression-statuses", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
 
       // Check if user is admin
@@ -22508,7 +22525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/hr/one-on-one/progression-statuses/:id", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       const { id } = req.params;
 
@@ -22541,7 +22558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/hr/one-on-one/progression-statuses/:id", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       const { id } = req.params;
 
@@ -22840,7 +22857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/offboarding-form-config", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       
       // Check if user is admin OR has settings/hr management permission
@@ -22885,7 +22902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Offboarding Submission Routes
   app.post("/api/offboarding-submissions", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       
       const validatedData = insertOffboardingSubmissionSchema.parse({
@@ -22908,7 +22925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/offboarding-submissions", requireAuth(), async (req, res) => {
     try {
       // Check if user has admin or manager role to view all submissions
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       
       const isAdmin = await isCurrentUserAdmin(currentUserId);
@@ -22934,7 +22951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { status } = req.body;
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       
       // Check if user has admin or manager permissions
@@ -22978,8 +22995,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/job-openings", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
     try {
       console.log("POST /api/job-openings - Request body:", req.body);
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // Authentication failed
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return; // Authentication failed
+
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
       console.log("Using authenticated user ID:", currentUserId);
       
       const validatedData = insertJobOpeningSchema.parse({
@@ -23068,8 +23087,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/job-openings/:id", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // Authentication failed
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return; // Authentication failed
+
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
 
       const validatedData = insertJobOpeningSchema.partial().parse(req.body);
       
@@ -23117,8 +23138,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/job-openings/:id/approve", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // Authentication failed
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return; // Authentication failed
+
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
       const { action, rejectionReason } = req.body; // action: 'approve' | 'reject'
       
       console.log("Approval request:", { id: req.params.id, action, currentUserId });
@@ -23191,7 +23214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete job opening (admin only)
   app.delete("/api/job-openings/:id", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
 
       const [opening] = await db.select()
@@ -23272,8 +23295,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Job Application Routes - Accessible to admins, hiring managers, and watchers
   app.get("/api/hr/job-applications", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // Authentication failed
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return; // Authentication failed
+
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
       
       // Check if user is admin - use proper auth function
       const isAdmin = await isCurrentUserAdmin(req);
@@ -24010,7 +24035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Staff ID is required" });
       }
       
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
       
       // Check if watcher already exists
@@ -26615,7 +26640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/training/analytics", requireAuth(), requireGranularPermission('training.view_analytics'), async (req, res) => {
     try {
       const { courseId, userId } = req.query;
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Total courses and categories
