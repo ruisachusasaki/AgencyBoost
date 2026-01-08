@@ -255,17 +255,12 @@ export default function Staff() {
   };
 
   const handleDeleteStaff = (staffId: string, staffName: string) => {
-    console.log("handleDeleteStaff called:", { staffId, staffName });
-    alert(`Delete button clicked for: ${staffName}`);
     setStaffToDelete({ id: staffId, name: staffName });
     setDeleteDialogOpen(true);
   };
 
   const confirmDeleteStaff = () => {
-    alert("Confirm delete button clicked!");
-    console.log("confirmDeleteStaff called, staffToDelete:", staffToDelete);
     if (staffToDelete) {
-      console.log("Calling deleteStaffMutation.mutate with id:", staffToDelete.id);
       deleteStaffMutation.mutate(staffToDelete.id);
       setDeleteDialogOpen(false);
       setStaffToDelete(null);
@@ -1091,10 +1086,7 @@ export default function Staff() {
                 type="button"
                 className="px-4 py-2 text-sm font-medium bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90"
                 data-testid="button-confirm-delete-staff"
-                onClick={() => {
-                  console.log("Confirm delete button clicked!");
-                  confirmDeleteStaff();
-                }}
+                onClick={confirmDeleteStaff}
               >
                 Delete
               </button>
