@@ -115,7 +115,7 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
 
   // Fetch task dependencies
   const { data: dependencyData } = useQuery({
-    queryKey: ["/api/tasks", taskId, "dependencies"],
+    queryKey: [`/api/tasks/${taskId}/dependencies`],
     enabled: !!taskId,
   });
 
@@ -140,10 +140,11 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
       fetch(`/api/tasks/${taskId}/dependencies`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(data),
       }).then(res => res.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "dependencies"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/dependencies`] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       setShowAddForm(false);
       setSelectedTaskId("");
@@ -168,9 +169,10 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
     mutationFn: (dependencyId: string) =>
       fetch(`/api/dependencies/${dependencyId}`, {
         method: "DELETE",
+        credentials: "include",
       }).then(res => res.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", taskId, "dependencies"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/dependencies`] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({
         title: "Success",

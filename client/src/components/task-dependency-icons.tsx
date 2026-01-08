@@ -62,7 +62,7 @@ const dependencyTypeConfig = {
 
 export function TaskDependencyIcons({ taskId, className = "" }: TaskDependencyIconsProps) {
   const { data: dependencyResponse, isLoading, error } = useQuery<DependencyResponse>({
-    queryKey: ["/api/tasks", taskId, "dependencies"],
+    queryKey: [`/api/tasks/${taskId}/dependencies`],
   });
 
   // Extract dependencies array from the response
