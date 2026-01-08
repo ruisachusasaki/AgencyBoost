@@ -147,6 +147,73 @@ export default function MyProfile() {
     },
   });
 
+  // Change password mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      const response = await apiRequest("POST", "/api/auth/change-password", data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      setFormData(prev => ({
+        ...prev,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      }));
+      toast({
+        title: "Success",
+        variant: "success",
+        description: "Password changed successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to change password. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleChangePassword = () => {
+    if (!formData.currentPassword) {
+      toast({
+        title: "Error",
+        description: "Please enter your current password.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!formData.newPassword) {
+      toast({
+        title: "Error",
+        description: "Please enter a new password.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (formData.newPassword.length < 8) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 8 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (formData.newPassword !== formData.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New passwords do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+    changePasswordMutation.mutate({
+      currentPassword: formData.currentPassword,
+      newPassword: formData.newPassword,
+    });
+  };
+
   // Update form defaults when user data loads
   useEffect(() => {
     if (currentUser) {
@@ -518,6 +585,16 @@ export default function MyProfile() {
                   <p className="text-sm text-gray-500">
                     Password must be at least 8 characters long and include uppercase, lowercase, and numbers.
                   </p>
+                  <div className="pt-2">
+                    <Button
+                      type="button"
+                      onClick={handleChangePassword}
+                      disabled={changePasswordMutation.isPending}
+                      data-testid="button-change-password"
+                    >
+                      {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 

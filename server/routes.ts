@@ -612,6 +612,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to reset password" });
     }
   });
+
+  // POST /api/auth/change-password - Change password when logged in
+  app.post("/api/auth/change-password", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: "Current password and new password are required" });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ error: "New password must be at least 8 characters long" });
+      }
+
+      // Find auth user for this staff member
+      const [authUser] = await db
+        .select()
+        .from(authUsers)
+        .where(eq(authUsers.userId, userId));
+
+      if (!authUser) {
+        return res.status(404).json({ error: "No password authentication set up for this account" });
+      }
+
+      // Verify current password
+      const bcrypt = await import("bcrypt");
+      const isValid = await bcrypt.compare(currentPassword, authUser.passwordHash);
+      if (!isValid) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+
+      // Hash new password and update
+      const newPasswordHash = await bcrypt.hash(newPassword, 10);
+      await db
+        .update(authUsers)
+        .set({ 
+          passwordHash: newPasswordHash,
+          passwordResetToken: null,
+          passwordResetExpires: null
+        })
+        .where(eq(authUsers.id, authUser.id));
+
+      // Log the activity
+      await appStorage.createAuditLog({
+        userId,
+        entityType: "auth",
+        entityId: authUser.id,
+        action: "password_changed",
+        details: "User changed their password via profile settings",
+      });
+
+      res.json({ success: true, message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ error: "Failed to change password" });
+    }
+  });
   // POST /api/auth/logout - Destroy session
   app.post("/api/auth/logout", (req, res) => {
     req.session = null;
