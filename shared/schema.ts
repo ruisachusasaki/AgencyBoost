@@ -2563,6 +2563,32 @@ export const emailIntegrations = pgTable("email_integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// GoHighLevel integration for receiving leads via webhook
+export const goHighLevelIntegration = pgTable("gohighlevel_integration", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  webhookToken: text("webhook_token").notNull().unique(), // Secure token for webhook URL
+  name: text("name").notNull().default("GoHighLevel"), // Integration name
+  isActive: boolean("is_active").default(true),
+  defaultSource: text("default_source").default("GoHighLevel"), // Default lead source
+  defaultStageId: varchar("default_stage_id"), // Default pipeline stage for new leads
+  assignToStaffId: uuid("assign_to_staff_id").references(() => staff.id), // Auto-assign leads to this staff
+  triggerWorkflows: boolean("trigger_workflows").default(true), // Trigger automation workflows
+  fieldMappings: jsonb("field_mappings"), // Map GHL fields to lead fields
+  leadsReceived: integer("leads_received").default(0), // Count of leads received
+  lastLeadAt: timestamp("last_lead_at"), // Last lead received timestamp
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertGoHighLevelIntegrationSchema = createInsertSchema(goHighLevelIntegration).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type GoHighLevelIntegration = typeof goHighLevelIntegration.$inferSelect;
+export type InsertGoHighLevelIntegration = z.infer<typeof insertGoHighLevelIntegrationSchema>;
+
 // Lead Notes - Multiple notes per lead  
 export const leadNotes = pgTable("lead_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
