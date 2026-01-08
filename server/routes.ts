@@ -18731,6 +18731,298 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========================================
+  // GoHighLevel Integration Routes
+  // ========================================
+
+  // GET GoHighLevel integration status
+  app.get("/api/integrations/gohighlevel/status", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
+    try {
+      const integration = await storage.getGoHighLevelIntegration();
+      
+      if (!integration) {
+        return res.json({
+          connected: false,
+          integration: null
+        });
+      }
+
+      // Build the webhook URL
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : process.env.BASE_URL || `https://${req.get('host')}`;
+      
+      const webhookUrl = `${baseUrl}/api/webhooks/gohighlevel/${integration.webhookToken}`;
+
+      res.json({
+        connected: integration.isActive,
+        integration: {
+          id: integration.id,
+          name: integration.name,
+          isActive: integration.isActive,
+          defaultSource: integration.defaultSource,
+          defaultStageId: integration.defaultStageId,
+          assignToStaffId: integration.assignToStaffId,
+          triggerWorkflows: integration.triggerWorkflows,
+          leadsReceived: integration.leadsReceived,
+          lastLeadAt: integration.lastLeadAt,
+          webhookUrl,
+          createdAt: integration.createdAt,
+          updatedAt: integration.updatedAt
+        }
+      });
+    } catch (error) {
+      console.error('Error getting GoHighLevel status:', error);
+      res.status(500).json({ message: "Failed to get GoHighLevel integration status" });
+    }
+  });
+
+  // POST Connect/Create GoHighLevel integration
+  app.post("/api/integrations/gohighlevel/connect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      // Check if integration already exists
+      const existing = await storage.getGoHighLevelIntegration();
+      if (existing) {
+        return res.status(400).json({ message: "GoHighLevel integration already exists" });
+      }
+
+      // Generate a secure webhook token
+      const webhookToken = randomUUID().replace(/-/g, '');
+
+      const integration = await storage.createGoHighLevelIntegration({
+        webhookToken,
+        name: req.body.name || 'GoHighLevel',
+        isActive: true,
+        defaultSource: req.body.defaultSource || 'GoHighLevel',
+        defaultStageId: req.body.defaultStageId || null,
+        assignToStaffId: req.body.assignToStaffId || null,
+        triggerWorkflows: req.body.triggerWorkflows !== false
+      });
+
+      // Build the webhook URL
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : process.env.BASE_URL || `https://${req.get('host')}`;
+      
+      const webhookUrl = `${baseUrl}/api/webhooks/gohighlevel/${integration.webhookToken}`;
+
+      // Create audit log
+      try {
+        const userId = await getAuthenticatedUserIdOrFail(req);
+        await createAuditLog(
+          "created",
+          "integration",
+          "gohighlevel",
+          "GoHighLevel Integration",
+          userId,
+          "Connected GoHighLevel integration",
+          null,
+          { webhookUrl },
+          req
+        );
+      } catch (auditError) {
+        console.error('Failed to create GoHighLevel audit log:', auditError);
+      }
+
+      res.json({
+        message: "GoHighLevel integration connected successfully",
+        integration: {
+          ...integration,
+          webhookUrl
+        }
+      });
+    } catch (error) {
+      console.error('Error connecting GoHighLevel:', error);
+      res.status(500).json({ message: "Failed to connect GoHighLevel integration" });
+    }
+  });
+
+  // PATCH Update GoHighLevel integration settings
+  app.patch("/api/integrations/gohighlevel/:id", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, defaultSource, defaultStageId, assignToStaffId, triggerWorkflows, isActive } = req.body;
+
+      const updated = await storage.updateGoHighLevelIntegration(id, {
+        ...(name !== undefined && { name }),
+        ...(defaultSource !== undefined && { defaultSource }),
+        ...(defaultStageId !== undefined && { defaultStageId }),
+        ...(assignToStaffId !== undefined && { assignToStaffId }),
+        ...(triggerWorkflows !== undefined && { triggerWorkflows }),
+        ...(isActive !== undefined && { isActive })
+      });
+
+      if (!updated) {
+        return res.status(404).json({ message: "GoHighLevel integration not found" });
+      }
+
+      res.json({ message: "Settings updated successfully", integration: updated });
+    } catch (error) {
+      console.error('Error updating GoHighLevel settings:', error);
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
+  // POST Regenerate webhook token
+  app.post("/api/integrations/gohighlevel/:id/regenerate-token", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const newToken = randomUUID().replace(/-/g, '');
+
+      const updated = await storage.updateGoHighLevelIntegration(id, {
+        webhookToken: newToken
+      });
+
+      if (!updated) {
+        return res.status(404).json({ message: "GoHighLevel integration not found" });
+      }
+
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : process.env.BASE_URL || `https://${req.get('host')}`;
+      
+      const webhookUrl = `${baseUrl}/api/webhooks/gohighlevel/${newToken}`;
+
+      res.json({ 
+        message: "Webhook token regenerated successfully",
+        webhookUrl 
+      });
+    } catch (error) {
+      console.error('Error regenerating token:', error);
+      res.status(500).json({ message: "Failed to regenerate token" });
+    }
+  });
+
+  // DELETE Disconnect GoHighLevel integration
+  app.delete("/api/integrations/gohighlevel/:id", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteGoHighLevelIntegration(id);
+
+      if (!deleted) {
+        return res.status(404).json({ message: "GoHighLevel integration not found" });
+      }
+
+      // Create audit log
+      try {
+        const userId = await getAuthenticatedUserIdOrFail(req);
+        await createAuditLog(
+          "deleted",
+          "integration",
+          "gohighlevel",
+          "GoHighLevel Integration",
+          userId,
+          "Disconnected GoHighLevel integration",
+          null,
+          null,
+          req
+        );
+      } catch (auditError) {
+        console.error('Failed to create GoHighLevel disconnection audit log:', auditError);
+      }
+
+      res.json({ message: "GoHighLevel integration disconnected successfully" });
+    } catch (error) {
+      console.error('Error disconnecting GoHighLevel:', error);
+      res.status(500).json({ message: "Failed to disconnect GoHighLevel" });
+    }
+  });
+
+  // ========================================
+  // GoHighLevel Webhook Endpoint (PUBLIC - no auth required)
+  // ========================================
+  app.post("/api/webhooks/gohighlevel/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      // Validate the webhook token
+      const integration = await storage.getGoHighLevelIntegrationByToken(token);
+      
+      if (!integration || !integration.isActive) {
+        console.log('GoHighLevel webhook: Invalid or inactive token');
+        return res.status(401).json({ message: "Invalid webhook token" });
+      }
+
+      console.log('GoHighLevel webhook received:', JSON.stringify(req.body, null, 2));
+
+      // Parse the incoming lead data from GoHighLevel
+      const body = req.body;
+      
+      // Extract lead data - GHL may send in different structures
+      const leadData = {
+        name: body.full_name || body.name || body.first_name 
+          ? `${body.first_name || ''} ${body.last_name || ''}`.trim() 
+          : body.contact_name || 'Unknown Lead',
+        email: body.email || body.contact_email || '',
+        phone: body.phone || body.contact_phone || body.phone_number || null,
+        company: body.company || body.company_name || body.business_name || null,
+        source: integration.defaultSource || 'GoHighLevel',
+        notes: body.message || body.notes || body.custom_message || null,
+        stageId: integration.defaultStageId || null,
+        assignedTo: integration.assignToStaffId || null,
+        customFieldData: {
+          gohighlevel_id: body.id || body.contact_id || null,
+          gohighlevel_location: body.location_id || null,
+          gohighlevel_tags: body.tags || [],
+          form_name: body.form_name || body.formName || null,
+          landing_page: body.page_url || body.landing_page || null,
+          raw_payload: body
+        }
+      };
+
+      // Validate required fields
+      if (!leadData.email) {
+        console.log('GoHighLevel webhook: Missing email');
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Create the lead
+      const lead = await storage.createLead({
+        name: leadData.name,
+        email: leadData.email,
+        phone: leadData.phone,
+        company: leadData.company,
+        source: leadData.source,
+        notes: leadData.notes,
+        stageId: leadData.stageId,
+        assignedTo: leadData.assignedTo,
+        status: 'Open',
+        customFieldData: leadData.customFieldData
+      });
+
+      console.log('GoHighLevel webhook: Lead created:', lead.id);
+
+      // Increment lead count
+      await storage.incrementGoHighLevelLeadCount(integration.id);
+
+      // Trigger workflows if enabled
+      if (integration.triggerWorkflows) {
+        try {
+          await emitTrigger({
+            triggerType: 'lead_created',
+            data: {
+              leadId: lead.id,
+              leadName: lead.name,
+              leadEmail: lead.email,
+              source: 'gohighlevel_webhook'
+            }
+          });
+        } catch (triggerError) {
+          console.error('Failed to emit lead_created trigger:', triggerError);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Lead created successfully",
+        leadId: lead.id 
+      });
+    } catch (error) {
+      console.error('GoHighLevel webhook error:', error);
+      res.status(500).json({ message: "Failed to process webhook" });
+    }
+  });
+
   // Custom Field File Upload Routes
   app.post("/api/custom-field-files/upload-url", requireAuth(), requirePermission('files', 'canCreate'), async (req, res) => {
     try {
