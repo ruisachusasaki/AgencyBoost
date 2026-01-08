@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle, FileText, Users, CheckSquare, HelpCircle } from "lucide-react";
+import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle, FileText, Users, CheckSquare, HelpCircle, Brain } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -416,6 +416,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
           
           {/* Global search */}
           <GlobalSearch />
+          
+          {/* Marketing Brain Link */}
+          <a
+            href="https://MarketingBrain.ai"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title="Marketing Brain"
+            data-testid="link-marketing-brain"
+          >
+            <Brain className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+          </a>
           
           <ThemeToggleButton />
           
