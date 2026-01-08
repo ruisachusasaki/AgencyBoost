@@ -18738,7 +18738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET GoHighLevel integration status
   app.get("/api/integrations/gohighlevel/status", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
     try {
-      const integration = await storage.getGoHighLevelIntegration();
+      const integration = await appStorage.getGoHighLevelIntegration();
       
       if (!integration) {
         return res.json({
@@ -18781,7 +18781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/integrations/gohighlevel/connect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       // Check if integration already exists
-      const existing = await storage.getGoHighLevelIntegration();
+      const existing = await appStorage.getGoHighLevelIntegration();
       if (existing) {
         return res.status(400).json({ message: "GoHighLevel integration already exists" });
       }
@@ -18789,7 +18789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate a secure webhook token
       const webhookToken = randomUUID().replace(/-/g, '');
 
-      const integration = await storage.createGoHighLevelIntegration({
+      const integration = await appStorage.createGoHighLevelIntegration({
         webhookToken,
         name: req.body.name || 'GoHighLevel',
         isActive: true,
@@ -18843,7 +18843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { name, defaultSource, defaultStageId, assignToStaffId, triggerWorkflows, isActive } = req.body;
 
-      const updated = await storage.updateGoHighLevelIntegration(id, {
+      const updated = await appStorage.updateGoHighLevelIntegration(id, {
         ...(name !== undefined && { name }),
         ...(defaultSource !== undefined && { defaultSource }),
         ...(defaultStageId !== undefined && { defaultStageId }),
@@ -18869,7 +18869,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const newToken = randomUUID().replace(/-/g, '');
 
-      const updated = await storage.updateGoHighLevelIntegration(id, {
+      const updated = await appStorage.updateGoHighLevelIntegration(id, {
         webhookToken: newToken
       });
 
@@ -18897,7 +18897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/integrations/gohighlevel/:id", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
       const { id } = req.params;
-      const deleted = await storage.deleteGoHighLevelIntegration(id);
+      const deleted = await appStorage.deleteGoHighLevelIntegration(id);
 
       if (!deleted) {
         return res.status(404).json({ message: "GoHighLevel integration not found" });
@@ -18936,7 +18936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { token } = req.params;
       
       // Validate the webhook token
-      const integration = await storage.getGoHighLevelIntegrationByToken(token);
+      const integration = await appStorage.getGoHighLevelIntegrationByToken(token);
       
       if (!integration || !integration.isActive) {
         console.log('GoHighLevel webhook: Invalid or inactive token');
@@ -18993,7 +18993,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('GoHighLevel webhook: Lead created:', lead.id);
 
       // Increment lead count
-      await storage.incrementGoHighLevelLeadCount(integration.id);
+      await appStorage.incrementGoHighLevelLeadCount(integration.id);
 
       // Trigger workflows if enabled
       if (integration.triggerWorkflows) {
