@@ -42,7 +42,7 @@ const navigation = [
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Calendars", href: "/calendar", icon: Calendar },
   { name: "Workflows", href: "/workflows", icon: GitBranch },
-  { name: "HR", href: "/hr", icon: UserCheck },
+  { name: "PX", href: "/hr", icon: UserCheck },
   { name: "Training", href: "/training", icon: GraduationCap },
   { name: "Resources", href: "/resources", icon: BookOpen },
   { name: "Reports", href: "/reports", icon: BarChart3 },
