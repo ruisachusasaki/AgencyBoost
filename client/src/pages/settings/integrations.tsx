@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw, Smartphone, Send } from "lucide-react";
+import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw, Smartphone, Send, Zap, Copy, RotateCcw } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -87,6 +87,16 @@ export default function Integrations() {
       lastSync: "",
       features: ["Transactional emails", "Email templates", "Delivery tracking", "Bounce handling"],
       settingsRequired: true
+    },
+    {
+      id: "gohighlevel",
+      name: "GoHighLevel",
+      description: "Receive leads from GoHighLevel landing pages and forms via webhook",
+      icon: Zap,
+      status: "disconnected",
+      lastSync: "",
+      features: ["Webhook lead capture", "Auto-assign leads", "Workflow triggers", "Field mapping"],
+      settingsRequired: true
     }
   ]);
 
@@ -103,6 +113,10 @@ export default function Integrations() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  
+  // GoHighLevel specific state
+  const [ghlIntegration, setGhlIntegration] = useState<any>(null);
+  const [showGhlDialog, setShowGhlDialog] = useState(false);
 
   // Check for OAuth callback parameters and Google Calendar status on load
   useEffect(() => {
@@ -144,6 +158,9 @@ export default function Integrations() {
     
     // Check MailGun status
     checkMailgunStatus();
+    
+    // Check GoHighLevel status
+    checkGoHighLevelStatus();
   }, []);
 
   const checkGoogleCalendarStatus = async () => {
@@ -210,6 +227,136 @@ export default function Integrations() {
           ? { ...integration, status: "disconnected" as const }
           : integration
       ));
+    }
+  };
+  
+  const checkGoHighLevelStatus = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/integrations/gohighlevel/status');
+      const status = await response.json();
+      
+      setGhlIntegration(status.integration);
+      
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "gohighlevel" 
+          ? { 
+              ...integration, 
+              status: status.connected ? "connected" as const : "disconnected" as const,
+              lastSync: status.integration?.lastLeadAt ? `${status.integration.leadsReceived} leads received` : "",
+            }
+          : integration
+      ));
+    } catch (error) {
+      console.error('Error checking GoHighLevel status:', error);
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "gohighlevel" 
+          ? { ...integration, status: "disconnected" as const }
+          : integration
+      ));
+    }
+  };
+  
+  const connectGoHighLevel = async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiRequest('POST', '/api/integrations/gohighlevel/connect', {
+        name: 'GoHighLevel',
+        defaultSource: 'GoHighLevel',
+        triggerWorkflows: true
+      });
+      const result = await response.json();
+      
+      setGhlIntegration(result.integration);
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "gohighlevel" 
+          ? { ...integration, status: "connected" as const }
+          : integration
+      ));
+      
+      toast({
+        title: "Success",
+        variant: "success",
+        description: "GoHighLevel integration connected successfully!",
+      });
+    } catch (error) {
+      console.error('Error connecting GoHighLevel:', error);
+      toast({
+        title: "Error",
+        description: "Failed to connect GoHighLevel integration",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const disconnectGoHighLevel = async () => {
+    if (!ghlIntegration?.id) return;
+    
+    setIsLoading(true);
+    try {
+      await apiRequest('DELETE', `/api/integrations/gohighlevel/${ghlIntegration.id}`);
+      
+      setGhlIntegration(null);
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "gohighlevel" 
+          ? { ...integration, status: "disconnected" as const, lastSync: "" }
+          : integration
+      ));
+      setShowGhlDialog(false);
+      
+      toast({
+        title: "Success",
+        variant: "success",
+        description: "GoHighLevel integration disconnected",
+      });
+    } catch (error) {
+      console.error('Error disconnecting GoHighLevel:', error);
+      toast({
+        title: "Error",
+        description: "Failed to disconnect GoHighLevel",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const regenerateGhlToken = async () => {
+    if (!ghlIntegration?.id) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await apiRequest('POST', `/api/integrations/gohighlevel/${ghlIntegration.id}/regenerate-token`);
+      const result = await response.json();
+      
+      setGhlIntegration((prev: any) => ({ ...prev, webhookUrl: result.webhookUrl }));
+      
+      toast({
+        title: "Success",
+        variant: "success",
+        description: "Webhook URL regenerated. Update this in GoHighLevel.",
+      });
+    } catch (error) {
+      console.error('Error regenerating token:', error);
+      toast({
+        title: "Error",
+        description: "Failed to regenerate webhook token",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const copyWebhookUrl = () => {
+    if (ghlIntegration?.webhookUrl) {
+      navigator.clipboard.writeText(ghlIntegration.webhookUrl);
+      toast({
+        title: "Copied!",
+        variant: "success",
+        description: "Webhook URL copied to clipboard",
+      });
     }
   };
   
@@ -353,6 +500,16 @@ export default function Integrations() {
       const mailgunIntegration = integrations.find(i => i.id === "mailgun");
       if (mailgunIntegration) {
         openConfigDialog(mailgunIntegration);
+      }
+      return;
+    } else if (integrationId === "gohighlevel") {
+      // Connect GoHighLevel - generates webhook URL
+      const ghlIntegrationData = integrations.find(i => i.id === "gohighlevel");
+      if (ghlIntegrationData?.status === "connected") {
+        setShowGhlDialog(true);
+      } else {
+        await connectGoHighLevel();
+        setShowGhlDialog(true);
       }
       return;
     }
@@ -1483,6 +1640,124 @@ export default function Integrations() {
                   Open Slack Apps
                 </Button>
               </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* GoHighLevel Configuration Dialog */}
+        <Dialog open={showGhlDialog} onOpenChange={setShowGhlDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-primary" />
+                GoHighLevel Integration
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {ghlIntegration ? (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Webhook URL</Label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      Copy this URL and paste it into your GoHighLevel landing page or form webhook settings.
+                    </p>
+                    <div className="flex gap-2">
+                      <Input 
+                        value={ghlIntegration.webhookUrl || ''} 
+                        readOnly 
+                        className="flex-1 font-mono text-xs"
+                        data-testid="input-ghl-webhook-url"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={copyWebhookUrl}
+                        data-testid="button-copy-webhook"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3">
+                    <h4 className="font-medium text-sm">Integration Stats</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Leads Received:</span>
+                        <span className="ml-2 font-semibold">{ghlIntegration.leadsReceived || 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Status:</span>
+                        <Badge className="ml-2 bg-green-100 text-green-800">Active</Badge>
+                      </div>
+                      {ghlIntegration.lastLeadAt && (
+                        <div className="col-span-2">
+                          <span className="text-gray-500">Last Lead:</span>
+                          <span className="ml-2">{new Date(ghlIntegration.lastLeadAt).toLocaleString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Default Lead Source</Label>
+                    <Input 
+                      value={ghlIntegration.defaultSource || 'GoHighLevel'} 
+                      readOnly 
+                      className="bg-gray-50"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div>
+                      <span className="text-sm font-medium">Trigger Workflows</span>
+                      <p className="text-xs text-gray-500">Run automation when leads arrive</p>
+                    </div>
+                    <Badge className={ghlIntegration.triggerWorkflows ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                      {ghlIntegration.triggerWorkflows ? "Enabled" : "Disabled"}
+                    </Badge>
+                  </div>
+
+                  <div className="border-t pt-4 space-y-2">
+                    <Button
+                      variant="outline"
+                      onClick={regenerateGhlToken}
+                      disabled={isLoading}
+                      className="w-full"
+                      data-testid="button-regenerate-token"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Regenerate Webhook URL
+                    </Button>
+                    <p className="text-xs text-gray-500 text-center">
+                      This will invalidate the old URL. Update it in GoHighLevel after regenerating.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-between pt-4 border-t">
+                    <Button 
+                      variant="destructive" 
+                      onClick={disconnectGoHighLevel}
+                      disabled={isLoading}
+                      data-testid="button-disconnect-ghl"
+                    >
+                      Disconnect
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => setShowGhlDialog(false)}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <Zap className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">Setting up GoHighLevel integration...</p>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
