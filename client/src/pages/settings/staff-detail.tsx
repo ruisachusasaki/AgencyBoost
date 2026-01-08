@@ -168,6 +168,28 @@ export default function StaffDetail() {
     },
   });
 
+  // Send password reset email mutation
+  const sendPasswordResetMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/send-password-reset", { staffId: id });
+      return await response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Success",
+        variant: "success",
+        description: data.message || "Password reset email sent successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send password reset email",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleProfileImageUpload = async () => {
     try {
       const response = await apiRequest("POST", "/api/objects/upload", {
@@ -301,9 +323,19 @@ export default function StaffDetail() {
         </div>
         <div className="flex items-center space-x-2">
           {!isEditing ? (
+            <>
             <Button onClick={() => setIsEditing(true)}>
               Edit Profile
             </Button>
+            <Button 
+              variant="outline"
+              onClick={() => sendPasswordResetMutation.mutate()}
+              disabled={sendPasswordResetMutation.isPending}
+              data-testid="button-send-password-reset"
+            >
+              {sendPasswordResetMutation.isPending ? "Sending..." : "Send Password Reset Email"}
+            </Button>
+            </>
           ) : (
             <div className="flex space-x-2">
               <Button variant="outline" onClick={() => setIsEditing(false)}>

@@ -672,6 +672,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to change password" });
     }
   });
+
+  // POST /api/admin/send-password-reset - Admin sends password reset email for a staff member
+  app.post("/api/admin/send-password-reset", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { staffId } = req.body;
+      
+      if (!staffId) {
+        return res.status(400).json({ error: "Staff ID is required" });
+      }
+      
+      // Get staff member
+      const [staffMember] = await db.select().from(staff).where(eq(staff.id, staffId));
+      if (!staffMember) {
+        return res.status(404).json({ error: "Staff member not found" });
+      }
+      
+      // Find or create auth user
+      let authUser = await appStorage.getAuthUserByEmail(staffMember.email);
+      if (!authUser) {
+        return res.status(404).json({ error: "No authentication account found for this staff member. They may be using Google sign-in only." });
+      }
+      
+      // Generate secure reset token
+      const resetToken = randomBytes(32).toString("hex");
+      const resetExpires = new Date(Date.now() + 3600000); // 1 hour from now
+      
+      // Store token in database
+      await db.update(authUsers)
+        .set({
+          passwordResetToken: resetToken,
+          passwordResetExpires: resetExpires,
+        })
+        .where(eq(authUsers.id, authUser.id));
+      
+      // Send reset email using Mailgun
+      const Mailgun = (await import("mailgun.js")).default;
+      const formData = (await import("form-data")).default;
+      const mailgun = new Mailgun(formData);
+      
+      const [emailConfig] = await db.select()
+        .from(emailIntegrations)
+        .where(eq(emailIntegrations.isActive, true))
+        .limit(1);
+      
+      const baseUrl = process.env.REPLIT_DEPLOYMENT_URL || 
+                      (process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.repl.co` : "http://localhost:5000");
+      const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+      
+      if (emailConfig) {
+        try {
+          const decryptedApiKey = EncryptionService.decrypt(emailConfig.apiKey);
+          const mg = mailgun.client({ username: "api", key: decryptedApiKey });
+          await mg.messages.create(emailConfig.domain, {
+            from: `${emailConfig.fromName} <${emailConfig.fromEmail}>`,
+            to: staffMember.email,
+            subject: "AgencyBoost - Password Reset Request",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #00C9C6;">Password Reset Request</h2>
+                <p>Hi ${staffMember.firstName || "there"},</p>
+                <p>An administrator has requested a password reset for your AgencyBoost account. Click the button below to set a new password:</p>
+                <p style="margin: 30px 0;">
+                  <a href="${resetUrl}" style="background-color: #00C9C6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                    Reset Password
+                  </a>
+                </p>
+                <p>Or copy and paste this link into your browser:</p>
+                <p style="word-break: break-all; color: #666;">${resetUrl}</p>
+                <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
+                <p style="color: #666; font-size: 14px;">If you did not request this, please contact your administrator.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                <p style="color: #999; font-size: 12px;">AgencyBoost CRM</p>
+              </div>
+            `,
+            text: `Password Reset Request\n\nHi ${staffMember.firstName || "there"},\n\nAn administrator has requested a password reset for your AgencyBoost account.\n\nClick this link to reset your password: ${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you did not request this, please contact your administrator.\n\nAgencyBoost CRM`,
+          });
+          console.log(`Admin-initiated password reset email sent to ${staffMember.email}`);
+          res.json({ success: true, message: `Password reset email sent to ${staffMember.email}` });
+        } catch (emailError) {
+          console.error("Failed to send password reset email:", emailError);
+          res.status(500).json({ error: "Failed to send password reset email" });
+        }
+      } else {
+        console.error("No email integration configured");
+        res.status(500).json({ error: "Email service not configured. Please configure email integration in Settings." });
+      }
+    } catch (error) {
+      console.error("Error in admin send-password-reset:", error);
+      res.status(500).json({ error: "Failed to send password reset email" });
+    }
+  });
   // POST /api/auth/logout - Destroy session
   app.post("/api/auth/logout", (req, res) => {
     req.session = null;
