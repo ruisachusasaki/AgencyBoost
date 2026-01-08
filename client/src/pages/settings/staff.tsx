@@ -1602,34 +1602,46 @@ function CapacitySettingsTab() {
       </Dialog>
 
       {/* Delete Staff Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Staff Member</DialogTitle>
-            <DialogDescription>
+      {deleteDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div 
+            className="fixed inset-0 bg-black/80" 
+            onClick={() => {
+              setDeleteDialogOpen(false);
+              setStaffToDelete(null);
+            }}
+          />
+          <div className="relative z-50 bg-background border rounded-lg p-6 w-full max-w-md shadow-lg">
+            <h2 className="text-lg font-semibold mb-2">Delete Staff Member</h2>
+            <p className="text-sm text-muted-foreground mb-4">
               Are you sure you want to delete {staffToDelete?.name}? This action will deactivate the staff member and cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline"
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setStaffToDelete(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={confirmDeleteStaff}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              data-testid="button-confirm-delete-staff"
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="px-4 py-2 text-sm font-medium border rounded-md hover:bg-accent"
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setStaffToDelete(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 text-sm font-medium bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90"
+                data-testid="button-confirm-delete-staff"
+                onClick={() => {
+                  alert("Native button clicked!");
+                  confirmDeleteStaff();
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
