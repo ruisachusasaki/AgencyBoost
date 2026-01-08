@@ -10793,6 +10793,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Don't fail the staff deletion if calendar cleanup fails - just log the error
       }
       
+      // Deactivate and clear the auth_users record so the email can be reused
+      try {
+        const [authUserRecord] = await db.select().from(authUsers).where(eq(authUsers.userId, req.params.id));
+        if (authUserRecord) {
+          // Modify the email to free it up for reuse, and deactivate the account
+          const deletedEmail = `deleted_${Date.now()}_${authUserRecord.email}`;
+          await db.update(authUsers)
+            .set({ 
+              isActive: false, 
+              email: deletedEmail,
+              passwordHash: '', // Clear password hash for security
+              passwordResetToken: null,
+              passwordResetExpires: null
+            })
+            .where(eq(authUsers.userId, req.params.id));
+          
+          // Also remove from user_roles to revoke permissions
+          await db.delete(userRoles).where(eq(userRoles.userId, authUserRecord.id));
+          
+          console.log(`Deactivated auth record and cleared email for deleted staff member ${staffToDelete.firstName} ${staffToDelete.lastName}`);
+        }
+      } catch (authCleanupError) {
+        console.error('Error cleaning up auth record for deactivated staff:', authCleanupError);
+        // Don't fail the staff deletion if auth cleanup fails - just log the error
+      }
+      
       // Log the deletion
       await createAuditLog(
         "deleted",
