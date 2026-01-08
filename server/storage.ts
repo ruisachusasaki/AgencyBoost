@@ -90,7 +90,8 @@ import {
   customFieldFileUploads, forms, formFields, formSubmissions, tags, automationTriggers, automationActions, staff, clientPortalUsers,
   type OrgChartStructure, type InsertOrgChartStructure, orgChartStructures,
   type OrgChartNode, type InsertOrgChartNode, orgChartNodes,
-  type OrgChartNodeAssignment, type InsertOrgChartNodeAssignment, orgChartNodeAssignments
+  type OrgChartNodeAssignment, type InsertOrgChartNodeAssignment, orgChartNodeAssignments,
+  type GoHighLevelIntegration, type InsertGoHighLevelIntegration, goHighLevelIntegration
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -684,6 +685,14 @@ export interface IStorage {
   updateTimeOffType(id: string, data: Partial<InsertTimeOffType>): Promise<SelectTimeOffType | undefined>;
   deleteTimeOffType(id: string): Promise<boolean>;
   reorderTimeOffTypes(updates: Array<{ id: string; orderIndex: number }>): Promise<void>;
+  
+  // GoHighLevel Integration
+  getGoHighLevelIntegration(): Promise<GoHighLevelIntegration | undefined>;
+  getGoHighLevelIntegrationByToken(token: string): Promise<GoHighLevelIntegration | undefined>;
+  createGoHighLevelIntegration(data: InsertGoHighLevelIntegration): Promise<GoHighLevelIntegration>;
+  updateGoHighLevelIntegration(id: string, data: Partial<InsertGoHighLevelIntegration>): Promise<GoHighLevelIntegration | undefined>;
+  deleteGoHighLevelIntegration(id: string): Promise<boolean>;
+  incrementGoHighLevelLeadCount(id: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -9988,6 +9997,57 @@ export class DbStorage implements IStorage {
         db.update(timeOffTypes).set({ orderIndex }).where(eq(timeOffTypes.id, id))
       )
     );
+  }
+
+  // GoHighLevel Integration methods
+  async getGoHighLevelIntegration(): Promise<GoHighLevelIntegration | undefined> {
+    const [integration] = await db
+      .select()
+      .from(goHighLevelIntegration)
+      .limit(1);
+    return integration;
+  }
+
+  async getGoHighLevelIntegrationByToken(token: string): Promise<GoHighLevelIntegration | undefined> {
+    const [integration] = await db
+      .select()
+      .from(goHighLevelIntegration)
+      .where(eq(goHighLevelIntegration.webhookToken, token))
+      .limit(1);
+    return integration;
+  }
+
+  async createGoHighLevelIntegration(data: InsertGoHighLevelIntegration): Promise<GoHighLevelIntegration> {
+    const [newIntegration] = await db
+      .insert(goHighLevelIntegration)
+      .values(data)
+      .returning();
+    return newIntegration;
+  }
+
+  async updateGoHighLevelIntegration(id: string, data: Partial<InsertGoHighLevelIntegration>): Promise<GoHighLevelIntegration | undefined> {
+    const [updated] = await db
+      .update(goHighLevelIntegration)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(goHighLevelIntegration.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteGoHighLevelIntegration(id: string): Promise<boolean> {
+    const result = await db.delete(goHighLevelIntegration).where(eq(goHighLevelIntegration.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async incrementGoHighLevelLeadCount(id: string): Promise<void> {
+    await db
+      .update(goHighLevelIntegration)
+      .set({ 
+        leadsReceived: sql`${goHighLevelIntegration.leadsReceived} + 1`,
+        lastLeadAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(goHighLevelIntegration.id, id));
   }
 }
 
