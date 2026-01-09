@@ -21325,7 +21325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const directReports = await db.select()
         .from(staff)
-        .where(eq(staff.managerId, currentUserId))
+        .where(and(eq(staff.managerId, currentUserId), eq(staff.isActive, true)))
         .orderBy(asc(staff.firstName));
       
       res.json(directReports);
@@ -22303,7 +22303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         birthdate: staff.birthdate,
       })
         .from(staff)
-        .where(eq(staff.managerId, currentUserId));
+        .where(and(eq(staff.managerId, currentUserId), eq(staff.isActive, true)));
 
       res.json(directReports);
     } catch (error) {
