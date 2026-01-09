@@ -10618,8 +10618,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Staff/Users Management API - Everyone can view staff directory
   app.get("/api/staff", requireAuth(), async (req, res) => {
     try {
-      const { search, departmentId } = req.query;
-      let whereConditions = [eq(staff.isActive, true)];
+      const { search, departmentId, inactive } = req.query;
+      let whereConditions = [eq(staff.isActive, inactive === "true" ? false : true)];
       
       if (search && typeof search === 'string') {
         whereConditions.push(

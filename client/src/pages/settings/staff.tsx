@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "wouter";
-import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft, Building2, UserCheck, Settings, UsersIcon, Info, Tag, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Edit, Trash2, User, Upload, Phone, Mail, Users, ChevronUp, ChevronDown, ArrowLeft, Building2, UserCheck, Settings, UsersIcon, Info, Tag, ChevronLeft, ChevronRight, UserX, RefreshCcw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,6 +108,16 @@ export default function Staff() {
       const url = `/api/staff${debouncedSearchTerm ? `?search=${encodeURIComponent(debouncedSearchTerm)}` : ""}`;
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch staff');
+      return response.json();
+    },
+  });
+
+  // Fetch inactive/deactivated staff members
+  const { data: inactiveStaffMembers = [], isLoading: inactiveLoading } = useQuery<Staff[]>({
+    queryKey: ["/api/staff", "inactive"],
+    queryFn: async () => {
+      const response = await fetch("/api/staff?inactive=true");
+      if (!response.ok) throw new Error("Failed to fetch inactive staff");
       return response.json();
     },
   });
@@ -409,7 +419,8 @@ export default function Staff() {
           {[
             { id: "staff", name: "Staff Members", icon: UserCheck, count: staffMembers.length },
             { id: "teams", name: "Teams", icon: Building2, count: 0 },
-            { id: "capacity", name: "Capacity Settings", icon: Settings, count: 0 }
+            { id: "capacity", name: "Capacity Settings", icon: Settings, count: 0 },
+            { id: "deactivated", name: "Deactivated", icon: UserX, count: inactiveStaffMembers.length }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -1064,6 +1075,84 @@ export default function Staff() {
 
       {activeTab === "capacity" && (
         <CapacitySettingsTab />
+      )}
+
+      {activeTab === "deactivated" && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserX className="h-5 w-5 text-muted-foreground" />
+                Deactivated Accounts
+              </CardTitle>
+              <CardDescription>
+                View and manage staff members who have been deactivated. You can reactivate them if needed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {inactiveLoading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              ) : inactiveStaffMembers.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <UserX className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No deactivated accounts found.</p>
+                  <p className="text-sm mt-2">All staff members are currently active.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Staff Member</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Position</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inactiveStaffMembers.map((member) => (
+                      <TableRow key={member.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={member.profileImagePath ? `/objects${member.profileImagePath}` : undefined} />
+                              <AvatarFallback>
+                                {member.firstName?.[0]}{member.lastName?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{member.firstName} {member.lastName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{member.email}</TableCell>
+                        <TableCell>{member.department || "-"}</TableCell>
+                        <TableCell>{member.position || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                await apiRequest("PUT", `/api/staff/${member.id}`, { isActive: true });
+                                queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+                                toast({ title: "Staff member reactivated", description: `${member.firstName} ${member.lastName} is now active.` });
+                              } catch (error) {
+                                toast({ title: "Error", description: "Failed to reactivate staff member", variant: "destructive" });
+                              }
+                            }}
+                            className="gap-1"
+                          >
+                            <RefreshCcw className="h-4 w-4" />
+                            Reactivate
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Delete Staff Confirmation Dialog */}
