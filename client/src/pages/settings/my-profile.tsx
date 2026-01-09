@@ -136,6 +136,7 @@ export default function MyProfile() {
   });
   
   const [formData, setFormData] = useState({
+    email: currentUser?.email || "",
     extension: "101",
     assignedCalendarId: currentUser?.assignedCalendarId || "none",
     currentPassword: "",
@@ -152,6 +153,8 @@ export default function MyProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff", currentUserId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", currentUserId, "linked-emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/current-user"] });
       toast({
         title: "Success",
         variant: "success",
@@ -301,6 +304,7 @@ export default function MyProfile() {
       });
       setFormData(prev => ({
         ...prev,
+        email: currentUser.email || "",
         assignedCalendarId: currentUser.assignedCalendarId || "none",
         signature: `<p><strong>Best regards,</strong></p><p>${currentUser.firstName} ${currentUser.lastName}<br>AgencyBoost Marketing<br><a href="mailto:${currentUser.email}">${currentUser.email}</a><br>${currentUser.phone}</p>`
       }));
@@ -309,8 +313,18 @@ export default function MyProfile() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Update staff record with calendar assignment
+    // Validate email format
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Update staff record with calendar assignment and email
     updateStaffMutation.mutate({
+      email: formData.email || undefined,
       assignedCalendarId: formData.assignedCalendarId === "none" ? null : formData.assignedCalendarId,
     });
   };
@@ -507,11 +521,11 @@ export default function MyProfile() {
                     <Input
                       id="email"
                       type="email"
-                      value={currentUser?.email || ""}
-                      readOnly
-                      className="bg-gray-50"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      placeholder="Enter your email address"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Edit in Staff Management to change</p>
+                    <p className="text-xs text-gray-500 mt-1">This is your primary contact email</p>
                   </div>
                   
                   <div className="grid md:grid-cols-2 gap-4">
