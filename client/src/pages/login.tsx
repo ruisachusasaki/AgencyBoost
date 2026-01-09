@@ -2,17 +2,42 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { TrendingUp, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { FcGoogle } from "react-icons/fc";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+const ERROR_MESSAGES: Record<string, string> = {
+  "auth_failed": "Authentication failed. Please try again.",
+  "account_deactivated": "Your account has been deactivated. Please contact your administrator.",
+  "email_linked_to_different_account": "This email is already linked to a different account. Please contact your administrator.",
+  "no_email_provided": "No email was provided by Google. Please try a different account.",
+  "google_denied": "Google sign-in was denied or cancelled.",
+  "session_failed": "Failed to create session. Please try again.",
+  "no_code": "Authentication failed. Please try again.",
+  "oauth_init_failed": "Failed to start Google sign-in. Please try again.",
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get("error");
+    const details = params.get("details");
+    
+    if (error) {
+      const message = ERROR_MESSAGES[error] || details || "An error occurred during sign-in.";
+      setAuthError(message);
+      window.history.replaceState({}, document.title, "/login");
+    }
+  }, []);
 
   const loginMutation = useMutation({
     mutationFn: async (data: { email: string; password: string }) => {
@@ -61,6 +86,12 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-2">
+            {authError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{authError}</AlertDescription>
+              </Alert>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>

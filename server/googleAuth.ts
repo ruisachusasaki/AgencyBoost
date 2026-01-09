@@ -78,6 +78,11 @@ async function upsertStaffFromGoogleProfile(profile: {
     .limit(1);
 
   if (existingStaff.length > 0) {
+    // Check if staff member is deactivated
+    if (!existingStaff[0].isActive) {
+      throw new Error("Your account has been deactivated. Please contact your administrator.");
+    }
+    
     // Update existing staff member, but preserve custom profile image if one exists
     // Only use Google photo if user doesn't have a custom uploaded image
     const existingProfileImage = existingStaff[0].profileImagePath;
@@ -109,6 +114,11 @@ async function upsertStaffFromGoogleProfile(profile: {
 
   if (existingByEmail.length > 0) {
     const existingStaffMember = existingByEmail[0];
+    
+    // Check if staff member is deactivated
+    if (!existingStaffMember.isActive) {
+      throw new Error("Your account has been deactivated. Please contact your administrator.");
+    }
 
     // Check if we need to migrate from Replit Auth to Google Auth
     // Replit Auth subs are short numeric strings (like "46893141")
@@ -334,7 +344,18 @@ export async function setupAuth(app: Express) {
       if (error.response?.data) {
         console.error("Error response data:", error.response.data);
       }
-      res.redirect("/login?error=auth_failed");
+      
+      // Provide more specific error messages
+      let errorCode = "auth_failed";
+      if (error.message?.includes("deactivated")) {
+        errorCode = "account_deactivated";
+      } else if (error.message?.includes("different Google account")) {
+        errorCode = "email_linked_to_different_account";
+      } else if (error.message?.includes("Email is required")) {
+        errorCode = "no_email_provided";
+      }
+      
+      res.redirect(`/login?error=${errorCode}&details=${encodeURIComponent(error.message || 'Authentication failed')}`);
     }
   });
 
