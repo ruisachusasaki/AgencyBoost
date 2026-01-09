@@ -3,7 +3,7 @@ import session from "express-session";
 import type { Express, RequestHandler, Request, Response, NextFunction } from "express";
 import connectPg from "connect-pg-simple";
 import { db } from "./db";
-import { staff, roles, userRoles } from "@shared/schema";
+import { staff, roles, userRoles, staffLinkedEmails } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -51,6 +51,36 @@ export function getSession() {
   });
 }
 
+// Helper function to ensure a linked email record exists
+async function ensureLinkedEmailExists(staffId: string, email: string, googleSub: string, isPrimary: boolean) {
+  const normalizedEmail = email.toLowerCase().trim();
+  
+  // Check if this email already exists
+  const existing = await db
+    .select()
+    .from(staffLinkedEmails)
+    .where(sql`LOWER(${staffLinkedEmails.email}) = ${normalizedEmail}`)
+    .limit(1);
+
+  if (existing.length === 0) {
+    // Insert new linked email
+    await db.insert(staffLinkedEmails).values({
+      staffId,
+      email: normalizedEmail,
+      googleSub,
+      isPrimary,
+    });
+    console.log(`📧 Created linked email record: ${normalizedEmail} for staff ${staffId}`);
+  } else if (!existing[0].googleSub && googleSub) {
+    // Update existing record with Google sub
+    await db
+      .update(staffLinkedEmails)
+      .set({ googleSub })
+      .where(eq(staffLinkedEmails.id, existing[0].id));
+    console.log(`📧 Updated linked email with Google sub: ${normalizedEmail}`);
+  }
+}
+
 async function upsertStaffFromGoogleProfile(profile: {
   sub: string;
   email: string;
@@ -70,7 +100,56 @@ async function upsertStaffFromGoogleProfile(profile: {
   const profileImageUrl = profile.picture;
   const normalizedEmail = email.toLowerCase().trim();
 
-  // Check if staff member already exists by Google sub (stored in replitAuthSub field)
+  // STEP 1: Check if this Google account (by sub) OR email exists in staff_linked_emails
+  const linkedEmail = await db
+    .select()
+    .from(staffLinkedEmails)
+    .where(sql`${staffLinkedEmails.googleSub} = ${googleSub} OR LOWER(${staffLinkedEmails.email}) = ${normalizedEmail}`)
+    .limit(1);
+
+  if (linkedEmail.length > 0) {
+    // Found in linked emails - get the associated staff member
+    const staffMember = await db
+      .select()
+      .from(staff)
+      .where(eq(staff.id, linkedEmail[0].staffId))
+      .limit(1);
+
+    if (staffMember.length > 0) {
+      if (!staffMember[0].isActive) {
+        throw new Error("Your account has been deactivated. Please contact your administrator.");
+      }
+
+      // Update the linked email with the Google sub if not already set
+      if (!linkedEmail[0].googleSub || linkedEmail[0].googleSub !== googleSub) {
+        await db
+          .update(staffLinkedEmails)
+          .set({ googleSub })
+          .where(eq(staffLinkedEmails.id, linkedEmail[0].id));
+      }
+
+      // Update staff profile (preserve custom image)
+      const existingProfileImage = staffMember[0].profileImagePath;
+      const hasCustomProfileImage = existingProfileImage && 
+        !existingProfileImage.includes('googleusercontent.com') &&
+        !existingProfileImage.includes('lh3.google');
+
+      const [updated] = await db
+        .update(staff)
+        .set({
+          replitAuthSub: googleSub,
+          profileImagePath: hasCustomProfileImage ? existingProfileImage : profileImageUrl,
+          updatedAt: new Date(),
+        })
+        .where(eq(staff.id, staffMember[0].id))
+        .returning();
+
+      console.log(`✅ Login via linked email: ${normalizedEmail} -> Staff: ${updated.firstName} ${updated.lastName}`);
+      return updated;
+    }
+  }
+
+  // STEP 2: Legacy fallback - Check if staff member already exists by Google sub in staff table
   let existingStaff = await db
     .select()
     .from(staff)
@@ -78,13 +157,10 @@ async function upsertStaffFromGoogleProfile(profile: {
     .limit(1);
 
   if (existingStaff.length > 0) {
-    // Check if staff member is deactivated
     if (!existingStaff[0].isActive) {
       throw new Error("Your account has been deactivated. Please contact your administrator.");
     }
     
-    // Update existing staff member, but preserve custom profile image if one exists
-    // Only use Google photo if user doesn't have a custom uploaded image
     const existingProfileImage = existingStaff[0].profileImagePath;
     const hasCustomProfileImage = existingProfileImage && 
       !existingProfileImage.includes('googleusercontent.com') &&
@@ -96,16 +172,18 @@ async function upsertStaffFromGoogleProfile(profile: {
         email: normalizedEmail,
         firstName,
         lastName,
-        // Preserve custom profile image, only use Google photo as fallback
         profileImagePath: hasCustomProfileImage ? existingProfileImage : profileImageUrl,
         updatedAt: new Date(),
       })
       .where(eq(staff.id, existingStaff[0].id))
       .returning();
+
+    // Ensure linked email record exists
+    await ensureLinkedEmailExists(updated.id, normalizedEmail, googleSub, true);
     return updated;
   }
 
-  // Check if staff member exists by email (link Google to existing account)
+  // STEP 3: Legacy fallback - Check by staff.email
   let existingByEmail = await db
     .select()
     .from(staff)
@@ -115,33 +193,24 @@ async function upsertStaffFromGoogleProfile(profile: {
   if (existingByEmail.length > 0) {
     const existingStaffMember = existingByEmail[0];
     
-    // Check if staff member is deactivated
     if (!existingStaffMember.isActive) {
       throw new Error("Your account has been deactivated. Please contact your administrator.");
     }
 
-    // Check if we need to migrate from Replit Auth to Google Auth
-    // Replit Auth subs are short numeric strings (like "46893141")
-    // Google subs are long numeric strings (like "106262515489422760460")
     const existingSub = existingStaffMember.replitAuthSub;
     const isReplitAuthSub = existingSub && existingSub.length < 15 && /^\d+$/.test(existingSub);
     const isGoogleSub = googleSub && googleSub.length >= 15 && /^\d+$/.test(googleSub);
     
     if (existingSub && existingSub !== googleSub) {
-      // If migrating from Replit Auth (short numeric) to Google Auth (long numeric), allow it
       if (isReplitAuthSub && isGoogleSub) {
         console.log(`🔄 Migrating user ${normalizedEmail} from Replit Auth to Google Auth`);
-        console.log(`   Old sub (Replit): ${existingSub}`);
-        console.log(`   New sub (Google): ${googleSub}`);
       } else {
-        // Different Google accounts - don't allow
         throw new Error(
           "This email is already linked to a different Google account. Please contact your administrator."
         );
       }
     }
 
-    // Link/update Google identity to existing staff member
     const [updated] = await db
       .update(staff)
       .set({
@@ -151,6 +220,9 @@ async function upsertStaffFromGoogleProfile(profile: {
       })
       .where(eq(staff.id, existingStaffMember.id))
       .returning();
+
+    // Ensure linked email record exists
+    await ensureLinkedEmailExists(updated.id, normalizedEmail, googleSub, true);
     return updated;
   }
 
@@ -204,6 +276,9 @@ async function upsertStaffFromGoogleProfile(profile: {
 
     console.log(`✅ Admin role assigned to ${firstName} ${lastName} (${email})`);
   }
+
+  // Create linked email record for new staff
+  await ensureLinkedEmailExists(newStaff.id, normalizedEmail, googleSub, true);
 
   return newStaff;
 }
@@ -356,6 +431,148 @@ export async function setupAuth(app: Express) {
       }
       
       res.redirect(`/login?error=${errorCode}&details=${encodeURIComponent(error.message || 'Authentication failed')}`);
+    }
+  });
+
+  // Start OAuth flow to link a new Gmail to existing staff account
+  app.get("/api/link-gmail", (req: Request, res: Response) => {
+    try {
+      // User must be logged in to link a new email
+      if (!req.session.userId) {
+        return res.redirect("/login?error=login_required");
+      }
+
+      const oauth2Client = createOAuth2Client(req);
+      
+      // Store the staffId we're linking to in session
+      req.session.linkingStaffId = req.session.userId;
+      
+      const redirectUri = getRedirectUri(req).replace('/callback', '/link-gmail-callback');
+      const actualClient = new OAuth2Client(
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+        redirectUri
+      );
+      
+      const authUrl = actualClient.generateAuthUrl({
+        access_type: "offline",
+        scope: [
+          "https://www.googleapis.com/auth/userinfo.email",
+          "https://www.googleapis.com/auth/userinfo.profile",
+          "openid",
+        ],
+        prompt: "select_account",
+        include_granted_scopes: true,
+      });
+
+      console.log("🔗 Starting Gmail linking flow for staff:", req.session.userId);
+      res.redirect(authUrl);
+    } catch (error) {
+      console.error("Error starting link Gmail flow:", error);
+      res.redirect("/settings/staff/" + req.session.userId + "?error=link_failed");
+    }
+  });
+
+  // Callback for linking new Gmail
+  app.get("/api/link-gmail-callback", async (req: Request, res: Response) => {
+    try {
+      const code = req.query.code as string;
+      const staffIdToLink = req.session.linkingStaffId as string;
+      const currentUserId = req.session.userId as string;
+
+      if (!code) {
+        throw new Error("No authorization code received");
+      }
+
+      if (!staffIdToLink) {
+        throw new Error("No staff ID found for linking. Please try again.");
+      }
+
+      // Security: Ensure the user is linking to their own account
+      if (staffIdToLink !== currentUserId) {
+        console.error("Security: Attempted to link Gmail to different staff ID", {
+          staffIdToLink,
+          currentUserId,
+        });
+        delete req.session.linkingStaffId;
+        throw new Error("You can only link Gmail accounts to your own profile.");
+      }
+
+      const redirectUri = getRedirectUri(req).replace('/callback', '/link-gmail-callback');
+      const oauth2Client = new OAuth2Client(
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+        redirectUri
+      );
+
+      const { tokens } = await oauth2Client.getToken(code);
+      oauth2Client.setCredentials(tokens);
+
+      // Get user info from Google
+      const userInfoResponse = await fetch(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        {
+          headers: { Authorization: `Bearer ${tokens.access_token}` },
+        }
+      );
+
+      if (!userInfoResponse.ok) {
+        throw new Error("Failed to fetch user info from Google");
+      }
+
+      const userInfo = await userInfoResponse.json();
+      const normalizedEmail = userInfo.email.toLowerCase().trim();
+      const googleSub = userInfo.sub;
+
+      console.log("🔗 Linking Gmail:", normalizedEmail, "to staff:", staffIdToLink);
+
+      // Check if this email is already linked to any account
+      const existingLink = await db
+        .select()
+        .from(staffLinkedEmails)
+        .where(sql`LOWER(${staffLinkedEmails.email}) = ${normalizedEmail}`)
+        .limit(1);
+
+      if (existingLink.length > 0) {
+        if (existingLink[0].staffId === staffIdToLink) {
+          // Already linked to this account
+          delete req.session.linkingStaffId;
+          return res.redirect("/settings/staff/" + staffIdToLink + "?message=email_already_linked");
+        } else {
+          // Linked to a different account
+          delete req.session.linkingStaffId;
+          return res.redirect("/settings/staff/" + staffIdToLink + "?error=email_linked_to_other_account");
+        }
+      }
+
+      // Check if this Google sub is already used
+      const existingBySub = await db
+        .select()
+        .from(staffLinkedEmails)
+        .where(eq(staffLinkedEmails.googleSub, googleSub))
+        .limit(1);
+
+      if (existingBySub.length > 0 && existingBySub[0].staffId !== staffIdToLink) {
+        delete req.session.linkingStaffId;
+        return res.redirect("/settings/staff/" + staffIdToLink + "?error=google_account_linked_to_other_staff");
+      }
+
+      // Add the new linked email
+      await db.insert(staffLinkedEmails).values({
+        staffId: staffIdToLink,
+        email: normalizedEmail,
+        googleSub,
+        isPrimary: false,
+      });
+
+      console.log("✅ Successfully linked Gmail:", normalizedEmail, "to staff:", staffIdToLink);
+      delete req.session.linkingStaffId;
+      res.redirect("/settings/staff/" + staffIdToLink + "?message=email_linked_successfully");
+    } catch (error: any) {
+      console.error("Error in link Gmail callback:", error);
+      const staffId = req.session.linkingStaffId;
+      delete req.session.linkingStaffId;
+      res.redirect("/settings/staff/" + (staffId || "") + "?error=link_failed&details=" + encodeURIComponent(error.message));
     }
   });
 

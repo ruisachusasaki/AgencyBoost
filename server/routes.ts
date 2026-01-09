@@ -66,7 +66,7 @@ import {
   clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings,
   knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseLikes, knowledgeBaseBookmarks, knowledgeBasePermissions, knowledgeBaseArticleVersions,
   oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments, oneOnOneMeetingKpiStatuses,
-  clientRoadmapComments, insertClientRoadmapCommentSchema, clientRoadmapEntries, insertClientRoadmapEntrySchema
+  clientRoadmapComments, insertClientRoadmapCommentSchema, clientRoadmapEntries, insertClientRoadmapEntrySchema, staffLinkedEmails
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
@@ -10897,6 +10897,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting staff:', error);
       res.status(500).json({ message: "Failed to delete staff member" });
+    }
+  });
+
+
+  // ========================
+  // Staff Linked Emails API
+  // ========================
+
+  // Get linked emails for a staff member (owner or admin only)
+  app.get("/api/staff/:id/linked-emails", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const requestedStaffId = req.params.id;
+
+      // Authorization: Only the owner or an admin can view linked emails
+      const isAdmin = await isCurrentUserAdmin(userId as string);
+      if (!isAdmin && userId !== requestedStaffId) {
+        return res.status(403).json({ message: "You can only view your own linked emails" });
+      }
+
+      const linkedEmails = await db
+        .select()
+        .from(staffLinkedEmails)
+        .where(eq(staffLinkedEmails.staffId, requestedStaffId))
+        .orderBy(staffLinkedEmails.isPrimary);
+
+      res.json(linkedEmails);
+    } catch (error) {
+      console.error('Error fetching linked emails:', error);
+      res.status(500).json({ message: "Failed to fetch linked emails" });
+    }
+  });
+
+  // Delete a linked email (only non-primary, and only by owner or admin)
+  app.delete("/api/staff/:staffId/linked-emails/:emailId", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { staffId, emailId } = req.params;
+
+      // Check if user is admin or the owner
+      const isAdmin = await isCurrentUserAdmin(userId as string);
+      if (!isAdmin && userId !== staffId) {
+        return res.status(403).json({ message: "You can only manage your own linked emails" });
+      }
+
+      // Get the email to check if it's primary
+      const [emailToDelete] = await db
+        .select()
+        .from(staffLinkedEmails)
+        .where(eq(staffLinkedEmails.id, emailId));
+
+      if (!emailToDelete) {
+        return res.status(404).json({ message: "Linked email not found" });
+      }
+
+      if (emailToDelete.isPrimary) {
+        return res.status(400).json({ message: "Cannot delete primary email" });
+      }
+
+      await db.delete(staffLinkedEmails).where(eq(staffLinkedEmails.id, emailId));
+      res.json({ success: true, message: "Email unlinked successfully" });
+    } catch (error) {
+      console.error('Error deleting linked email:', error);
+      res.status(500).json({ message: "Failed to unlink email" });
+    }
+  });
+
+  // Admin: Manually add a linked email to a staff member
+  app.post("/api/staff/:id/linked-emails", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { email } = req.body;
+      const staffId = req.params.id;
+
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Check if email already exists
+      const existing = await db
+        .select()
+        .from(staffLinkedEmails)
+        .where(sql`LOWER(${staffLinkedEmails.email}) = ${normalizedEmail}`)
+        .limit(1);
+
+      if (existing.length > 0) {
+        return res.status(400).json({ message: "This email is already linked to another account" });
+      }
+
+      // Add the linked email
+      const [newLinkedEmail] = await db.insert(staffLinkedEmails).values({
+        staffId,
+        email: normalizedEmail,
+        isPrimary: false,
+      }).returning();
+
+      res.json(newLinkedEmail);
+    } catch (error) {
+      console.error('Error adding linked email:', error);
+      res.status(500).json({ message: "Failed to add linked email" });
     }
   });
 

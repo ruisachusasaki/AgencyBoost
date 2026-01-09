@@ -2234,6 +2234,26 @@ export const insertAuthUserSchema = createInsertSchema(authUsers).omit({
 export type AuthUser = typeof authUsers.$inferSelect;
 export type InsertAuthUser = z.infer<typeof insertAuthUserSchema>;
 
+// Staff Linked Emails - Multiple Gmail accounts per staff member
+export const staffLinkedEmails = pgTable("staff_linked_emails", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  email: varchar("email", { length: 255 }).notNull(),
+  googleSub: varchar("google_sub", { length: 255 }), // Google account ID for this email
+  isPrimary: boolean("is_primary").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueEmail: unique().on(table.email), // Each email can only be linked to one staff
+}));
+
+export const insertStaffLinkedEmailSchema = createInsertSchema(staffLinkedEmails).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type StaffLinkedEmail = typeof staffLinkedEmails.$inferSelect;
+export type InsertStaffLinkedEmail = z.infer<typeof insertStaffLinkedEmailSchema>;
+
 // Job Openings Management
 export const jobOpenings = pgTable("job_openings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
