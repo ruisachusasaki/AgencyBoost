@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, MapPin, Bell, Settings, UserCheck } from "lucide-react";
+import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, MapPin, Bell, Settings, UserCheck, Mail, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -91,6 +91,26 @@ export default function MyProfile() {
     queryKey: ["/api/calendars"],
   });
 
+  // Fetch linked email accounts for the current user
+  const { data: linkedEmails = [], isLoading: linkedEmailsLoading } = useQuery<Array<{
+    id: string;
+    staffId: string;
+    email: string;
+    googleSub: string | null;
+    isPrimary: boolean;
+    createdAt: string;
+  }>>({
+    queryKey: ["/api/staff", currentUserId, "linked-emails"],
+    queryFn: async () => {
+      const response = await fetch(`/api/staff/${currentUserId}/linked-emails`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error("Failed to fetch linked emails");
+      return response.json();
+    },
+    enabled: !!currentUserId,
+  });
+
   // Form for personal information
   const personalForm = useForm<z.infer<typeof personalInfoSchema>>({
     resolver: zodResolver(personalInfoSchema),
@@ -170,6 +190,29 @@ export default function MyProfile() {
       toast({
         title: "Error",
         description: error.message || "Failed to change password. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Remove linked email mutation
+  const removeLinkedEmailMutation = useMutation({
+    mutationFn: async (emailId: string) => {
+      const response = await apiRequest("DELETE", `/api/staff/${currentUserId}/linked-emails/${emailId}`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", currentUserId, "linked-emails"] });
+      toast({
+        title: "Success",
+        variant: "success",
+        description: "Email account unlinked successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to unlink email. Please try again.",
         variant: "destructive",
       });
     },
@@ -594,6 +637,76 @@ export default function MyProfile() {
                     >
                       {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
                     </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Linked Email Accounts */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="h-5 w-5" />
+                    Linked Email Accounts
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Link multiple Gmail accounts to your profile. You can log in with any of your linked email addresses.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {linkedEmailsLoading ? (
+                      <p className="text-sm text-muted-foreground">Loading linked accounts...</p>
+                    ) : linkedEmails.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No linked email accounts found.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {linkedEmails.map((linkedEmail) => (
+                          <div key={linkedEmail.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <Mail className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">{linkedEmail.email}</span>
+                              {linkedEmail.isPrimary && (
+                                <Badge variant="secondary">Primary</Badge>
+                              )}
+                              {linkedEmail.googleSub && (
+                                <Badge variant="outline" className="text-primary border-primary">Google Verified</Badge>
+                              )}
+                            </div>
+                            {!linkedEmail.isPrimary && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => removeLinkedEmailMutation.mutate(linkedEmail.id)}
+                                disabled={removeLinkedEmailMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Link a New Gmail Account</p>
+                        <p className="text-sm text-muted-foreground">
+                          Add another Gmail address to log in with
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          window.location.href = `/api/link-gmail?staffId=${currentUserId}`;
+                        }}
+                      >
+                        <Mail className="h-4 w-4 mr-2" />
+                        Link Gmail Account
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

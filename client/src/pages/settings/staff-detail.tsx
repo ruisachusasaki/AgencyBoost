@@ -122,7 +122,14 @@ export default function StaffDetail() {
   // Linked emails query
   const { data: linkedEmails = [], isLoading: isLoadingEmails } = useQuery<StaffLinkedEmail[]>({
     queryKey: ["/api/staff", id, "linked-emails"],
-    queryFn: () => fetch(`/api/staff/${id}/linked-emails`, { credentials: 'include' }).then(res => res.json()),
+    queryFn: async () => {
+      const res = await fetch(`/api/staff/${id}/linked-emails`, { credentials: 'include' });
+      if (!res.ok) {
+        throw new Error("Failed to fetch linked emails");
+      }
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
     enabled: !!id
   });
 
