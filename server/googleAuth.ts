@@ -4,7 +4,7 @@ import type { Express, RequestHandler, Request, Response, NextFunction } from "e
 import connectPg from "connect-pg-simple";
 import { db } from "./db";
 import { staff, roles, userRoles } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
