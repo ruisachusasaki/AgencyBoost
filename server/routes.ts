@@ -507,10 +507,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(emailIntegrations.isActive, true))
         .limit(1);
       
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : (process.env.REPLIT_DOMAINS?.split(',')[0] 
-          ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+      const baseUrl = process.env.REPLIT_DOMAINS?.split(',')[0]
+        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+        : (process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
           : 'http://localhost:5000');
       const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
       
@@ -780,10 +780,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(emailIntegrations.isActive, true))
         .limit(1);
       
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : (process.env.REPLIT_DOMAINS?.split(',')[0] 
-          ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+      const baseUrl = process.env.REPLIT_DOMAINS?.split(',')[0]
+        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+        : (process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
           : 'http://localhost:5000');
       const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
       
@@ -19160,9 +19160,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Build the webhook URL
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : process.env.BASE_URL || `https://${req.get('host')}`;
+      const baseUrl = process.env.REPLIT_DOMAINS?.split(',')[0]
+        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+        : (process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : process.env.BASE_URL || `https://${req.get('host')}`);
       
       const webhookUrl = `${baseUrl}/api/webhooks/gohighlevel/${integration.webhookToken}`;
 
@@ -19212,9 +19214,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Build the webhook URL
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : process.env.BASE_URL || `https://${req.get('host')}`;
+      const baseUrl = process.env.REPLIT_DOMAINS?.split(',')[0]
+        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+        : (process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : process.env.BASE_URL || `https://${req.get('host')}`);
       
       const webhookUrl = `${baseUrl}/api/webhooks/gohighlevel/${integration.webhookToken}`;
 
@@ -19289,9 +19293,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "GoHighLevel integration not found" });
       }
 
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : process.env.BASE_URL || `https://${req.get('host')}`;
+      const baseUrl = process.env.REPLIT_DOMAINS?.split(',')[0]
+        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+        : (process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : process.env.BASE_URL || `https://${req.get('host')}`);
       
       const webhookUrl = `${baseUrl}/api/webhooks/gohighlevel/${newToken}`;
 
