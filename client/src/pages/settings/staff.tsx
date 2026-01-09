@@ -645,13 +645,14 @@ export default function Staff() {
                   <SortableHeader field="email">Email</SortableHeader>
                   <SortableHeader field="phone">Phone</SortableHeader>
                   <SortableHeader field="role">Role</SortableHeader>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {staffMembers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6">
+                    <TableCell colSpan={6} className="text-center py-6">
                       <div className="flex flex-col items-center space-y-2">
                         <User className="h-8 w-8 text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">
@@ -725,6 +726,15 @@ export default function Staff() {
                             <Badge variant="outline">No Role</Badge>
                           );
                         })()}
+                      </TableCell>
+
+                      {/* Status */}
+                      <TableCell>
+                        {staff.isActive !== false ? (
+                          <Badge variant="default" className="bg-green-500 hover:bg-green-600">Active</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">Inactive</Badge>
+                        )}
                       </TableCell>
 
                       {/* Actions */}
