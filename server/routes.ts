@@ -10968,6 +10968,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Set a linked email as primary (owner or admin only)
+  app.patch("/api/staff/:staffId/linked-emails/:emailId/set-primary", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { staffId, emailId } = req.params;
+
+      // Check if user is admin or the owner
+      const isAdmin = await isCurrentUserAdmin(userId as string);
+      if (!isAdmin && userId !== staffId) {
+        return res.status(403).json({ message: "You can only modify your own linked emails" });
+      }
+
+      // Get the linked email to set as primary
+      const [linkedEmail] = await db
+        .select()
+        .from(staffLinkedEmails)
+        .where(eq(staffLinkedEmails.id, emailId))
+        .limit(1);
+
+      if (!linkedEmail) {
+        return res.status(404).json({ message: "Linked email not found" });
+      }
+
+      if (linkedEmail.staffId !== staffId) {
+        return res.status(403).json({ message: "This email does not belong to the specified staff member" });
+      }
+
+      if (linkedEmail.isPrimary) {
+        return res.status(400).json({ message: "This email is already the primary email" });
+      }
+
+      // Update all linked emails: set new primary and unset old primary
+      // Use a transaction to ensure atomicity
+      await db.transaction(async (tx) => {
+        // Unset ALL current primaries for this staff (handles edge cases)
+        await tx
+          .update(staffLinkedEmails)
+          .set({ isPrimary: false })
+          .where(eq(staffLinkedEmails.staffId, staffId));
+
+        // Set new primary
+        await tx
+          .update(staffLinkedEmails)
+          .set({ isPrimary: true })
+          .where(eq(staffLinkedEmails.id, emailId));
+
+        // Update the main staff email field
+        await tx
+          .update(staff)
+          .set({ email: linkedEmail.email })
+          .where(eq(staff.id, staffId));
+      });
+
+      console.log(`Primary email changed for staff ${staffId} to ${linkedEmail.email}`);
+      res.json({ message: "Primary email updated successfully", email: linkedEmail.email });
+    } catch (error) {
+      console.error('Error setting primary email:', error);
+      res.status(500).json({ message: "Failed to set primary email" });
+    }
+  });
+
   // Admin: Manually add a linked email to a staff member
   app.post("/api/staff/:id/linked-emails", requireAuth(), requireAdmin(), async (req, res) => {
     try {

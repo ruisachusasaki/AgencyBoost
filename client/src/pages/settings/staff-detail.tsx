@@ -156,6 +156,30 @@ export default function StaffDetail() {
     },
   });
 
+  // Set email as primary mutation
+  const setPrimaryEmailMutation = useMutation({
+    mutationFn: async (emailId: string) => {
+      const response = await apiRequest("PATCH", `/api/staff/${id}/linked-emails/${emailId}/set-primary`);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", id, "linked-emails"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/staff/${id}`] });
+      toast({
+        title: "Success",
+        variant: "success",
+        description: "Primary email updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to set primary email",
+        variant: "destructive",
+      });
+    },
+  });
+
   const form = useForm<StaffFormData>({
     resolver: zodResolver(staffFormSchema),
     defaultValues: {
@@ -847,16 +871,27 @@ export default function StaffDetail() {
                               )}
                             </div>
                             {!linkedEmail.isPrimary && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteLinkedEmailMutation.mutate(linkedEmail.id)}
-                                disabled={deleteLinkedEmailMutation.isPending}
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setPrimaryEmailMutation.mutate(linkedEmail.id)}
+                                  disabled={setPrimaryEmailMutation.isPending}
+                                >
+                                  Set as Primary
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteLinkedEmailMutation.mutate(linkedEmail.id)}
+                                  disabled={deleteLinkedEmailMutation.isPending}
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             )}
                           </div>
                         ))}
