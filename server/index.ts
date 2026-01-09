@@ -1044,6 +1044,14 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Health check endpoint for deployment - must respond quickly before other middleware
+app.get("/_health", (_req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 // Note: Session debugging middleware removed for production
 
 app.use((req, res, next) => {
