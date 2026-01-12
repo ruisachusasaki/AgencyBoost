@@ -14,15 +14,17 @@ import {
   ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Eye, Globe, Copy,
   AlignLeft, Mail, Phone, Hash, Calendar, ChevronDown, CheckSquare, CircleDot,
   Star, Image, FileText, ListOrdered, LayoutGrid, Type, Layers, ChevronRight, ChevronLeft,
-  Zap, BarChart3, MoreHorizontal, Check, X
+  Zap, BarChart3, MoreHorizontal, Check, X, Folder
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import type { CustomField } from "@shared/schema";
 
 interface SurveyBuilderProps {
   surveyId?: string;
@@ -173,6 +175,15 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
       if (!response.ok) throw new Error("Failed to fetch submissions");
       return response.json();
     },
+  });
+
+  // Custom fields for adding to surveys
+  const { data: customFields = [] } = useQuery<CustomField[]>({
+    queryKey: ['/api/custom-fields'],
+  });
+
+  const { data: customFieldFolders = [] } = useQuery<Array<{id: string; name: string}>>({
+    queryKey: ['/api/custom-field-folders'],
   });
 
   useEffect(() => {
@@ -447,12 +458,12 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
       ) : (
         <div className="flex-1 flex">
           <div className="flex flex-col border-r bg-white dark:bg-gray-800 w-64">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex flex-col h-full">
-              <TabsList className="grid grid-cols-4 m-2">
-                <TabsTrigger value="build" className="text-xs">Build</TabsTrigger>
-                <TabsTrigger value="logic" className="text-xs">Logic</TabsTrigger>
-                <TabsTrigger value="settings" className="text-xs">Settings</TabsTrigger>
-                <TabsTrigger value="submissions" className="text-xs">Data</TabsTrigger>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex flex-col h-full form-elements-tabs">
+              <TabsList className="grid grid-cols-4 m-2 form-elements-tabslist">
+                <TabsTrigger value="build" className="text-xs form-elements-tab">Build</TabsTrigger>
+                <TabsTrigger value="logic" className="text-xs form-elements-tab">Logic</TabsTrigger>
+                <TabsTrigger value="settings" className="text-xs form-elements-tab">Settings</TabsTrigger>
+                <TabsTrigger value="submissions" className="text-xs form-elements-tab">Data</TabsTrigger>
               </TabsList>
 
               <TabsContent value="build" className="flex-1 p-0 m-0">
@@ -463,7 +474,7 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  <ScrollArea className="h-40">
+                  <ScrollArea className="h-32">
                     <div className="space-y-1">
                       {slides.map((slide, index) => (
                         <div
@@ -502,35 +513,68 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                   </ScrollArea>
                 </div>
 
+                {/* Form Elements - Add Fields and Custom Fields tabs */}
                 <div className="p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Add Field</span>
-                  </div>
-                  <div className="space-y-1">
-                    {fieldTypes.map((field) => {
-                      const Icon = field.icon;
-                      return (
-                        <Button
-                          key={field.id}
-                          variant="ghost"
-                          className="w-full justify-start text-sm h-8"
-                          onClick={() => {
+                  <Tabs defaultValue="add-fields" className="w-full form-elements-tabs">
+                    <TabsList className="grid w-full grid-cols-2 form-elements-tabslist">
+                      <TabsTrigger value="add-fields" className="form-elements-tab text-xs">Add Fields</TabsTrigger>
+                      <TabsTrigger value="custom-fields" className="form-elements-tab text-xs">Custom Fields</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="add-fields" className="mt-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        {fieldTypes.map((field) => {
+                          const Icon = field.icon;
+                          return (
+                            <Button
+                              key={field.id}
+                              variant="outline"
+                              size="sm"
+                              className="justify-start text-xs"
+                              onClick={() => {
+                                if (selectedSlideId) {
+                                  addFieldMutation.mutate({
+                                    type: field.id,
+                                    label: field.label,
+                                    slideId: selectedSlideId,
+                                  });
+                                }
+                              }}
+                              disabled={!selectedSlideId}
+                            >
+                              <Icon className="h-4 w-4 mr-2" />
+                              {field.label}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="custom-fields" className="mt-3">
+                      {customFields.length > 0 ? (
+                        <SurveyCustomFieldsAccordion 
+                          customFields={customFields} 
+                          customFieldFolders={customFieldFolders}
+                          onAddField={(customFieldId) => {
                             if (selectedSlideId) {
+                              const customField = customFields.find(f => f.id === customFieldId);
                               addFieldMutation.mutate({
-                                type: field.id,
-                                label: field.label,
+                                type: 'custom_field',
+                                label: customField?.name || 'Custom Field',
                                 slideId: selectedSlideId,
                               });
                             }
                           }}
                           disabled={!selectedSlideId}
-                        >
-                          <Icon className="h-4 w-4 mr-2" />
-                          {field.label}
-                        </Button>
-                      );
-                    })}
-                  </div>
+                        />
+                      ) : (
+                        <div className="text-center py-4 text-gray-500 text-xs">
+                          <p>No custom fields available</p>
+                          <p className="text-xs mt-1">Create custom fields in Settings to use them here</p>
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
                 </div>
               </TabsContent>
 
@@ -1038,5 +1082,74 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Custom Fields Accordion Component for Surveys
+interface SurveyCustomFieldsAccordionProps {
+  customFields: CustomField[];
+  customFieldFolders: Array<{id: string; name: string}>;
+  onAddField: (customFieldId: string) => void;
+  disabled?: boolean;
+}
+
+function SurveyCustomFieldsAccordion({ customFields, customFieldFolders, onAddField, disabled }: SurveyCustomFieldsAccordionProps) {
+  
+  // Helper function to get folder name by ID
+  const getFolderName = (folderId: string | null) => {
+    if (!folderId) return "No Folder";
+    const folder = customFieldFolders.find(f => f.id === folderId);
+    return folder?.name || "Unknown Folder";
+  };
+  
+  // Group custom fields by folder name
+  const groupedFields = customFields.reduce((groups, field) => {
+    const folderName = getFolderName(field.folderId);
+    if (!groups[folderName]) {
+      groups[folderName] = [];
+    }
+    groups[folderName].push(field);
+    return groups;
+  }, {} as Record<string, CustomField[]>);
+
+  // Sort folder names, with "No Folder" last
+  const sortedFolders = Object.keys(groupedFields).sort((a, b) => {
+    if (a === "No Folder") return 1;
+    if (b === "No Folder") return -1;
+    return a.localeCompare(b);
+  });
+
+  return (
+    <Accordion type="multiple" className="w-full custom-fields-accordion">
+      {sortedFolders.map((folderName) => (
+        <AccordionItem key={folderName} value={folderName} className="border-none">
+          <AccordionTrigger className="py-2 text-xs font-medium hover:no-underline">
+            <div className="flex items-center gap-2">
+              <Folder className="w-3 h-3 text-gray-500" />
+              <span>{folderName}</span>
+              <Badge variant="secondary" className="text-xs h-4 px-1">
+                {groupedFields[folderName].length}
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pt-0 pb-2">
+            <div className="grid grid-cols-1 gap-1">
+              {groupedFields[folderName].map((field) => (
+                <Button
+                  key={field.id}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onAddField(field.id)}
+                  className="justify-start text-xs h-7 px-2"
+                  disabled={disabled}
+                >
+                  {field.name}
+                </Button>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
   );
 }
