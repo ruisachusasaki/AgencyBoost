@@ -110,53 +110,66 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   const [editingField, setEditingField] = useState<SurveyField | null>(null);
   const [isEditFieldDialogOpen, setIsEditFieldDialogOpen] = useState(false);
   const [isAddLogicDialogOpen, setIsAddLogicDialogOpen] = useState(false);
-  const isNew = surveyId === "new" || !surveyId;
+  
+  // Track the active survey ID - updates when a new survey is created or when navigating
+  const [activeSurveyId, setActiveSurveyId] = useState<string | undefined>(
+    surveyId === "new" ? undefined : surveyId
+  );
+  
+  // Update activeSurveyId when surveyId prop changes (e.g., navigating to an existing survey)
+  useEffect(() => {
+    if (surveyId && surveyId !== "new") {
+      setActiveSurveyId(surveyId);
+    }
+  }, [surveyId]);
+  
+  const isNew = !activeSurveyId;
 
   const { data: survey, isLoading: surveyLoading } = useQuery({
-    queryKey: ["/api/surveys", surveyId],
-    enabled: !isNew && !!surveyId,
+    queryKey: ["/api/surveys", activeSurveyId],
+    enabled: !isNew && !!activeSurveyId,
     queryFn: async () => {
-      const response = await fetch(`/api/surveys/${surveyId}`, { credentials: "include" });
+      const response = await fetch(`/api/surveys/${activeSurveyId}`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch survey");
       return response.json();
     },
   });
 
   const { data: slides = [], isLoading: slidesLoading } = useQuery<SurveySlide[]>({
-    queryKey: ["/api/surveys", surveyId, "slides"],
-    enabled: !isNew && !!surveyId,
+    queryKey: ["/api/surveys", activeSurveyId, "slides"],
+    enabled: !isNew && !!activeSurveyId,
     queryFn: async () => {
-      const response = await fetch(`/api/surveys/${surveyId}/slides`, { credentials: "include" });
+      const response = await fetch(`/api/surveys/${activeSurveyId}/slides`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch slides");
       return response.json();
     },
   });
 
   const { data: fields = [], isLoading: fieldsLoading } = useQuery<SurveyField[]>({
-    queryKey: ["/api/surveys", surveyId, "fields"],
-    enabled: !isNew && !!surveyId,
+    queryKey: ["/api/surveys", activeSurveyId, "fields"],
+    enabled: !isNew && !!activeSurveyId,
     queryFn: async () => {
-      const response = await fetch(`/api/surveys/${surveyId}/fields`, { credentials: "include" });
+      const response = await fetch(`/api/surveys/${activeSurveyId}/fields`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch fields");
       return response.json();
     },
   });
 
   const { data: logicRules = [] } = useQuery<SurveyLogicRule[]>({
-    queryKey: ["/api/surveys", surveyId, "logic"],
-    enabled: !isNew && !!surveyId,
+    queryKey: ["/api/surveys", activeSurveyId, "logic"],
+    enabled: !isNew && !!activeSurveyId,
     queryFn: async () => {
-      const response = await fetch(`/api/surveys/${surveyId}/logic`, { credentials: "include" });
+      const response = await fetch(`/api/surveys/${activeSurveyId}/logic`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch logic rules");
       return response.json();
     },
   });
 
   const { data: submissions = [] } = useQuery({
-    queryKey: ["/api/surveys", surveyId, "submissions"],
-    enabled: !isNew && !!surveyId && activeTab === "submissions",
+    queryKey: ["/api/surveys", activeSurveyId, "submissions"],
+    enabled: !isNew && !!activeSurveyId && activeTab === "submissions",
     queryFn: async () => {
-      const response = await fetch(`/api/surveys/${surveyId}/submissions`, { credentials: "include" });
+      const response = await fetch(`/api/surveys/${activeSurveyId}/submissions`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch submissions");
       return response.json();
     },
@@ -181,6 +194,8 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
     },
     onSuccess: (newSurvey: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/surveys"] });
+      // Update the active survey ID before navigating
+      setActiveSurveyId(newSurvey.id);
       setLocation(`/survey-builder/${newSurvey.id}`);
       toast({ title: "Survey created", description: "Your survey has been created" });
     },
@@ -191,10 +206,10 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
 
   const updateSurveyMutation = useMutation({
     mutationFn: async (data: { name: string; description?: string; status?: string }) => {
-      return await apiRequest("PUT", `/api/surveys/${surveyId}`, data);
+      return await apiRequest("PUT", `/api/surveys/${activeSurveyId}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/surveys", surveyId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId] });
       toast({ title: "Survey saved", description: "Your changes have been saved" });
     },
     onError: () => {
@@ -204,13 +219,13 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
 
   const addSlideMutation = useMutation({
     mutationFn: async (data: { title: string; buttonText: string }) => {
-      return await apiRequest("POST", `/api/surveys/${surveyId}/slides`, {
+      return await apiRequest("POST", `/api/surveys/${activeSurveyId}/slides`, {
         ...data,
         order: slides.length,
       });
     },
     onSuccess: (newSlide: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/surveys", surveyId, "slides"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId, "slides"] });
       setSelectedSlideId(newSlide.id);
       setIsAddSlideDialogOpen(false);
       toast({ title: "Slide added", description: "New slide has been added" });
@@ -220,15 +235,15 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   const addFieldMutation = useMutation({
     mutationFn: async (data: { type: string; label: string; slideId: string }) => {
       const slideFields = fields.filter(f => f.slideId === data.slideId);
-      return await apiRequest("POST", `/api/surveys/${surveyId}/fields`, {
+      return await apiRequest("POST", `/api/surveys/${activeSurveyId}/fields`, {
         ...data,
-        surveyId,
+        surveyId: activeSurveyId,
         required: false,
         order: slideFields.length,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/surveys", surveyId, "fields"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId, "fields"] });
       setIsAddFieldDialogOpen(false);
       toast({ title: "Field added", description: "New field has been added" });
     },
@@ -236,10 +251,10 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
 
   const updateFieldMutation = useMutation({
     mutationFn: async ({ fieldId, data }: { fieldId: string; data: Partial<SurveyField> }) => {
-      return await apiRequest("PUT", `/api/surveys/${surveyId}/fields/${fieldId}`, data);
+      return await apiRequest("PUT", `/api/surveys/${activeSurveyId}/fields/${fieldId}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/surveys", surveyId, "fields"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId, "fields"] });
       setIsEditFieldDialogOpen(false);
       setEditingField(null);
       toast({ title: "Field updated", description: "Field has been updated" });
@@ -248,21 +263,21 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
 
   const deleteFieldMutation = useMutation({
     mutationFn: async (fieldId: string) => {
-      return await apiRequest("DELETE", `/api/surveys/${surveyId}/fields/${fieldId}`);
+      return await apiRequest("DELETE", `/api/surveys/${activeSurveyId}/fields/${fieldId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/surveys", surveyId, "fields"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId, "fields"] });
       toast({ title: "Field deleted", description: "Field has been removed" });
     },
   });
 
   const deleteSlideMutation = useMutation({
     mutationFn: async (slideId: string) => {
-      return await apiRequest("DELETE", `/api/surveys/${surveyId}/slides/${slideId}`);
+      return await apiRequest("DELETE", `/api/surveys/${activeSurveyId}/slides/${slideId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/surveys", surveyId, "slides"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/surveys", surveyId, "fields"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId, "slides"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId, "fields"] });
       if (slides.length > 1) {
         setSelectedSlideId(slides[0].id);
       }
@@ -272,19 +287,19 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
 
   const reorderFieldsMutation = useMutation({
     mutationFn: async (updates: { id: string; order: number; slideId: string }[]) => {
-      return await apiRequest("PUT", `/api/surveys/${surveyId}/fields/reorder`, { updates });
+      return await apiRequest("PUT", `/api/surveys/${activeSurveyId}/fields/reorder`, { updates });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/surveys", surveyId, "fields"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId, "fields"] });
     },
   });
 
   const addLogicRuleMutation = useMutation({
     mutationFn: async (data: Omit<SurveyLogicRule, "id" | "surveyId">) => {
-      return await apiRequest("POST", `/api/surveys/${surveyId}/logic`, data);
+      return await apiRequest("POST", `/api/surveys/${activeSurveyId}/logic`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/surveys", surveyId, "logic"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId, "logic"] });
       setIsAddLogicDialogOpen(false);
       toast({ title: "Logic rule added", description: "Conditional logic has been added" });
     },
@@ -292,10 +307,10 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
 
   const deleteLogicRuleMutation = useMutation({
     mutationFn: async (ruleId: string) => {
-      return await apiRequest("DELETE", `/api/surveys/${surveyId}/logic/${ruleId}`);
+      return await apiRequest("DELETE", `/api/surveys/${activeSurveyId}/logic/${ruleId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/surveys", surveyId, "logic"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId, "logic"] });
       toast({ title: "Logic rule deleted", description: "Rule has been removed" });
     },
   });
