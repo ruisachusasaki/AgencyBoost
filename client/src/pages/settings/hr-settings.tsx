@@ -632,9 +632,9 @@ export default function HRSettingsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-3">
             <Users className="h-8 w-8 text-primary" />
-            <span>HR Settings</span>
+            <span>PX Settings</span>
           </h1>
-          <p className="text-slate-600">Configure HR policies and time off categories</p>
+          <p className="text-slate-600">Configure time off categories and PX policies</p>
         </div>
       </div>
 
