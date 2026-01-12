@@ -66,7 +66,9 @@ import {
   clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings,
   knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseLikes, knowledgeBaseBookmarks, knowledgeBasePermissions, knowledgeBaseArticleVersions,
   oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments, oneOnOneMeetingKpiStatuses,
-  clientRoadmapComments, insertClientRoadmapCommentSchema, clientRoadmapEntries, insertClientRoadmapEntrySchema, staffLinkedEmails
+  clientRoadmapComments, insertClientRoadmapCommentSchema, clientRoadmapEntries, insertClientRoadmapEntrySchema, staffLinkedEmails,
+  surveys, surveyFolders, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers,
+  insertSurveySchema, insertSurveyFolderSchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
@@ -19975,6 +19977,438 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+
+  // ================================
+  // SURVEY ROUTES - Multi-step forms with conditional logic
+  // ================================
+
+  // Survey Folders
+  app.get("/api/survey-folders", requireAuth(), async (req, res) => {
+    try {
+      const folders = await appStorage.getSurveyFolders();
+      res.json(folders);
+    } catch (error) {
+      console.error("Error fetching survey folders:", error);
+      res.status(500).json({ message: "Failed to fetch survey folders" });
+    }
+  });
+
+  app.post("/api/survey-folders", requireAuth(), requirePermission('campaigns', 'canCreate'), async (req, res) => {
+    try {
+      const folder = await appStorage.createSurveyFolder(req.body);
+      res.status(201).json(folder);
+    } catch (error) {
+      console.error("Error creating survey folder:", error);
+      res.status(500).json({ message: "Failed to create survey folder" });
+    }
+  });
+
+  app.put("/api/survey-folders/:id", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const folder = await appStorage.updateSurveyFolder(req.params.id, req.body);
+      if (!folder) {
+        return res.status(404).json({ message: "Survey folder not found" });
+      }
+      res.json(folder);
+    } catch (error) {
+      console.error("Error updating survey folder:", error);
+      res.status(500).json({ message: "Failed to update survey folder" });
+    }
+  });
+
+  app.delete("/api/survey-folders/:id", requireAuth(), requirePermission('campaigns', 'canDelete'), async (req, res) => {
+    try {
+      const deleted = await appStorage.deleteSurveyFolder(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Survey folder not found" });
+      }
+      res.json({ message: "Survey folder deleted" });
+    } catch (error) {
+      console.error("Error deleting survey folder:", error);
+      res.status(500).json({ message: "Failed to delete survey folder" });
+    }
+  });
+
+  // Surveys - CRUD
+  app.get("/api/surveys", requireAuth(), requirePermission('campaigns', 'canView'), async (req, res) => {
+    try {
+      const surveysList = await appStorage.getSurveys();
+      res.json(surveysList);
+    } catch (error) {
+      console.error("Error fetching surveys:", error);
+      res.status(500).json({ message: "Failed to fetch surveys" });
+    }
+  });
+
+  app.get("/api/surveys/:id", requireAuth(), requirePermission('campaigns', 'canView'), async (req, res) => {
+    try {
+      const survey = await appStorage.getSurveyWithDetails(req.params.id);
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      res.json(survey);
+    } catch (error) {
+      console.error("Error fetching survey:", error);
+      res.status(500).json({ message: "Failed to fetch survey" });
+    }
+  });
+
+  app.post("/api/surveys", requireAuth(), requirePermission('campaigns', 'canCreate'), async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const surveyData = {
+        ...req.body,
+        createdBy: userId,
+      };
+      
+      const survey = await appStorage.createSurvey(surveyData);
+      
+      // Create first slide automatically
+      await appStorage.createSurveySlide({
+        surveyId: survey.id,
+        title: "Slide 1",
+        order: 0,
+        buttonText: "Next",
+      });
+      
+      res.status(201).json(survey);
+    } catch (error) {
+      console.error("Error creating survey:", error);
+      res.status(500).json({ message: "Failed to create survey" });
+    }
+  });
+
+  app.put("/api/surveys/:id", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      const surveyData = {
+        ...req.body,
+        updatedBy: userId,
+      };
+      
+      const survey = await appStorage.updateSurvey(req.params.id, surveyData);
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      res.json(survey);
+    } catch (error) {
+      console.error("Error updating survey:", error);
+      res.status(500).json({ message: "Failed to update survey" });
+    }
+  });
+
+  app.delete("/api/surveys/:id", requireAuth(), requirePermission('campaigns', 'canDelete'), async (req, res) => {
+    try {
+      const deleted = await appStorage.deleteSurvey(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      res.json({ message: "Survey deleted" });
+    } catch (error) {
+      console.error("Error deleting survey:", error);
+      res.status(500).json({ message: "Failed to delete survey" });
+    }
+  });
+
+  app.post("/api/surveys/:id/duplicate", requireAuth(), requirePermission('campaigns', 'canCreate'), async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const survey = await appStorage.duplicateSurvey(req.params.id, userId);
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      res.status(201).json(survey);
+    } catch (error) {
+      console.error("Error duplicating survey:", error);
+      res.status(500).json({ message: "Failed to duplicate survey" });
+    }
+  });
+
+  // Survey Slides
+  app.get("/api/surveys/:surveyId/slides", requireAuth(), async (req, res) => {
+    try {
+      const slides = await appStorage.getSurveySlides(req.params.surveyId);
+      res.json(slides);
+    } catch (error) {
+      console.error("Error fetching survey slides:", error);
+      res.status(500).json({ message: "Failed to fetch slides" });
+    }
+  });
+
+  app.post("/api/surveys/:surveyId/slides", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const slide = await appStorage.createSurveySlide({
+        ...req.body,
+        surveyId: req.params.surveyId,
+      });
+      res.status(201).json(slide);
+    } catch (error) {
+      console.error("Error creating survey slide:", error);
+      res.status(500).json({ message: "Failed to create slide" });
+    }
+  });
+
+  app.put("/api/surveys/:surveyId/slides/:slideId", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const slide = await appStorage.updateSurveySlide(req.params.slideId, req.body);
+      if (!slide) {
+        return res.status(404).json({ message: "Slide not found" });
+      }
+      res.json(slide);
+    } catch (error) {
+      console.error("Error updating survey slide:", error);
+      res.status(500).json({ message: "Failed to update slide" });
+    }
+  });
+
+  app.delete("/api/surveys/:surveyId/slides/:slideId", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const deleted = await appStorage.deleteSurveySlide(req.params.slideId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Slide not found" });
+      }
+      res.json({ message: "Slide deleted" });
+    } catch (error) {
+      console.error("Error deleting survey slide:", error);
+      res.status(500).json({ message: "Failed to delete slide" });
+    }
+  });
+
+  app.put("/api/surveys/:surveyId/slides/reorder", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const { updates } = req.body;
+      await appStorage.reorderSurveySlides(updates);
+      res.json({ message: "Slides reordered" });
+    } catch (error) {
+      console.error("Error reordering slides:", error);
+      res.status(500).json({ message: "Failed to reorder slides" });
+    }
+  });
+
+  // Survey Fields
+  app.get("/api/surveys/:surveyId/fields", requireAuth(), async (req, res) => {
+    try {
+      const fields = await appStorage.getSurveyFields(req.params.surveyId);
+      res.json(fields);
+    } catch (error) {
+      console.error("Error fetching survey fields:", error);
+      res.status(500).json({ message: "Failed to fetch fields" });
+    }
+  });
+
+  app.post("/api/surveys/:surveyId/fields", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const field = await appStorage.createSurveyField({
+        ...req.body,
+        surveyId: req.params.surveyId,
+      });
+      res.status(201).json(field);
+    } catch (error) {
+      console.error("Error creating survey field:", error);
+      res.status(500).json({ message: "Failed to create field" });
+    }
+  });
+
+  app.put("/api/surveys/:surveyId/fields/:fieldId", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const field = await appStorage.updateSurveyField(req.params.fieldId, req.body);
+      if (!field) {
+        return res.status(404).json({ message: "Field not found" });
+      }
+      res.json(field);
+    } catch (error) {
+      console.error("Error updating survey field:", error);
+      res.status(500).json({ message: "Failed to update field" });
+    }
+  });
+
+  app.delete("/api/surveys/:surveyId/fields/:fieldId", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const deleted = await appStorage.deleteSurveyField(req.params.fieldId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Field not found" });
+      }
+      res.json({ message: "Field deleted" });
+    } catch (error) {
+      console.error("Error deleting survey field:", error);
+      res.status(500).json({ message: "Failed to delete field" });
+    }
+  });
+
+  app.put("/api/surveys/:surveyId/fields/reorder", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const { updates } = req.body;
+      await appStorage.reorderSurveyFields(updates);
+      res.json({ message: "Fields reordered" });
+    } catch (error) {
+      console.error("Error reordering fields:", error);
+      res.status(500).json({ message: "Failed to reorder fields" });
+    }
+  });
+
+  // Survey Logic Rules
+  app.get("/api/surveys/:surveyId/logic", requireAuth(), async (req, res) => {
+    try {
+      const rules = await appStorage.getSurveyLogicRules(req.params.surveyId);
+      res.json(rules);
+    } catch (error) {
+      console.error("Error fetching survey logic rules:", error);
+      res.status(500).json({ message: "Failed to fetch logic rules" });
+    }
+  });
+
+  app.post("/api/surveys/:surveyId/logic", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const rule = await appStorage.createSurveyLogicRule({
+        ...req.body,
+        surveyId: req.params.surveyId,
+      });
+      res.status(201).json(rule);
+    } catch (error) {
+      console.error("Error creating logic rule:", error);
+      res.status(500).json({ message: "Failed to create logic rule" });
+    }
+  });
+
+  app.put("/api/surveys/:surveyId/logic/:ruleId", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const rule = await appStorage.updateSurveyLogicRule(req.params.ruleId, req.body);
+      if (!rule) {
+        return res.status(404).json({ message: "Logic rule not found" });
+      }
+      res.json(rule);
+    } catch (error) {
+      console.error("Error updating logic rule:", error);
+      res.status(500).json({ message: "Failed to update logic rule" });
+    }
+  });
+
+  app.delete("/api/surveys/:surveyId/logic/:ruleId", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const deleted = await appStorage.deleteSurveyLogicRule(req.params.ruleId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Logic rule not found" });
+      }
+      res.json({ message: "Logic rule deleted" });
+    } catch (error) {
+      console.error("Error deleting logic rule:", error);
+      res.status(500).json({ message: "Failed to delete logic rule" });
+    }
+  });
+
+  // Survey Submissions
+  app.get("/api/surveys/:surveyId/submissions", requireAuth(), requirePermission('campaigns', 'canView'), async (req, res) => {
+    try {
+      const submissions = await appStorage.getSurveySubmissions(req.params.surveyId);
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching survey submissions:", error);
+      res.status(500).json({ message: "Failed to fetch submissions" });
+    }
+  });
+
+  app.get("/api/surveys/:surveyId/submissions/:submissionId", requireAuth(), requirePermission('campaigns', 'canView'), async (req, res) => {
+    try {
+      const submission = await appStorage.getSurveySubmission(req.params.submissionId);
+      if (!submission) {
+        return res.status(404).json({ message: "Submission not found" });
+      }
+      const answers = await appStorage.getSurveySubmissionAnswers(req.params.submissionId);
+      res.json({ submission, answers });
+    } catch (error) {
+      console.error("Error fetching survey submission:", error);
+      res.status(500).json({ message: "Failed to fetch submission" });
+    }
+  });
+
+  app.delete("/api/surveys/:surveyId/submissions/:submissionId", requireAuth(), requirePermission('campaigns', 'canDelete'), async (req, res) => {
+    try {
+      const deleted = await appStorage.deleteSurveySubmission(req.params.submissionId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Submission not found" });
+      }
+      res.json({ message: "Submission deleted" });
+    } catch (error) {
+      console.error("Error deleting submission:", error);
+      res.status(500).json({ message: "Failed to delete submission" });
+    }
+  });
+
+  // Public Survey Routes (no auth required for taking surveys)
+  app.get("/api/public/surveys/:shortCode", async (req, res) => {
+    try {
+      const survey = await appStorage.getSurveyByShortCode(req.params.shortCode);
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      if (survey.status !== 'published') {
+        return res.status(404).json({ message: "Survey not available" });
+      }
+      
+      const [slides, fields] = await Promise.all([
+        appStorage.getSurveySlides(survey.id),
+        appStorage.getSurveyFields(survey.id),
+      ]);
+      
+      // Get logic rules for published survey
+      const logicRules = await appStorage.getSurveyLogicRules(survey.id);
+      
+      res.json({ survey, slides, fields, logicRules });
+    } catch (error) {
+      console.error("Error fetching public survey:", error);
+      res.status(500).json({ message: "Failed to fetch survey" });
+    }
+  });
+
+  app.post("/api/public/surveys/:shortCode/submit", async (req, res) => {
+    try {
+      const survey = await appStorage.getSurveyByShortCode(req.params.shortCode);
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      if (survey.status !== 'published') {
+        return res.status(400).json({ message: "Survey is not accepting submissions" });
+      }
+      
+      const { answers, submitterEmail, submitterName } = req.body;
+      
+      // Create submission
+      const submission = await appStorage.createSurveySubmission({
+        surveyId: survey.id,
+        submitterEmail,
+        submitterName,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        startedAt: new Date(),
+        completedAt: new Date(),
+        status: 'completed',
+      });
+      
+      // Create answers
+      if (answers && Array.isArray(answers)) {
+        const answerRecords = answers.map((answer: { fieldId: string; value: any }) => ({
+          submissionId: submission.id,
+          fieldId: answer.fieldId,
+          value: typeof answer.value === 'object' ? JSON.stringify(answer.value) : String(answer.value),
+        }));
+        await appStorage.createSurveySubmissionAnswers(answerRecords);
+      }
+      
+      res.status(201).json({ message: "Survey submitted successfully", submissionId: submission.id });
+    } catch (error) {
+      console.error("Error submitting survey:", error);
+      res.status(500).json({ message: "Failed to submit survey" });
+    }
+  });
   // File upload routes for task comments
   app.get("/api/comments/upload-url", requireAuth(), async (req, res) => {
     try {
