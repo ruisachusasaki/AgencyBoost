@@ -5429,6 +5429,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reorder route must come BEFORE :id routes to avoid "reorder" being matched as an ID
+  app.put("/api/lead-sources/reorder", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
+    try {
+      const { sourceIds } = req.body;
+      
+      if (!Array.isArray(sourceIds)) {
+        return res.status(400).json({ message: "sourceIds must be an array" });
+      }
+      
+      await appStorage.reorderLeadSources(sourceIds);
+      res.json({ message: "Lead sources reordered successfully" });
+    } catch (error) {
+      console.error("Error reordering lead sources:", error);
+      res.status(500).json({ message: "Failed to reorder lead sources" });
+    }
+  });
+
   app.get("/api/lead-sources/:id", requireAuth(), async (req, res) => {
     try {
       const source = await appStorage.getLeadSource(req.params.id);
@@ -5481,21 +5498,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/lead-sources/reorder", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
-    try {
-      const { sourceIds } = req.body;
-      
-      if (!Array.isArray(sourceIds)) {
-        return res.status(400).json({ message: "sourceIds must be an array" });
-      }
-      
-      await appStorage.reorderLeadSources(sourceIds);
-      res.json({ message: "Lead sources reordered successfully" });
-    } catch (error) {
-      console.error("Error reordering lead sources:", error);
-      res.status(500).json({ message: "Failed to reorder lead sources" });
-    }
-  });
 
   // Move lead to different stage
   app.put("/api/leads/:id/stage", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
