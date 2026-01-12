@@ -14,7 +14,7 @@ import {
   ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Eye, Globe, Copy,
   AlignLeft, Mail, Phone, Hash, Calendar, ChevronDown, CheckSquare, CircleDot,
   Star, Image, FileText, ListOrdered, LayoutGrid, Type, Layers, ChevronRight, ChevronLeft,
-  Zap, BarChart3, MoreHorizontal, Check, X, Folder
+  Zap, BarChart3, MoreHorizontal, Check, X, Folder, Pencil
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -112,6 +112,8 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   const [isAddSlideDialogOpen, setIsAddSlideDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<SurveyField | null>(null);
   const [isEditFieldDialogOpen, setIsEditFieldDialogOpen] = useState(false);
+  const [editingSlide, setEditingSlide] = useState<SurveySlide | null>(null);
+  const [isEditSlideDialogOpen, setIsEditSlideDialogOpen] = useState(false);
   const [isAddLogicDialogOpen, setIsAddLogicDialogOpen] = useState(false);
   const [localSlides, setLocalSlides] = useState<SurveySlide[]>([]);
   
@@ -236,7 +238,7 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   });
 
   const addSlideMutation = useMutation({
-    mutationFn: async (data: { title: string; buttonText: string }) => {
+    mutationFn: async (data: { title: string | null; buttonText: string }) => {
       return await apiRequest("POST", `/api/surveys/${activeSurveyId}/slides`, {
         ...data,
         order: slides.length,
@@ -247,6 +249,18 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
       setSelectedSlideId(newSlide.id);
       setIsAddSlideDialogOpen(false);
       toast({ title: "Slide added", description: "New slide has been added" });
+    },
+  });
+
+  const updateSlideMutation = useMutation({
+    mutationFn: async ({ slideId, data }: { slideId: string; data: Partial<SurveySlide> }) => {
+      return await apiRequest("PUT", `/api/surveys/${activeSurveyId}/slides/${slideId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId, "slides"] });
+      setIsEditSlideDialogOpen(false);
+      setEditingSlide(null);
+      toast({ title: "Slide updated", description: "Slide has been updated" });
     },
   });
 
@@ -567,6 +581,17 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                                         </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingSlide(slide);
+                                            setIsEditSlideDialogOpen(true);
+                                          }}
+                                        >
+                                          <Pencil className="h-4 w-4 mr-2" />
+                                          Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
                                         <DropdownMenuItem
                                           className="text-red-600"
                                           onClick={(e) => {
@@ -999,6 +1024,52 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditSlideDialogOpen} onOpenChange={setIsEditSlideDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Slide</DialogTitle>
+          </DialogHeader>
+          {editingSlide && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const titleValue = (formData.get("title") as string)?.trim();
+                updateSlideMutation.mutate({
+                  slideId: editingSlide.id,
+                  data: {
+                    title: titleValue || null,
+                    buttonText: formData.get("buttonText") as string || "Next",
+                  },
+                });
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <Label>Slide Title <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <Input 
+                  name="title" 
+                  defaultValue={editingSlide.title || ""} 
+                  placeholder="Leave blank for auto-numbering (Slide 1, 2, 3...)" 
+                />
+              </div>
+              <div>
+                <Label>Button Text</Label>
+                <Input name="buttonText" defaultValue={editingSlide.buttonText || "Next"} placeholder="Next" />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsEditSlideDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateSlideMutation.isPending}>
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
 
