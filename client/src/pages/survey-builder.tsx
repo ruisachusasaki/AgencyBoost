@@ -297,6 +297,31 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
     },
   });
 
+  const reorderSlidesMutation = useMutation({
+    mutationFn: async (updates: { id: string; order: number }[]) => {
+      return await apiRequest("PUT", `/api/surveys/${activeSurveyId}/slides/reorder`, { updates });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId, "slides"] });
+    },
+  });
+
+  const handleSlideDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    if (result.destination.index === result.source.index) return;
+
+    const reorderedSlides = Array.from(slides);
+    const [removed] = reorderedSlides.splice(result.source.index, 1);
+    reorderedSlides.splice(result.destination.index, 0, removed);
+
+    const updates = reorderedSlides.map((slide, index) => ({
+      id: slide.id,
+      order: index,
+    }));
+
+    reorderSlidesMutation.mutate(updates);
+  };
+
   const reorderFieldsMutation = useMutation({
     mutationFn: async (updates: { id: string; order: number; slideId: string }[]) => {
       return await apiRequest("PUT", `/api/surveys/${activeSurveyId}/fields/reorder`, { updates });
@@ -496,41 +521,64 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                     </Button>
                   </div>
                   <ScrollArea className="h-32">
-                    <div className="space-y-1">
-                      {slides.map((slide, index) => (
-                        <div
-                          key={slide.id}
-                          className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm ${
-                            selectedSlideId === slide.id
-                              ? "bg-primary/10 text-primary"
-                              : "hover:bg-gray-100 dark:hover:bg-gray-700"
-                          }`}
-                          onClick={() => setSelectedSlideId(slide.id)}
-                        >
-                          <Layers className="h-4 w-4" />
-                          <span className="flex-1 truncate">{slide.title || `Slide ${index + 1}`}</span>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon" className="h-6 w-6">
-                                <MoreHorizontal className="h-3 w-3" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteSlideMutation.mutate(slide.id);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      ))}
-                    </div>
+                    <DragDropContext onDragEnd={handleSlideDragEnd}>
+                      <Droppable droppableId="slides-list">
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            className="space-y-1"
+                          >
+                            {slides.map((slide, index) => (
+                              <Draggable key={slide.id} draggableId={slide.id} index={index}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    className={`flex items-center gap-1 p-2 rounded cursor-pointer text-sm ${
+                                      selectedSlideId === slide.id
+                                        ? "bg-primary/10 text-primary"
+                                        : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    } ${snapshot.isDragging ? "shadow-md bg-white dark:bg-gray-800" : ""}`}
+                                    onClick={() => setSelectedSlideId(slide.id)}
+                                  >
+                                    <div
+                                      {...provided.dragHandleProps}
+                                      className="cursor-grab text-gray-400 hover:text-gray-600"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <GripVertical className="h-3 w-3" />
+                                    </div>
+                                    <Layers className="h-4 w-4" />
+                                    <span className="flex-1 truncate">{slide.title || `Slide ${index + 1}`}</span>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                                          <MoreHorizontal className="h-3 w-3" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          className="text-red-600"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteSlideMutation.mutate(slide.id);
+                                          }}
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                    </DragDropContext>
                   </ScrollArea>
                 </div>
 
