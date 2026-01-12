@@ -113,6 +113,7 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   const [editingField, setEditingField] = useState<SurveyField | null>(null);
   const [isEditFieldDialogOpen, setIsEditFieldDialogOpen] = useState(false);
   const [isAddLogicDialogOpen, setIsAddLogicDialogOpen] = useState(false);
+  const [localSlides, setLocalSlides] = useState<SurveySlide[]>([]);
   
   // Track the active survey ID - updates when a new survey is created or when navigating
   const [activeSurveyId, setActiveSurveyId] = useState<string | undefined>(
@@ -199,6 +200,11 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
       setSelectedSlideId(slides[0].id);
     }
   }, [slides, selectedSlideId]);
+
+  // Sync localSlides with query data for optimistic drag-and-drop
+  useEffect(() => {
+    setLocalSlides(slides);
+  }, [slides]);
 
   const createSurveyMutation = useMutation({
     mutationFn: async (data: { name: string; description?: string }) => {
@@ -310,9 +316,12 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
     if (!result.destination) return;
     if (result.destination.index === result.source.index) return;
 
-    const reorderedSlides = Array.from(slides);
+    const reorderedSlides = Array.from(localSlides);
     const [removed] = reorderedSlides.splice(result.source.index, 1);
     reorderedSlides.splice(result.destination.index, 0, removed);
+
+    // Update local state immediately for smooth UI
+    setLocalSlides(reorderedSlides);
 
     const updates = reorderedSlides.map((slide, index) => ({
       id: slide.id,
@@ -529,7 +538,7 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                             {...provided.droppableProps}
                             className="space-y-1"
                           >
-                            {slides.map((slide, index) => (
+                            {localSlides.map((slide, index) => (
                               <Draggable key={slide.id} draggableId={slide.id} index={index}>
                                 {(provided, snapshot) => (
                                   <div
