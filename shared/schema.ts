@@ -4491,3 +4491,176 @@ export const insertEventTimeEntrySchema = createInsertSchema(eventTimeEntries).o
 });
 export type InsertEventTimeEntry = z.infer<typeof insertEventTimeEntrySchema>;
 export type EventTimeEntry = typeof eventTimeEntries.$inferSelect;
+
+// ================================
+// SURVEYS - Multi-step forms with conditional logic
+// ================================
+
+// Survey folders - for organizing surveys
+export const surveyFolders = pgTable("survey_folders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Surveys - main survey entity
+export const surveys = pgTable("surveys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("draft"), // draft, published, archived
+  shortCode: text("short_code").unique(), // for public URLs like /survey/abc123
+  folderId: varchar("folder_id").references(() => surveyFolders.id, { onDelete: "set null" }),
+  settings: jsonb("settings").default({}), // general survey settings
+  styling: jsonb("styling").default({}), // visual styling configuration
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  updatedBy: uuid("updated_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_surveys_folder").on(table.folderId),
+  index("idx_surveys_status").on(table.status),
+  index("idx_surveys_short_code").on(table.shortCode),
+]);
+
+// Survey slides - the pages/steps in a multi-step survey
+export const surveySlides = pgTable("survey_slides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  surveyId: varchar("survey_id").notNull().references(() => surveys.id, { onDelete: "cascade" }),
+  title: text("title"),
+  description: text("description"),
+  order: integer("order").notNull().default(0),
+  buttonText: text("button_text").default("Next"), // CTA button text
+  settings: jsonb("settings").default({}), // slide-specific settings
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_survey_slides_survey").on(table.surveyId),
+]);
+
+// Survey fields - questions/inputs within each slide
+export const surveyFields = pgTable("survey_fields", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  surveyId: varchar("survey_id").notNull().references(() => surveys.id, { onDelete: "cascade" }),
+  slideId: varchar("slide_id").notNull().references(() => surveySlides.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // text, email, phone, dropdown, checkbox, radio, date, number, rating, textarea, html, etc.
+  label: text("label"),
+  placeholder: text("placeholder"),
+  shortLabel: text("short_label"), // short name for reports
+  queryKey: text("query_key"), // unique key for URL params and data exports
+  required: boolean("required").default(false),
+  hidden: boolean("hidden").default(false),
+  options: text("options").array(), // for dropdown/radio/checkbox fields
+  validation: jsonb("validation").default({}), // validation rules
+  settings: jsonb("settings").default({}), // field-specific settings
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_survey_fields_survey").on(table.surveyId),
+  index("idx_survey_fields_slide").on(table.slideId),
+]);
+
+// Survey logic rules - conditional logic for showing/hiding fields or jumping to slides
+export const surveyLogicRules = pgTable("survey_logic_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  surveyId: varchar("survey_id").notNull().references(() => surveys.id, { onDelete: "cascade" }),
+  sourceFieldId: varchar("source_field_id").notNull().references(() => surveyFields.id, { onDelete: "cascade" }),
+  operator: text("operator").notNull(), // equals, not_equals, contains, not_contains, is_empty, is_not_empty, greater_than, less_than
+  comparisonValue: text("comparison_value"), // the value to compare against
+  actionType: text("action_type").notNull(), // show, hide, jump_to_slide, skip_slide
+  targetFieldId: varchar("target_field_id").references(() => surveyFields.id, { onDelete: "cascade" }), // for show/hide field
+  targetSlideId: varchar("target_slide_id").references(() => surveySlides.id, { onDelete: "cascade" }), // for jump/skip slide
+  order: integer("order").default(0), // rule priority
+  enabled: boolean("enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_survey_logic_rules_survey").on(table.surveyId),
+  index("idx_survey_logic_rules_source_field").on(table.sourceFieldId),
+]);
+
+// Survey submissions - when someone completes a survey
+export const surveySubmissions = pgTable("survey_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  surveyId: varchar("survey_id").notNull().references(() => surveys.id, { onDelete: "cascade" }),
+  submitterEmail: text("submitter_email"),
+  submitterName: text("submitter_name"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  status: text("status").default("completed"), // in_progress, completed, abandoned
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_survey_submissions_survey").on(table.surveyId),
+  index("idx_survey_submissions_status").on(table.status),
+]);
+
+// Survey submission answers - individual answers for each field
+export const surveySubmissionAnswers = pgTable("survey_submission_answers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  submissionId: varchar("submission_id").notNull().references(() => surveySubmissions.id, { onDelete: "cascade" }),
+  fieldId: varchar("field_id").notNull().references(() => surveyFields.id, { onDelete: "cascade" }),
+  value: text("value"), // the submitted value (JSON stringified for complex types)
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_survey_submission_answers_submission").on(table.submissionId),
+  index("idx_survey_submission_answers_field").on(table.fieldId),
+]);
+
+// Survey schemas and types
+export const insertSurveyFolderSchema = createInsertSchema(surveyFolders).omit({
+  id: true,
+  createdAt: true,
+});
+export type SurveyFolder = typeof surveyFolders.$inferSelect;
+export type InsertSurveyFolder = z.infer<typeof insertSurveyFolderSchema>;
+
+export const insertSurveySchema = createInsertSchema(surveys).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type Survey = typeof surveys.$inferSelect;
+export type InsertSurvey = z.infer<typeof insertSurveySchema>;
+
+export const insertSurveySlideSchema = createInsertSchema(surveySlides).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type SurveySlide = typeof surveySlides.$inferSelect;
+export type InsertSurveySlide = z.infer<typeof insertSurveySlideSchema>;
+
+export const insertSurveyFieldSchema = createInsertSchema(surveyFields).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type SurveyField = typeof surveyFields.$inferSelect;
+export type InsertSurveyField = z.infer<typeof insertSurveyFieldSchema>;
+
+export const insertSurveyLogicRuleSchema = createInsertSchema(surveyLogicRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type SurveyLogicRule = typeof surveyLogicRules.$inferSelect;
+export type InsertSurveyLogicRule = z.infer<typeof insertSurveyLogicRuleSchema>;
+
+export const insertSurveySubmissionSchema = createInsertSchema(surveySubmissions).omit({
+  id: true,
+  createdAt: true,
+});
+export type SurveySubmission = typeof surveySubmissions.$inferSelect;
+export type InsertSurveySubmission = z.infer<typeof insertSurveySubmissionSchema>;
+
+export const insertSurveySubmissionAnswerSchema = createInsertSchema(surveySubmissionAnswers).omit({
+  id: true,
+  createdAt: true,
+});
+export type SurveySubmissionAnswer = typeof surveySubmissionAnswers.$inferSelect;
+export type InsertSurveySubmissionAnswer = z.infer<typeof insertSurveySubmissionAnswerSchema>;
