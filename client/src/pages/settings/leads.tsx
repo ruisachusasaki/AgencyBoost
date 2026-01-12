@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,14 +12,6 @@ import {
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
 import { 
   Form, 
   FormControl, 
@@ -42,7 +35,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertLeadSourceSchema, type LeadSource, type InsertLeadSource } from "@shared/schema";
 import { Link } from "wouter";
-import { ArrowLeft, Plus, Edit, Trash2, ChevronUp, ChevronDown, Target } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, GripVertical, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LeadsSettingsPage() {
@@ -221,15 +214,15 @@ export default function LeadsSettingsPage() {
     });
   };
 
-  const moveSource = (index: number, direction: 'up' | 'down') => {
-    const newSources = [...sources];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
-    if (targetIndex < 0 || targetIndex >= newSources.length) return;
-    
-    [newSources[index], newSources[targetIndex]] = [newSources[targetIndex], newSources[index]];
-    
-    const sourceIds = newSources.map(s => s.id);
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    if (result.source.index === result.destination.index) return;
+
+    const items = Array.from(sources);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    const sourceIds = items.map(s => s.id);
     reorderMutation.mutate(sourceIds);
   };
 
@@ -284,78 +277,81 @@ export default function LeadsSettingsPage() {
               No lead sources found. Create one to get started.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead data-testid="text-header-order">Order</TableHead>
-                  <TableHead data-testid="text-header-name">Name</TableHead>
-                  <TableHead data-testid="text-header-status">Status</TableHead>
-                  <TableHead className="text-right" data-testid="text-header-actions">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sources.map((source, index) => (
-                  <TableRow key={source.id} data-testid={`row-source-${source.id}`}>
-                    <TableCell data-testid={`text-order-${source.id}`}>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => moveSource(index, 'up')}
-                          disabled={index === 0}
-                          data-testid={`button-move-up-${source.id}`}
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => moveSource(index, 'down')}
-                          disabled={index === sources.length - 1}
-                          data-testid={`button-move-down-${source.id}`}
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium" data-testid={`text-name-${source.id}`}>
-                      {source.name}
-                    </TableCell>
-                    <TableCell data-testid={`text-status-${source.id}`}>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        source.isActive 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                      }`}>
-                        {source.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(source)}
-                          data-testid={`button-edit-${source.id}`}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeletingSource(source)}
-                          data-testid={`button-delete-${source.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="lead-sources">
+                {(provided) => (
+                  <div 
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-2"
+                  >
+                    {sources.map((source, index) => (
+                      <Draggable 
+                        key={source.id} 
+                        draggableId={source.id} 
+                        index={index}
+                      >
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                              snapshot.isDragging 
+                                ? 'bg-primary/10 border-primary shadow-lg' 
+                                : 'bg-muted/30 hover:bg-muted/50'
+                            }`}
+                            data-testid={`row-source-${source.id}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div 
+                                {...provided.dragHandleProps}
+                                className="cursor-move text-muted-foreground hover:text-foreground"
+                              >
+                                <GripVertical className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <div className="font-medium" data-testid={`text-name-${source.id}`}>
+                                  {source.name}
+                                </div>
+                              </div>
+                              <span 
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  source.isActive 
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                                }`}
+                                data-testid={`text-status-${source.id}`}
+                              >
+                                {source.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditDialog(source)}
+                                data-testid={`button-edit-${source.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setDeletingSource(source)}
+                                data-testid={`button-delete-${source.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
           )}
         </CardContent>
       </Card>
