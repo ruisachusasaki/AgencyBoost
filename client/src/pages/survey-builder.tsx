@@ -982,8 +982,8 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
             className="space-y-4"
           >
             <div>
-              <Label>Slide Title</Label>
-              <Input name="title" placeholder="e.g., Personal Information" required />
+              <Label>Slide Title <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input name="title" placeholder="Leave blank for auto-numbering (Slide 1, 2, 3...)" />
             </div>
             <div>
               <Label>Button Text</Label>
