@@ -91,7 +91,14 @@ import {
   type OrgChartStructure, type InsertOrgChartStructure, orgChartStructures,
   type OrgChartNode, type InsertOrgChartNode, orgChartNodes,
   type OrgChartNodeAssignment, type InsertOrgChartNodeAssignment, orgChartNodeAssignments,
-  type GoHighLevelIntegration, type InsertGoHighLevelIntegration, goHighLevelIntegration
+  type GoHighLevelIntegration, type InsertGoHighLevelIntegration, goHighLevelIntegration,
+  type Survey, type InsertSurvey, surveys,
+  type SurveyFolder, type InsertSurveyFolder, surveyFolders,
+  type SurveySlide, type InsertSurveySlide, surveySlides,
+  type SurveyField, type InsertSurveyField, surveyFields,
+  type SurveyLogicRule, type InsertSurveyLogicRule, surveyLogicRules,
+  type SurveySubmission, type InsertSurveySubmission, surveySubmissions,
+  type SurveySubmissionAnswer, type InsertSurveySubmissionAnswer, surveySubmissionAnswers
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -10048,6 +10055,262 @@ export class DbStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(goHighLevelIntegration.id, id));
+  }
+
+  // ================================
+  // SURVEY METHODS
+  // ================================
+
+  // Survey Folders
+  async getSurveyFolders(): Promise<SurveyFolder[]> {
+    return await db.select().from(surveyFolders).orderBy(asc(surveyFolders.order));
+  }
+
+  async createSurveyFolder(data: InsertSurveyFolder): Promise<SurveyFolder> {
+    const [folder] = await db.insert(surveyFolders).values(data).returning();
+    return folder;
+  }
+
+  async updateSurveyFolder(id: string, data: Partial<InsertSurveyFolder>): Promise<SurveyFolder | undefined> {
+    const [updated] = await db.update(surveyFolders).set(data).where(eq(surveyFolders.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSurveyFolder(id: string): Promise<boolean> {
+    const result = await db.delete(surveyFolders).where(eq(surveyFolders.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Surveys
+  async getSurveys(): Promise<Survey[]> {
+    return await db.select().from(surveys).orderBy(desc(surveys.createdAt));
+  }
+
+  async getSurvey(id: string): Promise<Survey | undefined> {
+    const [survey] = await db.select().from(surveys).where(eq(surveys.id, id)).limit(1);
+    return survey;
+  }
+
+  async getSurveyByShortCode(shortCode: string): Promise<Survey | undefined> {
+    const [survey] = await db.select().from(surveys).where(eq(surveys.shortCode, shortCode)).limit(1);
+    return survey;
+  }
+
+  async createSurvey(data: InsertSurvey): Promise<Survey> {
+    const shortCode = randomUUID().substring(0, 8);
+    const [survey] = await db.insert(surveys).values({ ...data, shortCode }).returning();
+    return survey;
+  }
+
+  async updateSurvey(id: string, data: Partial<InsertSurvey>): Promise<Survey | undefined> {
+    const [updated] = await db.update(surveys).set({ ...data, updatedAt: new Date() }).where(eq(surveys.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSurvey(id: string): Promise<boolean> {
+    const result = await db.delete(surveys).where(eq(surveys.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async duplicateSurvey(id: string, userId: string): Promise<Survey | undefined> {
+    const survey = await this.getSurvey(id);
+    if (!survey) return undefined;
+
+    const newSurvey = await this.createSurvey({
+      name: `${survey.name} (Copy)`,
+      description: survey.description,
+      status: 'draft',
+      folderId: survey.folderId,
+      settings: survey.settings,
+      styling: survey.styling,
+      createdBy: userId,
+    });
+
+    // Copy slides and fields
+    const slides = await this.getSurveySlides(id);
+    const fieldIdMap: Record<string, string> = {};
+
+    for (const slide of slides) {
+      const newSlide = await this.createSurveySlide({
+        surveyId: newSurvey.id,
+        title: slide.title,
+        description: slide.description,
+        order: slide.order,
+        buttonText: slide.buttonText,
+        settings: slide.settings,
+      });
+
+      const fields = await this.getSurveyFieldsBySlide(slide.id);
+      for (const field of fields) {
+        const newField = await this.createSurveyField({
+          surveyId: newSurvey.id,
+          slideId: newSlide.id,
+          type: field.type,
+          label: field.label,
+          placeholder: field.placeholder,
+          shortLabel: field.shortLabel,
+          queryKey: field.queryKey,
+          required: field.required,
+          hidden: field.hidden,
+          options: field.options,
+          validation: field.validation,
+          settings: field.settings,
+          order: field.order,
+        });
+        fieldIdMap[field.id] = newField.id;
+      }
+    }
+
+    return newSurvey;
+  }
+
+  // Survey Slides
+  async getSurveySlides(surveyId: string): Promise<SurveySlide[]> {
+    return await db.select().from(surveySlides).where(eq(surveySlides.surveyId, surveyId)).orderBy(asc(surveySlides.order));
+  }
+
+  async getSurveySlide(id: string): Promise<SurveySlide | undefined> {
+    const [slide] = await db.select().from(surveySlides).where(eq(surveySlides.id, id)).limit(1);
+    return slide;
+  }
+
+  async createSurveySlide(data: InsertSurveySlide): Promise<SurveySlide> {
+    const [slide] = await db.insert(surveySlides).values(data).returning();
+    return slide;
+  }
+
+  async updateSurveySlide(id: string, data: Partial<InsertSurveySlide>): Promise<SurveySlide | undefined> {
+    const [updated] = await db.update(surveySlides).set({ ...data, updatedAt: new Date() }).where(eq(surveySlides.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSurveySlide(id: string): Promise<boolean> {
+    const result = await db.delete(surveySlides).where(eq(surveySlides.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async reorderSurveySlides(updates: Array<{ id: string; order: number }>): Promise<void> {
+    await Promise.all(
+      updates.map(({ id, order }) =>
+        db.update(surveySlides).set({ order, updatedAt: new Date() }).where(eq(surveySlides.id, id))
+      )
+    );
+  }
+
+  // Survey Fields
+  async getSurveyFields(surveyId: string): Promise<SurveyField[]> {
+    return await db.select().from(surveyFields).where(eq(surveyFields.surveyId, surveyId)).orderBy(asc(surveyFields.order));
+  }
+
+  async getSurveyFieldsBySlide(slideId: string): Promise<SurveyField[]> {
+    return await db.select().from(surveyFields).where(eq(surveyFields.slideId, slideId)).orderBy(asc(surveyFields.order));
+  }
+
+  async getSurveyField(id: string): Promise<SurveyField | undefined> {
+    const [field] = await db.select().from(surveyFields).where(eq(surveyFields.id, id)).limit(1);
+    return field;
+  }
+
+  async createSurveyField(data: InsertSurveyField): Promise<SurveyField> {
+    const [field] = await db.insert(surveyFields).values(data).returning();
+    return field;
+  }
+
+  async updateSurveyField(id: string, data: Partial<InsertSurveyField>): Promise<SurveyField | undefined> {
+    const [updated] = await db.update(surveyFields).set({ ...data, updatedAt: new Date() }).where(eq(surveyFields.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSurveyField(id: string): Promise<boolean> {
+    const result = await db.delete(surveyFields).where(eq(surveyFields.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async reorderSurveyFields(updates: Array<{ id: string; order: number }>): Promise<void> {
+    await Promise.all(
+      updates.map(({ id, order }) =>
+        db.update(surveyFields).set({ order, updatedAt: new Date() }).where(eq(surveyFields.id, id))
+      )
+    );
+  }
+
+  // Survey Logic Rules
+  async getSurveyLogicRules(surveyId: string): Promise<SurveyLogicRule[]> {
+    return await db.select().from(surveyLogicRules).where(eq(surveyLogicRules.surveyId, surveyId)).orderBy(asc(surveyLogicRules.order));
+  }
+
+  async createSurveyLogicRule(data: InsertSurveyLogicRule): Promise<SurveyLogicRule> {
+    const [rule] = await db.insert(surveyLogicRules).values(data).returning();
+    return rule;
+  }
+
+  async updateSurveyLogicRule(id: string, data: Partial<InsertSurveyLogicRule>): Promise<SurveyLogicRule | undefined> {
+    const [updated] = await db.update(surveyLogicRules).set({ ...data, updatedAt: new Date() }).where(eq(surveyLogicRules.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSurveyLogicRule(id: string): Promise<boolean> {
+    const result = await db.delete(surveyLogicRules).where(eq(surveyLogicRules.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Survey Submissions
+  async getSurveySubmissions(surveyId: string): Promise<SurveySubmission[]> {
+    return await db.select().from(surveySubmissions).where(eq(surveySubmissions.surveyId, surveyId)).orderBy(desc(surveySubmissions.createdAt));
+  }
+
+  async getSurveySubmission(id: string): Promise<SurveySubmission | undefined> {
+    const [submission] = await db.select().from(surveySubmissions).where(eq(surveySubmissions.id, id)).limit(1);
+    return submission;
+  }
+
+  async createSurveySubmission(data: InsertSurveySubmission): Promise<SurveySubmission> {
+    const [submission] = await db.insert(surveySubmissions).values(data).returning();
+    return submission;
+  }
+
+  async updateSurveySubmission(id: string, data: Partial<InsertSurveySubmission>): Promise<SurveySubmission | undefined> {
+    const [updated] = await db.update(surveySubmissions).set(data).where(eq(surveySubmissions.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSurveySubmission(id: string): Promise<boolean> {
+    const result = await db.delete(surveySubmissions).where(eq(surveySubmissions.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Survey Submission Answers
+  async getSurveySubmissionAnswers(submissionId: string): Promise<SurveySubmissionAnswer[]> {
+    return await db.select().from(surveySubmissionAnswers).where(eq(surveySubmissionAnswers.submissionId, submissionId));
+  }
+
+  async createSurveySubmissionAnswer(data: InsertSurveySubmissionAnswer): Promise<SurveySubmissionAnswer> {
+    const [answer] = await db.insert(surveySubmissionAnswers).values(data).returning();
+    return answer;
+  }
+
+  async createSurveySubmissionAnswers(answers: InsertSurveySubmissionAnswer[]): Promise<SurveySubmissionAnswer[]> {
+    if (answers.length === 0) return [];
+    return await db.insert(surveySubmissionAnswers).values(answers).returning();
+  }
+
+  // Survey with full data (for builder)
+  async getSurveyWithDetails(id: string): Promise<{
+    survey: Survey;
+    slides: SurveySlide[];
+    fields: SurveyField[];
+    logicRules: SurveyLogicRule[];
+  } | undefined> {
+    const survey = await this.getSurvey(id);
+    if (!survey) return undefined;
+
+    const [slides, fields, logicRules] = await Promise.all([
+      this.getSurveySlides(id),
+      this.getSurveyFields(id),
+      this.getSurveyLogicRules(id),
+    ]);
+
+    return { survey, slides, fields, logicRules };
   }
 }
 
