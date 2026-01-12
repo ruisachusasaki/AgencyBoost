@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import type { CustomField } from "@shared/schema";
 
@@ -388,14 +389,34 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div>
-            <Input
-              value={surveyName}
-              onChange={(e) => setSurveyName(e.target.value)}
-              className="text-lg font-semibold border-0 focus-visible:ring-0 px-0 h-auto"
-              placeholder="Survey Name"
-            />
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="text-lg font-semibold hover:text-primary cursor-pointer text-left">
+                {surveyName || "Untitled Survey"}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="start">
+              <div className="space-y-3">
+                <div>
+                  <Label>Survey Name</Label>
+                  <Input
+                    value={surveyName}
+                    onChange={(e) => setSurveyName(e.target.value)}
+                    placeholder="Enter survey name"
+                  />
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Textarea
+                    value={surveyDescription}
+                    onChange={(e) => setSurveyDescription(e.target.value)}
+                    placeholder="Survey description"
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="flex items-center gap-2">
           {!isNew && survey?.status === "published" && (
