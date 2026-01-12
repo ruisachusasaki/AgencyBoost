@@ -2107,7 +2107,11 @@ export default function Campaigns() {
                     <TableRow key={survey.id}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{survey.name}</div>
+                          <Link href={`/survey-builder/${survey.id}`}>
+                            <span className="font-medium text-primary hover:underline cursor-pointer">
+                              {survey.name}
+                            </span>
+                          </Link>
                           {survey.description && (
                             <div className="text-sm text-muted-foreground truncate max-w-[300px]">
                               {survey.description}
