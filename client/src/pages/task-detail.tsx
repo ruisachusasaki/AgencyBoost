@@ -64,6 +64,7 @@ export default function TaskDetail() {
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [manualTimeDateOpen, setManualTimeDateOpen] = useState(false);
+  const [fathomUrlValue, setFathomUrlValue] = useState("");
   
   // Get URL search parameters
   const searchParams = new URLSearchParams(window.location.search);
@@ -499,6 +500,11 @@ export default function TaskDetail() {
       }
     }
   }, [task?.timeEstimate]);
+
+  // Sync fathom URL from task data
+  useEffect(() => {
+    setFathomUrlValue((task as any)?.fathomRecordingUrl || "");
+  }, [(task as any)?.fathomRecordingUrl]);
 
   if (isLoading) {
     return (
@@ -1016,38 +1022,44 @@ export default function TaskDetail() {
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-          {/* Fathom Recording Link - Only shown for meeting tasks with recordings */}
-          {(task as any).fathomRecordingUrl && (
-            <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-white">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-purple-700">
-                  <Video className="h-5 w-5" />
-                  Meeting Recording
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm text-slate-600">
-                      This meeting was recorded and is available on Fathom.
-                    </p>
+                {/* Row 6: Fathom Recording URL */}
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Video className="h-4 w-4 text-purple-500" />
+                      <span className="text-sm font-medium text-slate-700">Fathom Recording</span>
+                    </div>
+                    <div className="flex-1 flex items-center gap-2">
+                      <Input
+                        placeholder="Paste Fathom recording URL..."
+                        value={fathomUrlValue}
+                        onChange={(e) => setFathomUrlValue(e.target.value)}
+                        onBlur={() => {
+                          const currentValue = (task as any).fathomRecordingUrl || "";
+                          if (fathomUrlValue !== currentValue) {
+                            updateTaskMutation.mutate({ fathomRecordingUrl: fathomUrlValue || null });
+                          }
+                        }}
+                        className="flex-1 h-8 text-sm"
+                        data-testid="input-fathom-url"
+                      />
+                      {fathomUrlValue && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 border-purple-300 text-purple-700 hover:bg-purple-100"
+                          onClick={() => window.open(fathomUrlValue, '_blank')}
+                          data-testid="view-fathom-recording"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="ml-4 border-purple-300 text-purple-700 hover:bg-purple-100"
-                    onClick={() => window.open((task as any).fathomRecordingUrl, '_blank')}
-                    data-testid="view-fathom-recording"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View Recording
-                  </Button>
                 </div>
               </CardContent>
             </Card>
-          )}
 
           {/* Task Description */}
           <TaskDescriptionCard 
