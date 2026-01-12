@@ -974,8 +974,9 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
             onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
+              const titleValue = (formData.get("title") as string)?.trim();
               addSlideMutation.mutate({
-                title: formData.get("title") as string,
+                title: titleValue || null,
                 buttonText: formData.get("buttonText") as string || "Next",
               });
             }}
