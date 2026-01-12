@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, FolderOpen, MoreHorizontal, Copy, Tag, Megaphone, FileText, ChevronUp, ChevronDown, ExternalLink, ArrowLeft } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, FolderOpen, MoreHorizontal, Copy, Tag, Megaphone, FileText, ChevronUp, ChevronDown, ExternalLink, ArrowLeft, ClipboardList, Globe, BarChart3 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,7 +26,7 @@ export default function Campaigns() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tab = urlParams.get('tab');
-      return (tab && ['email', 'sms', 'forms'].includes(tab)) ? tab : "email";
+      return (tab && ['email', 'sms', 'forms', 'surveys'].includes(tab)) ? tab : "email";
     }
     return "email";
   });
@@ -37,7 +37,7 @@ export default function Campaigns() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab');
-    if (tab && ['email', 'sms', 'forms'].includes(tab) && tab !== activeTab) {
+    if (tab && ['email', 'sms', 'forms', 'surveys'].includes(tab) && tab !== activeTab) {
       setActiveTab(tab);
     }
   }, []); // Remove dependency to prevent re-running
@@ -92,6 +92,11 @@ export default function Campaigns() {
   // Fetch form folders data (always load to show correct count)
   const { data: formFolders = [] } = useQuery<Array<{id: string; name: string; description?: string; order: number}>>({
     queryKey: ['/api/form-folders'],
+  });
+
+  // Fetch surveys for surveys tab
+  const { data: surveysData = [] } = useQuery<Array<{id: string; name: string; description?: string; status: string; shortCode: string; folderId?: string; createdAt: string; submissionCount?: number}>>({
+    queryKey: ['/api/surveys'],
   });
 
   // Define available merge tags based on client schema - dynamic with custom fields
@@ -980,7 +985,8 @@ export default function Campaigns() {
           {[
             { id: "email", name: "Email", icon: Mail, count: emailTemplates.length },
             { id: "sms", name: "SMS", icon: MessageCircle, count: smsTemplates.length },
-            { id: "forms", name: "Forms", icon: FileText, count: Array.isArray(formsData) ? formsData.length : 0 }
+            { id: "forms", name: "Forms", icon: FileText, count: Array.isArray(formsData) ? formsData.length : 0 },
+            { id: "surveys", name: "Surveys", icon: ClipboardList, count: surveysData.length }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -2032,6 +2038,153 @@ export default function Campaigns() {
                                 </DropdownMenuItem>
                               </>
                             )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Surveys Tab */}
+      {activeTab === "surveys" && (
+        <div>
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search surveys..."
+                  className="pl-9 w-80"
+                />
+              </div>
+            </div>
+            <Button
+              onClick={() => window.location.href = '/survey-builder/new'}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Survey
+            </Button>
+          </div>
+
+          {surveysData.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <ClipboardList className="h-16 w-16 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No surveys yet</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  Create your first survey to start collecting responses
+                </p>
+                <Button
+                  onClick={() => window.location.href = '/survey-builder/new'}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Survey
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="bg-background dark:bg-gray-900 border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Responses</TableHead>
+                    <TableHead>Public URL</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {surveysData.map((survey) => (
+                    <TableRow key={survey.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{survey.name}</div>
+                          {survey.description && (
+                            <div className="text-sm text-muted-foreground truncate max-w-[300px]">
+                              {survey.description}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={survey.status === 'published' ? 'default' : 'secondary'}>
+                          {survey.status === 'published' ? (
+                            <>
+                              <Globe className="h-3 w-3 mr-1" />
+                              Published
+                            </>
+                          ) : (
+                            'Draft'
+                          )}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                          {survey.submissionCount || 0}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {survey.status === 'published' ? (
+                          <button
+                            onClick={() => {
+                              const url = `${window.location.origin}/s/${survey.shortCode}`;
+                              navigator.clipboard.writeText(url);
+                              toast({
+                                title: "URL copied",
+                                description: "Survey URL copied to clipboard",
+                              });
+                            }}
+                            className="text-primary hover:underline flex items-center gap-1 text-sm"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Copy Link
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Not published</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {new Date(survey.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => window.location.href = `/survey-builder/${survey.id}`}
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => window.location.href = `/survey-builder/${survey.id}?tab=submissions`}
+                            >
+                              <BarChart3 className="h-4 w-4 mr-2" />
+                              View Submissions
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Copy className="h-4 w-4 mr-2" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-600">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

@@ -49,6 +49,7 @@ import SalesSettings from "@/pages/settings/sales";
 import LeadsSettings from "@/pages/settings/leads";
 import MainLayout from "@/components/layout/main-layout";
 import FormBuilder from "@/pages/form-builder";
+import SurveyBuilder from "@/pages/survey-builder";
 import FormsTest from "@/pages/forms-test";
 import HRPage from "@/pages/hr";
 import ApplicantDetailPage from "@/pages/applicant-detail";
@@ -73,6 +74,7 @@ import ClientPortalAuthGuard from "@/components/ClientPortalAuthGuard";
 import HelpSupport from "@/pages/help-support";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
+import PublicSurvey from "@/pages/public-survey";
 
 function Router() {
   return (
@@ -100,6 +102,9 @@ function Router() {
       <Route path="/embed/:customUrl" component={BookingEmbed} />
       <Route path="/careers" component={CareersPage} />
       <Route path="/onboarding" component={OnboardingPage} />
+      <Route path="/s/:shortCode">
+        {(params) => <PublicSurvey shortCode={params.shortCode} />}
+      </Route>
       
       {/* Protected routes - authentication required */}
       <Route path="/">
@@ -661,6 +666,26 @@ function Router() {
           <AuthGate>
             <MainLayout>
               <FormBuilder formId={params.id} />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/survey-builder/new">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <SurveyBuilder surveyId="new" />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/survey-builder/:id">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <SurveyBuilder surveyId={params.id} />
             </MainLayout>
           </AuthGate>
         )}

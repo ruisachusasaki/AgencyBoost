@@ -20369,8 +20369,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple in-memory rate limiting for public survey submissions
+  const surveySubmissionRateLimit = new Map<string, { count: number; resetAt: number }>();
+  const SURVEY_RATE_LIMIT = 10; // max submissions per minute
+  const SURVEY_RATE_WINDOW = 60000; // 1 minute
+
   app.post("/api/public/surveys/:shortCode/submit", async (req, res) => {
     try {
+      // Rate limiting by IP + shortCode
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      const rateKey = `${clientIP}:${req.params.shortCode}`;
+      const now = Date.now();
+      const rateData = surveySubmissionRateLimit.get(rateKey);
+      
+      if (rateData && now < rateData.resetAt) {
+        if (rateData.count >= SURVEY_RATE_LIMIT) {
+          return res.status(429).json({ message: "Too many submissions. Please try again later." });
+        }
+        rateData.count++;
+      } else {
+        surveySubmissionRateLimit.set(rateKey, { count: 1, resetAt: now + SURVEY_RATE_WINDOW });
+      }
+      
       const survey = await appStorage.getSurveyByShortCode(req.params.shortCode);
       if (!survey) {
         return res.status(404).json({ message: "Survey not found" });
@@ -20379,28 +20399,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Survey is not accepting submissions" });
       }
       
-      const { answers, submitterEmail, submitterName } = req.body;
+      // Validate request body with Zod
+      const submissionSchema = z.object({
+        answers: z.array(z.object({
+          fieldId: z.string(),
+          value: z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]),
+        })).optional().default([]),
+        submitterEmail: z.string().email().optional().or(z.literal('')).transform(val => val || undefined),
+        submitterName: z.string().max(255).optional().transform(val => val || undefined),
+      });
+      
+      const parseResult = submissionSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ message: "Invalid submission data", errors: parseResult.error.errors });
+      }
+      
+      const { answers, submitterEmail, submitterName } = parseResult.data;
       
       // Create submission
       const submission = await appStorage.createSurveySubmission({
         surveyId: survey.id,
         submitterEmail,
         submitterName,
-        ipAddress: req.ip || req.connection.remoteAddress,
+        ipAddress: clientIP,
         userAgent: req.get('User-Agent'),
         startedAt: new Date(),
         completedAt: new Date(),
         status: 'completed',
       });
       
-      // Create answers
-      if (answers && Array.isArray(answers)) {
-        const answerRecords = answers.map((answer: { fieldId: string; value: any }) => ({
-          submissionId: submission.id,
-          fieldId: answer.fieldId,
-          value: typeof answer.value === 'object' ? JSON.stringify(answer.value) : String(answer.value),
-        }));
-        await appStorage.createSurveySubmissionAnswers(answerRecords);
+      // Create answers (filter out empty values)
+      if (answers && answers.length > 0) {
+        const answerRecords = answers
+          .filter((answer) => answer.value !== '' && answer.value !== undefined && answer.value !== null)
+          .map((answer) => ({
+            submissionId: submission.id,
+            fieldId: answer.fieldId,
+            value: typeof answer.value === 'object' ? JSON.stringify(answer.value) : String(answer.value),
+          }));
+        if (answerRecords.length > 0) {
+          await appStorage.createSurveySubmissionAnswers(answerRecords);
+        }
       }
       
       res.status(201).json({ message: "Survey submitted successfully", submissionId: submission.id });
