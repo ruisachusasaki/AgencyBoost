@@ -7,11 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, X, Clock, MapPin, Repeat, Users, Tag } from "lucide-react";
+import { Calendar as CalendarIcon, X, Clock, MapPin, Repeat, Users, Tag } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface AppointmentModalProps {
   open: boolean;
@@ -561,12 +564,31 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="date" className="text-xs text-gray-600">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={appointmentData.date}
-                  onChange={(e) => setAppointmentData(prev => ({ ...prev, date: e.target.value }))}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !appointmentData.date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {appointmentData.date ? format(new Date(appointmentData.date), "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={appointmentData.date ? new Date(appointmentData.date) : undefined}
+                      onSelect={(date) => setAppointmentData(prev => ({ 
+                        ...prev, 
+                        date: date ? format(date, 'yyyy-MM-dd') : '' 
+                      }))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div>
                 <Label htmlFor="time" className="text-xs text-gray-600">Time</Label>
@@ -662,11 +684,31 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
                 {appointmentData.recurringEnds === 'on' && (
                   <div>
                     <Label className="text-xs text-gray-600">End Date</Label>
-                    <Input
-                      type="date"
-                      value={appointmentData.recurringEndDate}
-                      onChange={(e) => setAppointmentData(prev => ({ ...prev, recurringEndDate: e.target.value }))}
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !appointmentData.recurringEndDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {appointmentData.recurringEndDate ? format(new Date(appointmentData.recurringEndDate), "PPP") : "Pick end date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={appointmentData.recurringEndDate ? new Date(appointmentData.recurringEndDate) : undefined}
+                          onSelect={(date) => setAppointmentData(prev => ({ 
+                            ...prev, 
+                            recurringEndDate: date ? format(date, 'yyyy-MM-dd') : '' 
+                          }))}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
 
