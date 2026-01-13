@@ -17391,6 +17391,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete appointment
+  app.delete("/api/appointments/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [existingAppointment] = await db
+        .select()
+        .from(calendarAppointments)
+        .where(eq(calendarAppointments.id, id));
+
+      if (!existingAppointment) {
+        return res.status(404).json({ message: "Appointment not found" });
+      }
+
+      await db.delete(calendarAppointments).where(eq(calendarAppointments.id, id));
+
+      res.status(200).json({ message: "Appointment deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+      res.status(500).json({ message: "Failed to delete appointment" });
+    }
+  });
+
   // Public Booking Route - for external bookings via public calendar URLs
   app.post("/api/calendars/:customUrl/book", async (req, res) => {
     try {
