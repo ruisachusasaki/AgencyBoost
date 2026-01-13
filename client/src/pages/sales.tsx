@@ -1285,8 +1285,8 @@ export default function Sales() {
                                           Avg MRR <Info className="h-3 w-3" />
                                         </span>
                                       </TooltipTrigger>
-                                      <TooltipContent side="top" className="max-w-xs text-left">
-                                        <p className="text-left">Average Monthly Recurring Revenue per closed deal</p>
+                                      <TooltipContent side="top">
+                                        <p>Average Monthly Recurring Revenue per closed deal</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
@@ -1299,8 +1299,8 @@ export default function Sales() {
                                           Total Value <Info className="h-3 w-3" />
                                         </span>
                                       </TooltipTrigger>
-                                      <TooltipContent side="top" className="max-w-xs text-left">
-                                        <p className="text-left">Annual Recurring Revenue (MRR × 12 months)</p>
+                                      <TooltipContent side="top">
+                                        <p>Annual Recurring Revenue (MRR × 12 months)</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
