@@ -190,12 +190,15 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
     queryKey: ['/api/custom-field-folders'],
   });
 
+  // Only sync survey name/description on initial load or when survey ID changes
   useEffect(() => {
-    if (survey) {
+    if (survey?.name !== undefined) {
       setSurveyName(survey.name || "Untitled Survey");
+    }
+    if (survey?.description !== undefined) {
       setSurveyDescription(survey.description || "");
     }
-  }, [survey]);
+  }, [survey?.id]);
 
   useEffect(() => {
     if (slides.length > 0 && !selectedSlideId) {
