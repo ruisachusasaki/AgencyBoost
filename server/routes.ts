@@ -30595,7 +30595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/sales/reports/pipeline - Pipeline Report with lead counts and conversion rates
   app.get("/api/sales/reports/pipeline", requireAuth(), async (req, res) => {
     try {
-      const { startDate, endDate, salesRepId } = req.query;
+      const { startDate, endDate, salesRepId, sourceId } = req.query;
       
       // Build filters
       const filters = [];
@@ -30607,6 +30607,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       if (salesRepId && salesRepId !== 'all') {
         filters.push(eq(leads.assignedTo, salesRepId as string));
+      }
+      if (sourceId && sourceId !== 'all') {
+        filters.push(eq(leads.source, sourceId as string));
       }
       const dateFilter = filters.length > 0 ? and(...filters) : undefined;
 
@@ -30641,6 +30644,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       if (salesRepId && salesRepId !== 'all') {
+      }
+      if (sourceId && sourceId !== 'all') {
+        filters.push(eq(leads.source, sourceId as string));
         transitionFilters.push(eq(leads.assignedTo, salesRepId as string));
       }
 
@@ -30707,7 +30713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/sales/reports/sales-reps - Sales Rep Performance Report
   app.get("/api/sales/reports/sales-reps", requireAuth(), async (req, res) => {
     try {
-      const { startDate, endDate, salesRepId } = req.query;
+      const { startDate, endDate, salesRepId, sourceId } = req.query;
       
       // Build date filter for deals
       const dealFilters = [];
@@ -30718,6 +30724,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       if (salesRepId && salesRepId !== 'all') {
+      }
+      if (sourceId && sourceId !== 'all') {
+        filters.push(eq(leads.source, sourceId as string));
         dealFilters.push(eq(deals.assignedTo, salesRepId as string));
       }
       const dealDateFilter = dealFilters.length > 0 ? and(...dealFilters) : undefined;
@@ -30731,6 +30740,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       if (salesRepId && salesRepId !== 'all') {
+      }
+      if (sourceId && sourceId !== 'all') {
+        filters.push(eq(leads.source, sourceId as string));
         activityFilters.push(eq(salesActivities.assignedTo, salesRepId as string));
       }
       const activityDateFilter = activityFilters.length > 0 ? and(...activityFilters) : undefined;
@@ -30744,6 +30756,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       if (salesRepId && salesRepId !== 'all') {
+      }
+      if (sourceId && sourceId !== 'all') {
+        filters.push(eq(leads.source, sourceId as string));
         leadFilters.push(eq(leads.assignedTo, salesRepId as string));
       }
       const leadDateFilter = leadFilters.length > 0 ? and(...leadFilters) : undefined;
@@ -30766,6 +30781,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       
       if (salesRepId && salesRepId !== 'all') {
+      }
+      if (sourceId && sourceId !== 'all') {
+        filters.push(eq(leads.source, sourceId as string));
         staffFilters.push(eq(staff.id, salesRepId as string));
       }
 

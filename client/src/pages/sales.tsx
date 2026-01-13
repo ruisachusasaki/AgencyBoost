@@ -60,6 +60,7 @@ export default function Sales() {
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [selectedSalesRep, setSelectedSalesRep] = useState<string>("all");
+  const [selectedSource, setSelectedSource] = useState<string>("all");
   
   // Quotes pagination and filters
   const [quotesPage, setQuotesPage] = useState(1);
@@ -191,14 +192,21 @@ export default function Sales() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch lead sources for source filter
+  const { data: leadSources = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/lead-sources"],
+    refetchOnWindowFocus: false,
+  });
+
   // Fetch Pipeline Report data
   const { data: pipelineReport, isLoading: pipelineReportLoading } = useQuery({
-    queryKey: ["/api/sales/reports/pipeline", dateRange.startDate, dateRange.endDate, selectedSalesRep],
+    queryKey: ["/api/sales/reports/pipeline", dateRange.startDate, dateRange.endDate, selectedSalesRep, selectedSource],
     queryFn: async () => {
       const params = new URLSearchParams({
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
-        ...(selectedSalesRep !== "all" && { salesRepId: selectedSalesRep })
+        ...(selectedSalesRep !== "all" && { salesRepId: selectedSalesRep }),
+        ...(selectedSource !== "all" && { sourceId: selectedSource })
       });
       const response = await fetch(`/api/sales/reports/pipeline?${params}`);
       if (!response.ok) throw new Error('Failed to fetch pipeline report');
@@ -970,6 +978,25 @@ export default function Sales() {
                         {staffData.map((staff: any) => (
                           <SelectItem key={staff.id} value={staff.id}>
                             {staff.firstName} {staff.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="source-filter" className="text-sm whitespace-nowrap">Source:</Label>
+                    <Select
+                      value={selectedSource}
+                      onValueChange={setSelectedSource}
+                    >
+                      <SelectTrigger id="source-filter" className="w-48" data-testid="select-source-filter">
+                        <SelectValue placeholder="All Sources" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Sources</SelectItem>
+                        {leadSources.map((source: any) => (
+                          <SelectItem key={source.id} value={source.name}>
+                            {source.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
