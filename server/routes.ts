@@ -2217,7 +2217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Security check for DND changes - Only Admin users can UNCHECK (disable) DND settings
       const currentUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!rawUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const dndFieldsBeingDisabled = [];
       if (validatedData.dndAll === false && oldClient.dndAll === true) {
@@ -14422,7 +14422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/:userId/permissions", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!rawUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const { userId } = req.params;
       
@@ -14524,7 +14524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/permission-audit-logs", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!rawUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const filters = {
         roleId: req.query.roleId as string,
@@ -14562,7 +14562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/permission-audit-logs/:id", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!rawUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const auditLog = await permissionAuditService.getAuditLogDetails(req.params.id);
       
@@ -14631,7 +14631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/notification-settings/:userId", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!rawUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const { userId } = req.params;
       
@@ -16442,7 +16442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current user with proper authentication
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!rawUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
 
       // Check if user has permission to delete documents (Admin only)
       const hasDeletePermission = await hasPermission(currentUserId, 'documents', 'canDelete');
@@ -21751,7 +21751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/hr/time-off-requests", requireAuth(), requirePermission('hr', 'canCreate'), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       
       // Get staffId (auto-set to current user if not provided)
       const staffId = req.body.staffId || currentUserId;
@@ -21818,17 +21818,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/hr/direct-reports", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!rawUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Development mode: Mock admin user has no direct reports
-      if (IS_DEVELOPMENT && currentUserId === MOCK_ADMIN_USER_ID) {
+      if (IS_DEVELOPMENT && rawUserId === MOCK_ADMIN_USER_ID) {
         res.json([]);
         return;
       }
       
       const directReports = await db.select()
         .from(staff)
-        .where(and(eq(staff.managerId, currentUserId), eq(staff.isActive, true)))
+        .where(and(eq(staff.managerId, rawUserId), eq(staff.isActive, true)))
         .orderBy(asc(staff.firstName));
       
       res.json(directReports);
@@ -21854,7 +21854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/hr/time-off-requests/pending-for-approval", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!rawUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
 
       // Check if current user is admin
       const isAdmin = await hasPermission(currentUserId, 'hr', 'canManage');
@@ -21876,7 +21876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(
             and(
               eq(timeOffRequests.status, "pending"),
-              eq(staff.managerId, currentUserId)
+              eq(staff.managerId, rawUserId)
             )
           )
           .orderBy(desc(timeOffRequests.createdAt));
@@ -22122,7 +22122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(
             and(
               eq(timeOffRequests.id, requestId),
-              eq(staff.managerId, currentUserId)
+              eq(staff.managerId, rawUserId)
             )
           );
       }
@@ -22621,7 +22621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/expense-report-form-config", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       
       // Check if user is admin OR has settings/hr management permission
       const isAdmin = await isCurrentUserAdmin(currentUserId);
@@ -22659,7 +22659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/expense-report-submissions", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       
       const validatedData = insertExpenseReportSubmissionSchema.parse({
         ...req.body,
@@ -22684,7 +22684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check if user has admin or accounting role to view all submissions
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       
       const isAdmin = await isCurrentUserAdmin(currentUserId);
       const hasAccountingPermission = await hasPermission(currentUserId, 'accounting', 'canView');
@@ -22715,7 +22715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { status } = req.body;
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       
       const isAdmin = await isCurrentUserAdmin(currentUserId);
       const hasAccountingPermission = await hasPermission(currentUserId, 'accounting', 'canEdit');
@@ -22754,7 +22754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       
       const isAdmin = await isCurrentUserAdmin(currentUserId);
       const hasAccountingPermission = await hasPermission(currentUserId, 'accounting', 'canEdit');
@@ -22791,7 +22791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/hr/one-on-one/direct-reports", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
 
       // Get direct reports
       const directReports = await db.select({
@@ -22806,7 +22806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         birthdate: staff.birthdate,
       })
         .from(staff)
-        .where(and(eq(staff.managerId, currentUserId), eq(staff.isActive, true)));
+        .where(and(eq(staff.managerId, rawUserId), eq(staff.isActive, true)));
 
       res.json(directReports);
     } catch (error) {
@@ -22820,7 +22820,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/hr/one-on-one/my-meetings", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
 
       // Get meetings where current user is the direct report
       // Explicitly exclude privateNotes for security
@@ -22857,7 +22857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/hr/one-on-one/meetings/:directReportId", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       const { directReportId } = req.params;
 
       // Check if user is manager of this direct report or admin
@@ -22887,7 +22887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/hr/one-on-one/meetings/:meetingId/details", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       const { meetingId } = req.params;
 
       // Get meeting
@@ -22956,7 +22956,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/hr/one-on-one/meetings", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
 
       const validatedData = insertOneOnOneMeetingSchema.parse({
         ...req.body,
@@ -23049,7 +23049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/hr/one-on-one/meetings/:meetingId", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       const { meetingId } = req.params;
 
       // Get existing meeting
@@ -23088,7 +23088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/hr/one-on-one/meetings/:meetingId", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       const { meetingId } = req.params;
 
       // Get existing meeting
@@ -23120,7 +23120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/hr/one-on-one/talking-points", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
 
       const validatedData = insertOneOnOneTalkingPointSchema.parse({
         ...req.body,
@@ -23338,7 +23338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/hr/one-on-one/comments", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
 
       const validatedData = insertOneOnOneCommentSchema.parse({
         ...req.body,
@@ -23377,7 +23377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/hr/one-on-one/comments/:id", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       const { id } = req.params;
 
       // Check if user is the author or admin
@@ -23420,7 +23420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/hr/one-on-one/progression-statuses", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
 
       // Check if user is admin
       const isAdmin = await isCurrentUserAdmin(req);
@@ -23447,7 +23447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/hr/one-on-one/progression-statuses/:id", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       const { id } = req.params;
 
       // Check if user is admin
@@ -23480,7 +23480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/hr/one-on-one/progression-statuses/:id", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       const { id } = req.params;
 
       // Check if user is admin
@@ -23504,7 +23504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const currentUserId = getAuthenticatedUserId(req);
       console.log("📊 1-on-1 Performance Report - currentUserId:", currentUserId);
-      if (!currentUserId) {
+      if (!rawUserId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
@@ -23779,7 +23779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/offboarding-form-config", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       
       // Check if user is admin OR has settings/hr management permission
       const isAdmin = await isCurrentUserAdmin(currentUserId);
@@ -23824,7 +23824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/offboarding-submissions", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       
       const validatedData = insertOffboardingSubmissionSchema.parse({
         ...req.body,
@@ -23847,7 +23847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check if user has admin or manager role to view all submissions
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       
       const isAdmin = await isCurrentUserAdmin(currentUserId);
       const hasHrViewPermission = await hasPermission(currentUserId, 'hr', 'canView');
@@ -23873,7 +23873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { status } = req.body;
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       
       // Check if user has admin or manager permissions
       const isAdmin = await isCurrentUserAdmin(currentUserId);
@@ -24136,7 +24136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/job-openings/:id", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
 
       const [opening] = await db.select()
         .from(jobOpenings)
@@ -24957,7 +24957,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return;
+      if (!rawUserId) return;
       
       // Check if watcher already exists
       const existing = await db
@@ -27562,7 +27562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { courseId, userId } = req.query;
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!rawUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Total courses and categories
       const [totalCourses] = await db.select({ count: sql<number>`count(*)` }).from(trainingCourses);
