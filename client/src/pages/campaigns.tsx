@@ -59,6 +59,11 @@ export default function Campaigns() {
   const [smsTemplateToMove, setSmsTemplateToMove] = useState<SmsTemplate | null>(null);
   const [formSearchTerm, setFormSearchTerm] = useState("");
   const [selectedFormFolder, setSelectedFormFolder] = useState<string | null>(null);
+  const [selectedSurveyFolder, setSelectedSurveyFolder] = useState<string | null>(null);
+  const [isCreateSurveyFolderDialogOpen, setIsCreateSurveyFolderDialogOpen] = useState(false);
+  const [surveySearchTerm, setSurveySearchTerm] = useState("");
+  const [moveSurveyToFolderDialogOpen, setMoveSurveyToFolderDialogOpen] = useState(false);
+  const [surveyToMove, setSurveyToMove] = useState<any>(null);
   const [isEditFolderDialogOpen, setIsEditFolderDialogOpen] = useState(false);
   const [folderToEdit, setFolderToEdit] = useState<any>(null);
   
@@ -98,6 +103,11 @@ export default function Campaigns() {
   // Fetch surveys for surveys tab
   const { data: surveysData = [] } = useQuery<Array<{id: string; name: string; description?: string; status: string; shortCode: string; folderId?: string; createdAt: string; submissionCount?: number}>>({
     queryKey: ['/api/surveys'],
+  });
+
+  // Fetch survey folders
+  const { data: surveyFolders = [] } = useQuery<Array<{id: string; name: string; description?: string; order: number}>>({
+    queryKey: ['/api/survey-folders'],
   });
 
   // Define available merge tags based on client schema - dynamic with custom fields
@@ -291,6 +301,63 @@ export default function Campaigns() {
       toast({
         title: "Error",
         description: error?.message || "Failed to create form folder",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create survey folder mutation
+  const createSurveyFolderMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/survey-folders", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/survey-folders"] });
+      toast({ title: "Success", description: "Survey folder created successfully" });
+      setIsCreateSurveyFolderDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to create survey folder",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Move survey to folder mutation
+  const moveSurveyToFolderMutation = useMutation({
+    mutationFn: async ({ surveyId, folderId }: { surveyId: string; folderId: string | null }) => {
+      return await apiRequest("PUT", `/api/surveys/${surveyId}`, { folderId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys"] });
+      toast({ title: "Success", description: "Survey moved successfully" });
+      setMoveSurveyToFolderDialogOpen(false);
+      setSurveyToMove(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to move survey",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete survey mutation
+  const deleteSurveyMutation = useMutation({
+    mutationFn: async (surveyId: string) => {
+      return await apiRequest("DELETE", `/api/surveys/${surveyId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/surveys"] });
+      toast({ title: "Success", description: "Survey deleted successfully" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to delete survey",
         variant: "destructive",
       });
     },
@@ -541,6 +608,27 @@ export default function Campaigns() {
       description,
       order: formFolders.length, // Add to end
     });
+  };
+
+  const handleCreateSurveyFolder = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const description = formData.get("description") as string;
+    
+    createSurveyFolderMutation.mutate({
+      name,
+      description,
+      order: surveyFolders.length,
+    });
+  };
+
+  const handleSurveyFolderClick = (folderId: string) => {
+    setSelectedSurveyFolder(folderId);
+  };
+
+  const handleClearSurveyFolderFilter = () => {
+    setSelectedSurveyFolder(null);
   };
 
   const handleCreateEmailTemplate = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -2054,26 +2142,82 @@ export default function Campaigns() {
       {/* Surveys Tab */}
       {activeTab === "surveys" && (
         <div>
+          {/* Breadcrumb for folder navigation */}
+          {selectedSurveyFolder && (
+            <div className="mb-4">
+              <nav className="flex items-center space-x-2 text-sm">
+                <button
+                  onClick={handleClearSurveyFolderFilter}
+                  className="text-primary hover:text-primary/90 flex items-center gap-1"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  All Surveys
+                </button>
+                <span className="text-gray-400">/</span>
+                <span className="text-gray-900 dark:text-gray-100 font-medium">
+                  {surveyFolders.find(folder => folder.id === selectedSurveyFolder)?.name || 'Unknown Folder'}
+                </span>
+              </nav>
+            </div>
+          )}
+
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
-                  placeholder="Search surveys..."
-                  className="pl-9 w-80"
+                  placeholder={selectedSurveyFolder ? "Search surveys in folder..." : "Search surveys..."}
+                  value={surveySearchTerm}
+                  onChange={(e) => setSurveySearchTerm(e.target.value)}
+                  className="pl-10 w-80"
                 />
               </div>
             </div>
-            <Button
-              onClick={() => window.location.href = '/survey-builder/new'}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Survey
-            </Button>
+            <div className="flex items-center gap-2">
+              <Dialog open={isCreateSurveyFolderDialogOpen} onOpenChange={setIsCreateSurveyFolderDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-10">
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    New Folder
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Survey Folder</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateSurveyFolder} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Folder Name</label>
+                      <Input name="name" placeholder="Enter folder name" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Description</label>
+                      <Input name="description" placeholder="Optional description" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setIsCreateSurveyFolderDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={createSurveyFolderMutation.isPending}>
+                        Create Folder
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Button
+                onClick={() => window.location.href = '/survey-builder/new'}
+                className="bg-primary hover:bg-primary/90 h-10"
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Survey
+              </Button>
+            </div>
           </div>
 
-          {surveysData.length === 0 ? (
+          {surveysData.length === 0 && surveyFolders.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <ClipboardList className="h-16 w-16 text-muted-foreground mb-4" />
@@ -2104,7 +2248,71 @@ export default function Campaigns() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {surveysData.map((survey) => (
+                  {/* Show folders first when not inside a folder */}
+                  {!selectedSurveyFolder && surveyFolders
+                    .filter(folder => folder.name.toLowerCase().includes(surveySearchTerm.toLowerCase()))
+                    .map((folder) => {
+                      const surveysInFolder = surveysData.filter(s => s.folderId === folder.id);
+                      return (
+                        <TableRow key={`folder-${folder.id}`} className="bg-muted/30 hover:bg-muted/50">
+                          <TableCell>
+                            <button
+                              onClick={() => handleSurveyFolderClick(folder.id)}
+                              className="flex items-center gap-2 text-left hover:text-primary"
+                            >
+                              <FolderOpen className="h-5 w-5 text-primary" />
+                              <div>
+                                <span className="font-medium">{folder.name}</span>
+                                <div className="text-sm text-muted-foreground">
+                                  {surveysInFolder.length} survey{surveysInFolder.length !== 1 ? 's' : ''}
+                                </div>
+                              </div>
+                            </button>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">Folder</Badge>
+                          </TableCell>
+                          <TableCell>-</TableCell>
+                          <TableCell>-</TableCell>
+                          <TableCell>-</TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleSurveyFolderClick(folder.id)}>
+                                  <FolderOpen className="h-4 w-4 mr-2" />
+                                  Open Folder
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Rename Folder
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-red-600">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Folder
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+
+                  {/* Show surveys */}
+                  {surveysData
+                    .filter(survey => {
+                      const matchesSearch = survey.name.toLowerCase().includes(surveySearchTerm.toLowerCase());
+                      const matchesFolder = selectedSurveyFolder 
+                        ? survey.folderId === selectedSurveyFolder
+                        : !survey.folderId;
+                      return matchesSearch && matchesFolder;
+                    })
+                    .map((survey) => (
                     <TableRow key={survey.id}>
                       <TableCell>
                         <div>
@@ -2181,12 +2389,24 @@ export default function Campaigns() {
                               <BarChart3 className="h-4 w-4 mr-2" />
                               View Submissions
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSurveyToMove(survey);
+                                setMoveSurveyToFolderDialogOpen(true);
+                              }}
+                            >
+                              <Folder className="h-4 w-4 mr-2" />
+                              Move to Folder
+                            </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Copy className="h-4 w-4 mr-2" />
                               Duplicate
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => deleteSurveyMutation.mutate(survey.id)}
+                            >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -2201,6 +2421,41 @@ export default function Campaigns() {
           )}
         </div>
       )}
+
+      {/* Move Survey to Folder Dialog */}
+      <Dialog open={moveSurveyToFolderDialogOpen} onOpenChange={setMoveSurveyToFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move Survey to Folder</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select a folder to move "{surveyToMove?.name}" to:
+            </p>
+            <div className="space-y-2">
+              <Button
+                variant={surveyToMove?.folderId === null ? "default" : "outline"}
+                className="w-full justify-start"
+                onClick={() => moveSurveyToFolderMutation.mutate({ surveyId: surveyToMove?.id, folderId: null })}
+              >
+                <Folder className="h-4 w-4 mr-2" />
+                No Folder (Root)
+              </Button>
+              {surveyFolders.map((folder) => (
+                <Button
+                  key={folder.id}
+                  variant={surveyToMove?.folderId === folder.id ? "default" : "outline"}
+                  className="w-full justify-start"
+                  onClick={() => moveSurveyToFolderMutation.mutate({ surveyId: surveyToMove?.id, folderId: folder.id })}
+                >
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                  {folder.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Move to Folder Dialog */}
       <Dialog open={moveToFolderDialogOpen} onOpenChange={setMoveToFolderDialogOpen}>
