@@ -1277,8 +1277,34 @@ export default function Sales() {
                                 <SalesRepSortableHeader field="closedDeals" align="right">Closed</SalesRepSortableHeader>
                                 <SalesRepSortableHeader field="totalLeads" align="right">Total Leads</SalesRepSortableHeader>
                                 <SalesRepSortableHeader field="closeRate" align="right">Close Rate</SalesRepSortableHeader>
-                                <SalesRepSortableHeader field="avgMRR" align="right">Avg MRR</SalesRepSortableHeader>
-                                <SalesRepSortableHeader field="totalValue" align="right">Total Value</SalesRepSortableHeader>
+                                <SalesRepSortableHeader field="avgMRR" align="right">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="flex items-center gap-1 cursor-help">
+                                          Avg MRR <Info className="h-3 w-3" />
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="max-w-xs">
+                                        <p>Average Monthly Recurring Revenue per closed deal</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </SalesRepSortableHeader>
+                                <SalesRepSortableHeader field="totalValue" align="right">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="flex items-center gap-1 cursor-help">
+                                          Total Value <Info className="h-3 w-3" />
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="max-w-xs">
+                                        <p>Annual Recurring Revenue (MRR × 12 months)</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </SalesRepSortableHeader>
                               </tr>
                             </thead>
                             <tbody className="divide-y">
