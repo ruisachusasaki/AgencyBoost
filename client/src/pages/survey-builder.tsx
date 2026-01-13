@@ -14,7 +14,7 @@ import {
   ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Eye, Globe, Copy, Code,
   AlignLeft, Mail, Phone, Hash, Calendar, ChevronDown, CheckSquare, CircleDot,
   Star, Image, FileText, ListOrdered, LayoutGrid, Type, Layers, ChevronRight, ChevronLeft,
-  Zap, BarChart3, MoreHorizontal, Check, X, Folder, Pencil, Heading
+  Zap, BarChart3, MoreHorizontal, Check, X, Folder, Pencil
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -66,7 +66,7 @@ interface SurveyLogicRule {
 }
 
 const fieldTypes = [
-  { id: "heading", label: "Heading", icon: Heading, category: "layout" },
+  { id: "text_block", label: "Text", icon: AlignLeft, category: "layout" },
   { id: "short_text", label: "Short Text", icon: Type, category: "text" },
   { id: "long_text", label: "Long Text", icon: AlignLeft, category: "text" },
   { id: "email", label: "Email", icon: Mail, category: "contact" },
@@ -139,7 +139,9 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
     queryFn: async () => {
       const response = await fetch(`/api/surveys/${activeSurveyId}`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch survey");
-      return response.json();
+      const data = await response.json();
+      // API returns { survey, slides, fields, ... } - extract survey object
+      return data.survey || data;
     },
   });
 
@@ -934,6 +936,13 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                                             {[1, 2, 3, 4, 5].map((n) => (
                                               <Star key={n} className="h-6 w-6 text-muted-foreground" />
                                             ))}
+                                          </div>
+                                        )}
+                                        {field.type === "text_block" && (
+                                          <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+                                            <p className="text-sm text-gray-600 dark:text-gray-300 italic">
+                                              {field.placeholder || "Rich text content will display here..."}
+                                            </p>
                                           </div>
                                         )}
                                         {field.helpText && (
