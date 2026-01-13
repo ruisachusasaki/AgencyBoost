@@ -924,6 +924,8 @@ function MeetingEditor({
   const [meetingDate, setMeetingDate] = useState(
     meeting?.meetingDate || format(new Date(), "yyyy-MM-dd")
   );
+  const [meetingTime, setMeetingTime] = useState(meeting?.meetingTime || "09:00");
+  const [meetingDuration, setMeetingDuration] = useState(meeting?.meetingDuration || 30);
   const [weekOf, setWeekOf] = useState(
     meeting?.weekOf || format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd")
   );
@@ -935,6 +937,9 @@ function MeetingEditor({
   const [family, setFamily] = useState(meeting?.family || "");
   const [privateNotes, setPrivateNotes] = useState(meeting?.privateNotes || "");
   const [recordingLink, setRecordingLink] = useState(meeting?.recordingLink || "");
+  
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // Lists
   const [talkingPoints, setTalkingPoints] = useState<TalkingPoint[]>([]);
@@ -1071,11 +1076,20 @@ function MeetingEditor({
         }
       }
       
-      toast({
-        title: "Success",
-        variant: "success",
-        description: meeting ? "Meeting updated successfully" : "Meeting created successfully",
-      });
+      // Check for calendar sync errors
+      if (result.meeting?.calendarSyncError) {
+        toast({
+          title: meeting ? "Meeting Updated" : "Meeting Created",
+          description: `${meeting ? "Meeting updated" : "Meeting created"}, but there was an issue syncing with Google Calendar.`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Success",
+          variant: "success",
+          description: meeting ? "Meeting updated successfully" : "Meeting created successfully",
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });
       onSave();
     },
@@ -1088,6 +1102,51 @@ function MeetingEditor({
     },
   });
 
+  // Delete meeting mutation
+  const deleteMeetingMutation = useMutation({
+    mutationFn: async () => {
+      if (!meeting) throw new Error("No meeting to delete");
+      const response = await apiRequest("DELETE", `/api/hr/one-on-one/meetings/${meeting.id}`);
+      return await response.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });
+      setShowDeleteDialog(false);
+      
+      if (data.googleDeleteError) {
+        toast({
+          title: "Meeting Deleted",
+          description: "The meeting was deleted, but there was an issue removing the Google Calendar event. You may need to manually remove it from your calendar.",
+          variant: "default",
+        });
+      } else if (data.calendarDeleted === false) {
+        toast({
+          title: "Meeting Deleted",
+          description: "The meeting was deleted, but some calendar events may not have been removed.",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Success",
+          variant: "success",
+          description: "Meeting and calendar events deleted successfully.",
+        });
+      }
+      onBack();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete meeting",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDelete = () => {
+    deleteMeetingMutation.mutate();
+  };
+
   const handleSave = () => {
     const performancePoints = PERFORMANCE_OPTIONS.find(
       p => p.value === performanceFeedback
@@ -1096,6 +1155,8 @@ function MeetingEditor({
     saveMeetingMutation.mutate({
       directReportId: directReportId,
       meetingDate,
+      meetingTime,
+      meetingDuration,
       weekOf,
       feeling: feeling || null,
       performanceFeedback: performanceFeedback || null,
@@ -1299,16 +1360,59 @@ function MeetingEditor({
           {isReadOnly ? "Back to My Meetings" : "Back to Meetings"}
         </Button>
         {!isReadOnly && (
-          <Button
-            onClick={handleSave}
-            className="bg-primary hover:bg-primary/90"
-            disabled={saveMeetingMutation.isPending}
-            data-testid="button-save-meeting"
-          >
-            {saveMeetingMutation.isPending ? "Saving..." : meeting ? "Update Meeting" : "Create Meeting"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {meeting && (
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(true)}
+                className="text-destructive border-destructive hover:bg-destructive hover:text-white"
+                disabled={deleteMeetingMutation.isPending}
+                data-testid="button-delete-meeting"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            )}
+            <Button
+              onClick={handleSave}
+              className="bg-primary hover:bg-primary/90"
+              disabled={saveMeetingMutation.isPending}
+              data-testid="button-save-meeting"
+            >
+              {saveMeetingMutation.isPending ? "Saving..." : meeting ? "Update Meeting" : "Create Meeting"}
+            </Button>
+          </div>
         )}
       </div>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete 1-on-1 Meeting</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this meeting? This will also remove the associated calendar events. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteMeetingMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteMeetingMutation.isPending ? "Deleting..." : "Delete Meeting"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Main Meeting Content */}
@@ -1340,7 +1444,7 @@ function MeetingEditor({
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Meeting Details */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <Label htmlFor="meeting-date">Meeting Date</Label>
                   <Input
@@ -1351,6 +1455,36 @@ function MeetingEditor({
                     disabled={isReadOnly}
                     data-testid="input-meeting-date"
                   />
+                </div>
+                <div>
+                  <Label htmlFor="meeting-time">Time</Label>
+                  <Input
+                    id="meeting-time"
+                    type="time"
+                    value={meetingTime}
+                    onChange={(e) => setMeetingTime(e.target.value)}
+                    disabled={isReadOnly}
+                    data-testid="input-meeting-time"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="meeting-duration">Duration</Label>
+                  <Select
+                    value={meetingDuration.toString()}
+                    onValueChange={(value) => setMeetingDuration(parseInt(value))}
+                    disabled={isReadOnly}
+                  >
+                    <SelectTrigger id="meeting-duration" data-testid="select-meeting-duration">
+                      <SelectValue placeholder="Duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 min</SelectItem>
+                      <SelectItem value="30">30 min</SelectItem>
+                      <SelectItem value="45">45 min</SelectItem>
+                      <SelectItem value="60">1 hour</SelectItem>
+                      <SelectItem value="90">1.5 hours</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="week-of">Week Of</Label>

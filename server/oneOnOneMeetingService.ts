@@ -1,7 +1,8 @@
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or, inArray } from "drizzle-orm";
 import { calendars, calendarStaff, calendarAppointments, oneOnOneMeetings, staff } from "@shared/schema";
 import { createOneOnOneMeetingCalendarEvent } from "./googleCalendarCreateEvent";
+import { deleteAppointmentFromGoogleCalendar, syncAppointmentToGoogleCalendar } from "./googleCalendar";
 import { fromZonedTime } from "date-fns-tz";
 
 interface CreateMeetingCalendarResult {
@@ -239,6 +240,191 @@ export async function createOneOnOneMeetingCalendars(params: CreateMeetingCalend
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Failed to create calendar appointment" 
+    };
+  }
+}
+
+interface DeleteMeetingCalendarResult {
+  success: boolean;
+  error?: string;
+  googleDeleteError?: string;
+}
+
+export async function deleteOneOnOneMeetingCalendars(meeting: {
+  id: string;
+  calendarAppointmentId: string | null;
+  calendarEventId: string | null;
+  directReportId: string;
+}): Promise<DeleteMeetingCalendarResult> {
+  let googleDeleteError: string | undefined;
+
+  try {
+    // Delete Google Calendar event if exists
+    if (meeting.calendarEventId) {
+      try {
+        const result = await deleteAppointmentFromGoogleCalendar(meeting.calendarEventId);
+        if (!result.success) {
+          googleDeleteError = result.error;
+          console.warn('[1-on-1 Meeting] Google Calendar delete failed (non-fatal):', result.error);
+        } else {
+          console.log(`[1-on-1 Meeting] Deleted Google Calendar event: ${meeting.calendarEventId}`);
+        }
+      } catch (googleError) {
+        googleDeleteError = googleError instanceof Error ? googleError.message : "Google Calendar delete failed";
+        console.warn('[1-on-1 Meeting] Google Calendar delete error (non-fatal):', googleError);
+      }
+    }
+
+    // Delete internal calendar appointments (both manager's and direct report's)
+    if (meeting.calendarAppointmentId) {
+      // Get the appointment to find its title for matching the direct report's appointment
+      const [managerAppointment] = await db.select()
+        .from(calendarAppointments)
+        .where(eq(calendarAppointments.id, meeting.calendarAppointmentId));
+
+      if (managerAppointment) {
+        // Find and delete direct report's appointment with matching title and time
+        await db.delete(calendarAppointments)
+          .where(and(
+            eq(calendarAppointments.title, managerAppointment.title),
+            eq(calendarAppointments.startTime, managerAppointment.startTime),
+            eq(calendarAppointments.assignedTo, meeting.directReportId)
+          ));
+        console.log(`[1-on-1 Meeting] Deleted direct report's calendar appointment`);
+      }
+
+      // Delete manager's appointment
+      await db.delete(calendarAppointments)
+        .where(eq(calendarAppointments.id, meeting.calendarAppointmentId));
+      console.log(`[1-on-1 Meeting] Deleted manager's calendar appointment: ${meeting.calendarAppointmentId}`);
+    }
+
+    return {
+      success: true,
+      googleDeleteError,
+    };
+  } catch (error) {
+    console.error('[1-on-1 Meeting] Calendar deletion failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete calendar appointments",
+      googleDeleteError,
+    };
+  }
+}
+
+interface UpdateMeetingCalendarResult {
+  success: boolean;
+  error?: string;
+  googleSyncError?: string;
+}
+
+interface UpdateMeetingCalendarParams {
+  meetingId: string;
+  managerId: string;
+  directReportId: string;
+  calendarAppointmentId: string | null;
+  calendarEventId: string | null;
+  meetingDate: string;
+  meetingTime: string;
+  meetingDuration: number;
+}
+
+export async function updateOneOnOneMeetingCalendars(params: UpdateMeetingCalendarParams): Promise<UpdateMeetingCalendarResult> {
+  const { meetingId, managerId, directReportId, calendarAppointmentId, calendarEventId, meetingDate, meetingTime, meetingDuration } = params;
+
+  let googleSyncError: string | undefined;
+
+  try {
+    const [manager] = await db.select().from(staff).where(eq(staff.id, managerId));
+    const [directReport] = await db.select().from(staff).where(eq(staff.id, directReportId));
+
+    if (!manager || !directReport) {
+      return { success: false, error: "Manager or direct report not found" };
+    }
+
+    const managerName = `${manager.firstName} ${manager.lastName}`;
+    const directReportName = `${directReport.firstName} ${directReport.lastName}`;
+    const appointmentTitle = `1-on-1: ${managerName} & ${directReportName}`;
+    const appointmentDescription = `1-on-1 meeting between ${managerName} (Manager) and ${directReportName} (Direct Report)`;
+
+    const isoDateTimeString = `${meetingDate}T${meetingTime}:00`;
+    const startTime = fromZonedTime(isoDateTimeString, MEETING_TIMEZONE);
+    const endTime = new Date(startTime.getTime() + meetingDuration * 60 * 1000);
+
+    // Update internal calendar appointments
+    if (calendarAppointmentId) {
+      // Get current appointment to find matching direct report appointment
+      const [currentAppointment] = await db.select()
+        .from(calendarAppointments)
+        .where(eq(calendarAppointments.id, calendarAppointmentId));
+
+      if (currentAppointment) {
+        // Update manager's appointment
+        await db.update(calendarAppointments)
+          .set({
+            startTime,
+            endTime,
+            title: appointmentTitle,
+            description: appointmentDescription,
+            updatedAt: new Date(),
+          })
+          .where(eq(calendarAppointments.id, calendarAppointmentId));
+        console.log(`[1-on-1 Meeting] Updated manager's calendar appointment`);
+
+        // Find and update direct report's matching appointment
+        await db.update(calendarAppointments)
+          .set({
+            startTime,
+            endTime,
+            title: appointmentTitle,
+            description: appointmentDescription,
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(calendarAppointments.title, currentAppointment.title),
+            eq(calendarAppointments.startTime, currentAppointment.startTime),
+            eq(calendarAppointments.assignedTo, directReportId)
+          ));
+        console.log(`[1-on-1 Meeting] Updated direct report's calendar appointment`);
+      }
+    }
+
+    // Update Google Calendar event
+    if (calendarEventId) {
+      try {
+        const result = await syncAppointmentToGoogleCalendar({
+          id: meetingId,
+          title: appointmentTitle,
+          description: appointmentDescription,
+          startTime,
+          endTime,
+          attendeeEmails: directReport.email ? [directReport.email] : undefined,
+          googleEventId: calendarEventId,
+        });
+
+        if (!result.success) {
+          googleSyncError = result.error;
+          console.warn('[1-on-1 Meeting] Google Calendar update failed (non-fatal):', result.error);
+        } else {
+          console.log(`[1-on-1 Meeting] Updated Google Calendar event: ${calendarEventId}`);
+        }
+      } catch (googleError) {
+        googleSyncError = googleError instanceof Error ? googleError.message : "Google Calendar update failed";
+        console.warn('[1-on-1 Meeting] Google Calendar update error (non-fatal):', googleError);
+      }
+    }
+
+    return {
+      success: true,
+      googleSyncError,
+    };
+  } catch (error) {
+    console.error('[1-on-1 Meeting] Calendar update failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update calendar appointments",
+      googleSyncError,
     };
   }
 }

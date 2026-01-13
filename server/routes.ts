@@ -1,6 +1,6 @@
 import { getGoogleCalendarEventsForView } from "./googleCalendarEventsEndpoint";
 import { createCalendarEvent, updateCalendarEventStatus, getEventTimeEntries, createOneOnOneMeetingCalendarEvent } from "./googleCalendarCreateEvent";
-import { createOneOnOneMeetingCalendars } from "./oneOnOneMeetingService";
+import { createOneOnOneMeetingCalendars, deleteOneOnOneMeetingCalendars, updateOneOnOneMeetingCalendars } from "./oneOnOneMeetingService";
 import { findFathomRecording } from "./fathomService";
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
@@ -23074,7 +23074,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(oneOnOneMeetings.id, meetingId))
         .returning();
 
-      res.json(updatedMeeting);
+      // Check if date/time changed and sync to calendar
+      const dateChanged = validatedData.meetingDate && validatedData.meetingDate !== existingMeeting.meetingDate;
+      const timeChanged = validatedData.meetingTime && validatedData.meetingTime !== existingMeeting.meetingTime;
+      const durationChanged = validatedData.meetingDuration && validatedData.meetingDuration !== existingMeeting.meetingDuration;
+      
+      let calendarSyncError: string | undefined;
+      
+      if (dateChanged || timeChanged || durationChanged) {
+        const calendarResult = await updateOneOnOneMeetingCalendars({
+          meetingId: updatedMeeting.id,
+          managerId: updatedMeeting.managerId,
+          directReportId: updatedMeeting.directReportId,
+          calendarAppointmentId: updatedMeeting.calendarAppointmentId,
+          calendarEventId: updatedMeeting.calendarEventId,
+          meetingDate: updatedMeeting.meetingDate,
+          meetingTime: updatedMeeting.meetingTime,
+          meetingDuration: updatedMeeting.meetingDuration,
+        });
+        
+        if (!calendarResult.success) {
+          console.warn('[1-on-1 Meeting] Calendar sync had issues:', calendarResult.error);
+          calendarSyncError = calendarResult.error;
+        }
+        if (calendarResult.googleSyncError) {
+          calendarSyncError = calendarResult.googleSyncError;
+        }
+      }
+
+      res.json({
+        ...updatedMeeting,
+        calendarSyncError,
+      });
     } catch (error) {
       console.error("Error updating 1-on-1 meeting:", error);
       if (error instanceof z.ZodError) {
@@ -23106,10 +23137,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Only managers can delete meetings" });
       }
 
+      // Delete calendar events first (internal and Google)
+      const calendarResult = await deleteOneOnOneMeetingCalendars({
+        id: existingMeeting.id,
+        calendarAppointmentId: existingMeeting.calendarAppointmentId,
+        calendarEventId: existingMeeting.calendarEventId,
+        directReportId: existingMeeting.directReportId,
+      });
+      
+      if (!calendarResult.success) {
+        console.warn('[1-on-1 Meeting] Calendar deletion had issues:', calendarResult.error);
+      }
+
+      // Delete the meeting record
       await db.delete(oneOnOneMeetings)
         .where(eq(oneOnOneMeetings.id, meetingId));
 
-      res.json({ message: "Meeting deleted successfully" });
+      res.json({ 
+        message: "Meeting deleted successfully",
+        calendarDeleted: calendarResult.success,
+        googleDeleteError: calendarResult.googleDeleteError 
+      });
     } catch (error) {
       console.error("Error deleting 1-on-1 meeting:", error);
       res.status(500).json({ error: "Failed to delete meeting" });
