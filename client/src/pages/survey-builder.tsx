@@ -432,7 +432,7 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b">
         <div className="flex items-center gap-4">
-          <Link href="/campaigns?tab=surveys">
+          <Link href="/marketing?tab=surveys">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
             </Button>
