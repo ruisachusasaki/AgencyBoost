@@ -151,7 +151,8 @@ export default function LeadDetail() {
         selectedQuoteId: selectedQuote.id, // Pass the selected quote ID for product transfer
       };
       
-      return await apiRequest("POST", "/api/clients", clientData);
+      const response = await apiRequest("POST", "/api/clients", clientData);
+      return await response.json();
     },
     onSuccess: (data: any) => {
       // Invalidate leads cache to refresh the pipeline view
