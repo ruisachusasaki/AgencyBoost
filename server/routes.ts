@@ -19772,8 +19772,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (fields && Array.isArray(fields)) {
         for (let i = 0; i < fields.length; i++) {
           const field = fields[i];
+          // Generate new ID for each field to avoid conflicts with temp IDs
+          const { id: _tempId, ...fieldWithoutId } = field;
           await db.insert(formFields).values({
-            ...field,
+            ...fieldWithoutId,
+            id: crypto.randomUUID(),
             formId: form.id,
             order: i
           });
