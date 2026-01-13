@@ -833,9 +833,6 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
                           <Button className="bg-blue-600 hover:bg-blue-700">
                             Submit Form
                           </Button>
-                          <Button variant="outline">
-                            Clear Form
-                          </Button>
                         </div>
                       </div>
                     </div>
