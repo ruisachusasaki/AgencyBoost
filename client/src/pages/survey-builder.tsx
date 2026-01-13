@@ -1129,13 +1129,25 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
               className="space-y-4"
             >
               <div>
-                <Label>Field Label</Label>
+                <Label>{editingField.type === "text_block" ? "Heading" : "Field Label"}</Label>
                 <Input name="label" defaultValue={editingField.label} required />
               </div>
-              <div>
-                <Label>Placeholder</Label>
-                <Input name="placeholder" defaultValue={editingField.placeholder || ""} />
-              </div>
+              {editingField.type === "text_block" ? (
+                <div>
+                  <Label>Text Content (HTML supported)</Label>
+                  <Textarea 
+                    name="placeholder" 
+                    defaultValue={editingField.placeholder || ""} 
+                    rows={6}
+                    placeholder="Enter your text content here. HTML tags like <b>bold</b>, <i>italic</i>, <a href='...'>links</a> are supported."
+                  />
+                </div>
+              ) : (
+                <div>
+                  <Label>Placeholder</Label>
+                  <Input name="placeholder" defaultValue={editingField.placeholder || ""} />
+                </div>
+              )}
               <div>
                 <Label>Help Text</Label>
                 <Input name="helpText" defaultValue={editingField.helpText || ""} />
@@ -1151,10 +1163,12 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                   />
                 </div>
               )}
-              <div className="flex items-center gap-2">
-                <Switch name="required" id="required" defaultChecked={editingField.required} />
-                <Label htmlFor="required">Required field</Label>
-              </div>
+              {editingField.type !== "text_block" && (
+                <div className="flex items-center gap-2">
+                  <Switch name="required" id="required" defaultChecked={editingField.required} />
+                  <Label htmlFor="required">Required field</Label>
+                </div>
+              )}
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsEditFieldDialogOpen(false)}>
                   Cancel
