@@ -5,6 +5,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautif
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { 
   Dialog, 
   DialogContent, 
@@ -36,10 +37,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertLeadSourceSchema, type LeadSource, type InsertLeadSource } from "@shared/schema";
 import { Link } from "wouter";
-import { ArrowLeft, Plus, Edit, Trash2, GripVertical, Target } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, GripVertical, Target, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LeadsSettingsPage() {
+  const [activeTab, setActiveTab] = useState("lead-sources");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingSource, setEditingSource] = useState<LeadSource | null>(null);
   const [deletingSource, setDeletingSource] = useState<LeadSource | null>(null);
@@ -227,6 +229,11 @@ export default function LeadsSettingsPage() {
     reorderMutation.mutate(sourceIds);
   };
 
+  const tabs = [
+    { id: "lead-sources", name: "Lead Sources", icon: Target },
+    { id: "note-templates", name: "Note Templates", icon: FileText },
+  ];
+
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
@@ -239,126 +246,155 @@ export default function LeadsSettingsPage() {
           </Link>
         </div>
         
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Target className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-2xl font-bold" data-testid="text-page-title">Leads Settings</h1>
-              <p className="text-muted-foreground" data-testid="text-page-description">
-                Manage lead sources and note templates for your sales team
-              </p>
-            </div>
+        <div className="flex items-center gap-3">
+          <Target className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold" data-testid="text-page-title">Leads Settings</h1>
+            <p className="text-muted-foreground" data-testid="text-page-description">
+              Manage lead sources and note templates for your sales team
+            </p>
           </div>
-          <Button 
-            onClick={() => setShowAddDialog(true)}
-            className="bg-primary hover:bg-primary/90"
-            data-testid="button-add-source"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Source
-          </Button>
         </div>
       </div>
 
-      {/* Lead Sources List */}
-      <Card>
-        <CardHeader>
-          <CardTitle data-testid="text-card-title">Lead Sources</CardTitle>
-          <CardDescription data-testid="text-card-description">
-            Configure the source options that appear in the lead creation form
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground" data-testid="text-loading">
-              Loading lead sources...
-            </div>
-          ) : sources.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground" data-testid="text-empty-state">
-              No lead sources found. Create one to get started.
-            </div>
-          ) : (
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="lead-sources">
-                {(provided) => (
-                  <div 
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                    className="space-y-2"
-                  >
-                    {sources.map((source, index) => (
-                      <Draggable 
-                        key={source.id} 
-                        draggableId={source.id} 
-                        index={index}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="-mb-px flex space-x-2">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-2 px-4 border-b-2 font-medium text-sm flex items-center justify-center gap-2 whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                  }`}
+                  data-testid={`tab-${tab.id}`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.name}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        <TabsContent value="lead-sources" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle data-testid="text-card-title">Lead Sources</CardTitle>
+                  <CardDescription data-testid="text-card-description">
+                    Configure the source options that appear in the lead creation form
+                  </CardDescription>
+                </div>
+                <Button 
+                  onClick={() => setShowAddDialog(true)}
+                  className="bg-primary hover:bg-primary/90"
+                  data-testid="button-add-source"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Source
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground" data-testid="text-loading">
+                  Loading lead sources...
+                </div>
+              ) : sources.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground" data-testid="text-empty-state">
+                  No lead sources found. Create one to get started.
+                </div>
+              ) : (
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="lead-sources">
+                    {(provided) => (
+                      <div 
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className="space-y-2"
                       >
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
-                              snapshot.isDragging 
-                                ? 'bg-primary/10 border-primary shadow-lg' 
-                                : 'bg-muted/30 hover:bg-muted/50'
-                            }`}
-                            data-testid={`row-source-${source.id}`}
+                        {sources.map((source, index) => (
+                          <Draggable 
+                            key={source.id} 
+                            draggableId={source.id} 
+                            index={index}
                           >
-                            <div className="flex items-center gap-3">
-                              <div 
-                                {...provided.dragHandleProps}
-                                className="cursor-move text-muted-foreground hover:text-foreground"
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                                  snapshot.isDragging 
+                                    ? 'bg-primary/10 border-primary shadow-lg' 
+                                    : 'bg-muted/30 hover:bg-muted/50'
+                                }`}
+                                data-testid={`row-source-${source.id}`}
                               >
-                                <GripVertical className="h-4 w-4" />
-                              </div>
-                              <div>
-                                <div className="font-medium" data-testid={`text-name-${source.id}`}>
-                                  {source.name}
+                                <div className="flex items-center gap-3">
+                                  <div 
+                                    {...provided.dragHandleProps}
+                                    className="cursor-move text-muted-foreground hover:text-foreground"
+                                  >
+                                    <GripVertical className="h-4 w-4" />
+                                  </div>
+                                  <div>
+                                    <div className="font-medium" data-testid={`text-name-${source.id}`}>
+                                      {source.name}
+                                    </div>
+                                  </div>
+                                  <span 
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                      source.isActive 
+                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                                    }`}
+                                    data-testid={`text-status-${source.id}`}
+                                  >
+                                    {source.isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => openEditDialog(source)}
+                                    data-testid={`button-edit-${source.id}`}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setDeletingSource(source)}
+                                    data-testid={`button-delete-${source.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               </div>
-                              <span 
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                  source.isActive 
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                                }`}
-                                data-testid={`text-status-${source.id}`}
-                              >
-                                {source.isActive ? 'Active' : 'Inactive'}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => openEditDialog(source)}
-                                data-testid={`button-edit-${source.id}`}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setDeletingSource(source)}
-                                data-testid={`button-delete-${source.id}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
-          )}
-        </CardContent>
-      </Card>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Note Templates Section */}
-      <NoteTemplatesSection />
+        <TabsContent value="note-templates" className="space-y-6">
+          <NoteTemplatesSection />
+        </TabsContent>
+      </Tabs>
 
       {/* Add Source Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
