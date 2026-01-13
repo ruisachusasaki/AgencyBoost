@@ -1052,8 +1052,30 @@ export default function Sales() {
                                     ))}
                                   </div>
                                 </div>
-                                <div className="w-24 text-center text-xs font-semibold text-muted-foreground">Cumulative</div>
-                                <div className="w-24 text-center text-xs font-semibold text-muted-foreground">Next Step<br/>Conversion</div>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="w-24 text-center text-xs font-semibold text-muted-foreground cursor-help flex items-center justify-center gap-1">
+                                        Cumulative <Info className="h-3 w-3" />
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs">
+                                      <p>Percentage of leads from the first stage that have made it to this stage. Shows overall funnel retention.</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="w-24 text-center text-xs font-semibold text-muted-foreground cursor-help flex items-center justify-center gap-1">
+                                        Next Step<br/>Conversion <Info className="h-3 w-3" />
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs">
+                                      <p>Percentage of leads in this stage that successfully move to the next stage. Shows stage-by-stage conversion rate.</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </div>
                             );
                           })()}
