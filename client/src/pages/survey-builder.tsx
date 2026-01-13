@@ -540,7 +540,7 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
         </div>
       ) : (
         <div className="flex-1 flex">
-          <div className="flex flex-col border-r bg-white dark:bg-gray-800 w-72">
+          <div className="flex flex-col border-r bg-white dark:bg-gray-800 w-80">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex flex-col h-full form-elements-tabs">
               <TabsList className="grid grid-cols-4 m-2 form-elements-tabslist">
                 <TabsTrigger value="build" className="text-xs form-elements-tab">Build</TabsTrigger>
