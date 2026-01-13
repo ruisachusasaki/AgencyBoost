@@ -30880,8 +30880,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pitchCount = activities?.pitchCount || 0;
         const closedCount = dealData?.closedCount || 0;
         const totalLeads = leadData?.totalLeads || 0;
-        const totalValue = parseFloat(dealData?.totalValue || '0');
-        const avgMRR = 0; // Leads don't track MRR
+        // Lead value represents MRR (Monthly Recurring Revenue)
+        const totalMRR = parseFloat(dealData?.totalValue || '0');
+        const avgMRR = closedCount > 0 ? totalMRR / closedCount : 0;
+        // Total Value = Annual value (MRR × 12)
+        const totalValue = totalMRR * 12;
 
         return {
           id: member.id,
