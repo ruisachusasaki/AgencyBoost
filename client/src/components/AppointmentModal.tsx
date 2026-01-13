@@ -158,6 +158,10 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
   // Search state for merge tags
   const [titleMergeTagSearch, setTitleMergeTagSearch] = useState("");
   const [descriptionMergeTagSearch, setDescriptionMergeTagSearch] = useState("");
+  
+  // Controlled state for date pickers (prevents auto-opening in dialog)
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
 
   // Merge tag insert functions
   const insertMergeTagInTitle = (tag: string) => {
@@ -564,7 +568,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="date" className="text-xs text-gray-600">Date</Label>
-                <Popover>
+                <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -577,14 +581,17 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
                       {appointmentData.date ? format(new Date(appointmentData.date), "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[9999]" align="start" sideOffset={4}>
+                  <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
                     <Calendar
                       mode="single"
                       selected={appointmentData.date ? new Date(appointmentData.date) : undefined}
-                      onSelect={(date) => setAppointmentData(prev => ({ 
-                        ...prev, 
-                        date: date ? format(date, 'yyyy-MM-dd') : '' 
-                      }))}
+                      onSelect={(date) => {
+                        setAppointmentData(prev => ({ 
+                          ...prev, 
+                          date: date ? format(date, 'yyyy-MM-dd') : '' 
+                        }));
+                        setIsDatePickerOpen(false);
+                      }}
                       initialFocus
                     />
                   </PopoverContent>
@@ -684,7 +691,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
                 {appointmentData.recurringEnds === 'on' && (
                   <div>
                     <Label className="text-xs text-gray-600">End Date</Label>
-                    <Popover>
+                    <Popover open={isEndDatePickerOpen} onOpenChange={setIsEndDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -697,14 +704,17 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
                           {appointmentData.recurringEndDate ? format(new Date(appointmentData.recurringEndDate), "PPP") : "Pick end date"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 z-[9999]" align="start" sideOffset={4}>
+                      <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
                         <Calendar
                           mode="single"
                           selected={appointmentData.recurringEndDate ? new Date(appointmentData.recurringEndDate) : undefined}
-                          onSelect={(date) => setAppointmentData(prev => ({ 
-                            ...prev, 
-                            recurringEndDate: date ? format(date, 'yyyy-MM-dd') : '' 
-                          }))}
+                          onSelect={(date) => {
+                            setAppointmentData(prev => ({ 
+                              ...prev, 
+                              recurringEndDate: date ? format(date, 'yyyy-MM-dd') : '' 
+                            }));
+                            setIsEndDatePickerOpen(false);
+                          }}
                           initialFocus
                         />
                       </PopoverContent>
