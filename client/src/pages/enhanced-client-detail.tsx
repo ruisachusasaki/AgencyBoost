@@ -2861,6 +2861,37 @@ export default function EnhancedClientDetail() {
     return client.company || "";
   }, [client]);
 
+  // Helper function to replace merge tags in text with actual client data
+  const replaceMergeTags = (text: string) => {
+    if (!text || !client) return text;
+    
+    // Get first and last name from custom fields
+    let firstName = "";
+    let lastName = "";
+    
+    if (customFieldsData) {
+      const firstNameField = customFieldsData.find((field: any) => 
+        field.name === 'First Name' || field.name === 'FirstName' || field.name === 'first name'
+      );
+      const lastNameField = customFieldsData.find((field: any) => 
+        field.name === 'Last Name' || field.name === 'LastName' || field.name === 'last name'
+      );
+      
+      const customFieldValues = client.customFieldValues as Record<string, any> || {};
+      firstName = firstNameField ? customFieldValues[firstNameField.id] || "" : "";
+      lastName = lastNameField ? customFieldValues[lastNameField.id] || "" : "";
+    }
+    
+    // Replace common merge tags
+    return text
+      .replace(/{{first_name}}/gi, firstName || client.name?.split(' ')[0] || "")
+      .replace(/{{last_name}}/gi, lastName || client.name?.split(' ').slice(1).join(' ') || "")
+      .replace(/{{full_name}}/gi, firstName && lastName ? `${firstName} ${lastName}` : client.name || "")
+      .replace(/{{email}}/gi, client.email || "")
+      .replace(/{{phone}}/gi, client.phone || "")
+      .replace(/{{company}}/gi, client.company || "");
+  };
+
   // Fixed height for notes section to enable consistent scrolling
   const calculateNotesMaxHeight = () => {
     // Use a fixed height that works well for most screen sizes
@@ -6582,7 +6613,7 @@ export default function EnhancedClientDetail() {
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <h4 className="font-medium text-sm text-gray-900">
-                                  {appointment.title}
+                                  {replaceMergeTags(appointment.title)}
                                 </h4>
                                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                                   {appointment.startTime && (
@@ -6781,7 +6812,7 @@ export default function EnhancedClientDetail() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Appointment</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deletingAppointment?.title}"? This action cannot be undone.
+              Are you sure you want to delete "{deletingAppointment ? replaceMergeTags(deletingAppointment.title) : ""}"? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
