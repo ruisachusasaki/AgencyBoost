@@ -30765,27 +30765,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const salesRoleIds = salesRoles.map(r => r.id);
 
-      // Get staff members with sales roles (filtered if specific rep selected)
-      const staffFilters = [
-        eq(staff.isActive, true),
-        salesRoleIds.length > 0 ? inArray(userRoles.roleId, salesRoleIds) : sql`1=0`
-      ];
-      
-      if (salesRepId && salesRepId !== 'all') {
-        staffFilters.push(eq(staff.id, salesRepId as string));
-      }
+      // Get staff IDs who have any leads assigned (regardless of role)
+      const staffWithLeads = await db
+        .selectDistinct({ assignedTo: leads.assignedTo })
+        .from(leads)
+        .where(isNotNull(leads.assignedTo));
+      const staffIdsWithLeads = staffWithLeads.map(s => s.assignedTo).filter(Boolean) as string[];
 
-      const staffMembers = await db
-        .select({
-          id: staff.id,
-          firstName: staff.firstName,
-          lastName: staff.lastName,
-          email: staff.email,
-          department: staff.department
-        })
-        .from(staff)
-        .innerJoin(userRoles, eq(userRoles.userId, staff.id))
-        .where(and(...staffFilters));
+      // Get staff members who have sales roles OR have leads assigned to them
+      // This ensures executives/anyone who closes deals will appear in the report
+      let staffMembers;
+      if (salesRepId && salesRepId !== 'all') {
+        // Filter to specific rep
+        staffMembers = await db
+          .select({
+            id: staff.id,
+            firstName: staff.firstName,
+            lastName: staff.lastName,
+            email: staff.email,
+            department: staff.department
+          })
+          .from(staff)
+          .where(and(eq(staff.isActive, true), eq(staff.id, salesRepId as string)));
+      } else {
+        // Get all staff with sales roles
+        const salesStaff = salesRoleIds.length > 0 ? await db
+          .selectDistinct({
+            id: staff.id,
+            firstName: staff.firstName,
+            lastName: staff.lastName,
+            email: staff.email,
+            department: staff.department
+          })
+          .from(staff)
+          .innerJoin(userRoles, eq(userRoles.userId, staff.id))
+          .where(and(eq(staff.isActive, true), inArray(userRoles.roleId, salesRoleIds))) : [];
+        
+        // Get all staff with leads assigned (this catches executives, etc.)
+        const leadAssignedStaff = staffIdsWithLeads.length > 0 ? await db
+          .select({
+            id: staff.id,
+            firstName: staff.firstName,
+            lastName: staff.lastName,
+            email: staff.email,
+            department: staff.department
+          })
+          .from(staff)
+          .where(and(eq(staff.isActive, true), inArray(staff.id, staffIdsWithLeads))) : [];
+        
+        // Merge and dedupe by staff ID
+        const staffMap = new Map();
+        [...salesStaff, ...leadAssignedStaff].forEach(s => staffMap.set(s.id, s));
+        staffMembers = Array.from(staffMap.values());
+      }
 
       // Get appointment counts by rep
       const appointmentCounts = await db
