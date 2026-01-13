@@ -441,13 +441,22 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
       
       if (!uploadResponse.ok) throw new Error('Upload failed');
       
-      // Extract the object path from the upload URL (remove query params)
-      const imageUrl = uploadURL.split('?')[0];
+      // Normalize the URL to get a usable object path
+      const normalizeResponse = await fetch('/api/survey-images', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ imageURL: uploadURL })
+      });
+      
+      if (!normalizeResponse.ok) throw new Error('Failed to normalize URL');
+      
+      const { objectPath } = await normalizeResponse.json();
       
       updateFieldMutation.mutate({
         fieldId,
         data: {
-          settings: { imageUrl }
+          settings: { imageUrl: objectPath }
         }
       });
       
