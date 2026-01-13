@@ -417,7 +417,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
       <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+            <CalendarIcon className="h-5 w-5" />
             {isEditMode ? 'Edit Appointment' : 'Create New Appointment'}
           </DialogTitle>
         </DialogHeader>
