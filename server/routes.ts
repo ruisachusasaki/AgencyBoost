@@ -30724,9 +30724,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       if (salesRepId && salesRepId !== 'all') {
-      }
-      if (sourceId && sourceId !== 'all') {
-        filters.push(eq(leads.source, sourceId as string));
         dealFilters.push(eq(deals.assignedTo, salesRepId as string));
       }
       const dealDateFilter = dealFilters.length > 0 ? and(...dealFilters) : undefined;
@@ -30740,9 +30737,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       if (salesRepId && salesRepId !== 'all') {
-      }
-      if (sourceId && sourceId !== 'all') {
-        filters.push(eq(leads.source, sourceId as string));
         activityFilters.push(eq(salesActivities.assignedTo, salesRepId as string));
       }
       const activityDateFilter = activityFilters.length > 0 ? and(...activityFilters) : undefined;
@@ -30756,9 +30750,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       if (salesRepId && salesRepId !== 'all') {
-      }
-      if (sourceId && sourceId !== 'all') {
-        filters.push(eq(leads.source, sourceId as string));
         leadFilters.push(eq(leads.assignedTo, salesRepId as string));
       }
       const leadDateFilter = leadFilters.length > 0 ? and(...leadFilters) : undefined;
@@ -30781,9 +30772,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       
       if (salesRepId && salesRepId !== 'all') {
-      }
-      if (sourceId && sourceId !== 'all') {
-        filters.push(eq(leads.source, sourceId as string));
         staffFilters.push(eq(staff.id, salesRepId as string));
       }
 
@@ -30810,17 +30798,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(activityDateFilter)
         .groupBy(salesActivities.assignedTo);
 
-      // Get closed deals by rep
+      // Get closed (Won) leads by rep - count leads with status 'Won'
+      const wonLeadFilters = [...(leadFilters || [])];
+      wonLeadFilters.push(eq(leads.status, 'Won'));
+      const wonLeadFilter = wonLeadFilters.length > 0 ? and(...wonLeadFilters) : undefined;
+      
       const dealStats = await db
         .select({
-          assignedTo: deals.assignedTo,
+          assignedTo: leads.assignedTo,
           closedCount: sql<number>`count(*)::int`,
-          totalValue: sql<string>`COALESCE(sum(${deals.value}), 0)::text`,
-          avgMRR: sql<string>`COALESCE(avg(${deals.mrr}), 0)::text`
+          totalValue: sql<string>`COALESCE(sum(${leads.value}), 0)::text`
         })
-        .from(deals)
-        .where(dealDateFilter)
-        .groupBy(deals.assignedTo);
+        .from(leads)
+        .where(wonLeadFilter)
+        .groupBy(leads.assignedTo);
 
       // Get total leads assigned to each rep
       const leadCounts = await db
@@ -30843,7 +30834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const closedCount = dealData?.closedCount || 0;
         const totalLeads = leadData?.totalLeads || 0;
         const totalValue = parseFloat(dealData?.totalValue || '0');
-        const avgMRR = parseFloat(dealData?.avgMRR || '0');
+        const avgMRR = 0; // Leads don't track MRR
 
         return {
           id: member.id,
