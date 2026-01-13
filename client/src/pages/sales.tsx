@@ -15,6 +15,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -1014,93 +1015,125 @@ export default function Sales() {
                     <div className="text-center py-8 text-muted-foreground">Loading pipeline data...</div>
                   ) : pipelineReport ? (
                     <>
-                      {/* Summary Cards */}
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <Card>
-                          <CardContent className="pt-6">
-                            <div className="text-sm text-muted-foreground">Total Leads</div>
-                            <div className="text-2xl font-bold" data-testid="text-total-leads">
-                              {pipelineReport.summary?.totalLeads || 0}
-                            </div>
-                          </CardContent>
-                        </Card>
-                        <Card>
-                          <CardContent className="pt-6">
-                            <div className="text-sm text-muted-foreground">Total Value</div>
-                            <div className="text-2xl font-bold" data-testid="text-total-value">
-                              ${pipelineReport.summary?.totalValue?.toLocaleString() || 0}
-                            </div>
-                          </CardContent>
-                        </Card>
-                        <Card>
-                          <CardContent className="pt-6">
-                            <div className="text-sm text-muted-foreground">Total Transitions</div>
-                            <div className="text-2xl font-bold" data-testid="text-total-transitions">
-                              {pipelineReport.summary?.totalTransitions || 0}
-                            </div>
-                          </CardContent>
-                        </Card>
-                        <Card>
-                          <CardContent className="pt-6">
-                            <div className="text-sm text-muted-foreground">Average Value</div>
-                            <div className="text-2xl font-bold" data-testid="text-average-value">
-                              ${pipelineReport.summary?.averageValue?.toFixed(2) || 0}
-                            </div>
-                          </CardContent>
-                        </Card>
+                      {/* Total Value Header */}
+                      <div className="mb-6">
+                        <div className="text-4xl font-bold" data-testid="text-total-value">
+                          ${((pipelineReport.summary?.totalValue || 0) / 1000).toFixed(2)}K
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-sm text-muted-foreground">
+                            {pipelineReport.summary?.totalLeads || 0} leads in pipeline
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Pipeline Stages */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">Pipeline Stages</h3>
-                        {pipelineReport.stages?.length > 0 ? (
-                          pipelineReport.stages.map((stage: any) => (
-                            <Card key={stage.id} className="border-l-4" style={{ borderLeftColor: stage.color }}>
-                              <CardContent className="pt-6">
-                                <div className="flex items-center justify-between mb-4">
-                                  <div className="flex items-center gap-3">
+                      {/* Pipeline Funnel Visualization */}
+                      {pipelineReport.stages?.length > 0 ? (
+                        <div className="space-y-0">
+                          {/* Header Row */}
+                          <div className="flex items-center border-b pb-2 mb-2">
+                            <div className="flex-1 pr-4"></div>
+                            <div className="w-24 text-center text-xs font-semibold text-muted-foreground">Cumulative</div>
+                            <div className="w-24 text-center text-xs font-semibold text-muted-foreground">Next Step<br/>Conversion</div>
+                          </div>
+                          
+                          {/* Stage Bars */}
+                          {(() => {
+                            const stages = pipelineReport.stages;
+                            const maxValue = Math.max(...stages.map((s: any) => s.leadCount || 0), 1);
+                            const firstStageLeads = stages[0]?.leadCount || 1;
+                            
+                            return stages.map((stage: any, index: number) => {
+                              const barWidth = Math.max((stage.leadCount / maxValue) * 100, 5);
+                              const cumulativePercent = ((stage.leadCount / firstStageLeads) * 100).toFixed(2);
+                              const nextStage = stages[index + 1];
+                              const conversionPercent = nextStage 
+                                ? ((nextStage.leadCount / (stage.leadCount || 1)) * 100).toFixed(2)
+                                : "100.00";
+                              const formattedValue = stage.totalValue >= 1000 
+                                ? `$${(stage.totalValue / 1000).toFixed(2)}K` 
+                                : `$${stage.totalValue?.toLocaleString() || 0}`;
+                              
+                              return (
+                                <div key={stage.id} className="flex items-center py-1 group">
+                                  {/* Bar Container */}
+                                  <div className="flex-1 pr-4">
                                     <div 
-                                      className="w-4 h-4 rounded-full" 
-                                      style={{ backgroundColor: stage.color }}
-                                    />
-                                    <h4 className="font-semibold text-lg" data-testid={`text-stage-name-${stage.id}`}>
-                                      {stage.name}
-                                    </h4>
+                                      className="relative h-10 rounded-sm flex items-center px-3 transition-all group-hover:opacity-90"
+                                      style={{ 
+                                        width: `${barWidth}%`,
+                                        backgroundColor: stage.color || '#3b82f6',
+                                        minWidth: '120px'
+                                      }}
+                                      data-testid={`bar-stage-${stage.id}`}
+                                    >
+                                      <span className="text-white text-sm font-medium truncate">
+                                        {stage.name}
+                                      </span>
+                                      <span className="text-white text-sm font-medium ml-2">
+                                        {formattedValue}
+                                      </span>
+                                      {/* Tooltip on hover */}
+                                      <div className="absolute left-full ml-2 bg-white dark:bg-gray-800 border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap pointer-events-none">
+                                        <div className="font-medium">{stage.name} - {formattedValue}</div>
+                                        <div className="text-sm text-muted-foreground flex items-center gap-1">
+                                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: stage.color }} />
+                                          {stage.leadCount} leads
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="text-right">
-                                    <div className="text-2xl font-bold" data-testid={`text-stage-count-${stage.id}`}>
-                                      {stage.leadCount} leads
-                                    </div>
-                                    <div className="text-sm text-muted-foreground">
-                                      ${stage.totalValue?.toLocaleString()} value
-                                    </div>
+                                  
+                                  {/* Cumulative % */}
+                                  <div className="w-24 text-center">
+                                    <span className="text-sm font-medium" data-testid={`text-cumulative-${stage.id}`}>
+                                      {cumulativePercent}%
+                                    </span>
+                                  </div>
+                                  
+                                  {/* Next Step Conversion % */}
+                                  <div className="w-24 text-center">
+                                    <span className="text-sm font-medium" data-testid={`text-conversion-${stage.id}`}>
+                                      {conversionPercent}%
+                                    </span>
                                   </div>
                                 </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          No pipeline data available for the selected date range
+                        </div>
+                      )}
 
-                                {/* Conversion Rates */}
-                                {stage.conversions && stage.conversions.length > 0 && (
-                                  <div className="mt-4 pl-7">
-                                    <div className="text-sm font-medium text-muted-foreground mb-2">Conversions:</div>
-                                    <div className="space-y-2">
-                                      {stage.conversions.map((conversion: any, idx: number) => (
-                                        <div key={idx} className="flex items-center justify-between text-sm">
-                                          <span>→ {conversion.toStageName}</span>
-                                          <span className="font-medium">
-                                            {conversion.count} leads ({conversion.rate.toFixed(1)}%)
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          ))
-                        ) : (
-                          <div className="text-center py-8 text-muted-foreground">
-                            No pipeline data available for the selected date range
+                      {/* Summary Stats */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Total Leads</div>
+                          <div className="text-xl font-bold" data-testid="text-total-leads">
+                            {pipelineReport.summary?.totalLeads || 0}
                           </div>
-                        )}
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Total Value</div>
+                          <div className="text-xl font-bold">
+                            ${pipelineReport.summary?.totalValue?.toLocaleString() || 0}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Total Transitions</div>
+                          <div className="text-xl font-bold" data-testid="text-total-transitions">
+                            {pipelineReport.summary?.totalTransitions || 0}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Avg Value</div>
+                          <div className="text-xl font-bold" data-testid="text-average-value">
+                            ${pipelineReport.summary?.averageValue?.toFixed(0) || 0}
+                          </div>
+                        </div>
                       </div>
                     </>
                   ) : (
