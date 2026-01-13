@@ -420,20 +420,29 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   const handleImageUpload = async (file: File, fieldId: string) => {
     setIsUploadingImage(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('directory', 'public/surveys');
-      
-      const response = await fetch('/api/upload', {
+      // Get pre-signed upload URL from object storage
+      const urlResponse = await fetch('/api/objects/upload', {
         method: 'POST',
-        body: formData,
         credentials: 'include'
       });
       
-      if (!response.ok) throw new Error('Upload failed');
+      if (!urlResponse.ok) throw new Error('Failed to get upload URL');
       
-      const result = await response.json();
-      const imageUrl = result.url || result.publicUrl;
+      const { uploadURL } = await urlResponse.json();
+      
+      // Upload file directly to object storage
+      const uploadResponse = await fetch(uploadURL, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type
+        }
+      });
+      
+      if (!uploadResponse.ok) throw new Error('Upload failed');
+      
+      // Extract the object path from the upload URL (remove query params)
+      const imageUrl = uploadURL.split('?')[0];
       
       updateFieldMutation.mutate({
         fieldId,
