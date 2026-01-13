@@ -30830,9 +30830,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(activityDateFilter)
         .groupBy(salesActivities.assignedTo);
 
-      // Get closed (Won) leads by rep - count leads with status 'Won'
+      // Get closed (Won) leads by rep - count leads in "Closed Won" pipeline stage
+      // First get the "Closed Won" stage ID
+      const closedWonStage = await db
+        .select({ id: leadPipelineStages.id })
+        .from(leadPipelineStages)
+        .where(ilike(leadPipelineStages.name, '%closed won%'))
+        .limit(1);
+      
+      const closedWonStageId = closedWonStage[0]?.id;
+      
+      // Build filter for won leads
       const wonLeadFilters = [...(leadFilters || [])];
-      wonLeadFilters.push(eq(leads.status, 'Won'));
+      if (closedWonStageId) {
+        wonLeadFilters.push(eq(leads.stageId, closedWonStageId));
+      } else {
+        // Fallback to status if no Closed Won stage exists
+        wonLeadFilters.push(eq(leads.status, 'Won'));
+      }
       const wonLeadFilter = wonLeadFilters.length > 0 ? and(...wonLeadFilters) : undefined;
       
       const dealStats = await db
