@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -205,11 +205,19 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
     if (slides.length > 0 && !selectedSlideId) {
       setSelectedSlideId(slides[0].id);
     }
-  }, [slides, selectedSlideId]);
+  }, [slides.length, selectedSlideId, slides]);
 
+  // Track previous slides for comparison
+  const prevSlidesRef = useRef<string>("");
+  
   // Sync localSlides with query data for optimistic drag-and-drop
+  // Only update if slides content actually changed
   useEffect(() => {
-    setLocalSlides(slides);
+    const slidesJson = JSON.stringify(slides.map(s => s.id + s.order));
+    if (slidesJson !== prevSlidesRef.current) {
+      prevSlidesRef.current = slidesJson;
+      setLocalSlides(slides);
+    }
   }, [slides]);
 
   const createSurveyMutation = useMutation({
