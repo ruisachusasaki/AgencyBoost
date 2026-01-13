@@ -30602,7 +30602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (startDate && endDate) {
         filters.push(
           gte(leads.createdAt, new Date(startDate as string)),
-          lte(leads.createdAt, new Date(endDate as string))
+          lte(leads.createdAt, new Date(new Date(endDate as string).getTime() + 24 * 60 * 60 * 1000 - 1))
         );
       }
       if (salesRepId && salesRepId !== 'all') {
@@ -30740,7 +30740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (startDate && endDate) {
         leadFilters.push(
           gte(leads.createdAt, new Date(startDate as string)),
-          lte(leads.createdAt, new Date(endDate as string))
+          lte(leads.createdAt, new Date(new Date(endDate as string).getTime() + 24 * 60 * 60 * 1000 - 1))
         );
       }
       if (salesRepId && salesRepId !== 'all') {
