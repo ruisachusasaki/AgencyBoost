@@ -2035,25 +2035,27 @@ export default function Campaigns() {
                             <div className="flex items-center gap-2">
                               <FileText className="h-4 w-4 text-green-500" />
                               <div>
-                                <a 
-                                  href={`/form-builder/${item.id}`} 
-                                  className="font-medium text-primary hover:underline cursor-pointer"
-                                  data-testid={`link-edit-form-${item.id}`}
-                                >
-                                  {item.name}
-                                </a>
+                                <div className="flex items-center gap-2">
+                                  <a 
+                                    href={`/form-builder/${item.id}`} 
+                                    className="font-medium text-primary hover:underline cursor-pointer"
+                                    data-testid={`link-edit-form-${item.id}`}
+                                  >
+                                    {item.name}
+                                  </a>
+                                  {item.status && (
+                                    <Badge 
+                                      variant={item.status === 'published' ? 'default' : 'secondary'}
+                                      className="text-xs"
+                                    >
+                                      {item.status}
+                                    </Badge>
+                                  )}
+                                </div>
                                 {item.description && (
                                   <div className="text-sm text-gray-500 truncate max-w-xs">
                                     {item.description}
                                   </div>
-                                )}
-                                {item.status && (
-                                  <Badge 
-                                    variant={item.status === 'published' ? 'default' : 'secondary'}
-                                    className="text-xs mt-1"
-                                  >
-                                    {item.status}
-                                  </Badge>
                                 )}
                               </div>
                             </div>
