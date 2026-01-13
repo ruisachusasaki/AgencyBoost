@@ -30935,6 +30935,262 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/sales/reports/opportunity-status - Opportunity Status Report
+  app.get("/api/sales/reports/opportunity-status", requireAuth(), async (req, res) => {
+    try {
+      const { startDate, endDate, salesRepId, sourceId } = req.query;
+      
+      // Build date filter for leads
+      const filters = [];
+      if (startDate && endDate) {
+        filters.push(
+          gte(leads.createdAt, new Date(startDate as string)),
+          lte(leads.createdAt, new Date(new Date(endDate as string).getTime() + 24 * 60 * 60 * 1000 - 1))
+        );
+      }
+      if (salesRepId && salesRepId !== 'all') {
+        filters.push(eq(leads.assignedTo, salesRepId as string));
+      }
+      if (sourceId && sourceId !== 'all') {
+        filters.push(eq(leads.source, sourceId as string));
+      }
+      const dateFilter = filters.length > 0 ? and(...filters) : undefined;
+      
+      // Calculate previous period date range for comparison
+      let previousPeriodFilter = undefined;
+      if (startDate && endDate) {
+        const startMs = new Date(startDate as string).getTime();
+        const endMs = new Date(endDate as string).getTime();
+        const periodLength = endMs - startMs;
+        const prevStart = new Date(startMs - periodLength - 24 * 60 * 60 * 1000);
+        const prevEnd = new Date(startMs - 1);
+        
+        const prevFilters = [
+          gte(leads.createdAt, prevStart),
+          lte(leads.createdAt, prevEnd)
+        ];
+        if (salesRepId && salesRepId !== 'all') {
+          prevFilters.push(eq(leads.assignedTo, salesRepId as string));
+        }
+        if (sourceId && sourceId !== 'all') {
+          prevFilters.push(eq(leads.source, sourceId as string));
+        }
+        previousPeriodFilter = and(...prevFilters);
+      }
+
+      // Get Closed Won and Closed Lost stage IDs
+      const closedWonStage = await db
+        .select({ id: leadPipelineStages.id })
+        .from(leadPipelineStages)
+        .where(ilike(leadPipelineStages.name, '%closed won%'))
+        .limit(1);
+      
+      const closedLostStage = await db
+        .select({ id: leadPipelineStages.id })
+        .from(leadPipelineStages)
+        .where(ilike(leadPipelineStages.name, '%closed lost%'))
+        .limit(1);
+      
+      const closedWonStageId = closedWonStage[0]?.id;
+      const closedLostStageId = closedLostStage[0]?.id;
+      
+      // Count leads by status category for current period
+      const allLeadsCurrent = await db
+        .select({
+          stageId: leads.stageId,
+          count: sql<number>`count(*)::int`
+        })
+        .from(leads)
+        .where(dateFilter)
+        .groupBy(leads.stageId);
+      
+      // Count leads for previous period
+      const allLeadsPrevious = previousPeriodFilter ? await db
+        .select({
+          stageId: leads.stageId,
+          count: sql<number>`count(*)::int`
+        })
+        .from(leads)
+        .where(previousPeriodFilter)
+        .groupBy(leads.stageId) : [];
+
+      // Calculate current period counts
+      let openCount = 0, wonCount = 0, lostCount = 0;
+      for (const row of allLeadsCurrent) {
+        if (row.stageId === closedWonStageId) {
+          wonCount += row.count;
+        } else if (row.stageId === closedLostStageId) {
+          lostCount += row.count;
+        } else {
+          openCount += row.count;
+        }
+      }
+      const totalCurrent = openCount + wonCount + lostCount;
+      
+      // Calculate previous period counts
+      let prevOpenCount = 0, prevWonCount = 0, prevLostCount = 0;
+      for (const row of allLeadsPrevious) {
+        if (row.stageId === closedWonStageId) {
+          prevWonCount += row.count;
+        } else if (row.stageId === closedLostStageId) {
+          prevLostCount += row.count;
+        } else {
+          prevOpenCount += row.count;
+        }
+      }
+      const totalPrevious = prevOpenCount + prevWonCount + prevLostCount;
+      
+      // Calculate percent change
+      const percentChange = totalPrevious > 0 
+        ? ((totalCurrent - totalPrevious) / totalPrevious) * 100 
+        : totalCurrent > 0 ? 100 : 0;
+
+      res.json({
+        total: totalCurrent,
+        percentChange,
+        previousTotal: totalPrevious,
+        breakdown: {
+          open: openCount,
+          won: wonCount,
+          lost: lostCount
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching opportunity status report:", error);
+      res.status(500).json({ message: "Failed to fetch opportunity status report" });
+    }
+  });
+
+  // GET /api/sales/reports/opportunity-value - Opportunity Value Report
+  app.get("/api/sales/reports/opportunity-value", requireAuth(), async (req, res) => {
+    try {
+      const { startDate, endDate, salesRepId, sourceId } = req.query;
+      
+      // Build date filter for leads
+      const filters = [];
+      if (startDate && endDate) {
+        filters.push(
+          gte(leads.createdAt, new Date(startDate as string)),
+          lte(leads.createdAt, new Date(new Date(endDate as string).getTime() + 24 * 60 * 60 * 1000 - 1))
+        );
+      }
+      if (salesRepId && salesRepId !== 'all') {
+        filters.push(eq(leads.assignedTo, salesRepId as string));
+      }
+      if (sourceId && sourceId !== 'all') {
+        filters.push(eq(leads.source, sourceId as string));
+      }
+      const dateFilter = filters.length > 0 ? and(...filters) : undefined;
+      
+      // Calculate previous period date range for comparison
+      let previousPeriodFilter = undefined;
+      if (startDate && endDate) {
+        const startMs = new Date(startDate as string).getTime();
+        const endMs = new Date(endDate as string).getTime();
+        const periodLength = endMs - startMs;
+        const prevStart = new Date(startMs - periodLength - 24 * 60 * 60 * 1000);
+        const prevEnd = new Date(startMs - 1);
+        
+        const prevFilters = [
+          gte(leads.createdAt, prevStart),
+          lte(leads.createdAt, prevEnd)
+        ];
+        if (salesRepId && salesRepId !== 'all') {
+          prevFilters.push(eq(leads.assignedTo, salesRepId as string));
+        }
+        if (sourceId && sourceId !== 'all') {
+          prevFilters.push(eq(leads.source, sourceId as string));
+        }
+        previousPeriodFilter = and(...prevFilters);
+      }
+
+      // Get Closed Won and Closed Lost stage IDs
+      const closedWonStage = await db
+        .select({ id: leadPipelineStages.id })
+        .from(leadPipelineStages)
+        .where(ilike(leadPipelineStages.name, '%closed won%'))
+        .limit(1);
+      
+      const closedLostStage = await db
+        .select({ id: leadPipelineStages.id })
+        .from(leadPipelineStages)
+        .where(ilike(leadPipelineStages.name, '%closed lost%'))
+        .limit(1);
+      
+      const closedWonStageId = closedWonStage[0]?.id;
+      const closedLostStageId = closedLostStage[0]?.id;
+      
+      // Get lead values by status for current period
+      const valuesCurrent = await db
+        .select({
+          stageId: leads.stageId,
+          totalValue: sql<string>`COALESCE(sum(${leads.value}), 0)::text`
+        })
+        .from(leads)
+        .where(dateFilter)
+        .groupBy(leads.stageId);
+      
+      // Get lead values for previous period
+      const valuesPrevious = previousPeriodFilter ? await db
+        .select({
+          stageId: leads.stageId,
+          totalValue: sql<string>`COALESCE(sum(${leads.value}), 0)::text`
+        })
+        .from(leads)
+        .where(previousPeriodFilter)
+        .groupBy(leads.stageId) : [];
+
+      // Calculate current period values (convert MRR to annual by multiplying by 12)
+      let openValue = 0, wonValue = 0, lostValue = 0;
+      for (const row of valuesCurrent) {
+        const monthlyValue = parseFloat(row.totalValue);
+        const annualValue = monthlyValue * 12; // Convert MRR to annual
+        if (row.stageId === closedWonStageId) {
+          wonValue += annualValue;
+        } else if (row.stageId === closedLostStageId) {
+          lostValue += annualValue;
+        } else {
+          openValue += annualValue;
+        }
+      }
+      const totalValueCurrent = openValue + wonValue + lostValue;
+      
+      // Calculate previous period values
+      let prevOpenValue = 0, prevWonValue = 0, prevLostValue = 0;
+      for (const row of valuesPrevious) {
+        const monthlyValue = parseFloat(row.totalValue);
+        const annualValue = monthlyValue * 12;
+        if (row.stageId === closedWonStageId) {
+          prevWonValue += annualValue;
+        } else if (row.stageId === closedLostStageId) {
+          prevLostValue += annualValue;
+        } else {
+          prevOpenValue += annualValue;
+        }
+      }
+      const totalValuePrevious = prevOpenValue + prevWonValue + prevLostValue;
+      
+      // Calculate percent change
+      const percentChange = totalValuePrevious > 0 
+        ? ((totalValueCurrent - totalValuePrevious) / totalValuePrevious) * 100 
+        : totalValueCurrent > 0 ? 100 : 0;
+
+      res.json({
+        totalRevenue: totalValueCurrent,
+        percentChange,
+        previousTotal: totalValuePrevious,
+        breakdown: {
+          open: openValue,
+          won: wonValue,
+          lost: lostValue
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching opportunity value report:", error);
+      res.status(500).json({ message: "Failed to fetch opportunity value report" });
+    }
+  });
+
   // Get user view preferences
   app.get("/api/user-view-preferences/:viewType", requireAuth(), async (req, res) => {
     try {

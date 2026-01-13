@@ -15,7 +15,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
-import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, LabelList, PieChart, Pie } from "recharts";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -52,7 +52,7 @@ import {
 export default function Sales() {
   const [activeTab, setActiveTab] = useState("quotes");
   const [searchTerm, setSearchTerm] = useState("");
-  const [reportType, setReportType] = useState<"pipeline" | "sales-reps">("pipeline");
+  const [reportType, setReportType] = useState<"pipeline" | "sales-reps" | "opportunity-status" | "opportunity-value">("pipeline");
   const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({
     startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // Start of year
     endDate: new Date().toISOString().split('T')[0] // Today
@@ -230,6 +230,42 @@ export default function Sales() {
       return response.json();
     },
     enabled: activeTab === "reports" && reportType === "sales-reps",
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch Opportunity Status Report data
+  const { data: opportunityStatusReport, isLoading: opportunityStatusLoading } = useQuery({
+    queryKey: ["/api/sales/reports/opportunity-status", dateRange.startDate, dateRange.endDate, selectedSalesRep, selectedSource],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        ...(selectedSalesRep !== "all" && { salesRepId: selectedSalesRep }),
+        ...(selectedSource !== "all" && { sourceId: selectedSource })
+      });
+      const response = await fetch(`/api/sales/reports/opportunity-status?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch opportunity status report');
+      return response.json();
+    },
+    enabled: activeTab === "reports" && reportType === "opportunity-status",
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch Opportunity Value Report data
+  const { data: opportunityValueReport, isLoading: opportunityValueLoading } = useQuery({
+    queryKey: ["/api/sales/reports/opportunity-value", dateRange.startDate, dateRange.endDate, selectedSalesRep, selectedSource],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        ...(selectedSalesRep !== "all" && { salesRepId: selectedSalesRep }),
+        ...(selectedSource !== "all" && { sourceId: selectedSource })
+      });
+      const response = await fetch(`/api/sales/reports/opportunity-value?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch opportunity value report');
+      return response.json();
+    },
+    enabled: activeTab === "reports" && reportType === "opportunity-value",
     refetchOnWindowFocus: false,
   });
 
@@ -1032,6 +1068,28 @@ export default function Sales() {
                   >
                     Sales Rep Report
                   </button>
+                  <button
+                    onClick={() => setReportType("opportunity-status")}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      reportType === "opportunity-status"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                    data-testid="button-opportunity-status-report"
+                  >
+                    Opportunity Status
+                  </button>
+                  <button
+                    onClick={() => setReportType("opportunity-value")}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      reportType === "opportunity-value"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                    data-testid="button-opportunity-value-report"
+                  >
+                    Opportunity Value
+                  </button>
                 </nav>
               </div>
 
@@ -1337,6 +1395,205 @@ export default function Sales() {
                               )}
                             </tbody>
                           </table>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">No data available</div>
+                  )}
+                </div>
+              )}
+
+              {/* Opportunity Status Report Content */}
+              {reportType === "opportunity-status" && (
+                <div className="space-y-6">
+                  {opportunityStatusLoading ? (
+                    <div className="text-center py-8 text-muted-foreground">Loading opportunity status data...</div>
+                  ) : opportunityStatusReport ? (
+                    <>
+                      {/* Total Count Header */}
+                      <div className="mb-6">
+                        <div className="text-4xl font-bold" data-testid="text-opportunity-total">
+                          {opportunityStatusReport.total >= 1000 
+                            ? `${(opportunityStatusReport.total / 1000).toFixed(2)}K`
+                            : opportunityStatusReport.total.toLocaleString()}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-sm font-medium px-2 py-0.5 rounded ${
+                            opportunityStatusReport.percentChange >= 0 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {opportunityStatusReport.percentChange >= 0 ? '↑' : '↓'} {Math.abs(opportunityStatusReport.percentChange).toFixed(2)}%
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            vs Previous Period
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Donut Chart and Legend */}
+                      <div className="flex items-center justify-center gap-12">
+                        <div className="relative">
+                          <ResponsiveContainer width={250} height={250}>
+                            <PieChart>
+                              <Pie
+                                data={[
+                                  { name: 'Open', value: opportunityStatusReport.breakdown.open, fill: '#3B82F6' },
+                                  { name: 'Won', value: opportunityStatusReport.breakdown.won, fill: '#06B6D4' },
+                                  { name: 'Lost', value: opportunityStatusReport.breakdown.lost, fill: '#8B5CF6' }
+                                ]}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={70}
+                                outerRadius={100}
+                                paddingAngle={2}
+                                dataKey="value"
+                              >
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                          {/* Center text */}
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className="text-2xl font-bold">
+                              {opportunityStatusReport.total >= 1000 
+                                ? `${(opportunityStatusReport.total / 1000).toFixed(2)}K`
+                                : opportunityStatusReport.total.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Legend */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: '#3B82F6' }}></div>
+                            <span className="text-sm">Open - {opportunityStatusReport.breakdown.open.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: '#06B6D4' }}></div>
+                            <span className="text-sm">Won - {opportunityStatusReport.breakdown.won.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: '#8B5CF6' }}></div>
+                            <span className="text-sm">Lost - {opportunityStatusReport.breakdown.lost.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">No data available</div>
+                  )}
+                </div>
+              )}
+
+              {/* Opportunity Value Report Content */}
+              {reportType === "opportunity-value" && (
+                <div className="space-y-6">
+                  {opportunityValueLoading ? (
+                    <div className="text-center py-8 text-muted-foreground">Loading opportunity value data...</div>
+                  ) : opportunityValueReport ? (
+                    <>
+                      {/* Total Revenue Header */}
+                      <div className="mb-6">
+                        <div className="text-4xl font-bold" data-testid="text-opportunity-value">
+                          ${opportunityValueReport.totalRevenue >= 1000000 
+                            ? `${(opportunityValueReport.totalRevenue / 1000000).toFixed(2)}M`
+                            : opportunityValueReport.totalRevenue >= 1000
+                            ? `${(opportunityValueReport.totalRevenue / 1000).toFixed(2)}K`
+                            : opportunityValueReport.totalRevenue.toLocaleString()}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-sm font-medium px-2 py-0.5 rounded ${
+                            opportunityValueReport.percentChange >= 0 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {opportunityValueReport.percentChange >= 0 ? '↑' : '↓'} {Math.abs(opportunityValueReport.percentChange).toFixed(2)}%
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            vs Previous Period
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Horizontal Bar Chart */}
+                      <div className="space-y-4">
+                        {(() => {
+                          const maxValue = Math.max(
+                            opportunityValueReport.breakdown.open,
+                            opportunityValueReport.breakdown.won,
+                            opportunityValueReport.breakdown.lost,
+                            1
+                          );
+                          const formatValue = (val: number) => {
+                            if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+                            if (val >= 1000) return `$${(val / 1000).toFixed(0)}K`;
+                            return `$${val.toLocaleString()}`;
+                          };
+                          
+                          return (
+                            <>
+                              {/* Lost */}
+                              <div className="flex items-center gap-4">
+                                <div className="w-12 text-sm text-right text-muted-foreground">Lost</div>
+                                <div className="flex-1 h-8 bg-gray-100 rounded relative overflow-hidden">
+                                  <div 
+                                    className="h-full rounded transition-all duration-500"
+                                    style={{ 
+                                      width: `${(opportunityValueReport.breakdown.lost / maxValue) * 100}%`,
+                                      backgroundColor: '#8B5CF6',
+                                      minWidth: opportunityValueReport.breakdown.lost > 0 ? '8px' : '0'
+                                    }}
+                                  />
+                                </div>
+                                <div className="w-20 text-sm text-right">{formatValue(opportunityValueReport.breakdown.lost)}</div>
+                              </div>
+                              {/* Won */}
+                              <div className="flex items-center gap-4">
+                                <div className="w-12 text-sm text-right text-muted-foreground">Won</div>
+                                <div className="flex-1 h-8 bg-gray-100 rounded relative overflow-hidden">
+                                  <div 
+                                    className="h-full rounded transition-all duration-500"
+                                    style={{ 
+                                      width: `${(opportunityValueReport.breakdown.won / maxValue) * 100}%`,
+                                      backgroundColor: '#06B6D4',
+                                      minWidth: opportunityValueReport.breakdown.won > 0 ? '8px' : '0'
+                                    }}
+                                  />
+                                </div>
+                                <div className="w-20 text-sm text-right">{formatValue(opportunityValueReport.breakdown.won)}</div>
+                              </div>
+                              {/* Open */}
+                              <div className="flex items-center gap-4">
+                                <div className="w-12 text-sm text-right text-muted-foreground">Open</div>
+                                <div className="flex-1 h-8 bg-gray-100 rounded relative overflow-hidden">
+                                  <div 
+                                    className="h-full rounded transition-all duration-500"
+                                    style={{ 
+                                      width: `${(opportunityValueReport.breakdown.open / maxValue) * 100}%`,
+                                      backgroundColor: '#3B82F6',
+                                      minWidth: opportunityValueReport.breakdown.open > 0 ? '8px' : '0'
+                                    }}
+                                  />
+                                </div>
+                                <div className="w-20 text-sm text-right">{formatValue(opportunityValueReport.breakdown.open)}</div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Total Revenue Summary */}
+                      <div className="pt-4 border-t mt-6">
+                        <div className="text-center">
+                          <div className="text-sm text-muted-foreground">Total revenue</div>
+                          <div className="text-2xl font-bold">
+                            ${opportunityValueReport.totalRevenue >= 1000000 
+                              ? `${(opportunityValueReport.totalRevenue / 1000000).toFixed(2)}M`
+                              : opportunityValueReport.totalRevenue >= 1000
+                              ? `${(opportunityValueReport.totalRevenue / 1000).toFixed(2)}K`
+                              : opportunityValueReport.totalRevenue.toLocaleString()}
+                          </div>
                         </div>
                       </div>
                     </>
