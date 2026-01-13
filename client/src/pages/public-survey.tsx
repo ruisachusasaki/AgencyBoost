@@ -383,10 +383,21 @@ export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyP
           <CardContent className="space-y-6">
             {currentSlideFields.map((field) => (
               <div key={field.id} className="space-y-2">
-                <Label className="text-sm font-medium">
-                  {field.label}
-                  {field.required && <span className="text-red-500 ml-1">*</span>}
-                </Label>
+                {field.type === "heading" ? (
+                  <div className="py-2">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      {field.label}
+                    </h3>
+                    {field.helpText && (
+                      <p className="text-sm text-muted-foreground mt-1">{field.helpText}</p>
+                    )}
+                  </div>
+                ) : (
+                  <Label className="text-sm font-medium">
+                    {field.label}
+                    {field.required && <span className="text-red-500 ml-1">*</span>}
+                  </Label>
+                )}
 
                 {field.type === "short_text" && (
                   <Input

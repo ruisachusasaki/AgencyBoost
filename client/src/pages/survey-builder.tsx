@@ -14,7 +14,7 @@ import {
   ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Eye, Globe, Copy, Code,
   AlignLeft, Mail, Phone, Hash, Calendar, ChevronDown, CheckSquare, CircleDot,
   Star, Image, FileText, ListOrdered, LayoutGrid, Type, Layers, ChevronRight, ChevronLeft,
-  Zap, BarChart3, MoreHorizontal, Check, X, Folder, Pencil
+  Zap, BarChart3, MoreHorizontal, Check, X, Folder, Pencil, Heading
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -66,6 +66,7 @@ interface SurveyLogicRule {
 }
 
 const fieldTypes = [
+  { id: "heading", label: "Heading", icon: Heading, category: "layout" },
   { id: "short_text", label: "Short Text", icon: Type, category: "text" },
   { id: "long_text", label: "Long Text", icon: AlignLeft, category: "text" },
   { id: "email", label: "Email", icon: Mail, category: "contact" },
