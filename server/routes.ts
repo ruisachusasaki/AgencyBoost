@@ -22843,7 +22843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // privateNotes intentionally excluded
       })
         .from(oneOnOneMeetings)
-        .where(eq(oneOnOneMeetings.directReportId, currentUserId))
+        .where(eq(oneOnOneMeetings.directReportId, rawUserId))
         .orderBy(desc(oneOnOneMeetings.meetingDate));
 
       res.json(meetings);
@@ -22861,12 +22861,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { directReportId } = req.params;
 
       // Check if user is manager of this direct report or admin
-      const isAdmin = await isCurrentUserAdmin(currentUserId);
+      const isAdmin = await isCurrentUserAdmin(rawUserId);
       const [directReport] = await db.select()
         .from(staff)
         .where(eq(staff.id, directReportId));
 
-      if (!isAdmin && directReport?.managerId !== currentUserId && currentUserId !== directReportId) {
+      if (!isAdmin && directReport?.managerId !== rawUserId && rawUserId !== directReportId) {
         return res.status(403).json({ error: "Unauthorized" });
       }
 
@@ -22900,8 +22900,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check authorization
-      const isAdmin = await isCurrentUserAdmin(currentUserId);
-      if (!isAdmin && meeting.managerId !== currentUserId && meeting.directReportId !== currentUserId) {
+      const isAdmin = await isCurrentUserAdmin(rawUserId);
+      if (!isAdmin && meeting.managerId !== rawUserId && meeting.directReportId !== rawUserId) {
         return res.status(403).json({ error: "Unauthorized" });
       }
 
@@ -22935,7 +22935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(oneOnOneComments.createdAt);
 
       // If user is direct report, filter out private notes
-      const sanitizedMeeting = meeting.directReportId === currentUserId && meeting.managerId !== currentUserId
+      const sanitizedMeeting = meeting.directReportId === rawUserId && meeting.managerId !== rawUserId
         ? { ...meeting, privateNotes: null, progressionStatus: null }
         : meeting;
 
@@ -22960,7 +22960,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertOneOnOneMeetingSchema.parse({
         ...req.body,
-        managerId: currentUserId,
+        managerId: rawUserId,
       });
 
       // Check if user is manager of this direct report
@@ -22968,8 +22968,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(staff)
         .where(eq(staff.id, validatedData.directReportId));
 
-      const isAdmin = await isCurrentUserAdmin(currentUserId);
-      if (!isAdmin && directReport?.managerId !== currentUserId) {
+      const isAdmin = await isCurrentUserAdmin(rawUserId);
+      if (!isAdmin && directReport?.managerId !== rawUserId) {
         return res.status(403).json({ error: "You can only create meetings for your direct reports" });
       }
 
@@ -23002,7 +23002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (newMeeting.meetingTime && newMeeting.meetingDuration) {
         const calendarResult = await createOneOnOneMeetingCalendars({
           meetingId: newMeeting.id,
-          managerId: currentUserId,
+          managerId: rawUserId,
           directReportId: newMeeting.directReportId,
           meetingDate: newMeeting.meetingDate,
           meetingTime: newMeeting.meetingTime,
@@ -23062,8 +23062,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check authorization - only manager can update
-      const isAdmin = await isCurrentUserAdmin(currentUserId);
-      if (!isAdmin && existingMeeting.managerId !== currentUserId) {
+      const isAdmin = await isCurrentUserAdmin(rawUserId);
+      if (!isAdmin && existingMeeting.managerId !== rawUserId) {
         return res.status(403).json({ error: "Only managers can update meetings" });
       }
 
@@ -23101,8 +23101,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check authorization
-      const isAdmin = await isCurrentUserAdmin(currentUserId);
-      if (!isAdmin && existingMeeting.managerId !== currentUserId) {
+      const isAdmin = await isCurrentUserAdmin(rawUserId);
+      if (!isAdmin && existingMeeting.managerId !== rawUserId) {
         return res.status(403).json({ error: "Only managers can delete meetings" });
       }
 
@@ -23124,7 +23124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertOneOnOneTalkingPointSchema.parse({
         ...req.body,
-        addedBy: currentUserId,
+        addedBy: rawUserId,
       });
 
       const [newPoint] = await db.insert(oneOnOneTalkingPoints)
