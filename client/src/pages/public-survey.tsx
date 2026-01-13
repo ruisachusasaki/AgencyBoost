@@ -375,7 +375,9 @@ export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyP
 
         <Card>
           <CardHeader>
-            <CardTitle>{currentSlide.title}</CardTitle>
+            {!survey?.settings?.hideSlideNames && currentSlide.title && (
+              <CardTitle>{currentSlide.title}</CardTitle>
+            )}
             {currentSlide.description && (
               <p className="text-muted-foreground">{currentSlide.description}</p>
             )}
@@ -391,6 +393,19 @@ export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyP
                     {field.placeholder && (
                       <div className="text-sm text-gray-700 dark:text-gray-300 mt-2 prose prose-sm max-w-none" 
                            dangerouslySetInnerHTML={{ __html: field.placeholder }} />
+                    )}
+                    {field.helpText && (
+                      <p className="text-sm text-muted-foreground mt-1">{field.helpText}</p>
+                    )}
+                  </div>
+                ) : field.type === "image" ? (
+                  <div className="py-2">
+                    {field.settings?.imageUrl && (
+                      <img 
+                        src={field.settings.imageUrl} 
+                        alt={field.label || "Survey image"} 
+                        className="max-w-full h-auto rounded-md"
+                      />
                     )}
                     {field.helpText && (
                       <p className="text-sm text-muted-foreground mt-1">{field.helpText}</p>
@@ -528,7 +543,7 @@ export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyP
                 )}
 
                 {/* Custom field or unknown type - default to text input */}
-                {(field.type === "custom_field" || !["short_text", "long_text", "email", "phone", "number", "date", "dropdown", "multiple_choice", "checkboxes", "rating"].includes(field.type)) && (
+                {(field.type === "custom_field" || !["short_text", "long_text", "email", "phone", "number", "date", "dropdown", "multiple_choice", "checkboxes", "rating", "text_block", "image"].includes(field.type)) && (
                   <Input
                     value={answers[field.id] || ""}
                     onChange={(e) => handleAnswer(field.id, e.target.value)}

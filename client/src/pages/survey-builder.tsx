@@ -118,6 +118,9 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   const [isAddLogicDialogOpen, setIsAddLogicDialogOpen] = useState(false);
   const [isEmbedDialogOpen, setIsEmbedDialogOpen] = useState(false);
   const [localSlides, setLocalSlides] = useState<SurveySlide[]>([]);
+  const [hideSlideNames, setHideSlideNames] = useState(false);
+  const [imageUploadFieldId, setImageUploadFieldId] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   
   // Track the active survey ID - updates when a new survey is created or when navigating
   const [activeSurveyId, setActiveSurveyId] = useState<string | undefined>(
@@ -202,6 +205,9 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
     if (survey?.description !== undefined) {
       setSurveyDescription(survey.description || "");
     }
+    if (survey?.settings !== undefined) {
+      setHideSlideNames(survey.settings?.hideSlideNames || false);
+    }
   }, [survey?.id]);
 
   useEffect(() => {
@@ -240,7 +246,7 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   });
 
   const updateSurveyMutation = useMutation({
-    mutationFn: async (data: { name: string; description?: string; status?: string }) => {
+    mutationFn: async (data: { name: string; description?: string; status?: string; settings?: any }) => {
       return await apiRequest("PUT", `/api/surveys/${activeSurveyId}`, data);
     },
     onSuccess: () => {
@@ -394,7 +400,11 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
     if (isNew) {
       createSurveyMutation.mutate({ name: surveyName, description: surveyDescription });
     } else {
-      updateSurveyMutation.mutate({ name: surveyName, description: surveyDescription });
+      updateSurveyMutation.mutate({ 
+        name: surveyName, 
+        description: surveyDescription,
+        settings: { hideSlideNames }
+      });
     }
   };
 
@@ -402,8 +412,43 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
     updateSurveyMutation.mutate({ 
       name: surveyName, 
       description: surveyDescription,
-      status: "published" 
+      status: "published",
+      settings: { hideSlideNames }
     });
+  };
+
+  const handleImageUpload = async (file: File, fieldId: string) => {
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('directory', 'public/surveys');
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) throw new Error('Upload failed');
+      
+      const result = await response.json();
+      const imageUrl = result.url || result.publicUrl;
+      
+      updateFieldMutation.mutate({
+        fieldId,
+        data: {
+          settings: { imageUrl }
+        }
+      });
+      
+      toast({ title: "Image uploaded", description: "Your image has been uploaded successfully" });
+    } catch (error) {
+      console.error('Image upload error:', error);
+      toast({ title: "Upload failed", description: "Failed to upload image. Please try again.", variant: "destructive" });
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   const handleDragEnd = (result: DropResult) => {
@@ -771,6 +816,19 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                     />
                   </div>
                   <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm">Hide Slide Names</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Hide slide titles on the public survey
+                      </p>
+                    </div>
+                    <Switch
+                      checked={hideSlideNames}
+                      onCheckedChange={setHideSlideNames}
+                    />
+                  </div>
+                  <Separator />
                   <div>
                     <Label className="text-sm">Status</Label>
                     <div className="mt-2">
@@ -943,6 +1001,22 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                                             <p className="text-sm text-gray-600 dark:text-gray-300 italic">
                                               {field.placeholder || "Rich text content will display here..."}
                                             </p>
+                                          </div>
+                                        )}
+                                        {field.type === "image" && (
+                                          <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+                                            {field.settings?.imageUrl ? (
+                                              <img 
+                                                src={field.settings.imageUrl} 
+                                                alt={field.label || "Survey image"} 
+                                                className="max-w-full h-auto rounded-md"
+                                              />
+                                            ) : (
+                                              <div className="flex flex-col items-center justify-center py-4 text-gray-400">
+                                                <Image className="h-8 w-8 mb-2" />
+                                                <p className="text-sm">Click edit to upload an image</p>
+                                              </div>
+                                            )}
                                           </div>
                                         )}
                                         {field.helpText && (
@@ -1142,6 +1216,58 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                     placeholder="Enter your text content here. HTML tags like <b>bold</b>, <i>italic</i>, <a href='...'>links</a> are supported."
                   />
                 </div>
+              ) : editingField.type === "image" ? (
+                <div className="space-y-4">
+                  <Label>Image</Label>
+                  {editingField.settings?.imageUrl ? (
+                    <div className="space-y-2">
+                      <img 
+                        src={editingField.settings.imageUrl} 
+                        alt="Uploaded image" 
+                        className="max-w-full h-auto rounded-md border"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          updateFieldMutation.mutate({
+                            fieldId: editingField.id,
+                            data: { settings: { imageUrl: null } }
+                          });
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remove Image
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed rounded-md p-6 text-center">
+                      <Image className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mb-2">Upload an image for your survey</p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        id="image-upload"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleImageUpload(file, editingField.id);
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById('image-upload')?.click()}
+                        disabled={isUploadingImage}
+                      >
+                        {isUploadingImage ? "Uploading..." : "Choose Image"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div>
                   <Label>Placeholder</Label>
@@ -1163,7 +1289,7 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                   />
                 </div>
               )}
-              {editingField.type !== "text_block" && (
+              {editingField.type !== "text_block" && editingField.type !== "image" && (
                 <div className="flex items-center gap-2">
                   <Switch name="required" id="required" defaultChecked={editingField.required} />
                   <Label htmlFor="required">Required field</Label>
