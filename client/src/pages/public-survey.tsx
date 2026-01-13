@@ -111,7 +111,7 @@ export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyP
 
   useEffect(() => {
     if (logicRules.length === 0) {
-      setHiddenFields(new Set());
+      setHiddenFields(prev => prev.size === 0 ? prev : new Set());
       return;
     }
 
@@ -120,7 +120,6 @@ export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyP
     // First pass: identify all fields with show_field rules (start hidden until condition met)
     logicRules.forEach(rule => {
       if (rule.actionType === "show_field" && rule.targetFieldId) {
-        // Fields controlled by show_field rules start hidden
         newHiddenFields.add(rule.targetFieldId);
       }
     });
@@ -158,36 +157,21 @@ export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyP
       }
 
       if (rule.targetFieldId) {
-        if (rule.actionType === "hide_field") {
-          // Hide when condition is met
-          if (conditionMet) {
-            newHiddenFields.add(rule.targetFieldId);
-          }
-        } else if (rule.actionType === "show_field") {
-          // Show when condition is met (remove from hidden)
-          if (conditionMet) {
-            newHiddenFields.delete(rule.targetFieldId);
-          }
+        if (rule.actionType === "hide_field" && conditionMet) {
+          newHiddenFields.add(rule.targetFieldId);
+        } else if (rule.actionType === "show_field" && conditionMet) {
+          newHiddenFields.delete(rule.targetFieldId);
         }
       }
     });
 
-    // Update hidden fields state and clear answers for newly hidden fields
+    // Only update state if hidden fields actually changed
     setHiddenFields(prevHidden => {
-      // Find fields that are becoming newly hidden
-      const newlyHidden = [...newHiddenFields].filter(id => !prevHidden.has(id));
-      
-      // Clear answers for newly hidden fields
-      if (newlyHidden.length > 0) {
-        setAnswers(prevAnswers => {
-          const updated = { ...prevAnswers };
-          newlyHidden.forEach(fieldId => {
-            delete updated[fieldId];
-          });
-          return updated;
-        });
+      const prevArray = [...prevHidden].sort();
+      const newArray = [...newHiddenFields].sort();
+      if (prevArray.length === newArray.length && prevArray.every((v, i) => v === newArray[i])) {
+        return prevHidden; // No change, return same reference
       }
-      
       return newHiddenFields;
     });
   }, [answers, logicRules]);
@@ -526,6 +510,15 @@ export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyP
                       </button>
                     ))}
                   </div>
+                )}
+
+                {/* Custom field or unknown type - default to text input */}
+                {(field.type === "custom_field" || !["short_text", "long_text", "email", "phone", "number", "date", "dropdown", "multiple_choice", "checkboxes", "rating"].includes(field.type)) && (
+                  <Input
+                    value={answers[field.id] || ""}
+                    onChange={(e) => handleAnswer(field.id, e.target.value)}
+                    placeholder={field.placeholder || ""}
+                  />
                 )}
 
                 {field.helpText && (
