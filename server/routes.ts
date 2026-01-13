@@ -20245,6 +20245,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reorder endpoint MUST be before :fieldId routes to avoid "reorder" being matched as a fieldId
+  app.put("/api/surveys/:surveyId/fields/reorder", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
+    try {
+      const { updates } = req.body;
+      await appStorage.reorderSurveyFields(updates);
+      res.json({ message: "Fields reordered" });
+    } catch (error) {
+      console.error("Error reordering fields:", error);
+      res.status(500).json({ message: "Failed to reorder fields" });
+    }
+  });
+
   app.put("/api/surveys/:surveyId/fields/:fieldId", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
     try {
       const field = await appStorage.updateSurveyField(req.params.fieldId, req.body);
@@ -20268,17 +20280,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting survey field:", error);
       res.status(500).json({ message: "Failed to delete field" });
-    }
-  });
-
-  app.put("/api/surveys/:surveyId/fields/reorder", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
-    try {
-      const { updates } = req.body;
-      await appStorage.reorderSurveyFields(updates);
-      res.json({ message: "Fields reordered" });
-    } catch (error) {
-      console.error("Error reordering fields:", error);
-      res.status(500).json({ message: "Failed to reorder fields" });
     }
   });
 
