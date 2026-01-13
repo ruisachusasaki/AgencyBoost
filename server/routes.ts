@@ -19754,12 +19754,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/forms", requireAuth(), requirePermission('campaigns', 'canCreate'), async (req, res) => {
     try {
       const { fields, ...formData } = req.body;
+      const currentUserId = req.user?.id || req.session?.userId;
       
       // Clean form data and set defaults
       const { updatedAt, createdAt, id, ...cleanFormData } = formData;
       const formToInsert = {
         ...cleanFormData,
-        createdBy: userId,
+        createdBy: currentUserId,
         status: cleanFormData.status || "draft"
       };
       
