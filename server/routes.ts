@@ -32,7 +32,7 @@ import {
   insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema,
   insertCalendarAppointmentSchema, insertCustomFieldFileUploadSchema, insertFormFolderSchema,
   insertCalendarIntegrationSchema, insertSmsIntegrationSchema,
-  insertLeadPipelineStagSchema, insertLeadSourceSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
+  insertLeadPipelineStagSchema, insertLeadSourceSchema, insertLeadNoteTemplateSchema, insertLeadNoteSchema, insertLeadAppointmentSchema,
   insertTaskDependencySchema, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema,
   insertScheduledEmailSchema,
   insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema,
@@ -5497,6 +5497,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting lead source:", error);
       res.status(500).json({ message: "Failed to delete lead source" });
+    }
+  });
+
+
+  // ============== Lead Note Templates ==============
+  app.get("/api/lead-note-templates", requireAuth(), async (req, res) => {
+    try {
+      const templates = await appStorage.getLeadNoteTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching lead note templates:", error);
+      res.status(500).json({ message: "Failed to fetch lead note templates" });
+    }
+  });
+
+  app.put("/api/lead-note-templates/reorder", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
+    try {
+      const { templateIds } = req.body;
+      
+      if (!Array.isArray(templateIds)) {
+        return res.status(400).json({ message: "templateIds must be an array" });
+      }
+      
+      await appStorage.reorderLeadNoteTemplates(templateIds);
+      res.json({ message: "Lead note templates reordered successfully" });
+    } catch (error) {
+      console.error("Error reordering lead note templates:", error);
+      res.status(500).json({ message: "Failed to reorder lead note templates" });
+    }
+  });
+
+  app.get("/api/lead-note-templates/:id", requireAuth(), async (req, res) => {
+    try {
+      const template = await appStorage.getLeadNoteTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Lead note template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching lead note template:", error);
+      res.status(500).json({ message: "Failed to fetch lead note template" });
+    }
+  });
+
+  app.post("/api/lead-note-templates", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
+    try {
+      const validatedData = insertLeadNoteTemplateSchema.parse(req.body);
+      const newTemplate = await appStorage.createLeadNoteTemplate(validatedData);
+      res.status(201).json(newTemplate);
+    } catch (error) {
+      console.error("Error creating lead note template:", error);
+      res.status(500).json({ message: "Failed to create lead note template" });
+    }
+  });
+
+  app.put("/api/lead-note-templates/:id", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
+    try {
+      const validatedData = insertLeadNoteTemplateSchema.partial().parse(req.body);
+      const updatedTemplate = await appStorage.updateLeadNoteTemplate(req.params.id, validatedData);
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Lead note template not found" });
+      }
+      res.json(updatedTemplate);
+    } catch (error) {
+      console.error("Error updating lead note template:", error);
+      res.status(500).json({ message: "Failed to update lead note template" });
+    }
+  });
+
+  app.delete("/api/lead-note-templates/:id", requireAuth(), requirePermission('leads', 'canManage'), async (req, res) => {
+    try {
+      const success = await appStorage.deleteLeadNoteTemplate(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Lead note template not found" });
+      }
+      res.json({ message: "Lead note template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting lead note template:", error);
+      res.status(500).json({ message: "Failed to delete lead note template" });
     }
   });
 

@@ -669,6 +669,17 @@ export const leadSources = pgTable("lead_sources", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Lead Note Templates - Pre-built note templates for sales reps
+export const leadNoteTemplates = pgTable("lead_note_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  content: text("content").notNull(),
+  isActive: boolean("is_active").default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const leads = pgTable("leads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -1310,6 +1321,12 @@ export const insertLeadSourceSchema = createInsertSchema(leadSources).omit({
   updatedAt: true,
 });
 
+export const insertLeadNoteTemplateSchema = createInsertSchema(leadNoteTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
@@ -1595,6 +1612,9 @@ export type InsertLeadPipelineStage = z.infer<typeof insertLeadPipelineStagSchem
 
 export type LeadSource = typeof leadSources.$inferSelect;
 export type InsertLeadSource = z.infer<typeof insertLeadSourceSchema>;
+
+export type LeadNoteTemplate = typeof leadNoteTemplates.$inferSelect;
+export type InsertLeadNoteTemplate = z.infer<typeof insertLeadNoteTemplateSchema>;
 
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;

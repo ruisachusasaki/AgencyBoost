@@ -1,4 +1,5 @@
 import { useState } from "react";
+import NoteTemplatesSection from "@/components/settings/note-templates-section";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
@@ -242,9 +243,9 @@ export default function LeadsSettingsPage() {
           <div className="flex items-center gap-3">
             <Target className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-2xl font-bold" data-testid="text-page-title">Lead Sources</h1>
+              <h1 className="text-2xl font-bold" data-testid="text-page-title">Leads Settings</h1>
               <p className="text-muted-foreground" data-testid="text-page-description">
-                Manage customizable source options for tracking where leads come from
+                Manage lead sources and note templates for your sales team
               </p>
             </div>
           </div>
@@ -355,6 +356,9 @@ export default function LeadsSettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Note Templates Section */}
+      <NoteTemplatesSection />
 
       {/* Add Source Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>

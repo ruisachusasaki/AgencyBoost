@@ -5,6 +5,7 @@ import {
   type Lead, type InsertLead, leads,
   type LeadPipelineStage, leadPipelineStages,
   type LeadSource, type InsertLeadSource, leadSources,
+  type LeadNoteTemplate, type InsertLeadNoteTemplate, leadNoteTemplates,
   type Quote, type InsertQuote, quotes,
   type Task, type InsertTask, tasks,
   type Invoice, type InsertInvoice, invoices,
@@ -184,6 +185,14 @@ export interface IStorage {
   updateLeadSource(id: string, source: Partial<InsertLeadSource>): Promise<LeadSource | undefined>;
   deleteLeadSource(id: string): Promise<boolean>;
   reorderLeadSources(sourceIds: string[]): Promise<void>;
+  
+  // Lead Note Templates
+  getLeadNoteTemplates(): Promise<LeadNoteTemplate[]>;
+  getLeadNoteTemplate(id: string): Promise<LeadNoteTemplate | undefined>;
+  createLeadNoteTemplate(template: InsertLeadNoteTemplate): Promise<LeadNoteTemplate>;
+  updateLeadNoteTemplate(id: string, template: Partial<InsertLeadNoteTemplate>): Promise<LeadNoteTemplate | undefined>;
+  deleteLeadNoteTemplate(id: string): Promise<boolean>;
+  reorderLeadNoteTemplates(templateIds: string[]): Promise<void>;
   
   // Smart Lists
   getSmartLists(userId: string, entityType?: string): Promise<SmartList[]>;
@@ -2333,6 +2342,56 @@ export class MemStorage implements IStorage {
       const source = this.leadSources.get(id);
       if (source) {
         this.leadSources.set(id, { ...source, order: index });
+      }
+    });
+  }
+
+  // Lead Note Templates
+  private leadNoteTemplates: Map<string, LeadNoteTemplate> = new Map();
+
+  async getLeadNoteTemplates(): Promise<LeadNoteTemplate[]> {
+    return Array.from(this.leadNoteTemplates.values())
+      .sort((a, b) => a.order - b.order);
+  }
+
+  async getLeadNoteTemplate(id: string): Promise<LeadNoteTemplate | undefined> {
+    return this.leadNoteTemplates.get(id);
+  }
+
+  async createLeadNoteTemplate(insertTemplate: InsertLeadNoteTemplate): Promise<LeadNoteTemplate> {
+    const id = randomUUID();
+    const now = new Date();
+    const template: LeadNoteTemplate = {
+      id,
+      name: insertTemplate.name,
+      content: insertTemplate.content,
+      isActive: insertTemplate.isActive ?? true,
+      order: insertTemplate.order ?? 0,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.leadNoteTemplates.set(id, template);
+    return template;
+  }
+
+  async updateLeadNoteTemplate(id: string, templateUpdate: Partial<InsertLeadNoteTemplate>): Promise<LeadNoteTemplate | undefined> {
+    const template = this.leadNoteTemplates.get(id);
+    if (!template) return undefined;
+    
+    const updatedTemplate = { ...template, ...templateUpdate, updatedAt: new Date() };
+    this.leadNoteTemplates.set(id, updatedTemplate);
+    return updatedTemplate;
+  }
+
+  async deleteLeadNoteTemplate(id: string): Promise<boolean> {
+    return this.leadNoteTemplates.delete(id);
+  }
+
+  async reorderLeadNoteTemplates(templateIds: string[]): Promise<void> {
+    templateIds.forEach((id, index) => {
+      const template = this.leadNoteTemplates.get(id);
+      if (template) {
+        this.leadNoteTemplates.set(id, { ...template, order: index });
       }
     });
   }
@@ -5372,6 +5431,79 @@ export class DbStorage implements IStorage {
       }
     } catch (error) {
       console.error("Error reordering lead sources:", error);
+      throw error;
+    }
+  }
+
+  // Lead Note Templates - Database implementation
+  async getLeadNoteTemplates(): Promise<LeadNoteTemplate[]> {
+    try {
+      const templates = await db.select().from(leadNoteTemplates)
+        .orderBy(asc(leadNoteTemplates.order));
+      return templates;
+    } catch (error) {
+      console.error("Error fetching lead note templates:", error);
+      return [];
+    }
+  }
+
+  async getLeadNoteTemplate(id: string): Promise<LeadNoteTemplate | undefined> {
+    try {
+      const result = await db.select().from(leadNoteTemplates).where(eq(leadNoteTemplates.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching lead note template:", error);
+      return undefined;
+    }
+  }
+
+  async createLeadNoteTemplate(template: InsertLeadNoteTemplate): Promise<LeadNoteTemplate> {
+    try {
+      const result = await db.insert(leadNoteTemplates).values({
+        ...template,
+        id: sql`gen_random_uuid()`,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating lead note template:", error);
+      throw error;
+    }
+  }
+
+  async updateLeadNoteTemplate(id: string, template: Partial<InsertLeadNoteTemplate>): Promise<LeadNoteTemplate | undefined> {
+    try {
+      const result = await db.update(leadNoteTemplates)
+        .set({ ...template, updatedAt: new Date() })
+        .where(eq(leadNoteTemplates.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating lead note template:", error);
+      return undefined;
+    }
+  }
+
+  async deleteLeadNoteTemplate(id: string): Promise<boolean> {
+    try {
+      await db.delete(leadNoteTemplates).where(eq(leadNoteTemplates.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting lead note template:", error);
+      return false;
+    }
+  }
+
+  async reorderLeadNoteTemplates(templateIds: string[]): Promise<void> {
+    try {
+      for (let i = 0; i < templateIds.length; i++) {
+        await db.update(leadNoteTemplates)
+          .set({ order: i })
+          .where(eq(leadNoteTemplates.id, templateIds[i]));
+      }
+    } catch (error) {
+      console.error("Error reordering lead note templates:", error);
       throw error;
     }
   }

@@ -8,10 +8,11 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertLeadNoteSchema, type LeadNote, type InsertLeadNote } from "@shared/schema";
-import { NotebookPen, Plus, Edit, Trash2, Lock, Unlock, User } from "lucide-react";
+import { insertLeadNoteSchema, type LeadNote, type InsertLeadNote, type LeadNoteTemplate } from "@shared/schema";
+import { NotebookPen, Plus, Edit, Trash2, Lock, Unlock, User, FileText, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { z } from "zod";
 
@@ -39,6 +40,22 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
   const { data: staff = [] } = useQuery({
     queryKey: ["/api/staff"],
   });
+
+  const { data: allNoteTemplates = [] } = useQuery<LeadNoteTemplate[]>({
+    queryKey: ['/api/lead-note-templates'],
+    queryFn: async () => {
+      const response = await fetch('/api/lead-note-templates');
+      if (!response.ok) throw new Error('Failed to fetch note templates');
+      return response.json();
+    },
+  });
+
+  // Only show active templates in the dropdown for sales reps
+  const noteTemplates = allNoteTemplates.filter(t => t.isActive);
+
+  const handleLoadTemplate = (template: LeadNoteTemplate) => {
+    form.setValue('content', template.content);
+  };
 
   const form = useForm<NoteFormData>({
     resolver: zodResolver(noteFormSchema),
@@ -243,12 +260,44 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
               Add Note
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Note</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {noteTemplates.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button type="button" variant="outline" size="sm" data-testid="button-load-template">
+                          <FileText className="w-4 h-4 mr-2" />
+                          Load Template
+                          <ChevronDown className="w-4 h-4 ml-2" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-64">
+                        {noteTemplates.map((template) => (
+                          <DropdownMenuItem
+                            key={template.id}
+                            onClick={() => handleLoadTemplate(template)}
+                            data-testid={`template-option-${template.id}`}
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium">{template.name}</span>
+                              <span className="text-xs text-muted-foreground truncate">
+                                {template.content.substring(0, 50)}{template.content.length > 50 ? '...' : ''}
+                              </span>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <span className="text-sm text-muted-foreground">
+                      Select a template to pre-fill the note
+                    </span>
+                  </div>
+                )}
                 <FormField
                   control={form.control}
                   name="content"
@@ -258,7 +307,8 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
                         <Textarea
                           {...field}
                           placeholder="Enter your note here..."
-                          rows={6}
+                          rows={8}
+                          data-testid="input-note-content"
                         />
                       </FormControl>
                       <FormMessage />
@@ -266,10 +316,10 @@ export default function LeadNotesSection({ leadId }: LeadNotesSectionProps) {
                   )}
                 />
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} data-testid="button-cancel-note">
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isLoading_mutation}>
+                  <Button type="submit" disabled={isLoading_mutation} data-testid="button-add-note">
                     {isLoading_mutation ? "Adding..." : "Add Note"}
                   </Button>
                 </div>
