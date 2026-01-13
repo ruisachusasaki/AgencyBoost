@@ -577,7 +577,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
                       {appointmentData.date ? format(new Date(appointmentData.date), "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0 z-[9999]" align="start" sideOffset={4}>
                     <Calendar
                       mode="single"
                       selected={appointmentData.date ? new Date(appointmentData.date) : undefined}
@@ -697,7 +697,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
                           {appointmentData.recurringEndDate ? format(new Date(appointmentData.recurringEndDate), "PPP") : "Pick end date"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start" sideOffset={4}>
                         <Calendar
                           mode="single"
                           selected={appointmentData.recurringEndDate ? new Date(appointmentData.recurringEndDate) : undefined}
