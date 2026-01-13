@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { 
-  ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Eye, Globe, Copy,
+  ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Eye, Globe, Copy, Code,
   AlignLeft, Mail, Phone, Hash, Calendar, ChevronDown, CheckSquare, CircleDot,
   Star, Image, FileText, ListOrdered, LayoutGrid, Type, Layers, ChevronRight, ChevronLeft,
   Zap, BarChart3, MoreHorizontal, Check, X, Folder, Pencil
@@ -115,6 +115,7 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   const [editingSlide, setEditingSlide] = useState<SurveySlide | null>(null);
   const [isEditSlideDialogOpen, setIsEditSlideDialogOpen] = useState(false);
   const [isAddLogicDialogOpen, setIsAddLogicDialogOpen] = useState(false);
+  const [isEmbedDialogOpen, setIsEmbedDialogOpen] = useState(false);
   const [localSlides, setLocalSlides] = useState<SurveySlide[]>([]);
   
   // Track the active survey ID - updates when a new survey is created or when navigating
@@ -471,18 +472,28 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
         </div>
         <div className="flex items-center gap-2">
           {!isNew && survey?.status === "published" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const url = `${window.location.origin}/s/${survey.shortCode}`;
-                navigator.clipboard.writeText(url);
-                toast({ title: "URL copied", description: "Survey URL copied to clipboard" });
-              }}
-            >
-              <Copy className="h-4 w-4 mr-2" />
-              Copy Link
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const url = `${window.location.origin}/s/${survey.shortCode}`;
+                  navigator.clipboard.writeText(url);
+                  toast({ title: "URL copied", description: "Survey URL copied to clipboard" });
+                }}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Link
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEmbedDialogOpen(true)}
+              >
+                <Code className="h-4 w-4 mr-2" />
+                Embed
+              </Button>
+            </>
           )}
           {!isNew && survey?.status !== "published" && (
             <Button variant="outline" size="sm" onClick={handlePublish} disabled={updateSurveyMutation.isPending}>
@@ -1232,6 +1243,60 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Embed Code Dialog */}
+      <Dialog open={isEmbedDialogOpen} onOpenChange={setIsEmbedDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Embed Survey</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="block text-sm font-medium mb-2">Direct URL</Label>
+              <div className="flex gap-2">
+                <Input 
+                  readOnly 
+                  value={`${window.location.origin}/s/${survey?.shortCode}`}
+                  className="font-mono text-sm"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/s/${survey?.shortCode}`);
+                    toast({ title: "Copied", description: "Survey URL copied to clipboard" });
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div>
+              <Label className="block text-sm font-medium mb-2">Embed Code (iframe)</Label>
+              <div className="flex gap-2">
+                <Textarea
+                  readOnly
+                  value={`<iframe src="${window.location.origin}/embed/survey/${survey?.shortCode}" width="100%" height="600" frameborder="0" style="border: none;"></iframe>`}
+                  className="font-mono text-xs"
+                  rows={3}
+                />
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`<iframe src="${window.location.origin}/embed/survey/${survey?.shortCode}" width="100%" height="600" frameborder="0" style="border: none;"></iframe>`);
+                    toast({ title: "Copied", description: "Embed code copied to clipboard" });
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Paste this code into your website's HTML to embed the survey. Adjust the height value as needed.
+              </p>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface PublicSurveyProps {
   shortCode: string;
+  embed?: boolean;
 }
 
 interface SurveySlide {
@@ -53,7 +54,7 @@ interface SurveyLogicRule {
   targetSlideId?: string;
 }
 
-export default function PublicSurvey({ shortCode }: PublicSurveyProps) {
+export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -308,9 +309,13 @@ export default function PublicSurvey({ shortCode }: PublicSurveyProps) {
   const isLastSlide = currentSlideIndex === sortedSlides.length - 1;
   const progress = sortedSlides.length > 0 ? ((currentSlideIndex + 1) / sortedSlides.length) * 100 : 0;
 
+  const containerClass = embed 
+    ? "flex items-center justify-center p-4" 
+    : "min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900";
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className={containerClass}>
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-muted-foreground">Loading survey...</p>
@@ -321,7 +326,7 @@ export default function PublicSurvey({ shortCode }: PublicSurveyProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className={containerClass}>
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-6 text-center">
             <h2 className="text-xl font-semibold mb-2">Survey Not Found</h2>
@@ -336,7 +341,7 @@ export default function PublicSurvey({ shortCode }: PublicSurveyProps) {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className={containerClass}>
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-6 text-center">
             <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -354,7 +359,7 @@ export default function PublicSurvey({ shortCode }: PublicSurveyProps) {
 
   if (!currentSlide) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className={containerClass}>
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-6 text-center">
             <h2 className="text-xl font-semibold mb-2">Survey Not Available</h2>
@@ -368,7 +373,7 @@ export default function PublicSurvey({ shortCode }: PublicSurveyProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
+    <div className={embed ? "bg-transparent p-4" : "min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4"}>
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-center mb-2">{survey?.name}</h1>

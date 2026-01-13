@@ -105,6 +105,9 @@ function Router() {
       <Route path="/s/:shortCode">
         {(params) => <PublicSurvey shortCode={params.shortCode} />}
       </Route>
+      <Route path="/embed/survey/:shortCode">
+        {(params) => <PublicSurvey shortCode={params.shortCode} embed={true} />}
+      </Route>
       
       {/* Protected routes - authentication required */}
       <Route path="/">

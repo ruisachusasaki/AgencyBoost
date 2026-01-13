@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, FolderOpen, MoreHorizontal, Copy, Tag, Megaphone, FileText, ChevronUp, ChevronDown, ExternalLink, ArrowLeft, ClipboardList, Globe, BarChart3 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Mail, MessageCircle, Folder, FolderPlus, FolderOpen, MoreHorizontal, Copy, Tag, Megaphone, FileText, ChevronUp, ChevronDown, ExternalLink, ArrowLeft, ClipboardList, Globe, BarChart3, Code } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -64,6 +64,8 @@ export default function Campaigns() {
   const [surveySearchTerm, setSurveySearchTerm] = useState("");
   const [moveSurveyToFolderDialogOpen, setMoveSurveyToFolderDialogOpen] = useState(false);
   const [surveyToMove, setSurveyToMove] = useState<any>(null);
+  const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
+  const [surveyToEmbed, setSurveyToEmbed] = useState<any>(null);
   const [isEditFolderDialogOpen, setIsEditFolderDialogOpen] = useState(false);
   const [folderToEdit, setFolderToEdit] = useState<any>(null);
   
@@ -2398,6 +2400,17 @@ export default function Campaigns() {
                               <Folder className="h-4 w-4 mr-2" />
                               Move to Folder
                             </DropdownMenuItem>
+                            {survey.status === 'published' && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSurveyToEmbed(survey);
+                                  setEmbedDialogOpen(true);
+                                }}
+                              >
+                                <Code className="h-4 w-4 mr-2" />
+                                Get Embed Code
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem>
                               <Copy className="h-4 w-4 mr-2" />
                               Duplicate
@@ -2452,6 +2465,60 @@ export default function Campaigns() {
                   {folder.name}
                 </Button>
               ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Survey Embed Code Dialog */}
+      <Dialog open={embedDialogOpen} onOpenChange={setEmbedDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Embed Survey: {surveyToEmbed?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Direct URL</label>
+              <div className="flex gap-2">
+                <Input 
+                  readOnly 
+                  value={`${window.location.origin}/s/${surveyToEmbed?.shortCode}`}
+                  className="font-mono text-sm"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/s/${surveyToEmbed?.shortCode}`);
+                    toast({ title: "Copied", description: "Survey URL copied to clipboard" });
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Embed Code (iframe)</label>
+              <div className="flex gap-2">
+                <Textarea
+                  readOnly
+                  value={`<iframe src="${window.location.origin}/embed/survey/${surveyToEmbed?.shortCode}" width="100%" height="600" frameborder="0" style="border: none;"></iframe>`}
+                  className="font-mono text-xs"
+                  rows={3}
+                />
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`<iframe src="${window.location.origin}/embed/survey/${surveyToEmbed?.shortCode}" width="100%" height="600" frameborder="0" style="border: none;"></iframe>`);
+                    toast({ title: "Copied", description: "Embed code copied to clipboard" });
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Paste this code into your website's HTML to embed the survey. Adjust the height value as needed.
+              </p>
             </div>
           </div>
         </DialogContent>
