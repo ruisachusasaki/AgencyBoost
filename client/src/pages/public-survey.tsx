@@ -399,17 +399,30 @@ export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyP
                     )}
                   </div>
                 ) : field.type === "image" ? (
-                  <div className="py-2">
-                    {field.settings?.imageUrl && (
-                      <img 
-                        src={field.settings.imageUrl} 
-                        alt={field.label || "Survey image"} 
-                        className="max-w-full h-auto rounded-md"
-                      />
-                    )}
-                    {field.helpText && (
-                      <p className="text-sm text-muted-foreground mt-1">{field.helpText}</p>
-                    )}
+                  <div 
+                    className="py-2"
+                    style={{
+                      display: 'flex',
+                      justifyContent: field.settings?.imageAlignment === 'center' ? 'center' : 
+                                     field.settings?.imageAlignment === 'right' ? 'flex-end' : 'flex-start'
+                    }}
+                  >
+                    <div>
+                      {field.settings?.imageUrl && (
+                        <img 
+                          src={field.settings.imageUrl} 
+                          alt={field.label || "Survey image"} 
+                          className="h-auto rounded-md"
+                          style={{
+                            maxWidth: `${field.settings?.imageSize || 100}%`,
+                            width: `${field.settings?.imageSize || 100}%`,
+                          }}
+                        />
+                      )}
+                      {field.helpText && (
+                        <p className="text-sm text-muted-foreground mt-1">{field.helpText}</p>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <Label className="text-sm font-medium">

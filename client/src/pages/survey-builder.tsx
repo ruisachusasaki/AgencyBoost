@@ -1022,15 +1022,25 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                                           </div>
                                         )}
                                         {field.type === "image" && (
-                                          <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+                                          <div 
+                                            className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md border border-dashed border-gray-300 dark:border-gray-600"
+                                            style={{
+                                              display: 'flex',
+                                              justifyContent: field.settings?.imageAlignment === 'center' ? 'center' : 
+                                                             field.settings?.imageAlignment === 'right' ? 'flex-end' : 'flex-start'
+                                            }}
+                                          >
                                             {field.settings?.imageUrl ? (
                                               <img 
                                                 src={field.settings.imageUrl} 
                                                 alt={field.label || "Survey image"} 
-                                                className="max-w-full h-auto rounded-md"
+                                                className="h-auto rounded-md"
+                                                style={{
+                                                  maxWidth: `${field.settings?.imageSize || 100}%`,
+                                                }}
                                               />
                                             ) : (
-                                              <div className="flex flex-col items-center justify-center py-4 text-gray-400">
+                                              <div className="flex flex-col items-center justify-center py-4 text-gray-400 w-full">
                                                 <Image className="h-8 w-8 mb-2" />
                                                 <p className="text-sm">Click edit to upload an image</p>
                                               </div>
@@ -1238,12 +1248,67 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                 <div className="space-y-4">
                   <Label>Image</Label>
                   {editingField.settings?.imageUrl ? (
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                       <img 
                         src={editingField.settings.imageUrl} 
                         alt="Uploaded image" 
                         className="max-w-full h-auto rounded-md border"
+                        style={{
+                          maxWidth: `${editingField.settings?.imageSize || 100}%`,
+                        }}
                       />
+                      
+                      <div className="space-y-2">
+                        <Label>Alignment</Label>
+                        <div className="flex gap-2">
+                          {["left", "center", "right"].map((align) => (
+                            <Button
+                              key={align}
+                              type="button"
+                              variant={editingField.settings?.imageAlignment === align ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => {
+                                updateFieldMutation.mutate({
+                                  fieldId: editingField.id,
+                                  data: { 
+                                    settings: { 
+                                      ...editingField.settings,
+                                      imageAlignment: align 
+                                    } 
+                                  }
+                                });
+                              }}
+                              className="capitalize"
+                            >
+                              {align}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Size: {editingField.settings?.imageSize || 100}%</Label>
+                        <input
+                          type="range"
+                          min="25"
+                          max="100"
+                          step="5"
+                          value={editingField.settings?.imageSize || 100}
+                          onChange={(e) => {
+                            updateFieldMutation.mutate({
+                              fieldId: editingField.id,
+                              data: { 
+                                settings: { 
+                                  ...editingField.settings,
+                                  imageSize: parseInt(e.target.value) 
+                                } 
+                              }
+                            });
+                          }}
+                          className="w-full"
+                        />
+                      </div>
+
                       <Button
                         type="button"
                         variant="outline"
@@ -1251,7 +1316,7 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                         onClick={() => {
                           updateFieldMutation.mutate({
                             fieldId: editingField.id,
-                            data: { settings: { imageUrl: null } }
+                            data: { settings: { imageUrl: null, imageAlignment: null, imageSize: null } }
                           });
                         }}
                       >
