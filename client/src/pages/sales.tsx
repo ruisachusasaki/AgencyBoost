@@ -1030,17 +1030,40 @@ export default function Sales() {
                       {/* Pipeline Funnel Visualization */}
                       {pipelineReport.stages?.length > 0 ? (
                         <div className="space-y-0">
-                          {/* Header Row */}
-                          <div className="flex items-center border-b pb-2 mb-2">
-                            <div className="flex-1 pr-4"></div>
-                            <div className="w-24 text-center text-xs font-semibold text-muted-foreground">Cumulative</div>
-                            <div className="w-24 text-center text-xs font-semibold text-muted-foreground">Next Step<br/>Conversion</div>
-                          </div>
+                          {/* Dynamic Scale Header */}
+                          {(() => {
+                            const stages = pipelineReport.stages;
+                            const maxLeads = Math.max(...stages.map((s: any) => s.leadCount || 0), 1);
+                            // Calculate nice round numbers for the scale
+                            const magnitude = Math.pow(10, Math.floor(Math.log10(maxLeads)));
+                            const niceMax = Math.ceil(maxLeads / magnitude) * magnitude;
+                            const tickCount = 6;
+                            const tickInterval = niceMax / tickCount;
+                            const ticks = Array.from({ length: tickCount + 1 }, (_, i) => Math.round(i * tickInterval));
+                            
+                            return (
+                              <div className="flex items-end mb-2">
+                                <div className="flex-1 pr-4">
+                                  <div className="flex justify-between text-xs text-muted-foreground border-b pb-1">
+                                    {ticks.map((tick, i) => (
+                                      <span key={i} className="text-center" style={{ width: `${100 / tickCount}%` }}>
+                                        {tick >= 1000 ? `${(tick / 1000).toFixed(0)}K` : tick.toLocaleString()}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="w-24 text-center text-xs font-semibold text-muted-foreground">Cumulative</div>
+                                <div className="w-24 text-center text-xs font-semibold text-muted-foreground">Next Step<br/>Conversion</div>
+                              </div>
+                            );
+                          })()}
                           
                           {/* Stage Bars */}
                           {(() => {
                             const stages = pipelineReport.stages;
-                            const maxValue = Math.max(...stages.map((s: any) => s.leadCount || 0), 1);
+                            const maxLeads = Math.max(...stages.map((s: any) => s.leadCount || 0), 1);
+                            const magnitude = Math.pow(10, Math.floor(Math.log10(maxLeads)));
+                            const maxValue = Math.ceil(maxLeads / magnitude) * magnitude;
                             const firstStageLeads = stages[0]?.leadCount || 1;
                             
                             return stages.map((stage: any, index: number) => {
