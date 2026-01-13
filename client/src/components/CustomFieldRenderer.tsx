@@ -6,6 +6,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
 import CustomFieldFileUpload from "./CustomFieldFileUpload";
 import type { CustomField, CustomFieldFileUpload as CustomFieldFileUploadType } from "@shared/schema";
 
@@ -27,6 +33,7 @@ export default function CustomFieldRenderer({
   showLabel = true,
 }: CustomFieldRendererProps) {
   const [localValue, setLocalValue] = useState(value);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // Fetch file uploads for file upload fields
   const { data: fileUploads = [], isLoading: isLoadingFiles } = useQuery<CustomFieldFileUploadType[]>({
@@ -82,13 +89,38 @@ export default function CustomFieldRenderer({
         );
 
       case "date":
+        const dateValue = localValue ? (typeof localValue === 'string' ? parseISO(localValue) : new Date(localValue)) : undefined;
         return (
-          <Input
-            type="date"
-            value={localValue || ""}
-            onChange={(e) => handleLocalChange(e.target.value)}
-            disabled={disabled}
-          />
+          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={disabled}
+                className={cn(
+                  "w-full pl-3 text-left font-normal justify-start",
+                  !localValue && "text-muted-foreground"
+                )}
+              >
+                {localValue ? (
+                  format(dateValue!, "PPP")
+                ) : (
+                  <span>Pick a date</span>
+                )}
+                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={dateValue}
+                onSelect={(date) => {
+                  handleLocalChange(date ? format(date, "yyyy-MM-dd") : null);
+                  setDatePickerOpen(false);
+                }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         );
 
       case "multiline":
