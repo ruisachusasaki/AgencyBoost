@@ -11,6 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -20,7 +24,7 @@ import {
   Users, 
   Plus,
   Search,
-  Calendar,
+  Calendar as CalendarIcon,
   FileText,
   Phone,
   Mail,
@@ -52,6 +56,8 @@ export default function Sales() {
     startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // Start of year
     endDate: new Date().toISOString().split('T')[0] // Today
   });
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
   const [selectedSalesRep, setSelectedSalesRep] = useState<string>("all");
   
   // Quotes pagination and filters
@@ -62,6 +68,8 @@ export default function Sales() {
   const [quotesCreatedByFilter, setQuotesCreatedByFilter] = useState<string>("all");
   const [quotesDateFrom, setQuotesDateFrom] = useState<string>("");
   const [quotesDateTo, setQuotesDateTo] = useState<string>("");
+  const [quotesDateFromOpen, setQuotesDateFromOpen] = useState(false);
+  const [quotesDateToOpen, setQuotesDateToOpen] = useState(false);
   const [quotesShowLowMarginOnly, setQuotesShowLowMarginOnly] = useState(false);
   
   // Quotes sorting
@@ -883,25 +891,69 @@ export default function Sales() {
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="start-date" className="text-sm whitespace-nowrap">Start Date:</Label>
-                    <Input
-                      id="start-date"
-                      type="date"
-                      value={dateRange.startDate}
-                      onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                      className="w-40"
-                      data-testid="input-start-date"
-                    />
+                    <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-40 pl-3 text-left font-normal",
+                            !dateRange.startDate && "text-muted-foreground"
+                          )}
+                          data-testid="input-start-date"
+                        >
+                          {dateRange.startDate ? (
+                            format(parseISO(dateRange.startDate), "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={dateRange.startDate ? parseISO(dateRange.startDate) : undefined}
+                          onSelect={(date) => {
+                            setDateRange(prev => ({ ...prev, startDate: date ? format(date, "yyyy-MM-dd") : "" }));
+                            setStartDateOpen(false);
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="flex items-center gap-2">
                     <Label htmlFor="end-date" className="text-sm whitespace-nowrap">End Date:</Label>
-                    <Input
-                      id="end-date"
-                      type="date"
-                      value={dateRange.endDate}
-                      onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                      className="w-40"
-                      data-testid="input-end-date"
-                    />
+                    <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-40 pl-3 text-left font-normal",
+                            !dateRange.endDate && "text-muted-foreground"
+                          )}
+                          data-testid="input-end-date"
+                        >
+                          {dateRange.endDate ? (
+                            format(parseISO(dateRange.endDate), "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={dateRange.endDate ? parseISO(dateRange.endDate) : undefined}
+                          onSelect={(date) => {
+                            setDateRange(prev => ({ ...prev, endDate: date ? format(date, "yyyy-MM-dd") : "" }));
+                            setEndDateOpen(false);
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="flex items-center gap-2">
                     <Label htmlFor="sales-rep-filter" className="text-sm whitespace-nowrap">Sales Rep:</Label>
@@ -1632,31 +1684,73 @@ export default function Sales() {
                   {/* Date From Filter */}
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">From Date</Label>
-                    <Input
-                      type="date"
-                      value={quotesDateFrom}
-                      onChange={(e) => {
-                        setQuotesDateFrom(e.target.value);
-                        setQuotesPage(1);
-                      }}
-                      className="h-9"
-                      data-testid="input-filter-date-from"
-                    />
+                    <Popover open={quotesDateFromOpen} onOpenChange={setQuotesDateFromOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-[140px] h-9 pl-3 text-left font-normal",
+                            !quotesDateFrom && "text-muted-foreground"
+                          )}
+                          data-testid="input-filter-date-from"
+                        >
+                          {quotesDateFrom ? (
+                            format(parseISO(quotesDateFrom), "MMM d, yyyy")
+                          ) : (
+                            <span>mm/dd/yyyy</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={quotesDateFrom ? parseISO(quotesDateFrom) : undefined}
+                          onSelect={(date) => {
+                            setQuotesDateFrom(date ? format(date, "yyyy-MM-dd") : "");
+                            setQuotesPage(1);
+                            setQuotesDateFromOpen(false);
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   {/* Date To Filter */}
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">To Date</Label>
-                    <Input
-                      type="date"
-                      value={quotesDateTo}
-                      onChange={(e) => {
-                        setQuotesDateTo(e.target.value);
-                        setQuotesPage(1);
-                      }}
-                      className="h-9"
-                      data-testid="input-filter-date-to"
-                    />
+                    <Popover open={quotesDateToOpen} onOpenChange={setQuotesDateToOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-[140px] h-9 pl-3 text-left font-normal",
+                            !quotesDateTo && "text-muted-foreground"
+                          )}
+                          data-testid="input-filter-date-to"
+                        >
+                          {quotesDateTo ? (
+                            format(parseISO(quotesDateTo), "MMM d, yyyy")
+                          ) : (
+                            <span>mm/dd/yyyy</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={quotesDateTo ? parseISO(quotesDateTo) : undefined}
+                          onSelect={(date) => {
+                            setQuotesDateTo(date ? format(date, "yyyy-MM-dd") : "");
+                            setQuotesPage(1);
+                            setQuotesDateToOpen(false);
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   {/* Low Margin Filter */}
