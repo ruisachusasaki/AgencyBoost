@@ -1451,6 +1451,18 @@ export default function Sales() {
                                 dataKey="value"
                               >
                               </Pie>
+                              <RechartsTooltip
+                                content={({ active, payload }) => {
+                                  if (active && payload && payload.length) {
+                                    return (
+                                      <div className="bg-popover border rounded-md shadow-md px-3 py-2">
+                                        <p className="text-sm font-medium">{payload[0].name}: {payload[0].value}</p>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                }}
+                              />
                             </PieChart>
                           </ResponsiveContainer>
                           {/* Center text */}
