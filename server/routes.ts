@@ -2216,7 +2216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Security check for DND changes - Only Admin users can UNCHECK (disable) DND settings
-      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const dndFieldsBeingDisabled = [];
@@ -21793,7 +21793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get direct reports for managers - SECURED
   app.get("/api/hr/direct-reports", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Development mode: Mock admin user has no direct reports
@@ -22766,7 +22766,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get manager's direct reports for 1-on-1 meetings
   app.get("/api/hr/one-on-one/direct-reports", requireAuth(), async (req, res) => {
     try {
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return;
 
       // Get direct reports
