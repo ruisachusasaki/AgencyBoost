@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ interface Message {
 }
 
 export function AIAssistantWidget() {
+  const [, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -148,7 +150,7 @@ export function AIAssistantWidget() {
                             </p>
                             <ul className="mt-1 space-y-0.5">
                               {message.sources.map((source, i) => (
-                                <li key={i} className="text-xs text-primary hover:underline cursor-pointer">
+                                <li key={i} className="text-xs text-primary hover:underline cursor-pointer" onClick={() => { setLocation(`/resources/articles/${source.id}`); setIsOpen(false); }}>
                                   {source.title}
                                 </li>
                               ))}
