@@ -14,8 +14,9 @@ import {
   ArrowLeft, Save, Plus, Trash2, GripVertical, Settings, Eye, Globe, Copy, Code,
   AlignLeft, Mail, Phone, Hash, Calendar, ChevronDown, CheckSquare, CircleDot,
   Star, Image, FileText, ListOrdered, LayoutGrid, Type, Layers, ChevronRight, ChevronLeft,
-  Zap, BarChart3, MoreHorizontal, Check, X, Folder, Pencil
+  Zap, BarChart3, MoreHorizontal, Check, X, Folder, Pencil, HelpCircle
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
@@ -882,7 +883,21 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                   </div>
                   {survey?.shortCode && (
                     <div>
-                      <Label className="text-sm">Public URL</Label>
+                      <div className="flex items-center gap-1">
+                        <Label className="text-sm">Public URL</Label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs">
+                              <p className="text-xs">
+                                <strong>Link to a client:</strong> Add <code className="bg-muted px-1 rounded">?clientId=ID</code> to automatically update that client's custom fields when submitted.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       <div className="mt-1 flex gap-2">
                         <Input
                           value={`${window.location.origin}/s/${survey.shortCode}`}
@@ -1544,7 +1559,21 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="block text-sm font-medium mb-2">Direct URL</Label>
+              <div className="flex items-center gap-1.5 mb-2">
+                <Label className="block text-sm font-medium">Direct URL</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p className="text-xs">
+                        <strong>Link to a client:</strong> Add <code className="bg-muted px-1 rounded">?clientId=ID</code> to automatically update that client's custom fields when submitted.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <div className="flex gap-2">
                 <Input 
                   readOnly 
