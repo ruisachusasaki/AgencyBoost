@@ -20358,7 +20358,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/surveys/:surveyId/fields/:fieldId", requireAuth(), requirePermission('campaigns', 'canEdit'), async (req, res) => {
     try {
-      const field = await appStorage.updateSurveyField(req.params.fieldId, req.body);
+      // Get existing field to merge settings properly
+      const existingField = await appStorage.getSurveyField(req.params.fieldId);
+      let updateData = req.body;
+      
+      // Merge settings if both exist (prevents overwriting imageUrl when updating alignment)
+      if (req.body.settings && existingField?.settings) {
+        updateData = {
+          ...req.body,
+          settings: { ...existingField.settings, ...req.body.settings }
+        };
+      }
+      
+      const field = await appStorage.updateSurveyField(req.params.fieldId, updateData);
       if (!field) {
         return res.status(404).json({ message: "Field not found" });
       }
