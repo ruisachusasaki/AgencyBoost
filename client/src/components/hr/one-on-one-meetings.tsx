@@ -40,7 +40,9 @@ import {
   ChevronLeft,
   Trash2,
   BarChart3,
-  ChevronRight
+  ChevronRight,
+  Trophy,
+  X
 } from "lucide-react";
 
 interface DirectReport {
@@ -84,6 +86,14 @@ interface TalkingPoint {
   addedBy: string;
   orderIndex: number;
   isCompleted: boolean;
+}
+
+interface Win {
+  id: string;
+  meetingId: string;
+  content: string;
+  addedBy: string;
+  orderIndex: number;
 }
 
 interface ActionItem {
@@ -191,6 +201,7 @@ export default function OneOnOneMeetings() {
   const { data: meetingDetails, isLoading: loadingDetails } = useQuery<{
     meeting: Meeting;
     talkingPoints: TalkingPoint[];
+    wins: Win[];
     actionItems: ActionItem[];
     goals: Goal[];
     comments: Comment[];
@@ -879,6 +890,7 @@ function MeetingEditor({
   meetingDetails?: {
     meeting: Meeting;
     talkingPoints: TalkingPoint[];
+    wins: Win[];
     actionItems: ActionItem[];
     goals: Goal[];
     comments: Comment[];
@@ -943,6 +955,7 @@ function MeetingEditor({
   
   // Lists
   const [talkingPoints, setTalkingPoints] = useState<TalkingPoint[]>([]);
+  const [wins, setWins] = useState<Win[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -951,6 +964,7 @@ function MeetingEditor({
   useEffect(() => {
     if (meetingDetails) {
       setTalkingPoints(meetingDetails.talkingPoints || []);
+      setWins(meetingDetails.wins || []);
       setActionItems(meetingDetails.actionItems || []);
       setGoals(meetingDetails.goals || []);
       setComments(meetingDetails.comments || []);
@@ -959,6 +973,7 @@ function MeetingEditor({
   
   // New item inputs
   const [newTalkingPoint, setNewTalkingPoint] = useState("");
+  const [newWin, setNewWin] = useState("");
   const [newActionItem, setNewActionItem] = useState("");
   const [newGoal, setNewGoal] = useState("");
   const [newComment, setNewComment] = useState("");
@@ -967,6 +982,24 @@ function MeetingEditor({
   const createTalkingPointMutation = useMutation({
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/hr/one-on-one/talking-points", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
+    },
+  });
+
+  const createWinMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/hr/one-on-one/wins", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
+    },
+  });
+
+  const deleteWinMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/hr/one-on-one/wins/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
@@ -1051,6 +1084,15 @@ function MeetingEditor({
             content: point.content,
             orderIndex: point.orderIndex,
             isCompleted: point.isCompleted || false,
+          });
+        }
+        
+        // Save all wins
+        for (const win of wins) {
+          await apiRequest("POST", "/api/hr/one-on-one/wins", {
+            meetingId: savedMeeting.id,
+            content: win.content,
+            orderIndex: win.orderIndex,
           });
         }
         
@@ -1195,6 +1237,36 @@ function MeetingEditor({
       }]);
       setNewTalkingPoint("");
     }
+  };
+
+  const handleAddWin = () => {
+    if (!newWin.trim()) return;
+    
+    if (meeting) {
+      createWinMutation.mutate({
+        meetingId: meeting.id,
+        content: newWin.trim(),
+        orderIndex: wins.length,
+      });
+      setNewWin("");
+    } else {
+      const tempId = `temp-${Date.now()}`;
+      setWins([...wins, {
+        id: tempId,
+        meetingId: "",
+        content: newWin.trim(),
+        addedBy: "",
+        orderIndex: wins.length,
+      }]);
+      setNewWin("");
+    }
+  };
+
+  const handleDeleteWin = (winId: string) => {
+    if (meeting) {
+      deleteWinMutation.mutate(winId);
+    }
+    setWins(wins.filter(w => w.id !== winId));
   };
 
   const handleAddActionItem = () => {
@@ -1523,6 +1595,57 @@ function MeetingEditor({
                       <div className={`text-sm font-medium ${option.color}`}>{option.label}</div>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Wins */}
+              <div>
+                <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-yellow-500" />
+                  Wins
+                </Label>
+                <div className="space-y-2">
+                  {wins.map((win) => (
+                    <div key={win.id} className="flex items-center justify-between p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                      <span className="flex-1">{win.content}</span>
+                      {!isReadOnly && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteWin(win.id)}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                          data-testid={`button-delete-win-${win.id}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  {!isReadOnly && (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add a win..."
+                        value={newWin}
+                        onChange={(e) => setNewWin(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddWin();
+                          }
+                        }}
+                        data-testid="input-new-win"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleAddWin}
+                        data-testid="button-add-win"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
