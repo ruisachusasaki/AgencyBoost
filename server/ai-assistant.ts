@@ -1,8 +1,26 @@
 import OpenAI from "openai";
 import { db } from "./db";
-import { knowledgeBaseArticles, knowledgeBaseCategories, aiIntegrations } from "@shared/schema";
+import { knowledgeBaseArticles, knowledgeBaseCategories, aiIntegrations, aiAssistantSettings } from "@shared/schema";
 import { eq, ilike, or, sql, and } from "drizzle-orm";
 import { EncryptionService } from "./encryption";
+
+// Get custom instructions from database
+async function getCustomInstructions(): Promise<string | null> {
+  try {
+    const [settings] = await db
+      .select()
+      .from(aiAssistantSettings)
+      .limit(1);
+    
+    if (settings && settings.isEnabled && settings.customInstructions) {
+      return settings.customInstructions;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching AI assistant settings:', error);
+    return null;
+  }
+}
 
 interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -167,7 +185,11 @@ export async function chatWithAssistant(
   
   const openai = new OpenAI({ apiKey: openaiConfig.apiKey });
   
-  const relevantArticles = await searchKnowledgeBase(userMessage);
+  // Fetch custom instructions and relevant articles in parallel
+  const [relevantArticles, customInstructions] = await Promise.all([
+    searchKnowledgeBase(userMessage),
+    getCustomInstructions()
+  ]);
   
   let contextContent = "";
   if (relevantArticles.length > 0) {
@@ -177,16 +199,25 @@ export async function chatWithAssistant(
       ).join("\n\n");
   }
 
+  // Build custom instructions section
+  let customInstructionsSection = "";
+  if (customInstructions) {
+    customInstructionsSection = `\n\nIMPORTANT - Custom Instructions from Admin:
+${customInstructions}
+
+When answering questions, prioritize information from the Custom Instructions and Knowledge Base articles over general knowledge. Only suggest features that exist within AgencyBoost.`;
+  }
+
   const systemPrompt = `You are AgencyBoost's AI Assistant, a helpful assistant for a marketing agency CRM system. Your role is to help team members with questions about agency processes, client management, and best practices.
 
 You have access to the agency's Knowledge Base which contains SOPs, playbooks, and operational guidelines. When answering questions:
-1. Use information from the provided Knowledge Base articles when relevant
-2. Be concise but thorough
-3. Provide practical, actionable advice
-4. If you reference specific content from the Knowledge Base, mention the article title
-5. If the question is outside the scope of the available content, provide general best practices while noting that specific documentation may not be available
-
-${contextContent}`;
+1. FIRST check if there are Custom Instructions or Knowledge Base articles that answer the question
+2. Only use information from Custom Instructions and Knowledge Base - do not suggest external tools or generic solutions
+3. Be concise but thorough
+4. Provide practical, actionable advice
+5. If you reference specific content from the Knowledge Base, mention the article title
+6. If the question is truly outside the scope of available content, say "I don't have specific information about that in my Knowledge Base. Please check with your admin or add this topic to the Knowledge Base."
+${customInstructionsSection}${contextContent}`;
 
   const messages: OpenAI.ChatCompletionMessageParam[] = [
     { role: "system", content: systemPrompt },

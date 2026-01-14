@@ -17,7 +17,8 @@ import {
   Zap,
   Contact,
   Banknote,
-  Target
+  Target,
+  Bot
 } from "lucide-react";
 
 const settingsNavigation = [
@@ -32,6 +33,7 @@ const settingsNavigation = [
   { name: "Permission Audit", href: "/settings/permission-audit", icon: ShieldCheck },
   { name: "Calendar Settings", href: "/calendar-settings", icon: Calendar },
   { name: "Integrations", href: "/settings/integrations", icon: Plug },
+  { name: "AI Assistant", href: "/settings/ai-assistant", icon: Bot },
   { name: "Custom Fields", href: "/settings/custom-fields", icon: Database },
   { name: "Tags", href: "/settings/tags", icon: Tag },
   { name: "Products", href: "/settings/products", icon: Package },
@@ -89,6 +91,7 @@ function getSettingDescription(name: string): string {
     "Permission Audit": "Track permission changes and role assignments",
     "Calendar Settings": "Configure calendar availability and booking pages",
     "Integrations": "Connect external services and tools",
+    "AI Assistant": "Teach the AI Assistant about your setup",
     "Custom Fields": "Create and manage custom contact fields",
     "Tags": "Organize and manage system tags",
     "Products": "Manage your products and services catalog",

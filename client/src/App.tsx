@@ -46,6 +46,7 @@ import PermissionAudit from "@/pages/settings/permission-audit";
 import TasksSettings from "@/pages/settings/tasks";
 import AutomationTriggers from "@/pages/settings/automation-triggers";
 import SalesSettings from "@/pages/settings/sales";
+import AiAssistantSettings from "@/pages/settings/ai-assistant";
 import LeadsSettings from "@/pages/settings/leads";
 import MainLayout from "@/components/layout/main-layout";
 import FormBuilder from "@/pages/form-builder";
@@ -560,6 +561,16 @@ function Router() {
           <AuthGate>
             <MainLayout>
               <Integrations />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/settings/ai-assistant">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <AiAssistantSettings />
             </MainLayout>
           </AuthGate>
         )}
