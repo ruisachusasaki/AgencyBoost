@@ -5,7 +5,7 @@ import { setupAuth } from "./googleAuth";
 import { setupGoogleCalendar } from "./googleCalendarSetup";
 import { db } from "./db";
 import { sql, eq, and } from "drizzle-orm";
-import { clientBriefSections, automationTriggers, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses, timeOffPolicies, timeOffTypes, userRoles } from "@shared/schema";
+import { clientBriefSections, automationTriggers, automationActions, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses, timeOffPolicies, timeOffTypes, userRoles } from "@shared/schema";
 
 /**
  * Startup migration to ensure client brief columns exist
@@ -240,6 +240,329 @@ async function initializeDefaultAutomationTriggers() {
     log(`Automation triggers initialization error: ${error.message}`);
     // Don't crash the server if initialization fails
     log("WARNING: Automation triggers initialization failed - some automation functionality may not work correctly");
+  }
+}
+
+/**
+ * Initialize default automation actions
+ * Creates sample automation actions in the database for system functionality
+ */
+async function initializeDefaultAutomationActions() {
+  try {
+    log("Running startup migration: initializeDefaultAutomationActions");
+    
+    // Check if actions already exist
+    const existingActions = await db.select().from(automationActions).limit(1);
+    
+    if (existingActions.length > 0) {
+      log("Automation actions already exist - skipping initialization");
+      return;
+    }
+    
+    // Sample automation actions matching workflow engine capabilities
+    const sampleActions = [
+      // Communication Actions
+      {
+        id: "action-1",
+        name: "Send Email",
+        type: "send_email",
+        description: "Send an email to a contact using a template or custom content",
+        category: "communication",
+        configSchema: {
+          template_id: { type: "email_template", label: "Email Template" },
+          to: { type: "string", label: "Recipient Email" },
+          subject: { type: "string", label: "Subject (override)" },
+          body: { type: "textarea", label: "Body (override)" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-2",
+        name: "Send SMS",
+        type: "send_sms",
+        description: "Send an SMS message to a contact",
+        category: "communication",
+        configSchema: {
+          template_id: { type: "sms_template", label: "SMS Template" },
+          to: { type: "string", label: "Phone Number" },
+          message: { type: "textarea", label: "Message Content" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-3",
+        name: "Send Internal Notification",
+        type: "send_internal_notification",
+        description: "Send a notification to team members",
+        category: "communication",
+        configSchema: {
+          recipient_type: { 
+            type: "string", 
+            options: ["specific_user", "contact_owner", "all_admins"], 
+            label: "Send To",
+            required: true 
+          },
+          recipient_id: { type: "staff_select", label: "Specific User" },
+          title: { type: "string", label: "Notification Title", required: true },
+          message: { type: "textarea", label: "Message", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      // Assignment Actions
+      {
+        id: "action-4",
+        name: "Assign Contact Owner",
+        type: "assign_contact_owner",
+        description: "Assign a staff member as the owner of a contact",
+        category: "assignment",
+        configSchema: {
+          staff_id: { type: "staff_select", label: "Assign To", required: true },
+          assignment_type: { 
+            type: "string", 
+            options: ["specific", "round_robin", "least_assigned"],
+            label: "Assignment Type"
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-5",
+        name: "Assign Lead",
+        type: "assign_lead",
+        description: "Assign a lead to a sales representative",
+        category: "assignment",
+        configSchema: {
+          staff_id: { type: "staff_select", label: "Sales Rep", required: true },
+          send_notification: { type: "boolean", label: "Notify Assignee" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-6",
+        name: "Assign Task",
+        type: "assign_task",
+        description: "Assign a task to a team member",
+        category: "assignment",
+        configSchema: {
+          staff_id: { type: "staff_select", label: "Assign To", required: true },
+          task_id: { type: "task_select", label: "Task" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      // Data Management Actions
+      {
+        id: "action-7",
+        name: "Update Contact Field",
+        type: "update_contact",
+        description: "Update a field on the contact record",
+        category: "data_management",
+        configSchema: {
+          field: { type: "custom_field_select", label: "Field to Update", required: true },
+          value: { type: "string", label: "New Value", required: true },
+          use_form_value: { type: "boolean", label: "Use form submission value" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-8",
+        name: "Add Tags",
+        type: "add_tags",
+        description: "Add one or more tags to a contact",
+        category: "data_management",
+        configSchema: {
+          tags: { type: "tag_multi_select", label: "Tags to Add", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-9",
+        name: "Remove Tags",
+        type: "remove_tags",
+        description: "Remove tags from a contact",
+        category: "data_management",
+        configSchema: {
+          tags: { type: "tag_multi_select", label: "Tags to Remove", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      // Status & Progress Actions
+      {
+        id: "action-10",
+        name: "Update Lead Stage",
+        type: "update_lead_stage",
+        description: "Move a lead to a different pipeline stage",
+        category: "status_progress",
+        configSchema: {
+          stage_id: { type: "lead_stage_select", label: "New Stage", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-11",
+        name: "Update Client Status",
+        type: "update_client_status",
+        description: "Change the status of a client",
+        category: "status_progress",
+        configSchema: {
+          status: { 
+            type: "string", 
+            options: ["active", "inactive", "pending", "churned"],
+            label: "New Status",
+            required: true 
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      // Task Actions
+      {
+        id: "action-12",
+        name: "Create Task",
+        type: "create_task",
+        description: "Create a new task associated with the contact",
+        category: "data_management",
+        configSchema: {
+          title: { type: "string", label: "Task Title", required: true },
+          description: { type: "textarea", label: "Description" },
+          assignee_id: { type: "staff_select", label: "Assign To" },
+          due_in_days: { type: "number", label: "Due In (Days)", min: 0 },
+          priority: { 
+            type: "string", 
+            options: ["low", "medium", "high", "urgent"],
+            label: "Priority"
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      // Internal Control Actions
+      {
+        id: "action-13",
+        name: "Wait/Delay",
+        type: "wait",
+        description: "Pause the workflow for a specified duration",
+        category: "internal",
+        configSchema: {
+          duration: { type: "number", label: "Duration", required: true, min: 1 },
+          unit: { 
+            type: "string", 
+            options: ["minutes", "hours", "days"],
+            label: "Time Unit",
+            required: true
+          }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-14",
+        name: "If/Else Condition",
+        type: "condition",
+        description: "Branch workflow based on conditions",
+        category: "internal",
+        configSchema: {
+          field: { type: "custom_field_select", label: "Field to Check", required: true },
+          operator: { 
+            type: "string", 
+            options: ["equals", "not_equals", "contains", "not_contains", "greater_than", "less_than", "is_empty", "is_not_empty"],
+            label: "Operator",
+            required: true
+          },
+          value: { type: "string", label: "Value" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-15",
+        name: "Webhook",
+        type: "webhook",
+        description: "Send data to an external URL",
+        category: "internal",
+        configSchema: {
+          url: { type: "string", label: "Webhook URL", required: true },
+          method: { 
+            type: "string", 
+            options: ["POST", "GET", "PUT", "PATCH"],
+            label: "HTTP Method",
+            required: true
+          },
+          headers: { type: "key_value", label: "Headers" },
+          payload: { type: "textarea", label: "Request Body (JSON)" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      // Calendar Actions
+      {
+        id: "action-16",
+        name: "Create Appointment",
+        type: "create_appointment",
+        description: "Schedule an appointment for the contact",
+        category: "calendar_scheduling",
+        configSchema: {
+          calendar_id: { type: "calendar_select", label: "Calendar", required: true },
+          title: { type: "string", label: "Appointment Title", required: true },
+          duration: { type: "number", label: "Duration (minutes)", min: 15 },
+          assignee_id: { type: "staff_select", label: "Assign To" },
+          days_from_now: { type: "number", label: "Schedule In (Days)", min: 0 }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      // Note Actions
+      {
+        id: "action-17",
+        name: "Add Note",
+        type: "add_note",
+        description: "Add a note to the contact record",
+        category: "data_management",
+        configSchema: {
+          content: { type: "textarea", label: "Note Content", required: true },
+          is_pinned: { type: "boolean", label: "Pin Note" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      // Activity Logging
+      {
+        id: "action-18",
+        name: "Log Activity",
+        type: "log_activity",
+        description: "Record an activity in the contact timeline",
+        category: "data_management",
+        configSchema: {
+          activity_type: { 
+            type: "string", 
+            options: ["call", "meeting", "email", "note", "task", "other"],
+            label: "Activity Type",
+            required: true
+          },
+          description: { type: "textarea", label: "Description", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      }
+    ];
+
+    // Insert all sample actions
+    await db.insert(automationActions).values(sampleActions);
+    
+    log(`Automation actions initialization completed successfully - ${sampleActions.length} actions created`);
+  } catch (error: any) {
+    log(`Automation actions initialization error: ${error.message}`);
+    // Don't crash the server if initialization fails
+    log("WARNING: Automation actions initialization failed - some automation functionality may not work correctly");
   }
 }
 
@@ -1160,6 +1483,7 @@ async function syncStaffRolesToUserRoles() {
   await ensureClientBriefColumns();
   await initializeCoreClientBriefSections();
   await initializeDefaultAutomationTriggers();
+  await initializeDefaultAutomationActions();
   await initializeDefaultCalendars();
   await generateAnniversaryAndBirthdayEvents();
   await initializeDefaultTeamPositions();

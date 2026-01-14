@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Settings, Zap, AlertTriangle, RefreshCw, ArrowLeft } from "lucide-react";
+import { Plus, Edit, Trash2, Settings, Zap, AlertTriangle, RefreshCw, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 
 interface AutomationTrigger {
@@ -36,6 +36,8 @@ interface AutomationAction {
   createdAt: string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function AutomationTriggers() {
   const [activeTab, setActiveTab] = useState("triggers");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -43,6 +45,8 @@ export default function AutomationTriggers() {
   const [deletingTrigger, setDeletingTrigger] = useState<AutomationTrigger | null>(null);
   const [editingAction, setEditingAction] = useState<AutomationAction | null>(null);
   const [deletingAction, setDeletingAction] = useState<AutomationAction | null>(null);
+  const [triggersPage, setTriggersPage] = useState(1);
+  const [actionsPage, setActionsPage] = useState(1);
   const [formData, setFormData] = useState({
     name: "",
     type: "",
@@ -64,6 +68,21 @@ export default function AutomationTriggers() {
   const { data: actions = [], isLoading: isLoadingActions } = useQuery<AutomationAction[]>({
     queryKey: ["/api/automation-actions"],
   });
+
+  // Clamp pagination when data changes
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(triggers.length / ITEMS_PER_PAGE));
+    if (triggersPage > maxPage) {
+      setTriggersPage(maxPage);
+    }
+  }, [triggers.length, triggersPage]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(actions.length / ITEMS_PER_PAGE));
+    if (actionsPage > maxPage) {
+      setActionsPage(maxPage);
+    }
+  }, [actions.length, actionsPage]);
 
   // Create trigger mutation
   const createTriggerMutation = useMutation({
@@ -409,7 +428,9 @@ export default function AutomationTriggers() {
           </div>
 
           <div className="grid gap-4">
-            {triggers.map((trigger) => (
+            {triggers
+              .slice((triggersPage - 1) * ITEMS_PER_PAGE, triggersPage * ITEMS_PER_PAGE)
+              .map((trigger) => (
               <Card key={trigger.id} className="relative" data-testid={`card-trigger-${trigger.id}`}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -474,6 +495,38 @@ export default function AutomationTriggers() {
               </Card>
             )}
           </div>
+
+          {/* Triggers Pagination */}
+          {triggers.length > ITEMS_PER_PAGE && (
+            <div className="flex items-center justify-between border-t pt-4">
+              <p className="text-sm text-muted-foreground">
+                Showing {((triggersPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(triggersPage * ITEMS_PER_PAGE, triggers.length)} of {triggers.length} triggers
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTriggersPage(p => Math.max(1, p - 1))}
+                  disabled={triggersPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <span className="text-sm px-2">
+                  Page {triggersPage} of {Math.ceil(triggers.length / ITEMS_PER_PAGE)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTriggersPage(p => Math.min(Math.ceil(triggers.length / ITEMS_PER_PAGE), p + 1))}
+                  disabled={triggersPage >= Math.ceil(triggers.length / ITEMS_PER_PAGE)}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
         )}
 
@@ -509,7 +562,9 @@ export default function AutomationTriggers() {
           </div>
 
           <div className="grid gap-4">
-            {actions.map((action) => (
+            {actions
+              .slice((actionsPage - 1) * ITEMS_PER_PAGE, actionsPage * ITEMS_PER_PAGE)
+              .map((action) => (
               <Card key={action.id} className="relative" data-testid={`card-action-${action.id}`}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -581,6 +636,38 @@ export default function AutomationTriggers() {
               </Card>
             )}
           </div>
+
+          {/* Actions Pagination */}
+          {actions.length > ITEMS_PER_PAGE && (
+            <div className="flex items-center justify-between border-t pt-4">
+              <p className="text-sm text-muted-foreground">
+                Showing {((actionsPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(actionsPage * ITEMS_PER_PAGE, actions.length)} of {actions.length} actions
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActionsPage(p => Math.max(1, p - 1))}
+                  disabled={actionsPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <span className="text-sm px-2">
+                  Page {actionsPage} of {Math.ceil(actions.length / ITEMS_PER_PAGE)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActionsPage(p => Math.min(Math.ceil(actions.length / ITEMS_PER_PAGE), p + 1))}
+                  disabled={actionsPage >= Math.ceil(actions.length / ITEMS_PER_PAGE)}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
         )}
 
