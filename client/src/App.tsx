@@ -75,6 +75,7 @@ import HelpSupport from "@/pages/help-support";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import PublicSurvey from "@/pages/public-survey";
+import { AIAssistantWidget } from "@/components/ai-assistant-widget";
 
 function Router() {
   return (

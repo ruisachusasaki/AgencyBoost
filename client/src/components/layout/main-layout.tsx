@@ -3,6 +3,7 @@ import Sidebar from "./sidebar";
 import Header from "./header";
 import ImpersonationBanner from "@/components/admin/impersonation-banner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AIAssistantWidget } from "@/components/ai-assistant-widget";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -37,6 +38,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
           onClick={() => setSidebarOpen(false)}
         />
       )}
+
+      {/* AI Assistant Chat Widget */}
+      <AIAssistantWidget />
     </div>
   );
 }

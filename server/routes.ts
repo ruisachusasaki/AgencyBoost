@@ -31918,5 +31918,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/calendar/events", requireAuth(), createCalendarEvent);
   app.patch("/api/calendar/events/:eventId/status", requireAuth(), updateCalendarEventStatus);
   app.get("/api/calendar/time-entries", requireAuth(), getEventTimeEntries);
+
+  // AI Assistant endpoints
+  const { chatWithAssistant } = await import("./ai-assistant");
+  
+  app.post("/api/ai-assistant/chat", requireAuth(), async (req, res) => {
+    try {
+      const { message, history = [] } = req.body;
+      
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "Message is required" });
+      }
+      
+      const result = await chatWithAssistant(message, history);
+      res.json(result);
+    } catch (error: any) {
+      console.error("AI Assistant error:", error);
+      res.status(500).json({ error: error.message || "Failed to get AI response" });
+    }
+  });
   return httpServer;
 }
