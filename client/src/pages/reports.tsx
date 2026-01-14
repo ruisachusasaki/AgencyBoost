@@ -65,7 +65,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   LineChart as RechartsLineChart,
   Line,
@@ -987,7 +987,7 @@ export default function Reports() {
                 <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip content={<CustomTooltip />} />
+            <RechartsTooltip content={<CustomTooltip />} />
             <Legend />
           </RechartsPieChart>
         </ResponsiveContainer>
@@ -1037,7 +1037,7 @@ export default function Reports() {
               label={{ value: 'Hours', angle: -90, position: 'insideLeft' }}
               tick={{ fontSize: 12 }}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <RechartsTooltip content={<CustomTooltip />} />
             <Line 
               type="monotone" 
               dataKey="value" 
@@ -1096,7 +1096,7 @@ export default function Reports() {
               label={{ value: 'Hours', angle: -90, position: 'insideLeft' }}
               tick={{ fontSize: 12 }}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <RechartsTooltip content={<CustomTooltip />} />
             <Bar dataKey="minutes" fill="#10B981" radius={[4, 4, 0, 0]}>
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
@@ -1152,7 +1152,7 @@ export default function Reports() {
               label={{ value: 'Hours', angle: -90, position: 'insideLeft' }}
               tick={{ fontSize: 12 }}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <RechartsTooltip content={<CustomTooltip />} />
             <Bar dataKey="minutes" fill="#3B82F6" radius={[4, 4, 0, 0]}>
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
@@ -1300,7 +1300,7 @@ export default function Reports() {
       {/* Main Tabs */}
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
-          <TooltipProvider>
+          <TooltipProvider delayDuration={300}>
             {[
               { id: "overview", name: "Business Overview", icon: BarChart3, count: null, description: "High-level metrics including active projects, campaigns, leads, and task completion rates across your agency" },
               { id: "health", name: "Client Health", icon: Heart, count: null, description: "Weekly health scores tracking client engagement, response times, and satisfaction indicators" },
@@ -3734,7 +3734,7 @@ export default function Reports() {
                           dataKey="value"
                           label={(entry) => `${entry.name}: ${entry.value}`}
                         >
-                          <Tooltip />
+                          <RechartsTooltip />
                         </Pie>
                       </RechartsPieChart>
                     </ResponsiveContainer>
@@ -4478,7 +4478,7 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
                       tick={{ fontSize: 12 }}
                       domain={[0, 5]}
                     />
-                    <Tooltip 
+                    <RechartsTooltip 
                       contentStyle={{ 
                         backgroundColor: 'hsl(var(--background))', 
                         border: '1px solid hsl(var(--border))',
@@ -4577,7 +4577,7 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
                             <Cell key={`cell-${index}`} fill={getStatusColor(entry.name)} />
                           ))}
                         </Pie>
-                        <Tooltip 
+                        <RechartsTooltip 
                           contentStyle={{ 
                             backgroundColor: 'hsl(var(--background))', 
                             border: '1px solid hsl(var(--border))',
@@ -4630,7 +4630,7 @@ function IndividualAnalysisView({ report, onBack }: IndividualAnalysisViewProps)
                             <Cell key={`cell-${index}`} fill={getFeelingColor(entry.name)} />
                           ))}
                         </Pie>
-                        <Tooltip 
+                        <RechartsTooltip 
                           contentStyle={{ 
                             backgroundColor: 'hsl(var(--background))', 
                             border: '1px solid hsl(var(--border))',
