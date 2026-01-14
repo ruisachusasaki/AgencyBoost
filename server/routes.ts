@@ -20546,6 +20546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })).optional().default([]),
         submitterEmail: z.string().email().optional().or(z.literal('')).transform(val => val || undefined),
         submitterName: z.string().max(255).optional().transform(val => val || undefined),
+        clientId: z.string().optional(), // Client ID to link survey submission to a client
       });
       
       const parseResult = submissionSchema.safeParse(req.body);
@@ -20553,7 +20554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid submission data", errors: parseResult.error.errors });
       }
       
-      const { answers, submitterEmail, submitterName } = parseResult.data;
+      const { answers, submitterEmail, submitterName, clientId } = parseResult.data;
       
       // Create submission
       const submission = await appStorage.createSurveySubmission({
@@ -20581,6 +20582,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Get survey fields for custom field mapping
+      const surveyFields = await appStorage.getSurveyFields(survey.id);
+      
+      // Update client custom fields if clientId is provided
+      if (clientId && answers && answers.length > 0) {
+        try {
+          // Find fields that are linked to custom fields
+          for (const answer of answers) {
+            const field = surveyFields.find(f => f.id === answer.fieldId);
+            if (field?.customFieldId && answer.value !== undefined && answer.value !== '') {
+              // Update or create the client's custom field value
+              await appStorage.upsertClientCustomFieldValue(
+                clientId,
+                field.customFieldId,
+                typeof answer.value === 'object' ? JSON.stringify(answer.value) : String(answer.value)
+              );
+            }
+          }
+          console.log(`Updated custom fields for client ${clientId} from survey submission`);
+        } catch (customFieldError) {
+          console.error("Error updating client custom fields:", customFieldError);
+          // Don't fail the submission if custom field update fails
+        }
+      }
+      
       // Emit survey submission trigger for workflows
       try {
         const { emitTrigger } = await import("./workflow-engine");
@@ -20588,7 +20614,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Build responses object for trigger data
         const responsesObj: Record<string, any> = {};
         if (answers && answers.length > 0) {
-          const surveyFields = await appStorage.getSurveyFields(survey.id);
           answers.forEach((answer) => {
             const field = surveyFields.find(f => f.id === answer.fieldId);
             if (field) {

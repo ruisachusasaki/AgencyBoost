@@ -4561,6 +4561,37 @@ export class DbStorage implements IStorage {
     }
   }
 
+  async upsertClientCustomFieldValue(clientId: string, customFieldId: string, value: string): Promise<Client | undefined> {
+    try {
+      // Get current client
+      const client = await this.getClient(clientId);
+      if (!client) {
+        console.error(`Client ${clientId} not found for custom field update`);
+        return undefined;
+      }
+      
+      // Get current custom field values or initialize empty object
+      const currentValues = (client.customFieldValues as Record<string, any>) || {};
+      
+      // Update the specific custom field
+      currentValues[customFieldId] = value;
+      
+      // Save back to client
+      const result = await db.update(clients)
+        .set({
+          customFieldValues: currentValues,
+          updatedAt: new Date()
+        })
+        .where(eq(clients.id, clientId))
+        .returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error upserting client custom field value:", error);
+      throw error;
+    }
+  }
+
   async deleteClient(id: string): Promise<boolean> {
     try {
       // First delete all related records that reference this client

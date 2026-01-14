@@ -64,6 +64,10 @@ export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyP
   const [submitterName, setSubmitterName] = useState("");
   const [hiddenFields, setHiddenFields] = useState<Set<string>>(new Set());
   const [visitedSlides, setVisitedSlides] = useState<Set<number>>(new Set([0]));
+  
+  // Get client ID from URL params (for linking survey responses to a specific client)
+  const urlParams = new URLSearchParams(window.location.search);
+  const clientId = urlParams.get('clientId') || urlParams.get('client');
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["/api/public/surveys", shortCode],
@@ -80,7 +84,7 @@ export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyP
   });
 
   const submitMutation = useMutation({
-    mutationFn: async (submitData: { answers: { fieldId: string; value: any }[]; submitterEmail?: string; submitterName?: string }) => {
+    mutationFn: async (submitData: { answers: { fieldId: string; value: any }[]; submitterEmail?: string; submitterName?: string; clientId?: string | null }) => {
       const response = await fetch(`/api/public/surveys/${shortCode}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -287,6 +291,7 @@ export default function PublicSurvey({ shortCode, embed = false }: PublicSurveyP
       answers: answerArray,
       submitterEmail: submitterEmail || undefined,
       submitterName: submitterName || undefined,
+      clientId: clientId || undefined,
     });
   };
 
