@@ -59,6 +59,24 @@ export default function TriggerConfigPanel({
     enabled: !!selectedFormId
   });
 
+  // Fetch all surveys for survey_id dropdowns
+  const { data: surveys = [] } = useQuery<any[]>({
+    queryKey: ["/api/surveys"],
+  });
+
+  // Fetch survey fields for selected survey
+  const selectedSurveyId = conditions.survey_id;
+  const { data: surveyFields = [] } = useQuery<any[]>({
+    queryKey: ["/api/surveys", selectedSurveyId, "fields"],
+    queryFn: async () => {
+      if (!selectedSurveyId) return [];
+      const response = await fetch(`/api/surveys/${selectedSurveyId}/fields`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!selectedSurveyId
+  });
+
   // Fetch custom fields for the filter dropdowns
   const { data: customFields = [] } = useQuery<any[]>({
     queryKey: ["/api/custom-fields"],
@@ -240,6 +258,32 @@ export default function TriggerConfigPanel({
               name: formField.label,
               type: formField.type,
               options: formField.options || []
+            });
+          }
+        }
+      });
+    } else if (triggerDefinition?.configSchema?.survey_id) {
+      // If this trigger has survey_id in schema, use survey fields
+      surveyFields.forEach((surveyField: any) => {
+        if (surveyField.label && surveyField.type !== 'image' && surveyField.type !== 'html') {
+          if (surveyField.customFieldId) {
+            // Custom field reference - find the matching custom field
+            const matchingCustomField = customFields.find((cf: any) => cf.id === surveyField.customFieldId);
+            if (matchingCustomField) {
+              fields.push({
+                id: surveyField.customFieldId,
+                name: surveyField.label,
+                type: matchingCustomField.type,
+                options: matchingCustomField.options || []
+              });
+            }
+          } else {
+            // Standard survey field
+            fields.push({
+              id: surveyField.id,
+              name: surveyField.label,
+              type: surveyField.type,
+              options: surveyField.options || []
             });
           }
         }
@@ -1031,6 +1075,10 @@ export default function TriggerConfigPanel({
     // Special handling for filters and additionalFilters array - show dynamic filter builder
     if ((fieldName === "filters" || fieldName === "additionalFilters") && (fieldSchema.type === "array" || fieldSchema.type === "filters")) {
       const filters = conditions[fieldName] || [];
+      const needsFormSelection = triggerDefinition?.configSchema?.form_id && !conditions.form_id;
+      const needsSurveySelection = triggerDefinition?.configSchema?.survey_id && !conditions.survey_id;
+      const isDisabled = needsFormSelection || needsSurveySelection;
+      
       return (
         <div key={fieldName} className="space-y-4">
           <div className="flex items-center justify-between">
@@ -1041,17 +1089,25 @@ export default function TriggerConfigPanel({
               size="sm"
               onClick={() => addFilter(fieldName)}
               className="text-blue-600 border-blue-600 hover:bg-blue-50"
-              disabled={triggerDefinition?.configSchema?.form_id && !conditions.form_id}
+              disabled={isDisabled}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Filter
             </Button>
           </div>
           
-          {triggerDefinition?.configSchema?.form_id && !conditions.form_id && (
+          {needsFormSelection && (
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800">
                 Please select a form first to add custom field filters.
+              </p>
+            </div>
+          )}
+          
+          {needsSurveySelection && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                Please select a survey first to add custom field filters.
               </p>
             </div>
           )}
@@ -1062,11 +1118,13 @@ export default function TriggerConfigPanel({
             </div>
           )}
 
-          {filters.length === 0 && (triggerDefinition?.configSchema?.form_id ? conditions.form_id : true) && (
+          {filters.length === 0 && !isDisabled && (
             <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
               <p className="text-sm text-muted-foreground">
                 {triggerDefinition?.configSchema?.form_id 
                   ? "No filters added. This trigger will fire for any submission of the selected form."
+                  : triggerDefinition?.configSchema?.survey_id
+                  ? "No filters added. This trigger will fire for any submission of the selected survey."
                   : "No filters added. This trigger will fire for any new client created."
                 }
               </p>
@@ -1271,6 +1329,43 @@ export default function TriggerConfigPanel({
               ) : (
                 <div className="p-2 text-center text-sm text-muted-foreground">
                   No published forms available
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+          {fieldSchema.required && <p className="text-xs text-muted-foreground">Required</p>}
+        </div>
+      );
+    }
+
+    // Special handling for survey_id fields - show survey dropdown
+    if (fieldName === "survey_id" && fieldSchema.type === "string") {
+      const publishedSurveys = surveys.filter((survey: any) => survey.status === "published");
+      return (
+        <div key={fieldName} className="space-y-2">
+          <Label htmlFor={fieldName}>Choose a Survey</Label>
+          <Select 
+            value={value} 
+            onValueChange={(newValue) => setConditions((prev: any) => ({ ...prev, [fieldName]: newValue }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a survey" />
+            </SelectTrigger>
+            <SelectContent>
+              {publishedSurveys.length > 0 ? (
+                publishedSurveys.map((survey: any) => (
+                  <SelectItem key={survey.id} value={survey.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{survey.name}</span>
+                      {survey.description && (
+                        <span className="text-xs text-muted-foreground">{survey.description}</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No published surveys available
                 </div>
               )}
             </SelectContent>
@@ -1899,6 +1994,16 @@ export default function TriggerConfigPanel({
             
             {/* Add separator if form_id exists */}
             {triggerDefinition.configSchema.form_id && Object.keys(triggerDefinition.configSchema).length > 1 && (
+              <Separator className="my-4" />
+            )}
+
+            {/* Always show survey selection first for survey triggers */}
+            {triggerDefinition.configSchema.survey_id && 
+              renderConfigField("survey_id", triggerDefinition.configSchema.survey_id)
+            }
+            
+            {/* Add separator if survey_id exists */}
+            {triggerDefinition.configSchema.survey_id && Object.keys(triggerDefinition.configSchema).length > 1 && (
               <Separator className="my-4" />
             )}
             
@@ -2689,6 +2794,7 @@ export default function TriggerConfigPanel({
              triggerDefinition.type !== 'appointment_status_changed' &&
               Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
                 if (fieldName === "form_id") return null; // Already rendered above
+                if (fieldName === "survey_id") return null; // Already rendered above
                 return renderConfigField(fieldName, fieldSchema);
               })
             }
@@ -2707,6 +2813,16 @@ export default function TriggerConfigPanel({
                     return (
                       <div key={key} className="text-xs text-muted-foreground">
                         <span className="font-medium">Form:</span> {selectedForm?.name || value}
+                      </div>
+                    );
+                  }
+                  
+                  // For survey_id, show the survey name instead of the ID
+                  if (key === "survey_id") {
+                    const selectedSurvey = surveys.find((survey: any) => survey.id === value);
+                    return (
+                      <div key={key} className="text-xs text-muted-foreground">
+                        <span className="font-medium">Survey:</span> {selectedSurvey?.name || value}
                       </div>
                     );
                   }

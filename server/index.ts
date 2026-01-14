@@ -126,7 +126,8 @@ async function initializeDefaultAutomationTriggers() {
         category: "form_management",
         configSchema: {
           form_id: { type: "string", required: true },
-          fields: { type: "object" }
+          fields: { type: "object" },
+          filters: { type: "filters", label: "Custom Field Filters" }
         },
         isActive: true,
         createdAt: new Date()
@@ -139,7 +140,8 @@ async function initializeDefaultAutomationTriggers() {
         category: "form_management",
         configSchema: {
           survey_id: { type: "string", label: "Survey", required: true },
-          fields: { type: "object" }
+          fields: { type: "object" },
+          filters: { type: "filters", label: "Custom Field Filters" }
         },
         isActive: true,
         createdAt: new Date()
