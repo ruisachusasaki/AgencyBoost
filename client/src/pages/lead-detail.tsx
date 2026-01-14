@@ -12,6 +12,7 @@ import type { Lead, Task, User as StaffUser, LeadPipelineStage, CustomField, Tag
 import LeadNotesSection from "@/components/forms/lead-notes-section";
 import CustomFieldRenderer from "@/components/CustomFieldRenderer";
 import LeadAppointmentsDisplay from "@/components/forms/lead-appointments-display";
+import { CallButton } from "@/components/voip";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -535,8 +536,15 @@ export default function LeadDetail() {
             {/* Email */}
             {renderEditableField('email', 'Email', lead.email, Mail)}
             
-            {/* Phone */}
-            {renderEditableField('phone', 'Phone', lead.phone, Phone)}
+            {/* Phone with Call Button */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                {renderEditableField('phone', 'Phone', lead.phone, Phone)}
+              </div>
+              {lead.phone && (
+                <CallButton phoneNumber={lead.phone} leadId={lead.id} leadName={lead.name} />
+              )}
+            </div>
             
             {/* Company */}
             {renderEditableField('company', 'Company', lead.company, Building2)}

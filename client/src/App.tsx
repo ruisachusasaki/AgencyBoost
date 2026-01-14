@@ -77,6 +77,8 @@ import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import PublicSurvey from "@/pages/public-survey";
 import { AIAssistantWidget } from "@/components/ai-assistant-widget";
+import { VoipProvider } from "@/hooks/use-voip";
+import { ActiveCallPanel } from "@/components/voip";
 
 function Router() {
   return (
@@ -727,8 +729,11 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TimerProvider>
           <TooltipProvider>
+            <VoipProvider>
             <Toaster />
+              <ActiveCallPanel />
             <Router />
+          </VoipProvider>
           </TooltipProvider>
         </TimerProvider>
       </QueryClientProvider>

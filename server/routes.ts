@@ -18970,8 +18970,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         action: "call",
         entityType: "lead",
         entityId: leadId,
-        entityName: leadName || \`Lead \${leadId}\`,
-        description: \`Called \${phoneNumber} - Duration: \${Math.floor(duration / 60)}m \${duration % 60}s - Status: \${status}\`,
+        entityName: leadName || `Lead ${leadId}`,
+        description: `Called ${phoneNumber} - Duration: ${Math.floor(duration / 60)}m ${duration % 60}s - Status: ${status}`,
         newValues: { phoneNumber, duration, callSid, status, leadId },
         ipAddress: req.ip || 'unknown',
         userAgent: req.headers['user-agent'] || 'unknown'
