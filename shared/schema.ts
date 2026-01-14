@@ -2603,6 +2603,29 @@ export const emailIntegrations = pgTable("email_integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// AI integrations (OpenAI, etc.)
+export const aiIntegrations = pgTable("ai_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: text("provider").notNull(), // 'openai', 'anthropic', etc.
+  name: text("name").notNull().default("OpenAI"), // Integration name
+  apiKey: text("api_key").notNull(), // API Key (encrypted)
+  model: text("model").default("gpt-4o"), // Default model to use
+  isActive: boolean("is_active").default(true),
+  lastTestAt: timestamp("last_test_at"),
+  connectionErrors: text("connection_errors"), // Latest connection error messages
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAiIntegrationSchema = createInsertSchema(aiIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AiIntegration = typeof aiIntegrations.$inferSelect;
+export type InsertAiIntegration = z.infer<typeof insertAiIntegrationSchema>;
+
 // GoHighLevel integration for receiving leads via webhook
 export const goHighLevelIntegration = pgTable("gohighlevel_integration", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
