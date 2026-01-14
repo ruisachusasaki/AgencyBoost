@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -1299,31 +1300,39 @@ export default function Reports() {
       {/* Main Tabs */}
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
-          {[
-            { id: "overview", name: "Business Overview", icon: BarChart3, count: null },
-            { id: "health", name: "Client Health", icon: Heart, count: null },
-            { id: "tasks", name: "Tasks", icon: Clock, count: null },
-            { id: "team", name: "Team Workload", icon: Users, count: null },
-            { id: "mrr", name: "MRR Report", icon: DollarSign, count: null },
-            { id: "one-on-one", name: "1v1 Performance", icon: Target, count: null }
-          ].map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                  activeTab === tab.id
-                    ? "border-primary text-primary"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-                data-testid={`tab-${tab.id}`}
-              >
-                <Icon className="h-4 w-4" />
-                {tab.name} {tab.count !== null ? `(${tab.count})` : ''}
-              </button>
-            );
-          })}
+          <TooltipProvider>
+            {[
+              { id: "overview", name: "Business Overview", icon: BarChart3, count: null, description: "High-level metrics including active projects, campaigns, leads, and task completion rates across your agency" },
+              { id: "health", name: "Client Health", icon: Heart, count: null, description: "Weekly health scores tracking client engagement, response times, and satisfaction indicators" },
+              { id: "tasks", name: "Tasks", icon: Clock, count: null, description: "Time tracking reports showing hours logged by team members, clients, and projects with detailed breakdowns" },
+              { id: "team", name: "Team Workload", icon: Users, count: null, description: "Staff assignment distribution showing how many clients each team member is managing" },
+              { id: "mrr", name: "MRR Report", icon: DollarSign, count: null, description: "Monthly Recurring Revenue breakdown by client, showing retainer values and revenue distribution" },
+              { id: "one-on-one", name: "1v1 Performance", icon: Target, count: null, description: "Individual performance metrics from 1-on-1 meetings, tracking KPIs and progress over time" }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <Tooltip key={tab.id}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                        activeTab === tab.id
+                          ? "border-primary text-primary"
+                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      }`}
+                      data-testid={`tab-${tab.id}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {tab.name} {tab.count !== null ? `(${tab.count})` : ''}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <p>{tab.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </TooltipProvider>
         </nav>
       </div>
 
