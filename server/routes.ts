@@ -69,7 +69,8 @@ import {
   clientRoadmapComments, insertClientRoadmapCommentSchema, clientRoadmapEntries, insertClientRoadmapEntrySchema, staffLinkedEmails,
   surveys, surveyFolders, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers,
   insertSurveySchema, insertSurveyFolderSchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema,
-  aiIntegrations
+  aiIntegrations,
+  aiAssistantSettings
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
@@ -32120,6 +32121,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // AI Assistant endpoints
   const { chatWithAssistant } = await import("./ai-assistant");
+
+  // Get AI Assistant settings (custom instructions)
+  app.get("/api/ai-assistant/settings", requireAuth(["admin"]), async (req, res) => {
+    try {
+      const [settings] = await db
+        .select()
+        .from(aiAssistantSettings)
+        .limit(1);
+      
+      res.json(settings || { customInstructions: null, isEnabled: true });
+    } catch (error: any) {
+      console.error("Error fetching AI assistant settings:", error);
+      res.status(500).json({ error: "Failed to fetch AI assistant settings" });
+    }
+  });
+  
+  // Update AI Assistant settings (custom instructions)
+  app.put("/api/ai-assistant/settings", requireAuth(["admin"]), async (req, res) => {
+    try {
+      const { customInstructions, isEnabled } = req.body;
+      
+      // Check if settings exist
+      const [existingSettings] = await db
+        .select()
+        .from(aiAssistantSettings)
+        .limit(1);
+      
+      if (existingSettings) {
+        // Update existing settings
+        const [updated] = await db
+          .update(aiAssistantSettings)
+          .set({
+            customInstructions: customInstructions ?? existingSettings.customInstructions,
+            isEnabled: isEnabled ?? existingSettings.isEnabled,
+            updatedAt: new Date(),
+          })
+          .where(eq(aiAssistantSettings.id, existingSettings.id))
+          .returning();
+        
+        res.json(updated);
+      } else {
+        // Create new settings
+        const [created] = await db
+          .insert(aiAssistantSettings)
+          .values({
+            customInstructions,
+            isEnabled: isEnabled ?? true,
+          })
+          .returning();
+        
+        res.json(created);
+      }
+    } catch (error: any) {
+      console.error("Error updating AI assistant settings:", error);
+      res.status(500).json({ error: "Failed to update AI assistant settings" });
+    }
+  });
   
   app.post("/api/ai-assistant/chat", requireAuth(), async (req, res) => {
     try {
