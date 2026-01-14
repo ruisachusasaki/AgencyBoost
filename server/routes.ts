@@ -49,7 +49,7 @@ import {
   insertSalesTargetSchema, updateSalesTargetSchema,
   insertCapacitySettingsSchema, updateCapacitySettingsSchema,
   insertDashboardSchema,
-  insertOneOnOneMeetingSchema, insertOneOnOneTalkingPointSchema, insertOneOnOneActionItemSchema, insertOneOnOneGoalSchema, insertOneOnOneCommentSchema, insertOneOnOneProgressionStatusSchema,
+  insertOneOnOneMeetingSchema, insertOneOnOneTalkingPointSchema, insertOneOnOneWinSchema, insertOneOnOneActionItemSchema, insertOneOnOneGoalSchema, insertOneOnOneCommentSchema, insertOneOnOneProgressionStatusSchema,
   oneOnOneProgressionStatuses,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, granularPermissions, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
@@ -65,7 +65,7 @@ import {
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
   clientPortalUsers, quotes, quoteItems, leadStageTransitions, salesActivities, deals, salesSettings, salesTargets, capacitySettings,
   knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseLikes, knowledgeBaseBookmarks, knowledgeBasePermissions, knowledgeBaseArticleVersions,
-  oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments, oneOnOneMeetingKpiStatuses,
+  oneOnOneMeetings, oneOnOneTalkingPoints, oneOnOneWins, oneOnOneActionItems, oneOnOneGoals, oneOnOneComments, oneOnOneMeetingKpiStatuses,
   clientRoadmapComments, insertClientRoadmapCommentSchema, clientRoadmapEntries, insertClientRoadmapEntrySchema, staffLinkedEmails,
   surveys, surveyFolders, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers,
   insertSurveySchema, insertSurveyFolderSchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema,
@@ -23476,6 +23476,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(oneOnOneTalkingPoints.meetingId, meetingId))
         .orderBy(oneOnOneTalkingPoints.orderIndex);
 
+      const wins = await db.select()
+        .from(oneOnOneWins)
+        .where(eq(oneOnOneWins.meetingId, meetingId))
+        .orderBy(oneOnOneWins.orderIndex);
+
       const actionItems = await db.select()
         .from(oneOnOneActionItems)
         .where(eq(oneOnOneActionItems.meetingId, meetingId));
@@ -23507,6 +23512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         meeting: sanitizedMeeting,
         talkingPoints,
+        wins,
         actionItems,
         goals,
         comments,
@@ -23783,6 +23789,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting talking point:", error);
       res.status(500).json({ error: "Failed to delete talking point" });
+    }
+  });
+
+
+  // Wins Routes
+  app.post("/api/hr/one-on-one/wins", requireAuth(), async (req, res) => {
+    try {
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return;
+
+      const validatedData = insertOneOnOneWinSchema.parse({
+        ...req.body,
+        addedBy: rawUserId,
+      });
+
+      const [newWin] = await db.insert(oneOnOneWins)
+        .values(validatedData)
+        .returning();
+
+      res.json(newWin);
+    } catch (error) {
+      console.error("Error creating win:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create win" });
+    }
+  });
+
+  app.put("/api/hr/one-on-one/wins/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertOneOnOneWinSchema.partial().parse(req.body);
+      
+      const [updatedWin] = await db.update(oneOnOneWins)
+        .set(validatedData)
+        .where(eq(oneOnOneWins.id, id))
+        .returning();
+
+      res.json(updatedWin);
+    } catch (error) {
+      console.error("Error updating win:", error);
+      res.status(500).json({ error: "Failed to update win" });
+    }
+  });
+
+  app.delete("/api/hr/one-on-one/wins/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(oneOnOneWins).where(eq(oneOnOneWins.id, id));
+      res.json({ message: "Win deleted" });
+    } catch (error) {
+      console.error("Error deleting win:", error);
+      res.status(500).json({ error: "Failed to delete win" });
     }
   });
 
