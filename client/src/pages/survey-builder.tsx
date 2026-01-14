@@ -121,6 +121,7 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   const [hideSlideNames, setHideSlideNames] = useState(false);
   const [imageUploadFieldId, setImageUploadFieldId] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [localImageSize, setLocalImageSize] = useState<number>(100);
   
   // Track the active survey ID - updates when a new survey is created or when navigating
   const [activeSurveyId, setActiveSurveyId] = useState<string | undefined>(
@@ -229,6 +230,25 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
     }
   }, [slides]);
 
+  // Sync local image size when editing field changes
+  useEffect(() => {
+    if (editingField?.settings?.imageSize !== undefined) {
+      setLocalImageSize(editingField.settings.imageSize);
+    } else {
+      setLocalImageSize(100);
+    }
+  }, [editingField?.id]);
+
+  // Update editingField when fields data changes (after mutation updates)
+  useEffect(() => {
+    if (editingField && fields.length > 0) {
+      const updatedField = fields.find(f => f.id === editingField.id);
+      if (updatedField && JSON.stringify(updatedField) !== JSON.stringify(editingField)) {
+        setEditingField(updatedField);
+      }
+    }
+  }, [fields]);
+
   const createSurveyMutation = useMutation({
     mutationFn: async (data: { name: string; description?: string }) => {
       return await apiRequest("POST", "/api/surveys", data);
@@ -303,14 +323,17 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   });
 
   const updateFieldMutation = useMutation({
-    mutationFn: async ({ fieldId, data }: { fieldId: string; data: Partial<SurveyField> }) => {
-      return await apiRequest("PUT", `/api/surveys/${activeSurveyId}/fields/${fieldId}`, data);
+    mutationFn: async ({ fieldId, data, keepDialogOpen }: { fieldId: string; data: Partial<SurveyField>; keepDialogOpen?: boolean }) => {
+      const result = await apiRequest("PUT", `/api/surveys/${activeSurveyId}/fields/${fieldId}`, data);
+      return { result, keepDialogOpen };
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["/api/surveys", activeSurveyId, "fields"] });
-      setIsEditFieldDialogOpen(false);
-      setEditingField(null);
-      toast({ title: "Field updated", description: "Field has been updated" });
+      if (!response.keepDialogOpen) {
+        setIsEditFieldDialogOpen(false);
+        setEditingField(null);
+        toast({ title: "Field updated", description: "Field has been updated" });
+      }
     },
   });
 
@@ -1275,7 +1298,8 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                                       ...editingField.settings,
                                       imageAlignment: align 
                                     } 
-                                  }
+                                  },
+                                  keepDialogOpen: true
                                 });
                               }}
                               className="capitalize"
@@ -1287,22 +1311,38 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Size: {editingField.settings?.imageSize || 100}%</Label>
+                        <Label>Size: {localImageSize}%</Label>
                         <input
                           type="range"
                           min="25"
                           max="100"
                           step="5"
-                          value={editingField.settings?.imageSize || 100}
+                          value={localImageSize}
                           onChange={(e) => {
+                            setLocalImageSize(parseInt(e.target.value));
+                          }}
+                          onMouseUp={() => {
                             updateFieldMutation.mutate({
                               fieldId: editingField.id,
                               data: { 
                                 settings: { 
                                   ...editingField.settings,
-                                  imageSize: parseInt(e.target.value) 
+                                  imageSize: localImageSize 
                                 } 
-                              }
+                              },
+                              keepDialogOpen: true
+                            });
+                          }}
+                          onTouchEnd={() => {
+                            updateFieldMutation.mutate({
+                              fieldId: editingField.id,
+                              data: { 
+                                settings: { 
+                                  ...editingField.settings,
+                                  imageSize: localImageSize 
+                                } 
+                              },
+                              keepDialogOpen: true
                             });
                           }}
                           className="w-full"
