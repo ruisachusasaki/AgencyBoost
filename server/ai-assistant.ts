@@ -1,10 +1,8 @@
 import OpenAI from "openai";
 import { db } from "./db";
-import { knowledgeBaseArticles, knowledgeBaseCategories } from "@shared/schema";
-import { eq, ilike, or, sql } from "drizzle-orm";
-
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { knowledgeBaseArticles, knowledgeBaseCategories, aiIntegrations } from "@shared/schema";
+import { eq, ilike, or, sql, and } from "drizzle-orm";
+import { EncryptionService } from "./encryption";
 
 interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -17,6 +15,41 @@ interface RelevantArticle {
   excerpt: string | null;
   content: string;
   categoryName: string | null;
+}
+
+// Get OpenAI API key from database or fallback to env
+async function getOpenAIApiKey(): Promise<{ apiKey: string; model: string } | null> {
+  try {
+    // First try to get from database
+    const [integration] = await db
+      .select()
+      .from(aiIntegrations)
+      .where(and(
+        eq(aiIntegrations.provider, 'openai'),
+        eq(aiIntegrations.isActive, true)
+      ));
+
+    if (integration && integration.apiKey) {
+      const decryptedKey = EncryptionService.decrypt(integration.apiKey);
+      return {
+        apiKey: decryptedKey,
+        model: integration.model || 'gpt-4o'
+      };
+    }
+  } catch (error) {
+    console.error('Error fetching OpenAI integration from database:', error);
+  }
+
+  // Fallback to environment variable
+  const envKey = process.env.OPENAI_API_KEY;
+  if (envKey) {
+    return {
+      apiKey: envKey,
+      model: 'gpt-4o'
+    };
+  }
+
+  return null;
 }
 
 function extractTextFromContent(content: any): string {
@@ -125,6 +158,15 @@ export async function chatWithAssistant(
   userMessage: string,
   conversationHistory: ChatMessage[] = []
 ): Promise<{ response: string; sources: { id: string; title: string }[] }> {
+  // Get OpenAI configuration from database or env
+  const openaiConfig = await getOpenAIApiKey();
+  
+  if (!openaiConfig) {
+    throw new Error("OpenAI is not configured. Please set up the OpenAI integration in Settings > Integrations or provide an OPENAI_API_KEY environment variable.");
+  }
+  
+  const openai = new OpenAI({ apiKey: openaiConfig.apiKey });
+  
   const relevantArticles = await searchKnowledgeBase(userMessage);
   
   let contextContent = "";
@@ -157,7 +199,7 @@ ${contextContent}`;
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: openaiConfig.model,
       messages,
       max_completion_tokens: 1024,
     });
