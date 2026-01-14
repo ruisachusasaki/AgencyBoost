@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw, Smartphone, Send, Zap, Copy, RotateCcw } from "lucide-react";
+import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw, Smartphone, Send, Zap, Copy, RotateCcw, Brain } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -97,6 +97,16 @@ export default function Integrations() {
       lastSync: "",
       features: ["Webhook lead capture", "Auto-assign leads", "Workflow triggers", "Field mapping"],
       settingsRequired: true
+    },
+    {
+      id: "openai",
+      name: "OpenAI / AI Assistant",
+      description: "Power the AI Assistant chat widget with OpenAI GPT-4 for Knowledge Base Q&A",
+      icon: Brain,
+      status: "disconnected",
+      lastSync: "",
+      features: ["AI Chat Widget", "Knowledge Base Search", "SOP/Playbook Q&A", "Context-Aware Answers"],
+      settingsRequired: true
     }
   ]);
 
@@ -117,6 +127,13 @@ export default function Integrations() {
   // GoHighLevel specific state
   const [ghlIntegration, setGhlIntegration] = useState<any>(null);
   const [showGhlDialog, setShowGhlDialog] = useState(false);
+  
+  // OpenAI specific state
+  const [showOpenAIDialog, setShowOpenAIDialog] = useState(false);
+  const [openaiApiKey, setOpenaiApiKey] = useState("");
+  const [openaiModel, setOpenaiModel] = useState("gpt-4o");
+  const [openaiStatus, setOpenaiStatus] = useState<"connected" | "disconnected" | "error">("disconnected");
+  const [openaiTestResult, setOpenaiTestResult] = useState<string | null>(null);
 
   // Check for OAuth callback parameters and Google Calendar status on load
   useEffect(() => {
@@ -161,6 +178,9 @@ export default function Integrations() {
     
     // Check GoHighLevel status
     checkGoHighLevelStatus();
+    
+    // Check OpenAI status
+    checkOpenAIStatus();
   }, []);
 
   const checkGoogleCalendarStatus = async () => {
@@ -256,6 +276,27 @@ export default function Integrations() {
     }
   };
   
+  const checkOpenAIStatus = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/integrations/openai/status');
+      const status = await response.json();
+      
+      setOpenaiStatus(status.connected ? "connected" : "disconnected");
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "openai" 
+          ? { 
+              ...integration, 
+              status: status.connected ? "connected" as const : "disconnected" as const,
+              lastSync: status.lastTestAt ? new Date(status.lastTestAt).toLocaleString() : ""
+            }
+          : integration
+      ));
+    } catch (error) {
+      console.error('Error checking OpenAI status:', error);
+      setOpenaiStatus("disconnected");
+    }
+  };
+
   const connectGoHighLevel = async () => {
     setIsLoading(true);
     try {
@@ -290,6 +331,100 @@ export default function Integrations() {
     }
   };
   
+  const connectOpenAI = async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiRequest('POST', '/api/integrations/openai/connect', {
+        apiKey: openaiApiKey,
+        model: openaiModel
+      });
+      const result = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          variant: "success",
+          description: "OpenAI connected successfully!",
+        });
+        setShowOpenAIDialog(false);
+        setOpenaiApiKey("");
+        checkOpenAIStatus();
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to connect OpenAI",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error connecting OpenAI:', error);
+      toast({
+        title: "Error",
+        description: "Failed to connect to OpenAI",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const disconnectOpenAI = async () => {
+    setIsLoading(true);
+    try {
+      await apiRequest('POST', '/api/integrations/openai/disconnect');
+      toast({
+        title: "Success",
+        variant: "success",
+        description: "OpenAI disconnected successfully",
+      });
+      checkOpenAIStatus();
+    } catch (error) {
+      console.error('Error disconnecting OpenAI:', error);
+      toast({
+        title: "Error",
+        description: "Failed to disconnect OpenAI",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const testOpenAI = async () => {
+    setIsLoading(true);
+    setOpenaiTestResult(null);
+    try {
+      const response = await apiRequest('POST', '/api/integrations/openai/test');
+      const result = await response.json();
+      
+      if (response.ok) {
+        setOpenaiTestResult(result.response || "Connection successful!");
+        toast({
+          title: "Success",
+          variant: "success",
+          description: "OpenAI test successful!",
+        });
+      } else {
+        setOpenaiTestResult(null);
+        toast({
+          title: "Test Failed",
+          description: result.message || "OpenAI test failed",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error testing OpenAI:', error);
+      setOpenaiTestResult(null);
+      toast({
+        title: "Error",
+        description: "Failed to test OpenAI connection",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const disconnectGoHighLevel = async () => {
     if (!ghlIntegration?.id) return;
     
@@ -511,6 +646,10 @@ export default function Integrations() {
         await connectGoHighLevel();
         setShowGhlDialog(true);
       }
+      return;
+    } else if (integrationId === "openai") {
+      // Open OpenAI configuration dialog
+      setShowOpenAIDialog(true);
       return;
     }
 
@@ -1756,6 +1895,92 @@ export default function Integrations() {
                 <div className="text-center py-8">
                   <Zap className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500">Setting up GoHighLevel integration...</p>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+        
+        {/* OpenAI Configuration Dialog */}
+        <Dialog open={showOpenAIDialog} onOpenChange={setShowOpenAIDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-primary" />
+                Configure OpenAI / AI Assistant
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {openaiStatus === "connected" ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <Check className="h-5 w-5 text-green-600" />
+                    <span className="text-green-700 font-medium">OpenAI Connected</span>
+                  </div>
+                  
+                  {openaiTestResult && (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <p className="text-sm text-gray-600">Last Test Response:</p>
+                      <p className="text-sm font-medium">{openaiTestResult}</p>
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={testOpenAI}
+                      disabled={isLoading}
+                      className="flex-1"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+                      Test Connection
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={disconnectOpenAI}
+                      disabled={isLoading}
+                      className="flex-1"
+                    >
+                      Disconnect
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Connect your OpenAI API key to enable the AI Assistant chat widget. The AI Assistant will search your Knowledge Base articles to answer team questions.
+                  </p>
+                  
+                  <div>
+                    <Label htmlFor="openai-key">OpenAI API Key</Label>
+                    <Input
+                      id="openai-key"
+                      type="password"
+                      placeholder="sk-..."
+                      value={openaiApiKey}
+                      onChange={(e) => setOpenaiApiKey(e.target.value)}
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Get your API key from{" "}
+                      <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" className="text-primary hover:underline">
+                        OpenAI Platform
+                      </a>
+                    </p>
+                  </div>
+                  
+                  <Button
+                    onClick={connectOpenAI}
+                    disabled={isLoading || !openaiApiKey.trim()}
+                    className="w-full"
+                  >
+                    {isLoading ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-2" />
+                    )}
+                    Connect OpenAI
+                  </Button>
                 </div>
               )}
             </div>

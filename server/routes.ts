@@ -19450,7 +19450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db
           .update(aiIntegrations)
           .set({
-            connectionErrors: \`Test Error: \${error.message}\`,
+            connectionErrors: `Test Error: ${error.message}`,
             updatedAt: new Date()
           })
           .where(eq(aiIntegrations.id, integration.id));
