@@ -122,6 +122,8 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   const [imageUploadFieldId, setImageUploadFieldId] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [localImageSize, setLocalImageSize] = useState<number>(100);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [isViewSubmissionDialogOpen, setIsViewSubmissionDialogOpen] = useState(false);
   
   // Track the active survey ID - updates when a new survey is created or when navigating
   const [activeSurveyId, setActiveSurveyId] = useState<string | undefined>(
@@ -916,7 +918,14 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
                       </p>
                     ) : (
                       submissions.map((sub: any) => (
-                        <Card key={sub.id} className="p-2">
+                        <Card 
+                          key={sub.id} 
+                          className="p-2 cursor-pointer hover:bg-accent transition-colors"
+                          onClick={() => {
+                            setSelectedSubmission(sub);
+                            setIsViewSubmissionDialogOpen(true);
+                          }}
+                        >
                           <div className="text-xs">
                             <p className="font-medium">{sub.submitterEmail || "Anonymous"}</p>
                             <p className="text-muted-foreground">
@@ -1578,6 +1587,51 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
               </p>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Submission Dialog */}
+      <Dialog open={isViewSubmissionDialogOpen} onOpenChange={setIsViewSubmissionDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Submission Details</DialogTitle>
+          </DialogHeader>
+          {selectedSubmission && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-sm border-b pb-3">
+                <div>
+                  <span className="text-muted-foreground">Submitted by: </span>
+                  <span className="font-medium">{selectedSubmission.submitterEmail || "Anonymous"}</span>
+                </div>
+                <div className="text-muted-foreground">
+                  {new Date(selectedSubmission.completedAt).toLocaleString()}
+                </div>
+              </div>
+              <div className="space-y-3">
+                {selectedSubmission.responses && typeof selectedSubmission.responses === 'object' ? (
+                  Object.entries(selectedSubmission.responses).map(([fieldId, answer]) => {
+                    const field = fields.find(f => f.id === fieldId);
+                    return (
+                      <div key={fieldId} className="border rounded-lg p-3">
+                        <p className="text-sm font-medium text-muted-foreground mb-1">
+                          {field?.label || fieldId}
+                        </p>
+                        <p className="text-sm">
+                          {Array.isArray(answer) 
+                            ? answer.join(", ") 
+                            : typeof answer === 'object' 
+                              ? JSON.stringify(answer) 
+                              : String(answer) || <span className="text-muted-foreground italic">No answer</span>}
+                        </p>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground">No response data available</p>
+                )}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
