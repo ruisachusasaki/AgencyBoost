@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, X, Send, Loader2, Bot, User, BookOpen } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -24,12 +23,17 @@ export function AIAssistantWidget() {
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
-      const response = await apiRequest("/api/ai-assistant/chat", {
+      const response = await fetch("/api/ai-assistant/chat", {
         method: "POST",
         body: JSON.stringify({ message, history }),
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
       });
-      return response;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to get AI response");
+      }
+      return response.json();
     },
     onSuccess: (data) => {
       setMessages(prev => [...prev, {
