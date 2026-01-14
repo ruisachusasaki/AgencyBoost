@@ -132,6 +132,19 @@ async function initializeDefaultAutomationTriggers() {
         createdAt: new Date()
       },
       {
+        id: "trigger-2a",
+        name: "Survey Submitted",
+        type: "survey_submitted",
+        description: "Triggers when a survey is submitted",
+        category: "form_management",
+        configSchema: {
+          survey_id: { type: "string", label: "Survey", required: true },
+          fields: { type: "object" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
         id: "trigger-3",
         name: "Tag Added",
         type: "tag_added",

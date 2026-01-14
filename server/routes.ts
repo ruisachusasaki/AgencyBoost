@@ -20581,6 +20581,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Emit survey submission trigger for workflows
+      try {
+        const { emitTrigger } = await import("./workflow-engine");
+        
+        // Build responses object for trigger data
+        const responsesObj: Record<string, any> = {};
+        if (answers && answers.length > 0) {
+          const surveyFields = await appStorage.getSurveyFields(survey.id);
+          answers.forEach((answer) => {
+            const field = surveyFields.find(f => f.id === answer.fieldId);
+            if (field) {
+              responsesObj[field.label || answer.fieldId] = answer.value;
+            }
+          });
+        }
+        
+        await emitTrigger({
+          type: "survey_submitted",
+          data: {
+            survey_id: survey.id,
+            survey_name: survey.name,
+            submission_id: submission.id,
+            submitter_email: submitterEmail,
+            submitter_name: submitterName,
+            responses: responsesObj,
+          },
+          context: {
+            timestamp: new Date(),
+            metadata: { surveyId: survey.id, shortCode: survey.shortCode }
+          }
+        });
+      } catch (triggerError) {
+        console.error("Error emitting survey_submitted trigger:", triggerError);
+        // Don't fail the submission if trigger fails
+      }
+      
       res.status(201).json({ message: "Survey submitted successfully", submissionId: submission.id });
     } catch (error) {
       console.error("Error submitting survey:", error);
