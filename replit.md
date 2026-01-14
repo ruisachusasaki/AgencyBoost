@@ -32,7 +32,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Google Calendar Integration**: Per-user OAuth 2.0 with Google Calendar API, featuring two-way sync, incremental sync, contact creation from attendees, availability blocking, workflow triggers, optimized storage, event caching, and sync preferences.
 - **Business Timezone**: Account-level timezone setting with a lightweight API endpoint, React hook, and timezone-aware helper functions for consistent date calculations.
 - **Task Management**: Hierarchical sub-tasks, scheduling, dependencies, recurring tasks, bulk actions, and dynamic project progress.
-- **Communication**: Smart Lists, Email/SMS, document management, notes, calendar management with dynamic merge tags, and unified templating.
+- **Communication**: Smart Lists, Email/SMS, VoIP calling (Twilio-based browser calling for leads), document management, notes, calendar management with dynamic merge tags, and unified templating.
 - **Automation System**: GoHighLevel-style, API-driven, database-backed workflow engine with 25+ trigger definitions and 7 action types, featuring conditional evaluation and variable interpolation.
 - **Client Management**: Client team assignment (drag-and-drop), health scoring, asset approval workflow with annotation, customizable column views, billing information, and comprehensive bulk actions.
 - **HR Features**: Time off requests (simplified global types with customizable settings), job application forms, watchers, expense reports, and a 1-on-1 meeting tracker.

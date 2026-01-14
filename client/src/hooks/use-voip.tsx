@@ -20,7 +20,6 @@ interface VoipContextType {
 const VoipContext = createContext<VoipContextType | null>(null);
 
 export function VoipProvider({ children }: { children: React.ReactNode }) {
-  const [device, setDevice] = useState<Device | null>(null);
   const [activeCall, setActiveCall] = useState<Call | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isConfigured, setIsConfigured] = useState(false);
@@ -30,9 +29,11 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
   const [callerIdNumber, setCallerIdNumber] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  const deviceRef = useRef<Device | null>(null);
   const callStartTime = useRef<Date | null>(null);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
   const currentCallInfo = useRef<{ leadId: string; leadName: string; phoneNumber: string } | null>(null);
+  const initializationPromise = useRef<Promise<Device | null> | null>(null);
 
   const checkConfiguration = useCallback(async () => {
     try {
@@ -56,63 +57,91 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const initializeDevice = useCallback(async () => {
-    try {
-      const response = await fetch("/api/integrations/twilio/voice-token", {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        setError(data.message || "Failed to get voice token");
-        return;
-      }
-
-      const { token, callerIdNumber: callerId } = await response.json();
-      setCallerIdNumber(callerId);
-
-      const newDevice = new Device(token, {
-        codecPreferences: [Call.Codec.Opus, Call.Codec.PCMU],
-        allowIncomingWhileBusy: false,
-      });
-
-      newDevice.on("registered", () => {
-        console.log("[VoIP] Device registered");
-        setIsReady(true);
-        setError(null);
-      });
-
-      newDevice.on("unregistered", () => {
-        console.log("[VoIP] Device unregistered");
-        setIsReady(false);
-      });
-
-      newDevice.on("error", (deviceError) => {
-        console.error("[VoIP] Device error:", deviceError);
-        setError(deviceError.message);
-      });
-
-      newDevice.on("tokenWillExpire", async () => {
-        console.log("[VoIP] Token expiring, refreshing...");
-        try {
-          const refreshResponse = await fetch("/api/integrations/twilio/voice-token", {
-            credentials: "include",
-          });
-          if (refreshResponse.ok) {
-            const { token: newToken } = await refreshResponse.json();
-            newDevice.updateToken(newToken);
-          }
-        } catch (err) {
-          console.error("[VoIP] Failed to refresh token:", err);
-        }
-      });
-
-      await newDevice.register();
-      setDevice(newDevice);
-    } catch (err) {
-      console.error("[VoIP] Failed to initialize device:", err);
-      setError("Failed to initialize calling device");
+  const initializeDevice = useCallback(async (): Promise<Device | null> => {
+    if (initializationPromise.current) {
+      return initializationPromise.current;
     }
+    
+    if (deviceRef.current) {
+      return deviceRef.current;
+    }
+
+    initializationPromise.current = (async () => {
+      try {
+        const response = await fetch("/api/integrations/twilio/voice-token", {
+          credentials: "include",
+        });
+        
+        if (!response.ok) {
+          const data = await response.json();
+          setError(data.message || "Failed to get voice token");
+          initializationPromise.current = null;
+          return null;
+        }
+
+        const { token, callerIdNumber: callerId } = await response.json();
+        setCallerIdNumber(callerId);
+
+        const newDevice = new Device(token, {
+          codecPreferences: [Call.Codec.Opus, Call.Codec.PCMU],
+          allowIncomingWhileBusy: false,
+        });
+
+        const registrationPromise = new Promise<Device>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error("Device registration timed out"));
+          }, 15000);
+
+          newDevice.on("registered", () => {
+            console.log("[VoIP] Device registered");
+            clearTimeout(timeout);
+            setIsReady(true);
+            setError(null);
+            resolve(newDevice);
+          });
+
+          newDevice.on("error", (deviceError) => {
+            console.error("[VoIP] Device error:", deviceError);
+            clearTimeout(timeout);
+            setError(deviceError.message);
+            reject(deviceError);
+          });
+        });
+
+        newDevice.on("unregistered", () => {
+          console.log("[VoIP] Device unregistered");
+          setIsReady(false);
+        });
+
+        newDevice.on("tokenWillExpire", async () => {
+          console.log("[VoIP] Token expiring, refreshing...");
+          try {
+            const refreshResponse = await fetch("/api/integrations/twilio/voice-token", {
+              credentials: "include",
+            });
+            if (refreshResponse.ok) {
+              const { token: newToken } = await refreshResponse.json();
+              newDevice.updateToken(newToken);
+            }
+          } catch (err) {
+            console.error("[VoIP] Failed to refresh token:", err);
+          }
+        });
+
+        await newDevice.register();
+        
+        const registeredDevice = await registrationPromise;
+        deviceRef.current = registeredDevice;
+        return registeredDevice;
+      } catch (err) {
+        console.error("[VoIP] Failed to initialize device:", err);
+        setError("Failed to initialize calling device");
+        initializationPromise.current = null;
+        return null;
+      }
+    })();
+
+    return initializationPromise.current;
   }, []);
 
   useEffect(() => {
@@ -120,16 +149,18 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
   }, [checkConfiguration]);
 
   useEffect(() => {
-    if (isConfigured && !device) {
+    if (isConfigured && !deviceRef.current) {
       initializeDevice();
     }
     
     return () => {
-      if (device) {
-        device.destroy();
+      if (deviceRef.current) {
+        deviceRef.current.destroy();
+        deviceRef.current = null;
       }
+      initializationPromise.current = null;
     };
-  }, [isConfigured, device, initializeDevice]);
+  }, [isConfigured, initializeDevice]);
 
   const startDurationTimer = useCallback(() => {
     callStartTime.current = new Date();
@@ -149,7 +180,7 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
     callStartTime.current = null;
   }, []);
 
-  const logCall = useCallback(async (status: string) => {
+  const logCall = useCallback(async (status: string, duration: number, callSid: string) => {
     if (!currentCallInfo.current) return;
     
     try {
@@ -157,37 +188,42 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
         leadId: currentCallInfo.current.leadId,
         leadName: currentCallInfo.current.leadName,
         phoneNumber: currentCallInfo.current.phoneNumber,
-        duration: callDuration,
-        callSid: activeCall?.parameters?.CallSid || "unknown",
+        duration,
+        callSid: callSid || "unknown",
         status,
       });
     } catch (err) {
       console.error("[VoIP] Failed to log call:", err);
     }
-  }, [callDuration, activeCall]);
+  }, []);
 
   const makeCall = useCallback(async (phoneNumber: string, leadId: string, leadName: string) => {
-    if (!device || !isReady) {
-      if (!isConfigured) {
-        setError("VoIP calling is not configured. Please set up Twilio in Settings.");
-        return;
-      }
-      await initializeDevice();
-    }
-
-    if (!device) {
-      setError("Calling device not ready. Please try again.");
+    if (!isConfigured) {
+      setError("VoIP calling is not configured. Please set up Twilio in Settings.");
       return;
     }
 
     setIsConnecting(true);
     setError(null);
+
+    let currentDevice = deviceRef.current;
+    
+    if (!currentDevice) {
+      currentDevice = await initializeDevice();
+    }
+
+    if (!currentDevice) {
+      setError("Calling device not ready. Please try again.");
+      setIsConnecting(false);
+      return;
+    }
+
     currentCallInfo.current = { leadId, leadName, phoneNumber };
 
     try {
       const cleanNumber = phoneNumber.replace(/[^+\d]/g, '');
       
-      const call = await device.connect({
+      const call = await currentDevice.connect({
         params: {
           To: cleanNumber,
         },
@@ -201,7 +237,10 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
 
       call.on("disconnect", () => {
         console.log("[VoIP] Call disconnected");
-        logCall("completed");
+        const finalDuration = callStartTime.current 
+          ? Math.floor((Date.now() - callStartTime.current.getTime()) / 1000) 
+          : 0;
+        logCall("completed", finalDuration, call.parameters?.CallSid || "unknown");
         setActiveCall(null);
         setCallDuration(0);
         setIsMuted(false);
@@ -211,7 +250,7 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
 
       call.on("cancel", () => {
         console.log("[VoIP] Call cancelled");
-        logCall("cancelled");
+        logCall("cancelled", 0, call.parameters?.CallSid || "unknown");
         setActiveCall(null);
         setIsConnecting(false);
         stopDurationTimer();
@@ -229,7 +268,7 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
 
       call.on("reject", () => {
         console.log("[VoIP] Call rejected");
-        logCall("rejected");
+        logCall("rejected", 0, call.parameters?.CallSid || "unknown");
         setActiveCall(null);
         setIsConnecting(false);
         stopDurationTimer();
@@ -243,7 +282,7 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
       setIsConnecting(false);
       currentCallInfo.current = null;
     }
-  }, [device, isReady, isConfigured, initializeDevice, startDurationTimer, stopDurationTimer, logCall]);
+  }, [isConfigured, initializeDevice, startDurationTimer, stopDurationTimer, logCall]);
 
   const hangUp = useCallback(() => {
     if (activeCall) {
