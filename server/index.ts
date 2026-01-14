@@ -61,11 +61,47 @@ async function initializeDefaultAutomationTriggers() {
   try {
     log("Running startup migration: initializeDefaultAutomationTriggers");
     
-    // Check if triggers already exist
-    const existingTriggers = await db.select().from(automationTriggers).limit(1);
+    // Get all existing trigger types to check which ones are missing
+    const existingTriggers = await db.select({ type: automationTriggers.type }).from(automationTriggers);
+    const existingTypes = new Set(existingTriggers.map(t => t.type));
     
+    // If triggers exist, check for any missing critical triggers and add them
     if (existingTriggers.length > 0) {
-      log("Automation triggers already exist - skipping initialization");
+      // Critical triggers that must exist - add any missing ones
+      const criticalTriggers = [
+        {
+          id: "trigger-2a",
+          name: "Survey Submitted",
+          type: "survey_submitted",
+          description: "Triggers when a survey is submitted",
+          category: "form_management",
+          configSchema: {
+            survey_id: { type: "string", label: "Survey", required: true },
+            fields: { type: "object" },
+            filters: { type: "filters", label: "Custom Field Filters" }
+          },
+          isActive: true,
+          createdAt: new Date()
+        }
+      ];
+      
+      const missingTriggers = criticalTriggers.filter(t => !existingTypes.has(t.type));
+      
+      if (missingTriggers.length > 0) {
+        for (const trigger of missingTriggers) {
+          try {
+            await db.insert(automationTriggers).values(trigger);
+            log(`Added missing critical trigger: ${trigger.name}`);
+          } catch (insertError: any) {
+            // Handle duplicate key error gracefully
+            if (insertError.code !== '23505') {
+              log(`Warning: Could not add trigger ${trigger.name}: ${insertError.message}`);
+            }
+          }
+        }
+      } else {
+        log("Automation triggers already exist - all critical triggers present");
+      }
       return;
     }
     
