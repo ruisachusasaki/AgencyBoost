@@ -2626,6 +2626,24 @@ export const insertAiIntegrationSchema = createInsertSchema(aiIntegrations).omit
 export type AiIntegration = typeof aiIntegrations.$inferSelect;
 export type InsertAiIntegration = z.infer<typeof insertAiIntegrationSchema>;
 
+// AI Assistant Settings (custom instructions, context)
+export const aiAssistantSettings = pgTable("ai_assistant_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customInstructions: text("custom_instructions"), // Custom instructions/context for the AI
+  isEnabled: boolean("is_enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAiAssistantSettingsSchema = createInsertSchema(aiAssistantSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AiAssistantSettings = typeof aiAssistantSettings.$inferSelect;
+export type InsertAiAssistantSettings = z.infer<typeof insertAiAssistantSettingsSchema>;
+
 // GoHighLevel integration for receiving leads via webhook
 export const goHighLevelIntegration = pgTable("gohighlevel_integration", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
