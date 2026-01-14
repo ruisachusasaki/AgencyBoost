@@ -18791,6 +18791,199 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============== MAILGUN EMAIL INTEGRATION ENDPOINTS ==============
 
+  // ============== TWILIO VOIP CALLING ENDPOINTS ==============
+
+  // Generate Twilio Voice access token for browser-based calling
+  app.get("/api/integrations/twilio/voice-token", requireAuth(), async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Get active Twilio integration
+      const [integration] = await db
+        .select()
+        .from(smsIntegrations)
+        .where(and(
+          eq(smsIntegrations.provider, 'twilio'),
+          eq(smsIntegrations.isActive, true)
+        ))
+        .limit(1);
+
+      if (!integration) {
+        return res.status(400).json({ 
+          message: "No active Twilio integration found. Please configure Twilio in Settings > Integrations." 
+        });
+      }
+
+      // Check for TwiML App SID in environment
+      const twimlAppSid = process.env.TWILIO_TWIML_APP_SID;
+      if (!twimlAppSid) {
+        return res.status(400).json({ 
+          message: "Twilio TwiML App not configured. Please set TWILIO_TWIML_APP_SID environment variable." 
+        });
+      }
+
+      // Check for API credentials
+      const apiKeySid = process.env.TWILIO_API_KEY_SID;
+      const apiKeySecret = process.env.TWILIO_API_KEY_SECRET;
+      if (!apiKeySid || !apiKeySecret) {
+        return res.status(400).json({ 
+          message: "Twilio API credentials not configured. Please set TWILIO_API_KEY_SID and TWILIO_API_KEY_SECRET." 
+        });
+      }
+
+      // Generate access token for Voice SDK
+      const AccessToken = twilio.jwt.AccessToken;
+      const VoiceGrant = AccessToken.VoiceGrant;
+
+      const accessToken = new AccessToken(
+        integration.accountSid,
+        apiKeySid,
+        apiKeySecret,
+        { identity: userId }
+      );
+
+      // Create a Voice grant for this token
+      const voiceGrant = new VoiceGrant({
+        outgoingApplicationSid: twimlAppSid,
+        incomingAllow: false
+      });
+
+      accessToken.addGrant(voiceGrant);
+
+      res.json({
+        token: accessToken.toJwt(),
+        identity: userId,
+        callerIdNumber: integration.phoneNumber,
+        expiresIn: 3600
+      });
+    } catch (error) {
+      console.error('Error generating voice token:', error);
+      res.status(500).json({ 
+        message: "Failed to generate voice token",
+        error: (error as Error).message
+      });
+    }
+  });
+
+  // TwiML webhook for outbound calls - Twilio calls this to get call instructions
+  app.post("/api/integrations/twilio/voice-twiml", async (req, res) => {
+    try {
+      const { To, From, CallerId } = req.body;
+      
+      console.log('[TwiML] Outbound call request:', { To, From, CallerId });
+
+      // Get the caller ID (phone number to show)
+      const [integration] = await db
+        .select()
+        .from(smsIntegrations)
+        .where(and(
+          eq(smsIntegrations.provider, 'twilio'),
+          eq(smsIntegrations.isActive, true)
+        ))
+        .limit(1);
+
+      const callerIdNumber = CallerId || integration?.phoneNumber || From;
+
+      // Build TwiML response
+      const VoiceResponse = twilio.twiml.VoiceResponse;
+      const twiml = new VoiceResponse();
+
+      if (To) {
+        const dial = twiml.dial({ callerId: callerIdNumber });
+        if (To.startsWith('sip:')) {
+          dial.sip(To);
+        } else {
+          dial.number(To);
+        }
+      } else {
+        twiml.say('No phone number specified for outbound call.');
+      }
+
+      res.type('text/xml');
+      res.send(twiml.toString());
+    } catch (error) {
+      console.error('Error generating TwiML:', error);
+      
+      const VoiceResponse = twilio.twiml.VoiceResponse;
+      const twiml = new VoiceResponse();
+      twiml.say('An error occurred while connecting your call. Please try again.');
+      
+      res.type('text/xml');
+      res.send(twiml.toString());
+    }
+  });
+
+  // Get VoIP configuration status
+  app.get("/api/integrations/twilio/voice-status", requireAuth(), async (req, res) => {
+    try {
+      const [integration] = await db
+        .select()
+        .from(smsIntegrations)
+        .where(and(
+          eq(smsIntegrations.provider, 'twilio'),
+          eq(smsIntegrations.isActive, true)
+        ))
+        .limit(1);
+
+      const hasIntegration = !!integration;
+      const hasTwimlApp = !!process.env.TWILIO_TWIML_APP_SID;
+      const hasApiKey = !!process.env.TWILIO_API_KEY_SID && !!process.env.TWILIO_API_KEY_SECRET;
+
+      res.json({
+        configured: hasIntegration && hasTwimlApp && hasApiKey,
+        hasIntegration,
+        hasTwimlApp,
+        hasApiKey,
+        callerIdNumber: integration?.phoneNumber || null,
+        message: !hasIntegration 
+          ? "Configure Twilio integration in Settings > Integrations"
+          : !hasTwimlApp 
+          ? "Set TWILIO_TWIML_APP_SID environment variable"
+          : !hasApiKey 
+          ? "Set TWILIO_API_KEY_SID and TWILIO_API_KEY_SECRET environment variables"
+          : "VoIP calling is ready"
+      });
+    } catch (error) {
+      console.error('Error checking voice status:', error);
+      res.status(500).json({ 
+        configured: false,
+        message: "Failed to check VoIP configuration" 
+      });
+    }
+  });
+
+  // Log a completed call for audit trail
+  app.post("/api/integrations/twilio/call-log", requireAuth(), async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const { leadId, leadName, phoneNumber, duration, callSid, status } = req.body;
+
+      if (!leadId || !phoneNumber) {
+        return res.status(400).json({ message: "Lead ID and phone number are required" });
+      }
+
+      await appStorage.createAuditLog({
+        userId: userId!,
+        action: "call",
+        entityType: "lead",
+        entityId: leadId,
+        entityName: leadName || \`Lead \${leadId}\`,
+        description: \`Called \${phoneNumber} - Duration: \${Math.floor(duration / 60)}m \${duration % 60}s - Status: \${status}\`,
+        newValues: { phoneNumber, duration, callSid, status, leadId },
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown'
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error logging call:', error);
+      res.status(500).json({ message: "Failed to log call" });
+    }
+  });
+
   // Helper function to create MailGun client
   function createMailgunClient(apiKey: string, domain: string) {
     const mg = new mailgun(formData);
