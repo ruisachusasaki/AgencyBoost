@@ -110,6 +110,10 @@ export default function ProductsSettings() {
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [sortField, setSortField] = useState<'name' | 'type' | 'status' | 'category' | 'cost' | 'createdAt'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Bundle pagination state
+  const [bundleCurrentPage, setBundleCurrentPage] = useState(1);
+  const [bundlesPerPage, setBundlesPerPage] = useState(10);
 
   // Fetch products
   const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
@@ -717,6 +721,12 @@ export default function ProductsSettings() {
     bundle.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (bundle.description && bundle.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+  
+  // Bundle pagination calculations
+  const totalBundlePages = Math.ceil(filteredBundles.length / bundlesPerPage);
+  const bundleStartIndex = (bundleCurrentPage - 1) * bundlesPerPage;
+  const bundleEndIndex = bundleStartIndex + bundlesPerPage;
+  const paginatedBundles = filteredBundles.slice(bundleStartIndex, bundleEndIndex);
 
   // Category form handlers
   const handleCreateCategory = (e: React.FormEvent<HTMLFormElement>) => {
@@ -1420,8 +1430,9 @@ export default function ProductsSettings() {
                   {searchTerm ? "No bundles found matching your search" : "No bundles created yet"}
                 </div>
               ) : (
+                <>
                 <div className="grid gap-4">
-                  {filteredBundles.map((bundle: ProductBundle) => {
+                  {paginatedBundles.map((bundle: ProductBundle) => {
                     const metrics = calculateBundleMetrics(bundle);
                     return (
                       <Card key={bundle.id} className="border-l-4 border-l-primary">
@@ -1553,6 +1564,70 @@ export default function ProductsSettings() {
                     );
                   })}
                 </div>
+                
+                {/* Bundle Pagination Controls */}
+                <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">
+                      Showing {bundleStartIndex + 1}-{Math.min(bundleEndIndex, filteredBundles.length)} of {filteredBundles.length} bundles
+                    </span>
+                    <Select value={bundlesPerPage.toString()} onValueChange={(value) => {
+                      setBundlesPerPage(parseInt(value));
+                      setBundleCurrentPage(1);
+                    }}>
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className="text-sm text-gray-600">per page</span>
+                  </div>
+                  {totalBundlePages > 1 && (
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setBundleCurrentPage(Math.max(1, bundleCurrentPage - 1))}
+                        disabled={bundleCurrentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      {Array.from({ length: totalBundlePages }, (_, i) => i + 1)
+                        .filter(page => {
+                          const showPage = page === 1 || 
+                                           page === totalBundlePages || 
+                                           (page >= bundleCurrentPage - 1 && page <= bundleCurrentPage + 1);
+                          return showPage;
+                        })
+                        .map((page, index, array) => (
+                          <span key={page}>
+                            {index > 0 && array[index - 1] !== page - 1 && <span className="px-1">...</span>}
+                            <Button
+                              variant={bundleCurrentPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setBundleCurrentPage(page)}
+                            >
+                              {page}
+                            </Button>
+                          </span>
+                        ))}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setBundleCurrentPage(Math.min(totalBundlePages, bundleCurrentPage + 1))}
+                        disabled={bundleCurrentPage === totalBundlePages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                </>
               )}
             </CardContent>
           </Card>
