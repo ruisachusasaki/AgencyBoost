@@ -47,6 +47,18 @@ export default function OffboardingSubmissionsView() {
     queryKey: ["/api/offboarding-submissions"],
   });
 
+  // Fetch staff to get submitter names
+  const { data: staffData = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff"],
+  });
+
+  // Helper to get staff name by ID
+  const getStaffName = (staffId: string | null) => {
+    if (!staffId) return 'Unknown';
+    const staff = staffData.find(s => s.id === staffId);
+    return staff ? `${staff.firstName} ${staff.lastName}` : 'Unknown';
+  };
+
   // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
@@ -179,6 +191,7 @@ export default function OffboardingSubmissionsView() {
                 <SortableHeader field="employmentEndDate">End Date</SortableHeader>
                 <SortableHeader field="accountSuspensionDate">Account Suspension</SortableHeader>
                 <SortableHeader field="submittedAt">Submitted</SortableHeader>
+                <SortableHeader field="submittedById">Submitted By</SortableHeader>
                 <SortableHeader field="status">Status</SortableHeader>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -214,6 +227,9 @@ export default function OffboardingSubmissionsView() {
                       <Calendar className="h-4 w-4" />
                       {new Date(submission.submittedAt).toLocaleDateString()}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <p className="text-sm">{getStaffName(submission.submittedById)}</p>
                   </TableCell>
                   <TableCell>
                     <Badge 
