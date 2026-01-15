@@ -99,6 +99,8 @@ export default function ProductsSettings() {
   const [editFormType, setEditFormType] = useState("");
   const [editFormStatus, setEditFormStatus] = useState("");
   const [editFormCategoryId, setEditFormCategoryId] = useState("");
+  const [editFormPrice, setEditFormPrice] = useState("");
+  const [editFormCost, setEditFormCost] = useState("");
 
   // State for tracking expanded bundles
   const [expandedBundles, setExpandedBundles] = useState<Set<string>>(new Set());
@@ -448,7 +450,6 @@ export default function ProductsSettings() {
     
     // Client-side validation  
     const name = (formData.get("name") as string)?.trim();
-    const price = formData.get("price") as string;
     
     if (!name) {
       toast({
@@ -459,7 +460,7 @@ export default function ProductsSettings() {
       return;
     }
     
-    if (!price || parseFloat(price) < 0) {
+    if (!editFormPrice || parseFloat(editFormPrice) < 0) {
       toast({
         title: "Validation Error",
         description: "Please enter a valid price (0 or greater)",
@@ -480,8 +481,8 @@ export default function ProductsSettings() {
     const data = {
       name,
       description: (formData.get("description") as string)?.trim() || "",
-      price,
-      cost: formData.get("cost") as string,
+      price: editFormPrice,
+      cost: editFormCost || null,
       type: editFormType,
       categoryId: editFormCategoryId || undefined,
       status: editFormStatus,
@@ -494,6 +495,8 @@ export default function ProductsSettings() {
     setEditFormType(product.type);
     setEditFormStatus(product.status);
     setEditFormCategoryId(product.categoryId || "");
+    setEditFormPrice(product.price?.toString() || "");
+    setEditFormCost(product.cost?.toString() || "");
     setIsEditProductOpen(true);
   };
 
@@ -507,6 +510,8 @@ export default function ProductsSettings() {
     setEditFormType("");
     setEditFormStatus("");
     setEditFormCategoryId("");
+    setEditFormPrice("");
+    setEditFormCost("");
   };
 
   const handleCreateBundle = (e: React.FormEvent<HTMLFormElement>) => {
@@ -956,7 +961,8 @@ export default function ProductsSettings() {
                         name="price" 
                         type="number" 
                         step="0.01" 
-                        defaultValue={editingProduct.price || ""}
+                        value={editFormPrice}
+                        onChange={(e) => setEditFormPrice(e.target.value)}
                         placeholder="0.00"
                         required
                         data-testid="input-edit-product-price"
@@ -969,7 +975,8 @@ export default function ProductsSettings() {
                         name="cost" 
                         type="number" 
                         step="0.01" 
-                        defaultValue={editingProduct.cost || ""}
+                        value={editFormCost}
+                        onChange={(e) => setEditFormCost(e.target.value)}
                         placeholder="0.00"
                       />
                     </div>
