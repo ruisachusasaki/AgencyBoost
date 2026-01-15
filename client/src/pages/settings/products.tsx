@@ -1090,24 +1090,6 @@ export default function ProductsSettings() {
                       </Button>
                     </div>
                     
-                    {/* Product Search */}
-                    {bundleProducts.length > 0 && (
-                      <div className="space-y-2">
-                        <Label htmlFor="bundle-product-search">Search Products</Label>
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                          <Input
-                            id="bundle-product-search"
-                            placeholder="Search products by name..."
-                            value={bundleProductSearch}
-                            onChange={(e) => setBundleProductSearch(e.target.value)}
-                            className="pl-10"
-                            data-testid="input-bundle-product-search"
-                          />
-                        </div>
-                      </div>
-                    )}
-                    
                     {bundleProducts.map((bundleProduct, index) => (
                       <div key={index} className="flex gap-2 items-end">
                         <div className="flex-1">
@@ -1127,6 +1109,8 @@ export default function ProductsSettings() {
                                   onChange={(e) => setBundleProductSearch(e.target.value)}
                                   className="h-8"
                                   onClick={(e) => e.stopPropagation()}
+                                  onKeyDown={(e) => e.stopPropagation()}
+                                  onFocus={(e) => e.stopPropagation()}
                                 />
                               </div>
                               <div className="max-h-48 overflow-y-auto">
@@ -1743,6 +1727,8 @@ export default function ProductsSettings() {
                               onChange={(e) => setBundleProductSearch(e.target.value)}
                               className="h-8"
                               onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              onFocus={(e) => e.stopPropagation()}
                             />
                           </div>
                           <div className="max-h-48 overflow-y-auto">
