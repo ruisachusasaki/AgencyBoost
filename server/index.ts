@@ -1522,6 +1522,17 @@ async function initializeDefaultTimeOffTypes() {
 
 const app = express();
 
+// CRITICAL: Early health check endpoint for Cloud Run - responds IMMEDIATELY
+// This must be defined BEFORE any middleware that could slow down the response
+// Cloud Run health checks need this to pass within 10 seconds of startup
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Slack Events webhook with raw body capture for signature verification
 // MUST be registered before express.json() to capture the raw request body
 app.post('/api/integrations/slack/events', 
@@ -1753,35 +1764,42 @@ async function syncStaffRolesToUserRoles() {
   }
 }
 
+/**
+ * Run all startup migrations
+ * Called AFTER server starts listening to avoid Cloud Run health check timeout
+ */
+async function runStartupMigrations() {
+  log("Starting background migrations...");
+  try {
+    await ensureClientBriefColumns();
+    await initializeCoreClientBriefSections();
+    await initializeDefaultAutomationTriggers();
+    await initializeDefaultAutomationActions();
+    await initializeDefaultCalendars();
+    await generateAnniversaryAndBirthdayEvents();
+    await initializeDefaultTeamPositions();
+    await initializeDefaultExpenseReportFormFields();
+    await initializeHRTeamWidgets();
+    await initializeCalendarAppointmentWidgets();
+    await initializeActivityAlertsWidgets();
+    await initializeDefaultProgressionStatuses();
+    await initializeDefaultTimeOffTypes();
+    await syncStaffRolesToUserRoles();
+    log("✅ All startup migrations completed successfully");
+  } catch (error) {
+    log(`⚠️ Startup migrations encountered an error: ${error}`);
+    // Don't crash - migrations are non-blocking
+  }
+}
+
 (async () => {
-  // Run startup migrations before setting up routes
-  await ensureClientBriefColumns();
-  await initializeCoreClientBriefSections();
-  await initializeDefaultAutomationTriggers();
-  await initializeDefaultAutomationActions();
-  await initializeDefaultCalendars();
-  await generateAnniversaryAndBirthdayEvents();
-  await initializeDefaultTeamPositions();
-  await initializeDefaultExpenseReportFormFields();
-  await initializeHRTeamWidgets();
-  await initializeCalendarAppointmentWidgets();
-  await initializeActivityAlertsWidgets();
-  await initializeDefaultProgressionStatuses();
-  await initializeDefaultTimeOffTypes();
-  await syncStaffRolesToUserRoles();
-  
-  // Setup Replit Auth
+  // Setup Replit Auth FIRST (essential for routes)
   await setupAuth(app);
   log("✅ Replit Auth initialized");
   
-  // Setup Google Calendar OAuth routes
+  // Setup Google Calendar OAuth routes (lightweight, no async work)
   setupGoogleCalendar(app);
   log("✅ Google Calendar OAuth routes initialized");
-  
-  // Start background calendar sync service
-  const { startBackgroundSync } = await import('./googleCalendarBackgroundSync');
-  startBackgroundSync();
-  log("✅ Google Calendar background sync started");
   
   const server = await registerRoutes(app);
 
@@ -1813,5 +1831,17 @@ async function syncStaffRolesToUserRoles() {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Run migrations AFTER server is listening (non-blocking for Cloud Run health checks)
+    // This ensures Cloud Run sees the app as healthy before migrations complete
+    runStartupMigrations().then(() => {
+      // Start background calendar sync service AFTER migrations complete
+      import('./googleCalendarBackgroundSync').then(({ startBackgroundSync }) => {
+        startBackgroundSync();
+        log("✅ Google Calendar background sync started");
+      }).catch(err => {
+        log(`⚠️ Failed to start background calendar sync: ${err.message}`);
+      });
+    });
   });
 })();
