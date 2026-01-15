@@ -13593,22 +13593,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       
+      // Check if product exists
+      const existingProduct = await db.select().from(products).where(eq(products.id, id)).limit(1);
+      if (existingProduct.length === 0) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      // Remove product from any bundles first
+      await db.delete(bundleProducts).where(eq(bundleProducts.productId, id));
+      
+      // Remove product from any client product assignments
+      await db.delete(clientProducts).where(eq(clientProducts.productId, id));
+      
+      // Now delete the product
       const [deletedProduct] = await db
         .delete(products)
         .where(eq(products.id, id))
         .returning();
 
-      if (!deletedProduct) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-
       res.json({ message: "Product deleted successfully" });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting product:', error);
+      // Check for foreign key constraint error
+      if (error.code === '23503') {
+        return res.status(400).json({ 
+          message: "Cannot delete product - it is referenced by quotes or other records. Please remove those references first." 
+        });
+      }
       res.status(500).json({ message: "Failed to delete product" });
     }
   });
-
   // Product Bundles API
   // Allow users who can view clients to also see bundles (needed for adding bundles to clients)
   app.get("/api/product-bundles", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
