@@ -24611,6 +24611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!rawUserId) return;
       
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
       // Check if user has admin or manager permissions
       const isAdmin = await isCurrentUserAdmin(currentUserId);
       const hasHrManagePermission = await hasPermission(currentUserId, 'hr', 'canManage');
