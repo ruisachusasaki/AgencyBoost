@@ -581,17 +581,19 @@ export default function ProductsSettings() {
       return { totalCost: 0 };
     }
 
-    // Each product is 1 unit in base bundle - calculate total cost
+    // Calculate total cost including quantities
     const totalCost = bundle.products.reduce((sum, product) => {
       // Handle various formats of cost fields (string, number, null, undefined)
-      // Try multiple possible field names: productCost, cost, price, productPrice
       const costValue = product.productCost || product.cost || product.price || product.productPrice || 0;
       const cost = typeof costValue === 'string' ? parseFloat(costValue) : Number(costValue);
+      
+      // Get quantity (default to 1 if not set)
+      const quantity = product.quantity || 1;
       
       // Ensure we have a valid number (not NaN)
       const validCost = isNaN(cost) ? 0 : cost;
       
-      return sum + validCost;
+      return sum + (validCost * quantity);
     }, 0);
 
     return { totalCost };
@@ -1513,22 +1515,27 @@ export default function ProductsSettings() {
                                 
                                 {expandedBundles.has(bundle.id) && (
                                   <div className="space-y-2 mt-2 pl-6">
-                                    {bundle.products.map((product) => (
-                                      <div key={product.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                        <div className="flex items-center gap-3">
-                                          <ShoppingCart className="w-4 h-4 text-gray-500" />
-                                          <div>
-                                            <span className="font-medium">{product.productName}</span>
-                                            <span className="text-sm text-gray-500 ml-2">
-                                              1 unit each
-                                            </span>
+                                    {bundle.products.map((product) => {
+                                      const qty = product.quantity || 1;
+                                      const unitCost = parseFloat(product.productCost || '0');
+                                      const totalProductCost = unitCost * qty;
+                                      return (
+                                        <div key={product.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                          <div className="flex items-center gap-3">
+                                            <ShoppingCart className="w-4 h-4 text-gray-500" />
+                                            <div>
+                                              <span className="font-medium">{product.productName}</span>
+                                              <span className="text-sm text-gray-500 ml-2">
+                                                {qty} unit{qty !== 1 ? 's' : ''} @ ${unitCost.toFixed(2)} each
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div className="text-sm font-medium text-blue-600">
+                                            ${totalProductCost.toFixed(2)}
                                           </div>
                                         </div>
-                                        <div className="text-sm font-medium text-blue-600">
-                                          ${parseFloat(product.productCost || '0').toFixed(2)} cost each
-                                        </div>
-                                      </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>
