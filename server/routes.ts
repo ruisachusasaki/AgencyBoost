@@ -24558,9 +24558,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!rawUserId) return;
       
-      const validatedData = insertOffboardingSubmissionSchema.parse({
-        ...req.body,
-        submittedById: currentUserId,
         status: 'pending'
       });
 
