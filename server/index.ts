@@ -89,7 +89,7 @@ async function initializeDefaultAutomationTriggers() {
           name: "Slack Message Received",
           type: "slack_message_received",
           description: "Triggers when a message is posted in a Slack channel",
-          category: "integrations",
+          category: "integration",
           configSchema: {
             channel_id: { type: "string", label: "Channel ID", placeholder: "Filter by channel (leave empty for all)" },
             contains_text: { type: "string", label: "Contains Text", placeholder: "Trigger only if message contains this text" },
@@ -103,7 +103,7 @@ async function initializeDefaultAutomationTriggers() {
           name: "Slack Reaction Added",
           type: "slack_reaction_added",
           description: "Triggers when an emoji reaction is added to a message",
-          category: "integrations",
+          category: "integration",
           configSchema: {
             channel_id: { type: "string", label: "Channel ID", placeholder: "Filter by channel (leave empty for all)" },
             emoji: { type: "string", label: "Emoji", placeholder: "Filter by emoji name (leave empty for all)" },
@@ -117,7 +117,7 @@ async function initializeDefaultAutomationTriggers() {
           name: "Slack Bot Mentioned",
           type: "slack_app_mention",
           description: "Triggers when your Slack bot is mentioned in a message",
-          category: "integrations",
+          category: "integration",
           configSchema: {
             channel_id: { type: "string", label: "Channel ID", placeholder: "Filter by channel (leave empty for all)" }
           },
@@ -129,7 +129,7 @@ async function initializeDefaultAutomationTriggers() {
           name: "Slack Channel Created",
           type: "slack_channel_created",
           description: "Triggers when a new Slack channel is created",
-          category: "integrations",
+          category: "integration",
           configSchema: {
             is_private: { type: "boolean", label: "Private Channel Only", default: false }
           },
@@ -325,7 +325,7 @@ async function initializeDefaultAutomationTriggers() {
         name: "Slack Message Received",
         type: "slack_message_received",
         description: "Triggers when a message is posted in a Slack channel",
-        category: "integrations",
+        category: "integration",
         configSchema: {
           channel_id: { type: "string", label: "Channel ID", placeholder: "Filter by channel (leave empty for all)" },
           contains_text: { type: "string", label: "Contains Text", placeholder: "Trigger only if message contains this text" },
@@ -339,7 +339,7 @@ async function initializeDefaultAutomationTriggers() {
         name: "Slack Reaction Added",
         type: "slack_reaction_added",
         description: "Triggers when an emoji reaction is added to a message",
-        category: "integrations",
+        category: "integration",
         configSchema: {
           channel_id: { type: "string", label: "Channel ID", placeholder: "Filter by channel (leave empty for all)" },
           emoji: { type: "string", label: "Emoji", placeholder: "Filter by emoji name (leave empty for all)" },
@@ -353,7 +353,7 @@ async function initializeDefaultAutomationTriggers() {
         name: "Slack Bot Mentioned",
         type: "slack_app_mention",
         description: "Triggers when your Slack bot is mentioned in a message",
-        category: "integrations",
+        category: "integration",
         configSchema: {
           channel_id: { type: "string", label: "Channel ID", placeholder: "Filter by channel (leave empty for all)" }
         },
@@ -365,7 +365,7 @@ async function initializeDefaultAutomationTriggers() {
         name: "Slack Channel Created",
         type: "slack_channel_created",
         description: "Triggers when a new Slack channel is created",
-        category: "integrations",
+        category: "integration",
         configSchema: {
           is_private: { type: "boolean", label: "Private Channel Only", default: false }
         },
