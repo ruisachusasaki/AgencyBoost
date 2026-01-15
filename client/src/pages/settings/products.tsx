@@ -1119,8 +1119,8 @@ export default function ProductsSettings() {
                             <SelectTrigger>
                               <SelectValue placeholder="Select product" />
                             </SelectTrigger>
-                            <SelectContent className="max-h-60">
-                              <div className="p-2 sticky top-0 bg-background border-b">
+                            <SelectContent className="max-h-60 overflow-hidden">
+                              <div className="p-2 sticky top-0 z-10 bg-background border-b shadow-sm">
                                 <Input
                                   placeholder="Search products..."
                                   value={bundleProductSearch}
@@ -1129,16 +1129,18 @@ export default function ProductsSettings() {
                                   onClick={(e) => e.stopPropagation()}
                                 />
                               </div>
-                              {filteredProductsForBundle.map((product) => (
-                                <SelectItem key={product.id} value={product.id}>
-                                  {product.name} - ${product.cost || '0.00'} cost
-                                </SelectItem>
-                              ))}
-                              {filteredProductsForBundle.length === 0 && (
-                                <div className="p-2 text-sm text-muted-foreground text-center">
-                                  No products found
-                                </div>
-                              )}
+                              <div className="max-h-48 overflow-y-auto">
+                                {filteredProductsForBundle.map((product) => (
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.name} - ${product.cost || '0.00'} cost
+                                  </SelectItem>
+                                ))}
+                                {filteredProductsForBundle.length === 0 && (
+                                  <div className="p-2 text-sm text-muted-foreground text-center">
+                                    No products found
+                                  </div>
+                                )}
+                              </div>
                             </SelectContent>
                           </Select>
                         </div>
@@ -1733,8 +1735,8 @@ export default function ProductsSettings() {
                         <SelectTrigger>
                           <SelectValue placeholder="Select product" />
                         </SelectTrigger>
-                        <SelectContent className="max-h-60">
-                          <div className="p-2 sticky top-0 bg-background border-b">
+                        <SelectContent className="max-h-60 overflow-hidden">
+                          <div className="p-2 sticky top-0 z-10 bg-background border-b shadow-sm">
                             <Input
                               placeholder="Search products..."
                               value={bundleProductSearch}
@@ -1743,16 +1745,18 @@ export default function ProductsSettings() {
                               onClick={(e) => e.stopPropagation()}
                             />
                           </div>
-                          {filteredProductsForBundle.map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name} - ${product.cost || '0.00'} cost
-                            </SelectItem>
-                          ))}
-                          {filteredProductsForBundle.length === 0 && (
-                            <div className="p-2 text-sm text-muted-foreground text-center">
-                              No products found
-                            </div>
-                          )}
+                          <div className="max-h-48 overflow-y-auto">
+                            {filteredProductsForBundle.map((product) => (
+                              <SelectItem key={product.id} value={product.id}>
+                                {product.name} - ${product.cost || '0.00'} cost
+                              </SelectItem>
+                            ))}
+                            {filteredProductsForBundle.length === 0 && (
+                              <div className="p-2 text-sm text-muted-foreground text-center">
+                                No products found
+                              </div>
+                            )}
+                          </div>
                         </SelectContent>
                       </Select>
                     </div>
