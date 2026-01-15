@@ -11,7 +11,8 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Filter
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -39,6 +40,8 @@ export default function OffboardingSubmissionsView() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [timeFrameFilter, setTimeFrameFilter] = useState<string>('all');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -118,11 +121,51 @@ export default function OffboardingSubmissionsView() {
     </TableHead>
   );
 
+  // Filter submissions
+  const filteredSubmissions = useMemo(() => {
+    let filtered = [...submissions];
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(s => s.status === statusFilter);
+    }
+
+    // Time frame filter
+    if (timeFrameFilter !== 'all') {
+      const now = new Date();
+      const cutoffDate = new Date();
+
+      switch (timeFrameFilter) {
+        case '7days':
+          cutoffDate.setDate(now.getDate() - 7);
+          break;
+        case '30days':
+          cutoffDate.setDate(now.getDate() - 30);
+          break;
+        case '90days':
+          cutoffDate.setDate(now.getDate() - 90);
+          break;
+        case 'thisMonth':
+          cutoffDate.setDate(1);
+          cutoffDate.setHours(0, 0, 0, 0);
+          break;
+        case 'thisYear':
+          cutoffDate.setMonth(0, 1);
+          cutoffDate.setHours(0, 0, 0, 0);
+          break;
+      }
+
+      filtered = filtered.filter(s => new Date(s.submittedAt) >= cutoffDate);
+    }
+
+    return filtered;
+  }, [submissions, statusFilter, timeFrameFilter]);
+
   // Sorted submissions
   const sortedSubmissions = useMemo(() => {
-    if (!sortField) return submissions;
+    if (!sortField) return filteredSubmissions;
 
-    return [...submissions].sort((a, b) => {
+    return [...filteredSubmissions].sort((a, b) => {
       const aVal = a[sortField];
       const bVal = b[sortField];
 
@@ -140,7 +183,7 @@ export default function OffboardingSubmissionsView() {
 
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [submissions, sortField, sortDirection]);
+  }, [filteredSubmissions, sortField, sortDirection]);
 
   // Pagination
   const totalPages = Math.ceil(sortedSubmissions.length / pageSize);
@@ -181,6 +224,76 @@ export default function OffboardingSubmissionsView() {
   return (
     <Card>
       <CardContent className="p-0">
+        {/* Filter Controls */}
+        <div className="flex items-center gap-4 p-4 border-b bg-gray-50">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-slate-500" />
+            <span className="text-sm font-medium text-slate-700">Filters:</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600">Status:</span>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => {
+                setStatusFilter(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[130px]" data-testid="filter-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600">Time Frame:</span>
+            <Select
+              value={timeFrameFilter}
+              onValueChange={(value) => {
+                setTimeFrameFilter(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[150px]" data-testid="filter-timeframe">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="7days">Last 7 Days</SelectItem>
+                <SelectItem value="30days">Last 30 Days</SelectItem>
+                <SelectItem value="90days">Last 90 Days</SelectItem>
+                <SelectItem value="thisMonth">This Month</SelectItem>
+                <SelectItem value="thisYear">This Year</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(statusFilter !== 'all' || timeFrameFilter !== 'all') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setStatusFilter('all');
+                setTimeFrameFilter('all');
+                setPage(1);
+              }}
+              className="text-slate-600 hover:text-slate-900"
+            >
+              Clear Filters
+            </Button>
+          )}
+
+          <div className="ml-auto text-sm text-slate-500">
+            Showing {filteredSubmissions.length} of {submissions.length} submissions
+          </div>
+        </div>
+
         <div className="border rounded-lg overflow-hidden bg-white">
           <Table className="bg-white">
             <TableHeader>
