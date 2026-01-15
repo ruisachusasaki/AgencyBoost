@@ -82,6 +82,59 @@ async function initializeDefaultAutomationTriggers() {
           },
           isActive: true,
           createdAt: new Date()
+        },
+        // Slack triggers
+        {
+          id: "trigger-slack-message",
+          name: "Slack Message Received",
+          type: "slack_message_received",
+          description: "Triggers when a message is posted in a Slack channel",
+          category: "integrations",
+          configSchema: {
+            channel_id: { type: "string", label: "Channel ID", placeholder: "Filter by channel (leave empty for all)" },
+            contains_text: { type: "string", label: "Contains Text", placeholder: "Trigger only if message contains this text" },
+            from_user_id: { type: "string", label: "From User ID", placeholder: "Filter by sender (leave empty for all)" }
+          },
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
+          id: "trigger-slack-reaction",
+          name: "Slack Reaction Added",
+          type: "slack_reaction_added",
+          description: "Triggers when an emoji reaction is added to a message",
+          category: "integrations",
+          configSchema: {
+            channel_id: { type: "string", label: "Channel ID", placeholder: "Filter by channel (leave empty for all)" },
+            emoji: { type: "string", label: "Emoji", placeholder: "Filter by emoji name (leave empty for all)" },
+            by_user_id: { type: "string", label: "By User ID", placeholder: "Filter by who added the reaction" }
+          },
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
+          id: "trigger-slack-mention",
+          name: "Slack Bot Mentioned",
+          type: "slack_app_mention",
+          description: "Triggers when your Slack bot is mentioned in a message",
+          category: "integrations",
+          configSchema: {
+            channel_id: { type: "string", label: "Channel ID", placeholder: "Filter by channel (leave empty for all)" }
+          },
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
+          id: "trigger-slack-channel-created",
+          name: "Slack Channel Created",
+          type: "slack_channel_created",
+          description: "Triggers when a new Slack channel is created",
+          category: "integrations",
+          configSchema: {
+            is_private: { type: "boolean", label: "Private Channel Only", default: false }
+          },
+          isActive: true,
+          createdAt: new Date()
         }
       ];
       
@@ -262,6 +315,59 @@ async function initializeDefaultAutomationTriggers() {
             options: ["scheduled", "confirmed", "cancelled", "completed", "no_show"],
             required: true
           }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      // Slack triggers
+      {
+        id: "trigger-slack-message",
+        name: "Slack Message Received",
+        type: "slack_message_received",
+        description: "Triggers when a message is posted in a Slack channel",
+        category: "integrations",
+        configSchema: {
+          channel_id: { type: "string", label: "Channel ID", placeholder: "Filter by channel (leave empty for all)" },
+          contains_text: { type: "string", label: "Contains Text", placeholder: "Trigger only if message contains this text" },
+          from_user_id: { type: "string", label: "From User ID", placeholder: "Filter by sender (leave empty for all)" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "trigger-slack-reaction",
+        name: "Slack Reaction Added",
+        type: "slack_reaction_added",
+        description: "Triggers when an emoji reaction is added to a message",
+        category: "integrations",
+        configSchema: {
+          channel_id: { type: "string", label: "Channel ID", placeholder: "Filter by channel (leave empty for all)" },
+          emoji: { type: "string", label: "Emoji", placeholder: "Filter by emoji name (leave empty for all)" },
+          by_user_id: { type: "string", label: "By User ID", placeholder: "Filter by who added the reaction" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "trigger-slack-mention",
+        name: "Slack Bot Mentioned",
+        type: "slack_app_mention",
+        description: "Triggers when your Slack bot is mentioned in a message",
+        category: "integrations",
+        configSchema: {
+          channel_id: { type: "string", label: "Channel ID", placeholder: "Filter by channel (leave empty for all)" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "trigger-slack-channel-created",
+        name: "Slack Channel Created",
+        type: "slack_channel_created",
+        description: "Triggers when a new Slack channel is created",
+        category: "integrations",
+        configSchema: {
+          is_private: { type: "boolean", label: "Private Channel Only", default: false }
         },
         isActive: true,
         createdAt: new Date()
@@ -1415,6 +1521,139 @@ async function initializeDefaultTimeOffTypes() {
 }
 
 const app = express();
+
+// Slack Events webhook with raw body capture for signature verification
+// MUST be registered before express.json() to capture the raw request body
+app.post('/api/integrations/slack/events', 
+  express.raw({ type: 'application/json', limit: '1mb' }),
+  async (req, res) => {
+    try {
+      const rawBody = (req.body as Buffer).toString('utf8');
+      
+      // STEP 1: Verify signature FIRST before any processing
+      // This prevents unauthenticated requests from triggering any logic
+      const timestamp = req.headers['x-slack-request-timestamp'] as string;
+      const signature = req.headers['x-slack-signature'] as string;
+
+      if (process.env.SLACK_SIGNING_SECRET) {
+        if (!timestamp || !signature) {
+          console.warn('[Slack Events] Missing signature headers');
+          return res.status(401).json({ error: 'Missing authentication headers' });
+        }
+
+        const { slackService } = await import('./slack-service');
+        if (!slackService.verifySlackRequest(timestamp, signature, rawBody)) {
+          console.warn('[Slack Events] Invalid signature - rejecting request');
+          return res.status(401).json({ error: 'Invalid signature' });
+        }
+        console.log('[Slack Events] Signature verified successfully');
+      }
+      
+      // STEP 2: Parse JSON only AFTER signature verification
+      let payload: any;
+      try {
+        payload = JSON.parse(rawBody);
+      } catch (e) {
+        console.error('[Slack Events] Invalid JSON in request body');
+        return res.status(400).json({ error: 'Invalid JSON' });
+      }
+
+      // STEP 3: Handle URL verification challenge (only after verification)
+      if (payload.type === 'url_verification') {
+        console.log('[Slack Events] URL verification challenge received');
+        return res.json({ challenge: payload.challenge });
+      }
+
+      // Import emitTrigger for workflow triggers
+      const { emitTrigger } = await import('./workflow-engine');
+
+      // Handle event callbacks
+      if (payload.type === 'event_callback') {
+        const event = payload.event;
+        console.log(`[Slack Events] Received event: ${event.type}`, {
+          channel: event.channel,
+          user: event.user,
+          text: event.text?.substring(0, 50)
+        });
+
+        // Map Slack events to workflow triggers
+        switch (event.type) {
+          case 'message':
+            if (event.subtype === 'bot_message' || event.subtype === 'message_changed') {
+              return res.json({ ok: true });
+            }
+            await emitTrigger({
+              type: 'slack_message_received',
+              data: {
+                channel: event.channel,
+                channel_type: event.channel_type,
+                user: event.user,
+                text: event.text,
+                ts: event.ts,
+                thread_ts: event.thread_ts,
+                team: payload.team_id
+              },
+              context: { timestamp: new Date(), metadata: { source: 'slack_events_api' } }
+            });
+            break;
+
+          case 'reaction_added':
+            await emitTrigger({
+              type: 'slack_reaction_added',
+              data: {
+                channel: event.item.channel,
+                message_ts: event.item.ts,
+                user: event.user,
+                emoji: event.reaction,
+                item_user: event.item_user,
+                team: payload.team_id
+              },
+              context: { timestamp: new Date(), metadata: { source: 'slack_events_api' } }
+            });
+            break;
+
+          case 'app_mention':
+            await emitTrigger({
+              type: 'slack_app_mention',
+              data: {
+                channel: event.channel,
+                user: event.user,
+                text: event.text,
+                ts: event.ts,
+                team: payload.team_id
+              },
+              context: { timestamp: new Date(), metadata: { source: 'slack_events_api' } }
+            });
+            break;
+
+          case 'channel_created':
+            await emitTrigger({
+              type: 'slack_channel_created',
+              data: {
+                channel_id: event.channel.id,
+                channel_name: event.channel.name,
+                creator: event.channel.creator,
+                is_private: event.channel.is_private || false,
+                team: payload.team_id
+              },
+              context: { timestamp: new Date(), metadata: { source: 'slack_events_api' } }
+            });
+            break;
+
+          default:
+            console.log(`[Slack Events] Unhandled event type: ${event.type}`);
+        }
+      }
+
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('[Slack Events] Error processing event:', error);
+      res.status(500).json({ error: 'Failed to process event' });
+    }
+  }
+);
+
+// Standard body parsers for all other routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

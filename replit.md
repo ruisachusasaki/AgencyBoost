@@ -33,7 +33,8 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Business Timezone**: Account-level timezone setting with a lightweight API endpoint, React hook, and timezone-aware helper functions for consistent date calculations.
 - **Task Management**: Hierarchical sub-tasks, scheduling, dependencies, recurring tasks, bulk actions, and dynamic project progress.
 - **Communication**: Smart Lists, Email/SMS, VoIP calling (Twilio-based browser calling for leads), document management, notes, calendar management with dynamic merge tags, and unified templating.
-- **Automation System**: GoHighLevel-style, API-driven, database-backed workflow engine with 25+ trigger definitions and 7 action types, featuring conditional evaluation and variable interpolation.
+- **Automation System**: GoHighLevel-style, API-driven, database-backed workflow engine with 25+ trigger definitions and 13+ action types, featuring conditional evaluation and variable interpolation.
+    - **Slack Workflow Integration**: Full Zapier-like Slack support with 6 action types (Send Message, Send DM, Add Reaction, Create Channel, Set Topic, Create Reminder) and 4 trigger types (Message Received, Reaction Added, Bot Mentioned, Channel Created). Uses Slack Events API webhook with signature verification.
 - **Client Management**: Client team assignment (drag-and-drop), health scoring, asset approval workflow with annotation, customizable column views, billing information, and comprehensive bulk actions.
 - **HR Features**: Time off requests (simplified global types with customizable settings), job application forms, watchers, expense reports, and a 1-on-1 meeting tracker.
     - **1-on-1 Meetings**: Includes meeting recording links, position-specific KPI tracking, two-tab navigation, URL-based routing, private notes, and null-safety. Integrates with the internal AgencyBoost calendar, and optionally Google Calendar for synced events.

@@ -12,6 +12,7 @@ import { db } from "./db";
 import { workflows, workflowExecutions, clients, enhancedTasks, staff, automationTriggers } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { slackService } from "./slack-service";
 
 // ===== TYPE DEFINITIONS =====
 
@@ -366,6 +367,25 @@ async function executeAction(
     case "assign_staff":
       return await executeAssignStaff(action, context);
     
+    // Slack actions
+    case "send_slack_message":
+      return await executeSendSlackMessage(action, context);
+    
+    case "send_slack_dm":
+      return await executeSendSlackDM(action, context);
+    
+    case "add_slack_reaction":
+      return await executeAddSlackReaction(action, context);
+    
+    case "create_slack_channel":
+      return await executeCreateSlackChannel(action, context);
+    
+    case "set_slack_topic":
+      return await executeSetSlackTopic(action, context);
+    
+    case "create_slack_reminder":
+      return await executeCreateSlackReminder(action, context);
+    
     default:
       console.warn(`⚠️  Unknown action type: ${action.type}`);
       return { skipped: true, reason: `Unknown action type: ${action.type}` };
@@ -532,6 +552,192 @@ async function executeAssignStaff(action: WorkflowAction, context: ExecutionCont
 
   console.log(`    👤 Assigned staff ${config.staffId} to client ${clientId}`);
   return { assigned: true, staffId: config.staffId, clientId };
+}
+
+// ===== SLACK ACTION EXECUTORS =====
+
+async function executeSendSlackMessage(action: WorkflowAction, context: ExecutionContext) {
+  const config = action.config;
+
+  if (!slackService.isConfigured()) {
+    console.warn('    ⚠️  Slack not configured - skipping message');
+    return { skipped: true, reason: 'Slack not configured' };
+  }
+
+  const message = interpolateString(config.message || config.text, context);
+  const channel = config.channel || undefined;
+
+  const result = await slackService.sendMessage({
+    channel,
+    text: message,
+  });
+
+  if (result.success) {
+    console.log(`    💬 Sent Slack message to ${result.channel}`);
+    return { sent: true, channel: result.channel, ts: result.ts };
+  } else {
+    throw new Error(`Failed to send Slack message: ${result.error}`);
+  }
+}
+
+async function executeSendSlackDM(action: WorkflowAction, context: ExecutionContext) {
+  const config = action.config;
+
+  if (!slackService.isConfigured()) {
+    console.warn('    ⚠️  Slack not configured - skipping DM');
+    return { skipped: true, reason: 'Slack not configured' };
+  }
+
+  let userId = config.userId ? interpolateString(config.userId, context) : null;
+  const email = config.email ? interpolateString(config.email, context) : null;
+
+  if (!userId && email) {
+    console.log(`    🔍 Looking up Slack user by email: ${email}`);
+    const lookupResult = await slackService.lookupUserByEmail(email);
+    if (lookupResult.success && lookupResult.userId) {
+      userId = lookupResult.userId;
+      console.log(`    ✓ Found user: ${userId}`);
+    } else {
+      throw new Error(`Could not find Slack user by email "${email}": ${lookupResult.error || 'User not found'}`);
+    }
+  }
+
+  if (!userId) {
+    throw new Error('No userId or email provided for send_slack_dm action. Configure either userId or email in the action settings.');
+  }
+
+  const message = interpolateString(config.message || config.text, context);
+
+  const result = await slackService.sendDirectMessage({
+    userId,
+    text: message,
+  });
+
+  if (result.success) {
+    console.log(`    📨 Sent Slack DM to user ${userId}`);
+    return { sent: true, userId, channel: result.channel, ts: result.ts };
+  } else {
+    throw new Error(`Failed to send Slack DM: ${result.error}`);
+  }
+}
+
+async function executeAddSlackReaction(action: WorkflowAction, context: ExecutionContext) {
+  const config = action.config;
+
+  if (!slackService.isConfigured()) {
+    console.warn('    ⚠️  Slack not configured - skipping reaction');
+    return { skipped: true, reason: 'Slack not configured' };
+  }
+
+  if (!config.channel || !config.timestamp || !config.emoji) {
+    throw new Error('Channel, timestamp, and emoji are required for add_slack_reaction action');
+  }
+
+  const result = await slackService.addReaction({
+    channel: config.channel,
+    timestamp: config.timestamp,
+    emoji: config.emoji,
+  });
+
+  if (result.success) {
+    console.log(`    👍 Added reaction ${config.emoji} to message`);
+    return { added: true, emoji: config.emoji };
+  } else {
+    throw new Error(`Failed to add Slack reaction: ${result.error}`);
+  }
+}
+
+async function executeCreateSlackChannel(action: WorkflowAction, context: ExecutionContext) {
+  const config = action.config;
+
+  if (!slackService.isConfigured()) {
+    console.warn('    ⚠️  Slack not configured - skipping channel creation');
+    return { skipped: true, reason: 'Slack not configured' };
+  }
+
+  const channelName = interpolateString(config.name, context);
+  const description = config.description ? interpolateString(config.description, context) : undefined;
+
+  const result = await slackService.createChannel({
+    name: channelName,
+    isPrivate: config.isPrivate || false,
+    description,
+  });
+
+  if (result.success) {
+    console.log(`    📢 Created Slack channel: ${channelName} (${result.channelId})`);
+
+    let inviteResult = null;
+    if (config.inviteUsers && Array.isArray(config.inviteUsers) && config.inviteUsers.length > 0) {
+      try {
+        inviteResult = await slackService.inviteToChannel(result.channelId!, config.inviteUsers);
+        if (inviteResult.success) {
+          console.log(`    👥 Invited ${config.inviteUsers.length} users to channel`);
+        } else {
+          console.warn(`    ⚠️  Failed to invite users: ${inviteResult.error}`);
+        }
+      } catch (inviteError: any) {
+        console.warn(`    ⚠️  Failed to invite users: ${inviteError.message}`);
+      }
+    }
+
+    context.variables.slackChannelId = result.channelId;
+    return { created: true, channelId: result.channelId, name: channelName, inviteResult };
+  } else {
+    throw new Error(`Failed to create Slack channel: ${result.error}`);
+  }
+}
+
+async function executeSetSlackTopic(action: WorkflowAction, context: ExecutionContext) {
+  const config = action.config;
+
+  if (!slackService.isConfigured()) {
+    console.warn('    ⚠️  Slack not configured - skipping topic update');
+    return { skipped: true, reason: 'Slack not configured' };
+  }
+
+  if (!config.channel) {
+    throw new Error('Channel is required for set_slack_topic action');
+  }
+
+  const topic = interpolateString(config.topic, context);
+
+  const result = await slackService.setChannelTopic(config.channel, topic);
+
+  if (result.success) {
+    console.log(`    📝 Set topic for channel ${config.channel}`);
+    return { updated: true, channel: config.channel, topic };
+  } else {
+    throw new Error(`Failed to set Slack topic: ${result.error}`);
+  }
+}
+
+async function executeCreateSlackReminder(action: WorkflowAction, context: ExecutionContext) {
+  const config = action.config;
+
+  if (!slackService.isConfigured()) {
+    console.warn('    ⚠️  Slack not configured - skipping reminder');
+    return { skipped: true, reason: 'Slack not configured' };
+  }
+
+  if (!config.text || !config.time) {
+    throw new Error('Text and time are required for create_slack_reminder action');
+  }
+
+  const text = interpolateString(config.text, context);
+
+  const result = await slackService.createReminder({
+    text,
+    time: config.time,
+    user: config.user,
+  });
+
+  if (result.success) {
+    console.log(`    ⏰ Created Slack reminder`);
+    return { created: true, reminderId: result.reminderId };
+  } else {
+    throw new Error(`Failed to create Slack reminder: ${result.error}`);
+  }
 }
 
 // ===== UTILITY FUNCTIONS =====

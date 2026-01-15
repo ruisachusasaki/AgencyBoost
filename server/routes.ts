@@ -2,7 +2,7 @@ import { getGoogleCalendarEventsForView } from "./googleCalendarEventsEndpoint";
 import { createCalendarEvent, updateCalendarEventStatus, getEventTimeEntries, createOneOnOneMeetingCalendarEvent } from "./googleCalendarCreateEvent";
 import { createOneOnOneMeetingCalendars, deleteOneOnOneMeetingCalendars, updateOneOnOneMeetingCalendars } from "./oneOnOneMeetingService";
 import { findFathomRecording } from "./fathomService";
-import type { Express, Request } from "express";
+import express, { type Express, type Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import csv from "csv-parser";
@@ -18196,6 +18196,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to send message",
         error: (error as Error).message
       });
+    }
+  });
+  app.get("/api/integrations/slack/channels", requireAuth(), async (req, res) => {
+    try {
+      const { slackService } = await import('./slack-service');
+      
+      if (!slackService.isConfigured()) {
+        return res.status(400).json({ error: 'Slack not configured' });
+      }
+
+      const result = await slackService.listChannels();
+      
+      if (result.success) {
+        res.json({ channels: result.channels });
+      } else {
+        res.status(500).json({ error: result.error });
+      }
+    } catch (error) {
+      console.error('Error fetching Slack channels:', error);
+      res.status(500).json({ error: 'Failed to fetch channels' });
+    }
+  });
+
+  // Get Slack users list (for UI dropdowns)
+  app.get("/api/integrations/slack/users", requireAuth(), async (req, res) => {
+    try {
+      const { slackService } = await import('./slack-service');
+      
+      if (!slackService.isConfigured()) {
+        return res.status(400).json({ error: 'Slack not configured' });
+      }
+
+      const result = await slackService.listUsers();
+      
+      if (result.success) {
+        res.json({ users: result.members });
+      } else {
+        res.status(500).json({ error: result.error });
+      }
+    } catch (error) {
+      console.error('Error fetching Slack users:', error);
+      res.status(500).json({ error: 'Failed to fetch users' });
     }
   });
 
