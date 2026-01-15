@@ -9,9 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { CheckCircle } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CheckCircle, CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface FormField {
   id: string;
@@ -39,6 +43,7 @@ const defaultFormFields: FormField[] = [
 export default function OffboardingForm() {
   const [submissionComplete, setSubmissionComplete] = useState(false);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('');
+  const [openDatePickers, setOpenDatePickers] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -234,11 +239,39 @@ export default function OffboardingForm() {
                             data-testid={`input-${field.id}`}
                           />
                         ) : field.type === 'date' ? (
-                          <Input
-                            {...formField}
-                            type="date"
-                            data-testid={`input-${field.id}`}
-                          />
+                          <Popover 
+                            open={openDatePickers[field.id] || false} 
+                            onOpenChange={(open) => setOpenDatePickers(prev => ({ ...prev, [field.id]: open }))}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal justify-start",
+                                  !formField.value && "text-muted-foreground"
+                                )}
+                                data-testid={`input-${field.id}`}
+                              >
+                                {formField.value ? (
+                                  format(new Date(formField.value), "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={formField.value ? new Date(formField.value) : undefined}
+                                onSelect={(date) => {
+                                  formField.onChange(date ? format(date, 'yyyy-MM-dd') : '');
+                                  setOpenDatePickers(prev => ({ ...prev, [field.id]: false }));
+                                }}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
                         ) : field.type === 'department-dropdown' ? (
                           <Select
                             value={formField.value}

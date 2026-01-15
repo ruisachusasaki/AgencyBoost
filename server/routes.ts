@@ -24583,6 +24583,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!rawUserId) return;
       
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
+      
       const isAdmin = await isCurrentUserAdmin(currentUserId);
       const hasHrViewPermission = await hasPermission(currentUserId, 'hr', 'canView');
       const hasHrManagePermission = await hasPermission(currentUserId, 'hr', 'canManage');
