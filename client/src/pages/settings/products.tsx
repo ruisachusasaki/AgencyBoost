@@ -920,7 +920,7 @@ export default function ProductsSettings() {
                 </DialogDescription>
               </DialogHeader>
               {editingProduct && (
-                <form onSubmit={handleEditProduct} className="space-y-4">
+                <form onSubmit={handleEditProduct} className="space-y-4" key={editingProduct.id}>
                   <div>
                     <Label htmlFor="edit-name">Product Name</Label>
                     <Input 
