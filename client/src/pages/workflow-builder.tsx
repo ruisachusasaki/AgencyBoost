@@ -122,7 +122,8 @@ export default function WorkflowBuilderPage() {
       calendar_scheduling: Calendar,
       knowledge_training: GraduationCap,
       notification_alert: Zap,
-      internal: Settings
+      internal: Settings,
+      integration: Globe
     };
     return iconMap[category] || FileText;
   };
@@ -139,7 +140,8 @@ export default function WorkflowBuilderPage() {
       notification_alert: 'Notification & Alert',
       internal: 'Internal Control',
       calendar_time: 'Calendar & Time',
-      file_document: 'File & Document'
+      file_document: 'File & Document',
+      integration: 'Integration'
     };
     return categoryNames[category] || category;
   };
@@ -156,7 +158,8 @@ export default function WorkflowBuilderPage() {
       notification_alert: 'text-yellow-600',
       internal: 'text-gray-600',
       calendar_time: 'text-red-600',
-      file_document: 'text-indigo-600'
+      file_document: 'text-indigo-600',
+      integration: 'text-teal-600'
     };
     return colorMap[category] || 'text-gray-600';
   };
@@ -1199,12 +1202,12 @@ export default function WorkflowBuilderPage() {
               );
             })}
             
-            {/* Show message if no actions match search */}
-            {actionSearch && Object.keys(filteredGroupedActions).length === 0 && (
+            {/* Show message if no actions match search or no actions available */}
+            {Object.keys(filteredGroupedActions).length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                 <p className="text-lg font-medium mb-2">No actions found</p>
-                <p>Try adjusting your search terms</p>
+                <p>{actionSearch ? "Try adjusting your search terms" : "Actions are loading or not available"}</p>
               </div>
             )}
           </div>
