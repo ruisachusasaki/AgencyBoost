@@ -694,6 +694,89 @@ async function initializeDefaultAutomationActions() {
         },
         isActive: true,
         createdAt: new Date()
+      },
+      // Slack Actions
+      {
+        id: "action-slack-message",
+        name: "Send Slack Message",
+        type: "send_slack_message",
+        description: "Send a message to a Slack channel",
+        category: "integration",
+        configSchema: {
+          channel: { type: "string", label: "Channel ID", placeholder: "Leave empty for default channel" },
+          message: { type: "textarea", label: "Message", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-slack-dm",
+        name: "Send Slack DM",
+        type: "send_slack_dm",
+        description: "Send a direct message to a Slack user",
+        category: "integration",
+        configSchema: {
+          userId: { type: "string", label: "User ID", placeholder: "Slack user ID" },
+          email: { type: "string", label: "User Email", placeholder: "Or lookup by email" },
+          message: { type: "textarea", label: "Message", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-slack-reaction",
+        name: "Add Slack Reaction",
+        type: "add_slack_reaction",
+        description: "Add an emoji reaction to a Slack message",
+        category: "integration",
+        configSchema: {
+          channel: { type: "string", label: "Channel ID", required: true },
+          timestamp: { type: "string", label: "Message Timestamp", required: true },
+          emoji: { type: "string", label: "Emoji", required: true, placeholder: "thumbsup" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-slack-channel",
+        name: "Create Slack Channel",
+        type: "create_slack_channel",
+        description: "Create a new Slack channel",
+        category: "integration",
+        configSchema: {
+          name: { type: "string", label: "Channel Name", required: true },
+          isPrivate: { type: "boolean", label: "Private Channel", default: false },
+          description: { type: "string", label: "Channel Description" }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-slack-topic",
+        name: "Set Slack Channel Topic",
+        type: "set_slack_topic",
+        description: "Set the topic for a Slack channel",
+        category: "integration",
+        configSchema: {
+          channel: { type: "string", label: "Channel ID", required: true },
+          topic: { type: "string", label: "Topic", required: true }
+        },
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: "action-slack-reminder",
+        name: "Create Slack Reminder",
+        type: "create_slack_reminder",
+        description: "Create a reminder in Slack",
+        category: "integration",
+        configSchema: {
+          text: { type: "string", label: "Reminder Text", required: true },
+          time: { type: "string", label: "Time", required: true, placeholder: "in 1 hour, tomorrow at 9am" },
+          user: { type: "string", label: "User ID", placeholder: "Leave empty for yourself" }
+        },
+        isActive: true,
+        createdAt: new Date()
       }
     ];
 
