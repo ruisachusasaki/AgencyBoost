@@ -41,7 +41,7 @@ export default function OffboardingSubmissionsView() {
   const [pageSize, setPageSize] = useState(20);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [timeFrameFilter, setTimeFrameFilter] = useState<string>('all');
+  const [timeFrameFilter, setTimeFrameFilter] = useState<string>('30days');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
