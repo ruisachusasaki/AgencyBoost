@@ -13319,6 +13319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bundleProductsList = await db
         .select({
           productId: bundleProducts.productId,
+          quantity: bundleProducts.quantity,
           productName: products.name,
           productDescription: products.description,
           productCost: products.cost,
@@ -13378,6 +13379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bundleProductsList = await db
         .select({
           productId: bundleProducts.productId,
+          quantity: bundleProducts.quantity,
           baseQuantity: sql<number>`1`, // Base bundle always has 1 unit of each product
           productCost: products.cost
         })
@@ -13679,7 +13681,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: bundleProducts.id,
           bundleId: bundleProducts.bundleId,
           productId: bundleProducts.productId,
-          // quantity field removed - stored in clientBundles.customQuantities
+          quantity: bundleProducts.quantity,
+          
           productName: products.name,
           productDescription: products.description,
           productCost: products.cost,
@@ -13714,8 +13717,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (bundleProductsData && bundleProductsData.length > 0) {
         const bundleProductsInserts = bundleProductsData.map((product: any) => ({
           bundleId: newBundle.id,
-          productId: product.productId
-          // No quantity field - each product is 1 unit by default
+          productId: product.productId,
+          quantity: product.quantity || 1
         }));
         
         await db.insert(bundleProducts).values(bundleProductsInserts);
@@ -13758,8 +13761,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (bundleProductsData.length > 0) {
           const bundleProductsInserts = bundleProductsData.map((product: any) => ({
             bundleId: id,
-            productId: product.productId
-            // No quantity field - each product is 1 unit by default
+            productId: product.productId,
+            quantity: product.quantity || 1
           }));
           
           await db.insert(bundleProducts).values(bundleProductsInserts);

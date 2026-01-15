@@ -85,7 +85,7 @@ export default function ProductsSettings() {
   const [isCreateBundleOpen, setIsCreateBundleOpen] = useState(false);
   const [isEditBundleOpen, setIsEditBundleOpen] = useState(false);
   const [editingBundle, setEditingBundle] = useState<ProductBundle | null>(null);
-  const [bundleProducts, setBundleProducts] = useState<Array<{productId: string}>>([]);
+  const [bundleProducts, setBundleProducts] = useState<Array<{productId: string, quantity: number}>>([]);
   const [bundleProductSearch, setBundleProductSearch] = useState("");
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
   const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false);
@@ -544,11 +544,11 @@ export default function ProductsSettings() {
       
       setEditingBundle(detailedBundle);
       
-      // Load existing products into the form
+      // Load existing products into the form with their quantities
       if (detailedBundle.products && detailedBundle.products.length > 0) {
         const bundleProductsData = detailedBundle.products.map((product: any) => ({
-          productId: product.productId
-          // No quantity needed - each product is 1 unit by default
+          productId: product.productId,
+          quantity: product.quantity || 1
         }));
         setBundleProducts(bundleProductsData);
       } else {
@@ -563,7 +563,7 @@ export default function ProductsSettings() {
   };
 
   const addProductToBundle = () => {
-    setBundleProducts([...bundleProducts, { productId: "" }]);
+    setBundleProducts([...bundleProducts, { productId: "", quantity: 1 }]);
   };
 
   const removeProductFromBundle = (index: number) => {
@@ -1119,23 +1119,45 @@ export default function ProductsSettings() {
                             <SelectTrigger>
                               <SelectValue placeholder="Select product" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="max-h-60">
+                              <div className="p-2 sticky top-0 bg-background border-b">
+                                <Input
+                                  placeholder="Search products..."
+                                  value={bundleProductSearch}
+                                  onChange={(e) => setBundleProductSearch(e.target.value)}
+                                  className="h-8"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
                               {filteredProductsForBundle.map((product) => (
                                 <SelectItem key={product.id} value={product.id}>
                                   {product.name} - ${product.cost || '0.00'} cost
                                 </SelectItem>
                               ))}
+                              {filteredProductsForBundle.length === 0 && (
+                                <div className="p-2 text-sm text-muted-foreground text-center">
+                                  No products found
+                                </div>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="flex-none text-sm text-gray-500 self-end pb-2">
-                          1 unit
+                        <div className="w-20">
+                          <Label>Qty</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={bundleProduct.quantity}
+                            onChange={(e) => updateBundleProduct(index, "quantity", parseInt(e.target.value) || 1)}
+                            className="h-10"
+                          />
                         </div>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={() => removeProductFromBundle(index)}
+                          className="mb-0.5"
                         >
                           <X className="w-4 h-4" />
                         </Button>
@@ -1711,23 +1733,45 @@ export default function ProductsSettings() {
                         <SelectTrigger>
                           <SelectValue placeholder="Select product" />
                         </SelectTrigger>
-                        <SelectContent>
-                          {products.map((product) => (
+                        <SelectContent className="max-h-60">
+                          <div className="p-2 sticky top-0 bg-background border-b">
+                            <Input
+                              placeholder="Search products..."
+                              value={bundleProductSearch}
+                              onChange={(e) => setBundleProductSearch(e.target.value)}
+                              className="h-8"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          {filteredProductsForBundle.map((product) => (
                             <SelectItem key={product.id} value={product.id}>
                               {product.name} - ${product.cost || '0.00'} cost
                             </SelectItem>
                           ))}
+                          {filteredProductsForBundle.length === 0 && (
+                            <div className="p-2 text-sm text-muted-foreground text-center">
+                              No products found
+                            </div>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex-none text-sm text-gray-500 self-end pb-2">
-                      1 unit
+                    <div className="w-20">
+                      <Label>Qty</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={bundleProduct.quantity}
+                        onChange={(e) => updateBundleProduct(index, "quantity", parseInt(e.target.value) || 1)}
+                        className="h-10"
+                      />
                     </div>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => removeProductFromBundle(index)}
+                      className="mb-0.5"
                     >
                       <X className="w-4 h-4" />
                     </Button>

@@ -213,12 +213,12 @@ export const productBundles = pgTable("product_bundles", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Bundle Products relationship (many-to-many) - just defines which products belong to a bundle
+// Bundle Products relationship (many-to-many) - defines which products belong to a bundle with quantities
 export const bundleProducts = pgTable("bundle_products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   bundleId: varchar("bundle_id").notNull().references(() => productBundles.id),
   productId: varchar("product_id").notNull().references(() => products.id),
-  // Removed quantity - each product is 1 unit by default, client-specific quantities stored in clientBundles
+  quantity: integer("quantity").default(1).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
