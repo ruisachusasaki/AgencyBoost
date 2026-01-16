@@ -139,11 +139,37 @@ class SlackService {
         throw new Error('No channel specified and no default channel configured');
       }
 
+      // Debug: Test bot connection first
+      const authTest = await this.testConnection();
+      console.log('[Slack] Bot auth test:', authTest);
+
+      // Debug: Try to check if bot can see the channel
+      try {
+        const channelsResponse = await fetch('https://slack.com/api/conversations.list', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.botToken}`,
+          },
+          body: JSON.stringify({ types: 'public_channel,private_channel', limit: 100 }),
+        });
+        const channelsData = await channelsResponse.json() as any;
+        console.log('[Slack] Bot can see channels:', channelsData.ok ? channelsData.channels?.map((c: any) => ({ id: c.id, name: c.name })).slice(0, 10) : channelsData.error);
+        
+        // Check if target channel is in the list
+        const targetChannel = channelsData.channels?.find((c: any) => c.id === channel);
+        console.log('[Slack] Target channel found:', targetChannel ? { id: targetChannel.id, name: targetChannel.name, is_member: targetChannel.is_member } : 'NOT FOUND');
+      } catch (e: any) {
+        console.log('[Slack] Error listing channels:', e.message);
+      }
+
       const payload: any = {
         channel,
         text: message.text,
         mrkdwn: message.mrkdwn !== false,
       };
+      
+      console.log('[Slack] Sending message with payload:', JSON.stringify(payload));
 
       if (message.blocks) {
         payload.blocks = message.blocks;
