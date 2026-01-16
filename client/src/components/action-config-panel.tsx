@@ -113,6 +113,17 @@ export default function ActionConfigPanel({
     queryKey: ["/api/tags"],
   });
 
+  // Slack data for Slack actions
+  const { data: slackChannels = [], isLoading: slackChannelsLoading } = useQuery<any[]>({
+    queryKey: ["/api/integrations/slack/channels"],
+    enabled: action.type.includes('slack'),
+  });
+
+  const { data: slackUsers = [], isLoading: slackUsersLoading } = useQuery<any[]>({
+    queryKey: ["/api/integrations/slack/users"],
+    enabled: action.type.includes('slack'),
+  });
+
   // Create tag mutation
   const createTagMutation = useMutation({
     mutationFn: async (data: InsertTag) => {
@@ -3520,6 +3531,435 @@ export default function ActionConfigPanel({
           </div>
         );
 
+      case "send_slack_message":
+        return (
+          <div className="space-y-4">
+            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <p className="text-sm text-purple-800">
+                <strong>Send Slack Message</strong> - Post a message to a Slack channel
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-channel">Channel *</Label>
+              {slackChannelsLoading ? (
+                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading Slack channels...
+                </div>
+              ) : (
+                <Select 
+                  value={settings.channel || ""} 
+                  onValueChange={(value) => updateSetting("channel", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a channel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {slackChannels && slackChannels.length > 0 ? (
+                      slackChannels.map((channel: any) => (
+                        <SelectItem key={channel.id} value={channel.id}>
+                          #{channel.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-channels" disabled>
+                        No channels available
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Or enter a channel ID directly below
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-channel-id">Channel ID (override)</Label>
+              <Input
+                id="slack-channel-id"
+                value={settings.channelId || ""}
+                onChange={(e) => updateSetting("channelId", e.target.value)}
+                placeholder="e.g., C1234567890"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Use this to specify a channel ID directly (overrides dropdown selection)
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-message">Message *</Label>
+              <Textarea
+                id="slack-message"
+                value={settings.text || ""}
+                onChange={(e) => updateSetting("text", e.target.value)}
+                placeholder="Enter your message here..."
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Supports Slack markdown and merge tags like {"{{name}}"}, {"{{email}}"}
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-thread-ts">Thread Timestamp (optional)</Label>
+              <Input
+                id="slack-thread-ts"
+                value={settings.thread_ts || ""}
+                onChange={(e) => updateSetting("thread_ts", e.target.value)}
+                placeholder="e.g., 1234567890.123456"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Reply to a specific thread by providing the parent message timestamp
+              </p>
+            </div>
+          </div>
+        );
+
+      case "send_slack_dm":
+        return (
+          <div className="space-y-4">
+            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <p className="text-sm text-purple-800">
+                <strong>Send Slack DM</strong> - Send a direct message to a Slack user
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-recipient-type">Recipient Type *</Label>
+              <Select 
+                value={settings.recipientType || "user"} 
+                onValueChange={(value) => updateSetting("recipientType", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select recipient type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">Select Slack User</SelectItem>
+                  <SelectItem value="userId">Specify User ID</SelectItem>
+                  <SelectItem value="email">Specify by Email</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {settings.recipientType === "user" && (
+              <div>
+                <Label htmlFor="slack-user">Slack User *</Label>
+                {slackUsersLoading ? (
+                  <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading Slack users...
+                  </div>
+                ) : (
+                  <Select 
+                    value={settings.userId || ""} 
+                    onValueChange={(value) => updateSetting("userId", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {slackUsers && slackUsers.length > 0 ? (
+                        slackUsers.map((user: any) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.real_name || user.name} {user.profile?.email ? `(${user.profile.email})` : ''}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-users" disabled>
+                          No users available
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+
+            {settings.recipientType === "userId" && (
+              <div>
+                <Label htmlFor="slack-user-id">User ID *</Label>
+                <Input
+                  id="slack-user-id"
+                  value={settings.userId || ""}
+                  onChange={(e) => updateSetting("userId", e.target.value)}
+                  placeholder="e.g., U1234567890"
+                />
+              </div>
+            )}
+
+            {settings.recipientType === "email" && (
+              <div>
+                <Label htmlFor="slack-user-email">Email Address *</Label>
+                <Input
+                  id="slack-user-email"
+                  type="email"
+                  value={settings.email || ""}
+                  onChange={(e) => updateSetting("email", e.target.value)}
+                  placeholder="user@example.com"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  The email must match a Slack workspace member
+                </p>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="slack-dm-message">Message *</Label>
+              <Textarea
+                id="slack-dm-message"
+                value={settings.text || ""}
+                onChange={(e) => updateSetting("text", e.target.value)}
+                placeholder="Enter your direct message here..."
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Supports Slack markdown and merge tags
+              </p>
+            </div>
+          </div>
+        );
+
+      case "add_slack_reaction":
+        return (
+          <div className="space-y-4">
+            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <p className="text-sm text-purple-800">
+                <strong>Add Slack Reaction</strong> - Add an emoji reaction to a message
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-reaction-channel">Channel *</Label>
+              {slackChannelsLoading ? (
+                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading Slack channels...
+                </div>
+              ) : (
+                <Select 
+                  value={settings.channel || ""} 
+                  onValueChange={(value) => updateSetting("channel", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a channel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {slackChannels && slackChannels.length > 0 ? (
+                      slackChannels.map((channel: any) => (
+                        <SelectItem key={channel.id} value={channel.id}>
+                          #{channel.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-channels" disabled>
+                        No channels available
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="slack-message-ts">Message Timestamp *</Label>
+              <Input
+                id="slack-message-ts"
+                value={settings.timestamp || ""}
+                onChange={(e) => updateSetting("timestamp", e.target.value)}
+                placeholder="e.g., 1234567890.123456"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                The timestamp of the message to react to (from trigger context)
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-emoji">Emoji *</Label>
+              <Input
+                id="slack-emoji"
+                value={settings.emoji || ""}
+                onChange={(e) => updateSetting("emoji", e.target.value)}
+                placeholder="e.g., thumbsup, white_check_mark, rocket"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Emoji name without colons (e.g., "thumbsup" not ":thumbsup:")
+              </p>
+            </div>
+          </div>
+        );
+
+      case "create_slack_channel":
+        return (
+          <div className="space-y-4">
+            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <p className="text-sm text-purple-800">
+                <strong>Create Slack Channel</strong> - Create a new channel in your workspace
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-channel-name">Channel Name *</Label>
+              <Input
+                id="slack-channel-name"
+                value={settings.name || ""}
+                onChange={(e) => updateSetting("name", e.target.value)}
+                placeholder="e.g., project-alpha"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Lowercase, no spaces. Use hyphens or underscores. Merge tags supported.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="slack-channel-private"
+                checked={settings.isPrivate || false}
+                onCheckedChange={(checked) => updateSetting("isPrivate", checked)}
+              />
+              <Label htmlFor="slack-channel-private" className="cursor-pointer">
+                Make this a private channel
+              </Label>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-channel-description">Description (optional)</Label>
+              <Textarea
+                id="slack-channel-description"
+                value={settings.description || ""}
+                onChange={(e) => updateSetting("description", e.target.value)}
+                placeholder="Channel description..."
+                rows={2}
+              />
+            </div>
+          </div>
+        );
+
+      case "set_slack_topic":
+        return (
+          <div className="space-y-4">
+            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <p className="text-sm text-purple-800">
+                <strong>Set Slack Topic</strong> - Update the topic of a Slack channel
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-topic-channel">Channel *</Label>
+              {slackChannelsLoading ? (
+                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading Slack channels...
+                </div>
+              ) : (
+                <Select 
+                  value={settings.channel || ""} 
+                  onValueChange={(value) => updateSetting("channel", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a channel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {slackChannels && slackChannels.length > 0 ? (
+                      slackChannels.map((channel: any) => (
+                        <SelectItem key={channel.id} value={channel.id}>
+                          #{channel.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-channels" disabled>
+                        No channels available
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="slack-topic">Topic *</Label>
+              <Textarea
+                id="slack-topic"
+                value={settings.topic || ""}
+                onChange={(e) => updateSetting("topic", e.target.value)}
+                placeholder="Enter the channel topic..."
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Supports merge tags like {"{{name}}"}, {"{{company}}"}
+              </p>
+            </div>
+          </div>
+        );
+
+      case "create_slack_reminder":
+        return (
+          <div className="space-y-4">
+            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <p className="text-sm text-purple-800">
+                <strong>Create Slack Reminder</strong> - Set a reminder for a user
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-reminder-user">Remind User (optional)</Label>
+              {slackUsersLoading ? (
+                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading Slack users...
+                </div>
+              ) : (
+                <Select 
+                  value={settings.user || ""} 
+                  onValueChange={(value) => updateSetting("user", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a user (defaults to bot)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Bot User (default)</SelectItem>
+                    {slackUsers && slackUsers.length > 0 && (
+                      slackUsers.map((user: any) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.real_name || user.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave empty to remind the bot user
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-reminder-text">Reminder Text *</Label>
+              <Textarea
+                id="slack-reminder-text"
+                value={settings.text || ""}
+                onChange={(e) => updateSetting("text", e.target.value)}
+                placeholder="What should the reminder say?"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="slack-reminder-time">When *</Label>
+              <Input
+                id="slack-reminder-time"
+                value={settings.time || ""}
+                onChange={(e) => updateSetting("time", e.target.value)}
+                placeholder="e.g., in 1 hour, tomorrow at 9am, 1640000000"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Natural language (e.g., "in 1 hour", "tomorrow at 9am") or Unix timestamp
+              </p>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="space-y-4">
@@ -3567,6 +4007,17 @@ export default function ActionConfigPanel({
         return LucideIcons.ListChecks;
       case "notify_task_owners":
         return LucideIcons.Bell;
+      case "send_slack_message":
+      case "send_slack_dm":
+        return LucideIcons.MessageSquare;
+      case "add_slack_reaction":
+        return LucideIcons.Smile;
+      case "create_slack_channel":
+        return LucideIcons.Hash;
+      case "set_slack_topic":
+        return LucideIcons.Edit;
+      case "create_slack_reminder":
+        return LucideIcons.Clock;
       default:
         return FileText;
     }
