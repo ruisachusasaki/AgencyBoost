@@ -1616,13 +1616,36 @@ app.get('/api/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Slack webhook status endpoint - helps verify configuration
+app.get('/api/integrations/slack/events', (_req, res) => {
+  const hasSigningSecret = !!process.env.SLACK_SIGNING_SECRET;
+  const hasBotToken = !!process.env.SLACK_BOT_TOKEN;
+  res.json({
+    status: 'ready',
+    message: 'Slack Events webhook is active. POST events to this endpoint.',
+    configuration: {
+      signingSecretConfigured: hasSigningSecret,
+      botTokenConfigured: hasBotToken
+    },
+    instructions: [
+      '1. Go to your Slack App settings at https://api.slack.com/apps',
+      '2. Navigate to "Event Subscriptions" in the left sidebar',
+      '3. Enable Events and set Request URL to: [YOUR_APP_URL]/api/integrations/slack/events',
+      '4. Subscribe to bot events: message.channels, message.groups, reaction_added, channel_created',
+      '5. Save and reinstall the app to your workspace'
+    ]
+  });
+});
+
 // Slack Events webhook with raw body capture for signature verification
 // MUST be registered before express.json() to capture the raw request body
 app.post('/api/integrations/slack/events', 
   express.raw({ type: 'application/json', limit: '1mb' }),
   async (req, res) => {
+    console.log('[Slack Events] Received POST request');
     try {
       const rawBody = (req.body as Buffer).toString('utf8');
+      console.log('[Slack Events] Raw body received:', rawBody.substring(0, 200));
       
       // STEP 1: Verify signature FIRST before any processing
       // This prevents unauthenticated requests from triggering any logic
@@ -1641,6 +1664,8 @@ app.post('/api/integrations/slack/events',
           return res.status(401).json({ error: 'Invalid signature' });
         }
         console.log('[Slack Events] Signature verified successfully');
+      } else {
+        console.log('[Slack Events] No signing secret configured, skipping verification');
       }
       
       // STEP 2: Parse JSON only AFTER signature verification
