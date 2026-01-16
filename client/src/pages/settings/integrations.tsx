@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw, Smartphone, Send, Zap, Copy, RotateCcw, Brain } from "lucide-react";
+import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw, Smartphone, Send, Zap, Copy, RotateCcw, Brain, Trash2, Plus, Edit, Star } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -172,6 +172,7 @@ export default function Integrations() {
     
     // Check Slack status
     checkSlackStatus();
+    loadSlackWorkspaces();
     
     // Check MailGun status
     checkMailgunStatus();
@@ -885,6 +886,160 @@ export default function Integrations() {
   
   // Slack configuration state
   const [isSlackConfigDialogOpen, setIsSlackConfigDialogOpen] = useState(false);
+
+  // Slack Workspaces management state
+  interface SlackWorkspace {
+    id: string;
+    name: string;
+    teamId: string | null;
+    teamName: string | null;
+    botToken: string;
+    botUserId: string | null;
+    signingSecret: string | null;
+    isActive: boolean;
+    isDefault: boolean;
+    lastTestAt: string | null;
+    connectionErrors: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }
+  
+  const [slackWorkspaces, setSlackWorkspaces] = useState<SlackWorkspace[]>([]);
+  const [showAddWorkspaceDialog, setShowAddWorkspaceDialog] = useState(false);
+  const [editingWorkspace, setEditingWorkspace] = useState<SlackWorkspace | null>(null);
+  const [newWorkspace, setNewWorkspace] = useState({
+    name: "",
+    botToken: "",
+    signingSecret: "",
+    isDefault: false
+  });
+  const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false);
+  const [testingWorkspaceId, setTestingWorkspaceId] = useState<string | null>(null);
+
+  const loadSlackWorkspaces = async () => {
+    try {
+      setIsLoadingWorkspaces(true);
+      const response = await apiRequest('GET', '/api/integrations/slack/workspaces');
+      const workspaces = await response.json();
+      setSlackWorkspaces(workspaces);
+    } catch (error) {
+      console.error('Error loading Slack workspaces:', error);
+    } finally {
+      setIsLoadingWorkspaces(false);
+    }
+  };
+
+  const handleAddWorkspace = async () => {
+    if (!newWorkspace.name || !newWorkspace.botToken) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide a name and bot token.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await apiRequest('POST', '/api/integrations/slack/workspaces', newWorkspace);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add workspace');
+      }
+      const workspace = await response.json();
+      setSlackWorkspaces(prev => [...prev, workspace]);
+      setNewWorkspace({ name: "", botToken: "", signingSecret: "", isDefault: false });
+      setShowAddWorkspaceDialog(false);
+      toast({
+        title: "Workspace Added",
+        variant: "success",
+        description: `Successfully connected to ${workspace.teamName || workspace.name}!`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Connection Failed",
+        description: error.message || "Failed to connect to workspace",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteWorkspace = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this workspace?')) return;
+    
+    try {
+      const response = await apiRequest('DELETE', `/api/integrations/slack/workspaces/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to delete workspace');
+      }
+      setSlackWorkspaces(prev => prev.filter(w => w.id !== id));
+      toast({
+        title: "Workspace Deleted",
+        variant: "success",
+        description: "Workspace removed successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete workspace",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTestWorkspace = async (id: string) => {
+    setTestingWorkspaceId(id);
+    try {
+      const response = await apiRequest('POST', `/api/integrations/slack/workspaces/${id}/test`);
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Connection Successful",
+          variant: "success",
+          description: `Connected to ${result.team} as ${result.user}`,
+        });
+        loadSlackWorkspaces();
+      } else {
+        toast({
+          title: "Connection Failed",
+          description: result.error || "Failed to connect",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Test Failed",
+        description: error.message || "Failed to test connection",
+        variant: "destructive",
+      });
+    } finally {
+      setTestingWorkspaceId(null);
+    }
+  };
+
+  const handleSetDefaultWorkspace = async (id: string) => {
+    try {
+      const response = await apiRequest('PATCH', `/api/integrations/slack/workspaces/${id}`, { isDefault: true });
+      if (!response.ok) {
+        throw new Error('Failed to set default');
+      }
+      loadSlackWorkspaces();
+      toast({
+        title: "Default Set",
+        variant: "success",
+        description: "Default workspace updated.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update",
+        variant: "destructive",
+      });
+    }
+  };
   
   // MailGun configuration state
   const [mailgunSettings, setMailgunSettings] = useState({
@@ -1696,87 +1851,218 @@ export default function Integrations() {
           </DialogContent>
         </Dialog>
 
-        {/* Slack Configuration Dialog */}
+        {/* Slack Workspaces Management Dialog */}
         <Dialog open={isSlackConfigDialogOpen} onOpenChange={setIsSlackConfigDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>
-                Configure Slack Integration
+              <DialogTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                Slack Workspaces
               </DialogTitle>
             </DialogHeader>
             
             <div className="space-y-6">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h3 className="font-semibold text-yellow-800 mb-2">⚠️ Current Issue</h3>
-                <p className="text-yellow-700 text-sm">
-                  Your Slack integration is failing due to missing bot permissions. Follow the steps below to fix this.
-                </p>
-              </div>
-
+              {/* Workspace List */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Step 1: Update Bot Permissions</h3>
-                <ol className="text-sm text-gray-700 space-y-2 ml-4">
-                  <li>1. Go to <a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">https://api.slack.com/apps</a></li>
-                  <li>2. Select your app</li>
-                  <li>3. Go to <strong>"OAuth & Permissions"</strong> in the sidebar</li>
-                  <li>4. In <strong>"Bot Token Scopes"</strong>, add these permissions:
-                    <ul className="ml-4 mt-1 space-y-1">
-                      <li>• <code className="bg-gray-100 px-1 rounded">chat:write</code> (to send messages)</li>
-                      <li>• <code className="bg-gray-100 px-1 rounded">channels:read</code> (to access channel info)</li>
-                    </ul>
-                  </li>
-                  <li>5. Click <strong>"Reinstall App"</strong> at the top of the page</li>
-                  <li>6. Copy the new <strong>"Bot User OAuth Token"</strong> (starts with xoxb-)</li>
-                </ol>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Step 2: Get Channel ID</h3>
-                <ol className="text-sm text-gray-700 space-y-2 ml-4">
-                  <li>1. Open Slack and go to your desired channel</li>
-                  <li>2. Right-click the channel name and select <strong>"Copy link"</strong></li>
-                  <li>3. The Channel ID is the last part of the URL (e.g., C1234567890)</li>
-                </ol>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Step 3: Update Your Secrets</h3>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-blue-800 text-sm mb-3">
-                    Update these environment variables in your Replit Secrets:
-                  </p>
-                  <ul className="text-sm text-blue-700 space-y-2">
-                    <li>• <strong>SLACK_BOT_TOKEN</strong>: Your new Bot User OAuth Token</li>
-                    <li>• <strong>SLACK_CHANNEL_ID</strong>: Your channel ID</li>
-                  </ul>
-                  <p className="text-blue-600 text-xs mt-3">
-                    Go to your project settings → Secrets tab to update these values.
-                  </p>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Connected Workspaces</h3>
+                  <Button
+                    onClick={() => setShowAddWorkspaceDialog(true)}
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Workspace
+                  </Button>
                 </div>
+
+                {isLoadingWorkspaces ? (
+                  <div className="text-center py-8 text-gray-500">Loading workspaces...</div>
+                ) : slackWorkspaces.length === 0 ? (
+                  <div className="text-center py-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+                    <MessageSquare className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400">No Slack workspaces connected yet</p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Click "Add Workspace" to connect your first workspace</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {slackWorkspaces.map((workspace) => (
+                      <div
+                        key={workspace.id}
+                        className="border rounded-lg p-4 hover:border-primary/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900 dark:text-gray-100">{workspace.name}</span>
+                              {workspace.isDefault && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <Star className="h-3 w-3 mr-1 fill-current" />
+                                  Default
+                                </Badge>
+                              )}
+                              {workspace.isActive ? (
+                                <Badge className="bg-green-100 text-green-800 text-xs">Connected</Badge>
+                              ) : (
+                                <Badge variant="destructive" className="text-xs">Inactive</Badge>
+                              )}
+                            </div>
+                            {workspace.teamName && (
+                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                Team: {workspace.teamName}
+                              </p>
+                            )}
+                            {workspace.connectionErrors && (
+                              <p className="text-sm text-red-500 mt-1">
+                                Error: {workspace.connectionErrors}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">
+                              Token: {workspace.botToken}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!workspace.isDefault && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSetDefaultWorkspace(workspace.id)}
+                                title="Set as default"
+                              >
+                                <Star className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleTestWorkspace(workspace.id)}
+                              disabled={testingWorkspaceId === workspace.id}
+                            >
+                              {testingWorkspaceId === workspace.id ? (
+                                <RefreshCw className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteWorkspace(workspace.id)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h3 className="font-semibold text-green-800 mb-2">💡 Pro Tip</h3>
-                <p className="text-green-700 text-sm">
-                  After updating your secrets, the page will automatically restart. Then you can test the connection again!
-                </p>
+              {/* Setup Instructions */}
+              <div className="border-t pt-4">
+                <details className="group">
+                  <summary className="cursor-pointer text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200">
+                    How to get a Bot Token from Slack
+                  </summary>
+                  <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-2 ml-4">
+                    <ol className="list-decimal space-y-1">
+                      <li>Go to <a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">api.slack.com/apps</a></li>
+                      <li>Click "Create New App" → "From scratch"</li>
+                      <li>Give it a name and select your workspace</li>
+                      <li>Go to "OAuth & Permissions" and add these Bot Token Scopes:
+                        <ul className="list-disc ml-4 mt-1">
+                          <li><code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">chat:write</code></li>
+                          <li><code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">channels:read</code></li>
+                          <li><code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">users:read</code></li>
+                        </ul>
+                      </li>
+                      <li>Click "Install to Workspace" and authorize</li>
+                      <li>Copy the "Bot User OAuth Token" (starts with xoxb-)</li>
+                    </ol>
+                  </div>
+                </details>
               </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsSlackConfigDialogOpen(false)}
-                >
+
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setIsSlackConfigDialogOpen(false)}>
                   Close
                 </Button>
-                <Button 
-                  onClick={() => {
-                    setIsSlackConfigDialogOpen(false);
-                    window.open('https://api.slack.com/apps', '_blank');
-                  }}
-                  className="bg-purple-600 hover:bg-purple-700"
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Workspace Dialog */}
+        <Dialog open={showAddWorkspaceDialog} onOpenChange={setShowAddWorkspaceDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add Slack Workspace</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="workspace-name">Workspace Name *</Label>
+                <Input
+                  id="workspace-name"
+                  placeholder="e.g., Agency Team, Client Workspace"
+                  value={newWorkspace.name}
+                  onChange={(e) => setNewWorkspace(prev => ({ ...prev, name: e.target.value }))}
+                />
+                <p className="text-xs text-gray-500">A friendly name to identify this workspace</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bot-token">Bot User OAuth Token *</Label>
+                <Input
+                  id="bot-token"
+                  placeholder="xoxb-..."
+                  value={newWorkspace.botToken}
+                  onChange={(e) => setNewWorkspace(prev => ({ ...prev, botToken: e.target.value }))}
+                  type="password"
+                />
+                <p className="text-xs text-gray-500">Found in your Slack app's OAuth & Permissions page</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signing-secret">Signing Secret (Optional)</Label>
+                <Input
+                  id="signing-secret"
+                  placeholder="For webhook signature verification"
+                  value={newWorkspace.signingSecret}
+                  onChange={(e) => setNewWorkspace(prev => ({ ...prev, signingSecret: e.target.value }))}
+                  type="password"
+                />
+                <p className="text-xs text-gray-500">Used to verify webhook events from Slack</p>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is-default"
+                  checked={newWorkspace.isDefault}
+                  onCheckedChange={(checked) => setNewWorkspace(prev => ({ ...prev, isDefault: checked }))}
+                />
+                <Label htmlFor="is-default">Set as default workspace</Label>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setShowAddWorkspaceDialog(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddWorkspace}
+                  disabled={isLoading || !newWorkspace.name || !newWorkspace.botToken}
+                  className="bg-primary hover:bg-primary/90"
                 >
-                  Open Slack Apps
+                  {isLoading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    "Add Workspace"
+                  )}
                 </Button>
               </div>
             </div>

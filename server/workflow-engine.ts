@@ -560,7 +560,9 @@ async function executeSendSlackMessage(action: WorkflowAction, context: Executio
   // Support both 'config' and 'settings' for backwards compatibility
   const config = action.config || (action as any).settings || {};
 
-  if (!slackService.isConfigured()) {
+  const workspaceId = config.workspaceId || undefined;
+
+  if (!slackService.isConfigured() && !workspaceId) {
     console.warn('    ⚠️  Slack not configured - skipping message');
     return { skipped: true, reason: 'Slack not configured' };
   }
@@ -569,7 +571,7 @@ async function executeSendSlackMessage(action: WorkflowAction, context: Executio
   const channel = config.channel || config.channelId || undefined;
 
   console.log(`    🔍 Slack action config:`, JSON.stringify(config, null, 2));
-  console.log(`    📢 Sending to channel: ${channel}, message: ${message}`);
+  console.log(`    📢 Sending to channel: ${channel}, message: ${message}, workspace: ${workspaceId || "default"}`);
 
   if (!message) {
     throw new Error('No message text provided for send_slack_message action');
@@ -577,7 +579,7 @@ async function executeSendSlackMessage(action: WorkflowAction, context: Executio
 
   const result = await slackService.sendMessage({
     channel,
-    text: message,
+    text: message, workspaceId,
   });
 
   if (result.success) {
@@ -592,7 +594,9 @@ async function executeSendSlackDM(action: WorkflowAction, context: ExecutionCont
   // Support both 'config' and 'settings' for backwards compatibility
   const config = action.config || (action as any).settings || {};
 
-  if (!slackService.isConfigured()) {
+  const workspaceId = config.workspaceId || undefined;
+
+  if (!slackService.isConfigured() && !workspaceId) {
     console.warn('    ⚠️  Slack not configured - skipping DM');
     return { skipped: true, reason: 'Slack not configured' };
   }
@@ -619,7 +623,7 @@ async function executeSendSlackDM(action: WorkflowAction, context: ExecutionCont
 
   const result = await slackService.sendDirectMessage({
     userId,
-    text: message,
+    text: message, workspaceId,
   });
 
   if (result.success) {
@@ -634,7 +638,9 @@ async function executeAddSlackReaction(action: WorkflowAction, context: Executio
   // Support both 'config' and 'settings' for backwards compatibility
   const config = action.config || (action as any).settings || {};
 
-  if (!slackService.isConfigured()) {
+  const workspaceId = config.workspaceId || undefined;
+
+  if (!slackService.isConfigured() && !workspaceId) {
     console.warn('    ⚠️  Slack not configured - skipping reaction');
     return { skipped: true, reason: 'Slack not configured' };
   }
@@ -665,7 +671,9 @@ async function executeCreateSlackChannel(action: WorkflowAction, context: Execut
   // Support both 'config' and 'settings' for backwards compatibility
   const config = action.config || (action as any).settings || {};
 
-  if (!slackService.isConfigured()) {
+  const workspaceId = config.workspaceId || undefined;
+
+  if (!slackService.isConfigured() && !workspaceId) {
     console.warn('    ⚠️  Slack not configured - skipping channel creation');
     return { skipped: true, reason: 'Slack not configured' };
   }
@@ -707,7 +715,9 @@ async function executeSetSlackTopic(action: WorkflowAction, context: ExecutionCo
   // Support both 'config' and 'settings' for backwards compatibility
   const config = action.config || (action as any).settings || {};
 
-  if (!slackService.isConfigured()) {
+  const workspaceId = config.workspaceId || undefined;
+
+  if (!slackService.isConfigured() && !workspaceId) {
     console.warn('    ⚠️  Slack not configured - skipping topic update');
     return { skipped: true, reason: 'Slack not configured' };
   }
@@ -733,7 +743,9 @@ async function executeCreateSlackReminder(action: WorkflowAction, context: Execu
   // Support both 'config' and 'settings' for backwards compatibility
   const config = action.config || (action as any).settings || {};
 
-  if (!slackService.isConfigured()) {
+  const workspaceId = config.workspaceId || undefined;
+
+  if (!slackService.isConfigured() && !workspaceId) {
     console.warn('    ⚠️  Slack not configured - skipping reminder');
     return { skipped: true, reason: 'Slack not configured' };
   }

@@ -4,9 +4,25 @@
  * Centralized service for all Slack API interactions.
  * Provides methods for sending messages, creating channels, adding reactions, etc.
  * Used by the workflow automation engine and direct API endpoints.
+ * 
+ * Supports multiple Slack workspaces - can use either:
+ * - Environment variables (SLACK_BOT_TOKEN) for backward compatibility
+ * - Database-stored workspace credentials for multi-workspace support
  */
 
 import crypto from 'crypto';
+import { db } from './db';
+import { slackWorkspaces } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
+
+interface WorkspaceCredentials {
+  id: string;
+  name: string;
+  botToken: string;
+  signingSecret: string | null;
+  teamId: string | null;
+  teamName: string | null;
+}
 
 interface SlackApiResponse {
   ok: boolean;
@@ -25,6 +41,7 @@ interface SlackMessage {
   blocks?: any[];
   thread_ts?: string;
   mrkdwn?: boolean;
+  workspaceId?: string;
 }
 
 interface SlackDM {
@@ -55,6 +72,7 @@ class SlackService {
   private botToken: string | undefined;
   private defaultChannelId: string | undefined;
   private signingSecret: string | undefined;
+  private workspaceCache: Map<string, WorkspaceCredentials> = new Map();
 
   constructor() {
     this.refreshConfig();
@@ -87,8 +105,106 @@ class SlackService {
     };
   }
 
-  private async callSlackApi(method: string, body: Record<string, any>): Promise<SlackApiResponse> {
-    if (!this.botToken) {
+  async getWorkspaceCredentials(workspaceId: string): Promise<WorkspaceCredentials | null> {
+    if (this.workspaceCache.has(workspaceId)) {
+      return this.workspaceCache.get(workspaceId)!;
+    }
+
+    try {
+      const workspace = await db.select().from(slackWorkspaces)
+        .where(and(eq(slackWorkspaces.id, workspaceId), eq(slackWorkspaces.isActive, true)))
+        .limit(1);
+      
+      if (!workspace.length) {
+        return null;
+      }
+
+      const creds: WorkspaceCredentials = {
+        id: workspace[0].id,
+        name: workspace[0].name,
+        botToken: workspace[0].botToken,
+        signingSecret: workspace[0].signingSecret,
+        teamId: workspace[0].teamId,
+        teamName: workspace[0].teamName,
+      };
+
+      this.workspaceCache.set(workspaceId, creds);
+      return creds;
+    } catch (error) {
+      console.error('Error fetching workspace credentials:', error);
+      return null;
+    }
+  }
+
+  async getDefaultWorkspaceCredentials(): Promise<WorkspaceCredentials | null> {
+    try {
+      const workspace = await db.select().from(slackWorkspaces)
+        .where(and(eq(slackWorkspaces.isDefault, true), eq(slackWorkspaces.isActive, true)))
+        .limit(1);
+      
+      if (!workspace.length) {
+        const anyWorkspace = await db.select().from(slackWorkspaces)
+          .where(eq(slackWorkspaces.isActive, true))
+          .limit(1);
+        
+        if (!anyWorkspace.length) {
+          return null;
+        }
+        
+        return {
+          id: anyWorkspace[0].id,
+          name: anyWorkspace[0].name,
+          botToken: anyWorkspace[0].botToken,
+          signingSecret: anyWorkspace[0].signingSecret,
+          teamId: anyWorkspace[0].teamId,
+          teamName: anyWorkspace[0].teamName,
+        };
+      }
+
+      return {
+        id: workspace[0].id,
+        name: workspace[0].name,
+        botToken: workspace[0].botToken,
+        signingSecret: workspace[0].signingSecret,
+        teamId: workspace[0].teamId,
+        teamName: workspace[0].teamName,
+      };
+    } catch (error) {
+      console.error('Error fetching default workspace:', error);
+      return null;
+    }
+  }
+
+  async listWorkspaces(): Promise<WorkspaceCredentials[]> {
+    try {
+      const workspaces = await db.select().from(slackWorkspaces)
+        .where(eq(slackWorkspaces.isActive, true));
+      
+      return workspaces.map(w => ({
+        id: w.id,
+        name: w.name,
+        botToken: w.botToken,
+        signingSecret: w.signingSecret,
+        teamId: w.teamId,
+        teamName: w.teamName,
+      }));
+    } catch (error) {
+      console.error('Error listing workspaces:', error);
+      return [];
+    }
+  }
+
+  clearWorkspaceCache(workspaceId?: string) {
+    if (workspaceId) {
+      this.workspaceCache.delete(workspaceId);
+    } else {
+      this.workspaceCache.clear();
+    }
+  }
+
+  private async callSlackApi(method: string, body: Record<string, any>, token?: string): Promise<SlackApiResponse> {
+    const botToken = token || this.botToken;
+    if (!botToken) {
       throw new Error('Slack bot token not configured');
     }
 
@@ -96,7 +212,7 @@ class SlackService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.botToken}`,
+        'Authorization': `Bearer ${botToken}`,
       },
       body: JSON.stringify(body),
     });
@@ -109,6 +225,27 @@ class SlackService {
     }
 
     return data;
+  }
+
+  private async getTokenForWorkspace(workspaceId?: string): Promise<string> {
+    if (workspaceId) {
+      const creds = await this.getWorkspaceCredentials(workspaceId);
+      if (creds) {
+        return creds.botToken;
+      }
+      throw new Error(`Workspace ${workspaceId} not found or inactive`);
+    }
+
+    const defaultWorkspace = await this.getDefaultWorkspaceCredentials();
+    if (defaultWorkspace) {
+      return defaultWorkspace.botToken;
+    }
+
+    if (this.botToken) {
+      return this.botToken;
+    }
+
+    throw new Error('No Slack workspace configured');
   }
 
   async testConnection(): Promise<{ ok: boolean; team?: string; user?: string; error?: string }> {
@@ -139,29 +276,9 @@ class SlackService {
         throw new Error('No channel specified and no default channel configured');
       }
 
-      // Debug: Test bot connection first
-      const authTest = await this.testConnection();
-      console.log('[Slack] Bot auth test:', authTest);
-
-      // Debug: Try to check if bot can see the channel
-      try {
-        const channelsResponse = await fetch('https://slack.com/api/conversations.list', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.botToken}`,
-          },
-          body: JSON.stringify({ types: 'public_channel,private_channel', limit: 100 }),
-        });
-        const channelsData = await channelsResponse.json() as any;
-        console.log('[Slack] Bot can see channels:', channelsData.ok ? channelsData.channels?.map((c: any) => ({ id: c.id, name: c.name })).slice(0, 10) : channelsData.error);
-        
-        // Check if target channel is in the list
-        const targetChannel = channelsData.channels?.find((c: any) => c.id === channel);
-        console.log('[Slack] Target channel found:', targetChannel ? { id: targetChannel.id, name: targetChannel.name, is_member: targetChannel.is_member } : 'NOT FOUND');
-      } catch (e: any) {
-        console.log('[Slack] Error listing channels:', e.message);
-      }
+      // Get the appropriate bot token
+      const token = await this.getTokenForWorkspace(message.workspaceId);
+      console.log('[Slack] Using workspace:', message.workspaceId || 'default/env');
 
       const payload: any = {
         channel,
@@ -179,7 +296,7 @@ class SlackService {
         payload.thread_ts = message.thread_ts;
       }
 
-      const result = await this.callSlackApi('chat.postMessage', payload);
+      const result = await this.callSlackApi('chat.postMessage', payload, token);
 
       return {
         success: true,

@@ -70,7 +70,8 @@ import {
   surveys, surveyFolders, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers,
   insertSurveySchema, insertSurveyFolderSchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema,
   aiIntegrations,
-  aiAssistantSettings
+  aiAssistantSettings,
+  slackWorkspaces
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { z } from "zod";
@@ -18255,6 +18256,263 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching Slack users:', error);
       res.status(500).json({ error: 'Failed to fetch users' });
+    }
+  });
+
+
+  // Slack Workspaces Management Routes (Multi-Workspace Support)
+  // Get all Slack workspaces
+  app.get("/api/integrations/slack/workspaces", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
+    try {
+      const workspaces = await db.select().from(slackWorkspaces).orderBy(slackWorkspaces.name);
+      // Don't expose full bot token, just first/last few chars
+      const sanitized = workspaces.map(w => ({
+        ...w,
+        botToken: w.botToken ? `${w.botToken.slice(0, 10)}...${w.botToken.slice(-4)}` : null
+      }));
+      res.json(sanitized);
+    } catch (error) {
+      console.error('Error fetching Slack workspaces:', error);
+      res.status(500).json({ error: 'Failed to fetch workspaces' });
+    }
+  });
+
+  // Get a single Slack workspace
+  app.get("/api/integrations/slack/workspaces/:id", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
+    try {
+      const workspace = await db.select().from(slackWorkspaces).where(eq(slackWorkspaces.id, req.params.id)).limit(1);
+      if (!workspace.length) {
+        return res.status(404).json({ error: 'Workspace not found' });
+      }
+      const w = workspace[0];
+      res.json({
+        ...w,
+        botToken: w.botToken ? `${w.botToken.slice(0, 10)}...${w.botToken.slice(-4)}` : null
+      });
+    } catch (error) {
+      console.error('Error fetching Slack workspace:', error);
+      res.status(500).json({ error: 'Failed to fetch workspace' });
+    }
+  });
+
+  // Add new Slack workspace
+  app.post("/api/integrations/slack/workspaces", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      const { name, botToken, signingSecret, isDefault } = req.body;
+      
+      if (!name || !botToken) {
+        return res.status(400).json({ error: 'Name and Bot Token are required' });
+      }
+
+      // Test the bot token by calling auth.test
+      const testResponse = await fetch('https://slack.com/api/auth.test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${botToken}`,
+        },
+      });
+      const testData = await testResponse.json() as any;
+
+      if (!testData.ok) {
+        return res.status(400).json({ 
+          error: `Invalid bot token: ${testData.error}`,
+          connectionErrors: testData.error 
+        });
+      }
+
+      // If this is set as default, unset other defaults first
+      if (isDefault) {
+        await db.update(slackWorkspaces).set({ isDefault: false }).where(eq(slackWorkspaces.isDefault, true));
+      }
+
+      const newWorkspace = await db.insert(slackWorkspaces).values({
+        name,
+        botToken,
+        signingSecret: signingSecret || null,
+        isDefault: isDefault || false,
+        teamId: testData.team_id,
+        teamName: testData.team,
+        botUserId: testData.user_id,
+        lastTestAt: new Date(),
+      }).returning();
+
+      const w = newWorkspace[0];
+      res.json({
+        ...w,
+        botToken: `${w.botToken.slice(0, 10)}...${w.botToken.slice(-4)}`
+      });
+    } catch (error) {
+      console.error('Error creating Slack workspace:', error);
+      res.status(500).json({ error: 'Failed to create workspace' });
+    }
+  });
+
+  // Update Slack workspace
+  app.patch("/api/integrations/slack/workspaces/:id", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      const { name, botToken, signingSecret, isDefault, isActive } = req.body;
+      const updates: any = { updatedAt: new Date() };
+
+      if (name !== undefined) updates.name = name;
+      if (signingSecret !== undefined) updates.signingSecret = signingSecret;
+      if (isActive !== undefined) updates.isActive = isActive;
+
+      // If updating bot token, validate it first
+      if (botToken !== undefined) {
+        const testResponse = await fetch('https://slack.com/api/auth.test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${botToken}`,
+          },
+        });
+        const testData = await testResponse.json() as any;
+
+        if (!testData.ok) {
+          return res.status(400).json({ 
+            error: `Invalid bot token: ${testData.error}` 
+          });
+        }
+
+        updates.botToken = botToken;
+        updates.teamId = testData.team_id;
+        updates.teamName = testData.team;
+        updates.botUserId = testData.user_id;
+        updates.lastTestAt = new Date();
+        updates.connectionErrors = null;
+      }
+
+      // If setting as default, unset other defaults first
+      if (isDefault === true) {
+        await db.update(slackWorkspaces).set({ isDefault: false }).where(eq(slackWorkspaces.isDefault, true));
+        updates.isDefault = true;
+      } else if (isDefault === false) {
+        updates.isDefault = false;
+      }
+
+      const updated = await db.update(slackWorkspaces)
+        .set(updates)
+        .where(eq(slackWorkspaces.id, req.params.id))
+        .returning();
+
+      if (!updated.length) {
+        return res.status(404).json({ error: 'Workspace not found' });
+      }
+
+      const w = updated[0];
+      res.json({
+        ...w,
+        botToken: w.botToken ? `${w.botToken.slice(0, 10)}...${w.botToken.slice(-4)}` : null
+      });
+    } catch (error) {
+      console.error('Error updating Slack workspace:', error);
+      res.status(500).json({ error: 'Failed to update workspace' });
+    }
+  });
+
+  // Delete Slack workspace
+  app.delete("/api/integrations/slack/workspaces/:id", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      const deleted = await db.delete(slackWorkspaces)
+        .where(eq(slackWorkspaces.id, req.params.id))
+        .returning();
+
+      if (!deleted.length) {
+        return res.status(404).json({ error: 'Workspace not found' });
+      }
+
+      res.json({ success: true, message: 'Workspace deleted' });
+    } catch (error) {
+      console.error('Error deleting Slack workspace:', error);
+      res.status(500).json({ error: 'Failed to delete workspace' });
+    }
+  });
+
+  // Test Slack workspace connection
+  app.post("/api/integrations/slack/workspaces/:id/test", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      const workspace = await db.select().from(slackWorkspaces).where(eq(slackWorkspaces.id, req.params.id)).limit(1);
+      if (!workspace.length) {
+        return res.status(404).json({ error: 'Workspace not found' });
+      }
+
+      const w = workspace[0];
+      const testResponse = await fetch('https://slack.com/api/auth.test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${w.botToken}`,
+        },
+      });
+      const testData = await testResponse.json() as any;
+
+      if (testData.ok) {
+        await db.update(slackWorkspaces).set({
+          teamId: testData.team_id,
+          teamName: testData.team,
+          botUserId: testData.user_id,
+          lastTestAt: new Date(),
+          connectionErrors: null,
+          updatedAt: new Date()
+        }).where(eq(slackWorkspaces.id, req.params.id));
+
+        res.json({ 
+          success: true, 
+          team: testData.team,
+          user: testData.user 
+        });
+      } else {
+        await db.update(slackWorkspaces).set({
+          connectionErrors: testData.error,
+          updatedAt: new Date()
+        }).where(eq(slackWorkspaces.id, req.params.id));
+
+        res.status(400).json({ 
+          success: false, 
+          error: testData.error 
+        });
+      }
+    } catch (error) {
+      console.error('Error testing Slack workspace:', error);
+      res.status(500).json({ error: 'Failed to test workspace connection' });
+    }
+  });
+
+  // Get channels for a specific workspace
+  app.get("/api/integrations/slack/workspaces/:id/channels", requireAuth(), async (req, res) => {
+    try {
+      const workspace = await db.select().from(slackWorkspaces).where(eq(slackWorkspaces.id, req.params.id)).limit(1);
+      if (!workspace.length) {
+        return res.status(404).json({ error: 'Workspace not found' });
+      }
+
+      const w = workspace[0];
+      const channelsResponse = await fetch('https://slack.com/api/conversations.list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${w.botToken}`,
+        },
+        body: JSON.stringify({ types: 'public_channel,private_channel', limit: 200 }),
+      });
+      const channelsData = await channelsResponse.json() as any;
+
+      if (channelsData.ok) {
+        res.json({ 
+          channels: channelsData.channels.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            is_member: c.is_member,
+            is_private: c.is_private
+          }))
+        });
+      } else {
+        res.status(400).json({ error: channelsData.error });
+      }
+    } catch (error) {
+      console.error('Error fetching workspace channels:', error);
+      res.status(500).json({ error: 'Failed to fetch channels' });
     }
   });
 

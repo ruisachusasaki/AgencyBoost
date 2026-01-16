@@ -124,6 +124,12 @@ export default function ActionConfigPanel({
     enabled: action.type.includes('slack'),
   });
 
+  // Slack workspaces for multi-workspace support
+  const { data: slackWorkspaces = [], isLoading: slackWorkspacesLoading } = useQuery<any[]>({
+    queryKey: ["/api/integrations/slack/workspaces"],
+    enabled: action.type.includes('slack'),
+  });
+
   // Create tag mutation
   const createTagMutation = useMutation({
     mutationFn: async (data: InsertTag) => {
@@ -3537,6 +3543,38 @@ export default function ActionConfigPanel({
             <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
               <p className="text-sm text-purple-800">
                 <strong>Send Slack Message</strong> - Post a message to a Slack channel
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="slack-workspace">Workspace</Label>
+              {slackWorkspacesLoading ? (
+                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading workspaces...
+                </div>
+              ) : slackWorkspaces.length > 0 ? (
+                <Select
+                  value={settings.workspaceId || ""}
+                  onValueChange={(value) => updateSetting("workspaceId", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Default workspace" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Default workspace</SelectItem>
+                    {slackWorkspaces.map((ws: any) => (
+                      <SelectItem key={ws.id} value={ws.id}>
+                        {ws.name} {ws.teamName ? `(${ws.teamName})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-muted-foreground py-2">No workspaces configured</p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Select which Slack workspace to send to
               </p>
             </div>
 
