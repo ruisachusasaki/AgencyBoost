@@ -557,15 +557,20 @@ async function executeAssignStaff(action: WorkflowAction, context: ExecutionCont
 // ===== SLACK ACTION EXECUTORS =====
 
 async function executeSendSlackMessage(action: WorkflowAction, context: ExecutionContext) {
-  const config = action.config;
+  // Support both 'config' and 'settings' for backwards compatibility
+  const config = action.config || (action as any).settings || {};
 
   if (!slackService.isConfigured()) {
     console.warn('    ⚠️  Slack not configured - skipping message');
     return { skipped: true, reason: 'Slack not configured' };
   }
 
-  const message = interpolateString(config.message || config.text, context);
-  const channel = config.channel || undefined;
+  const message = interpolateString(config.message || config.text || '', context);
+  const channel = config.channel || config.channelId || undefined;
+
+  if (!message) {
+    throw new Error('No message text provided for send_slack_message action');
+  }
 
   const result = await slackService.sendMessage({
     channel,
@@ -581,7 +586,8 @@ async function executeSendSlackMessage(action: WorkflowAction, context: Executio
 }
 
 async function executeSendSlackDM(action: WorkflowAction, context: ExecutionContext) {
-  const config = action.config;
+  // Support both 'config' and 'settings' for backwards compatibility
+  const config = action.config || (action as any).settings || {};
 
   if (!slackService.isConfigured()) {
     console.warn('    ⚠️  Slack not configured - skipping DM');
@@ -606,7 +612,7 @@ async function executeSendSlackDM(action: WorkflowAction, context: ExecutionCont
     throw new Error('No userId or email provided for send_slack_dm action. Configure either userId or email in the action settings.');
   }
 
-  const message = interpolateString(config.message || config.text, context);
+  const message = interpolateString(config.message || config.text || '', context);
 
   const result = await slackService.sendDirectMessage({
     userId,
@@ -622,21 +628,26 @@ async function executeSendSlackDM(action: WorkflowAction, context: ExecutionCont
 }
 
 async function executeAddSlackReaction(action: WorkflowAction, context: ExecutionContext) {
-  const config = action.config;
+  // Support both 'config' and 'settings' for backwards compatibility
+  const config = action.config || (action as any).settings || {};
 
   if (!slackService.isConfigured()) {
     console.warn('    ⚠️  Slack not configured - skipping reaction');
     return { skipped: true, reason: 'Slack not configured' };
   }
 
-  if (!config.channel || !config.timestamp || !config.emoji) {
+  const channel = config.channel || config.channelId;
+  const timestamp = config.timestamp || config.ts;
+  const emoji = config.emoji || config.reaction;
+
+  if (!channel || !timestamp || !emoji) {
     throw new Error('Channel, timestamp, and emoji are required for add_slack_reaction action');
   }
 
   const result = await slackService.addReaction({
-    channel: config.channel,
-    timestamp: config.timestamp,
-    emoji: config.emoji,
+    channel,
+    timestamp,
+    emoji,
   });
 
   if (result.success) {
@@ -648,14 +659,15 @@ async function executeAddSlackReaction(action: WorkflowAction, context: Executio
 }
 
 async function executeCreateSlackChannel(action: WorkflowAction, context: ExecutionContext) {
-  const config = action.config;
+  // Support both 'config' and 'settings' for backwards compatibility
+  const config = action.config || (action as any).settings || {};
 
   if (!slackService.isConfigured()) {
     console.warn('    ⚠️  Slack not configured - skipping channel creation');
     return { skipped: true, reason: 'Slack not configured' };
   }
 
-  const channelName = interpolateString(config.name, context);
+  const channelName = interpolateString(config.name || config.channelName || '', context);
   const description = config.description ? interpolateString(config.description, context) : undefined;
 
   const result = await slackService.createChannel({
@@ -689,46 +701,52 @@ async function executeCreateSlackChannel(action: WorkflowAction, context: Execut
 }
 
 async function executeSetSlackTopic(action: WorkflowAction, context: ExecutionContext) {
-  const config = action.config;
+  // Support both 'config' and 'settings' for backwards compatibility
+  const config = action.config || (action as any).settings || {};
 
   if (!slackService.isConfigured()) {
     console.warn('    ⚠️  Slack not configured - skipping topic update');
     return { skipped: true, reason: 'Slack not configured' };
   }
 
-  if (!config.channel) {
+  const channel = config.channel || config.channelId;
+  if (!channel) {
     throw new Error('Channel is required for set_slack_topic action');
   }
 
-  const topic = interpolateString(config.topic, context);
+  const topic = interpolateString(config.topic || '', context);
 
-  const result = await slackService.setChannelTopic(config.channel, topic);
+  const result = await slackService.setChannelTopic(channel, topic);
 
   if (result.success) {
-    console.log(`    📝 Set topic for channel ${config.channel}`);
-    return { updated: true, channel: config.channel, topic };
+    console.log(`    📝 Set topic for channel ${channel}`);
+    return { updated: true, channel, topic };
   } else {
     throw new Error(`Failed to set Slack topic: ${result.error}`);
   }
 }
 
 async function executeCreateSlackReminder(action: WorkflowAction, context: ExecutionContext) {
-  const config = action.config;
+  // Support both 'config' and 'settings' for backwards compatibility
+  const config = action.config || (action as any).settings || {};
 
   if (!slackService.isConfigured()) {
     console.warn('    ⚠️  Slack not configured - skipping reminder');
     return { skipped: true, reason: 'Slack not configured' };
   }
 
-  if (!config.text || !config.time) {
+  const textValue = config.text || config.message || '';
+  const timeValue = config.time || config.reminderTime || '';
+
+  if (!textValue || !timeValue) {
     throw new Error('Text and time are required for create_slack_reminder action');
   }
 
-  const text = interpolateString(config.text, context);
+  const text = interpolateString(textValue, context);
 
   const result = await slackService.createReminder({
     text,
-    time: config.time,
+    time: timeValue,
     user: config.user,
   });
 
