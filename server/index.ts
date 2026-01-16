@@ -1698,7 +1698,13 @@ app.post('/api/integrations/slack/events',
         // Map Slack events to workflow triggers
         switch (event.type) {
           case 'message':
-            if (event.subtype === 'bot_message' || event.subtype === 'message_changed') {
+            // Ignore bot messages to prevent infinite loops
+            // Check for: bot_message subtype, bot_id presence, or message_changed/deleted subtypes
+            if (event.subtype === 'bot_message' || 
+                event.subtype === 'message_changed' || 
+                event.subtype === 'message_deleted' ||
+                event.bot_id) {
+              console.log(`[Slack Events] Ignoring bot/system message (subtype: ${event.subtype}, bot_id: ${event.bot_id})`);
               return res.json({ ok: true });
             }
             await emitTrigger({
