@@ -1,0 +1,285 @@
+Agency Boost Platform Development
+Project Sponsor: Joe Hupp 
+Date: January 2026 (Updated)
+1. Current Problem(s) or Situation
+The current operational setup relies on fragmented tools, creating scalability issues and inefficiencies for managing a growing client base.
+Core Issue (Internal): Lack of a scalable, centralized internal management tool and CRM capable of supporting a growing client base (10+ clients). The current system lacks centralized note-taking and management capabilities.
+Operational Bottleneck: Reliance on manual processes and external, separate platforms (ClickUp, GoHighLevel) creates friction in workflows (e.g., managing tasks and client data across two separate systems).
+Technical Challenge: The current staging environment (Replit) is not suitable for high-volume production use, requiring a robust plan for long-term data storage (Audit Logs, 1v1 notes) to prevent system slowdowns.
+2. Project Description & Goals
+This project involves developing the internal AgencyBoost platform to serve as a centralized CRM, task management system, and knowledge base, with a secondary goal of making it a paid product for other agencies.
+A. Project Description (Solution Summary)
+The project requires the new developer (Rui) to take over and build out core features for internal operational support and transition the platform to a production-ready environment. Functionality needs to be flexible enough to support external, white-labeled agency users.
+B. Key Goals and Success Metrics
+Business Objective
+Goal / Requirement
+Metric
+Primary Goal (Internal)
+Create a single tool that replaces the functionalities of ClickUp and serves as the primary CRM.
+Milestone: All Media Optimizer employees use AgencyBoost for 1v1 notes and tasks, ceasing use of ClickUp.
+Secondary Goal (External)
+Build the functionality to support hundreds of external, paying agency users (White-Labeling).
+Metric: Sub-account management and payment processes implemented (similar to GoHighLevel).
+Data Integrity
+Develop a strategy for long-term storage of high-volume data (Audit Logs, 1v1 notes).
+Deliverable: Storage solution (e.g., AWS S3 or dedicated database) implemented and functional for records over 90 days.
+Integration
+Complete critical integrations to centralize operations.
+Deliverable: Full Google Calendar/Gmail integration and External Task Creation API built.
+
+3. Project's Implementation Phases
+The phases are currently focused on transitioning development and establishing the production environment. (The duration and number of tasks may change as we continue developing the project.)
+Phase
+Duration (Estimated)
+Objective
+Phase 1: Transition & Scoping
+1 Week
+
+
+Rui to review all current functionality and Joe to finish scoping remaining tasks (50).
+Phase 2: Core Feature Delivery
+15 weeks
+
+
+Implement key features like Google Integration, Sub-Account Management, and Long-Term Data Storage.
+Phase 3: Production Build-Out
+2-3 weeks
+Establish the production environment (likely AWS) and define the Staging/Production deployment pipeline.
+Phase 4: Cleanup & Launch
+2 weeks
+Purge legacy ClickUp tasks and formally launch the AgencyBoost platform internally.
+
+
+
+4. Milestone(s) for each Phase
+Phase Milestones & Deliverables
+Phase 1 Milestone (Transition):
+Deliverable (Joe): Complete Loom video walkthrough of the platform and finalize scoping for all open tasks. Done
+Phase 2 Milestone (Core Feature Delivery):
+Deliverable (Rui):Implement key features like Google Integration, Sub-Account Management, and Long-Term Data Storage. Clickup Task. 
+Phase 3 Milestone (Production Build-Out):
+Deliverable (Rui): Provide initial assessment/plan for pushing the platform to production. 
+Deliverable: Defined Staging and Production environments; API built to support external task creation (Airtable/Carpe Diem).
+Phase Milestones (General Deliverables):
+Full Sub-Account Management UI developed.
+AI Chatbot (OpenAI) integrated for quick brand/client FAQ access.
+Permissions logic fully defined and functional across all user roles.
+Key Risks
+Title
+Impact
+Description
+Long-Term Data Storage
+High
+Failure to implement scalable storage for 1v1 and Audit Logs could lead to system slowdowns.
+Pricing/Tiering Structure
+High
+Need to define pricing tiers and usage limits (e.g., Mailgun/Twilio usage) for external sub-accounts.
+Permissions Logic Failure
+High
+Permissions logic (Manager vs. PM access) is currently broken and must be corrected before launch.
+
+Estimated Monthly Costs
+Service Component
+Path
+Estimated Monthly Cost (USD)
+TOTAL ESTIMATED MONTHLY COST
+
+
+
+
+
+
+
+
+
+Rui Sasaki
+
+Required for V1
+Required but not clear
+Not sure if they are required and they’re not clear
+Automate 1 v 1 Meeting Recordings Storage
+Sub-Account Management
+Under Tasks > Activity it should ALWAYS log the USER's NAME not "current user"
+Fathom Integration + Automation
+AI Tab for Clients (F2)
+Client Portal?
+Google Console migration (@MO -> @boostrap)
+Multi Organization Testing (F2)
+Have company logo show up on external URLs
+Settings > Org Chart > Positions > Modal > duplicating positions
+
+
+Reports
+Team Settings
+
+
+Tool tips for Reports
+Integrate w/ Slack
+
+
+Change Automations under settings to Workflows
+Mobile Responsive - Everything
+
+
+Email Analytics not showing under workflows
+API to create EXTERNAL tasks in AgencyBoost
+
+
+On Workflow analytics > showing Save as template > WHY?
+Audit Log > storage
+
+
+Task dependencies NOT working
+Projuct task section > "Add more Group" enable
+
+
+Add tool tips for Task Dependencies
+
+
+
+
+Add workflow to Edit Tasks
+
+
+
+
+Convert to client not working
+
+
+
+
+Settings > leads > reorder not working
+
+
+
+
+Sales Rep Report not working
+
+
+
+
+Visualize sales report better
+
+
+
+
+Can't add/save new forms.
+
+
+
+
+Optimize for SPEED?
+
+
+
+
+Edit Form > Custom Form - v1 > NOT showing NAME?
+
+
+
+
+Logic for Color Coading Names
+
+
+
+
+Forms > Updated By > User (NOT showing name)
+
+
+
+
+Team Workload is working?
+
+
+
+
+Client Status?
+
+
+
+
+Actions should always be far right column under Clients Table
+
+
+
+
+Columns Auto-Saving
+
+
+
+
+Clients > Add Followers
+
+
+
+
+Clients > Documents DIDN'T UPLOAD
+
+
+
+
+Merge tags for Appointments showing as the merge tag and not CLIENT info
+
+
+
+
+CLients > Tasks > filtiner > clear filter
+
+
+
+
+Permissions > Client Notes
+
+
+
+
+Clients > Notes > search not working
+
+
+
+
+CLients > add to automations not working
+
+
+
+
+Clients > Specific Client > tags not working
+
+
+
+
+Custom Fields > Folders not showing
+
+
+
+
+Under Settings > Folders & Fields allow NOT SHOWN
+
+
+
+
+Add Twillio Settings button/functionality
+
+
+
+
+Add Surveys under Marketing Tab?
+
+
+
+
+Payment Threshold Alerts
+
+
+
+
+Projuct task section > "Add more Group" enable
+
+
+
+
+Executive Dashboard (internal use)
+
+
+Required: How long are they going to take?
+Required: Order them in terms of priority
