@@ -568,6 +568,9 @@ async function executeSendSlackMessage(action: WorkflowAction, context: Executio
   const message = interpolateString(config.message || config.text || '', context);
   const channel = config.channel || config.channelId || undefined;
 
+  console.log(`    🔍 Slack action config:`, JSON.stringify(config, null, 2));
+  console.log(`    📢 Sending to channel: ${channel}, message: ${message}`);
+
   if (!message) {
     throw new Error('No message text provided for send_slack_message action');
   }
