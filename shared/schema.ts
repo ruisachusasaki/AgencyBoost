@@ -2671,6 +2671,37 @@ export const insertGoHighLevelIntegrationSchema = createInsertSchema(goHighLevel
 export type GoHighLevelIntegration = typeof goHighLevelIntegration.$inferSelect;
 export type InsertGoHighLevelIntegration = z.infer<typeof insertGoHighLevelIntegrationSchema>;
 
+// Slack Workspaces - Multi-workspace Slack integration
+export const slackWorkspaces = pgTable("slack_workspaces", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // Friendly name (e.g., "Agency Team", "Client - GoldBuds")
+  teamId: text("team_id"), // Slack workspace/team ID
+  teamName: text("team_name"), // Slack workspace name (from API)
+  botToken: text("bot_token").notNull(), // Bot User OAuth Token (xoxb-...)
+  botUserId: text("bot_user_id"), // Bot user ID in this workspace
+  signingSecret: text("signing_secret"), // App signing secret for event verification
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false), // Default workspace for workflows
+  lastTestAt: timestamp("last_test_at"),
+  connectionErrors: text("connection_errors"), // Latest connection error messages
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSlackWorkspaceSchema = createInsertSchema(slackWorkspaces).omit({
+  id: true,
+  teamId: true,
+  teamName: true,
+  botUserId: true,
+  lastTestAt: true,
+  connectionErrors: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SlackWorkspace = typeof slackWorkspaces.$inferSelect;
+export type InsertSlackWorkspace = z.infer<typeof insertSlackWorkspaceSchema>;
+
 // Lead Notes - Multiple notes per lead  
 export const leadNotes = pgTable("lead_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
