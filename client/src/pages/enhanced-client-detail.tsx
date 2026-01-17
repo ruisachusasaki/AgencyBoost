@@ -3560,7 +3560,7 @@ export default function EnhancedClientDetail() {
   // Memoized communications filtering to prevent re-render loops
   const communications = useMemo(() => {
     return auditLogs
-      .filter(log => log.entityType === 'sms' || log.entityType === 'email' || log.entity_type === 'sms' || log.entity_type === 'email')
+      .filter(log => log.entityType === 'sms' || log.entityType === 'email' || log.entity_type === 'sms' || log.entity_type === 'email' || log.action === 'call')
       .filter(log => {
         if (!deferredCommunicationSearch.trim()) return true;
         const searchLower = deferredCommunicationSearch.toLowerCase();
@@ -6122,12 +6122,16 @@ export default function EnhancedClientDetail() {
                           <div key={log.id} className="border rounded-lg p-4" data-testid={`message-card-${log.id}`}>
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
-                                {log.entityType === 'sms' ? (
+                                {log.action === 'call' ? (
+                                  <Phone className="h-4 w-4 text-green-600" />
+                                ) : log.entityType === 'sms' ? (
                                   <MessageSquare className="h-4 w-4 text-primary" />
                                 ) : (
                                   <Mail className="h-4 w-4 text-blue-600" />
                                 )}
-                                <span className="font-medium text-gray-900 capitalize" data-testid={`text-message-type-${log.id}`}>{log.entityType}</span>
+                                <span className="font-medium text-gray-900 capitalize" data-testid={`text-message-type-${log.id}`}>
+                                  {log.action === 'call' ? 'Call' : log.entityType}
+                                </span>
                                 {/* Provider Status Badge */}
                                 {log.newValues?.status && (
                                   <span 
