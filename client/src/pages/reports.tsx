@@ -168,6 +168,10 @@ export default function Reports() {
   const [taskDateRange, setTaskDateRange] = useState("this-week");
   const [customTaskDateFrom, setCustomTaskDateFrom] = useState("");
   const [customTaskDateTo, setCustomTaskDateTo] = useState("");
+  const [customFromDate, setCustomFromDate] = useState<Date | undefined>(undefined);
+  const [customToDate, setCustomToDate] = useState<Date | undefined>(undefined);
+  const [fromDateOpen, setFromDateOpen] = useState(false);
+  const [toDateOpen, setToDateOpen] = useState(false);
 
   // Chart visualization state
   const [chartsVisible, setChartsVisible] = useState<Record<string, boolean>>({
@@ -292,21 +296,37 @@ export default function Reports() {
   
   // Time tracking data query for client breakdowns - fixed filter logic with memoization
   // Note: Using business timezone helpers to ensure consistent date handling across the team
-  const timeTrackingFilters = useMemo(() => ({
+  const timeTrackingFilters = useMemo(() => {
+    const getLastWeekStart = () => {
+      const today = new Date();
+      const lastWeekStart = new Date(today);
+      lastWeekStart.setDate(today.getDate() - today.getDay() - 7);
+      return getLocalDateString(lastWeekStart, businessTimezone);
+    };
+    const getLastWeekEnd = () => {
+      const today = new Date();
+      const lastWeekEnd = new Date(today);
+      lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
+      return getLocalDateString(lastWeekEnd, businessTimezone);
+    };
+    return {
     dateFrom: taskDateRange === "today" ? getTodayInTimezone(businessTimezone) :
               taskDateRange === "this-week" ? getStartOfWeekInTimezone(businessTimezone) :
+              taskDateRange === "last-week" ? getLastWeekStart() :
               taskDateRange === "this-month" ? getLocalDateString(new Date(new Date().getFullYear(), new Date().getMonth(), 1), businessTimezone) :
               (taskDateRange === "custom" || taskDateRange === "Custom Range" || taskDateRange.toLowerCase().includes("custom")) && customTaskDateFrom ? customTaskDateFrom :
               getLocalDateString(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), businessTimezone),
     dateTo: taskDateRange === "today" ? getTodayInTimezone(businessTimezone) :
             taskDateRange === "this-week" ? getEndOfWeekInTimezone(businessTimezone) :
+            taskDateRange === "last-week" ? getLastWeekEnd() :
             taskDateRange === "this-month" ? getLocalDateString(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0), businessTimezone) :
             (taskDateRange === "custom" || taskDateRange === "Custom Range" || taskDateRange.toLowerCase().includes("custom")) && customTaskDateTo ? customTaskDateTo :
             getTodayInTimezone(businessTimezone),
     userId: userIdFilter !== "all" ? userIdFilter : undefined,
     clientId: clientFilter !== "all" ? clientFilter : undefined,
     reportType: taskReportType
-  }), [taskDateRange, customTaskDateFrom, customTaskDateTo, userIdFilter, clientFilter, taskReportType, businessTimezone]);
+  };
+  }, [taskDateRange, customTaskDateFrom, customTaskDateTo, userIdFilter, clientFilter, taskReportType, businessTimezone]);
   
   const { data: timeTrackingData, isLoading: timeTrackingLoading } = useQuery<{
     tasks: any[];
@@ -2098,6 +2118,7 @@ export default function Reports() {
                       <SelectContent>
                         <SelectItem value="today">Today</SelectItem>
                         <SelectItem value="this-week">This Week</SelectItem>
+                        <SelectItem value="last-week">Last Week</SelectItem>
                         <SelectItem value="this-month">This Month</SelectItem>
                         <SelectItem value="custom">Custom Range</SelectItem>
                       </SelectContent>
@@ -2105,21 +2126,61 @@ export default function Reports() {
                   </div>
                   {taskDateRange === "custom" && (
                     <div className="flex items-center gap-2">
-                      <Input
-                        type="date"
-                        value={customTaskDateFrom}
-                        onChange={(e) => setCustomTaskDateFrom(e.target.value)}
-                        className="w-32"
-                        data-testid="input-custom-date-from"
-                      />
+                      <Popover open={fromDateOpen} onOpenChange={setFromDateOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-[140px] justify-start text-left font-normal",
+                              !customFromDate && "text-muted-foreground"
+                            )}
+                            data-testid="input-custom-date-from"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {customFromDate ? format(customFromDate, "MMM d, yyyy") : "From date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={customFromDate}
+                            onSelect={(date) => {
+                              setCustomFromDate(date);
+                              setCustomTaskDateFrom(date ? format(date, "yyyy-MM-dd") : "");
+                              setFromDateOpen(false);
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                       <span className="text-sm text-slate-500">to</span>
-                      <Input
-                        type="date"
-                        value={customTaskDateTo}
-                        onChange={(e) => setCustomTaskDateTo(e.target.value)}
-                        className="w-32"
-                        data-testid="input-custom-date-to"
-                      />
+                      <Popover open={toDateOpen} onOpenChange={setToDateOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-[140px] justify-start text-left font-normal",
+                              !customToDate && "text-muted-foreground"
+                            )}
+                            data-testid="input-custom-date-to"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {customToDate ? format(customToDate, "MMM d, yyyy") : "To date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={customToDate}
+                            onSelect={(date) => {
+                              setCustomToDate(date);
+                              setCustomTaskDateTo(date ? format(date, "yyyy-MM-dd") : "");
+                              setToDateOpen(false);
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   )}
                   <div className="flex items-center gap-2">
