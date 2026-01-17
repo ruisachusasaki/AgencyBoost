@@ -173,6 +173,7 @@ export function GlobalPhoneDialer() {
           size="sm" 
           className={cn(
             "p-2 rounded-md transition-colors",
+            isOpen ? "bg-primary/10 text-primary" : "",
             isInCall ? "bg-green-100 dark:bg-green-900/30" : "hover:bg-slate-100 dark:hover:bg-slate-800"
           )}
           title={isInCall ? "Call in progress" : "Phone Dialer"}
@@ -180,6 +181,7 @@ export function GlobalPhoneDialer() {
         >
           <Phone className={cn(
             "h-5 w-5",
+            isOpen && !isInCall ? "text-primary" : "",
             isInCall ? "text-green-600 dark:text-green-400 animate-pulse" : "text-slate-600 dark:text-slate-300"
           )} />
         </Button>
@@ -205,17 +207,26 @@ export function GlobalPhoneDialer() {
           )}
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 h-9">
-              <TabsTrigger value="keypad" className="text-xs gap-1">
-                <Hash className="h-3 w-3" />
+            <TabsList className="flex w-full h-10 p-1 bg-muted/50 rounded-lg">
+              <TabsTrigger 
+                value="keypad" 
+                className="flex-1 text-xs gap-1.5 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-primary data-[state=active]:text-primary dark:data-[state=active]:bg-slate-800"
+              >
+                <Hash className="h-3.5 w-3.5" />
                 Keypad
               </TabsTrigger>
-              <TabsTrigger value="contacts" className="text-xs gap-1">
-                <Users className="h-3 w-3" />
+              <TabsTrigger 
+                value="contacts" 
+                className="flex-1 text-xs gap-1.5 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-primary data-[state=active]:text-primary dark:data-[state=active]:bg-slate-800"
+              >
+                <Users className="h-3.5 w-3.5" />
                 Contacts
               </TabsTrigger>
-              <TabsTrigger value="recent" className="text-xs gap-1">
-                <Clock className="h-3 w-3" />
+              <TabsTrigger 
+                value="recent" 
+                className="flex-1 text-xs gap-1.5 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-primary data-[state=active]:text-primary dark:data-[state=active]:bg-slate-800"
+              >
+                <Clock className="h-3.5 w-3.5" />
                 Recent
               </TabsTrigger>
             </TabsList>
@@ -302,11 +313,11 @@ export function GlobalPhoneDialer() {
                     <button
                       key={`${contact.type}-${contact.id}`}
                       onClick={() => handleCall(contact.phone, contact.name, contact.id)}
-                      className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-800 text-left flex items-center gap-3"
+                      className="w-full px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-left flex items-center gap-2.5"
                       data-testid={`contact-${contact.type}-${contact.id}`}
                     >
                       <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center",
+                        "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
                         contact.type === 'client' 
                           ? "bg-blue-100 dark:bg-blue-900/30" 
                           : "bg-purple-100 dark:bg-purple-900/30"
@@ -317,11 +328,13 @@ export function GlobalPhoneDialer() {
                           <User className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 overflow-hidden">
                         <p className="text-sm font-medium truncate">{contact.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{contact.phone}</p>
                       </div>
-                      <Phone className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      <div className="flex-shrink-0 pl-1">
+                        <Phone className="h-4 w-4 text-green-600" />
+                      </div>
                     </button>
                   ))}
                 </div>
