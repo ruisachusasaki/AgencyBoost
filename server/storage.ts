@@ -229,6 +229,8 @@ export interface IStorage {
   getUserTimeEntries(userId: string, dateFrom: string, dateTo: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>>;
   getRunningTimeEntries(): Promise<Array<{ taskId: string; userId: string; startTime: string }>>;
   getTimeEntriesByDateRange(dateFrom: string, dateTo: string, userId?: string, clientId?: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>>;
+  updateTimeEntry(taskId: string, entryId: string, updates: { duration?: number; startTime?: string; endTime?: string }): Promise<Task | undefined>;
+  getTimeEntriesForUserOnDate(userId: string, date: string): Promise<Array<{ taskId: string; taskTitle: string; entries: import("@shared/schema").TimeEntry[] }>>;
   
   // Sub-task hierarchy methods (ClickUp-style up to 5 levels deep)
   getSubTasks(parentTaskId: string): Promise<Task[]>;
@@ -2977,6 +2979,49 @@ export class MemStorage implements IStorage {
       }) as import("@shared/schema").TimeEntry[]
     }));
   }
+  
+  async updateTimeEntry(taskId: string, entryId: string, updates: { duration?: number; startTime?: string; endTime?: string }): Promise<Task | undefined> {
+    const task = this.tasks.get(taskId);
+    if (!task || !task.timeEntries) return undefined;
+    
+    const entries = task.timeEntries as any[];
+    const entryIndex = entries.findIndex((e: any) => e.id === entryId);
+    if (entryIndex === -1) return undefined;
+    
+    const entry = entries[entryIndex];
+    if (updates.duration !== undefined) entry.duration = updates.duration;
+    if (updates.startTime !== undefined) entry.startTime = updates.startTime;
+    if (updates.endTime !== undefined) entry.endTime = updates.endTime;
+    
+    entries[entryIndex] = entry;
+    const updatedTask = { ...task, timeEntries: entries };
+    this.tasks.set(taskId, updatedTask);
+    return updatedTask;
+  }
+  
+  async getTimeEntriesForUserOnDate(userId: string, date: string): Promise<Array<{ taskId: string; taskTitle: string; entries: import("@shared/schema").TimeEntry[] }>> {
+    const results: Array<{ taskId: string; taskTitle: string; entries: import("@shared/schema").TimeEntry[] }> = [];
+    
+    for (const task of this.tasks.values()) {
+      if (!task.timeEntries) continue;
+      
+      const matchingEntries = (task.timeEntries as any[]).filter((entry: any) => {
+        if (!entry.startTime) return false;
+        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+        return entryDate === date && entry.userId === userId;
+      });
+      
+      if (matchingEntries.length > 0) {
+        results.push({
+          taskId: task.id,
+          taskTitle: task.title,
+          entries: matchingEntries as import("@shared/schema").TimeEntry[]
+        });
+      }
+    }
+    
+    return results;
+  }
 
   // Invoices
   async getInvoices(): Promise<Invoice[]> {
@@ -5391,6 +5436,66 @@ export class DbStorage implements IStorage {
           }) as import("@shared/schema").TimeEntry[]
         : []
     }));
+  }
+  
+  async updateTimeEntry(taskId: string, entryId: string, updates: { duration?: number; startTime?: string; endTime?: string }): Promise<Task | undefined> {
+    try {
+      const taskResult = await db.select().from(tasks).where(eq(tasks.id, taskId));
+      const task = taskResult[0];
+      if (!task || !task.timeEntries) return undefined;
+      
+      const entries = task.timeEntries as any[];
+      const entryIndex = entries.findIndex((e: any) => e.id === entryId);
+      if (entryIndex === -1) return undefined;
+      
+      const entry = entries[entryIndex];
+      if (updates.duration !== undefined) entry.duration = updates.duration;
+      if (updates.startTime !== undefined) entry.startTime = updates.startTime;
+      if (updates.endTime !== undefined) entry.endTime = updates.endTime;
+      
+      entries[entryIndex] = entry;
+      
+      const [updatedTask] = await db
+        .update(tasks)
+        .set({ timeEntries: entries })
+        .where(eq(tasks.id, taskId))
+        .returning();
+      
+      return updatedTask;
+    } catch (error) {
+      console.error("Error updating time entry:", error);
+      return undefined;
+    }
+  }
+  
+  async getTimeEntriesForUserOnDate(userId: string, date: string): Promise<Array<{ taskId: string; taskTitle: string; entries: import("@shared/schema").TimeEntry[] }>> {
+    try {
+      const tasksData = await db
+        .select()
+        .from(tasks)
+        .where(
+          sql`EXISTS (
+            SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
+            WHERE entry->>'userId' = ${userId}
+            AND (entry->>'startTime')::date = ${date}::date
+          )`
+        );
+      
+      return tasksData.map(task => ({
+        taskId: task.id,
+        taskTitle: task.title,
+        entries: task.timeEntries && Array.isArray(task.timeEntries)
+          ? (task.timeEntries as any[]).filter((entry: any) => {
+              if (!entry.startTime) return false;
+              const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+              return entryDate === date && entry.userId === userId;
+            }) as import("@shared/schema").TimeEntry[]
+          : []
+      }));
+    } catch (error) {
+      console.error("Error getting time entries for user on date:", error);
+      return [];
+    }
   }
 
 

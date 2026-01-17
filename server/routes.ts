@@ -1788,6 +1788,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get time entries for a specific user on a specific date (for editing)
+  app.get("/api/reports/time-entries/:userId/:date", requireAuth(), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const isAdminOrManager = user?.role === 'admin' || user?.role === 'Admin' || user?.role === 'manager' || user?.role === 'Manager';
+      
+      // Only admins and managers can view other users' time entries
+      if (!isAdminOrManager && user?.id !== req.params.userId) {
+        return res.status(403).json({ error: "Not authorized to view other users' time entries" });
+      }
+      
+      const { userId, date } = req.params;
+      const entries = await appStorage.getTimeEntriesForUserOnDate(userId, date);
+      
+      res.json({ entries });
+    } catch (error) {
+      console.error("Error getting time entries:", error);
+      res.status(500).json({ error: "Failed to get time entries" });
+    }
+  });
+
+  // Update a time entry (admin/manager only)
+  app.patch("/api/reports/time-entries/:taskId/:entryId", requireAuth(), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const isAdminOrManager = user?.role === 'admin' || user?.role === 'Admin' || user?.role === 'manager' || user?.role === 'Manager';
+      
+      if (!isAdminOrManager) {
+        return res.status(403).json({ error: "Only admins and managers can edit time entries" });
+      }
+      
+      const { taskId, entryId } = req.params;
+      const { duration, startTime, endTime } = req.body;
+      
+      const updatedTask = await appStorage.updateTimeEntry(taskId, entryId, { duration, startTime, endTime });
+      
+      if (!updatedTask) {
+        return res.status(404).json({ error: "Time entry not found" });
+      }
+      
+      // Log the action
+      await appStorage.createAuditLog({
+        userId: user?.id || 'unknown',
+        userName: user?.email || 'Unknown',
+        action: 'update',
+        entityType: 'task',
+        entityId: taskId,
+        details: `Updated time entry ${entryId}: duration=${duration}`,
+        timestamp: new Date(),
+      });
+      
+      res.json({ success: true, task: updatedTask });
+    } catch (error) {
+      console.error("Error updating time entry:", error);
+      res.status(500).json({ error: "Failed to update time entry" });
+    }
+  });
+
+  // Team Workload Report API endpoint
   // Team Workload Report API endpoint
   app.get("/api/reports/team-workload", requireAuth(), requirePermission('reporting', 'canView'), async (req, res) => {
     try {

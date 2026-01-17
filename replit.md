@@ -48,6 +48,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **Predictive Hiring Alerts**: Staffing capacity prediction with configurable alerts.
 - **Team Workload Reports**: Comprehensive analytics for staff workload.
 - **Activity & Comments**: Global timer, activity logging, and a threaded comments system with @mentions and emoji picker.
+- **Time Entry Editing**: Admins and managers can edit time entries in the TimeSheet View when viewing "All Users". Clickable time cells show a pencil icon on hover, opening an edit modal to adjust durations. API endpoints enforce role-based access control.
 - **File & Media**: Advanced uploads, inline media display, voice recording, secure object storage, and collaborative annotation.
 - **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, enhanced search, draft/published workflow with version history, auto-generated sticky Table of Contents, breadcrumb navigation, and related articles suggestions.
 - **AI Assistant**: OpenAI-powered chat widget that indexes Knowledge Base content (SOPs/Playbooks) to provide quick answers to team questions. Features a floating chat interface in the bottom-right corner, keyword-based article search, conversation history, and source citations.

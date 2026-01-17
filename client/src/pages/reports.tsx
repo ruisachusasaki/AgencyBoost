@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,7 @@ import {
   Building2,
   AlertTriangle,
   X,
+  Pencil,
 } from "lucide-react";
 import { 
   exportTimeTrackingData,
@@ -161,8 +163,10 @@ export default function Reports() {
     }
   );
   
-  // Check if current user is admin - use server-provided role only
+  // Check if current user is admin or manager - use server-provided role only
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'Admin';
+  const isManager = currentUser?.role === 'manager' || currentUser?.role === 'Manager';
+  const canEditTimeEntries = isAdmin || isManager;
   
   // Task-specific time period controls
   const [taskDateRange, setTaskDateRange] = useState("this-week");
@@ -172,6 +176,16 @@ export default function Reports() {
   const [customToDate, setCustomToDate] = useState<Date | undefined>(undefined);
   const [fromDateOpen, setFromDateOpen] = useState(false);
   const [toDateOpen, setToDateOpen] = useState(false);
+
+  // Time entry edit modal state
+  const [editTimeModalOpen, setEditTimeModalOpen] = useState(false);
+  const [editingTimeEntry, setEditingTimeEntry] = useState<{
+    userId: string;
+    userName: string;
+    date: string;
+    entries: Array<{ id: string; taskId: string; taskTitle: string; duration: number; startTime: string; endTime?: string }>;
+  } | null>(null);
+  const [editedDurations, setEditedDurations] = useState<Record<string, number>>({});
 
   // Chart visualization state
   const [chartsVisible, setChartsVisible] = useState<Record<string, boolean>>({
@@ -328,6 +342,19 @@ export default function Reports() {
   };
   }, [taskDateRange, customTaskDateFrom, customTaskDateTo, userIdFilter, clientFilter, taskReportType, businessTimezone]);
   
+  // Time entry update mutation
+  const updateTimeEntryMutation = useMutation({
+    mutationFn: async ({ taskId, entryId, duration }: { taskId: string; entryId: string; duration: number }) => {
+      const response = await fetch(`/api/reports/time-entries/${taskId}/${entryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ duration }),
+      });
+      if (!response.ok) throw new Error("Failed to update time entry");
+      return response.json();
+    },
+  });
+
   const { data: timeTrackingData, isLoading: timeTrackingLoading } = useQuery<{
     tasks: any[];
     userSummaries: Array<{
@@ -2875,10 +2902,53 @@ export default function Reports() {
                                       data-testid={`time-cell-${rowIndex}-${dateString}`}
                                     >
                                       {dailyTimeMinutes > 0 ? (
-                                        <div className="inline-flex items-center justify-center">
-                                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-md text-xs font-medium">
-                                            {formatDuration(dailyTimeMinutes, timeDisplayMode)}
-                                          </span>
+                                        <div className="inline-flex items-center justify-center group">
+                                          {canEditTimeEntries && isAllUsers ? (
+                                            <button
+                                              onClick={async () => {
+                                                try {
+                                                  const response = await fetch(`/api/reports/time-entries/${row.id}/${dateString}`);
+                                                  if (!response.ok) {
+                                                    const errorText = await response.text();
+                                                    toast({
+                                                      title: "Error loading time entries",
+                                                      description: response.status === 403 ? "You don't have permission to edit time entries" : "Failed to load time entries",
+                                                      variant: "destructive"
+                                                    });
+                                                    return;
+                                                  }
+                                                  const data = await response.json();
+                                                  setEditingTimeEntry({
+                                                    userId: row.id,
+                                                    userName: row.name,
+                                                    date: dateString,
+                                                    entries: data.entries.flatMap((e: any) => e.entries.map((entry: any) => ({
+                                                      ...entry,
+                                                      taskId: e.taskId,
+                                                      taskTitle: e.taskTitle
+                                                    })))
+                                                  });
+                                                  setEditedDurations({});
+                                                  setEditTimeModalOpen(true);
+                                                } catch (error) {
+                                                  console.error('Failed to fetch time entries:', error);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Failed to load time entries. Please try again.",
+                                                    variant: "destructive"
+                                                  });
+                                                }
+                                              }}
+                                              className="bg-green-100 text-green-800 px-2 py-1 rounded-md text-xs font-medium hover:bg-green-200 hover:ring-2 hover:ring-green-300 transition-all cursor-pointer inline-flex items-center gap-1"
+                                            >
+                                              {formatDuration(dailyTimeMinutes, timeDisplayMode)}
+                                              <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </button>
+                                          ) : (
+                                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-md text-xs font-medium">
+                                              {formatDuration(dailyTimeMinutes, timeDisplayMode)}
+                                            </span>
+                                          )}
                                         </div>
                                       ) : (
                                         <span className="text-slate-300 text-xs">-</span>
@@ -4228,6 +4298,98 @@ export default function Reports() {
           <OneOnOnePerformanceReport />
         </div>
       )}
+
+      {/* Edit Time Entry Modal - for admins/managers only */}
+      <Dialog open={editTimeModalOpen} onOpenChange={setEditTimeModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Edit Time Entries
+            </DialogTitle>
+            <DialogDescription>
+              {editingTimeEntry ? (
+                <>Editing time for <strong>{editingTimeEntry.userName}</strong> on <strong>{editingTimeEntry.date}</strong></>
+              ) : 'Loading...'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {editingTimeEntry?.entries?.length ? (
+              editingTimeEntry.entries.map((entry: any) => (
+                <div key={entry.id} className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm text-slate-900">{entry.taskTitle}</p>
+                    <p className="text-xs text-slate-500">
+                      {new Date(entry.startTime).toLocaleTimeString()} - {entry.endTime ? new Date(entry.endTime).toLocaleTimeString() : 'Running'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1"
+                      className="w-20 text-center"
+                      value={editedDurations[entry.id] !== undefined ? editedDurations[entry.id] : Math.round(entry.duration / 60)}
+                      onChange={(e) => setEditedDurations(prev => ({
+                        ...prev,
+                        [entry.id]: parseInt(e.target.value) || 0
+                      }))}
+                    />
+                    <span className="text-xs text-slate-500">min</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-slate-500 py-4">No time entries found for this date.</p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTimeModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={async () => {
+                if (!editingTimeEntry) return;
+                
+                try {
+                  for (const entry of editingTimeEntry.entries) {
+                    const editedMinutes = editedDurations[entry.id];
+                    if (editedMinutes !== undefined) {
+                      const newDuration = editedMinutes * 60;
+                      const response = await fetch(`/api/reports/time-entries/${entry.taskId}/${entry.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ duration: newDuration })
+                      });
+                      if (!response.ok) {
+                        throw new Error('Failed to update time entry');
+                      }
+                    }
+                  }
+                  toast({
+                    title: "Time entries updated",
+                    description: "The time entries have been successfully updated.",
+                  });
+                  setEditTimeModalOpen(false);
+                  setEditingTimeEntry(null);
+                  setEditedDurations({});
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "Failed to update time entries. Please try again.",
+                    variant: "destructive"
+                  });
+                }
+              }}
+              disabled={Object.keys(editedDurations).length === 0}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
