@@ -427,7 +427,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             title="Marketing Brain"
             data-testid="link-marketing-brain"
           >
-            <Brain className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+            <Brain className="h-[18px] w-[18px] text-slate-600 dark:text-slate-300" />
           </a>
           
           {/* Global Phone Dialer */}
