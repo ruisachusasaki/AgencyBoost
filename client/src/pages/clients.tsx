@@ -639,6 +639,26 @@ export default function Clients() {
     return client.company || "";
   }, [customFieldsData]);
 
+  const getClientPhoneNumber = useCallback((client: Client) => {
+    if (!client || !customFieldsData) return client?.phone || "";
+    
+    if (!client.customFieldValues) {
+      return client.phone || "";
+    }
+    
+    const phoneField = customFieldsData.find(field => 
+      field.name === 'Phone' || field.name === 'phone' || field.name === 'Mobile' || field.name === 'mobile'
+    );
+    
+    const customFieldValues = client.customFieldValues as Record<string, any> || {};
+    const phoneFromCustomField = phoneField ? customFieldValues[phoneField.id] || "" : "";
+    
+    if (phoneFromCustomField) {
+      return phoneFromCustomField;
+    }
+    return client.phone || "";
+  }, [customFieldsData]);
+
 
   // Apply filter to clients - memoized to prevent infinite re-renders
   const applyClientFilter = useCallback((clients: Client[], filter: ClientFilter): Client[] => {
@@ -659,7 +679,7 @@ export default function Clients() {
             case 'name': return getClientDisplayName(client);
             case 'company': return getBusinessDisplayName(client);
             case 'email': return client.email || '';
-            case 'phone': return client.phone || '';
+            case 'phone': return getClientPhoneNumber(client);
             case 'city': return client.city || '';
             case 'state': return client.state || '';
             case 'status': return client.status || '';
@@ -732,7 +752,7 @@ export default function Clients() {
         const name = getClientDisplayName(client).toLowerCase();
         const company = getBusinessDisplayName(client).toLowerCase(); 
         const email = (client.email || '').toLowerCase();
-        const phone = (client.phone || '').toLowerCase();
+        const phone = getClientPhoneNumber(client).toLowerCase();
         
         return name.includes(searchLower) || 
                company.includes(searchLower) || 
@@ -760,8 +780,8 @@ export default function Clients() {
           bValue = (b.email || '').toLowerCase();
           break;
         case 'phone':
-          aValue = a.phone || '';
-          bValue = b.phone || '';
+          aValue = getClientPhoneNumber(a);
+          bValue = getClientPhoneNumber(b);
           break;
         case 'contactOwner':
           const aOwner = staff?.find((s: any) => s.id === a.contactOwner);
@@ -1446,7 +1466,8 @@ export default function Clients() {
       case 'company':
         return getBusinessDisplayName(client) || '-';
       case 'phone':
-        return client.phone ? formatPhoneNumber(client.phone) : '-';
+        const phoneNum = getClientPhoneNumber(client);
+        return phoneNum ? formatPhoneNumber(phoneNum) : '-';
       case 'email':
         return client.email;
       case 'contactOwner':
