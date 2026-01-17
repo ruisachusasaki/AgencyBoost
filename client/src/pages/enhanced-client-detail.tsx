@@ -22,6 +22,8 @@ import { AppointmentModal } from "@/components/AppointmentModal";
 import { ProductSearchResults } from "@/components/ProductSearchResults";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CallButton } from "@/components/voip/call-button";
+import { useVoip } from "@/hooks/use-voip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -2405,7 +2407,7 @@ export default function EnhancedClientDetail() {
   
 
   // Communication tabs state
-  const [communicationTab, setCommunicationTab] = useState<'sms' | 'email'>('sms');
+  const [communicationTab, setCommunicationTab] = useState<'sms' | 'email' | 'call'>('sms');
 
   // Client Brief state - 8 separate sections
   // Dynamic client brief sections from API - hybrid core + custom data
@@ -5651,8 +5653,12 @@ export default function EnhancedClientDetail() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">Send Communication</CardTitle>
-                <Tabs value={communicationTab} onValueChange={(value) => setCommunicationTab(value as 'sms' | 'email')} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
+                <Tabs value={communicationTab} onValueChange={(value) => setCommunicationTab(value as 'sms' | 'email' | 'call')} className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="call" className="flex items-center gap-2" data-testid="tab-call">
+                      <Phone className="h-4 w-4" />
+                      Call
+                    </TabsTrigger>
                     <TabsTrigger value="sms" className="flex items-center gap-2" data-testid="tab-sms">
                       <MessageSquare className="h-4 w-4" />
                       SMS
@@ -5666,6 +5672,57 @@ export default function EnhancedClientDetail() {
               </CardHeader>
               <CardContent>
                 <Tabs value={communicationTab} className="w-full">
+                  {/* Call Tab Content */}
+                  <TabsContent value="call" className="space-y-4 mt-0">
+                    {client?.dndAll || client?.dndCalls ? (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-red-700">
+                          <PhoneOff className="h-4 w-4" />
+                          <span className="font-medium">Call Communications Disabled</span>
+                        </div>
+                        <p className="text-sm text-red-600 mt-1">
+                          This client has call communications disabled. Disable DND to make calls.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="text-center py-6">
+                          <Phone className="h-12 w-12 mx-auto text-primary mb-4" />
+                          <h3 className="text-lg font-medium mb-2">Browser-Based VoIP Calling</h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Make calls directly from your browser using Twilio Voice.
+                          </p>
+                          
+                          {client?.phone ? (
+                            <div className="space-y-4">
+                              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                                <Label className="text-sm text-muted-foreground">Calling</Label>
+                                <p className="text-lg font-medium">{client.phone}</p>
+                              </div>
+                              <CallButton
+                                phoneNumber={client.phone}
+                                leadId={client.id.toString()}
+                                leadName={contactDisplayName || client.name || client.company || "Client"}
+                                variant="button"
+                                size="lg"
+                              />
+                            </div>
+                          ) : (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                              <div className="flex items-center gap-2 text-yellow-700">
+                                <AlertCircle className="h-4 w-4" />
+                                <span className="font-medium">No Phone Number</span>
+                              </div>
+                              <p className="text-sm text-yellow-600 mt-1">
+                                Add a phone number to this client's profile to enable calling.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+
                   {/* SMS Tab Content */}
                   <TabsContent value="sms" className="space-y-4 mt-0">
                     {client?.dndAll || client?.dndSms ? (
