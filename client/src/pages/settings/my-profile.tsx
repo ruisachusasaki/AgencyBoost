@@ -5,7 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, MapPin, Bell, Settings, UserCheck, Mail, Trash2 } from "lucide-react";
+import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, CalendarIcon, MapPin, Bell, Settings, UserCheck, Mail, Trash2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -49,6 +53,7 @@ export default function MyProfile() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [signatureEnabled, setSignatureEnabled] = useState(true);
+  const [birthdateOpen, setBirthdateOpen] = useState(false);
   
   // Get current user from authenticated session
   const { data: authUser } = useQuery<{ id: string; firstName: string; lastName: string }>({
@@ -863,11 +868,40 @@ export default function MyProfile() {
                         control={personalForm.control}
                         name="birthdate"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="flex flex-col">
                             <FormLabel>Birthdate</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="date" />
-                            </FormControl>
+                            <Popover open={birthdateOpen} onOpenChange={setBirthdateOpen}>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-full pl-3 text-left font-normal",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                  >
+                                    {field.value ? (
+                                      format(new Date(field.value), "PPP")
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={field.value ? new Date(field.value) : undefined}
+                                  onSelect={(date) => {
+                                    field.onChange(date ? format(date, "yyyy-MM-dd") : "");
+                                    setBirthdateOpen(false);
+                                  }}
+                                  disabled={(date) => date > new Date()}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
                             <FormMessage />
                           </FormItem>
                         )}
