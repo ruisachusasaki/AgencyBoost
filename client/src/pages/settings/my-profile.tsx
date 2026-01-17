@@ -418,15 +418,15 @@ export default function MyProfile() {
                 <span>Notifications</span>
               </button>
               <button
-                onClick={() => setActiveTab("hr")}
+                onClick={() => setActiveTab("px")}
                 className={`${
-                  activeTab === "hr"
+                  activeTab === "px"
                     ? "border-primary text-primary"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
               >
                 <UserCheck className="h-4 w-4" />
-                <span>HR</span>
+                <span>PX</span>
               </button>
             </nav>
           </div>
@@ -1096,8 +1096,8 @@ export default function MyProfile() {
             {currentUserId && <NotificationSettingsPanel userId={currentUserId} />}
           </div>
 
-          {/* HR Tab */}
-          <div className={activeTab === "hr" ? "space-y-6" : "hidden"}>
+          {/* PX Tab */}
+          <div className={activeTab === "px" ? "space-y-6" : "hidden"}>
             <Card>
               <CardHeader>
                 <CardTitle>My Time Off Usage</CardTitle>
