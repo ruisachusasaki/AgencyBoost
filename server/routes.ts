@@ -22759,7 +22759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/hr/direct-reports", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!rawUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Development mode: Mock admin user has no direct reports
       if (IS_DEVELOPMENT && rawUserId === MOCK_ADMIN_USER_ID) {
@@ -23604,7 +23604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertExpenseReportSubmissionSchema.parse({
         ...req.body,
-        submittedById: currentUserId
+        submittedById: rawUserId
       });
 
       const [newSubmission] = await db.insert(expenseReportSubmissions)
@@ -23627,8 +23627,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!rawUserId) return;
       
-      const isAdmin = await isCurrentUserAdmin(currentUserId);
-      const hasAccountingPermission = await hasPermission(currentUserId, 'accounting', 'canView');
+      const isAdmin = await isCurrentUserAdmin(rawUserId);
+      const hasAccountingPermission = await hasPermission(rawUserId, 'accounting', 'canView');
       
       let submissions;
       if (isAdmin || hasAccountingPermission) {
@@ -23640,7 +23640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Regular users can only see their own submissions
         submissions = await db.select()
           .from(expenseReportSubmissions)
-          .where(eq(expenseReportSubmissions.submittedById, currentUserId))
+          .where(eq(expenseReportSubmissions.submittedById, rawUserId))
           .orderBy(desc(expenseReportSubmissions.submittedAt));
       }
 
@@ -24879,7 +24879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertOffboardingSubmissionSchema.parse({
         ...req.body,
-        submittedById: currentUserId,
+        submittedById: rawUserId,
         status: 'pending'
       });
 
