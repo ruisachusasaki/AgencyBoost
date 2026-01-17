@@ -62,8 +62,10 @@ export function GlobalPhoneDialer() {
       field.name === 'Phone' || field.name === 'phone' || field.name === 'Mobile' || field.name === 'mobile'
     );
 
-    if (clientsData) {
-      clientsData.forEach((client: any) => {
+    // Handle both array and object with clients property
+    const clients = Array.isArray(clientsData) ? clientsData : (clientsData as any)?.clients || [];
+    if (clients && Array.isArray(clients)) {
+      clients.forEach((client: any) => {
         const customFieldValues = client.customFieldValues as Record<string, any> || {};
         const phoneValue = phoneField ? customFieldValues[phoneField.id] || "" : "";
         const phone = phoneValue || client.phone;
@@ -80,8 +82,10 @@ export function GlobalPhoneDialer() {
       });
     }
 
-    if (leadsData) {
-      leadsData.forEach((lead: any) => {
+    // Handle both array and object with leads property
+    const leads = Array.isArray(leadsData) ? leadsData : (leadsData as any)?.leads || [];
+    if (leads && Array.isArray(leads)) {
+      leads.forEach((lead: any) => {
         if (lead.phone) {
           result.push({
             id: lead.id,
