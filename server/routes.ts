@@ -1792,7 +1792,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/time-entries/:userId/:date", requireAuth(), async (req, res) => {
     try {
       const user = (req as any).user;
-      const isAdminOrManager = user?.role === 'admin' || user?.role === 'Admin' || user?.role === 'manager' || user?.role === 'Manager';
+      const userRole = user?.role?.toLowerCase() || '';
+      const isAdminOrManager = userRole === 'admin' || userRole === 'manager';
       
       // Only admins and managers can view other users' time entries
       if (!isAdminOrManager && user?.id !== req.params.userId) {
@@ -1809,11 +1810,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update a time entry (admin/manager only)
   app.patch("/api/reports/time-entries/:taskId/:entryId", requireAuth(), async (req, res) => {
     try {
       const user = (req as any).user;
-      const isAdminOrManager = user?.role === 'admin' || user?.role === 'Admin' || user?.role === 'manager' || user?.role === 'Manager';
+      const userRole = user?.role?.toLowerCase() || '';
+      const isAdminOrManager = userRole === 'admin' || userRole === 'manager';
       
       if (!isAdminOrManager) {
         return res.status(403).json({ error: "Only admins and managers can edit time entries" });
