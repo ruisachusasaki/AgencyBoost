@@ -19276,20 +19276,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/integrations/twilio/call-log", requireAuth(), async (req, res) => {
     try {
       const userId = getAuthenticatedUserId(req);
-      const { leadId, leadName, phoneNumber, duration, callSid, status } = req.body;
+      const { entityId, entityName, entityType = "lead", phoneNumber, duration, callSid, status } = req.body;
 
-      if (!leadId || !phoneNumber) {
-        return res.status(400).json({ message: "Lead ID and phone number are required" });
+      if (!entityId || !phoneNumber) {
+        return res.status(400).json({ message: "Entity ID and phone number are required" });
       }
 
       await appStorage.createAuditLog({
         userId: userId!,
         action: "call",
-        entityType: "lead",
-        entityId: leadId,
-        entityName: leadName || `Lead ${leadId}`,
+        entityType: entityType,
+        entityId: entityId,
+        entityName: entityName || (entityType === "client" ? `Client ${entityId}` : `Lead ${entityId}`),
         description: `Called ${phoneNumber} - Duration: ${Math.floor(duration / 60)}m ${duration % 60}s - Status: ${status}`,
-        newValues: { phoneNumber, duration, callSid, status, leadId },
+        newValues: { phoneNumber, duration, callSid, status, entityId, entityType },
         ipAddress: req.ip || 'unknown',
         userAgent: req.headers['user-agent'] || 'unknown'
       });

@@ -14,6 +14,7 @@ interface CallButtonProps {
   phoneNumber: string;
   leadId: string;
   leadName: string;
+  entityType?: "lead" | "client";
   variant?: "icon" | "button";
   size?: "sm" | "default" | "lg";
 }
@@ -22,6 +23,7 @@ export function CallButton({
   phoneNumber,
   leadId,
   leadName,
+  entityType = "lead",
   variant = "icon",
   size = "sm",
 }: CallButtonProps) {
@@ -61,7 +63,7 @@ export function CallButton({
       });
     } else {
       try {
-        await makeCall(phoneNumber, leadId, leadName);
+        await makeCall(phoneNumber, leadId, leadName, entityType);
       } catch (err) {
         toast({
           title: "Call failed",

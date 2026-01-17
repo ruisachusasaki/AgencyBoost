@@ -5727,6 +5727,7 @@ export default function EnhancedClientDetail() {
                                 leadName={contactDisplayName || client.name || client.company || "Client"}
                                 variant="button"
                                 size="lg"
+                                entityType="client"
                               />
                             </div>
                           ) : (

@@ -11,7 +11,7 @@ interface VoipContextType {
   isMuted: boolean;
   callerIdNumber: string | null;
   error: string | null;
-  makeCall: (phoneNumber: string, leadId: string, leadName: string) => Promise<void>;
+  makeCall: (phoneNumber: string, entityId: string, entityName: string, entityType?: "lead" | "client") => Promise<void>;
   hangUp: () => void;
   toggleMute: () => void;
   checkConfiguration: () => Promise<void>;
@@ -32,7 +32,7 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
   const deviceRef = useRef<Device | null>(null);
   const callStartTime = useRef<Date | null>(null);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
-  const currentCallInfo = useRef<{ leadId: string; leadName: string; phoneNumber: string } | null>(null);
+  const currentCallInfo = useRef<{ entityId: string; entityName: string; phoneNumber: string; entityType: "lead" | "client" } | null>(null);
   const initializationPromise = useRef<Promise<Device | null> | null>(null);
 
   const checkConfiguration = useCallback(async () => {
@@ -185,8 +185,9 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
     
     try {
       await apiRequest("POST", "/api/integrations/twilio/call-log", {
-        leadId: currentCallInfo.current.leadId,
-        leadName: currentCallInfo.current.leadName,
+        entityId: currentCallInfo.current.entityId,
+        entityName: currentCallInfo.current.entityName,
+        entityType: currentCallInfo.current.entityType,
         phoneNumber: currentCallInfo.current.phoneNumber,
         duration,
         callSid: callSid || "unknown",
@@ -197,7 +198,7 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const makeCall = useCallback(async (phoneNumber: string, leadId: string, leadName: string) => {
+  const makeCall = useCallback(async (phoneNumber: string, entityId: string, entityName: string, entityType: "lead" | "client" = "lead") => {
     if (!isConfigured) {
       setError("VoIP calling is not configured. Please set up Twilio in Settings.");
       return;
@@ -218,7 +219,7 @@ export function VoipProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    currentCallInfo.current = { leadId, leadName, phoneNumber };
+    currentCallInfo.current = { entityId, entityName, phoneNumber, entityType };
 
     try {
       const cleanNumber = phoneNumber.replace(/[^+\d]/g, '');

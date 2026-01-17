@@ -119,7 +119,7 @@ export function GlobalPhoneDialer() {
     }
   };
 
-  const handleCall = async (phoneNumber?: string, name?: string, entityId?: string) => {
+  const handleCall = async (phoneNumber?: string, name?: string, entityId?: string, entityType?: "client" | "lead") => {
     const numberToCall = phoneNumber || dialedNumber;
     
     if (!numberToCall) {
@@ -141,7 +141,7 @@ export function GlobalPhoneDialer() {
     }
 
     try {
-      await makeCall(numberToCall, entityId || "manual", name || numberToCall);
+      await makeCall(numberToCall, entityId || "manual", name || numberToCall, entityType || "lead");
       setIsOpen(false);
     } catch (err) {
       toast({
@@ -312,7 +312,7 @@ export function GlobalPhoneDialer() {
                   {filteredContacts.map((contact) => (
                     <button
                       key={`${contact.type}-${contact.id}`}
-                      onClick={() => handleCall(contact.phone, contact.name, contact.id)}
+                      onClick={() => handleCall(contact.phone, contact.name, contact.id, contact.type)}
                       className="w-full px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-left flex items-center gap-2.5"
                       data-testid={`contact-${contact.type}-${contact.id}`}
                     >
