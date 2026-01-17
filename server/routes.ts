@@ -19288,7 +19288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: entityType === "client" ? "contact" : entityType,
         entityId: entityId,
         entityName: entityName || (entityType === "client" ? `Client ${entityId}` : `Lead ${entityId}`),
-        description: `Called ${phoneNumber} - Duration: ${Math.floor(duration / 60)}m ${duration % 60}s - Status: ${status}`,
+        details: `Called ${phoneNumber} - Duration: ${Math.floor(duration / 60)}m ${duration % 60}s - Status: ${status}`,
         newValues: { phoneNumber, duration, callSid, status, entityId, entityType },
         ipAddress: req.ip || 'unknown',
         userAgent: req.headers['user-agent'] || 'unknown'
