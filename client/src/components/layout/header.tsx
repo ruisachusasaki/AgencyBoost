@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle, FileText, Users, CheckSquare, HelpCircle, Brain } from "lucide-react";
+import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle, FileText, Users, CheckSquare, HelpCircle, Brain, Phone } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import { apiRequest } from "@/lib/queryClient";
 import TimerIndicator from "@/components/timer-indicator";
 import LoginAsDropdown from "@/components/admin/login-as-dropdown";
 import { ThemeToggleButton } from "@/components/theme-toggle";
+import { GlobalPhoneDialer } from "@/components/voip/global-phone-dialer";
 import type { Staff } from "@shared/schema";
 
 interface HeaderProps {
@@ -428,6 +429,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
           >
             <Brain className="h-5 w-5 text-slate-600 dark:text-slate-300" />
           </a>
+          
+          {/* Global Phone Dialer */}
+          <GlobalPhoneDialer />
           
           <ThemeToggleButton />
           
