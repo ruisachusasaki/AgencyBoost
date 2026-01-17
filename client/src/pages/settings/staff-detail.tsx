@@ -4,7 +4,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Upload, User, Mail, Phone, MapPin, Calendar, Building, Users, Bell, Smartphone, Trash2, Plus, Link2 } from "lucide-react";
+import { ArrowLeft, Upload, User, Mail, Phone, MapPin, Calendar, CalendarIcon, Building, Users, Bell, Smartphone, Trash2, Plus, Link2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +56,8 @@ export default function StaffDetail() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [hireDateOpen, setHireDateOpen] = useState(false);
+  const [birthdateOpen, setBirthdateOpen] = useState(false);
 
   // Handle URL query parameters for Gmail linking feedback
   useEffect(() => {
@@ -713,13 +719,43 @@ export default function StaffDetail() {
                     control={form.control}
                     name="hireDate"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="flex flex-col">
                         <FormLabelWithTooltip tooltip="The date when this staff member was officially hired">
                           Hire Date
                         </FormLabelWithTooltip>
-                        <FormControl>
-                          <Input {...field} type="date" disabled={!isEditing} />
-                        </FormControl>
+                        <Popover open={hireDateOpen} onOpenChange={setHireDateOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                disabled={!isEditing}
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(new Date(field.value), "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={field.value ? new Date(field.value) : undefined}
+                              onSelect={(date) => {
+                                field.onChange(date ? format(date, "yyyy-MM-dd") : "");
+                                setHireDateOpen(false);
+                              }}
+                              disabled={(date) => date > new Date()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -728,11 +764,41 @@ export default function StaffDetail() {
                     control={form.control}
                     name="birthdate"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="flex flex-col">
                         <FormLabel>Birthdate</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="date" disabled={!isEditing} />
-                        </FormControl>
+                        <Popover open={birthdateOpen} onOpenChange={setBirthdateOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                disabled={!isEditing}
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(new Date(field.value), "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={field.value ? new Date(field.value) : undefined}
+                              onSelect={(date) => {
+                                field.onChange(date ? format(date, "yyyy-MM-dd") : "");
+                                setBirthdateOpen(false);
+                              }}
+                              disabled={(date) => date > new Date()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
