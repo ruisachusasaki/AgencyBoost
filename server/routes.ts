@@ -1792,8 +1792,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/time-entries/:userId/:date", requireAuth(), async (req, res) => {
     try {
       const user = (req as any).user;
-      const userRole = user?.role?.toLowerCase() || '';
-      const isAdminOrManager = userRole === 'admin' || userRole === 'manager';
+      console.log("DEBUG time-entries endpoint - user:", { id: user?.id, role: user?.role, email: user?.email });
+      const userRoles = user?.roles || [];
+      const isAdminOrManager = userRoles.some((r: string) => r.toLowerCase() === 'admin' || r.toLowerCase() === 'manager');
       
       // Only admins and managers can view other users' time entries
       if (!isAdminOrManager && user?.id !== req.params.userId) {
@@ -1813,8 +1814,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/reports/time-entries/:taskId/:entryId", requireAuth(), async (req, res) => {
     try {
       const user = (req as any).user;
-      const userRole = user?.role?.toLowerCase() || '';
-      const isAdminOrManager = userRole === 'admin' || userRole === 'manager';
+      const userRoles = user?.roles || [];
+      const isAdminOrManager = userRoles.some((r: string) => r.toLowerCase() === 'admin' || r.toLowerCase() === 'manager');
       
       if (!isAdminOrManager) {
         return res.status(403).json({ error: "Only admins and managers can edit time entries" });
