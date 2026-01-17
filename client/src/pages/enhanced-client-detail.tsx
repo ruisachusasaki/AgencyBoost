@@ -5516,20 +5516,22 @@ export default function EnhancedClientDetail() {
                       <div key={log.id} className="border-l-2 border-gray-200 pl-4 pb-4" data-testid={`activity-item-${log.id}`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            {log.entityType === 'email' && <Mail className="h-4 w-4 text-blue-600" />}
-                            {log.entityType === 'sms' && <MessageSquare className="h-4 w-4 text-primary" />}
-                            {log.entityType === 'call' && <Phone className="h-4 w-4 text-green-600" />}
-                            {log.entityType === 'meeting' && <Calendar className="h-4 w-4 text-purple-600" />}
-                            {log.entityType === 'task' && <CheckCircle className="h-4 w-4 text-orange-600" />}
-                            {log.entityType === 'note' && <StickyNote className="h-4 w-4 text-yellow-600" />}
-                            {log.entityType === 'campaign' && <Target className="h-4 w-4 text-red-600" />}
-                            {log.entityType === 'workflow' && <Workflow className="h-4 w-4 text-indigo-600" />}
-                            {log.entityType === 'contact' && <User className="h-4 w-4 text-blue-600" />}
-                            {!['email', 'sms', 'call', 'meeting', 'task', 'note', 'campaign', 'workflow', 'contact'].includes(log.entityType) && 
+                            {log.action === 'call' && <Phone className="h-4 w-4 text-green-600" />}
+                            {log.entityType === 'email' && log.action !== 'call' && <Mail className="h-4 w-4 text-blue-600" />}
+                            {log.entityType === 'sms' && log.action !== 'call' && <MessageSquare className="h-4 w-4 text-primary" />}
+                            {log.entityType === 'call' && log.action !== 'call' && <Phone className="h-4 w-4 text-green-600" />}
+                            {log.entityType === 'meeting' && log.action !== 'call' && <Calendar className="h-4 w-4 text-purple-600" />}
+                            {log.entityType === 'task' && log.action !== 'call' && <CheckCircle className="h-4 w-4 text-orange-600" />}
+                            {log.entityType === 'note' && log.action !== 'call' && <StickyNote className="h-4 w-4 text-yellow-600" />}
+                            {log.entityType === 'campaign' && log.action !== 'call' && <Target className="h-4 w-4 text-red-600" />}
+                            {log.entityType === 'workflow' && log.action !== 'call' && <Workflow className="h-4 w-4 text-indigo-600" />}
+                            {log.entityType === 'contact' && log.action !== 'call' && <User className="h-4 w-4 text-blue-600" />}
+                            {!['email', 'sms', 'call', 'meeting', 'task', 'note', 'campaign', 'workflow', 'contact'].includes(log.entityType) && log.action !== 'call' && 
                               <Activity className="h-4 w-4 text-gray-600" />
                             }
                             <h4 className="font-medium text-gray-900 capitalize" data-testid={`activity-type-${log.id}`}>
-                              {log.entityType === 'contact' ? 'Client Update' : 
+                              {log.action === 'call' ? 'Client Call' :
+                               log.entityType === 'contact' ? 'Client Update' : 
                                log.entityType === 'email' ? 'Email Sent' :
                                log.entityType === 'sms' ? 'SMS Sent' : 
                                `${log.entityType} Activity`}
