@@ -12,7 +12,7 @@ import {
   clientNotes, clientTasks, clientDocuments, clientTransactions, clientProducts, clientBundles, deals,
   socialMediaAccounts, socialMediaPosts, socialMediaTemplates, calendarEvents, eventTimeEntries,
   type User, type InsertUser,
-  type AuditLog, type InsertAuditLog,
+  type AuditLog, type InsertAuditLog, auditLogs,
   type CustomField, type InsertCustomField, customFields,
   type CustomFieldFolder, type InsertCustomFieldFolder, customFieldFolders,
   type ClientGroup, type InsertClientGroup,
