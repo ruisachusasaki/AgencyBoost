@@ -2211,7 +2211,7 @@ export default function EnhancedClientDetail() {
   };
 
   const handleSendSms = () => {
-    if (!smsData.fromNumber || !smsData.message.trim() || !client?.phone) {
+    if (!smsData.fromNumber || !smsData.message.trim() || !contactPhoneNumber) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -2220,7 +2220,7 @@ export default function EnhancedClientDetail() {
       return;
     }
 
-    const formattedToNumber = formatPhoneNumber(client.phone);
+    const formattedToNumber = formatPhoneNumber(contactPhoneNumber);
 
     sendSmsMutation.mutate({
       fromNumber: smsData.fromNumber,
@@ -2862,6 +2862,28 @@ export default function EnhancedClientDetail() {
     // For now, just use company field (can be enhanced later with caching)
     return client.company || "";
   }, [client]);
+
+  // Get phone number from custom fields (preferred) or fallback to client.phone
+  const contactPhoneNumber = useMemo(() => {
+    if (!client) return "";
+    
+    // Find Phone field by exact name match in custom fields
+    if (!customFieldsLoading && customFieldsData) {
+      const phoneField = customFieldsData.find(field => 
+        field.name === 'Phone' || field.name === 'phone' || field.name === 'Mobile' || field.name === 'mobile'
+      );
+      
+      const customFieldValues = client.customFieldValues as Record<string, any> || {};
+      const phoneValue = phoneField ? customFieldValues[phoneField.id] || "" : "";
+      
+      if (phoneValue) {
+        return phoneValue;
+      }
+    }
+    
+    // Fallback to client.phone if no custom field phone
+    return client.phone || "";
+  }, [client, customFieldsData, customFieldsLoading]);
 
   // Helper function to replace merge tags in text with actual client data
   const replaceMergeTags = (text: string) => {
@@ -4004,7 +4026,7 @@ export default function EnhancedClientDetail() {
   };
 
   const scheduleSms = async () => {
-    if (!smsData.fromNumber || !smsData.message.trim() || !client?.phone || !scheduledDate || !scheduledTime) {
+    if (!smsData.fromNumber || !smsData.message.trim() || !contactPhoneNumber || !scheduledDate || !scheduledTime) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -5693,14 +5715,14 @@ export default function EnhancedClientDetail() {
                             Make calls directly from your browser using Twilio Voice.
                           </p>
                           
-                          {client?.phone ? (
+                          {contactPhoneNumber ? (
                             <div className="space-y-4">
                               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                                 <Label className="text-sm text-muted-foreground">Calling</Label>
-                                <p className="text-lg font-medium">{client.phone}</p>
+                                <p className="text-lg font-medium">{contactPhoneNumber}</p>
                               </div>
                               <CallButton
-                                phoneNumber={client.phone}
+                                phoneNumber={contactPhoneNumber}
                                 leadId={client.id.toString()}
                                 leadName={contactDisplayName || client.name || client.company || "Client"}
                                 variant="button"
@@ -5758,7 +5780,7 @@ export default function EnhancedClientDetail() {
                             <Label htmlFor="sms-to">To</Label>
                             <Input
                               id="sms-to"
-                              value={client?.phone || ''}
+                              value={contactPhoneNumber || ''}
                               disabled
                               className="bg-gray-50"
                               data-testid="input-sms-to"
@@ -5818,17 +5840,17 @@ export default function EnhancedClientDetail() {
                           <Button
                             onClick={() => {
                               console.log('🔥 SMS BUTTON CLICKED!');
-                              console.log('Client phone:', client?.phone);
-                              console.log('Button disabled?', !client?.phone);
+                              console.log('Contact phone:', contactPhoneNumber);
+                              console.log('Button disabled?', !contactPhoneNumber);
                               console.log('Current showSmsChoiceModal:', showSmsChoiceModal);
                               setShowSmsChoiceModal(true);
                               console.log('Just called setShowSmsChoiceModal(true)');
                             }}
-                            disabled={!client?.phone}
+                            disabled={!contactPhoneNumber}
                             className="w-full"
                             data-testid="button-send-sms"
                             title={
-                              !client?.phone ? "Client has no phone number" : "Send SMS"
+                              !contactPhoneNumber ? "Client has no phone number" : "Send SMS"
                             }
                           >
                             <Send className="h-4 w-4 mr-2" />
@@ -5838,7 +5860,7 @@ export default function EnhancedClientDetail() {
                         
                         
                         {/* Show helpful message when client has no phone */}
-                        {!client?.phone && (
+                        {!contactPhoneNumber && (
                           <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
                             <div className="flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
