@@ -19113,7 +19113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Generate Twilio Voice access token for browser-based calling
   app.get("/api/integrations/twilio/voice-token", requireAuth(), async (req, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = getAuthenticatedUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -19275,7 +19275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Log a completed call for audit trail
   app.post("/api/integrations/twilio/call-log", requireAuth(), async (req, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = getAuthenticatedUserId(req);
       const { leadId, leadName, phoneNumber, duration, callSid, status } = req.body;
 
       if (!leadId || !phoneNumber) {
@@ -27373,7 +27373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/training/courses", requireAuth(), requirePermission('training', 'canView'), async (req, res) => {
     try {
       const { category, search, tags, difficulty, published } = req.query;
-      const userId = req.user?.id;
+      const userId = getAuthenticatedUserId(req);
       
       // Get current user's department using raw SQL
       let userDepartmentId: string | null = null;
