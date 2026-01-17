@@ -19285,7 +19285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await appStorage.createAuditLog({
         userId: userId!,
         action: "call",
-        entityType: entityType,
+        entityType: entityType === "client" ? "contact" : entityType,
         entityId: entityId,
         entityName: entityName || (entityType === "client" ? `Client ${entityId}` : `Lead ${entityId}`),
         description: `Called ${phoneNumber} - Duration: ${Math.floor(duration / 60)}m ${duration % 60}s - Status: ${status}`,
