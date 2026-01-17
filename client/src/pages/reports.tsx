@@ -2903,11 +2903,16 @@ export default function Reports() {
                                     >
                                       {dailyTimeMinutes > 0 ? (
                                         <div className="inline-flex items-center justify-center group">
-                                          {canEditTimeEntries && isAllUsers ? (
+                                          {canEditTimeEntries ? (
                                             <button
                                               onClick={async () => {
                                                 try {
-                                                  const response = await fetch(`/api/reports/time-entries/${row.id}/${dateString}`);
+                                                  // When viewing All Users, row.id is userId
+                                                  // When viewing a specific user, userIdFilter is the userId and row.id is taskId
+                                                  const targetUserId = isAllUsers ? row.id : userIdFilter;
+                                                  const taskIdFilter = isAllUsers ? null : row.id;
+                                                  
+                                                  const response = await fetch(`/api/reports/time-entries/${targetUserId}/${dateString}`);
                                                   if (!response.ok) {
                                                     const errorText = await response.text();
                                                     toast({
@@ -2918,15 +2923,29 @@ export default function Reports() {
                                                     return;
                                                   }
                                                   const data = await response.json();
+                                                  
+                                                  // Get the user name for display
+                                                  const userName = isAllUsers 
+                                                    ? row.name 
+                                                    : (allUsers.find(u => u.userId === userIdFilter)?.userName || 'Unknown User');
+                                                  
+                                                  // Filter entries by task if viewing a specific user's task
+                                                  let entries = data.entries.flatMap((e: any) => e.entries.map((entry: any) => ({
+                                                    ...entry,
+                                                    taskId: e.taskId,
+                                                    taskTitle: e.taskTitle
+                                                  })));
+                                                  
+                                                  // If viewing a specific task, filter to only show that task's entries
+                                                  if (taskIdFilter) {
+                                                    entries = entries.filter((e: any) => e.taskId === taskIdFilter);
+                                                  }
+                                                  
                                                   setEditingTimeEntry({
-                                                    userId: row.id,
-                                                    userName: row.name,
+                                                    userId: targetUserId,
+                                                    userName: userName,
                                                     date: dateString,
-                                                    entries: data.entries.flatMap((e: any) => e.entries.map((entry: any) => ({
-                                                      ...entry,
-                                                      taskId: e.taskId,
-                                                      taskTitle: e.taskTitle
-                                                    })))
+                                                    entries: entries
                                                   });
                                                   setEditedDurations({});
                                                   setEditTimeModalOpen(true);
