@@ -4495,7 +4495,7 @@ export default function EnhancedClientDetail() {
                   )}
                 </Tooltip>
               </TooltipProvider>
-              {contactDisplayName && <p className="text-muted-foreground">Primary Contact: {contactDisplayName}</p>}
+              {contactDisplayName && <p className="text-muted-foreground">{contactDisplayName}</p>}
             </div>
           </div>
           <div className="flex items-center gap-4">
