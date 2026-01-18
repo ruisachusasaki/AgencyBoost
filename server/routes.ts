@@ -16725,8 +16725,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Return user data with both permissions arrays
+      // Include roles as array for frontend compatibility
       res.json({
         ...user,
+        roles: user.role ? [user.role] : [],
         permissions: userPermissions,
         granularPermissions: userGranularPermissions
       });
