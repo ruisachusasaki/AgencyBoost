@@ -153,7 +153,7 @@ export default function Reports() {
   const [mrrSortOrder, setMrrSortOrder] = useState<"asc" | "desc">("desc");
   
   // User authentication and role data
-  const { data: currentUser } = useQuery<{ id: string; name: string; email: string; role: string }>({
+  const { data: currentUser } = useQuery<{ id: string; name: string; email: string; roles: string[] }>({
     queryKey: ["/api/auth/current-user"],
   });
   
@@ -163,9 +163,10 @@ export default function Reports() {
     }
   );
   
-  // Check if current user is admin or manager - use server-provided role only
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'Admin';
-  const isManager = currentUser?.role === 'manager' || currentUser?.role === 'Manager';
+  // Check if current user is admin or manager - check roles array
+  const userRoles = currentUser?.roles || [];
+  const isAdmin = userRoles.some((r: string) => r.toLowerCase() === 'admin');
+  const isManager = userRoles.some((r: string) => r.toLowerCase() === 'manager');
   const canEditTimeEntries = isAdmin || isManager;
   
   // Task-specific time period controls
