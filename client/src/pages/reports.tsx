@@ -4350,7 +4350,7 @@ export default function Reports() {
                       min="0"
                       step="1"
                       className="w-20 text-center"
-                      value={editedDurations[entry.id] !== undefined ? editedDurations[entry.id] : Math.round(entry.duration / 60)}
+                      value={editedDurations[entry.id] !== undefined ? editedDurations[entry.id] : entry.duration}
                       onChange={(e) => setEditedDurations(prev => ({
                         ...prev,
                         [entry.id]: parseInt(e.target.value) || 0
@@ -4377,11 +4377,10 @@ export default function Reports() {
                   for (const entry of editingTimeEntry.entries) {
                     const editedMinutes = editedDurations[entry.id];
                     if (editedMinutes !== undefined) {
-                      const newDuration = editedMinutes * 60;
                       const response = await fetch(`/api/reports/time-entries/${entry.taskId}/${entry.id}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ duration: newDuration })
+                        body: JSON.stringify({ duration: editedMinutes })
                       });
                       if (!response.ok) {
                         throw new Error('Failed to update time entry');
