@@ -4730,6 +4730,73 @@ export const insertSurveyFolderSchema = createInsertSchema(surveyFolders).omit({
 export type SurveyFolder = typeof surveyFolders.$inferSelect;
 export type InsertSurveyFolder = z.infer<typeof insertSurveyFolderSchema>;
 
+// ===============================================
+// PX Meetings System (Team Meetings)
+// ===============================================
+
+// Meeting segment types
+export const PX_MEETING_SEGMENTS = [
+  'whats_working_kpis',
+  'sales_opportunities', 
+  'areas_of_opportunities',
+  'action_plan',
+  'action_items'
+] as const;
+
+export type PxMeetingSegmentType = typeof PX_MEETING_SEGMENTS[number];
+
+// Main PX meetings table
+export const pxMeetings = pgTable("px_meetings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  meetingDate: date("meeting_date").notNull(),
+  meetingTime: text("meeting_time").notNull(), // HH:mm format
+  duration: integer("duration").notNull(), // Duration in minutes
+  
+  // Selected segments (stored as array)
+  selectedSegments: text("selected_segments").array().notNull(),
+  
+  // Recording link (Fathom, Google Meet, etc.)
+  recordingLink: text("recording_link"),
+  
+  // Rich text notes
+  notes: text("notes"),
+  
+  // Segment content (stored as JSON for flexibility)
+  segmentContent: jsonb("segment_content").default({}),
+  
+  // Metadata
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// PX meeting attendees
+export const pxMeetingAttendees = pgTable("px_meeting_attendees", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  meetingId: varchar("meeting_id").notNull().references(() => pxMeetings.id, { onDelete: 'cascade' }),
+  userId: uuid("user_id").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_px_meeting_attendees_meeting").on(table.meetingId),
+  index("idx_px_meeting_attendees_user").on(table.userId),
+]);
+
+// PX Meetings schemas and types
+export const insertPxMeetingSchema = createInsertSchema(pxMeetings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type PxMeeting = typeof pxMeetings.$inferSelect;
+export type InsertPxMeeting = z.infer<typeof insertPxMeetingSchema>;
+
+export const insertPxMeetingAttendeeSchema = createInsertSchema(pxMeetingAttendees).omit({
+  id: true,
+  createdAt: true,
+});
+export type PxMeetingAttendee = typeof pxMeetingAttendees.$inferSelect;
+export type InsertPxMeetingAttendee = z.infer<typeof insertPxMeetingAttendeeSchema>;
+
 export const insertSurveySchema = createInsertSchema(surveys).omit({
   id: true,
   createdAt: true,
