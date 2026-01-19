@@ -4771,7 +4771,7 @@ export const pxMeetings = pgTable("px_meetings", {
 export const pxMeetingAttendees = pgTable("px_meeting_attendees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   meetingId: varchar("meeting_id").notNull().references(() => pxMeetings.id, { onDelete: 'cascade' }),
-  userId: uuid("user_id").notNull().references(() => staff.id),
+  userId: varchar("user_id").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_px_meeting_attendees_meeting").on(table.meetingId),
