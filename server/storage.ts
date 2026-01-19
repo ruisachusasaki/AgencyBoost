@@ -10666,19 +10666,17 @@ export class DbStorage implements IStorage {
     
     const meetingsWithAttendees = await Promise.all(
       meetings.map(async (meeting) => {
-        const attendeeRows = await db
-          .select({
-            id: staff.id,
-            firstName: staff.firstName,
-            lastName: staff.lastName,
-          })
-          .from(pxMeetingAttendees)
-          .innerJoin(staff, eq(pxMeetingAttendees.userId, staff.id))
-          .where(eq(pxMeetingAttendees.meetingId, meeting.id));
+        // Use raw SQL to handle varchar to uuid cast
+        const attendeeRows = await db.execute(sql`
+          SELECT s.id, s.first_name as "firstName", s.last_name as "lastName"
+          FROM px_meeting_attendees pma
+          INNER JOIN staff s ON pma.user_id::uuid = s.id
+          WHERE pma.meeting_id = ${meeting.id}
+        `);
         
         return {
           ...meeting,
-          attendees: attendeeRows.map(a => ({ 
+          attendees: (attendeeRows.rows as Array<{ id: string; firstName: string | null; lastName: string | null }>).map(a => ({ 
             id: a.id, 
             name: `${a.firstName || ''} ${a.lastName || ''}`.trim() || 'Unknown'
           })),
@@ -10693,19 +10691,17 @@ export class DbStorage implements IStorage {
     const [meeting] = await db.select().from(pxMeetings).where(eq(pxMeetings.id, id)).limit(1);
     if (!meeting) return undefined;
     
-    const attendeeRows = await db
-      .select({
-        id: staff.id,
-        firstName: staff.firstName,
-        lastName: staff.lastName,
-      })
-      .from(pxMeetingAttendees)
-      .innerJoin(staff, eq(pxMeetingAttendees.userId, staff.id))
-      .where(eq(pxMeetingAttendees.meetingId, id));
+    // Use raw SQL to handle varchar to uuid cast
+    const attendeeRows = await db.execute(sql`
+      SELECT s.id, s.first_name as "firstName", s.last_name as "lastName"
+      FROM px_meeting_attendees pma
+      INNER JOIN staff s ON pma.user_id::uuid = s.id
+      WHERE pma.meeting_id = ${id}
+    `);
     
     return {
       ...meeting,
-      attendees: attendeeRows.map(a => ({ 
+      attendees: (attendeeRows.rows as Array<{ id: string; firstName: string | null; lastName: string | null }>).map(a => ({ 
         id: a.id, 
         name: `${a.firstName || ''} ${a.lastName || ''}`.trim() || 'Unknown'
       })),
