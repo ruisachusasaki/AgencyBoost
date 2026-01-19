@@ -421,7 +421,7 @@ export default function Reports() {
   };
 
   const { data: healthScoresData, isLoading: healthScoresLoading } = useQuery<{
-    items: Array<ClientHealthScore & { clientName: string; clientEmail: string }>;
+    items: Array<ClientHealthScore & { clientName: string; clientEmail: string; clientCompany: string | null }>;
     total: number;
     page: number;
     limit: number;
@@ -1959,9 +1959,9 @@ export default function Reports() {
                         <TableCell>
                           <div>
                             <p className="font-medium text-slate-900" data-testid={`text-client-name-${index}`}>
-                              {score.clientName}
+                              {score.clientCompany || score.clientName}
                             </p>
-                            <p className="text-xs text-slate-500">{score.clientEmail}</p>
+                            <p className="text-xs text-slate-500">{score.clientName}</p>
                           </div>
                         </TableCell>
                         <TableCell>
