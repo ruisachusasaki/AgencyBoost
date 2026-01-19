@@ -4748,24 +4748,21 @@ export type PxMeetingSegmentType = typeof PX_MEETING_SEGMENTS[number];
 // Main PX meetings table
 export const pxMeetings = pgTable("px_meetings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
   meetingDate: date("meeting_date").notNull(),
   meetingTime: text("meeting_time").notNull(), // HH:mm format
-  duration: integer("duration").notNull(), // Duration in minutes
-  
-  // Selected segments (stored as array)
-  selectedSegments: text("selected_segments").array().notNull(),
-  
-  // Recording link (Fathom, Google Meet, etc.)
+  meetingDuration: integer("meeting_duration").notNull(), // Duration in minutes
   recordingLink: text("recording_link"),
   
-  // Rich text notes
-  notes: text("notes"),
-  
-  // Segment content (stored as JSON for flexibility)
-  segmentContent: jsonb("segment_content").default({}),
+  // Segment content fields
+  whatsWorkingKpis: text("whats_working_kpis"),
+  salesOpportunities: text("sales_opportunities"),
+  areasOfOpportunities: text("areas_of_opportunities"),
+  actionPlan: text("action_plan"),
+  actionItems: text("action_items"),
   
   // Metadata
-  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdById: uuid("created_by_id").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
