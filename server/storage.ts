@@ -99,7 +99,9 @@ import {
   type SurveyField, type InsertSurveyField, surveyFields,
   type SurveyLogicRule, type InsertSurveyLogicRule, surveyLogicRules,
   type SurveySubmission, type InsertSurveySubmission, surveySubmissions,
-  type SurveySubmissionAnswer, type InsertSurveySubmissionAnswer, surveySubmissionAnswers
+  type SurveySubmissionAnswer, type InsertSurveySubmissionAnswer, surveySubmissionAnswers,
+  type PxMeeting, type InsertPxMeeting, pxMeetings,
+  type PxMeetingAttendee, type InsertPxMeetingAttendee, pxMeetingAttendees
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
@@ -711,6 +713,13 @@ export interface IStorage {
   updateGoHighLevelIntegration(id: string, data: Partial<InsertGoHighLevelIntegration>): Promise<GoHighLevelIntegration | undefined>;
   deleteGoHighLevelIntegration(id: string): Promise<boolean>;
   incrementGoHighLevelLeadCount(id: string): Promise<void>;
+  
+  // PX Meetings
+  getPxMeetings(): Promise<Array<PxMeeting & { attendees: Array<{ id: string; name: string }> }>>;
+  getPxMeeting(id: string): Promise<(PxMeeting & { attendees: Array<{ id: string; name: string }> }) | undefined>;
+  createPxMeeting(data: InsertPxMeeting, attendeeIds: string[]): Promise<PxMeeting>;
+  updatePxMeeting(id: string, data: Partial<InsertPxMeeting>, attendeeIds?: string[]): Promise<PxMeeting | undefined>;
+  deletePxMeeting(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -10649,6 +10658,95 @@ export class DbStorage implements IStorage {
     ]);
 
     return { survey, slides, fields, logicRules };
+  }
+
+  // PX Meetings
+  async getPxMeetings(): Promise<Array<PxMeeting & { attendees: Array<{ id: string; name: string }> }>> {
+    const meetings = await db.select().from(pxMeetings).orderBy(desc(pxMeetings.meetingDate), desc(pxMeetings.meetingTime));
+    
+    const meetingsWithAttendees = await Promise.all(
+      meetings.map(async (meeting) => {
+        const attendeeRows = await db
+          .select({
+            id: staff.id,
+            name: staff.name,
+          })
+          .from(pxMeetingAttendees)
+          .innerJoin(staff, eq(pxMeetingAttendees.userId, staff.id))
+          .where(eq(pxMeetingAttendees.meetingId, meeting.id));
+        
+        return {
+          ...meeting,
+          attendees: attendeeRows.map(a => ({ id: a.id, name: a.name })),
+        };
+      })
+    );
+    
+    return meetingsWithAttendees;
+  }
+
+  async getPxMeeting(id: string): Promise<(PxMeeting & { attendees: Array<{ id: string; name: string }> }) | undefined> {
+    const [meeting] = await db.select().from(pxMeetings).where(eq(pxMeetings.id, id)).limit(1);
+    if (!meeting) return undefined;
+    
+    const attendeeRows = await db
+      .select({
+        id: staff.id,
+        name: staff.name,
+      })
+      .from(pxMeetingAttendees)
+      .innerJoin(staff, eq(pxMeetingAttendees.userId, staff.id))
+      .where(eq(pxMeetingAttendees.meetingId, id));
+    
+    return {
+      ...meeting,
+      attendees: attendeeRows.map(a => ({ id: a.id, name: a.name })),
+    };
+  }
+
+  async createPxMeeting(data: InsertPxMeeting, attendeeIds: string[]): Promise<PxMeeting> {
+    const [meeting] = await db.insert(pxMeetings).values(data).returning();
+    
+    if (attendeeIds.length > 0) {
+      await db.insert(pxMeetingAttendees).values(
+        attendeeIds.map(userId => ({
+          meetingId: meeting.id,
+          userId,
+        }))
+      );
+    }
+    
+    return meeting;
+  }
+
+  async updatePxMeeting(id: string, data: Partial<InsertPxMeeting>, attendeeIds?: string[]): Promise<PxMeeting | undefined> {
+    const [updated] = await db
+      .update(pxMeetings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(pxMeetings.id, id))
+      .returning();
+    
+    if (!updated) return undefined;
+    
+    if (attendeeIds !== undefined) {
+      await db.delete(pxMeetingAttendees).where(eq(pxMeetingAttendees.meetingId, id));
+      
+      if (attendeeIds.length > 0) {
+        await db.insert(pxMeetingAttendees).values(
+          attendeeIds.map(userId => ({
+            meetingId: id,
+            userId,
+          }))
+        );
+      }
+    }
+    
+    return updated;
+  }
+
+  async deletePxMeeting(id: string): Promise<boolean> {
+    const result = await db.delete(pxMeetings).where(eq(pxMeetings.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 }
 
