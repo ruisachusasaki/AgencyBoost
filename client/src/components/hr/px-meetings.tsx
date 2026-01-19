@@ -70,13 +70,6 @@ interface PxMeeting {
   attendees: Array<{ id: string; name: string }>;
 }
 
-const SEGMENT_LABELS = {
-  whatsWorkingKpis: { label: "What's Working / KPI's", icon: ChartBar, color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
-  salesOpportunities: { label: "Sales Opportunities", icon: TrendingUp, color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
-  areasOfOpportunities: { label: "Areas of Opportunities", icon: Lightbulb, color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
-  actionPlan: { label: "Action Plan", icon: Target, color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" },
-  actionItems: { label: "Action Items", icon: ListTodo, color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" },
-};
 
 interface PxMeetingsProps {
   meetingId?: string;
@@ -101,13 +94,20 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   });
   
   const [editFormData, setEditFormData] = useState({
-    whatsWorkingKpis: "",
-    salesOpportunities: "",
-    areasOfOpportunities: "",
-    actionPlan: "",
-    actionItems: "",
+    meetingDate: "",
+    meetingTime: "",
+    meetingDuration: 60,
     recordingLink: "",
+    whatsWorkingKpis: "",
+    actionPlan: "",
   });
+  
+  const [salesOpportunities, setSalesOpportunities] = useState<string[]>([]);
+  const [areasOfOpportunities, setAreasOfOpportunities] = useState<string[]>([]);
+  const [actionItems, setActionItems] = useState<string[]>([]);
+  const [newSalesOpp, setNewSalesOpp] = useState("");
+  const [newAreaOpp, setNewAreaOpp] = useState("");
+  const [newActionItem, setNewActionItem] = useState("");
   
   const [isAttendeesOpen, setIsAttendeesOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -126,16 +126,33 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     queryKey: ["/api/staff"],
   });
 
+  const parseJsonArray = (value: string | undefined): string[] => {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return value ? [value] : [];
+    }
+  };
+
   useEffect(() => {
     if (selectedMeeting) {
+      const meetingDateStr = typeof selectedMeeting.meetingDate === 'string' 
+        ? selectedMeeting.meetingDate 
+        : selectedMeeting.meetingDate?.toString?.() || '';
+      
       setEditFormData({
-        whatsWorkingKpis: selectedMeeting.whatsWorkingKpis || "",
-        salesOpportunities: selectedMeeting.salesOpportunities || "",
-        areasOfOpportunities: selectedMeeting.areasOfOpportunities || "",
-        actionPlan: selectedMeeting.actionPlan || "",
-        actionItems: selectedMeeting.actionItems || "",
+        meetingDate: meetingDateStr,
+        meetingTime: selectedMeeting.meetingTime || "",
+        meetingDuration: selectedMeeting.meetingDuration || 60,
         recordingLink: selectedMeeting.recordingLink || "",
+        whatsWorkingKpis: selectedMeeting.whatsWorkingKpis || "",
+        actionPlan: selectedMeeting.actionPlan || "",
       });
+      setSalesOpportunities(parseJsonArray(selectedMeeting.salesOpportunities));
+      setAreasOfOpportunities(parseJsonArray(selectedMeeting.areasOfOpportunities));
+      setActionItems(parseJsonArray(selectedMeeting.actionItems));
       setIsEditMode(false);
     }
   }, [selectedMeeting]);
@@ -221,8 +238,51 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     
     updateMutation.mutate({
       id: meetingId,
-      data: editFormData,
+      data: {
+        meetingDate: editFormData.meetingDate,
+        meetingTime: editFormData.meetingTime,
+        meetingDuration: editFormData.meetingDuration,
+        recordingLink: editFormData.recordingLink,
+        whatsWorkingKpis: editFormData.whatsWorkingKpis,
+        salesOpportunities: JSON.stringify(salesOpportunities),
+        areasOfOpportunities: JSON.stringify(areasOfOpportunities),
+        actionPlan: editFormData.actionPlan,
+        actionItems: JSON.stringify(actionItems),
+      },
     });
+  };
+
+  const handleAddSalesOpp = () => {
+    if (newSalesOpp.trim()) {
+      setSalesOpportunities([...salesOpportunities, newSalesOpp.trim()]);
+      setNewSalesOpp("");
+    }
+  };
+
+  const handleRemoveSalesOpp = (index: number) => {
+    setSalesOpportunities(salesOpportunities.filter((_, i) => i !== index));
+  };
+
+  const handleAddAreaOpp = () => {
+    if (newAreaOpp.trim()) {
+      setAreasOfOpportunities([...areasOfOpportunities, newAreaOpp.trim()]);
+      setNewAreaOpp("");
+    }
+  };
+
+  const handleRemoveAreaOpp = (index: number) => {
+    setAreasOfOpportunities(areasOfOpportunities.filter((_, i) => i !== index));
+  };
+
+  const handleAddActionItem = () => {
+    if (newActionItem.trim()) {
+      setActionItems([...actionItems, newActionItem.trim()]);
+      setNewActionItem("");
+    }
+  };
+
+  const handleRemoveActionItem = (index: number) => {
+    setActionItems(actionItems.filter((_, i) => i !== index));
   };
 
   const navigateToMeeting = (meeting: PxMeeting) => {
@@ -291,142 +351,296 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   }
 
   if (meetingId && selectedMeeting) {
-    const meetingDateStr = typeof selectedMeeting.meetingDate === 'string' 
-      ? selectedMeeting.meetingDate 
-      : selectedMeeting.meetingDate?.toString?.() || '';
-    
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={navigateToList}>
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back to Meetings
           </Button>
+          <div className="flex items-center gap-2">
+            {isEditMode && (
+              <Button onClick={handleUpdate} disabled={updateMutation.isPending} className="bg-primary hover:bg-primary/90">
+                {updateMutation.isPending ? "Saving..." : "Save Meeting"}
+              </Button>
+            )}
+            <Button
+              variant={isEditMode ? "outline" : "default"}
+              size="sm"
+              onClick={() => setIsEditMode(!isEditMode)}
+            >
+              <Edit className="h-4 w-4 mr-1" />
+              {isEditMode ? "Cancel" : "Edit"}
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Meeting</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this meeting? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteMutation.mutate(selectedMeeting.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
 
         <Card>
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl">{selectedMeeting.title}</CardTitle>
-                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <CalendarIcon className="h-4 w-4" />
-                    {meetingDateStr ? format(parseISO(meetingDateStr), "MMMM d, yyyy") : "No date"}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {selectedMeeting.meetingTime || "No time"}
-                  </span>
-                  <span>{selectedMeeting.meetingDuration || 0} min</span>
-                </div>
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Presentation className="h-6 w-6 text-primary" />
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={isEditMode ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setIsEditMode(!isEditMode)}
-                >
-                  <Edit className="h-4 w-4 mr-1" />
-                  {isEditMode ? "Cancel" : "Edit"}
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Meeting</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete this meeting? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => deleteMutation.mutate(selectedMeeting.id)}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+              <div>
+                <CardTitle>{selectedMeeting.title}</CardTitle>
+                {selectedMeeting.attendees.length > 0 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selectedMeeting.attendees.map(a => a.name).join(", ")}
+                  </p>
+                )}
               </div>
             </div>
           </CardHeader>
-
-          <CardContent>
-            <Separator className="mb-6" />
-
-            {selectedMeeting.attendees.length > 0 && (
-              <div className="mb-6">
-                <Label className="text-sm text-muted-foreground">Attendees</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedMeeting.attendees.map((attendee) => (
-                    <Badge key={attendee.id} variant="secondary">
-                      {attendee.name}
-                    </Badge>
-                  ))}
-                </div>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <Label htmlFor="meeting-date">Meeting Date</Label>
+                <Input
+                  id="meeting-date"
+                  type="date"
+                  value={editFormData.meetingDate}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, meetingDate: e.target.value }))}
+                  disabled={!isEditMode}
+                />
               </div>
-            )}
-
-            {selectedMeeting.recordingLink && (
-              <div className="mb-6">
-                <Label className="text-sm text-muted-foreground">Recording Link</Label>
-                <a 
-                  href={selectedMeeting.recordingLink} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline block mt-1"
+              <div>
+                <Label htmlFor="meeting-time">Time</Label>
+                <Input
+                  id="meeting-time"
+                  type="time"
+                  value={editFormData.meetingTime}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, meetingTime: e.target.value }))}
+                  disabled={!isEditMode}
+                />
+              </div>
+              <div>
+                <Label htmlFor="meeting-duration">Duration</Label>
+                <Select
+                  value={editFormData.meetingDuration.toString()}
+                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, meetingDuration: parseInt(value) }))}
+                  disabled={!isEditMode}
                 >
-                  {selectedMeeting.recordingLink}
-                </a>
+                  <SelectTrigger id="meeting-duration">
+                    <SelectValue placeholder="Duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 min</SelectItem>
+                    <SelectItem value="30">30 min</SelectItem>
+                    <SelectItem value="45">45 min</SelectItem>
+                    <SelectItem value="60">1 hour</SelectItem>
+                    <SelectItem value="90">1.5 hours</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-
-            <div className="space-y-6">
-              {Object.entries(SEGMENT_LABELS).map(([key, { label, icon: Icon, color }]) => (
-                <div key={key} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Badge className={cn("font-normal", color)}>
-                      <Icon className="h-3.5 w-3.5 mr-1" />
-                      {label}
-                    </Badge>
-                  </div>
-                  {isEditMode ? (
-                    <Textarea
-                      value={editFormData[key as keyof typeof editFormData]}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, [key]: e.target.value }))}
-                      placeholder={`Enter ${label.toLowerCase()}...`}
-                      className="min-h-[100px]"
-                    />
-                  ) : (
-                    <div className="p-3 bg-muted/50 rounded-md min-h-[60px]">
-                      {(selectedMeeting as any)[key] ? (
-                        <p className="whitespace-pre-wrap">{(selectedMeeting as any)[key]}</p>
-                      ) : (
-                        <p className="text-muted-foreground italic">No content yet</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+              <div>
+                <Label htmlFor="recording-link">Recording Link</Label>
+                <Input
+                  id="recording-link"
+                  type="url"
+                  placeholder="https://..."
+                  value={editFormData.recordingLink}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, recordingLink: e.target.value }))}
+                  disabled={!isEditMode}
+                />
+              </div>
             </div>
 
-            {isEditMode && (
-              <div className="flex justify-end gap-2 mt-6">
-                <Button variant="outline" onClick={() => setIsEditMode(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
-                </Button>
+            <Separator />
+
+            <div>
+              <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                <ChartBar className="h-4 w-4 text-green-500" />
+                What's Working / KPI's
+              </Label>
+              <Textarea
+                value={editFormData.whatsWorkingKpis}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, whatsWorkingKpis: e.target.value }))}
+                placeholder="Enter what's working and KPI highlights..."
+                className="min-h-[100px]"
+                disabled={!isEditMode}
+              />
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-blue-500" />
+                Sales Opportunities
+              </Label>
+              <div className="space-y-2">
+                {salesOpportunities.map((opp, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                    <span className="flex-1">{opp}</span>
+                    {isEditMode && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveSalesOpp(index)}
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {isEditMode && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add a sales opportunity..."
+                      value={newSalesOpp}
+                      onChange={(e) => setNewSalesOpp(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddSalesOpp();
+                        }
+                      }}
+                    />
+                    <Button size="sm" onClick={handleAddSalesOpp}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                {!isEditMode && salesOpportunities.length === 0 && (
+                  <p className="text-muted-foreground italic text-sm">No sales opportunities yet</p>
+                )}
               </div>
-            )}
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-yellow-500" />
+                Areas of Opportunities
+              </Label>
+              <div className="space-y-2">
+                {areasOfOpportunities.map((opp, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                    <span className="flex-1">{opp}</span>
+                    {isEditMode && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveAreaOpp(index)}
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {isEditMode && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add an area of opportunity..."
+                      value={newAreaOpp}
+                      onChange={(e) => setNewAreaOpp(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddAreaOpp();
+                        }
+                      }}
+                    />
+                    <Button size="sm" onClick={handleAddAreaOpp}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                {!isEditMode && areasOfOpportunities.length === 0 && (
+                  <p className="text-muted-foreground italic text-sm">No areas of opportunities yet</p>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                <Target className="h-4 w-4 text-purple-500" />
+                Action Plan
+              </Label>
+              <Textarea
+                value={editFormData.actionPlan}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, actionPlan: e.target.value }))}
+                placeholder="Enter the action plan..."
+                className="min-h-[100px]"
+                disabled={!isEditMode}
+              />
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                <ListTodo className="h-4 w-4 text-orange-500" />
+                Action Items
+              </Label>
+              <div className="space-y-2">
+                {actionItems.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
+                    <span className="flex-1">{item}</span>
+                    {isEditMode && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveActionItem(index)}
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {isEditMode && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add an action item..."
+                      value={newActionItem}
+                      onChange={(e) => setNewActionItem(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddActionItem();
+                        }
+                      }}
+                    />
+                    <Button size="sm" onClick={handleAddActionItem}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                {!isEditMode && actionItems.length === 0 && (
+                  <p className="text-muted-foreground italic text-sm">No action items yet</p>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
