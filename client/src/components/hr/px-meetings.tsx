@@ -489,7 +489,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <div className="flex -space-x-2">
                       {meeting.attendees.slice(0, 3).map((attendee, idx) => (
                         <Avatar key={attendee.id} className="h-8 w-8 border-2 border-background">
@@ -504,6 +504,38 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                         </div>
                       )}
                     </div>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Meeting</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{meeting.title}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteMutation.mutate(meeting.id);
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </div>
                 </div>
