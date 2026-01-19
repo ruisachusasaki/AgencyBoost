@@ -4754,12 +4754,21 @@ export const pxMeetings = pgTable("px_meetings", {
   meetingDuration: integer("meeting_duration").notNull(), // Duration in minutes
   recordingLink: text("recording_link"),
   
+  // Client relation
+  clientId: varchar("client_id").references(() => clients.id),
+  
+  // Tags for filtering (stored as JSON array)
+  tags: text("tags").array(),
+  
   // Segment content fields
   whatsWorkingKpis: text("whats_working_kpis"),
   salesOpportunities: text("sales_opportunities"),
   areasOfOpportunities: text("areas_of_opportunities"),
   actionPlan: text("action_plan"),
   actionItems: text("action_items"),
+  
+  // Notes field
+  notes: text("notes"),
   
   // Metadata
   createdById: uuid("created_by_id").notNull().references(() => staff.id),

@@ -38,7 +38,9 @@ import {
   Target,
   ListTodo,
   ChartBar,
-  Edit
+  StickyNote,
+  Tag,
+  Building2
 } from "lucide-react";
 
 interface Staff {
@@ -52,6 +54,11 @@ interface Staff {
   department?: string;
 }
 
+interface Client {
+  id: string;
+  name: string;
+}
+
 interface PxMeeting {
   id: string;
   title: string;
@@ -59,11 +66,14 @@ interface PxMeeting {
   meetingTime: string;
   meetingDuration: number;
   recordingLink?: string;
+  clientId?: string;
+  tags?: string[];
   whatsWorkingKpis?: string;
   salesOpportunities?: string;
   areasOfOpportunities?: string;
   actionPlan?: string;
   actionItems?: string;
+  notes?: string;
   createdById?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -81,8 +91,9 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const { toast } = useToast();
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [tagFilter, setTagFilter] = useState<string>("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -98,9 +109,14 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     meetingTime: "",
     meetingDuration: 60,
     recordingLink: "",
+    clientId: "" as string,
+    tags: [] as string[],
     whatsWorkingKpis: "",
     actionPlan: "",
+    notes: "",
   });
+  
+  const [newTag, setNewTag] = useState("");
   
   const [salesOpportunities, setSalesOpportunities] = useState<string[]>([]);
   const [areasOfOpportunities, setAreasOfOpportunities] = useState<string[]>([]);
@@ -125,6 +141,12 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const { data: allStaff = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
   });
+  
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ["/api/clients"],
+  });
+  
+  const allTags = [...new Set((meetings || []).flatMap(m => m.tags || []))];
 
   const parseJsonArray = (value: string | undefined): string[] => {
     if (!value) return [];
@@ -147,13 +169,16 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         meetingTime: selectedMeeting.meetingTime || "",
         meetingDuration: selectedMeeting.meetingDuration || 60,
         recordingLink: selectedMeeting.recordingLink || "",
+        clientId: selectedMeeting.clientId || "",
+        tags: selectedMeeting.tags || [],
         whatsWorkingKpis: selectedMeeting.whatsWorkingKpis || "",
         actionPlan: selectedMeeting.actionPlan || "",
+        notes: selectedMeeting.notes || "",
       });
       setSalesOpportunities(parseJsonArray(selectedMeeting.salesOpportunities));
       setAreasOfOpportunities(parseJsonArray(selectedMeeting.areasOfOpportunities));
       setActionItems(parseJsonArray(selectedMeeting.actionItems));
-      setIsEditMode(false);
+      setHasUnsavedChanges(false);
     }
   }, [selectedMeeting]);
 
@@ -181,11 +206,11 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       if (meetingId) {
         queryClient.invalidateQueries({ queryKey: [`/api/px-meetings/${meetingId}`] });
       }
-      setIsEditMode(false);
-      toast({ title: "Meeting updated successfully" });
+      setHasUnsavedChanges(false);
+      toast({ title: "Meeting saved successfully" });
     },
     onError: (error: any) => {
-      toast({ title: "Failed to update meeting", description: error.message, variant: "destructive" });
+      toast({ title: "Failed to save meeting", description: error.message, variant: "destructive" });
     },
   });
 
@@ -243,46 +268,71 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         meetingTime: editFormData.meetingTime,
         meetingDuration: editFormData.meetingDuration,
         recordingLink: editFormData.recordingLink,
+        clientId: editFormData.clientId || null,
+        tags: editFormData.tags,
         whatsWorkingKpis: editFormData.whatsWorkingKpis,
         salesOpportunities: JSON.stringify(salesOpportunities),
         areasOfOpportunities: JSON.stringify(areasOfOpportunities),
         actionPlan: editFormData.actionPlan,
         actionItems: JSON.stringify(actionItems),
+        notes: editFormData.notes,
       },
     });
+  };
+
+  const handleFormChange = (updates: Partial<typeof editFormData>) => {
+    setEditFormData(prev => ({ ...prev, ...updates }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleAddTag = () => {
+    if (newTag.trim() && !editFormData.tags.includes(newTag.trim())) {
+      handleFormChange({ tags: [...editFormData.tags, newTag.trim()] });
+      setNewTag("");
+    }
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    handleFormChange({ tags: editFormData.tags.filter(t => t !== tag) });
   };
 
   const handleAddSalesOpp = () => {
     if (newSalesOpp.trim()) {
       setSalesOpportunities([...salesOpportunities, newSalesOpp.trim()]);
+      setHasUnsavedChanges(true);
       setNewSalesOpp("");
     }
   };
 
   const handleRemoveSalesOpp = (index: number) => {
     setSalesOpportunities(salesOpportunities.filter((_, i) => i !== index));
+    setHasUnsavedChanges(true);
   };
 
   const handleAddAreaOpp = () => {
     if (newAreaOpp.trim()) {
       setAreasOfOpportunities([...areasOfOpportunities, newAreaOpp.trim()]);
+      setHasUnsavedChanges(true);
       setNewAreaOpp("");
     }
   };
 
   const handleRemoveAreaOpp = (index: number) => {
     setAreasOfOpportunities(areasOfOpportunities.filter((_, i) => i !== index));
+    setHasUnsavedChanges(true);
   };
 
   const handleAddActionItem = () => {
     if (newActionItem.trim()) {
       setActionItems([...actionItems, newActionItem.trim()]);
+      setHasUnsavedChanges(true);
       setNewActionItem("");
     }
   };
 
   const handleRemoveActionItem = (index: number) => {
     setActionItems(actionItems.filter((_, i) => i !== index));
+    setHasUnsavedChanges(true);
   };
 
   const navigateToMeeting = (meeting: PxMeeting) => {
@@ -302,10 +352,12 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     }));
   };
 
-  const filteredMeetings = meetings.filter(meeting =>
-    meeting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    meeting.attendees.some(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredMeetings = meetings.filter(meeting => {
+    const matchesSearch = meeting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      meeting.attendees.some(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesTag = !tagFilter || (meeting.tags && meeting.tags.includes(tagFilter));
+    return matchesSearch && matchesTag;
+  });
 
   if (isLoading || (meetingId && isLoadingMeeting)) {
     return (
@@ -351,6 +403,9 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   }
 
   if (meetingId && selectedMeeting) {
+    const selectedClient = clients.find(c => c.id === editFormData.clientId);
+    const meetingDateValue = editFormData.meetingDate ? parseISO(editFormData.meetingDate) : new Date();
+    
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -359,19 +414,11 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             Back to Meetings
           </Button>
           <div className="flex items-center gap-2">
-            {isEditMode && (
+            {hasUnsavedChanges && (
               <Button onClick={handleUpdate} disabled={updateMutation.isPending} className="bg-primary hover:bg-primary/90">
                 {updateMutation.isPending ? "Saving..." : "Save Meeting"}
               </Button>
             )}
-            <Button
-              variant={isEditMode ? "outline" : "default"}
-              size="sm"
-              onClick={() => setIsEditMode(!isEditMode)}
-            >
-              <Edit className="h-4 w-4 mr-1" />
-              {isEditMode ? "Cancel" : "Edit"}
-            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm">
@@ -405,7 +452,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Presentation className="h-6 w-6 text-primary" />
               </div>
-              <div>
+              <div className="flex-1">
                 <CardTitle>{selectedMeeting.title}</CardTitle>
                 {selectedMeeting.attendees.length > 0 && (
                   <p className="text-sm text-muted-foreground mt-1">
@@ -413,19 +460,43 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   </p>
                 )}
               </div>
+              {hasUnsavedChanges && (
+                <Badge variant="outline" className="text-amber-600 border-amber-300">
+                  Unsaved changes
+                </Badge>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <Label htmlFor="meeting-date">Meeting Date</Label>
-                <Input
-                  id="meeting-date"
-                  type="date"
-                  value={editFormData.meetingDate}
-                  onChange={(e) => setEditFormData(prev => ({ ...prev, meetingDate: e.target.value }))}
-                  disabled={!isEditMode}
-                />
+                <Label>Meeting Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !editFormData.meetingDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {editFormData.meetingDate ? format(meetingDateValue, "PPP") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={meetingDateValue}
+                      onSelect={(date) => {
+                        if (date) {
+                          handleFormChange({ meetingDate: format(date, "yyyy-MM-dd") });
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div>
                 <Label htmlFor="meeting-time">Time</Label>
@@ -433,16 +504,14 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   id="meeting-time"
                   type="time"
                   value={editFormData.meetingTime}
-                  onChange={(e) => setEditFormData(prev => ({ ...prev, meetingTime: e.target.value }))}
-                  disabled={!isEditMode}
+                  onChange={(e) => handleFormChange({ meetingTime: e.target.value })}
                 />
               </div>
               <div>
                 <Label htmlFor="meeting-duration">Duration</Label>
                 <Select
                   value={editFormData.meetingDuration.toString()}
-                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, meetingDuration: parseInt(value) }))}
-                  disabled={!isEditMode}
+                  onValueChange={(value) => handleFormChange({ meetingDuration: parseInt(value) })}
                 >
                   <SelectTrigger id="meeting-duration">
                     <SelectValue placeholder="Duration" />
@@ -463,9 +532,86 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   type="url"
                   placeholder="https://..."
                   value={editFormData.recordingLink}
-                  onChange={(e) => setEditFormData(prev => ({ ...prev, recordingLink: e.target.value }))}
-                  disabled={!isEditMode}
+                  onChange={(e) => handleFormChange({ recordingLink: e.target.value })}
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Related Client</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between"
+                    >
+                      {selectedClient ? selectedClient.name : "Select client..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search clients..." />
+                      <CommandList>
+                        <CommandEmpty>No client found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value=""
+                            onSelect={() => handleFormChange({ clientId: "" })}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", !editFormData.clientId ? "opacity-100" : "opacity-0")} />
+                            None
+                          </CommandItem>
+                          {clients.map((client) => (
+                            <CommandItem
+                              key={client.id}
+                              value={client.name}
+                              onSelect={() => handleFormChange({ clientId: client.id })}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", editFormData.clientId === client.id ? "opacity-100" : "opacity-0")} />
+                              {client.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label>Tags</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {editFormData.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="gap-1">
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add tag..."
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddTag();
+                      }
+                    }}
+                  />
+                  <Button size="sm" onClick={handleAddTag} variant="outline">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -478,10 +624,9 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
               </Label>
               <Textarea
                 value={editFormData.whatsWorkingKpis}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, whatsWorkingKpis: e.target.value }))}
+                onChange={(e) => handleFormChange({ whatsWorkingKpis: e.target.value })}
                 placeholder="Enter what's working and KPI highlights..."
                 className="min-h-[100px]"
-                disabled={!isEditMode}
               />
             </div>
 
@@ -496,39 +641,32 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 {salesOpportunities.map((opp, index) => (
                   <div key={index} className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
                     <span className="flex-1">{opp}</span>
-                    {isEditMode && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveSalesOpp(index)}
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                {isEditMode && (
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Add a sales opportunity..."
-                      value={newSalesOpp}
-                      onChange={(e) => setNewSalesOpp(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddSalesOpp();
-                        }
-                      }}
-                    />
-                    <Button size="sm" onClick={handleAddSalesOpp}>
-                      <Plus className="h-4 w-4" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveSalesOpp(index)}
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
                     </Button>
                   </div>
-                )}
-                {!isEditMode && salesOpportunities.length === 0 && (
-                  <p className="text-muted-foreground italic text-sm">No sales opportunities yet</p>
-                )}
+                ))}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add a sales opportunity..."
+                    value={newSalesOpp}
+                    onChange={(e) => setNewSalesOpp(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSalesOpp();
+                      }
+                    }}
+                  />
+                  <Button size="sm" onClick={handleAddSalesOpp}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -543,39 +681,32 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 {areasOfOpportunities.map((opp, index) => (
                   <div key={index} className="flex items-center justify-between p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
                     <span className="flex-1">{opp}</span>
-                    {isEditMode && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveAreaOpp(index)}
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                {isEditMode && (
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Add an area of opportunity..."
-                      value={newAreaOpp}
-                      onChange={(e) => setNewAreaOpp(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddAreaOpp();
-                        }
-                      }}
-                    />
-                    <Button size="sm" onClick={handleAddAreaOpp}>
-                      <Plus className="h-4 w-4" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveAreaOpp(index)}
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
                     </Button>
                   </div>
-                )}
-                {!isEditMode && areasOfOpportunities.length === 0 && (
-                  <p className="text-muted-foreground italic text-sm">No areas of opportunities yet</p>
-                )}
+                ))}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add an area of opportunity..."
+                    value={newAreaOpp}
+                    onChange={(e) => setNewAreaOpp(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddAreaOpp();
+                      }
+                    }}
+                  />
+                  <Button size="sm" onClick={handleAddAreaOpp}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -588,10 +719,9 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
               </Label>
               <Textarea
                 value={editFormData.actionPlan}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, actionPlan: e.target.value }))}
+                onChange={(e) => handleFormChange({ actionPlan: e.target.value })}
                 placeholder="Enter the action plan..."
                 className="min-h-[100px]"
-                disabled={!isEditMode}
               />
             </div>
 
@@ -606,40 +736,48 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 {actionItems.map((item, index) => (
                   <div key={index} className="flex items-center justify-between p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
                     <span className="flex-1">{item}</span>
-                    {isEditMode && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveActionItem(index)}
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                {isEditMode && (
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Add an action item..."
-                      value={newActionItem}
-                      onChange={(e) => setNewActionItem(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddActionItem();
-                        }
-                      }}
-                    />
-                    <Button size="sm" onClick={handleAddActionItem}>
-                      <Plus className="h-4 w-4" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveActionItem(index)}
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
                     </Button>
                   </div>
-                )}
-                {!isEditMode && actionItems.length === 0 && (
-                  <p className="text-muted-foreground italic text-sm">No action items yet</p>
-                )}
+                ))}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add an action item..."
+                    value={newActionItem}
+                    onChange={(e) => setNewActionItem(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddActionItem();
+                      }
+                    }}
+                  />
+                  <Button size="sm" onClick={handleAddActionItem}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                <StickyNote className="h-4 w-4 text-gray-500" />
+                Notes
+              </Label>
+              <Textarea
+                value={editFormData.notes}
+                onChange={(e) => handleFormChange({ notes: e.target.value })}
+                placeholder="Add meeting notes..."
+                className="min-h-[150px]"
+              />
             </div>
           </CardContent>
         </Card>
@@ -661,8 +799,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <div className="relative">
+          <div className="mb-4 flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search meetings..."
@@ -671,6 +809,20 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 className="pl-10"
               />
             </div>
+            {allTags.length > 0 && (
+              <Select value={tagFilter} onValueChange={setTagFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <Tag className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter by tag" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All tags</SelectItem>
+                  {allTags.map(tag => (
+                    <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {filteredMeetings.length === 0 ? (
@@ -692,7 +844,23 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                       <Presentation className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-medium">{meeting.title}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium">{meeting.title}</h4>
+                        {meeting.tags && meeting.tags.length > 0 && (
+                          <div className="flex gap-1">
+                            {meeting.tags.slice(0, 2).map(tag => (
+                              <Badge key={tag} variant="secondary" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                            {meeting.tags.length > 2 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{meeting.tags.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <CalendarIcon className="h-3.5 w-3.5" />
