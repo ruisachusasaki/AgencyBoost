@@ -539,8 +539,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              <div className="space-y-2">
                 <Label>Related Client</Label>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -582,22 +582,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   </PopoverContent>
                 </Popover>
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label>Tags</Label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {editFormData.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="gap-1">
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTag(tag)}
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
                 <div className="flex gap-2">
                   <Input
                     placeholder="Add tag..."
@@ -614,6 +600,22 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
+                {editFormData.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {editFormData.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="gap-1">
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
