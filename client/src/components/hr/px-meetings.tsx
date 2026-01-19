@@ -117,7 +117,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   });
 
   const { data: selectedMeeting, isLoading: isLoadingMeeting, isError: isMeetingError } = useQuery<PxMeeting>({
-    queryKey: ["/api/px-meetings", meetingId],
+    queryKey: [`/api/px-meetings/${meetingId}`],
     enabled: !!meetingId,
     retry: 1,
   });
@@ -161,7 +161,9 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/px-meetings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/px-meetings", meetingId] });
+      if (meetingId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/px-meetings/${meetingId}`] });
+      }
       setIsEditMode(false);
       toast({ title: "Meeting updated successfully" });
     },
@@ -174,10 +176,12 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     mutationFn: async (id: string) => {
       return await apiRequest("DELETE", `/api/px-meetings/${id}`);
     },
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ["/api/px-meetings", meetingId] });
+    onSuccess: (_, deletedId) => {
+      queryClient.removeQueries({ queryKey: [`/api/px-meetings/${deletedId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/px-meetings"] });
-      setLocation("/hr/px-meetings");
+      if (meetingId) {
+        setLocation("/hr/px-meetings");
+      }
       toast({ title: "Meeting deleted successfully" });
     },
     onError: (error: any) => {
@@ -287,6 +291,10 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   }
 
   if (meetingId && selectedMeeting) {
+    const meetingDateStr = typeof selectedMeeting.meetingDate === 'string' 
+      ? selectedMeeting.meetingDate 
+      : selectedMeeting.meetingDate?.toString?.() || '';
+    
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -304,13 +312,13 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <CalendarIcon className="h-4 w-4" />
-                    {format(parseISO(selectedMeeting.meetingDate), "MMMM d, yyyy")}
+                    {meetingDateStr ? format(parseISO(meetingDateStr), "MMMM d, yyyy") : "No date"}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {selectedMeeting.meetingTime}
+                    {selectedMeeting.meetingTime || "No time"}
                   </span>
-                  <span>{selectedMeeting.meetingDuration} min</span>
+                  <span>{selectedMeeting.meetingDuration || 0} min</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
