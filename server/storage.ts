@@ -138,7 +138,7 @@ export interface IStorage {
     sort?: string;
     sortOrder?: string;
   }): Promise<{
-    items: Array<ClientHealthScore & { clientName: string; clientEmail: string }>;
+    items: Array<ClientHealthScore & { clientName: string; clientEmail: string; clientCompany: string | null }>;
     total: number;
     page: number;
     limit: number;
@@ -5002,7 +5002,8 @@ export class DbStorage implements IStorage {
         createdAt: clientHealthScores.createdAt,
         updatedAt: clientHealthScores.updatedAt,
         clientName: clients.name,
-        clientEmail: clients.email
+        clientEmail: clients.email,
+        clientCompany: clients.company
       })
       .from(clientHealthScores)
       .innerJoin(clients, eq(clientHealthScores.clientId, clients.id));
