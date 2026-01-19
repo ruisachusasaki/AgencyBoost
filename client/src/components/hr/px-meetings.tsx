@@ -93,6 +93,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [tagFilter, setTagFilter] = useState<string>("__all__");
+  const [clientFilter, setClientFilter] = useState<string>("__all__");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -391,7 +392,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     const matchesSearch = meeting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       meeting.attendees.some(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesTag = tagFilter === "__all__" || (meeting.tags && meeting.tags.includes(tagFilter));
-    return matchesSearch && matchesTag;
+    const matchesClient = clientFilter === "__all__" || meeting.clientId === clientFilter;
+    return matchesSearch && matchesTag && matchesClient;
   });
 
   if (isLoading || (meetingId && isLoadingMeeting)) {
@@ -870,6 +872,20 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 className="pl-10"
               />
             </div>
+            {clients.length > 0 && (
+              <Select value={clientFilter} onValueChange={setClientFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <Users className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter by client" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All clients</SelectItem>
+                  {clients.map(client => (
+                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {allTags.length > 0 && (
               <Select value={tagFilter} onValueChange={setTagFilter}>
                 <SelectTrigger className="w-[200px]">
