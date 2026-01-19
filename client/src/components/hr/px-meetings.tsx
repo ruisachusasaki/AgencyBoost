@@ -118,9 +118,15 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   
   const [newTag, setNewTag] = useState("");
   
-  const [salesOpportunities, setSalesOpportunities] = useState<string[]>([]);
-  const [areasOfOpportunities, setAreasOfOpportunities] = useState<string[]>([]);
-  const [actionItems, setActionItems] = useState<string[]>([]);
+  interface CheckableItem {
+    id: string;
+    content: string;
+    isCompleted: boolean;
+  }
+  
+  const [salesOpportunities, setSalesOpportunities] = useState<CheckableItem[]>([]);
+  const [areasOfOpportunities, setAreasOfOpportunities] = useState<CheckableItem[]>([]);
+  const [actionItems, setActionItems] = useState<CheckableItem[]>([]);
   const [newSalesOpp, setNewSalesOpp] = useState("");
   const [newAreaOpp, setNewAreaOpp] = useState("");
   const [newActionItem, setNewActionItem] = useState("");
@@ -150,13 +156,19 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   
   const allTags = [...new Set((meetings || []).flatMap(m => m.tags || []))];
 
-  const parseJsonArray = (value: string | undefined): string[] => {
+  const parseJsonArray = (value: string | undefined): CheckableItem[] => {
     if (!value) return [];
     try {
       const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((item: any, index: number) => {
+        if (typeof item === 'string') {
+          return { id: `item-${index}-${Date.now()}`, content: item, isCompleted: false };
+        }
+        return { id: item.id || `item-${index}-${Date.now()}`, content: item.content || '', isCompleted: item.isCompleted || false };
+      });
     } catch {
-      return value ? [value] : [];
+      return value ? [{ id: `item-0-${Date.now()}`, content: value, isCompleted: false }] : [];
     }
   };
 
@@ -300,40 +312,61 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
   const handleAddSalesOpp = () => {
     if (newSalesOpp.trim()) {
-      setSalesOpportunities([...salesOpportunities, newSalesOpp.trim()]);
+      setSalesOpportunities([...salesOpportunities, { id: `sales-${Date.now()}`, content: newSalesOpp.trim(), isCompleted: false }]);
       setHasUnsavedChanges(true);
       setNewSalesOpp("");
     }
   };
 
-  const handleRemoveSalesOpp = (index: number) => {
-    setSalesOpportunities(salesOpportunities.filter((_, i) => i !== index));
+  const handleRemoveSalesOpp = (id: string) => {
+    setSalesOpportunities(salesOpportunities.filter(item => item.id !== id));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleToggleSalesOpp = (id: string) => {
+    setSalesOpportunities(salesOpportunities.map(item => 
+      item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
+    ));
     setHasUnsavedChanges(true);
   };
 
   const handleAddAreaOpp = () => {
     if (newAreaOpp.trim()) {
-      setAreasOfOpportunities([...areasOfOpportunities, newAreaOpp.trim()]);
+      setAreasOfOpportunities([...areasOfOpportunities, { id: `area-${Date.now()}`, content: newAreaOpp.trim(), isCompleted: false }]);
       setHasUnsavedChanges(true);
       setNewAreaOpp("");
     }
   };
 
-  const handleRemoveAreaOpp = (index: number) => {
-    setAreasOfOpportunities(areasOfOpportunities.filter((_, i) => i !== index));
+  const handleRemoveAreaOpp = (id: string) => {
+    setAreasOfOpportunities(areasOfOpportunities.filter(item => item.id !== id));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleToggleAreaOpp = (id: string) => {
+    setAreasOfOpportunities(areasOfOpportunities.map(item => 
+      item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
+    ));
     setHasUnsavedChanges(true);
   };
 
   const handleAddActionItem = () => {
     if (newActionItem.trim()) {
-      setActionItems([...actionItems, newActionItem.trim()]);
+      setActionItems([...actionItems, { id: `action-${Date.now()}`, content: newActionItem.trim(), isCompleted: false }]);
       setHasUnsavedChanges(true);
       setNewActionItem("");
     }
   };
 
-  const handleRemoveActionItem = (index: number) => {
-    setActionItems(actionItems.filter((_, i) => i !== index));
+  const handleRemoveActionItem = (id: string) => {
+    setActionItems(actionItems.filter(item => item.id !== id));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleToggleActionItem = (id: string) => {
+    setActionItems(actionItems.map(item => 
+      item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
+    ));
     setHasUnsavedChanges(true);
   };
 
@@ -642,13 +675,21 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 Sales Opportunities
               </Label>
               <div className="space-y-2">
-                {salesOpportunities.map((opp, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                    <span className="flex-1">{opp}</span>
+                {salesOpportunities.map((opp) => (
+                  <div key={opp.id} className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                    <input
+                      type="checkbox"
+                      checked={opp.isCompleted}
+                      onChange={() => handleToggleSalesOpp(opp.id)}
+                      className="h-4 w-4 rounded-full cursor-pointer accent-primary"
+                    />
+                    <span className={`flex-1 ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                      {opp.content}
+                    </span>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleRemoveSalesOpp(index)}
+                      onClick={() => handleRemoveSalesOpp(opp.id)}
                       className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                     >
                       <X className="h-4 w-4" />
@@ -682,13 +723,21 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 Areas of Opportunities
               </Label>
               <div className="space-y-2">
-                {areasOfOpportunities.map((opp, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
-                    <span className="flex-1">{opp}</span>
+                {areasOfOpportunities.map((opp) => (
+                  <div key={opp.id} className="flex items-center gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                    <input
+                      type="checkbox"
+                      checked={opp.isCompleted}
+                      onChange={() => handleToggleAreaOpp(opp.id)}
+                      className="h-4 w-4 rounded-full cursor-pointer accent-primary"
+                    />
+                    <span className={`flex-1 ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                      {opp.content}
+                    </span>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleRemoveAreaOpp(index)}
+                      onClick={() => handleRemoveAreaOpp(opp.id)}
                       className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                     >
                       <X className="h-4 w-4" />
@@ -737,13 +786,21 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 Action Items
               </Label>
               <div className="space-y-2">
-                {actionItems.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
-                    <span className="flex-1">{item}</span>
+                {actionItems.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2 p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
+                    <input
+                      type="checkbox"
+                      checked={item.isCompleted}
+                      onChange={() => handleToggleActionItem(item.id)}
+                      className="h-4 w-4 rounded-full cursor-pointer accent-primary"
+                    />
+                    <span className={`flex-1 ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                      {item.content}
+                    </span>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleRemoveActionItem(index)}
+                      onClick={() => handleRemoveActionItem(item.id)}
                       className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                     >
                       <X className="h-4 w-4" />
