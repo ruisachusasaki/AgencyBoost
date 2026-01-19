@@ -92,7 +92,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [tagFilter, setTagFilter] = useState<string>("");
+  const [tagFilter, setTagFilter] = useState<string>("__all__");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -390,7 +390,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const filteredMeetings = meetings.filter(meeting => {
     const matchesSearch = meeting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       meeting.attendees.some(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesTag = !tagFilter || (meeting.tags && meeting.tags.includes(tagFilter));
+    const matchesTag = tagFilter === "__all__" || (meeting.tags && meeting.tags.includes(tagFilter));
     return matchesSearch && matchesTag;
   });
 
@@ -877,7 +877,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   <SelectValue placeholder="Filter by tag" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All tags</SelectItem>
+                  <SelectItem value="__all__">All tags</SelectItem>
                   {allTags.map(tag => (
                     <SelectItem key={tag} value={tag}>{tag}</SelectItem>
                   ))}
