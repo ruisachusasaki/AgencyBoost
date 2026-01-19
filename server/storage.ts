@@ -10669,7 +10669,8 @@ export class DbStorage implements IStorage {
         const attendeeRows = await db
           .select({
             id: staff.id,
-            name: staff.name,
+            firstName: staff.firstName,
+            lastName: staff.lastName,
           })
           .from(pxMeetingAttendees)
           .innerJoin(staff, eq(pxMeetingAttendees.userId, staff.id))
@@ -10677,7 +10678,10 @@ export class DbStorage implements IStorage {
         
         return {
           ...meeting,
-          attendees: attendeeRows.map(a => ({ id: a.id, name: a.name })),
+          attendees: attendeeRows.map(a => ({ 
+            id: a.id, 
+            name: `${a.firstName || ''} ${a.lastName || ''}`.trim() || 'Unknown'
+          })),
         };
       })
     );
@@ -10692,7 +10696,8 @@ export class DbStorage implements IStorage {
     const attendeeRows = await db
       .select({
         id: staff.id,
-        name: staff.name,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
       })
       .from(pxMeetingAttendees)
       .innerJoin(staff, eq(pxMeetingAttendees.userId, staff.id))
@@ -10700,7 +10705,10 @@ export class DbStorage implements IStorage {
     
     return {
       ...meeting,
-      attendees: attendeeRows.map(a => ({ id: a.id, name: a.name })),
+      attendees: attendeeRows.map(a => ({ 
+        id: a.id, 
+        name: `${a.firstName || ''} ${a.lastName || ''}`.trim() || 'Unknown'
+      })),
     };
   }
 
