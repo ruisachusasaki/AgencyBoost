@@ -419,26 +419,30 @@ export default function PxMeetings() {
                     <CommandList>
                       <CommandEmpty>No staff found.</CommandEmpty>
                       <CommandGroup>
-                        {allStaff.map((staff) => (
-                          <CommandItem
-                            key={staff.id}
-                            onSelect={() => toggleAttendee(staff.id)}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                formData.attendeeIds.includes(staff.id) ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <Avatar className="h-6 w-6 mr-2">
-                              <AvatarImage src={staff.profileImagePath} />
-                              <AvatarFallback className="text-xs">
-                                {staff.name?.substring(0, 2) || "??"}
-                              </AvatarFallback>
-                            </Avatar>
-                            {staff.name}
-                          </CommandItem>
-                        ))}
+                        {allStaff.map((member) => {
+                          const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown';
+                          const initials = `${member.firstName?.[0] || ''}${member.lastName?.[0] || ''}`.toUpperCase() || '??';
+                          return (
+                            <CommandItem
+                              key={member.id}
+                              onSelect={() => toggleAttendee(member.id)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.attendeeIds.includes(member.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <Avatar className="h-6 w-6 mr-2">
+                                <AvatarImage src={member.profileImagePath || undefined} />
+                                <AvatarFallback className="text-xs">
+                                  {initials}
+                                </AvatarFallback>
+                              </Avatar>
+                              {fullName}
+                            </CommandItem>
+                          );
+                        })}
                       </CommandGroup>
                     </CommandList>
                   </Command>
@@ -448,11 +452,12 @@ export default function PxMeetings() {
               {formData.attendeeIds.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {formData.attendeeIds.map(id => {
-                    const staff = allStaff.find(s => s.id === id);
-                    if (!staff) return null;
+                    const member = allStaff.find(s => s.id === id);
+                    if (!member) return null;
+                    const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown';
                     return (
                       <Badge key={id} variant="secondary" className="flex items-center gap-1">
-                        {staff.name}
+                        {fullName}
                         <X 
                           className="h-3 w-3 cursor-pointer" 
                           onClick={() => toggleAttendee(id)}
