@@ -245,7 +245,7 @@ export default function PxMeetings() {
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="flex items-center gap-2">
             <Presentation className="h-5 w-5" />
-            PX Meetings
+            Meetings
           </CardTitle>
           <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-2" />
@@ -269,7 +269,7 @@ export default function PxMeetings() {
             <div className="text-center py-12 text-muted-foreground">
               <Presentation className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium">No meetings yet</p>
-              <p className="text-sm">Create your first PX meeting to get started</p>
+              <p className="text-sm">Create your first meeting to get started</p>
             </div>
           ) : (
             <div className="space-y-3">

@@ -1013,7 +1013,7 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
               ...(isManager || isAdmin ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "one-on-one", name: "1v1 Meetings", icon: MessageCircle, count: 0 }] : []),
-              ...(isManager || isAdmin ? [{ id: "px-meetings", name: "PX Meetings", icon: Presentation, count: 0 }] : []),
+              ...(isManager || isAdmin ? [{ id: "px-meetings", name: "Meetings", icon: Presentation, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
             ];
             
