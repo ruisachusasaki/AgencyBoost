@@ -142,9 +142,11 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     queryKey: ["/api/staff"],
   });
   
-  const { data: clients = [] } = useQuery<Client[]>({
+  const { data: clientsData } = useQuery<Client[] | { clients: Client[] }>({
     queryKey: ["/api/clients"],
   });
+  
+  const clients = Array.isArray(clientsData) ? clientsData : (clientsData?.clients || []);
   
   const allTags = [...new Set((meetings || []).flatMap(m => m.tags || []))];
 
