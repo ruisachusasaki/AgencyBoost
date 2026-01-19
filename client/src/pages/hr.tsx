@@ -44,7 +44,8 @@ import {
   DollarSign,
   Receipt,
   MessageCircle,
-  Network
+  Network,
+  Presentation
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -57,6 +58,7 @@ import ExpenseSubmissionsView from "@/components/hr/expense-submissions-view";
 import OffboardingForm from "@/components/hr/offboarding-form";
 import OffboardingSubmissionsView from "@/components/hr/offboarding-submissions-view";
 import OneOnOneMeetings from "@/components/hr/one-on-one-meetings";
+import PxMeetings from "@/components/hr/px-meetings";
 import OrgChart from "@/components/hr/org-chart";
 
 interface HRPageProps {
@@ -1011,6 +1013,7 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
               ...(isManager || isAdmin ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "one-on-one", name: "1v1 Meetings", icon: MessageCircle, count: 0 }] : []),
+              ...(isManager || isAdmin ? [{ id: "px-meetings", name: "PX Meetings", icon: Presentation, count: 0 }] : []),
               ...(isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
             ];
             
@@ -3324,6 +3327,10 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
 
       {activeTab === "one-on-one" && (isManager || isAdmin) && (
         <OneOnOneMeetings />
+      )}
+
+      {activeTab === "px-meetings" && (isManager || isAdmin) && (
+        <PxMeetings />
       )}
 
       {/* Time Off Request Dialog */}

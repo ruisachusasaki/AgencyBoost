@@ -32832,5 +32832,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message || "Failed to get AI response" });
     }
   });
+
+  // PX Meetings
+  app.get("/api/px-meetings", requireAuth(), async (req, res) => {
+    try {
+      const meetings = await appStorage.getPxMeetings();
+      res.json(meetings);
+    } catch (error: any) {
+      console.error("Error fetching PX meetings:", error);
+      res.status(500).json({ error: "Failed to fetch PX meetings" });
+    }
+  });
+
+  app.get("/api/px-meetings/:id", requireAuth(), async (req, res) => {
+    try {
+      const meeting = await appStorage.getPxMeeting(req.params.id);
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      res.json(meeting);
+    } catch (error: any) {
+      console.error("Error fetching PX meeting:", error);
+      res.status(500).json({ error: "Failed to fetch PX meeting" });
+    }
+  });
+
+  app.post("/api/px-meetings", requireAuth(), async (req, res) => {
+    try {
+      const { attendeeIds, ...meetingData } = req.body;
+      const user = req.session?.user;
+      
+      const meeting = await appStorage.createPxMeeting(
+        {
+          ...meetingData,
+          createdById: user?.id,
+        },
+        attendeeIds || []
+      );
+      
+      res.status(201).json(meeting);
+    } catch (error: any) {
+      console.error("Error creating PX meeting:", error);
+      res.status(500).json({ error: "Failed to create PX meeting" });
+    }
+  });
+
+  app.put("/api/px-meetings/:id", requireAuth(), async (req, res) => {
+    try {
+      const { attendeeIds, ...meetingData } = req.body;
+      
+      const updated = await appStorage.updatePxMeeting(
+        req.params.id,
+        meetingData,
+        attendeeIds
+      );
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating PX meeting:", error);
+      res.status(500).json({ error: "Failed to update PX meeting" });
+    }
+  });
+
+  app.delete("/api/px-meetings/:id", requireAuth(), async (req, res) => {
+    try {
+      const deleted = await appStorage.deletePxMeeting(req.params.id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting PX meeting:", error);
+      res.status(500).json({ error: "Failed to delete PX meeting" });
+    }
+  });
   return httpServer;
 }
