@@ -105,6 +105,7 @@ export default function PxMeetings() {
   });
   
   const [isAttendeesOpen, setIsAttendeesOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const { data: meetings = [], isLoading } = useQuery<PxMeeting[]>({
     queryKey: ["/api/px-meetings"],
@@ -348,7 +349,7 @@ export default function PxMeetings() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Date</Label>
-                <Popover>
+                <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -359,7 +360,12 @@ export default function PxMeetings() {
                     <Calendar
                       mode="single"
                       selected={formData.meetingDate}
-                      onSelect={(date) => date && setFormData(prev => ({ ...prev, meetingDate: date }))}
+                      onSelect={(date) => {
+                        if (date) {
+                          setFormData(prev => ({ ...prev, meetingDate: date }));
+                          setIsDatePickerOpen(false);
+                        }
+                      }}
                       initialFocus
                     />
                   </PopoverContent>
