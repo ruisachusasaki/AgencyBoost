@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ import {
   AlertCircle,
   Trash2,
   ChevronRight,
+  ChevronLeft,
   X,
   Check,
   ChevronsUpDown,
@@ -76,13 +78,16 @@ const SEGMENT_LABELS = {
   actionItems: { label: "Action Items", icon: ListTodo, color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" },
 };
 
-export default function PxMeetings() {
+interface PxMeetingsProps {
+  meetingId?: string;
+}
+
+export default function PxMeetings({ meetingId }: PxMeetingsProps) {
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedMeeting, setSelectedMeeting] = useState<PxMeeting | null>(null);
-  const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -111,9 +116,29 @@ export default function PxMeetings() {
     queryKey: ["/api/px-meetings"],
   });
 
+  const { data: selectedMeeting, isLoading: isLoadingMeeting, isError: isMeetingError } = useQuery<PxMeeting>({
+    queryKey: ["/api/px-meetings", meetingId],
+    enabled: !!meetingId,
+    retry: 1,
+  });
+
   const { data: allStaff = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
   });
+
+  useEffect(() => {
+    if (selectedMeeting) {
+      setEditFormData({
+        whatsWorkingKpis: selectedMeeting.whatsWorkingKpis || "",
+        salesOpportunities: selectedMeeting.salesOpportunities || "",
+        areasOfOpportunities: selectedMeeting.areasOfOpportunities || "",
+        actionPlan: selectedMeeting.actionPlan || "",
+        actionItems: selectedMeeting.actionItems || "",
+        recordingLink: selectedMeeting.recordingLink || "",
+      });
+      setIsEditMode(false);
+    }
+  }, [selectedMeeting]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -136,6 +161,7 @@ export default function PxMeetings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/px-meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/px-meetings", meetingId] });
       setIsEditMode(false);
       toast({ title: "Meeting updated successfully" });
     },
@@ -149,9 +175,9 @@ export default function PxMeetings() {
       return await apiRequest("DELETE", `/api/px-meetings/${id}`);
     },
     onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ["/api/px-meetings", meetingId] });
       queryClient.invalidateQueries({ queryKey: ["/api/px-meetings"] });
-      setIsDetailViewOpen(false);
-      setSelectedMeeting(null);
+      setLocation("/hr/px-meetings");
       toast({ title: "Meeting deleted successfully" });
     },
     onError: (error: any) => {
@@ -187,26 +213,20 @@ export default function PxMeetings() {
   };
 
   const handleUpdate = () => {
-    if (!selectedMeeting) return;
+    if (!selectedMeeting || !meetingId) return;
     
     updateMutation.mutate({
-      id: selectedMeeting.id,
+      id: meetingId,
       data: editFormData,
     });
   };
 
-  const openMeetingDetail = (meeting: PxMeeting) => {
-    setSelectedMeeting(meeting);
-    setEditFormData({
-      whatsWorkingKpis: meeting.whatsWorkingKpis || "",
-      salesOpportunities: meeting.salesOpportunities || "",
-      areasOfOpportunities: meeting.areasOfOpportunities || "",
-      actionPlan: meeting.actionPlan || "",
-      actionItems: meeting.actionItems || "",
-      recordingLink: meeting.recordingLink || "",
-    });
-    setIsDetailViewOpen(true);
-    setIsEditMode(false);
+  const navigateToMeeting = (meeting: PxMeeting) => {
+    setLocation(`/hr/px-meetings/${meeting.id}`);
+  };
+
+  const navigateToList = () => {
+    setLocation("/hr/px-meetings");
   };
 
   const toggleAttendee = (staffId: string) => {
@@ -223,7 +243,7 @@ export default function PxMeetings() {
     meeting.attendees.some(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  if (isLoading) {
+  if (isLoading || (meetingId && isLoadingMeeting)) {
     return (
       <Card className="animate-pulse">
         <CardHeader>
@@ -237,6 +257,171 @@ export default function PxMeetings() {
           </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  if (meetingId && !isLoadingMeeting && (isMeetingError || !selectedMeeting)) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={navigateToList}>
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to Meetings
+          </Button>
+        </div>
+
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center text-muted-foreground">
+              <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium">Meeting not found</p>
+              <p className="text-sm">This meeting may have been deleted or doesn't exist.</p>
+              <Button onClick={navigateToList} className="mt-4">
+                Return to Meetings
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (meetingId && selectedMeeting) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={navigateToList}>
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to Meetings
+          </Button>
+        </div>
+
+        <Card>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl">{selectedMeeting.title}</CardTitle>
+                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <CalendarIcon className="h-4 w-4" />
+                    {format(parseISO(selectedMeeting.meetingDate), "MMMM d, yyyy")}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {selectedMeeting.meetingTime}
+                  </span>
+                  <span>{selectedMeeting.meetingDuration} min</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={isEditMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsEditMode(!isEditMode)}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  {isEditMode ? "Cancel" : "Edit"}
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Meeting</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this meeting? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteMutation.mutate(selectedMeeting.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <Separator className="mb-6" />
+
+            {selectedMeeting.attendees.length > 0 && (
+              <div className="mb-6">
+                <Label className="text-sm text-muted-foreground">Attendees</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedMeeting.attendees.map((attendee) => (
+                    <Badge key={attendee.id} variant="secondary">
+                      {attendee.name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedMeeting.recordingLink && (
+              <div className="mb-6">
+                <Label className="text-sm text-muted-foreground">Recording Link</Label>
+                <a 
+                  href={selectedMeeting.recordingLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline block mt-1"
+                >
+                  {selectedMeeting.recordingLink}
+                </a>
+              </div>
+            )}
+
+            <div className="space-y-6">
+              {Object.entries(SEGMENT_LABELS).map(([key, { label, icon: Icon, color }]) => (
+                <div key={key} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className={cn("font-normal", color)}>
+                      <Icon className="h-3.5 w-3.5 mr-1" />
+                      {label}
+                    </Badge>
+                  </div>
+                  {isEditMode ? (
+                    <Textarea
+                      value={editFormData[key as keyof typeof editFormData]}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, [key]: e.target.value }))}
+                      placeholder={`Enter ${label.toLowerCase()}...`}
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <div className="p-3 bg-muted/50 rounded-md min-h-[60px]">
+                      {(selectedMeeting as any)[key] ? (
+                        <p className="whitespace-pre-wrap">{(selectedMeeting as any)[key]}</p>
+                      ) : (
+                        <p className="text-muted-foreground italic">No content yet</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {isEditMode && (
+              <div className="flex justify-end gap-2 mt-6">
+                <Button variant="outline" onClick={() => setIsEditMode(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -277,7 +462,7 @@ export default function PxMeetings() {
               {filteredMeetings.map((meeting) => (
                 <div
                   key={meeting.id}
-                  onClick={() => openMeetingDetail(meeting)}
+                  onClick={() => navigateToMeeting(meeting)}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-4">
@@ -488,136 +673,6 @@ export default function PxMeetings() {
               {createMutation.isPending ? "Creating..." : "Create Meeting"}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-          {selectedMeeting && (
-            <>
-              <DialogHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <DialogTitle className="text-xl">{selectedMeeting.title}</DialogTitle>
-                    <DialogDescription className="flex items-center gap-4 mt-1">
-                      <span className="flex items-center gap-1">
-                        <CalendarIcon className="h-4 w-4" />
-                        {format(parseISO(selectedMeeting.meetingDate), "MMMM d, yyyy")}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {selectedMeeting.meetingTime}
-                      </span>
-                      <span>{selectedMeeting.meetingDuration} min</span>
-                    </DialogDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={isEditMode ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setIsEditMode(!isEditMode)}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      {isEditMode ? "Cancel" : "Edit"}
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Meeting</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete this meeting? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteMutation.mutate(selectedMeeting.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-              </DialogHeader>
-
-              <Separator className="my-4" />
-
-              {selectedMeeting.attendees.length > 0 && (
-                <div className="mb-4">
-                  <Label className="text-sm text-muted-foreground">Attendees</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {selectedMeeting.attendees.map((attendee) => (
-                      <Badge key={attendee.id} variant="secondary">
-                        {attendee.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedMeeting.recordingLink && (
-                <div className="mb-4">
-                  <Label className="text-sm text-muted-foreground">Recording Link</Label>
-                  <a 
-                    href={selectedMeeting.recordingLink} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline block mt-1"
-                  >
-                    {selectedMeeting.recordingLink}
-                  </a>
-                </div>
-              )}
-
-              <div className="space-y-6">
-                {Object.entries(SEGMENT_LABELS).map(([key, { label, icon: Icon, color }]) => (
-                  <div key={key} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge className={cn("font-normal", color)}>
-                        <Icon className="h-3.5 w-3.5 mr-1" />
-                        {label}
-                      </Badge>
-                    </div>
-                    {isEditMode ? (
-                      <Textarea
-                        value={editFormData[key as keyof typeof editFormData]}
-                        onChange={(e) => setEditFormData(prev => ({ ...prev, [key]: e.target.value }))}
-                        placeholder={`Enter ${label.toLowerCase()}...`}
-                        className="min-h-[100px]"
-                      />
-                    ) : (
-                      <div className="p-3 bg-muted/50 rounded-md min-h-[60px]">
-                        {(selectedMeeting as any)[key] ? (
-                          <p className="whitespace-pre-wrap">{(selectedMeeting as any)[key]}</p>
-                        ) : (
-                          <p className="text-muted-foreground italic">No content yet</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {isEditMode && (
-                <DialogFooter className="mt-6">
-                  <Button variant="outline" onClick={() => setIsEditMode(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
-                    {updateMutation.isPending ? "Saving..." : "Save Changes"}
-                  </Button>
-                </DialogFooter>
-              )}
-            </>
-          )}
         </DialogContent>
       </Dialog>
     </div>

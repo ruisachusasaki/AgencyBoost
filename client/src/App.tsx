@@ -257,6 +257,16 @@ function Router() {
         )}
       </Route>
       
+      <Route path="/hr/px-meetings/:meetingId">
+        {(params) => (
+          <AuthGate>
+            <MainLayout>
+              <HRPage initialTab="px-meetings" meetingId={params.meetingId} />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
       <Route path="/hr/:tab">
         {(params) => (
           <AuthGate>

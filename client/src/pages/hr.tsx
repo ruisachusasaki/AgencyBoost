@@ -63,9 +63,10 @@ import OrgChart from "@/components/hr/org-chart";
 
 interface HRPageProps {
   initialTab?: string;
+  meetingId?: string;
 }
 
-export default function HRPage({ initialTab }: HRPageProps = {}) {
+export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   const [location, setLocation] = useLocation();
   
   // Derive initial tab from prop, query param (fallback), or default
@@ -3330,7 +3331,7 @@ export default function HRPage({ initialTab }: HRPageProps = {}) {
       )}
 
       {activeTab === "px-meetings" && (isManager || isAdmin) && (
-        <PxMeetings />
+        <PxMeetings meetingId={meetingId} />
       )}
 
       {/* Time Off Request Dialog */}
