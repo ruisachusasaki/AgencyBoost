@@ -880,7 +880,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">All clients</SelectItem>
-                  {clients.map(client => (
+                  {clients.filter(client => client.id).map(client => (
                     <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
                   ))}
                 </SelectContent>
