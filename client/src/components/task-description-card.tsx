@@ -115,7 +115,7 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
                 Cancel
               </Button>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Press Escape to cancel • Ctrl/Cmd + Enter to save
             </p>
           </div>
@@ -124,7 +124,7 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
             {task.description ? (
               <>
                 <div
-                  className={`text-slate-600 cursor-text hover:bg-slate-50 p-3 rounded-lg transition-all duration-200 prose prose-sm max-w-none prose-headings:text-slate-800 prose-p:text-slate-700 prose-strong:text-slate-800 prose-em:text-slate-600 prose-code:bg-slate-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-blockquote:border-l-slate-300 prose-ul:text-slate-700 prose-ol:text-slate-700 ${
+                  className={`text-slate-600 dark:text-slate-300 cursor-text hover:bg-slate-50 dark:hover:bg-slate-800 p-3 rounded-lg transition-all duration-200 prose prose-sm max-w-none dark:prose-invert prose-headings:text-slate-800 dark:prose-headings:text-slate-100 prose-p:text-slate-700 dark:prose-p:text-slate-300 prose-strong:text-slate-800 dark:prose-strong:text-slate-100 prose-em:text-slate-600 dark:prose-em:text-slate-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-700 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-blockquote:border-l-slate-300 dark:prose-blockquote:border-l-slate-600 prose-ul:text-slate-700 dark:prose-ul:text-slate-300 prose-ol:text-slate-700 dark:prose-ol:text-slate-300 ${
                     needsExpansion && !isExpanded 
                       ? 'overflow-hidden relative' 
                       : ''
@@ -151,7 +151,7 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
                       e.stopPropagation();
                       setIsExpanded(!isExpanded);
                     }}
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 h-auto font-medium text-sm rounded-md transition-colors"
+                    className="text-[#00C9C6] hover:text-[#00C9C6]/90 hover:bg-[#00C9C6]/10 p-2 h-auto font-medium text-sm rounded-md transition-colors"
                     data-testid="button-toggle-description"
                   >
                     {isExpanded ? (

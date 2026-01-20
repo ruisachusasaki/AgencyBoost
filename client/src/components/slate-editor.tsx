@@ -982,14 +982,12 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       {/* Slash Menu */}
       {showSlashMenu && (
         <div
-          className="slash-menu"
+          className="slash-menu bg-background border border-border"
           style={{
             position: 'absolute',
             top: slashMenuPosition.top,
             left: slashMenuPosition.left,
             zIndex: 1000,
-            background: 'white',
-            border: '1px solid #e5e7eb',
             borderRadius: '0.5rem',
             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
             maxHeight: '300px',
@@ -1000,10 +998,10 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
           {filteredCommands.map((command, index) => (
             <button
               key={index}
-              className={`w-full text-left px-3 py-2 flex items-center gap-2 transition-colors ${
+              className={`w-full text-left px-3 py-2 flex items-center gap-2 transition-colors text-foreground ${
                 index === selectedIndex 
-                  ? 'bg-blue-50 text-blue-700 border-l-2 border-blue-500' 
-                  : 'hover:bg-gray-50'
+                  ? 'bg-[#00C9C6]/10 text-[#00C9C6] border-l-2 border-[#00C9C6]' 
+                  : 'hover:bg-muted/50'
               }`}
               onClick={() => executeCommand(command)}
             >
@@ -1012,7 +1010,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
             </button>
           ))}
           {filteredCommands.length === 0 && (
-            <div className="px-3 py-2 text-gray-500 text-sm">
+            <div className="px-3 py-2 text-muted-foreground text-sm">
               No commands found for "{slashQuery}"
             </div>
           )}
@@ -1044,7 +1042,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
             }}
             className={`p-1.5 rounded transition-colors ${
               isMarkActive('bold') 
-                ? 'bg-blue-600 text-white' 
+                ? 'bg-[#00C9C6] text-white' 
                 : 'text-gray-300 hover:bg-gray-700 hover:text-white'
             }`}
             title="Bold (Ctrl+B)"
@@ -1058,7 +1056,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
             }}
             className={`p-1.5 rounded transition-colors ${
               isMarkActive('italic') 
-                ? 'bg-blue-600 text-white' 
+                ? 'bg-[#00C9C6] text-white' 
                 : 'text-gray-300 hover:bg-gray-700 hover:text-white'
             }`}
             title="Italic (Ctrl+I)"
@@ -1073,7 +1071,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
             }}
             className={`p-1.5 rounded transition-colors ${
               isBlockActive('heading') 
-                ? 'bg-blue-600 text-white' 
+                ? 'bg-[#00C9C6] text-white' 
                 : 'text-gray-300 hover:bg-gray-700 hover:text-white'
             }`}
             title="Heading 1"

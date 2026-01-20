@@ -526,7 +526,7 @@ export default function LessonDetail() {
       );
     } else if (lesson.contentType === "assignment" && !assignment) {
       contentComponents.push(
-        <div key="assignment-loading" className="text-center text-gray-500 py-8">
+        <div key="assignment-loading" className="text-center text-muted-foreground py-8">
           <FileText className="h-12 w-12 mx-auto mb-2" />
           <p>Loading assignment...</p>
         </div>
@@ -536,7 +536,7 @@ export default function LessonDetail() {
     // Always show text content if available (regardless of contentType)
     if (lesson.content) {
       contentComponents.push(
-        <div key="content" className="prose max-w-none">
+        <div key="content" className="prose max-w-none dark:prose-invert">
           <div dangerouslySetInnerHTML={{ __html: lesson.content.replace(/\n/g, '<br/>') }} />
         </div>
       );
@@ -545,7 +545,7 @@ export default function LessonDetail() {
     // If no content components, show placeholder
     if (contentComponents.length === 0) {
       return (
-        <div className="text-center text-gray-500 py-8">
+        <div className="text-center text-muted-foreground py-8">
           <FileText className="h-12 w-12 mx-auto mb-2" />
           <p>Content not available</p>
         </div>
@@ -563,8 +563,8 @@ export default function LessonDetail() {
     return (
       <div className="p-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Lesson Not Found</h1>
-          <p className="text-gray-600 mb-4">The requested lesson could not be found.</p>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Lesson Not Found</h1>
+          <p className="text-muted-foreground mb-4">The requested lesson could not be found.</p>
           <Button asChild>
             <Link href="/training">Back to Training</Link>
           </Button>

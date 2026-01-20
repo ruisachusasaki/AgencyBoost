@@ -1018,7 +1018,7 @@ export default function ArticleView() {
                 />
               ) : null}
               
-              <div className="prose prose-lg max-w-none">
+              <div className="prose prose-lg max-w-none dark:prose-invert">
                 {isEditing ? (
                   <SlateEditor
                     value={editContent}
