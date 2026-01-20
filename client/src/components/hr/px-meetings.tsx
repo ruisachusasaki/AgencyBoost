@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
@@ -40,7 +41,8 @@ import {
   ChartBar,
   StickyNote,
   Tag,
-  Building2
+  Building2,
+  Lock
 } from "lucide-react";
 
 interface Staff {
@@ -74,6 +76,7 @@ interface PxMeeting {
   actionPlan?: string;
   actionItems?: string;
   notes?: string;
+  isPrivate?: boolean;
   createdById?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -115,6 +118,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     whatsWorkingKpis: "",
     actionPlan: "",
     notes: "",
+    isPrivate: false,
   });
   
   const [newTag, setNewTag] = useState("");
@@ -153,6 +157,10 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     queryKey: ["/api/clients"],
   });
   
+  const { data: currentUser } = useQuery<{ id: string; staffId?: string }>({
+    queryKey: ["/api/auth/me"],
+  });
+  
   const clients = Array.isArray(clientsData) ? clientsData : (clientsData?.clients || []);
   
   const allTags = [...new Set((meetings || []).flatMap(m => m.tags || []))];
@@ -189,6 +197,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         whatsWorkingKpis: selectedMeeting.whatsWorkingKpis || "",
         actionPlan: selectedMeeting.actionPlan || "",
         notes: selectedMeeting.notes || "",
+        isPrivate: selectedMeeting.isPrivate || false,
       });
       setSalesOpportunities(parseJsonArray(selectedMeeting.salesOpportunities));
       setAreasOfOpportunities(parseJsonArray(selectedMeeting.areasOfOpportunities));
@@ -291,6 +300,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         actionPlan: editFormData.actionPlan,
         actionItems: JSON.stringify(actionItems),
         notes: editFormData.notes,
+        isPrivate: editFormData.isPrivate,
       },
     });
   };
@@ -393,7 +403,13 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       meeting.attendees.some(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesTag = tagFilter === "__all__" || (meeting.tags && meeting.tags.includes(tagFilter));
     const matchesClient = clientFilter === "__all__" || meeting.clientId === clientFilter;
-    return matchesSearch && matchesTag && matchesClient;
+    
+    const currentUserStaffId = currentUser?.staffId || currentUser?.id;
+    const isAttendee = meeting.attendees.some(a => a.id === currentUserStaffId);
+    const isCreator = meeting.createdById === currentUserStaffId;
+    const canSeePrivate = !meeting.isPrivate || isAttendee || isCreator;
+    
+    return matchesSearch && matchesTag && matchesClient && canSeePrivate;
   });
 
   if (isLoading || (meetingId && isLoadingMeeting)) {
@@ -490,7 +506,15 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 <Presentation className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1">
-                <CardTitle>{selectedMeeting.title}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle>{selectedMeeting.title}</CardTitle>
+                  {editFormData.isPrivate && (
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <Lock className="h-3 w-3" />
+                      Private
+                    </Badge>
+                  )}
+                </div>
                 {selectedMeeting.attendees.length > 0 && (
                   <p className="text-sm text-muted-foreground mt-1">
                     {selectedMeeting.attendees.map(a => a.name).join(", ")}
@@ -572,6 +596,21 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   onChange={(e) => handleFormChange({ recordingLink: e.target.value })}
                 />
               </div>
+            </div>
+            
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+              <div className="flex items-center gap-3">
+                <Lock className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <Label htmlFor="private-toggle" className="font-medium cursor-pointer">Private Meeting</Label>
+                  <p className="text-sm text-muted-foreground">Only attendees can see this meeting</p>
+                </div>
+              </div>
+              <Switch
+                id="private-toggle"
+                checked={editFormData.isPrivate}
+                onCheckedChange={(checked) => handleFormChange({ isPrivate: checked })}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
@@ -923,6 +962,12 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="font-medium">{meeting.title}</h4>
+                        {meeting.isPrivate && (
+                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                            <Lock className="h-3 w-3" />
+                            Private
+                          </Badge>
+                        )}
                         {meeting.tags && meeting.tags.length > 0 && (
                           <div className="flex gap-1">
                             {meeting.tags.slice(0, 2).map(tag => (
