@@ -486,12 +486,18 @@ export default function RolesPermissions() {
   const handleExportCSV = async () => {
     setIsExporting(true);
     try {
+      // Use native fetch with credentials since we need binary response
       const response = await fetch('/api/roles-permissions/export', {
+        method: 'GET',
         credentials: 'include',
+        headers: {
+          'Accept': 'text/csv',
+        },
       });
       
       if (!response.ok) {
-        throw new Error('Failed to export roles and permissions');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to export roles and permissions');
       }
       
       const blob = await response.blob();
@@ -532,13 +538,30 @@ export default function RolesPermissions() {
     try {
       const csvContent = await file.text();
       
-      const response = await apiRequest('POST', '/api/roles-permissions/import', { csvContent });
+      // Send CSV content as JSON payload
+      const response = await fetch('/api/roles-permissions/import', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ csvContent }),
+      });
+      
       const result = await response.json();
       
-      if (!result.success) {
-        setImportErrors(result.errors || ['Unknown error parsing CSV']);
+      if (!response.ok || !result.success) {
+        setImportErrors(result.errors || [result.message || 'Unknown error parsing CSV']);
       } else {
-        setImportPreview(result.preview ? { ...result.preview, roles: result.roles } : null);
+        // Store the complete preview with roles data
+        setImportPreview({
+          newRoles: result.preview?.newRoles || [],
+          existingRoles: result.preview?.existingRoles || [],
+          warnings: result.preview?.warnings || [],
+          totalRoles: result.preview?.totalRoles || 0,
+          totalPermissions: result.preview?.totalPermissions || 0,
+          roles: result.roles || [],
+        });
       }
       
       setIsImportDialogOpen(true);
@@ -558,7 +581,14 @@ export default function RolesPermissions() {
     
     setIsImporting(true);
     try {
-      const response = await apiRequest('POST', '/api/roles-permissions/apply', { roles: importPreview.roles });
+      const response = await fetch('/api/roles-permissions/apply', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ roles: importPreview.roles }),
+      });
       const result = await response.json();
       
       if (result.success) {
