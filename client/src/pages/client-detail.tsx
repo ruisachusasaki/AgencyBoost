@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, Globe, Calendar, User, Building2, Tag, FileText, Briefcase, BarChart3, CheckSquare, Receipt, Folder } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, Globe, Calendar, User, Building2, Tag, FileText, Briefcase, BarChart3, CheckSquare, Receipt, Folder, Users } from "lucide-react";
 import ClientForm from "@/components/forms/client-form";
+import ClientContacts from "@/components/client-contacts";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -94,6 +95,7 @@ export default function ClientDetail() {
 
   const navigationItems = [
     { id: "overview", label: "Overview", icon: User },
+    { id: "contacts", label: "Contacts", icon: Users },
     { id: "projects", label: "Projects", icon: Briefcase, count: projects.length },
     { id: "campaigns", label: "Campaigns", icon: BarChart3, count: campaigns.length },
     { id: "tasks", label: "Tasks", icon: CheckSquare, count: tasks.length },
@@ -389,6 +391,8 @@ export default function ClientDetail() {
     switch (activeSection) {
       case "overview":
         return renderOverviewContent();
+      case "contacts":
+        return clientId ? <ClientContacts clientId={clientId} /> : null;
       case "projects":
         return renderProjectsContent();
       case "campaigns":
