@@ -150,6 +150,22 @@ export const clientDocuments = pgTable("client_documents", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Client contacts - multiple contacts per client
+export const clientContacts = pgTable("client_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name"),
+  email: text("email"),
+  phone: text("phone"),
+  title: text("title"), // Job title/role at the company
+  isPrimary: boolean("is_primary").default(false),
+  notes: text("notes"),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Client payments/transactions (placeholder for future invoicing integration)
 export const clientTransactions = pgTable("client_transactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2052,6 +2068,14 @@ export const insertClientDocumentSchema = createInsertSchema(clientDocuments).om
   id: true,
   createdAt: true,
 });
+
+export const insertClientContactSchema = createInsertSchema(clientContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertClientContact = z.infer<typeof insertClientContactSchema>;
+export type ClientContact = typeof clientContacts.$inferSelect;
 
 export const insertClientTransactionSchema = createInsertSchema(clientTransactions).omit({
   id: true,
