@@ -938,9 +938,11 @@ export default function RolesPermissions() {
       <div className="grid gap-6 md:grid-cols-2">
         {roles.map((role) => {
           // Count enabled modules and sub-permissions
+          // Only count modules where at least one permission is actually enabled
           const granularPerms = role.granularPermissions || [];
-          const enabledModules = new Set(granularPerms.map(gp => gp.module)).size;
-          const enabledSubPermissions = granularPerms.filter(gp => gp.enabled).length;
+          const enabledPerms = granularPerms.filter(gp => gp.enabled);
+          const enabledModules = new Set(enabledPerms.map(gp => gp.module)).size;
+          const enabledSubPermissions = enabledPerms.length;
 
           return (
           <Card key={role.id} className="relative" data-testid={`card-role-${role.id}`}>
@@ -1034,7 +1036,7 @@ export default function RolesPermissions() {
                         <Badge variant="outline">{enabledSubPermissions} permissions</Badge>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {Array.from(new Set(granularPerms.map(gp => gp.module)))
+                        {Array.from(new Set(enabledPerms.map(gp => gp.module)))
                           .slice(0, 5)
                           .map(module => formatModuleName(module))
                           .join(', ')}
