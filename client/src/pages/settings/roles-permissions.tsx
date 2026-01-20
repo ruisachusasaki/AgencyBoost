@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Plus, Edit, Trash2, Users, Eye, Settings, ArrowLeft, AlertTriangle, Lock, ChevronDown, ChevronRight } from "lucide-react";
+import { Shield, Plus, Edit, Trash2, Users, Eye, Settings, ArrowLeft, AlertTriangle, Lock, ChevronDown, ChevronRight, Download, Upload, FileSpreadsheet, Check, X, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -343,6 +343,20 @@ export default function RolesPermissions() {
     granularPermissions: {} as GranularPermissionState,
   });
   const [useGranularPermissions, setUseGranularPermissions] = useState(true);
+  
+  // CSV Import/Export state
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importPreview, setImportPreview] = useState<{
+    newRoles: string[];
+    existingRoles: string[];
+    warnings: string[];
+    totalRoles: number;
+    totalPermissions: number;
+    roles: Array<{ roleName: string; permissions: { [key: string]: boolean } }>;
+  } | null>(null);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Fetch current user data for admin check
   const { data: currentUser, isLoading: loadingUser, error: userError } = useQuery({
@@ -466,6 +480,112 @@ export default function RolesPermissions() {
   const handleDeleteRole = (roleId: string, roleName: string) => {
     if (!confirm(`Are you sure you want to delete the "${roleName}" role? This will affect all users assigned to this role.`)) return;
     deleteRoleMutation.mutate(roleId);
+  };
+
+  // CSV Export handler
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetch('/api/roles-permissions/export', {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to export roles and permissions');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'roles-permissions.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Export Successful",
+        variant: "success",
+        description: "Roles and permissions exported to CSV file.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Export Failed",
+        description: error.message || "Failed to export roles and permissions.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // CSV Import handler - parses and shows preview
+  const handleCSVFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    setIsImporting(true);
+    setImportErrors([]);
+    setImportPreview(null);
+    
+    try {
+      const csvContent = await file.text();
+      
+      const response = await apiRequest('POST', '/api/roles-permissions/import', { csvContent });
+      const result = await response.json();
+      
+      if (!result.success) {
+        setImportErrors(result.errors || ['Unknown error parsing CSV']);
+      } else {
+        setImportPreview(result.preview ? { ...result.preview, roles: result.roles } : null);
+      }
+      
+      setIsImportDialogOpen(true);
+    } catch (error: any) {
+      setImportErrors([error.message || 'Failed to parse CSV file']);
+      setIsImportDialogOpen(true);
+    } finally {
+      setIsImporting(false);
+      // Reset file input
+      event.target.value = '';
+    }
+  };
+
+  // Apply CSV import
+  const handleApplyImport = async () => {
+    if (!importPreview?.roles) return;
+    
+    setIsImporting(true);
+    try {
+      const response = await apiRequest('POST', '/api/roles-permissions/apply', { roles: importPreview.roles });
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Import Successful",
+          variant: "success",
+          description: `Created ${result.results.created.length} new roles, updated ${result.results.updated.length} existing roles.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
+        setIsImportDialogOpen(false);
+        setImportPreview(null);
+      } else {
+        toast({
+          title: "Import Partially Failed",
+          description: `Some roles failed to update: ${result.results.errors.join(', ')}`,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Import Failed",
+        description: error.message || "Failed to apply role changes.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const formatModuleName = (module: string) => {
@@ -594,29 +714,195 @@ export default function RolesPermissions() {
             </div>
           </div>
 
-          <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-role">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Role
+          <div className="flex items-center gap-2">
+            {/* Export CSV Button */}
+            <Button 
+              variant="outline" 
+              onClick={handleExportCSV}
+              disabled={isExporting}
+              data-testid="button-export-csv"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isExporting ? 'Exporting...' : 'Export CSV'}
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Role</DialogTitle>
-              <DialogDescription>
-                Create a new role with granular permissions for different modules and features.
-              </DialogDescription>
-            </DialogHeader>
-            <RoleForm
-              role={newRole}
-              onSubmit={handleAddRole}
-              onCancel={() => setIsAddRoleDialogOpen(false)}
+
+            {/* Import CSV Button */}
+            <Button 
+              variant="outline" 
+              onClick={() => document.getElementById('csv-file-input')?.click()}
+              disabled={isImporting}
+              data-testid="button-import-csv"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {isImporting ? 'Processing...' : 'Import CSV'}
+            </Button>
+            <input
+              type="file"
+              id="csv-file-input"
+              accept=".csv"
+              onChange={handleCSVFileUpload}
+              className="hidden"
             />
-          </DialogContent>
-          </Dialog>
+
+            {/* Add Role Button */}
+            <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-add-role">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Role
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New Role</DialogTitle>
+                  <DialogDescription>
+                    Create a new role with granular permissions for different modules and features.
+                  </DialogDescription>
+                </DialogHeader>
+                <RoleForm
+                  role={newRole}
+                  onSubmit={handleAddRole}
+                  onCancel={() => setIsAddRoleDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
+
+      {/* CSV Import Preview Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Import Roles & Permissions
+            </DialogTitle>
+            <DialogDescription>
+              Review the changes that will be applied from your CSV file.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {importErrors.length > 0 ? (
+            <div className="space-y-4">
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Validation Errors</AlertTitle>
+                <AlertDescription>
+                  The CSV file has errors that need to be fixed:
+                </AlertDescription>
+              </Alert>
+              <div className="max-h-60 overflow-y-auto space-y-2">
+                {importErrors.map((error, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-sm text-destructive">
+                    <X className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          ) : importPreview ? (
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold">{importPreview.totalRoles}</div>
+                    <div className="text-sm text-muted-foreground">Total Roles</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold">{importPreview.totalPermissions}</div>
+                    <div className="text-sm text-muted-foreground">Permissions per Role</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* New Roles */}
+              {importPreview.newRoles.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+                    <Plus className="h-4 w-4" />
+                    New Roles to Create ({importPreview.newRoles.length})
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {importPreview.newRoles.map(role => (
+                      <Badge key={role} variant="outline" className="border-green-500 text-green-600">
+                        {role}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Existing Roles */}
+              {importPreview.existingRoles.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-blue-600">
+                    <Edit className="h-4 w-4" />
+                    Existing Roles to Update ({importPreview.existingRoles.length})
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {importPreview.existingRoles.map(role => (
+                      <Badge key={role} variant="outline" className="border-blue-500 text-blue-600">
+                        {role}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Warnings */}
+              {importPreview.warnings.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-yellow-600">
+                    <AlertTriangle className="h-4 w-4" />
+                    Warnings ({importPreview.warnings.length})
+                  </div>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {importPreview.warnings.map((warning, idx) => (
+                      <div key={idx} className="text-xs text-yellow-600">
+                        {warning}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsImportDialogOpen(false);
+                    setImportPreview(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleApplyImport}
+                  disabled={isImporting}
+                  data-testid="button-apply-import"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  {isImporting ? 'Applying...' : 'Apply Changes'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Processing CSV file...
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Roles Grid */}
       <div className="grid gap-6 md:grid-cols-2">
