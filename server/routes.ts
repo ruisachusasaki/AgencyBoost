@@ -53,7 +53,7 @@ import {
   oneOnOneProgressionStatuses,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, granularPermissions, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
-  clientNotes, clientTasks, clientAppointments, clientDocuments, documents, clientTransactions, clientHealthScores, clients,
+  clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, documents, clientTransactions, clientHealthScores, clients,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, eventTimeEntries, smsIntegrations, emailIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments,
   socialMediaAccounts, socialMediaPosts, workflows, workflowTemplates, workflowExecutions, workflowActionAnalytics, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
@@ -15341,6 +15341,239 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // === CLIENT CONTACTS ===
+  // Get all contacts for a client
+  app.get("/api/clients/:clientId/contacts", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const clientId = req.params.clientId;
+      
+      const contacts = await db
+        .select({
+          id: clientContacts.id,
+          clientId: clientContacts.clientId,
+          firstName: clientContacts.firstName,
+          lastName: clientContacts.lastName,
+          email: clientContacts.email,
+          phone: clientContacts.phone,
+          title: clientContacts.title,
+          isPrimary: clientContacts.isPrimary,
+          notes: clientContacts.notes,
+          createdAt: clientContacts.createdAt,
+          updatedAt: clientContacts.updatedAt,
+          createdBy: {
+            id: staff.id,
+            firstName: staff.firstName,
+            lastName: staff.lastName
+          }
+        })
+        .from(clientContacts)
+        .leftJoin(staff, eq(clientContacts.createdBy, staff.id))
+        .where(eq(clientContacts.clientId, clientId))
+        .orderBy(desc(clientContacts.isPrimary), asc(clientContacts.firstName));
+      
+      res.json(contacts);
+    } catch (error) {
+      console.error("Error fetching client contacts:", error);
+      res.status(500).json({ error: "Failed to fetch client contacts" });
+    }
+  });
+
+  // Create a new client contact
+  app.post("/api/clients/:clientId/contacts", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const clientId = req.params.clientId;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      const { firstName, lastName, email, phone, title, isPrimary, notes } = req.body;
+      
+      if (!firstName?.trim()) {
+        return res.status(400).json({ error: "First name is required" });
+      }
+      
+      const databaseUserId = await normalizeUserIdForDb(userId);
+      
+      // If this contact is set as primary, unset other primary contacts first
+      if (isPrimary) {
+        await db.update(clientContacts)
+          .set({ isPrimary: false, updatedAt: new Date() })
+          .where(and(eq(clientContacts.clientId, clientId), eq(clientContacts.isPrimary, true)));
+      }
+      
+      const [newContact] = await db.insert(clientContacts).values({
+        clientId,
+        firstName: firstName.trim(),
+        lastName: lastName?.trim() || null,
+        email: email?.trim() || null,
+        phone: phone?.trim() || null,
+        title: title?.trim() || null,
+        isPrimary: isPrimary || false,
+        notes: notes?.trim() || null,
+        createdBy: databaseUserId,
+      }).returning();
+      
+      // Create audit log
+      await createAuditLog(
+        "created",
+        "client_contact",
+        newContact.id,
+        `${newContact.firstName} ${newContact.lastName || ''}`.trim(),
+        databaseUserId,
+        `Created contact for client`,
+        null,
+        newContact,
+        req
+      );
+      
+      res.status(201).json(newContact);
+    } catch (error) {
+      console.error("Error creating client contact:", error);
+      res.status(500).json({ error: "Failed to create client contact" });
+    }
+  });
+
+  // Update a client contact
+  app.put("/api/clients/:clientId/contacts/:contactId", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId, contactId } = req.params;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      const { firstName, lastName, email, phone, title, isPrimary, notes } = req.body;
+      
+      if (!firstName?.trim()) {
+        return res.status(400).json({ error: "First name is required" });
+      }
+      
+      // Get existing contact
+      const [existingContact] = await db.select()
+        .from(clientContacts)
+        .where(and(eq(clientContacts.id, contactId), eq(clientContacts.clientId, clientId)));
+      
+      if (!existingContact) {
+        return res.status(404).json({ error: "Contact not found" });
+      }
+      
+      const databaseUserId = await normalizeUserIdForDb(userId);
+      
+      // If this contact is being set as primary, unset other primary contacts first
+      if (isPrimary && !existingContact.isPrimary) {
+        await db.update(clientContacts)
+          .set({ isPrimary: false, updatedAt: new Date() })
+          .where(and(eq(clientContacts.clientId, clientId), eq(clientContacts.isPrimary, true)));
+      }
+      
+      const [updatedContact] = await db.update(clientContacts)
+        .set({
+          firstName: firstName.trim(),
+          lastName: lastName?.trim() || null,
+          email: email?.trim() || null,
+          phone: phone?.trim() || null,
+          title: title?.trim() || null,
+          isPrimary: isPrimary || false,
+          notes: notes?.trim() || null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(clientContacts.id, contactId), eq(clientContacts.clientId, clientId)))
+        .returning();
+      
+      // Create audit log
+      await createAuditLog(
+        "updated",
+        "client_contact",
+        updatedContact.id,
+        `${updatedContact.firstName} ${updatedContact.lastName || ''}`.trim(),
+        databaseUserId,
+        `Updated contact for client`,
+        existingContact,
+        updatedContact,
+        req
+      );
+      
+      res.json(updatedContact);
+    } catch (error) {
+      console.error("Error updating client contact:", error);
+      res.status(500).json({ error: "Failed to update client contact" });
+    }
+  });
+
+  // Delete a client contact
+  app.delete("/api/clients/:clientId/contacts/:contactId", requireAuth(), requirePermission('clients', 'canDelete'), async (req, res) => {
+    try {
+      const { clientId, contactId } = req.params;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      // Get existing contact
+      const [existingContact] = await db.select()
+        .from(clientContacts)
+        .where(and(eq(clientContacts.id, contactId), eq(clientContacts.clientId, clientId)));
+      
+      if (!existingContact) {
+        return res.status(404).json({ error: "Contact not found" });
+      }
+      
+      const databaseUserId = await normalizeUserIdForDb(userId);
+      
+      await db.delete(clientContacts)
+        .where(and(eq(clientContacts.id, contactId), eq(clientContacts.clientId, clientId)));
+      
+      // Create audit log
+      await createAuditLog(
+        "deleted",
+        "client_contact",
+        existingContact.id,
+        `${existingContact.firstName} ${existingContact.lastName || ''}`.trim(),
+        databaseUserId,
+        `Deleted contact from client`,
+        existingContact,
+        null,
+        req
+      );
+      
+      res.json({ message: "Contact deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting client contact:", error);
+      res.status(500).json({ error: "Failed to delete client contact" });
+    }
+  });
+
+  // Set a contact as primary
+  app.patch("/api/clients/:clientId/contacts/:contactId/set-primary", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId, contactId } = req.params;
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      // Get existing contact
+      const [existingContact] = await db.select()
+        .from(clientContacts)
+        .where(and(eq(clientContacts.id, contactId), eq(clientContacts.clientId, clientId)));
+      
+      if (!existingContact) {
+        return res.status(404).json({ error: "Contact not found" });
+      }
+      
+      const databaseUserId = await normalizeUserIdForDb(userId);
+      
+      // Unset all other primary contacts for this client
+      await db.update(clientContacts)
+        .set({ isPrimary: false, updatedAt: new Date() })
+        .where(and(eq(clientContacts.clientId, clientId), eq(clientContacts.isPrimary, true)));
+      
+      // Set this contact as primary
+      const [updatedContact] = await db.update(clientContacts)
+        .set({ isPrimary: true, updatedAt: new Date() })
+        .where(and(eq(clientContacts.id, contactId), eq(clientContacts.clientId, clientId)))
+        .returning();
+      
+      res.json(updatedContact);
+    } catch (error) {
+      console.error("Error setting primary contact:", error);
+      res.status(500).json({ error: "Failed to set primary contact" });
+    }
+  });
   // === LEAD NOTES ===
   app.get("/api/lead-notes/:leadId", requireAuth(), requirePermission('leads', 'canView'), async (req, res) => {
     try {
