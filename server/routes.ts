@@ -14421,6 +14421,205 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Roles & Permissions CSV Export/Import - SECURED (Admin Only)
+  app.get("/api/roles-permissions/export", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { generateCSV } = await import('./lib/roles-permissions-csv');
+      
+      // Fetch all roles with their granular permissions
+      const allRoles = await db
+        .select({
+          id: roles.id,
+          name: roles.name,
+        })
+        .from(roles)
+        .orderBy(asc(roles.name));
+
+      // Build role permission data
+      const roleDataList: Array<{ roleName: string; permissions: { [key: string]: boolean } }> = [];
+      
+      for (const role of allRoles) {
+        const roleGranularPerms = await db
+          .select({
+            permissionKey: granularPermissions.permissionKey,
+            enabled: granularPermissions.enabled,
+          })
+          .from(granularPermissions)
+          .where(eq(granularPermissions.roleId, role.id));
+        
+        const permissionsMap: { [key: string]: boolean } = {};
+        for (const perm of roleGranularPerms) {
+          permissionsMap[perm.permissionKey] = perm.enabled ?? false;
+        }
+        
+        roleDataList.push({
+          roleName: role.name,
+          permissions: permissionsMap,
+        });
+      }
+      
+      const csvContent = generateCSV(roleDataList);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="roles-permissions.csv"');
+      res.send(csvContent);
+    } catch (error) {
+      console.error('Error exporting roles permissions:', error);
+      res.status(500).json({ message: "Failed to export roles permissions" });
+    }
+  });
+
+  app.post("/api/roles-permissions/import", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      const { parseCSV, getAllValidPermissionKeys } = await import('./lib/roles-permissions-csv');
+      const { csvContent } = req.body;
+      
+      if (!csvContent || typeof csvContent !== 'string') {
+        return res.status(400).json({ message: "CSV content is required" });
+      }
+      
+      // Get existing role names for comparison
+      const existingRoles = await db
+        .select({ name: roles.name, id: roles.id })
+        .from(roles);
+      const existingRoleNames = existingRoles.map(r => r.name);
+      
+      // Parse and validate CSV
+      const parseResult = parseCSV(csvContent, existingRoleNames);
+      
+      if (!parseResult.success) {
+        return res.status(400).json({
+          message: "CSV validation failed",
+          errors: parseResult.errors,
+          warnings: parseResult.warnings,
+        });
+      }
+      
+      // Return preview data
+      res.json({
+        success: true,
+        preview: {
+          newRoles: parseResult.newRoles,
+          existingRoles: parseResult.existingRoles,
+          warnings: parseResult.warnings,
+          totalRoles: parseResult.roles.length,
+          totalPermissions: getAllValidPermissionKeys().length,
+        },
+        roles: parseResult.roles,
+      });
+    } catch (error) {
+      console.error('Error parsing roles permissions CSV:', error);
+      res.status(500).json({ message: "Failed to parse CSV" });
+    }
+  });
+
+  app.post("/api/roles-permissions/apply", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      const { getAllValidPermissionKeys } = await import('./lib/roles-permissions-csv');
+      const { roles: roleDataList } = req.body;
+      
+      if (!roleDataList || !Array.isArray(roleDataList)) {
+        return res.status(400).json({ message: "Role data is required" });
+      }
+      
+      // Get existing roles
+      const existingRoles = await db
+        .select({ name: roles.name, id: roles.id })
+        .from(roles);
+      const existingRoleMap = new Map(existingRoles.map(r => [r.name, r.id]));
+      
+      const validPermissionKeys = new Set(getAllValidPermissionKeys());
+      const results = {
+        created: [] as string[],
+        updated: [] as string[],
+        errors: [] as string[],
+      };
+      
+      for (const roleData of roleDataList) {
+        try {
+          let roleId = existingRoleMap.get(roleData.roleName);
+          
+          if (!roleId) {
+            // Create new role
+            const [newRole] = await db.insert(roles).values({
+              name: roleData.roleName,
+              description: `Imported from CSV`,
+              isSystem: false,
+            }).returning();
+            roleId = newRole.id;
+            results.created.push(roleData.roleName);
+            
+            // Create audit log for role creation
+            await createAuditLog(
+              "created",
+              "role",
+              newRole.id,
+              newRole.name,
+              userId,
+              `Created role '\${newRole.name}' via CSV import`,
+              null,
+              newRole,
+              req
+            );
+          } else {
+            results.updated.push(roleData.roleName);
+          }
+          
+          // Update granular permissions for this role
+          // First, delete existing granular permissions for this role
+          await db.delete(granularPermissions).where(eq(granularPermissions.roleId, roleId));
+          
+          // Insert new granular permissions
+          const permsToInsert = [];
+          for (const [permKey, enabled] of Object.entries(roleData.permissions)) {
+            if (validPermissionKeys.has(permKey)) {
+              const [modulePart] = permKey.split('.');
+              permsToInsert.push({
+                roleId: roleId,
+                module: modulePart,
+                permissionKey: permKey,
+                enabled: enabled === true,
+              });
+            }
+          }
+          
+          if (permsToInsert.length > 0) {
+            await db.insert(granularPermissions).values(permsToInsert);
+          }
+          
+          // Create audit log for permission update
+          await createAuditLog(
+            "updated",
+            "role",
+            roleId,
+            roleData.roleName,
+            userId,
+            `Updated permissions for role '\${roleData.roleName}' via CSV import`,
+            null,
+            { permissions: roleData.permissions },
+            req
+          );
+        } catch (roleError: any) {
+          results.errors.push(`Error processing role '\${roleData.roleName}': \${roleError.message}`);
+        }
+      }
+      
+      res.json({
+        success: results.errors.length === 0,
+        results,
+      });
+    } catch (error) {
+      console.error('Error applying roles permissions:', error);
+      res.status(500).json({ message: "Failed to apply roles permissions" });
+    }
+  });
   // User Roles API Routes - SECURED (Admin Only)
   app.get("/api/users/:userId/roles", requireAuth(), requireAdmin(), async (req, res) => {
     try {
