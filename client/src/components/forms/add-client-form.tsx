@@ -13,6 +13,7 @@ import { X, Plus } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertClientSchema, type Client, type InsertClient } from "@shared/schema";
+import ContactCardField from "@/components/contact-card-field";
 import { z } from "zod";
 
 interface AddClientFormProps {
@@ -24,7 +25,7 @@ const addClientFormSchema = z.object({
   status: z.string().min(1, "Status is required"),
   contactOwner: z.string().optional(),
   tags: z.array(z.string()).default([]),
-  customFieldValues: z.record(z.string()).default({}),
+  customFieldValues: z.record(z.any()).default({}),
 });
 
 type AddClientFormData = z.infer<typeof addClientFormSchema>;
@@ -240,6 +241,14 @@ export default function AddClientForm({ onSuccess }: AddClientFormProps) {
                     ))}
                   </SelectContent>
                 </Select>
+              )}
+              {fieldType === "contact_card" && (
+                <ContactCardField
+                  value={formField.value || []}
+                  onChange={formField.onChange}
+                  fieldName={fieldName}
+                  maxContacts={10}
+                />
               )}
             </FormControl>
             <FormMessage />

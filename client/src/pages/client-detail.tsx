@@ -5,13 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, Globe, Calendar, User, Building2, Tag, Folder, Users } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, Globe, Calendar, User, Building2, Tag, Folder, Users, Save, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import ClientForm from "@/components/forms/client-form";
 import ClientContacts from "@/components/client-contacts";
+import ContactCardField, { ContactCardEntry } from "@/components/contact-card-field";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import type { Client, CustomFieldFolder } from "@shared/schema";
+import type { Client, CustomFieldFolder, CustomField } from "@shared/schema";
 
 export default function ClientDetail() {
   const [match, params] = useRoute("/clients/:id");
@@ -32,6 +40,40 @@ export default function ClientDetail() {
   const { data: customFieldFolders = [] } = useQuery<CustomFieldFolder[]>({
     queryKey: ["/api/custom-field-folders"],
     enabled: !!clientId,
+  });
+
+  const { data: customFields = [] } = useQuery<CustomField[]>({
+    queryKey: ["/api/custom-fields"],
+    enabled: !!clientId,
+  });
+
+  const [editingFieldValues, setEditingFieldValues] = useState<Record<string, any>>({});
+  const [isSavingFields, setIsSavingFields] = useState(false);
+
+  const updateCustomFieldsMutation = useMutation({
+    mutationFn: async (values: Record<string, any>) => {
+      await apiRequest("PUT", `/api/clients/${clientId}`, {
+        customFieldValues: values
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients", clientId] });
+      toast({
+        title: "Saved",
+        variant: "success",
+        description: "Custom field values have been saved.",
+      });
+      setIsSavingFields(false);
+      setEditingFieldValues({});
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save custom field values.",
+        variant: "destructive",
+      });
+      setIsSavingFields(false);
+    },
   });
 
   const deleteClientMutation = useMutation({
@@ -210,7 +252,213 @@ export default function ClientDetail() {
       return (
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-slate-600">Folder not found.</p>
+            <p className="text-muted-foreground">Folder not found.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const folderFields = customFields
+      .filter(f => f.folderId === folder.id)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    const clientFieldValues = client?.customFieldValues as Record<string, any> || {};
+    
+    const getFieldValue = (fieldId: string) => {
+      if (editingFieldValues[fieldId] !== undefined) {
+        return editingFieldValues[fieldId];
+      }
+      return clientFieldValues[fieldId] ?? "";
+    };
+
+    const setFieldValue = (fieldId: string, value: any) => {
+      setEditingFieldValues(prev => ({
+        ...prev,
+        [fieldId]: value
+      }));
+    };
+
+    const saveFieldValues = () => {
+      setIsSavingFields(true);
+      const mergedValues = {
+        ...clientFieldValues,
+        ...editingFieldValues
+      };
+      updateCustomFieldsMutation.mutate(mergedValues);
+    };
+
+    const hasChanges = Object.keys(editingFieldValues).length > 0;
+
+    const renderFieldInput = (field: CustomField) => {
+      const value = getFieldValue(field.id);
+      
+      switch (field.type) {
+        case "text":
+          return (
+            <Input
+              value={value}
+              onChange={(e) => setFieldValue(field.id, e.target.value)}
+              placeholder={`Enter ${field.name.toLowerCase()}`}
+            />
+          );
+        case "email":
+          return (
+            <Input
+              type="email"
+              value={value}
+              onChange={(e) => setFieldValue(field.id, e.target.value)}
+              placeholder="email@example.com"
+            />
+          );
+        case "phone":
+          return (
+            <Input
+              type="tel"
+              value={value}
+              onChange={(e) => setFieldValue(field.id, e.target.value)}
+              placeholder="(555) 123-4567"
+            />
+          );
+        case "url":
+          return (
+            <Input
+              type="url"
+              value={value}
+              onChange={(e) => setFieldValue(field.id, e.target.value)}
+              placeholder="https://example.com"
+            />
+          );
+        case "number":
+          return (
+            <Input
+              type="number"
+              value={value}
+              onChange={(e) => setFieldValue(field.id, e.target.value)}
+              placeholder="0"
+            />
+          );
+        case "currency":
+          return (
+            <Input
+              type="number"
+              step="0.01"
+              value={value}
+              onChange={(e) => setFieldValue(field.id, e.target.value)}
+              placeholder="0.00"
+            />
+          );
+        case "date":
+          return (
+            <Input
+              type="date"
+              value={value}
+              onChange={(e) => setFieldValue(field.id, e.target.value)}
+            />
+          );
+        case "multiline":
+          return (
+            <Textarea
+              value={value}
+              onChange={(e) => setFieldValue(field.id, e.target.value)}
+              placeholder={`Enter ${field.name.toLowerCase()}`}
+              rows={3}
+            />
+          );
+        case "dropdown":
+          return (
+            <Select value={value} onValueChange={(v) => setFieldValue(field.id, v)}>
+              <SelectTrigger>
+                <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+              </SelectTrigger>
+              <SelectContent>
+                {(field.options || []).map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        case "dropdown_multiple":
+          const selectedValues = Array.isArray(value) ? value : [];
+          return (
+            <div className="space-y-2">
+              {(field.options || []).map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`${field.id}-${option}`}
+                    checked={selectedValues.includes(option)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setFieldValue(field.id, [...selectedValues, option]);
+                      } else {
+                        setFieldValue(field.id, selectedValues.filter((v: string) => v !== option));
+                      }
+                    }}
+                  />
+                  <Label htmlFor={`${field.id}-${option}`}>{option}</Label>
+                </div>
+              ))}
+            </div>
+          );
+        case "checkbox":
+          return (
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={value === true || value === "true"}
+                onCheckedChange={(checked) => setFieldValue(field.id, checked)}
+              />
+              <Label>{value ? "Yes" : "No"}</Label>
+            </div>
+          );
+        case "radio":
+          return (
+            <RadioGroup value={value} onValueChange={(v) => setFieldValue(field.id, v)}>
+              {(field.options || []).map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`${field.id}-${option}`} />
+                  <Label htmlFor={`${field.id}-${option}`}>{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          );
+        case "contact_card":
+          return (
+            <ContactCardField
+              value={Array.isArray(value) ? value : []}
+              onChange={(v) => setFieldValue(field.id, v)}
+              fieldName={field.name}
+              maxContacts={10}
+            />
+          );
+        default:
+          return (
+            <Input
+              value={value}
+              onChange={(e) => setFieldValue(field.id, e.target.value)}
+              placeholder={`Enter ${field.name.toLowerCase()}`}
+            />
+          );
+      }
+    };
+
+    if (folderFields.length === 0) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Folder className="h-5 w-5 text-[#00C9C6]" />
+              {folder.name}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 border border-dashed border-border rounded-lg">
+              <Folder className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-lg font-medium mb-2">No Fields Yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Add custom fields to this folder in Settings &gt; Custom Fields.
+              </p>
+            </div>
           </CardContent>
         </Card>
       );
@@ -218,23 +466,43 @@ export default function ClientDetail() {
 
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Folder className="h-5 w-5 text-[#46a1a0]" />
+            <Folder className="h-5 w-5 text-[#00C9C6]" />
             {folder.name}
           </CardTitle>
-
+          {hasChanges && (
+            <Button
+              onClick={saveFieldValues}
+              disabled={isSavingFields}
+              size="sm"
+              className="bg-[#00C9C6] hover:bg-[#00C9C6]/90"
+            >
+              {isSavingFields ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-1" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 border border-dashed border-slate-300 rounded-lg">
-            <Folder className="h-12 w-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 mb-2">Custom Fields Coming Soon</h3>
-            <p className="text-slate-600 mb-4">
-              Custom fields for this folder will appear here once they're created.
-            </p>
-            <p className="text-sm text-slate-500">
-              Admins can add custom fields to this folder in Settings > Custom Fields.
-            </p>
+          <div className="space-y-6">
+            {folderFields.map((field) => (
+              <div key={field.id} className="space-y-2">
+                <Label className="text-sm font-medium">
+                  {field.name}
+                  {field.required && <span className="text-destructive ml-1">*</span>}
+                </Label>
+                {renderFieldInput(field)}
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
