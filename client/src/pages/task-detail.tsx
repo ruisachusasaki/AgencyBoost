@@ -174,6 +174,18 @@ export default function TaskDetail() {
     queryKey: ["/api/task-priorities"],
   });
 
+  // Task categories for dynamic category dropdown
+  type TaskCategory = {
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
+  };
+
+  const { data: taskCategories = [] } = useQuery<TaskCategory[]>({
+    queryKey: ["/api/task-categories"],
+  });
+
   const { data: userPermissions } = useQuery({
     queryKey: ["/api/auth/permissions"],
   });
@@ -837,7 +849,39 @@ export default function TaskDetail() {
                   </div>
                 </div>
 
-                {/* Row 2.5: Tags */}
+                {/* Row 2.5: Category */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <FolderOpen className="h-4 w-4 text-slate-400" />
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Category</span>
+                  </div>
+                  <Select
+                    value={task.categoryId || "none"}
+                    onValueChange={(value) => updateTaskMutation.mutate({ categoryId: value === "none" ? null : value })}
+                  >
+                    <SelectTrigger className="w-[180px] h-8">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <span className="text-slate-500">No category</span>
+                      </SelectItem>
+                      {taskCategories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: category.color }}
+                            />
+                            <span>{category.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Row 2.6: Tags */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
                     <TagIcon className="h-4 w-4 text-slate-400" />
