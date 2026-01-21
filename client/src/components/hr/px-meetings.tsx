@@ -978,6 +978,64 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Convert to Task Dialog */}
+        <Dialog open={showConvertToTaskDialog} onOpenChange={setShowConvertToTaskDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Convert to Task</DialogTitle>
+              <DialogDescription>
+                Create a task from this action item and assign it to a team member.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Action Item</Label>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md text-sm">
+                  {actionItemToConvert?.content}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="px-detail-assignee">Assign To</Label>
+                <Select value={taskAssigneeId} onValueChange={setTaskAssigneeId}>
+                  <SelectTrigger id="px-detail-assignee">
+                    <SelectValue placeholder="Select a team member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeStaff.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id}>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={staff.profileImagePath} />
+                            <AvatarFallback className="text-xs">
+                              {staff.firstName?.[0]}{staff.lastName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{staff.firstName || staff.name} {staff.lastName || ""}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowConvertToTaskDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConvertToTask}
+                disabled={!taskAssigneeId || convertToTaskMutation.isPending}
+                className="bg-[#00C9C6] hover:bg-[#00a8a6] text-white"
+              >
+                {convertToTaskMutation.isPending ? "Creating..." : "Create Task"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
