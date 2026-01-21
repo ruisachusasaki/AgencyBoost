@@ -953,6 +953,19 @@ function MeetingEditor({
   // Delete dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
+  // Convert to Task dialog state
+  const [showConvertToTaskDialog, setShowConvertToTaskDialog] = useState(false);
+  const [actionItemToConvert, setActionItemToConvert] = useState<ActionItem | null>(null);
+  const [taskAssigneeId, setTaskAssigneeId] = useState<string>("");
+  
+  // Fetch all active staff for task assignment
+  const { data: allStaff = [] } = useQuery<DirectReport[]>({
+    queryKey: ["/api/staff"],
+  });
+  
+  // Filter to only active staff (those without a termination date or similar indicator)
+  const activeStaff = allStaff.filter((s: any) => s.isActive !== false);
+  
   // Lists
   const [talkingPoints, setTalkingPoints] = useState<TalkingPoint[]>([]);
   const [wins, setWins] = useState<Win[]>([]);
@@ -1060,6 +1073,52 @@ function MeetingEditor({
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
     },
   });
+
+  // Convert action item to task mutation
+  const convertToTaskMutation = useMutation({
+    mutationFn: async ({ title, assignedTo }: { title: string; assignedTo: string }) => {
+      return await apiRequest("POST", "/api/tasks", {
+        title,
+        assignedTo,
+        status: "todo",
+        priority: "medium",
+        description: `Converted from 1v1 meeting action item`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Task Created",
+        description: "Action item has been converted to a task successfully.",
+      });
+      setShowConvertToTaskDialog(false);
+      setActionItemToConvert(null);
+      setTaskAssigneeId("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handler to open convert to task dialog
+  const handleOpenConvertToTask = (item: ActionItem) => {
+    setActionItemToConvert(item);
+    setTaskAssigneeId("");
+    setShowConvertToTaskDialog(true);
+  };
+
+  // Handler to submit convert to task
+  const handleConvertToTask = () => {
+    if (!actionItemToConvert || !taskAssigneeId) return;
+    convertToTaskMutation.mutate({
+      title: actionItemToConvert.content,
+      assignedTo: taskAssigneeId,
+    });
+  };
 
   // Save meeting mutation
   const saveMeetingMutation = useMutation({
@@ -1486,6 +1545,66 @@ function MeetingEditor({
         </DialogContent>
       </Dialog>
 
+      {/* Convert to Task Dialog */}
+      <Dialog open={showConvertToTaskDialog} onOpenChange={setShowConvertToTaskDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convert to Task</DialogTitle>
+            <DialogDescription>
+              Create a task from this action item and assign it to a team member.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Action Item</Label>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md text-sm">
+                {actionItemToConvert?.content}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assignee">Assign To</Label>
+              <Select value={taskAssigneeId} onValueChange={setTaskAssigneeId}>
+                <SelectTrigger id="assignee" data-testid="select-task-assignee">
+                  <SelectValue placeholder="Select a team member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeStaff.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={staff.profileImagePath} />
+                          <AvatarFallback className="text-xs">
+                            {staff.firstName?.[0]}{staff.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{staff.firstName} {staff.lastName}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowConvertToTaskDialog(false)}
+              data-testid="button-cancel-convert"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConvertToTask}
+              disabled={!taskAssigneeId || convertToTaskMutation.isPending}
+              className="bg-[#00C9C6] hover:bg-[#00a8a6] text-white"
+              data-testid="button-confirm-convert"
+            >
+              {convertToTaskMutation.isPending ? "Creating..." : "Create Task"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Main Meeting Content */}
         <div className="lg:col-span-2 space-y-6">
@@ -1706,17 +1825,30 @@ function MeetingEditor({
                 </Label>
                 <div className="space-y-2">
                   {actionItems.map((item) => (
-                    <div key={item.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                      <input
-                        type="checkbox"
-                        checked={item.isCompleted}
-                        onChange={() => handleToggleActionItem(item.id)}
-                        className="h-4 w-4 rounded-full cursor-pointer"
-                        data-testid={`checkbox-action-item-${item.id}`}
-                      />
-                      <span className={item.isCompleted ? "line-through text-muted-foreground" : ""}>
-                        {item.content}
-                      </span>
+                    <div key={item.id} className="flex items-center justify-between gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          type="checkbox"
+                          checked={item.isCompleted}
+                          onChange={() => handleToggleActionItem(item.id)}
+                          className="h-4 w-4 rounded-full cursor-pointer"
+                          data-testid={`checkbox-action-item-${item.id}`}
+                        />
+                        <span className={item.isCompleted ? "line-through text-muted-foreground" : ""}>
+                          {item.content}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleOpenConvertToTask(item)}
+                        className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
+                        title="Convert to Task"
+                        data-testid={`button-convert-task-${item.id}`}
+                      >
+                        <Briefcase className="h-3 w-3 mr-1" />
+                        Task
+                      </Button>
                     </div>
                   ))}
                   <div className="flex gap-2">
