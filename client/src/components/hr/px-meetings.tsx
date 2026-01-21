@@ -599,6 +599,46 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                     {selectedMeeting.attendees.map(a => a.name).join(", ")}
                   </p>
                 )}
+                {(selectedMeeting.facilitatorId || selectedMeeting.noteTakerId) && (
+                  <div className="flex items-center gap-4 mt-2 text-sm">
+                    {selectedMeeting.facilitatorId && (() => {
+                      const facilitator = activeStaff.find(s => s.id === selectedMeeting.facilitatorId);
+                      if (!facilitator) return null;
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Facilitator:</span>
+                          <div className="flex items-center gap-1.5">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={facilitator.profileImagePath || undefined} />
+                              <AvatarFallback className="text-xs">
+                                {facilitator.firstName?.[0]}{facilitator.lastName?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{facilitator.firstName} {facilitator.lastName}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    {selectedMeeting.noteTakerId && (() => {
+                      const noteTaker = activeStaff.find(s => s.id === selectedMeeting.noteTakerId);
+                      if (!noteTaker) return null;
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Note Taker:</span>
+                          <div className="flex items-center gap-1.5">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={noteTaker.profileImagePath || undefined} />
+                              <AvatarFallback className="text-xs">
+                                {noteTaker.firstName?.[0]}{noteTaker.lastName?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{noteTaker.firstName} {noteTaker.lastName}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
               {hasUnsavedChanges && (
                 <Badge variant="outline" className="text-amber-600 border-amber-300">
