@@ -13,6 +13,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import CustomFieldFileUpload from "./CustomFieldFileUpload";
+import ContactCardField from "./contact-card-field";
 import type { CustomField, CustomFieldFileUpload as CustomFieldFileUploadType } from "@shared/schema";
 
 interface CustomFieldRendererProps {
@@ -248,6 +249,17 @@ export default function CustomFieldRenderer({
             }}
             label={field.name}
             required={field.required || false}
+          />
+        );
+
+      case "contact_card":
+        return (
+          <ContactCardField
+            value={Array.isArray(localValue) ? localValue : []}
+            onChange={handleLocalChange}
+            fieldName={field.name}
+            maxContacts={10}
+            disabled={disabled}
           />
         );
 

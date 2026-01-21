@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
-
+import ContactCardField from "@/components/contact-card-field";
 
 import { DocumentUploader } from "@/components/DocumentUploader";
 import { AppointmentModal } from "@/components/AppointmentModal";
@@ -1775,6 +1775,78 @@ const mockUsers = [
   { id: "3", name: "David Wilson" }
 ];
 
+// Contact Card Editable Field Component
+const ContactCardEditableField = ({
+  fieldId,
+  label,
+  value,
+  required,
+  updateFieldMutation
+}: {
+  fieldId: string;
+  label: string;
+  value: any;
+  required?: boolean;
+  updateFieldMutation: any;
+}) => {
+  const [localContactValue, setLocalContactValue] = useState<any[]>(
+    Array.isArray(value) ? value : []
+  );
+  const [hasChanges, setHasChanges] = useState(false);
+  
+  const handleContactChange = (newValue: any[]) => {
+    setLocalContactValue(newValue);
+    setHasChanges(true);
+  };
+  
+  const saveContactCard = async () => {
+    try {
+      await updateFieldMutation.mutateAsync({
+        fieldId,
+        value: localContactValue,
+        isCustomField: true
+      });
+      setHasChanges(false);
+    } catch (error) {
+      console.error('Failed to save contact card:', error);
+    }
+  };
+  
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-gray-500 dark:text-gray-400">
+          <span>
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </span>
+        </label>
+        {hasChanges && (
+          <Button
+            size="sm"
+            onClick={saveContactCard}
+            disabled={updateFieldMutation.isPending}
+            className="h-7 bg-[#00C9C6] hover:bg-[#00C9C6]/90"
+          >
+            {updateFieldMutation.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+            ) : (
+              <Save className="h-3 w-3 mr-1" />
+            )}
+            Save
+          </Button>
+        )}
+      </div>
+      <ContactCardField
+        value={localContactValue}
+        onChange={handleContactChange}
+        fieldName={label}
+        maxContacts={10}
+      />
+    </div>
+  );
+};
+
 // Editable Field Component (moved outside main component to prevent recreation)
 const EditableField = ({ 
   fieldId, 
@@ -1834,6 +1906,19 @@ const EditableField = ({
           required={required}
         />
       </div>
+    );
+  }
+  
+  // Handle contact_card fields - they need the ContactCardField component
+  if (type === 'contact_card') {
+    return (
+      <ContactCardEditableField
+        fieldId={fieldId}
+        label={label}
+        value={value}
+        required={required}
+        updateFieldMutation={updateFieldMutation}
+      />
     );
   }
   
