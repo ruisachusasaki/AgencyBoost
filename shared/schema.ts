@@ -4286,6 +4286,7 @@ export const oneOnOneActionItems = pgTable("one_on_one_action_items", {
   dueDate: date("due_date"),
   isCompleted: boolean("is_completed").default(false),
   completedAt: timestamp("completed_at"),
+  taskId: varchar("task_id").references(() => tasks.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

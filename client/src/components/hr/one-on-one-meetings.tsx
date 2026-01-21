@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,8 @@ import {
   BarChart3,
   ChevronRight,
   Trophy,
-  X
+  X,
+  ExternalLink
 } from "lucide-react";
 
 interface DirectReport {
@@ -103,6 +105,7 @@ interface ActionItem {
   assignedTo?: string;
   dueDate?: string;
   isCompleted: boolean;
+  taskId?: string;
 }
 
 interface Goal {
@@ -1076,17 +1079,27 @@ function MeetingEditor({
 
   // Convert action item to task mutation
   const convertToTaskMutation = useMutation({
-    mutationFn: async ({ title, assignedTo }: { title: string; assignedTo: string }) => {
-      return await apiRequest("POST", "/api/tasks", {
+    mutationFn: async ({ actionItemId, title, assignedTo }: { actionItemId: string; title: string; assignedTo: string }) => {
+      // Create the task
+      const taskResponse = await apiRequest("POST", "/api/tasks", {
         title,
         assignedTo,
         status: "todo",
         priority: "medium",
         description: `Converted from 1v1 meeting action item`,
       });
+      const task = await taskResponse.json();
+      
+      // Update the action item with the task ID
+      await apiRequest("PUT", `/api/hr/one-on-one/action-items/${actionItemId}`, {
+        taskId: task.id,
+      });
+      
+      return task;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
       toast({
         title: "Task Created",
         description: "Action item has been converted to a task successfully.",
@@ -1115,6 +1128,7 @@ function MeetingEditor({
   const handleConvertToTask = () => {
     if (!actionItemToConvert || !taskAssigneeId) return;
     convertToTaskMutation.mutate({
+      actionItemId: actionItemToConvert.id,
       title: actionItemToConvert.content,
       assignedTo: taskAssigneeId,
     });
@@ -1838,17 +1852,32 @@ function MeetingEditor({
                           {item.content}
                         </span>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleOpenConvertToTask(item)}
-                        className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
-                        title="Convert to Task"
-                        data-testid={`button-convert-task-${item.id}`}
-                      >
-                        <Briefcase className="h-3 w-3 mr-1" />
-                        Task
-                      </Button>
+                      {item.taskId ? (
+                        <Link href={`/tasks/${item.taskId}`}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
+                            title="View Task"
+                            data-testid={`button-view-task-${item.id}`}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            View Task
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleOpenConvertToTask(item)}
+                          className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
+                          title="Convert to Task"
+                          data-testid={`button-convert-task-${item.id}`}
+                        >
+                          <Briefcase className="h-3 w-3 mr-1" />
+                          Task
+                        </Button>
+                      )}
                     </div>
                   ))}
                   <div className="flex gap-2">
