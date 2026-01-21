@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +42,9 @@ import {
   StickyNote,
   Tag,
   Building2,
-  Lock
+  Lock,
+  Briefcase,
+  ExternalLink
 } from "lucide-react";
 
 interface Staff {
@@ -127,6 +129,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     id: string;
     content: string;
     isCompleted: boolean;
+    taskId?: string;
   }
   
   const [salesOpportunities, setSalesOpportunities] = useState<CheckableItem[]>([]);
@@ -138,6 +141,11 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   
   const [isAttendeesOpen, setIsAttendeesOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  
+  // Convert to Task dialog state
+  const [showConvertToTaskDialog, setShowConvertToTaskDialog] = useState(false);
+  const [actionItemToConvert, setActionItemToConvert] = useState<CheckableItem | null>(null);
+  const [taskAssigneeId, setTaskAssigneeId] = useState<string>("");
 
   const { data: meetings = [], isLoading } = useQuery<PxMeeting[]>({
     queryKey: ["/api/px-meetings"],
@@ -254,6 +262,69 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       toast({ title: "Failed to delete meeting", description: error.message, variant: "destructive" });
     },
   });
+
+  // Filter to only active staff
+  const activeStaff = allStaff.filter((s: any) => s.isActive !== false);
+
+  // Convert action item to task mutation
+  const convertToTaskMutation = useMutation({
+    mutationFn: async ({ actionItemId, title, assignedTo }: { actionItemId: string; title: string; assignedTo: string }) => {
+      // Create the task
+      const taskResponse = await apiRequest("POST", "/api/tasks", {
+        title,
+        assignedTo,
+        status: "todo",
+        priority: "medium",
+        description: `Converted from PX meeting action item`,
+      });
+      const task = await taskResponse.json();
+      return task;
+    },
+    onSuccess: (task) => {
+      // Update the action item with the task ID locally
+      setActionItems(prevItems => 
+        prevItems.map(item => 
+          item.id === actionItemToConvert?.id 
+            ? { ...item, taskId: task.id }
+            : item
+        )
+      );
+      setHasUnsavedChanges(true);
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Task Created",
+        description: "Action item has been converted to a task. Don't forget to save the meeting!",
+      });
+      setShowConvertToTaskDialog(false);
+      setActionItemToConvert(null);
+      setTaskAssigneeId("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handler to open convert to task dialog
+  const handleOpenConvertToTask = (item: CheckableItem) => {
+    setActionItemToConvert(item);
+    setTaskAssigneeId("");
+    setShowConvertToTaskDialog(true);
+  };
+
+  // Handler to submit convert to task
+  const handleConvertToTask = () => {
+    if (!actionItemToConvert || !taskAssigneeId) return;
+    convertToTaskMutation.mutate({
+      actionItemId: actionItemToConvert.id,
+      title: actionItemToConvert.content,
+      assignedTo: taskAssigneeId,
+    });
+  };
 
   const resetForm = () => {
     setFormData({
@@ -838,6 +909,30 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                     <span className={`flex-1 ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
                       {item.content}
                     </span>
+                    {item.taskId ? (
+                      <Link href={`/tasks/${item.taskId}`}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
+                          title="View Task"
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          View Task
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleOpenConvertToTask(item)}
+                        className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
+                        title="Convert to Task"
+                      >
+                        <Briefcase className="h-3 w-3 mr-1" />
+                        Task
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1215,6 +1310,64 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             </DialogClose>
             <Button onClick={handleCreate} disabled={createMutation.isPending}>
               {createMutation.isPending ? "Creating..." : "Create Meeting"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Convert to Task Dialog */}
+      <Dialog open={showConvertToTaskDialog} onOpenChange={setShowConvertToTaskDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convert to Task</DialogTitle>
+            <DialogDescription>
+              Create a task from this action item and assign it to a team member.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Action Item</Label>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md text-sm">
+                {actionItemToConvert?.content}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="px-assignee">Assign To</Label>
+              <Select value={taskAssigneeId} onValueChange={setTaskAssigneeId}>
+                <SelectTrigger id="px-assignee">
+                  <SelectValue placeholder="Select a team member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeStaff.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={staff.profileImagePath} />
+                          <AvatarFallback className="text-xs">
+                            {staff.firstName?.[0]}{staff.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{staff.firstName || staff.name} {staff.lastName || ""}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowConvertToTaskDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConvertToTask}
+              disabled={!taskAssigneeId || convertToTaskMutation.isPending}
+              className="bg-[#00C9C6] hover:bg-[#00a8a6] text-white"
+            >
+              {convertToTaskMutation.isPending ? "Creating..." : "Create Task"}
             </Button>
           </DialogFooter>
         </DialogContent>
