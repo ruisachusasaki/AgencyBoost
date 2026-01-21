@@ -23131,7 +23131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!rawUserId) return;
       
       // Get staffId (auto-set to current user if not provided)
-      const staffId = req.body.staffId || currentUserId;
+      const staffId = req.body.staffId || rawUserId;
       
       // If timeOffTypeId is provided, look up the type and populate the legacy type field
       let legacyType = req.body.type || "vacation"; // Default for backward compat
