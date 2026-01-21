@@ -2233,6 +2233,9 @@ export default function EnhancedClientDetail() {
   const [showCC, setShowCC] = useState(false);
   const [showBCC, setShowBCC] = useState(false);
   
+  // Selected contact for communication (index into availableContacts array, 0 = primary client)
+  const [selectedContactIndex, setSelectedContactIndex] = useState(0);
+  
   // Handler functions for communication forms
   const handleSmsFieldChange = (field: string, value: string) => {
     setSmsData(prev => ({ ...prev, [field]: value }));
@@ -2296,7 +2299,9 @@ export default function EnhancedClientDetail() {
   };
 
   const handleSendSms = () => {
-    if (!smsData.fromNumber || !smsData.message.trim() || !contactPhoneNumber) {
+    const recipientPhone = selectedContact?.phone || contactPhoneNumber;
+    
+    if (!smsData.fromNumber || !smsData.message.trim() || !recipientPhone) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -2305,7 +2310,7 @@ export default function EnhancedClientDetail() {
       return;
     }
 
-    const formattedToNumber = formatPhoneNumber(contactPhoneNumber);
+    const formattedToNumber = formatPhoneNumber(recipientPhone);
 
     sendSmsMutation.mutate({
       fromNumber: smsData.fromNumber,
@@ -2969,6 +2974,78 @@ export default function EnhancedClientDetail() {
     // Fallback to client.phone if no custom field phone
     return client.phone || "";
   }, [client, customFieldsData, customFieldsLoading]);
+
+  // Extract all available contacts from Contact Card custom fields + primary client
+  const availableContacts = useMemo(() => {
+    const contacts: Array<{
+      id: string;
+      name: string;
+      position?: string;
+      email?: string;
+      phone?: string;
+      isPrimary: boolean;
+    }> = [];
+    
+    // Add primary client contact first
+    contacts.push({
+      id: 'primary',
+      name: contactDisplayName || client?.name || client?.company || 'Primary Contact',
+      position: 'Primary Contact',
+      email: client?.email || '',
+      phone: contactPhoneNumber || '',
+      isPrimary: true
+    });
+    
+    // Find all contact_card type custom fields and extract contacts
+    if (!customFieldsLoading && customFieldsData && client) {
+      const customFieldValues = client.customFieldValues as Record<string, any> || {};
+      
+      customFieldsData.forEach((field: any) => {
+        if (field.type === 'contact_card') {
+          const contactCardValue = customFieldValues[field.id];
+          if (Array.isArray(contactCardValue)) {
+            contactCardValue.forEach((contact: any) => {
+              if (contact && (contact.name || contact.email || contact.phone)) {
+                contacts.push({
+                  id: contact.id || `${field.id}-${contacts.length}`,
+                  name: contact.name || 'Unnamed Contact',
+                  position: contact.position || '',
+                  email: contact.email || '',
+                  phone: contact.phone || '',
+                  isPrimary: false
+                });
+              }
+            });
+          }
+        }
+      });
+    }
+    
+    return contacts;
+  }, [client, customFieldsData, customFieldsLoading, contactDisplayName, contactPhoneNumber]);
+
+  // Reset selectedContactIndex when availableContacts changes to prevent out-of-range
+  useEffect(() => {
+    if (selectedContactIndex >= availableContacts.length && availableContacts.length > 0) {
+      setSelectedContactIndex(0);
+    }
+  }, [availableContacts.length, selectedContactIndex]);
+
+  // Get the currently selected contact for communication with proper fallback
+  const selectedContact = useMemo(() => {
+    if (availableContacts.length === 0) {
+      // Provide a default fallback during loading
+      return {
+        id: 'primary',
+        name: contactDisplayName || client?.name || client?.company || 'Primary Contact',
+        position: 'Primary Contact',
+        email: client?.email || '',
+        phone: contactPhoneNumber || '',
+        isPrimary: true
+      };
+    }
+    return availableContacts[selectedContactIndex] || availableContacts[0];
+  }, [availableContacts, selectedContactIndex, client, contactDisplayName, contactPhoneNumber]);
 
   // Helper function to replace merge tags in text with actual client data
   const replaceMergeTags = (text: string) => {
@@ -3961,9 +4038,12 @@ export default function EnhancedClientDetail() {
 
   const sendEmailNow = async () => {
     console.log('🚀 SEND NOW BUTTON CLICKED - Starting email send process...');
+    const recipientEmail = selectedContact?.email || client?.email;
+    const recipientName = selectedContact?.name || client?.name;
+    
     try {
       // Validate required fields
-      if (!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email) {
+      if (!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !recipientEmail) {
         toast({
           title: "Missing Information",
           description: "Please fill in all required fields: from email, subject, and message.",
@@ -3984,7 +4064,7 @@ export default function EnhancedClientDetail() {
 
       // Send email through CRM API using MailGun integration
       const response = await apiRequest('POST', '/api/communications/send-email', {
-        to: client.email,
+        to: recipientEmail,
         subject: emailData.subject,
         previewText: emailData.previewText,
         message: emailData.message,
@@ -3998,7 +4078,7 @@ export default function EnhancedClientDetail() {
       toast({
         title: "Email Sent Successfully",
         variant: "success",
-        description: `Email sent to ${client?.name} (${client?.email})`,
+        description: `Email sent to ${recipientName} (${recipientEmail})`,
       });
       
       // Clear the form after successful send
@@ -4024,17 +4104,20 @@ export default function EnhancedClientDetail() {
 
   const scheduleEmail = async () => {
     console.log("🚀 scheduleEmail function called!");
+    const recipientEmail = selectedContact?.email || client?.email;
+    const recipientName = selectedContact?.name || client?.name;
+    
     console.log("📊 Current state:", {
       emailData,
       scheduledDate,
       scheduledTime,
       scheduledTimezone,
-      clientEmail: client?.email
+      recipientEmail
     });
     
     try {
       // Validate required fields
-      if (!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email || !scheduledDate || !scheduledTime) {
+      if (!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !recipientEmail || !scheduledDate || !scheduledTime) {
         console.log("❌ Validation failed - missing fields");
         toast({
           title: "Missing Information",
@@ -4071,7 +4154,7 @@ export default function EnhancedClientDetail() {
       // Schedule email through API (fromUserId will be derived from authenticated session)
       const response = await apiRequest('POST', '/api/scheduled-emails', {
         clientId: client.id,
-        toEmail: client.email,
+        toEmail: recipientEmail,
         subject: emailData.subject,
         previewText: emailData.previewText,
         content: emailData.message,
@@ -4086,7 +4169,7 @@ export default function EnhancedClientDetail() {
       toast({
         title: "Email Scheduled Successfully",
         variant: "success",
-        description: `Email scheduled for ${client?.name} on ${scheduledDate} at ${scheduledTime} (${scheduledTimezone})`,
+        description: `Email scheduled for ${recipientName} on ${scheduledDate} at ${scheduledTime} (${scheduledTimezone})`,
       });
       
       // Clear the form after successful scheduling
@@ -5780,6 +5863,57 @@ export default function EnhancedClientDetail() {
                 </Tabs>
               </CardHeader>
               <CardContent>
+                {/* Contact Selector - Available for all communication types */}
+                {availableContacts.length > 1 && (
+                  <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <Label className="text-sm font-medium mb-2 block">
+                      <Users className="h-4 w-4 inline mr-2" />
+                      Select Contact
+                    </Label>
+                    <Select 
+                      value={selectedContactIndex.toString()} 
+                      onValueChange={(value) => setSelectedContactIndex(parseInt(value))}
+                    >
+                      <SelectTrigger className="w-full" data-testid="select-communication-contact">
+                        <SelectValue placeholder="Select a contact" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableContacts.map((contact, index) => (
+                          <SelectItem key={contact.id} value={index.toString()}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {contact.name}
+                                {contact.isPrimary && (
+                                  <Badge variant="outline" className="ml-2 text-xs">Primary</Badge>
+                                )}
+                              </span>
+                              {contact.position && !contact.isPrimary && (
+                                <span className="text-xs text-muted-foreground">{contact.position}</span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedContact && (
+                      <div className="mt-2 text-xs text-muted-foreground grid grid-cols-2 gap-2">
+                        {selectedContact.email && (
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            <span className="truncate">{selectedContact.email}</span>
+                          </div>
+                        )}
+                        {selectedContact.phone && (
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            <span>{selectedContact.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 <Tabs value={communicationTab} className="w-full">
                   {/* Call Tab Content */}
                   <TabsContent value="call" className="space-y-4 mt-0">
@@ -5802,29 +5936,33 @@ export default function EnhancedClientDetail() {
                             Make calls directly from your browser using Twilio Voice.
                           </p>
                           
-                          {contactPhoneNumber ? (
+                          {selectedContact?.phone ? (
                             <div className="space-y-4">
                               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                                <Label className="text-sm text-muted-foreground">Calling</Label>
-                                <p className="text-lg font-medium">{contactPhoneNumber}</p>
+                                <Label className="text-sm text-muted-foreground">
+                                  Calling {selectedContact.name}
+                                </Label>
+                                <p className="text-lg font-medium">{selectedContact.phone}</p>
                               </div>
                               <CallButton
-                                phoneNumber={contactPhoneNumber}
+                                phoneNumber={selectedContact.phone}
                                 leadId={client.id.toString()}
-                                leadName={contactDisplayName || client.name || client.company || "Client"}
+                                leadName={selectedContact.name || client.name || client.company || "Client"}
                                 variant="button"
                                 size="lg"
                                 entityType="client"
                               />
                             </div>
                           ) : (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                              <div className="flex items-center gap-2 text-yellow-700">
+                            <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
+                              <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400">
                                 <AlertCircle className="h-4 w-4" />
                                 <span className="font-medium">No Phone Number</span>
                               </div>
-                              <p className="text-sm text-yellow-600 mt-1">
-                                Add a phone number to this client's profile to enable calling.
+                              <p className="text-sm text-yellow-600 dark:text-yellow-500 mt-1">
+                                {availableContacts.length > 1 
+                                  ? "This contact has no phone number. Select a different contact or add one to their profile."
+                                  : "Add a phone number to this client's profile to enable calling."}
                               </p>
                             </div>
                           )}
@@ -5865,12 +6003,16 @@ export default function EnhancedClientDetail() {
                           </div>
                           
                           <div>
-                            <Label htmlFor="sms-to">To</Label>
+                            <Label htmlFor="sms-to">
+                              To {selectedContact && !selectedContact.isPrimary && (
+                                <span className="font-normal text-muted-foreground">({selectedContact.name})</span>
+                              )}
+                            </Label>
                             <Input
                               id="sms-to"
-                              value={contactPhoneNumber || ''}
+                              value={selectedContact?.phone || ''}
                               disabled
-                              className="bg-gray-50"
+                              className="bg-gray-50 dark:bg-gray-800"
                               data-testid="input-sms-to"
                             />
                           </div>
@@ -5928,17 +6070,21 @@ export default function EnhancedClientDetail() {
                           <Button
                             onClick={() => {
                               console.log('🔥 SMS BUTTON CLICKED!');
-                              console.log('Contact phone:', contactPhoneNumber);
-                              console.log('Button disabled?', !contactPhoneNumber);
+                              console.log('Contact phone:', selectedContact?.phone);
+                              console.log('Button disabled?', !selectedContact?.phone);
                               console.log('Current showSmsChoiceModal:', showSmsChoiceModal);
                               setShowSmsChoiceModal(true);
                               console.log('Just called setShowSmsChoiceModal(true)');
                             }}
-                            disabled={!contactPhoneNumber}
+                            disabled={!selectedContact?.phone}
                             className="w-full"
                             data-testid="button-send-sms"
                             title={
-                              !contactPhoneNumber ? "Client has no phone number" : "Send SMS"
+                              !selectedContact?.phone 
+                                ? (availableContacts.length > 1 
+                                    ? "Selected contact has no phone number" 
+                                    : "Client has no phone number")
+                                : `Send SMS to ${selectedContact.name}`
                             }
                           >
                             <Send className="h-4 w-4 mr-2" />
@@ -5947,15 +6093,19 @@ export default function EnhancedClientDetail() {
                         </div>
                         
                         
-                        {/* Show helpful message when client has no phone */}
-                        {!contactPhoneNumber && (
-                          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+                        {/* Show helpful message when selected contact has no phone */}
+                        {!selectedContact?.phone && (
+                          <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded text-sm text-yellow-700 dark:text-yellow-400">
                             <div className="flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
                               <span className="font-medium">Required to send SMS:</span>
                             </div>
                             <ul className="mt-1 ml-4 space-y-1 text-xs">
-                              <li>• Client needs a phone number in their profile</li>
+                              <li>
+                                {availableContacts.length > 1 
+                                  ? `• Select a contact with a phone number, or add a phone to ${selectedContact?.name || 'the contact'}`
+                                  : "• Client needs a phone number in their profile"}
+                              </li>
                             </ul>
                           </div>
                         )}
@@ -6003,12 +6153,16 @@ export default function EnhancedClientDetail() {
                           </div>
                           
                           <div>
-                            <Label htmlFor="email-to">To</Label>
+                            <Label htmlFor="email-to">
+                              To {selectedContact && !selectedContact.isPrimary && (
+                                <span className="font-normal text-muted-foreground">({selectedContact.name})</span>
+                              )}
+                            </Label>
                             <Input
                               id="email-to"
-                              value={client?.email || ''}
+                              value={selectedContact?.email || ''}
                               disabled
-                              className="bg-gray-50"
+                              className="bg-gray-50 dark:bg-gray-800"
                               data-testid="input-email-to"
                             />
                           </div>
@@ -6156,14 +6310,38 @@ export default function EnhancedClientDetail() {
                               setShowEmailChoiceModal(true);
                               console.log("✅ setShowEmailChoiceModal(true) called");
                             }}
-                            disabled={!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !client?.email}
+                            disabled={!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !selectedContact?.email}
                             className="flex-1"
                             data-testid="button-send-email"
+                            title={
+                              !selectedContact?.email 
+                                ? (availableContacts.length > 1 
+                                    ? "Selected contact has no email address" 
+                                    : "Client has no email address")
+                                : `Send email to ${selectedContact.name}`
+                            }
                           >
                             <Mail className="h-4 w-4 mr-2" />
                             Send Email
                           </Button>
                         </div>
+                        
+                        {/* Show helpful message when selected contact has no email */}
+                        {!selectedContact?.email && (
+                          <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded text-sm text-yellow-700 dark:text-yellow-400">
+                            <div className="flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              <span className="font-medium">Required to send email:</span>
+                            </div>
+                            <ul className="mt-1 ml-4 space-y-1 text-xs">
+                              <li>
+                                {availableContacts.length > 1 
+                                  ? `• Select a contact with an email address, or add an email to ${selectedContact?.name || 'the contact'}`
+                                  : "• Client needs an email address in their profile"}
+                              </li>
+                            </ul>
+                          </div>
+                        )}
                       </>
                     )}
                   </TabsContent>
