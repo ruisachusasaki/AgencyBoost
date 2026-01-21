@@ -644,6 +644,15 @@ export default function Tasks() {
         });
       }
     }
+    
+    // Save time filter (Today, This Week, etc.)
+    if (timeFilter !== "all") {
+      conditions.push({
+        field: 'timeFilter',
+        operator: 'equals',
+        value: timeFilter
+      });
+    }
 
     // Note: We build the Smart List filter solely from current UI state
     // to avoid duplicate/conflicting conditions
@@ -664,6 +673,70 @@ export default function Tasks() {
     setCurrentFilter(smartList.filters);
     setActiveSmartList(smartList.id);
     setActiveTab(smartList.id);
+    
+    // Restore individual filter states from saved conditions
+    // Reset all filters first
+    setSearchTerm("");
+    setStatusFilter("all");
+    setAssigneeFilter("all");
+    setPriorityFilter("all");
+    setClientFilter("all");
+    setCategoryFilter("all");
+    setTimeFilter("all");
+    
+    // Apply saved conditions to filter states
+    if (smartList.filters?.conditions) {
+      for (const condition of smartList.filters.conditions) {
+        switch (condition.field) {
+          case 'title':
+            if (condition.operator === 'contains') {
+              setSearchTerm(condition.value);
+            }
+            break;
+          case 'status':
+            if (condition.operator === 'equals') {
+              setStatusFilter(condition.value);
+            }
+            break;
+          case 'assignedTo':
+            if (condition.operator === 'equals') {
+              setAssigneeFilter(condition.value);
+            } else if (condition.operator === 'is_empty') {
+              setAssigneeFilter("unassigned");
+            }
+            break;
+          case 'priority':
+            if (condition.operator === 'equals') {
+              setPriorityFilter(condition.value);
+            }
+            break;
+          case 'clientId':
+            if (condition.operator === 'equals') {
+              setClientFilter(`client-${condition.value}`);
+            } else if (condition.operator === 'is_empty') {
+              setClientFilter("none");
+            }
+            break;
+          case 'leadId':
+            if (condition.operator === 'equals') {
+              setClientFilter(`lead-${condition.value}`);
+            }
+            break;
+          case 'categoryId':
+            if (condition.operator === 'equals') {
+              setCategoryFilter(condition.value);
+            } else if (condition.operator === 'is_empty') {
+              setCategoryFilter("none");
+            }
+            break;
+          case 'timeFilter':
+            if (condition.operator === 'equals') {
+              setTimeFilter(condition.value);
+            }
+            break;
+        }
+      }
+    }
   };
 
   const handleTabChange = (tabValue: string) => {
