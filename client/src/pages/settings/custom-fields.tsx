@@ -32,7 +32,8 @@ const fieldTypeIcons = {
   multiline: AlignLeft,
   dropdown_multiple: List,
   radio: Radio,
-  file_upload: Upload
+  file_upload: Upload,
+  contact_card: Users
 };
 
 type SortField = 'name' | 'type' | 'folder' | 'required';
@@ -532,8 +533,14 @@ export default function CustomFields() {
                             <SelectItem value="checkbox">Checkbox</SelectItem>
                             <SelectItem value="radio">Radio Select</SelectItem>
                             <SelectItem value="file_upload">File Upload</SelectItem>
+                            <SelectItem value="contact_card">Contact Card</SelectItem>
                           </SelectContent>
                         </Select>
+                        {newField.type === 'contact_card' && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Allows adding multiple contact entries (Name, Position, Email, Phone). Max 10 contacts per field.
+                          </p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="fieldFolder">Folder (Optional)</Label>
@@ -965,8 +972,14 @@ export default function CustomFields() {
                       <SelectItem value="checkbox">Checkbox</SelectItem>
                       <SelectItem value="radio">Radio Select</SelectItem>
                       <SelectItem value="file_upload">File Upload</SelectItem>
+                      <SelectItem value="contact_card">Contact Card</SelectItem>
                     </SelectContent>
                   </Select>
+                  {editingField.type === 'contact_card' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Allows adding multiple contact entries (Name, Position, Email, Phone). Max 10 contacts per field.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="editFieldFolder">Folder (Optional)</Label>
