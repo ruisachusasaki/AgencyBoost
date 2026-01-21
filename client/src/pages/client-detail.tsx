@@ -52,6 +52,9 @@ export default function ClientDetail() {
     enabled: !!clientId,
   });
 
+  // Projects are not yet implemented - placeholder for future feature
+  const projects: any[] = [];
+
   const deleteClientMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/clients/${id}`);
