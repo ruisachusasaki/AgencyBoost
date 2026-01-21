@@ -1958,9 +1958,11 @@ export default function Reports() {
                       <TableRow key={score.id} data-testid={`row-health-score-${index}`}>
                         <TableCell>
                           <div>
-                            <p className="font-medium text-slate-900" data-testid={`text-client-name-${index}`}>
-                              {score.clientCompany || score.clientName}
-                            </p>
+                            <Link href={`/clients/${score.clientId}`}>
+                              <p className="font-medium text-[#00C9C6] hover:text-[#00a8a6] hover:underline cursor-pointer" data-testid={`text-client-name-${index}`}>
+                                {score.clientCompany || score.clientName}
+                              </p>
+                            </Link>
                             <p className="text-xs text-slate-500">{score.clientName}</p>
                           </div>
                         </TableCell>
