@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, Globe, Calendar, User, Building2, Tag, FileText, Briefcase, BarChart3, CheckSquare, Receipt, Folder, Users } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, Globe, Calendar, User, Building2, Tag, Folder, Users } from "lucide-react";
 import ClientForm from "@/components/forms/client-form";
 import ClientContacts from "@/components/client-contacts";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import type { Client, Campaign, Task, Invoice, CustomFieldFolder } from "@shared/schema";
+import type { Client, CustomFieldFolder } from "@shared/schema";
 
 export default function ClientDetail() {
   const [match, params] = useRoute("/clients/:id");
@@ -29,31 +29,10 @@ export default function ClientDetail() {
   });
 
 
-  const { data: campaigns = [] } = useQuery<Campaign[]>({
-    queryKey: ["/api/campaigns"],
-    select: (data) => data.filter(c => c.clientId === clientId),
-    enabled: !!clientId,
-  });
-
-  const { data: tasks = [] } = useQuery<Task[]>({
-    queryKey: ["/api/tasks"],
-    select: (data) => data.filter(t => t.clientId === clientId),
-    enabled: !!clientId,
-  });
-
-  const { data: invoices = [] } = useQuery<Invoice[]>({
-    queryKey: ["/api/invoices"],
-    select: (data) => data.filter(i => i.clientId === clientId),
-    enabled: !!clientId,
-  });
-
   const { data: customFieldFolders = [] } = useQuery<CustomFieldFolder[]>({
     queryKey: ["/api/custom-field-folders"],
     enabled: !!clientId,
   });
-
-  // Projects are not yet implemented - placeholder for future feature
-  const projects: any[] = [];
 
   const deleteClientMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -99,10 +78,6 @@ export default function ClientDetail() {
   const navigationItems = [
     { id: "overview", label: "Overview", icon: User },
     { id: "contacts", label: "Contacts", icon: Users },
-    { id: "projects", label: "Projects", icon: Briefcase, count: projects.length },
-    { id: "campaigns", label: "Campaigns", icon: BarChart3, count: campaigns.length },
-    { id: "tasks", label: "Tasks", icon: CheckSquare, count: tasks.length },
-    { id: "invoices", label: "Invoices", icon: Receipt, count: invoices.length },
     // Add custom field folders dynamically
     ...customFieldFolders.map((folder) => ({
       id: `folder-${folder.id}`,
@@ -229,130 +204,6 @@ export default function ClientDetail() {
     );
   }
 
-  function renderProjectsContent() {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Projects ({projects.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {projects.length === 0 ? (
-            <p className="text-slate-600 text-center py-8">No projects found for this client.</p>
-          ) : (
-            <div className="space-y-4">
-              {projects.map((project) => (
-                <div key={project.id} className="border rounded-lg p-4">
-                  <h4 className="font-medium text-slate-900">{project.name}</h4>
-                  {project.description && (
-                    <p className="text-sm text-slate-600 mt-1">{project.description}</p>
-                  )}
-                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                    <span>Status: {project.status}</span>
-                    <span>Priority: {project.priority}</span>
-                    {project.budget && <span>Budget: {project.budget}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  function renderCampaignsContent() {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Campaigns ({campaigns.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {campaigns.length === 0 ? (
-            <p className="text-slate-600 text-center py-8">No campaigns found for this client.</p>
-          ) : (
-            <div className="space-y-4">
-              {campaigns.map((campaign) => (
-                <div key={campaign.id} className="border rounded-lg p-4">
-                  <h4 className="font-medium text-slate-900">{campaign.name}</h4>
-                  {campaign.description && (
-                    <p className="text-sm text-slate-600 mt-1">{campaign.description}</p>
-                  )}
-                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                    <span>Type: {campaign.type}</span>
-                    <span>Status: {campaign.status}</span>
-                    {campaign.budget && <span>Budget: {campaign.budget}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  function renderTasksContent() {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Tasks ({tasks.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tasks.length === 0 ? (
-            <p className="text-slate-600 text-center py-8">No tasks found for this client.</p>
-          ) : (
-            <div className="space-y-4">
-              {tasks.map((task) => (
-                <div key={task.id} className="border rounded-lg p-4">
-                  <h4 className="font-medium text-slate-900">{task.title}</h4>
-                  {task.description && (
-                    <p className="text-sm text-slate-600 mt-1">{task.description}</p>
-                  )}
-                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                    <span>Status: {task.status}</span>
-                    <span>Priority: {task.priority}</span>
-                    {task.assignedTo && <span>Assigned to: {task.assignedTo}</span>}
-                    {task.dueDate && <span>Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  function renderInvoicesContent() {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Invoices ({invoices.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {invoices.length === 0 ? (
-            <p className="text-slate-600 text-center py-8">No invoices found for this client.</p>
-          ) : (
-            <div className="space-y-4">
-              {invoices.map((invoice) => (
-                <div key={invoice.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-slate-900">Invoice #{invoice.invoiceNumber}</h4>
-                    <span className="text-lg font-semibold text-slate-900">{invoice.total}</span>
-                  </div>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                    <span>Status: {invoice.status}</span>
-                    <span>Amount: {invoice.amount}</span>
-                    {invoice.dueDate && <span>Due: {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
 
   function renderCustomFieldFolderContent(folder?: CustomFieldFolder) {
     if (!folder) {
@@ -396,14 +247,6 @@ export default function ClientDetail() {
         return renderOverviewContent();
       case "contacts":
         return clientId ? <ClientContacts clientId={clientId} /> : null;
-      case "projects":
-        return renderProjectsContent();
-      case "campaigns":
-        return renderCampaignsContent();
-      case "tasks":
-        return renderTasksContent();
-      case "invoices":
-        return renderInvoicesContent();
       default:
         // Handle custom field folders
         if (activeSection.startsWith("folder-")) {
