@@ -4798,6 +4798,10 @@ export const pxMeetings = pgTable("px_meetings", {
   // Privacy setting - if true, only attendees can see this meeting
   isPrivate: boolean("is_private").default(false),
   
+  // Facilitator and Note Taker
+  facilitatorId: uuid("facilitator_id").references(() => staff.id),
+  noteTakerId: uuid("note_taker_id").references(() => staff.id),
+  
   // Metadata
   createdById: uuid("created_by_id").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),

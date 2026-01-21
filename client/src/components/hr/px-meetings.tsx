@@ -108,6 +108,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     meetingDuration: 60,
     recordingLink: "",
     attendeeIds: [] as string[],
+    facilitatorId: "",
+    noteTakerId: "",
   });
   
   const [editFormData, setEditFormData] = useState({
@@ -141,6 +143,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   
   const [isAttendeesOpen, setIsAttendeesOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isFacilitatorOpen, setIsFacilitatorOpen] = useState(false);
+  const [isNoteTakerOpen, setIsNoteTakerOpen] = useState(false);
   
   // Convert to Task dialog state
   const [showConvertToTaskDialog, setShowConvertToTaskDialog] = useState(false);
@@ -334,6 +338,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       meetingDuration: 60,
       recordingLink: "",
       attendeeIds: [],
+      facilitatorId: "",
+      noteTakerId: "",
     });
   };
 
@@ -350,6 +356,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       meetingDuration: formData.meetingDuration,
       recordingLink: formData.recordingLink || null,
       attendeeIds: formData.attendeeIds,
+      facilitatorId: formData.facilitatorId || null,
+      noteTakerId: formData.noteTakerId || null,
     });
   };
 
@@ -1349,6 +1357,116 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   })}
                 </div>
               )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Facilitator</Label>
+                <Popover open={isFacilitatorOpen} onOpenChange={setIsFacilitatorOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      {formData.facilitatorId
+                        ? (() => {
+                            const member = activeStaff.find(s => s.id === formData.facilitatorId);
+                            return member ? `${member.firstName || ''} ${member.lastName || ''}`.trim() : "Select...";
+                          })()
+                        : "Select facilitator..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search staff..." />
+                      <CommandList>
+                        <CommandEmpty>No staff found.</CommandEmpty>
+                        <CommandGroup>
+                          {activeStaff.map((member) => {
+                            const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown';
+                            const initials = `${member.firstName?.[0] || ''}${member.lastName?.[0] || ''}`.toUpperCase() || '??';
+                            return (
+                              <CommandItem
+                                key={member.id}
+                                onSelect={() => {
+                                  setFormData(prev => ({ ...prev, facilitatorId: member.id }));
+                                  setIsFacilitatorOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.facilitatorId === member.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <Avatar className="h-6 w-6 mr-2">
+                                  <AvatarImage src={member.profileImagePath || undefined} />
+                                  <AvatarFallback className="text-xs">
+                                    {initials}
+                                  </AvatarFallback>
+                                </Avatar>
+                                {fullName}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Note Taker</Label>
+                <Popover open={isNoteTakerOpen} onOpenChange={setIsNoteTakerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      {formData.noteTakerId
+                        ? (() => {
+                            const member = activeStaff.find(s => s.id === formData.noteTakerId);
+                            return member ? `${member.firstName || ''} ${member.lastName || ''}`.trim() : "Select...";
+                          })()
+                        : "Select note taker..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search staff..." />
+                      <CommandList>
+                        <CommandEmpty>No staff found.</CommandEmpty>
+                        <CommandGroup>
+                          {activeStaff.map((member) => {
+                            const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown';
+                            const initials = `${member.firstName?.[0] || ''}${member.lastName?.[0] || ''}`.toUpperCase() || '??';
+                            return (
+                              <CommandItem
+                                key={member.id}
+                                onSelect={() => {
+                                  setFormData(prev => ({ ...prev, noteTakerId: member.id }));
+                                  setIsNoteTakerOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.noteTakerId === member.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <Avatar className="h-6 w-6 mr-2">
+                                  <AvatarImage src={member.profileImagePath || undefined} />
+                                  <AvatarFallback className="text-xs">
+                                    {initials}
+                                  </AvatarFallback>
+                                </Avatar>
+                                {fullName}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
             <div className="space-y-2">
