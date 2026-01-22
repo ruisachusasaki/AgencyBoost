@@ -1071,27 +1071,24 @@ function FormPreviewDialog({
                   </Select>
                 )}
                 
-                {/* Client and Department always use radio buttons */}
+                {/* Client and Department use dropdown by default */}
                 {(currentQuestion.questionType === "client" || 
                   currentQuestion.questionType === "department") && (
-                  <RadioGroup
+                  <Select
                     value={(answers[currentQuestion.id] as string) || ""}
                     onValueChange={handleSingleChoiceChange}
-                    className="space-y-3"
                   >
-                    {getOptionsForQuestion(currentQuestion).map((option) => (
-                      <div
-                        key={option.id}
-                        className="flex items-center space-x-3 border rounded-lg p-3 hover:bg-accent cursor-pointer"
-                        onClick={() => handleSingleChoiceChange(option.id)}
-                      >
-                        <RadioGroupItem value={option.id} id={option.id} />
-                        <Label htmlFor={option.id} className="flex-1 cursor-pointer">
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={`Select a ${currentQuestion.questionType}...`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getOptionsForQuestion(currentQuestion).map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
                           {option.optionText}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
                 
                 {currentQuestion.questionType === "multi_choice" && (
