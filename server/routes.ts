@@ -23412,9 +23412,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       res.json(newRequest);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating time off request:", error);
-      res.status(500).json({ error: "Failed to create time off request" });
+      console.error("Request body received:", JSON.stringify(req.body, null, 2));
+      if (error.errors) {
+        console.error("Validation errors:", JSON.stringify(error.errors, null, 2));
+      }
+      res.status(500).json({ 
+        error: "Failed to create time off request", 
+        details: error.message || String(error),
+        validationErrors: error.errors || null
+      });
     }
   });
 
