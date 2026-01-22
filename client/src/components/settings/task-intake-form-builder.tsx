@@ -737,6 +737,18 @@ function LogicRulesBuilder({
   const [targetQuestionId, setTargetQuestionId] = useState<string>("");
   const [isEndForm, setIsEndForm] = useState(false);
   
+  // Fetch teams for department question type
+  const { data: teams = [] } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ["/api/teams"],
+  });
+  
+  // Fetch clients for client question type
+  const { data: clients = [] } = useQuery<{ id: number; name: string; status: string }[]>({
+    queryKey: ["/api/clients"],
+  });
+  
+  const activeClients = clients.filter((c) => c.status === "active");
+  
   const invalidateFormQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
     queryClient.invalidateQueries({ queryKey: [`/api/task-intake-forms/${formId}`] });
@@ -779,7 +791,7 @@ function LogicRulesBuilder({
   
   const sourceQuestion = questions.find((q) => q.id === sourceQuestionId);
   const choiceQuestions = questions.filter(
-    (q) => q.questionType === "single_choice" || q.questionType === "multi_choice"
+    (q) => q.questionType === "single_choice" || q.questionType === "multi_choice" || q.questionType === "department" || q.questionType === "client"
   );
   
   const handleSubmit = () => {
@@ -905,20 +917,52 @@ function LogicRulesBuilder({
               <div className="space-y-2">
                 <Label>...has any of these answers:</Label>
                 <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-2">
-                  {sourceQuestion.options.map((option) => (
-                    <div key={option.id} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id={option.id}
-                        checked={selectedOptionIds.includes(option.id)}
-                        onChange={() => toggleOptionSelection(option.id)}
-                        className="h-4 w-4"
-                      />
-                      <label htmlFor={option.id} className="text-sm cursor-pointer">
-                        {option.optionText}
-                      </label>
-                    </div>
-                  ))}
+                  {sourceQuestion.questionType === "department" ? (
+                    teams.map((team) => (
+                      <div key={`team-${team.id}`} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`team-${team.id}`}
+                          checked={selectedOptionIds.includes(`team-${team.id}`)}
+                          onChange={() => toggleOptionSelection(`team-${team.id}`)}
+                          className="h-4 w-4"
+                        />
+                        <label htmlFor={`team-${team.id}`} className="text-sm cursor-pointer">
+                          {team.name}
+                        </label>
+                      </div>
+                    ))
+                  ) : sourceQuestion.questionType === "client" ? (
+                    activeClients.map((client) => (
+                      <div key={`client-${client.id}`} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`client-${client.id}`}
+                          checked={selectedOptionIds.includes(`client-${client.id}`)}
+                          onChange={() => toggleOptionSelection(`client-${client.id}`)}
+                          className="h-4 w-4"
+                        />
+                        <label htmlFor={`client-${client.id}`} className="text-sm cursor-pointer">
+                          {client.name}
+                        </label>
+                      </div>
+                    ))
+                  ) : (
+                    sourceQuestion.options.map((option) => (
+                      <div key={option.id} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={option.id}
+                          checked={selectedOptionIds.includes(option.id)}
+                          onChange={() => toggleOptionSelection(option.id)}
+                          className="h-4 w-4"
+                        />
+                        <label htmlFor={option.id} className="text-sm cursor-pointer">
+                          {option.optionText}
+                        </label>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -983,6 +1027,18 @@ function AssignmentRulesBuilder({
   const [assignToStaffId, setAssignToStaffId] = useState<string>("");
   const [priority, setPriority] = useState(0);
   
+  // Fetch teams for department question type
+  const { data: teams = [] } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ["/api/teams"],
+  });
+  
+  // Fetch clients for client question type
+  const { data: clients = [] } = useQuery<{ id: number; name: string; status: string }[]>({
+    queryKey: ["/api/clients"],
+  });
+  
+  const activeClients = clients.filter((c) => c.status === "active");
+  
   const invalidateFormQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
     queryClient.invalidateQueries({ queryKey: [`/api/task-intake-forms/${formId}`] });
@@ -1023,7 +1079,7 @@ function AssignmentRulesBuilder({
   };
   
   const choiceQuestions = questions.filter(
-    (q) => q.questionType === "single_choice" || q.questionType === "multi_choice"
+    (q) => q.questionType === "single_choice" || q.questionType === "multi_choice" || q.questionType === "department" || q.questionType === "client"
   );
   
   const addCondition = () => {
@@ -1189,23 +1245,61 @@ function AssignmentRulesBuilder({
                           If answer is any of:
                         </Label>
                         <div className="grid grid-cols-2 gap-2">
-                          {question.options.map((option) => (
-                            <div key={option.id} className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                id={`${index}-${option.id}`}
-                                checked={condition.optionIds.includes(option.id)}
-                                onChange={() => toggleConditionOption(index, option.id)}
-                                className="h-4 w-4"
-                              />
-                              <label
-                                htmlFor={`${index}-${option.id}`}
-                                className="text-sm cursor-pointer"
-                              >
-                                {option.optionText}
-                              </label>
-                            </div>
-                          ))}
+                          {question.questionType === "department" ? (
+                            teams.map((team) => (
+                              <div key={`team-${team.id}`} className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  id={`${index}-team-${team.id}`}
+                                  checked={condition.optionIds.includes(`team-${team.id}`)}
+                                  onChange={() => toggleConditionOption(index, `team-${team.id}`)}
+                                  className="h-4 w-4"
+                                />
+                                <label
+                                  htmlFor={`${index}-team-${team.id}`}
+                                  className="text-sm cursor-pointer"
+                                >
+                                  {team.name}
+                                </label>
+                              </div>
+                            ))
+                          ) : question.questionType === "client" ? (
+                            activeClients.map((client) => (
+                              <div key={`client-${client.id}`} className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  id={`${index}-client-${client.id}`}
+                                  checked={condition.optionIds.includes(`client-${client.id}`)}
+                                  onChange={() => toggleConditionOption(index, `client-${client.id}`)}
+                                  className="h-4 w-4"
+                                />
+                                <label
+                                  htmlFor={`${index}-client-${client.id}`}
+                                  className="text-sm cursor-pointer"
+                                >
+                                  {client.name}
+                                </label>
+                              </div>
+                            ))
+                          ) : (
+                            question.options.map((option) => (
+                              <div key={option.id} className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  id={`${index}-${option.id}`}
+                                  checked={condition.optionIds.includes(option.id)}
+                                  onChange={() => toggleConditionOption(index, option.id)}
+                                  className="h-4 w-4"
+                                />
+                                <label
+                                  htmlFor={`${index}-${option.id}`}
+                                  className="text-sm cursor-pointer"
+                                >
+                                  {option.optionText}
+                                </label>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </div>
                     )}
