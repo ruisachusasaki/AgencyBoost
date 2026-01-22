@@ -995,9 +995,24 @@ export default function TaskDetail() {
                       <Building className="h-4 w-4 text-slate-400" />
                       <span className="text-sm font-medium text-slate-700">Client</span>
                     </div>
-                    <span className="text-sm text-slate-600">
-                      {getClientName(task.clientId) || "No client assigned"}
-                    </span>
+                    <Select
+                      value={task.clientId || "none"}
+                      onValueChange={(value) => updateTaskMutation.mutate({ clientId: value === "none" ? null : value })}
+                    >
+                      <SelectTrigger className="w-[180px] h-8">
+                        <SelectValue placeholder="Select client">
+                          {getClientName(task.clientId) || "No client"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No client</SelectItem>
+                        {clients.map((client: Client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.company || `${client.firstName} ${client.lastName}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Client Portal Visibility - Right Side */}
