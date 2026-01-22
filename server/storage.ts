@@ -5774,10 +5774,47 @@ export class DbStorage implements IStorage {
   
   async updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined> {
     try {
+      // First, get the current task to check for status changes
+      const [currentTask] = await db.select().from(tasks).where(eq(tasks.id, id));
+      
+      if (!currentTask) {
+        return undefined;
+      }
+      
+      // Prepare the update data
+      let updateData: any = { ...task };
+      
+      // Track status changes if status is being updated
+      if (task.status && task.status !== currentTask.status) {
+        const now = new Date().toISOString();
+        const statusHistory = (currentTask.statusHistory as any[]) || [];
+        
+        // Close out the previous status entry (if any)
+        if (statusHistory.length > 0) {
+          const lastEntry = statusHistory[statusHistory.length - 1];
+          if (!lastEntry.exitedAt) {
+            lastEntry.exitedAt = now;
+            const enteredAt = new Date(lastEntry.enteredAt).getTime();
+            const exitedAt = new Date(now).getTime();
+            lastEntry.durationMs = exitedAt - enteredAt;
+          }
+        }
+        
+        // Add new status entry
+        statusHistory.push({
+          status: task.status,
+          enteredAt: now,
+          exitedAt: null,
+          durationMs: null,
+          hitCount: (statusHistory.filter(h => h.status === task.status).length) + 1,
+          timeTrackedInStage: 0
+        });
+        
+        updateData.statusHistory = statusHistory;
+      }
+      
       const result = await db.update(tasks)
-        .set({
-          ...task,
-        })
+        .set(updateData)
         .where(eq(tasks.id, id))
         .returning();
       return result[0];
