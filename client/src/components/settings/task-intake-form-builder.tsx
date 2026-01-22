@@ -142,6 +142,7 @@ const questionFormSchema = z.object({
   internalLabel: z.string().optional(),
   isRequired: z.boolean().default(true),
   options: z.array(z.object({ optionText: z.string() })).optional(),
+  displayType: z.enum(["radio", "dropdown"]).default("radio"),
 });
 
 type QuestionFormData = z.infer<typeof questionFormSchema>;
@@ -186,6 +187,7 @@ export function TaskIntakeFormBuilder() {
       helpText: "",
       isRequired: true,
       options: [],
+      displayType: "radio",
     },
   });
   
@@ -295,6 +297,7 @@ export function TaskIntakeFormBuilder() {
         helpText: question.helpText || "",
         internalLabel: question.internalLabel || "",
         isRequired: question.isRequired,
+        displayType: question.settings?.displayType || "radio",
       });
       setOptionInputs(
         question.options.length > 0
@@ -325,9 +328,14 @@ export function TaskIntakeFormBuilder() {
       return;
     }
     
+    const settings = questionType === "single_choice" 
+      ? { displayType: data.displayType }
+      : undefined;
+    
     const payload = {
       ...data,
       options,
+      settings,
     };
     
     if (editingQuestion) {
@@ -661,6 +669,40 @@ export function TaskIntakeFormBuilder() {
                 )}
               />
               
+              {watchedQuestionType === "single_choice" && (
+                <FormField
+                  control={form.control}
+                  name="displayType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Display Style</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="radio">
+                            <div className="flex items-center gap-2">
+                              <Circle className="h-4 w-4" />
+                              Radio Buttons (best for 2-5 options)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="dropdown">
+                            <div className="flex items-center gap-2">
+                              <ChevronDown className="h-4 w-4" />
+                              Dropdown (best for 6+ options)
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              
               {needsOptions && (
                 <div className="space-y-3">
                   <Label>Answer Options</Label>
@@ -986,8 +1028,51 @@ function FormPreviewDialog({
               </div>
               
               <div className="pt-4">
-                {(currentQuestion.questionType === "single_choice" || 
-                  currentQuestion.questionType === "client" || 
+                {/* Single choice with radio buttons */}
+                {currentQuestion.questionType === "single_choice" && 
+                  currentQuestion.settings?.displayType !== "dropdown" && (
+                  <RadioGroup
+                    value={(answers[currentQuestion.id] as string) || ""}
+                    onValueChange={handleSingleChoiceChange}
+                    className="space-y-3"
+                  >
+                    {getOptionsForQuestion(currentQuestion).map((option) => (
+                      <div
+                        key={option.id}
+                        className="flex items-center space-x-3 border rounded-lg p-3 hover:bg-accent cursor-pointer"
+                        onClick={() => handleSingleChoiceChange(option.id)}
+                      >
+                        <RadioGroupItem value={option.id} id={option.id} />
+                        <Label htmlFor={option.id} className="flex-1 cursor-pointer">
+                          {option.optionText}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                )}
+                
+                {/* Single choice with dropdown */}
+                {currentQuestion.questionType === "single_choice" && 
+                  currentQuestion.settings?.displayType === "dropdown" && (
+                  <Select
+                    value={(answers[currentQuestion.id] as string) || ""}
+                    onValueChange={handleSingleChoiceChange}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select an option..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getOptionsForQuestion(currentQuestion).map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.optionText}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
+                {/* Client and Department always use radio buttons */}
+                {(currentQuestion.questionType === "client" || 
                   currentQuestion.questionType === "department") && (
                   <RadioGroup
                     value={(answers[currentQuestion.id] as string) || ""}
