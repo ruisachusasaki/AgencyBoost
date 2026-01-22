@@ -33956,7 +33956,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PX Meetings
   app.get("/api/px-meetings", requireAuth(), async (req, res) => {
     try {
-      const meetings = await appStorage.getPxMeetings();
+      const { clientId } = req.query;
+      let meetings = await appStorage.getPxMeetings();
+      
+      // Filter by clientId if provided
+      if (clientId && typeof clientId === "string") {
+        meetings = meetings.filter((m: any) => m.clientId === clientId);
+      }
+      
       res.json(meetings);
     } catch (error: any) {
       console.error("Error fetching PX meetings:", error);

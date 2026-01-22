@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, Video } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 import ContactCardField from "@/components/contact-card-field";
 
@@ -6652,11 +6652,11 @@ export default function EnhancedClientDetail() {
                               : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                           }`}
                         >
-                          <Video className="h-4 w-4" />
+                          <ClipboardList className="h-4 w-4" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Meetings</p>
+                        <p>Meeting Agenda & Notes</p>
                       </TooltipContent>
                     </Tooltip>
                     
@@ -7172,7 +7172,7 @@ export default function EnhancedClientDetail() {
                       </div>
                     ) : clientMeetings.length === 0 ? (
                       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                        <Video className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                        <ClipboardList className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
                         <p className="text-sm">No PX meetings linked to this client</p>
                         <p className="text-xs mt-1">Link meetings from PX &gt; Meetings</p>
                       </div>
@@ -7192,7 +7192,7 @@ export default function EnhancedClientDetail() {
                               <div className="flex items-start justify-between">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <Video className="h-4 w-4 text-primary flex-shrink-0" />
+                                    <ClipboardList className="h-4 w-4 text-primary flex-shrink-0" />
                                     <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate">
                                       {meeting.title}
                                     </h4>
