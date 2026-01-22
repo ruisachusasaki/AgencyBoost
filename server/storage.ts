@@ -5417,7 +5417,10 @@ export class DbStorage implements IStorage {
     ];
     
     // Filter by client if specified  
-    if (clientId) {
+    if (clientId === "no-client") {
+      // Special filter: show only tasks with no client assigned
+      conditions.push(isNull(tasks.clientId));
+    } else if (clientId) {
       conditions.push(eq(tasks.clientId, clientId));
     }
     

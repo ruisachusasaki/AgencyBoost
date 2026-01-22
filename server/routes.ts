@@ -1496,7 +1496,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Filter by client if specified
-        if (clientId && task.clientId !== clientId) return false;
+        if (clientId === "no-client") {
+          // Special filter: show only tasks with no client assigned
+          if (task.clientId) return false;
+        } else if (clientId && task.clientId !== clientId) {
+          return false;
+        }
         
         // Filter by task status if specified
         if (taskStatus && taskStatus.length > 0 && !taskStatus.includes(task.status)) return false;

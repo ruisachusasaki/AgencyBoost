@@ -2221,6 +2221,7 @@ export default function Reports() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Clients</SelectItem>
+                        <SelectItem value="no-client" className="text-amber-600 dark:text-amber-400">No Client Assigned</SelectItem>
                         {clients.map((client) => (
                           <SelectItem key={client.id} value={client.id}>
                             {client.company || client.name}
