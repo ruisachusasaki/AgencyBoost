@@ -984,6 +984,18 @@ function MeetingEditor({
       setActionItems(meetingDetails.actionItems || []);
       setGoals(meetingDetails.goals || []);
       setComments(meetingDetails.comments || []);
+      
+      // Also update the meeting fields when data loads
+      if (meetingDetails.meeting) {
+        setPrivateNotes(meetingDetails.meeting.privateNotes || "");
+        setHobbies(meetingDetails.meeting.hobbies || "");
+        setFamily(meetingDetails.meeting.family || "");
+        setRecordingLink(meetingDetails.meeting.recordingLink || "");
+        setFeeling(meetingDetails.meeting.feeling || "");
+        setPerformanceFeedback(meetingDetails.meeting.performanceFeedback || "");
+        setBonusPoints(meetingDetails.meeting.bonusPoints || 0);
+        setProgressionStatus(meetingDetails.meeting.progressionStatus || "none");
+      }
     }
   }, [meetingDetails]);
   
