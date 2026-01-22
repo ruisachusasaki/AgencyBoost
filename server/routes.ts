@@ -1434,7 +1434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!authenticatedUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Simple inline validation
-      const { dateFrom, dateTo, userId, clientId, taskStatus, reportType } = req.body;
+      const { dateFrom, dateTo, userId, clientId, taskStatus, reportType, tags } = req.body;
       
       if (!dateFrom || !dateTo) {
         return res.status(400).json({
@@ -1505,6 +1505,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Filter by task status if specified
         if (taskStatus && taskStatus.length > 0 && !taskStatus.includes(task.status)) return false;
+        
+        // Filter by tags if specified
+        if (tags && Array.isArray(tags) && tags.length > 0) {
+          const taskTags = (task.tags as string[]) || [];
+          const hasMatchingTag = tags.some((tag: string) => taskTags.includes(tag));
+          if (!hasMatchingTag) return false;
+        }
         
         // Check if task has time entries in the date range
         if (!task.timeEntries || task.timeEntries.length === 0) return false;

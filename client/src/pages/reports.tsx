@@ -139,6 +139,7 @@ export default function Reports() {
   // Client breakdown specific state
   const [clientBreakdownView, setClientBreakdownView] = useState("by-user-client");
   const [userIdFilter, setUserIdFilter] = useState("all");
+  const [tagFilter, setTagFilter] = useState<string[]>([]); // Multi-select tag filter
   
   // Detailed Staff Workload specific state
   const [workloadSearchTerm, setWorkloadSearchTerm] = useState("");
@@ -310,6 +311,12 @@ export default function Reports() {
   const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
+
+  // Tags query for filtering
+  const { data: tagsData } = useQuery<{ id: string; name: string; color: string }[]>({
+    queryKey: ["/api/tags"],
+  });
+  const availableTags = tagsData || [];
   
   // Time tracking data query for client breakdowns - fixed filter logic with memoization
   // Note: Using business timezone helpers to ensure consistent date handling across the team
@@ -341,9 +348,10 @@ export default function Reports() {
             getTodayInTimezone(businessTimezone),
     userId: userIdFilter !== "all" ? userIdFilter : undefined,
     clientId: clientFilter !== "all" ? clientFilter : undefined,
+    tags: tagFilter.length > 0 ? tagFilter : undefined,
     reportType: taskReportType
   };
-  }, [taskDateRange, customTaskDateFrom, customTaskDateTo, userIdFilter, clientFilter, taskReportType, businessTimezone]);
+  }, [taskDateRange, customTaskDateFrom, customTaskDateTo, userIdFilter, clientFilter, tagFilter, taskReportType, businessTimezone]);
   
   // Time entry update mutation
   const updateTimeEntryMutation = useMutation({
@@ -2297,6 +2305,67 @@ export default function Reports() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+                  {/* Tag Filter for Timesheet */}
+                  {taskReportType === "timesheet" && availableTags.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-slate-600 dark:text-slate-400">Tags:</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="min-w-[140px] justify-between">
+                            {tagFilter.length === 0 ? (
+                              <span className="text-slate-500">All Tags</span>
+                            ) : (
+                              <span className="flex items-center gap-1">
+                                <span>{tagFilter.length} tag{tagFilter.length > 1 ? 's' : ''}</span>
+                              </span>
+                            )}
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-2" align="start">
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between pb-2 border-b mb-2">
+                              <span className="text-sm font-medium">Filter by Tags</span>
+                              {tagFilter.length > 0 && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 px-2 text-xs"
+                                  onClick={() => setTagFilter([])}
+                                >
+                                  Clear all
+                                </Button>
+                              )}
+                            </div>
+                            {availableTags.map((tag) => (
+                              <label 
+                                key={tag.id} 
+                                className="flex items-center gap-2 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={tagFilter.includes(tag.name)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setTagFilter([...tagFilter, tag.name]);
+                                    } else {
+                                      setTagFilter(tagFilter.filter(t => t !== tag.name));
+                                    }
+                                  }}
+                                  className="h-4 w-4 rounded border-slate-300"
+                                />
+                                <span 
+                                  className="w-3 h-3 rounded-full flex-shrink-0" 
+                                  style={{ backgroundColor: tag.color || '#46a1a0' }}
+                                />
+                                <span className="text-sm truncate">{tag.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   )}
                   {(taskReportType === "by-user-client" || taskReportType === "admin-by-client") && (
