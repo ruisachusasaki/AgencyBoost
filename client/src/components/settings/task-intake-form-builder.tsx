@@ -155,9 +155,11 @@ export function TaskIntakeFormBuilder() {
   
   const activeForm = forms?.[0];
   
+  const formId = activeForm?.id;
+  
   const { data: formDetails, isLoading: formDetailsLoading } = useQuery<TaskIntakeForm>({
-    queryKey: ["/api/task-intake-forms", activeForm?.id],
-    enabled: !!activeForm?.id,
+    queryKey: [`/api/task-intake-forms/${formId}`],
+    enabled: !!formId,
   });
   
   const form = useForm<QuestionFormData>({
@@ -185,13 +187,20 @@ export function TaskIntakeFormBuilder() {
     },
   });
   
+  const invalidateFormQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
+    if (formId) {
+      queryClient.invalidateQueries({ queryKey: [`/api/task-intake-forms/${formId}`] });
+    }
+  };
+  
   const createQuestionMutation = useMutation({
     mutationFn: async ({ formId, data }: { formId: string; data: any }) => {
       const response = await apiRequest("POST", `/api/task-intake-forms/${formId}/questions`, data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
+      invalidateFormQueries();
       setIsQuestionDialogOpen(false);
       resetQuestionForm();
       toast({ title: "Success", description: "Question added" });
@@ -207,7 +216,7 @@ export function TaskIntakeFormBuilder() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
+      invalidateFormQueries();
       setIsQuestionDialogOpen(false);
       setEditingQuestion(null);
       resetQuestionForm();
@@ -224,7 +233,7 @@ export function TaskIntakeFormBuilder() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
+      invalidateFormQueries();
       toast({ title: "Success", description: "Question deleted" });
     },
     onError: () => {
@@ -238,7 +247,7 @@ export function TaskIntakeFormBuilder() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
+      invalidateFormQueries();
     },
   });
   
@@ -698,13 +707,18 @@ function LogicRulesBuilder({
   const [targetQuestionId, setTargetQuestionId] = useState<string>("");
   const [isEndForm, setIsEndForm] = useState(false);
   
+  const invalidateFormQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
+    queryClient.invalidateQueries({ queryKey: [`/api/task-intake-forms/${formId}`] });
+  };
+  
   const createRuleMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest("POST", `/api/task-intake-forms/${formId}/logic-rules`, data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
+      invalidateFormQueries();
       setIsDialogOpen(false);
       resetForm();
       toast({ title: "Success", description: "Logic rule added" });
@@ -720,7 +734,7 @@ function LogicRulesBuilder({
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
+      invalidateFormQueries();
       toast({ title: "Success", description: "Logic rule deleted" });
     },
   });
@@ -939,13 +953,18 @@ function AssignmentRulesBuilder({
   const [assignToStaffId, setAssignToStaffId] = useState<string>("");
   const [priority, setPriority] = useState(0);
   
+  const invalidateFormQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
+    queryClient.invalidateQueries({ queryKey: [`/api/task-intake-forms/${formId}`] });
+  };
+  
   const createRuleMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest("POST", `/api/task-intake-forms/${formId}/assignment-rules`, data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
+      invalidateFormQueries();
       setIsDialogOpen(false);
       resetForm();
       toast({ title: "Success", description: "Assignment rule added" });
@@ -961,7 +980,7 @@ function AssignmentRulesBuilder({
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
+      invalidateFormQueries();
       toast({ title: "Success", description: "Assignment rule deleted" });
     },
   });
