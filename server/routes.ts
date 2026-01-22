@@ -33990,6 +33990,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         attendeeIds || []
       );
       
+      // If client is assigned on creation, log an activity
+      if (meetingData.clientId) {
+        try {
+          const userId = user?.staffId || user?.id;
+          const meetingDate = meeting.meetingDate ? new Date(meeting.meetingDate).toLocaleDateString() : "Unscheduled";
+          
+          await appStorage.createActivity({
+            type: "meeting",
+            description: `PX Meeting "${meeting.title}" was linked to this client`,
+            details: {
+              meetingId: meeting.id,
+              meetingTitle: meeting.title,
+              meetingDate: meetingDate,
+              action: "created"
+            },
+            clientId: meetingData.clientId,
+            userId: userId || null
+          });
+        } catch (activityError) {
+          console.error("Error creating activity for PX meeting:", activityError);
+          // Dont fail the creation if activity creation fails
+        }
+      }
+      
       res.status(201).json(meeting);
     } catch (error: any) {
       console.error("Error creating PX meeting:", error);
