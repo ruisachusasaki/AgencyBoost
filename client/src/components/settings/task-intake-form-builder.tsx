@@ -737,9 +737,9 @@ function LogicRulesBuilder({
   const [targetQuestionId, setTargetQuestionId] = useState<string>("");
   const [isEndForm, setIsEndForm] = useState(false);
   
-  // Fetch teams for department question type
-  const { data: teams = [] } = useQuery<{ id: number; name: string }[]>({
-    queryKey: ["/api/teams"],
+  // Fetch departments for department question type
+  const { data: departments = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/departments"],
   });
   
   // Fetch clients for client question type
@@ -918,17 +918,17 @@ function LogicRulesBuilder({
                 <Label>...has any of these answers:</Label>
                 <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-2">
                   {sourceQuestion.questionType === "department" ? (
-                    teams.map((team) => (
-                      <div key={`team-${team.id}`} className="flex items-center gap-2">
+                    departments.map((dept) => (
+                      <div key={`dept-${dept.id}`} className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          id={`team-${team.id}`}
-                          checked={selectedOptionIds.includes(`team-${team.id}`)}
-                          onChange={() => toggleOptionSelection(`team-${team.id}`)}
+                          id={`dept-${dept.id}`}
+                          checked={selectedOptionIds.includes(`dept-${dept.id}`)}
+                          onChange={() => toggleOptionSelection(`dept-${dept.id}`)}
                           className="h-4 w-4"
                         />
-                        <label htmlFor={`team-${team.id}`} className="text-sm cursor-pointer">
-                          {team.name}
+                        <label htmlFor={`dept-${dept.id}`} className="text-sm cursor-pointer">
+                          {dept.name}
                         </label>
                       </div>
                     ))
@@ -1027,9 +1027,9 @@ function AssignmentRulesBuilder({
   const [assignToStaffId, setAssignToStaffId] = useState<string>("");
   const [priority, setPriority] = useState(0);
   
-  // Fetch teams for department question type
-  const { data: teams = [] } = useQuery<{ id: number; name: string }[]>({
-    queryKey: ["/api/teams"],
+  // Fetch departments for department question type
+  const { data: departments = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/departments"],
   });
   
   // Fetch clients for client question type
@@ -1246,20 +1246,20 @@ function AssignmentRulesBuilder({
                         </Label>
                         <div className="grid grid-cols-2 gap-2">
                           {question.questionType === "department" ? (
-                            teams.map((team) => (
-                              <div key={`team-${team.id}`} className="flex items-center gap-2">
+                            departments.map((dept) => (
+                              <div key={`dept-${dept.id}`} className="flex items-center gap-2">
                                 <input
                                   type="checkbox"
-                                  id={`${index}-team-${team.id}`}
-                                  checked={condition.optionIds.includes(`team-${team.id}`)}
-                                  onChange={() => toggleConditionOption(index, `team-${team.id}`)}
+                                  id={`${index}-dept-${dept.id}`}
+                                  checked={condition.optionIds.includes(`dept-${dept.id}`)}
+                                  onChange={() => toggleConditionOption(index, `dept-${dept.id}`)}
                                   className="h-4 w-4"
                                 />
                                 <label
-                                  htmlFor={`${index}-team-${team.id}`}
+                                  htmlFor={`${index}-dept-${dept.id}`}
                                   className="text-sm cursor-pointer"
                                 >
-                                  {team.name}
+                                  {dept.name}
                                 </label>
                               </div>
                             ))
