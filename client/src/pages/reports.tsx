@@ -51,6 +51,8 @@ import {
   AlertTriangle,
   X,
   Pencil,
+  ArrowLeftRight,
+  ArrowRight,
 } from "lucide-react";
 import { 
   exportTimeTrackingData,
@@ -400,6 +402,51 @@ export default function Reports() {
         return result.data || result;
       },
       enabled: activeTab === "tasks"
+    }
+  );
+
+  // Stage Analytics query
+  const { data: stageAnalyticsData, isLoading: stageAnalyticsLoading } = useQuery<{
+    stageAnalytics: Array<{
+      stage: string;
+      avgTimeInStage: number;
+      totalTimeInStage: number;
+      totalTimeTracked: number;
+      hitCount: number;
+      taskCount: number;
+      backAndForthCount: number;
+    }>;
+    taskBreakdowns: Array<{
+      taskId: string;
+      taskTitle: string;
+      currentStatus: string;
+      stageHistory: Array<{
+        stage: string;
+        enteredAt: string;
+        exitedAt: string | null;
+        durationMs: number | null;
+        hitCount: number;
+      }>;
+    }>;
+    totalTasks: number;
+    tasksWithHistory: number;
+  }>(
+    {
+      queryKey: ["/api/reports/stage-analytics", timeTrackingFilters],
+      queryFn: async ({ queryKey }) => {
+        const [, filters] = queryKey;
+        const response = await fetch("/api/reports/stage-analytics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(filters)
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch stage analytics data');
+        }
+        return response.json();
+      },
+      enabled: activeTab === "tasks" && taskReportType === "stage-analytics"
     }
   );
 
@@ -2136,6 +2183,7 @@ export default function Reports() {
                         {isAdmin && <SelectItem value="admin-by-client">Total by Client (Admin)</SelectItem>}
                         <SelectItem value="productivity">Productivity Analysis</SelectItem>
                         <SelectItem value="workload">Workload Distribution</SelectItem>
+                        <SelectItem value="stage-analytics">Stage Analytics</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -3783,6 +3831,219 @@ export default function Reports() {
                           <div className="pt-4">
                             <UserPerformanceChart data={processUserPerformanceData(timeTrackingData)} />
                           </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Stage Analytics */}
+          {taskReportType === "stage-analytics" && (
+            <div className="space-y-6">
+              {stageAnalyticsLoading ? (
+                <Card>
+                  <CardContent className="p-8 text-center text-slate-500 dark:text-slate-400">
+                    <div className="animate-pulse">
+                      <p>Loading stage analytics...</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : !stageAnalyticsData || !stageAnalyticsData.stageAnalytics?.length ? (
+                <Card>
+                  <CardContent className="p-8 text-center text-slate-500 dark:text-slate-400">
+                    <Activity className="h-12 w-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+                    <p className="text-lg font-medium mb-2">No Stage History Data</p>
+                    <p className="text-sm">Tasks need status changes to track stage analytics. As tasks move between stages, data will appear here.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {/* Stage Analytics Overview Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-6">
+                        <div className="flex items-center">
+                          <Activity className="h-8 w-8 text-primary" />
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Tasks Tracked</p>
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                              {stageAnalyticsData.tasksWithHistory} / {stageAnalyticsData.totalTasks}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-6">
+                        <div className="flex items-center">
+                          <Clock className="h-8 w-8 text-blue-500" />
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Stage Time</p>
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                              {formatDuration(
+                                Math.round(stageAnalyticsData.stageAnalytics.reduce((sum, s) => sum + (s.totalTimeInStage || 0), 0) / 60000),
+                                timeDisplayMode
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-6">
+                        <div className="flex items-center">
+                          <ArrowLeftRight className="h-8 w-8 text-orange-500" />
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Back & Forth Moves</p>
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                              {stageAnalyticsData.stageAnalytics.reduce((sum, s) => sum + (s.backAndForthCount || 0), 0)}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-6">
+                        <div className="flex items-center">
+                          <BarChart3 className="h-8 w-8 text-green-500" />
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Avg Time/Stage</p>
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                              {formatDuration(
+                                Math.round((stageAnalyticsData.stageAnalytics.reduce((sum, s) => sum + (s.avgTimeInStage || 0), 0) / 
+                                Math.max(stageAnalyticsData.stageAnalytics.length, 1)) / 60000),
+                                timeDisplayMode
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Stage Analytics Table */}
+                  <Card>
+                    <CardHeader>
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Time in Each Stage</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Analysis of how long tasks spend in each stage and stage transitions
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Stage</TableHead>
+                            <TableHead className="text-right">Tasks</TableHead>
+                            <TableHead className="text-right">Total Time</TableHead>
+                            <TableHead className="text-right">Avg Time</TableHead>
+                            <TableHead className="text-right">Time Tracked</TableHead>
+                            <TableHead className="text-right">Stage Hits</TableHead>
+                            <TableHead className="text-right">Back & Forth</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {stageAnalyticsData.stageAnalytics.map((stage) => (
+                            <TableRow key={stage.stage}>
+                              <TableCell>
+                                <Badge 
+                                  variant="outline" 
+                                  className={
+                                    stage.stage === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                    stage.stage === 'in_progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                    stage.stage === 'todo' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' :
+                                    stage.stage === 'review' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                                    stage.stage === 'blocked' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                    stage.stage === 'on_hold' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                    stage.stage === 'cancelled' ? 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200' :
+                                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                                  }
+                                >
+                                  {stage.stage.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-medium">{stage.taskCount}</TableCell>
+                              <TableCell className="text-right">{formatDuration(Math.round((stage.totalTimeInStage || 0) / 60000), timeDisplayMode)}</TableCell>
+                              <TableCell className="text-right">{formatDuration(Math.round((stage.avgTimeInStage || 0) / 60000), timeDisplayMode)}</TableCell>
+                              <TableCell className="text-right">{formatDuration(stage.totalTimeTracked || 0, timeDisplayMode)}</TableCell>
+                              <TableCell className="text-right">{stage.hitCount}</TableCell>
+                              <TableCell className="text-right">
+                                {stage.backAndForthCount > 0 && (
+                                  <span className="text-orange-600 dark:text-orange-400 font-medium">
+                                    {stage.backAndForthCount}
+                                  </span>
+                                )}
+                                {stage.backAndForthCount === 0 && <span className="text-slate-400">-</span>}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+
+                  {/* Task Breakdown with History */}
+                  {stageAnalyticsData.taskBreakdowns && stageAnalyticsData.taskBreakdowns.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Task Stage History</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          Detailed view of how individual tasks moved through stages
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {stageAnalyticsData.taskBreakdowns.slice(0, 20).map((task) => (
+                            <div key={task.taskId} className="border rounded-lg p-4 dark:border-slate-700">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-medium text-slate-900 dark:text-white">{task.taskTitle}</h4>
+                                <Badge 
+                                  variant="outline"
+                                  className={
+                                    task.currentStatus === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                    task.currentStatus === 'in_progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                    task.currentStatus === 'blocked' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                    task.currentStatus === 'on_hold' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                    task.currentStatus === 'cancelled' ? 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200' :
+                                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                                  }
+                                >
+                                  {task.currentStatus.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                                </Badge>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {task.stageHistory.map((history, idx) => (
+                                  <div key={idx} className="flex items-center gap-1 text-sm">
+                                    <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-slate-700 dark:text-slate-300">
+                                      {history.stage.replace(/_/g, ' ')}
+                                    </span>
+                                    {history.durationMs && (
+                                      <span className="text-slate-500 dark:text-slate-400">
+                                        ({formatDuration(Math.round(history.durationMs / 60000), timeDisplayMode)})
+                                      </span>
+                                    )}
+                                    {history.hitCount > 1 && (
+                                      <span className="text-orange-500 text-xs">×{history.hitCount}</span>
+                                    )}
+                                    {idx < task.stageHistory.length - 1 && (
+                                      <ArrowRight className="h-4 w-4 text-slate-400" />
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                          {stageAnalyticsData.taskBreakdowns.length > 20 && (
+                            <p className="text-sm text-slate-500 dark:text-slate-400 text-center">
+                              Showing 20 of {stageAnalyticsData.taskBreakdowns.length} tasks
+                            </p>
+                          )}
                         </div>
                       </CardContent>
                     </Card>

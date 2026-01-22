@@ -1853,6 +1853,188 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  
+
+  // Task Stage Analytics Report API endpoint
+  app.post("/api/reports/stage-analytics", requireAuth(), requirePermission('reporting', 'canView'), async (req, res) => {
+    try {
+      console.log("📊 STAGE ANALYTICS REPORT ENDPOINT CALLED");
+      
+      const { dateFrom, dateTo, clientId, userId } = req.body;
+      
+      // Fetch all tasks with status history
+      let allTasks = await appStorage.getTasks();
+      
+      // Apply filters
+      if (clientId && clientId !== 'all' && clientId !== 'no-client') {
+        allTasks = allTasks.filter(t => t.clientId === clientId);
+      } else if (clientId === 'no-client') {
+        allTasks = allTasks.filter(t => !t.clientId);
+      }
+      
+      if (userId && userId !== 'all') {
+        allTasks = allTasks.filter(t => t.assignedTo === userId);
+      }
+      
+      // Filter by date range if provided
+      if (dateFrom && dateTo) {
+        const fromDate = new Date(dateFrom);
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        
+        allTasks = allTasks.filter(t => {
+          const createdAt = t.createdAt ? new Date(t.createdAt) : null;
+          return createdAt && createdAt >= fromDate && createdAt <= toDate;
+        });
+      }
+      
+      // Define all possible stages
+      const stages = ['todo', 'in_progress', 'completed', 'cancelled', 'on_hold', 'blocked', 'review'];
+      
+      // Calculate stage analytics
+      const stageStats: Record<string, {
+        stage: string;
+        avgTimeInStage: number; // milliseconds
+        totalTimeInStage: number; // milliseconds
+        totalTimeTracked: number; // minutes from time entries
+        hitCount: number; // total times any task entered this stage
+        taskCount: number; // number of tasks that have been in this stage
+        backAndForthCount: number; // tasks that hit this stage more than once
+      }> = {};
+      
+      // Initialize stats for all stages
+      stages.forEach(stage => {
+        stageStats[stage] = {
+          stage,
+          avgTimeInStage: 0,
+          totalTimeInStage: 0,
+          totalTimeTracked: 0,
+          hitCount: 0,
+          taskCount: 0,
+          backAndForthCount: 0
+        };
+      });
+      
+      // Process each task
+      for (const task of allTasks) {
+        const statusHistory = (task.statusHistory as any[]) || [];
+        const timeEntries = (task.timeEntries as any[]) || [];
+        
+        // Track which stages this task has been in and how many times
+        const stageHitCounts: Record<string, number> = {};
+        
+        for (const entry of statusHistory) {
+          const stage = entry.status;
+          if (!stageStats[stage]) {
+            stageStats[stage] = {
+              stage,
+              avgTimeInStage: 0,
+              totalTimeInStage: 0,
+              totalTimeTracked: 0,
+              hitCount: 0,
+              taskCount: 0,
+              backAndForthCount: 0
+            };
+          }
+          
+          // Count hits
+          stageStats[stage].hitCount++;
+          stageHitCounts[stage] = (stageHitCounts[stage] || 0) + 1;
+          
+          // Add duration if available
+          if (entry.durationMs) {
+            stageStats[stage].totalTimeInStage += entry.durationMs;
+          } else if (entry.enteredAt && !entry.exitedAt) {
+            // Task is still in this stage - calculate live duration
+            const now = new Date().getTime();
+            const entered = new Date(entry.enteredAt).getTime();
+            stageStats[stage].totalTimeInStage += (now - entered);
+          }
+          
+          // Add time tracked in stage
+          if (entry.timeTrackedInStage) {
+            stageStats[stage].totalTimeTracked += entry.timeTrackedInStage;
+          }
+        }
+        
+        // Count unique tasks per stage and back-and-forth
+        for (const [stage, count] of Object.entries(stageHitCounts)) {
+          stageStats[stage].taskCount++;
+          if (count > 1) {
+            stageStats[stage].backAndForthCount++;
+          }
+        }
+        
+        // Also calculate time tracked per stage from time entries
+        // (This associates time entries with the current stage at the time)
+        for (const timeEntry of timeEntries) {
+          if (!timeEntry.startTime) continue;
+          
+          const entryTime = new Date(timeEntry.startTime).getTime();
+          const duration = timeEntry.duration || 0; // in minutes
+          
+          // Find which stage the task was in when this time was logged
+          let stageAtTime = task.status; // default to current status
+          for (const historyEntry of statusHistory) {
+            const enteredAt = new Date(historyEntry.enteredAt).getTime();
+            const exitedAt = historyEntry.exitedAt ? new Date(historyEntry.exitedAt).getTime() : null;
+            
+            if (entryTime >= enteredAt && (!exitedAt || entryTime <= exitedAt)) {
+              stageAtTime = historyEntry.status;
+              break;
+            }
+          }
+          
+          if (stageStats[stageAtTime]) {
+            stageStats[stageAtTime].totalTimeTracked += duration;
+          }
+        }
+      }
+      
+      // Calculate averages
+      for (const stage in stageStats) {
+        const stats = stageStats[stage];
+        if (stats.hitCount > 0) {
+          stats.avgTimeInStage = stats.totalTimeInStage / stats.hitCount;
+        }
+      }
+      
+      // Convert to array and sort by hit count
+      const stageAnalytics = Object.values(stageStats)
+        .filter(s => s.hitCount > 0)
+        .sort((a, b) => b.hitCount - a.hitCount);
+      
+      // Also get per-task stage breakdown for detailed view
+      const taskBreakdowns = allTasks.slice(0, 50).map(task => {
+        const statusHistory = (task.statusHistory as any[]) || [];
+        return {
+          taskId: task.id,
+          taskTitle: task.title,
+          currentStatus: task.status,
+          stageHistory: statusHistory.map(h => ({
+            stage: h.status,
+            enteredAt: h.enteredAt,
+            exitedAt: h.exitedAt,
+            durationMs: h.durationMs,
+            hitCount: h.hitCount || 1
+          }))
+        };
+      });
+      
+      res.json({
+        stageAnalytics,
+        taskBreakdowns,
+        totalTasks: allTasks.length,
+        tasksWithHistory: allTasks.filter(t => ((t.statusHistory as any[]) || []).length > 0).length
+      });
+      
+    } catch (error: any) {
+      console.error("Error fetching stage analytics:", error);
+      res.status(500).json({ error: "Failed to fetch stage analytics" });
+    }
+  });
+
+
   // Team Workload Report API endpoint
   // Team Workload Report API endpoint
   app.get("/api/reports/team-workload", requireAuth(), requirePermission('reporting', 'canView'), async (req, res) => {

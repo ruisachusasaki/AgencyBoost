@@ -5760,10 +5760,24 @@ export class DbStorage implements IStorage {
   async createTask(task: InsertTask): Promise<Task> {
     try {
       const now = new Date();
+      const nowIso = now.toISOString();
+      
+      // Initialize statusHistory with the initial status
+      const initialStatus = task.status || 'todo';
+      const statusHistory = [{
+        status: initialStatus,
+        enteredAt: nowIso,
+        exitedAt: null,
+        durationMs: null,
+        hitCount: 1,
+        timeTrackedInStage: 0
+      }];
+      
       const result = await db.insert(tasks).values({
         ...task,
         id: sql`gen_random_uuid()`,
         createdAt: now,
+        statusHistory: statusHistory,
       }).returning();
       return result[0];
     } catch (error) {
