@@ -69,6 +69,8 @@ import {
   clientRoadmapComments, insertClientRoadmapCommentSchema, clientRoadmapEntries, insertClientRoadmapEntrySchema, staffLinkedEmails,
   surveys, surveyFolders, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers,
   insertSurveySchema, insertSurveyFolderSchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema,
+  taskIntakeForms, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules,
+  insertTaskIntakeFormSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema,
   aiIntegrations,
   aiAssistantSettings,
   slackWorkspaces
@@ -23033,6 +23035,452 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error calculating capacity predictions:", error);
       res.status(500).json({ message: "Failed to calculate capacity predictions" });
+    }
+  });
+
+  // ============================================
+  // TASK INTAKE FORM - Conditional Survey for Task Creation
+  // ============================================
+  
+  // Get the active task intake form (with all questions, options, logic, and assignment rules)
+  app.get("/api/task-intake-forms/active", requireAuth(), async (req, res) => {
+    try {
+      // Get the active form
+      const [activeForm] = await db
+        .select()
+        .from(taskIntakeForms)
+        .where(eq(taskIntakeForms.isActive, true))
+        .limit(1);
+      
+      if (!activeForm) {
+        return res.json(null);
+      }
+      
+      // Get all questions with their options
+      const questions = await db
+        .select()
+        .from(taskIntakeQuestions)
+        .where(eq(taskIntakeQuestions.formId, activeForm.id))
+        .orderBy(asc(taskIntakeQuestions.order));
+      
+      const questionIds = questions.map(q => q.id);
+      
+      let options: any[] = [];
+      if (questionIds.length > 0) {
+        options = await db
+          .select()
+          .from(taskIntakeOptions)
+          .where(inArray(taskIntakeOptions.questionId, questionIds))
+          .orderBy(asc(taskIntakeOptions.order));
+      }
+      
+      // Get logic rules
+      const logicRules = await db
+        .select()
+        .from(taskIntakeLogicRules)
+        .where(and(eq(taskIntakeLogicRules.formId, activeForm.id), eq(taskIntakeLogicRules.enabled, true)))
+        .orderBy(asc(taskIntakeLogicRules.order));
+      
+      // Get assignment rules
+      const assignmentRules = await db
+        .select()
+        .from(taskIntakeAssignmentRules)
+        .where(and(eq(taskIntakeAssignmentRules.formId, activeForm.id), eq(taskIntakeAssignmentRules.enabled, true)))
+        .orderBy(desc(taskIntakeAssignmentRules.priority));
+      
+      res.json({
+        ...activeForm,
+        questions: questions.map(q => ({
+          ...q,
+          options: options.filter(o => o.questionId === q.id)
+        })),
+        logicRules,
+        assignmentRules
+      });
+    } catch (error) {
+      console.error("Error fetching active task intake form:", error);
+      res.status(500).json({ error: "Failed to fetch task intake form" });
+    }
+  });
+  
+  // Get all task intake forms (admin)
+  app.get("/api/task-intake-forms", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const forms = await db.select().from(taskIntakeForms).orderBy(desc(taskIntakeForms.createdAt));
+      res.json(forms);
+    } catch (error) {
+      console.error("Error fetching task intake forms:", error);
+      res.status(500).json({ error: "Failed to fetch task intake forms" });
+    }
+  });
+  
+  // Get single task intake form with all details (admin)
+  app.get("/api/task-intake-forms/:formId", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { formId } = req.params;
+      
+      const [form] = await db
+        .select()
+        .from(taskIntakeForms)
+        .where(eq(taskIntakeForms.id, formId))
+        .limit(1);
+      
+      if (!form) {
+        return res.status(404).json({ error: "Form not found" });
+      }
+      
+      const questions = await db
+        .select()
+        .from(taskIntakeQuestions)
+        .where(eq(taskIntakeQuestions.formId, formId))
+        .orderBy(asc(taskIntakeQuestions.order));
+      
+      const questionIds = questions.map(q => q.id);
+      
+      let options: any[] = [];
+      if (questionIds.length > 0) {
+        options = await db
+          .select()
+          .from(taskIntakeOptions)
+          .where(inArray(taskIntakeOptions.questionId, questionIds))
+          .orderBy(asc(taskIntakeOptions.order));
+      }
+      
+      const logicRules = await db
+        .select()
+        .from(taskIntakeLogicRules)
+        .where(eq(taskIntakeLogicRules.formId, formId))
+        .orderBy(asc(taskIntakeLogicRules.order));
+      
+      const assignmentRules = await db
+        .select()
+        .from(taskIntakeAssignmentRules)
+        .where(eq(taskIntakeAssignmentRules.formId, formId))
+        .orderBy(desc(taskIntakeAssignmentRules.priority));
+      
+      res.json({
+        ...form,
+        questions: questions.map(q => ({
+          ...q,
+          options: options.filter(o => o.questionId === q.id)
+        })),
+        logicRules,
+        assignmentRules
+      });
+    } catch (error) {
+      console.error("Error fetching task intake form:", error);
+      res.status(500).json({ error: "Failed to fetch task intake form" });
+    }
+  });
+  
+  // Create a new task intake form (admin)
+  app.post("/api/task-intake-forms", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return;
+      
+      const validatedData = insertTaskIntakeFormSchema.parse({
+        ...req.body,
+        createdBy: rawUserId
+      });
+      
+      const [newForm] = await db.insert(taskIntakeForms).values(validatedData).returning();
+      
+      res.json(newForm);
+    } catch (error) {
+      console.error("Error creating task intake form:", error);
+      res.status(500).json({ error: "Failed to create task intake form" });
+    }
+  });
+  
+  // Update a task intake form (admin)
+  app.put("/api/task-intake-forms/:formId", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return;
+      
+      const { formId } = req.params;
+      
+      const [updatedForm] = await db
+        .update(taskIntakeForms)
+        .set({
+          ...req.body,
+          updatedBy: rawUserId,
+          updatedAt: new Date()
+        })
+        .where(eq(taskIntakeForms.id, formId))
+        .returning();
+      
+      if (!updatedForm) {
+        return res.status(404).json({ error: "Form not found" });
+      }
+      
+      res.json(updatedForm);
+    } catch (error) {
+      console.error("Error updating task intake form:", error);
+      res.status(500).json({ error: "Failed to update task intake form" });
+    }
+  });
+  
+  // Delete a task intake form (admin)
+  app.delete("/api/task-intake-forms/:formId", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { formId } = req.params;
+      
+      await db.delete(taskIntakeForms).where(eq(taskIntakeForms.id, formId));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting task intake form:", error);
+      res.status(500).json({ error: "Failed to delete task intake form" });
+    }
+  });
+  
+  // ============================================
+  // TASK INTAKE QUESTIONS
+  // ============================================
+  
+  // Add a question to a form
+  app.post("/api/task-intake-forms/:formId/questions", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { formId } = req.params;
+      const { options: optionsList, ...questionData } = req.body;
+      
+      // Get max order
+      const [maxOrderResult] = await db
+        .select({ maxOrder: sql`COALESCE(MAX("order"), -1)` })
+        .from(taskIntakeQuestions)
+        .where(eq(taskIntakeQuestions.formId, formId));
+      
+      const newOrder = (maxOrderResult?.maxOrder as number || -1) + 1;
+      
+      const validatedData = insertTaskIntakeQuestionSchema.parse({
+        ...questionData,
+        formId,
+        order: newOrder
+      });
+      
+      const [newQuestion] = await db.insert(taskIntakeQuestions).values(validatedData).returning();
+      
+      // If options provided (for single_choice/multi_choice), create them
+      let createdOptions: any[] = [];
+      if (optionsList && Array.isArray(optionsList) && optionsList.length > 0) {
+        const optionsToInsert = optionsList.map((opt: { optionText: string }, idx: number) => ({
+          questionId: newQuestion.id,
+          optionText: opt.optionText || opt,
+          order: idx
+        }));
+        createdOptions = await db.insert(taskIntakeOptions).values(optionsToInsert).returning();
+      }
+      
+      res.json({ ...newQuestion, options: createdOptions });
+    } catch (error) {
+      console.error("Error creating task intake question:", error);
+      res.status(500).json({ error: "Failed to create question" });
+    }
+  });
+  
+  // Update a question
+  app.put("/api/task-intake-questions/:questionId", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { questionId } = req.params;
+      const { options: optionsList, ...questionData } = req.body;
+      
+      const [updatedQuestion] = await db
+        .update(taskIntakeQuestions)
+        .set({ ...questionData, updatedAt: new Date() })
+        .where(eq(taskIntakeQuestions.id, questionId))
+        .returning();
+      
+      if (!updatedQuestion) {
+        return res.status(404).json({ error: "Question not found" });
+      }
+      
+      // If options provided, replace existing options
+      if (optionsList !== undefined) {
+        // Delete existing options
+        await db.delete(taskIntakeOptions).where(eq(taskIntakeOptions.questionId, questionId));
+        
+        // Create new options
+        if (Array.isArray(optionsList) && optionsList.length > 0) {
+          const optionsToInsert = optionsList.map((opt: any, idx: number) => ({
+            questionId: questionId,
+            optionText: typeof opt === 'string' ? opt : opt.optionText,
+            order: idx
+          }));
+          await db.insert(taskIntakeOptions).values(optionsToInsert);
+        }
+      }
+      
+      // Fetch updated options
+      const options = await db
+        .select()
+        .from(taskIntakeOptions)
+        .where(eq(taskIntakeOptions.questionId, questionId))
+        .orderBy(asc(taskIntakeOptions.order));
+      
+      res.json({ ...updatedQuestion, options });
+    } catch (error) {
+      console.error("Error updating task intake question:", error);
+      res.status(500).json({ error: "Failed to update question" });
+    }
+  });
+  
+  // Reorder questions
+  app.put("/api/task-intake-forms/:formId/questions/reorder", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { formId } = req.params;
+      const { questionIds } = req.body; // Array of question IDs in new order
+      
+      if (!Array.isArray(questionIds)) {
+        return res.status(400).json({ error: "questionIds must be an array" });
+      }
+      
+      // Update order for each question
+      await Promise.all(
+        questionIds.map((id: string, index: number) =>
+          db.update(taskIntakeQuestions)
+            .set({ order: index })
+            .where(and(eq(taskIntakeQuestions.id, id), eq(taskIntakeQuestions.formId, formId)))
+        )
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error reordering questions:", error);
+      res.status(500).json({ error: "Failed to reorder questions" });
+    }
+  });
+  
+  // Delete a question
+  app.delete("/api/task-intake-questions/:questionId", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { questionId } = req.params;
+      
+      await db.delete(taskIntakeQuestions).where(eq(taskIntakeQuestions.id, questionId));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting task intake question:", error);
+      res.status(500).json({ error: "Failed to delete question" });
+    }
+  });
+  
+  // ============================================
+  // TASK INTAKE LOGIC RULES
+  // ============================================
+  
+  // Add a logic rule
+  app.post("/api/task-intake-forms/:formId/logic-rules", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { formId } = req.params;
+      
+      const validatedData = insertTaskIntakeLogicRuleSchema.parse({
+        ...req.body,
+        formId
+      });
+      
+      const [newRule] = await db.insert(taskIntakeLogicRules).values(validatedData).returning();
+      
+      res.json(newRule);
+    } catch (error) {
+      console.error("Error creating logic rule:", error);
+      res.status(500).json({ error: "Failed to create logic rule" });
+    }
+  });
+  
+  // Update a logic rule
+  app.put("/api/task-intake-logic-rules/:ruleId", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { ruleId } = req.params;
+      
+      const [updatedRule] = await db
+        .update(taskIntakeLogicRules)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(taskIntakeLogicRules.id, ruleId))
+        .returning();
+      
+      if (!updatedRule) {
+        return res.status(404).json({ error: "Rule not found" });
+      }
+      
+      res.json(updatedRule);
+    } catch (error) {
+      console.error("Error updating logic rule:", error);
+      res.status(500).json({ error: "Failed to update logic rule" });
+    }
+  });
+  
+  // Delete a logic rule
+  app.delete("/api/task-intake-logic-rules/:ruleId", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { ruleId } = req.params;
+      
+      await db.delete(taskIntakeLogicRules).where(eq(taskIntakeLogicRules.id, ruleId));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting logic rule:", error);
+      res.status(500).json({ error: "Failed to delete logic rule" });
+    }
+  });
+  
+  // ============================================
+  // TASK INTAKE ASSIGNMENT RULES
+  // ============================================
+  
+  // Add an assignment rule
+  app.post("/api/task-intake-forms/:formId/assignment-rules", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { formId } = req.params;
+      
+      const validatedData = insertTaskIntakeAssignmentRuleSchema.parse({
+        ...req.body,
+        formId
+      });
+      
+      const [newRule] = await db.insert(taskIntakeAssignmentRules).values(validatedData).returning();
+      
+      res.json(newRule);
+    } catch (error) {
+      console.error("Error creating assignment rule:", error);
+      res.status(500).json({ error: "Failed to create assignment rule" });
+    }
+  });
+  
+  // Update an assignment rule
+  app.put("/api/task-intake-assignment-rules/:ruleId", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { ruleId } = req.params;
+      
+      const [updatedRule] = await db
+        .update(taskIntakeAssignmentRules)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(taskIntakeAssignmentRules.id, ruleId))
+        .returning();
+      
+      if (!updatedRule) {
+        return res.status(404).json({ error: "Rule not found" });
+      }
+      
+      res.json(updatedRule);
+    } catch (error) {
+      console.error("Error updating assignment rule:", error);
+      res.status(500).json({ error: "Failed to update assignment rule" });
+    }
+  });
+  
+  // Delete an assignment rule
+  app.delete("/api/task-intake-assignment-rules/:ruleId", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { ruleId } = req.params;
+      
+      await db.delete(taskIntakeAssignmentRules).where(eq(taskIntakeAssignmentRules.id, ruleId));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting assignment rule:", error);
+      res.status(500).json({ error: "Failed to delete assignment rule" });
     }
   });
 
