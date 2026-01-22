@@ -2240,6 +2240,9 @@ export default function EnhancedClientDetail() {
   // Selected contacts for SMS multi-select (array of contact indices)
   const [selectedSmsContactIndices, setSelectedSmsContactIndices] = useState<number[]>([0]);
   
+  // Selected contacts for Email multi-select (array of contact indices)
+  const [selectedEmailContactIndices, setSelectedEmailContactIndices] = useState<number[]>([0]);
+  
   // Handler functions for communication forms
   const handleSmsFieldChange = (field: string, value: string) => {
     setSmsData(prev => ({ ...prev, [field]: value }));
@@ -4088,15 +4091,25 @@ export default function EnhancedClientDetail() {
 
   const sendEmailNow = async () => {
     console.log('🚀 SEND NOW BUTTON CLICKED - Starting email send process...');
-    const recipientEmail = selectedContact?.email || client?.email;
-    const recipientName = selectedContact?.name || client?.name;
+    
+    // Get all selected contacts with email addresses
+    const selectedContacts = selectedEmailContactIndices
+      .map(index => availableContacts[index])
+      .filter(contact => contact?.email);
+    
+    // Fallback to single contact if no multi-select
+    const recipients = selectedContacts.length > 0 
+      ? selectedContacts 
+      : [{ email: selectedContact?.email || client?.email, name: selectedContact?.name || client?.name }].filter(r => r.email);
     
     try {
       // Validate required fields
-      if (!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !recipientEmail) {
+      if (!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || recipients.length === 0) {
         toast({
           title: "Missing Information",
-          description: "Please fill in all required fields: from email, subject, and message.",
+          description: recipients.length === 0 
+            ? "Please select at least one contact with an email address."
+            : "Please fill in all required fields: from email, subject, and message.",
           variant: "destructive",
         });
         return;
@@ -4112,35 +4125,56 @@ export default function EnhancedClientDetail() {
         return;
       }
 
-      // Send email through CRM API using MailGun integration
-      const response = await apiRequest('POST', '/api/communications/send-email', {
-        to: recipientEmail,
-        subject: emailData.subject,
-        previewText: emailData.previewText,
-        message: emailData.message,
-        fromEmail: emailData.fromEmail,
-        fromName: emailData.fromName,
-        clientId: client.id
-      });
-
-      const result = await response.json();
+      // Send email to all selected contacts
+      let successCount = 0;
+      let errorCount = 0;
       
-      toast({
-        title: "Email Sent Successfully",
-        variant: "success",
-        description: `Email sent to ${recipientName} (${recipientEmail})`,
-      });
+      for (const recipient of recipients) {
+        try {
+          const response = await apiRequest('POST', '/api/communications/send-email', {
+            to: recipient.email,
+            subject: emailData.subject,
+            previewText: emailData.previewText,
+            message: emailData.message,
+            fromEmail: emailData.fromEmail,
+            fromName: emailData.fromName,
+            clientId: client.id
+          });
+          await response.json();
+          successCount++;
+        } catch (err) {
+          errorCount++;
+        }
+      }
       
-      // Clear the form after successful send
-      setEmailData({
-        fromEmail: emailData.fromEmail, // Keep from email
-        fromName: emailData.fromName,   // Keep from name
-        subject: "",                    // Clear subject
-        previewText: "",                // Clear preview text
-        message: ""                     // Clear message
-      });
+      if (successCount > 0) {
+        toast({
+          title: "Email Sent Successfully",
+          variant: "success",
+          description: successCount === 1 
+            ? `Email sent to ${recipients[0]?.name} (${recipients[0]?.email})`
+            : `Email sent to ${successCount} contacts.`,
+        });
       
-      setShowSendModal(false);
+        // Clear the form after successful send
+        setEmailData({
+          fromEmail: emailData.fromEmail, // Keep from email
+          fromName: emailData.fromName,   // Keep from name
+          subject: "",                    // Clear subject
+          previewText: "",                // Clear preview text
+          message: ""                     // Clear message
+        } as any);
+      
+        setShowSendModal(false);
+      }
+      
+      if (errorCount > 0) {
+        toast({
+          variant: "destructive",
+          title: "Partial Failure",
+          description: `Failed to send email to ${errorCount} contact(s).`
+        });
+      }
       
     } catch (error) {
       console.error('Error sending email:', error);
@@ -5913,8 +5947,8 @@ export default function EnhancedClientDetail() {
                 </Tabs>
               </CardHeader>
               <CardContent>
-                {/* Contact Selector - Available for call/email (SMS has its own multi-select) */}
-                {availableContacts.length > 1 && communicationTab !== "sms" && (
+                {/* Contact Selector - Available for call only (SMS and Email have their own multi-select) */}
+                {availableContacts.length > 1 && communicationTab !== "sms" && communicationTab !== "email" && (
                   <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <Label className="text-sm font-medium mb-2 block">
                       <Users className="h-4 w-4 inline mr-2" />
@@ -6273,20 +6307,97 @@ export default function EnhancedClientDetail() {
                             </div>
                           </div>
                           
-                          <div>
-                            <Label htmlFor="email-to">
-                              To {selectedContact && !selectedContact.isPrimary && (
-                                <span className="font-normal text-muted-foreground">({selectedContact.name})</span>
+                          {/* Email Contact Multi-Select with dropdown aesthetic */}
+                          {availableContacts.length > 1 ? (
+                            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                              <Label className="text-sm font-medium mb-2 block">
+                                <Users className="h-4 w-4 inline mr-2" />
+                                Select Contacts
+                              </Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className="w-full justify-between h-auto min-h-10 py-2"
+                                  >
+                                    <span className="text-left truncate">
+                                      {selectedEmailContactIndices.filter(i => availableContacts[i]?.email).length === 0 
+                                        ? "Select contacts..."
+                                        : selectedEmailContactIndices
+                                            .filter(i => availableContacts[i]?.email)
+                                            .map(i => availableContacts[i]?.name)
+                                            .join(", ")}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0" align="start">
+                                  <div className="max-h-60 overflow-y-auto p-1">
+                                    {availableContacts.map((contact, index) => (
+                                      <label
+                                        key={contact.id}
+                                        className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                                          !contact.email ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedEmailContactIndices.includes(index)}
+                                          disabled={!contact.email}
+                                          onChange={(e) => {
+                                            if (e.target.checked) {
+                                              setSelectedEmailContactIndices(prev => [...prev, index]);
+                                            } else {
+                                              setSelectedEmailContactIndices(prev => prev.filter(i => i !== index));
+                                            }
+                                          }}
+                                          className="rounded border-gray-300"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-medium text-sm truncate">{contact.name}</span>
+                                            {contact.isPrimary && (
+                                              <Badge variant="outline" className="text-xs">Primary</Badge>
+                                            )}
+                                          </div>
+                                          {contact.email ? (
+                                            <span className="text-xs text-muted-foreground">{contact.email}</span>
+                                          ) : (
+                                            <span className="text-xs text-red-500">No email address</span>
+                                          )}
+                                        </div>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                              {/* Show selected contacts' emails */}
+                              {selectedEmailContactIndices.filter(i => availableContacts[i]?.email).length > 0 && (
+                                <div className="mt-2 text-xs text-muted-foreground flex flex-wrap gap-2">
+                                  {selectedEmailContactIndices
+                                    .filter(i => availableContacts[i]?.email)
+                                    .map(i => (
+                                      <div key={availableContacts[i]?.id} className="flex items-center gap-1">
+                                        <Mail className="h-3 w-3" />
+                                        <span>{availableContacts[i]?.email}</span>
+                                      </div>
+                                    ))}
+                                </div>
                               )}
-                            </Label>
-                            <Input
-                              id="email-to"
-                              value={selectedContact?.email || ''}
-                              disabled
-                              className="bg-gray-50 dark:bg-gray-800"
-                              data-testid="input-email-to"
-                            />
-                          </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <Label htmlFor="email-to">To</Label>
+                              <Input
+                                id="email-to"
+                                value={availableContacts[0]?.email || ''}
+                                disabled
+                                className="bg-gray-50 dark:bg-gray-800"
+                                data-testid="input-email-to"
+                              />
+                            </div>
+                          )}
                           
                           {showCC && (
                             <div>
@@ -6431,24 +6542,23 @@ export default function EnhancedClientDetail() {
                               setShowEmailChoiceModal(true);
                               console.log("✅ setShowEmailChoiceModal(true) called");
                             }}
-                            disabled={!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || !selectedContact?.email}
+                            disabled={!emailData.fromEmail || !emailData.subject.trim() || !emailData.message.trim() || selectedEmailContactIndices.filter(i => availableContacts[i]?.email).length === 0}
                             className="flex-1"
                             data-testid="button-send-email"
                             title={
-                              !selectedContact?.email 
-                                ? (availableContacts.length > 1 
-                                    ? "Selected contact has no email address" 
-                                    : "Client has no email address")
-                                : `Send email to ${selectedContact.name}`
+                              selectedEmailContactIndices.filter(i => availableContacts[i]?.email).length === 0
+                                ? "Select at least one contact with an email address"
+                                : `Send email to ${selectedEmailContactIndices.filter(i => availableContacts[i]?.email).length} contact(s)`
                             }
                           >
                             <Mail className="h-4 w-4 mr-2" />
-                            Send Email
+                            Send Email {selectedEmailContactIndices.filter(i => availableContacts[i]?.email).length > 1 && 
+                              `(${selectedEmailContactIndices.filter(i => availableContacts[i]?.email).length})`}
                           </Button>
                         </div>
                         
-                        {/* Show helpful message when selected contact has no email */}
-                        {!selectedContact?.email && (
+                        {/* Show helpful message when no contacts with email are selected */}
+                        {selectedEmailContactIndices.filter(i => availableContacts[i]?.email).length === 0 && (
                           <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded text-sm text-yellow-700 dark:text-yellow-400">
                             <div className="flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
@@ -6457,7 +6567,7 @@ export default function EnhancedClientDetail() {
                             <ul className="mt-1 ml-4 space-y-1 text-xs">
                               <li>
                                 {availableContacts.length > 1 
-                                  ? `• Select a contact with an email address, or add an email to ${selectedContact?.name || 'the contact'}`
+                                  ? "• Select at least one contact with an email address"
                                   : "• Client needs an email address in their profile"}
                               </li>
                             </ul>
