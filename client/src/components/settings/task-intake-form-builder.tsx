@@ -73,6 +73,7 @@ type TaskIntakeQuestion = {
   questionText: string;
   questionType: QuestionType;
   helpText?: string;
+  internalLabel?: string;
   isRequired: boolean;
   order: number;
   settings?: any;
@@ -134,11 +135,17 @@ const questionFormSchema = z.object({
   questionText: z.string().min(1, "Question text is required"),
   questionType: z.enum(["single_choice", "multi_choice", "text", "number", "date", "client", "department"]),
   helpText: z.string().optional(),
+  internalLabel: z.string().optional(),
   isRequired: z.boolean().default(true),
   options: z.array(z.object({ optionText: z.string() })).optional(),
 });
 
 type QuestionFormData = z.infer<typeof questionFormSchema>;
+
+// Helper to get display name for a question (internal label or question text)
+const getQuestionDisplayName = (question: TaskIntakeQuestion) => {
+  return question.internalLabel || question.questionText;
+};
 
 export function TaskIntakeFormBuilder() {
   const { toast } = useToast();
@@ -260,6 +267,7 @@ export function TaskIntakeFormBuilder() {
       questionText: "",
       questionType: "single_choice",
       helpText: "",
+      internalLabel: "",
       isRequired: true,
       options: [],
     });
@@ -280,6 +288,7 @@ export function TaskIntakeFormBuilder() {
         questionText: question.questionText,
         questionType: question.questionType,
         helpText: question.helpText || "",
+        internalLabel: question.internalLabel || "",
         isRequired: question.isRequired,
       });
       setOptionInputs(
@@ -457,8 +466,17 @@ export function TaskIntakeFormBuilder() {
                                     </Badge>
                                     <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
                                     <div className="flex-1 min-w-0">
-                                      <p className="font-medium truncate">{question.questionText}</p>
-                                      <p className="text-sm text-muted-foreground">
+                                      <p className="font-medium truncate">
+                                        {question.internalLabel ? (
+                                          <span className="text-primary">{question.internalLabel}</span>
+                                        ) : (
+                                          question.questionText
+                                        )}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground truncate">
+                                        {question.internalLabel && (
+                                          <span className="mr-2">{question.questionText} •</span>
+                                        )}
                                         {questionTypeLabels[question.questionType]}
                                         {question.questionType === "client" && " • From active clients"}
                                         {question.questionType === "department" && " • From teams"}
@@ -573,6 +591,26 @@ export function TaskIntakeFormBuilder() {
                         {...field}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="internalLabel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Internal Label (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., Department, Creative Type, Budget"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Admin-only name for easier identification in Logic Rules. Not visible to users.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -906,7 +944,7 @@ function LogicRulesBuilder({
                 <SelectContent>
                   {choiceQuestions.map((q) => (
                     <SelectItem key={q.id} value={q.id}>
-                      {q.questionText}
+                      {getQuestionDisplayName(q)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -984,7 +1022,7 @@ function LogicRulesBuilder({
                       .filter((q) => q.id !== sourceQuestionId)
                       .map((q) => (
                         <SelectItem key={q.id} value={q.id}>
-                          {q.questionText}
+                          {getQuestionDisplayName(q)}
                         </SelectItem>
                       ))}
                   </SelectContent>
@@ -1233,7 +1271,7 @@ function AssignmentRulesBuilder({
                       <SelectContent>
                         {choiceQuestions.map((q) => (
                           <SelectItem key={q.id} value={q.id}>
-                            {q.questionText}
+                            {getQuestionDisplayName(q)}
                           </SelectItem>
                         ))}
                       </SelectContent>
