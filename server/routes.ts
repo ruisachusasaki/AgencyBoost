@@ -6627,6 +6627,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = partialData;
       
+      // Auto-sync tags: Create any new tags in the tags table
+      if (validatedData.tags && Array.isArray(validatedData.tags)) {
+        const existingTags = await appStorage.getTags();
+        const existingTagNames = existingTags.map(t => t.name.toLowerCase());
+        
+        for (const tagName of validatedData.tags) {
+          if (tagName && !existingTagNames.includes(tagName.toLowerCase())) {
+            try {
+              await appStorage.createTag({
+                name: tagName,
+                color: "#46a1a0", // Default teal color
+              });
+              console.log(`[Tags] Auto-created tag: ${tagName}`);
+            } catch (err) {
+              // Tag might already exist due to race condition, ignore
+            }
+          }
+        }
+      }
+      
       // Check task dependencies before allowing completion
       if (validatedData.status === 'completed' && currentTask.status !== 'completed') {
         // Get all dependencies for this task

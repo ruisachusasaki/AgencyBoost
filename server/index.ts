@@ -5,7 +5,7 @@ import { setupAuth } from "./googleAuth";
 import { setupGoogleCalendar } from "./googleCalendarSetup";
 import { db } from "./db";
 import { sql, eq, and } from "drizzle-orm";
-import { clientBriefSections, automationTriggers, automationActions, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses, timeOffPolicies, timeOffTypes, userRoles } from "@shared/schema";
+import { clientBriefSections, automationTriggers, automationActions, calendars, staff, calendarAppointments, teamPositions, expenseReportFormConfig, users, dashboardWidgets, oneOnOneProgressionStatuses, timeOffPolicies, timeOffTypes, userRoles, tags, tasks } from "@shared/schema";
 
 /**
  * Startup migration to ensure client brief columns exist
@@ -1543,6 +1543,63 @@ async function initializeDefaultProgressionStatuses() {
 }
 
 /**
+/**
+ * Sync task tags to Settings > Tags
+ * Ensures any tags used on tasks also appear in the system tags table
+ */
+async function syncTaskTagsToSettingsTags() {
+  try {
+    log("Running startup migration: syncTaskTagsToSettingsTags");
+    
+    // Get all existing tags from settings
+    const existingTags = await db.select().from(tags);
+    const existingTagNames = new Set(existingTags.map(t => t.name.toLowerCase()));
+    
+    // Get all unique tags from tasks
+    const allTasks = await db.select({ tags: tasks.tags }).from(tasks);
+    const taskTagsSet = new Set<string>();
+    
+    for (const task of allTasks) {
+      if (task.tags && Array.isArray(task.tags)) {
+        for (const tag of task.tags) {
+          if (tag && typeof tag === "string") {
+            taskTagsSet.add(tag);
+          }
+        }
+      }
+    }
+    
+    // Create missing tags
+    let createdCount = 0;
+    for (const tagName of taskTagsSet) {
+      if (!existingTagNames.has(tagName.toLowerCase())) {
+        try {
+          await db.insert(tags).values({
+            name: tagName,
+            color: "#46a1a0",
+          });
+          createdCount++;
+          log(`[Tags] Synced task tag to settings: ${tagName}`);
+        } catch (err: any) {
+          if (!err.message?.includes("duplicate")) {
+            log(`[Tags] Warning: Could not sync tag ${tagName}: ${err.message}`);
+          }
+        }
+      }
+    }
+    
+    if (createdCount > 0) {
+      log(`[Tags] Synced ${createdCount} task tag(s) to Settings > Tags`);
+    } else {
+      log("[Tags] All task tags already exist in Settings > Tags");
+    }
+    
+  } catch (error) {
+    log(`Warning: Failed to sync task tags: ${error}`);
+  }
+}
+
+/**
  * Initialize default global time off types
  * Creates Vacation Time, Sick Days, and Personal Days as company-wide categories
  */
@@ -1899,6 +1956,7 @@ async function runStartupMigrations() {
     await initializeDefaultProgressionStatuses();
     await initializeDefaultTimeOffTypes();
     await syncStaffRolesToUserRoles();
+    await syncTaskTagsToSettingsTags();
     log("✅ All startup migrations completed successfully");
   } catch (error) {
     log(`⚠️ Startup migrations encountered an error: ${error}`);
