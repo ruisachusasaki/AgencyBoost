@@ -4884,3 +4884,119 @@ export const insertSurveySubmissionAnswerSchema = createInsertSchema(surveySubmi
 });
 export type SurveySubmissionAnswer = typeof surveySubmissionAnswers.$inferSelect;
 export type InsertSurveySubmissionAnswer = z.infer<typeof insertSurveySubmissionAnswerSchema>;
+
+// Task Intake Form Configuration - extends surveys for task creation workflow
+export const taskIntakeForms = pgTable("task_intake_forms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().default("Task Submission Form"),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  updatedBy: uuid("updated_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Task Intake Questions - one question per slide/step
+export const taskIntakeQuestions = pgTable("task_intake_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull().references(() => taskIntakeForms.id, { onDelete: "cascade" }),
+  questionText: text("question_text").notNull(),
+  questionType: text("question_type").notNull(), // single_choice, multi_choice, text, number, date
+  helpText: text("help_text"), // optional hint below the question
+  isRequired: boolean("is_required").default(true),
+  order: integer("order").notNull().default(0),
+  settings: jsonb("settings").default({}), // additional settings like min/max for numbers
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_task_intake_questions_form").on(table.formId),
+  index("idx_task_intake_questions_order").on(table.order),
+]);
+
+// Task Intake Options - for single_choice and multi_choice questions
+export const taskIntakeOptions = pgTable("task_intake_options", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  questionId: varchar("question_id").notNull().references(() => taskIntakeQuestions.id, { onDelete: "cascade" }),
+  optionText: text("option_text").notNull(),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_task_intake_options_question").on(table.questionId),
+]);
+
+// Task Intake Logic Rules - conditional navigation (if X or Y, go to Z)
+export const taskIntakeLogicRules = pgTable("task_intake_logic_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull().references(() => taskIntakeForms.id, { onDelete: "cascade" }),
+  sourceQuestionId: varchar("source_question_id").notNull().references(() => taskIntakeQuestions.id, { onDelete: "cascade" }),
+  // Conditions stored as JSON array for OR logic: [{optionId: "x"}, {optionId: "y"}] means "if X or Y"
+  conditions: jsonb("conditions").notNull().default([]),
+  targetQuestionId: varchar("target_question_id").references(() => taskIntakeQuestions.id, { onDelete: "cascade" }),
+  isEndForm: boolean("is_end_form").default(false), // if true, end form instead of going to target
+  order: integer("order").default(0),
+  enabled: boolean("enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_task_intake_logic_form").on(table.formId),
+  index("idx_task_intake_logic_source").on(table.sourceQuestionId),
+]);
+
+// Task Intake Assignment Rules - who gets assigned based on answers
+export const taskIntakeAssignmentRules = pgTable("task_intake_assignment_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull().references(() => taskIntakeForms.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // descriptive name for the rule
+  // Conditions: JSON array with AND logic between groups, OR within group
+  // Example: [{questionId: "q1", optionIds: ["opt1", "opt2"]}, {questionId: "q2", optionIds: ["opt3"]}]
+  // Means: (q1=opt1 OR q1=opt2) AND (q2=opt3)
+  conditions: jsonb("conditions").notNull().default([]),
+  assignToStaffId: uuid("assign_to_staff_id").references(() => staff.id),
+  priority: integer("priority").default(0), // higher priority rules evaluated first
+  enabled: boolean("enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_task_intake_assignment_form").on(table.formId),
+]);
+
+// Schema exports and types
+export const insertTaskIntakeFormSchema = createInsertSchema(taskIntakeForms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type TaskIntakeForm = typeof taskIntakeForms.$inferSelect;
+export type InsertTaskIntakeForm = z.infer<typeof insertTaskIntakeFormSchema>;
+
+export const insertTaskIntakeQuestionSchema = createInsertSchema(taskIntakeQuestions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type TaskIntakeQuestion = typeof taskIntakeQuestions.$inferSelect;
+export type InsertTaskIntakeQuestion = z.infer<typeof insertTaskIntakeQuestionSchema>;
+
+export const insertTaskIntakeOptionSchema = createInsertSchema(taskIntakeOptions).omit({
+  id: true,
+  createdAt: true,
+});
+export type TaskIntakeOption = typeof taskIntakeOptions.$inferSelect;
+export type InsertTaskIntakeOption = z.infer<typeof insertTaskIntakeOptionSchema>;
+
+export const insertTaskIntakeLogicRuleSchema = createInsertSchema(taskIntakeLogicRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type TaskIntakeLogicRule = typeof taskIntakeLogicRules.$inferSelect;
+export type InsertTaskIntakeLogicRule = z.infer<typeof insertTaskIntakeLogicRuleSchema>;
+
+export const insertTaskIntakeAssignmentRuleSchema = createInsertSchema(taskIntakeAssignmentRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type TaskIntakeAssignmentRule = typeof taskIntakeAssignmentRules.$inferSelect;
+export type InsertTaskIntakeAssignmentRule = z.infer<typeof insertTaskIntakeAssignmentRuleSchema>;
