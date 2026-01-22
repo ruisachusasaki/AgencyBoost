@@ -885,7 +885,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                       role="combobox"
                       className="w-full justify-between"
                     >
-                      {selectedClient ? selectedClient.name : "Select client..."}
+                      {selectedClient ? (selectedClient.company || selectedClient.name) : "Select client..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -905,11 +905,11 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                           {clients.map((client) => (
                             <CommandItem
                               key={client.id}
-                              value={client.name}
+                              value={client.company || client.name}
                               onSelect={() => handleFormChange({ clientId: client.id })}
                             >
                               <Check className={cn("mr-2 h-4 w-4", editFormData.clientId === client.id ? "opacity-100" : "opacity-0")} />
-                              {client.name}
+                              {client.company || client.name}
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -1279,7 +1279,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 <SelectContent>
                   <SelectItem value="__all__">All clients</SelectItem>
                   {clients.filter(client => client.id).map(client => (
-                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    <SelectItem key={client.id} value={client.id}>{client.company || client.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
