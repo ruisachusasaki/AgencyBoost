@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { 
   Plus, Edit, Trash2, GripVertical, Save, X, ChevronDown, ChevronUp, 
   MessageSquare, Hash, Calendar, Type, ListChecks, ArrowRight, Copy,
-  CheckCircle2, Circle, ToggleLeft
+  CheckCircle2, Circle, ToggleLeft, Building2, Users
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type QuestionType = "single_choice" | "multi_choice" | "text" | "number" | "date";
+type QuestionType = "single_choice" | "multi_choice" | "text" | "number" | "date" | "client" | "department";
 
 type TaskIntakeOption = {
   id: string;
@@ -116,6 +116,8 @@ const questionTypeIcons: Record<QuestionType, any> = {
   text: Type,
   number: Hash,
   date: Calendar,
+  client: Building2,
+  department: Users,
 };
 
 const questionTypeLabels: Record<QuestionType, string> = {
@@ -124,11 +126,13 @@ const questionTypeLabels: Record<QuestionType, string> = {
   text: "Text Input",
   number: "Number",
   date: "Date",
+  client: "Client (from active clients)",
+  department: "Department (from teams)",
 };
 
 const questionFormSchema = z.object({
   questionText: z.string().min(1, "Question text is required"),
-  questionType: z.enum(["single_choice", "multi_choice", "text", "number", "date"]),
+  questionType: z.enum(["single_choice", "multi_choice", "text", "number", "date", "client", "department"]),
   helpText: z.string().optional(),
   isRequired: z.boolean().default(true),
   options: z.array(z.object({ optionText: z.string() })).optional(),
@@ -456,7 +460,9 @@ export function TaskIntakeFormBuilder() {
                                       <p className="font-medium truncate">{question.questionText}</p>
                                       <p className="text-sm text-muted-foreground">
                                         {questionTypeLabels[question.questionType]}
-                                        {question.options.length > 0 && ` • ${question.options.length} options`}
+                                        {question.questionType === "client" && " • From active clients"}
+                                        {question.questionType === "department" && " • From teams"}
+                                        {question.options.length > 0 && question.questionType !== "client" && question.questionType !== "department" && ` • ${question.options.length} options`}
                                         {question.isRequired && " • Required"}
                                       </p>
                                     </div>
@@ -628,6 +634,30 @@ export function TaskIntakeFormBuilder() {
                     <Plus className="h-4 w-4 mr-1" />
                     Add Option
                   </Button>
+                </div>
+              )}
+              
+              {watchedQuestionType === "client" && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Client Selection</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Options will be automatically populated from your active clients list.
+                  </p>
+                </div>
+              )}
+              
+              {watchedQuestionType === "department" && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Department Selection</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Options will be automatically populated from your teams/departments in Staff settings.
+                  </p>
                 </div>
               )}
               
