@@ -77,6 +77,24 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
     return tabParam || "dashboard";
   }, [initialTab]);
   
+  // Derive meetingId from URL or prop
+  const deriveMeetingId = useMemo(() => {
+    if (meetingId) return meetingId;
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('meetingId') || undefined;
+  }, [meetingId]);
+  
+  const [activeMeetingId, setActiveMeetingId] = useState<string | undefined>(deriveMeetingId);
+  
+  // Sync activeMeetingId when URL changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlMeetingId = urlParams.get('meetingId') || undefined;
+    if (urlMeetingId !== activeMeetingId) {
+      setActiveMeetingId(urlMeetingId);
+    }
+  }, [location]);
+  
   const [activeTab, setActiveTab] = useState(deriveInitialTab);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -3331,7 +3349,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
       )}
 
       {activeTab === "px-meetings" && (isManager || isAdmin) && (
-        <PxMeetings meetingId={meetingId} />
+        <PxMeetings meetingId={activeMeetingId} />
       )}
 
       {/* Time Off Request Dialog */}
