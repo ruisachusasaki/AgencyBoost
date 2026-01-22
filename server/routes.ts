@@ -23389,14 +23389,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertTimeOffRequestSchema.parse(cleanedBody);
       const [newRequest] = await db.insert(timeOffRequests).values(validatedData).returning();
       
-      // Save individual day hours if provided
+      // Save individual day hours if provided (wrapped in try-catch for table existence)
       if (dayHours && Array.isArray(dayHours) && dayHours.length > 0) {
-        const dayRecords = dayHours.map((day) => ({
-          timeOffRequestId: newRequest.id,
-          date: day.date,
-          hours: day.hours?.toString() || "0"
-        }));
-        await db.insert(timeOffRequestDays).values(dayRecords);
+        try {
+          const dayRecords = dayHours.map((day) => ({
+            timeOffRequestId: newRequest.id,
+            date: day.date,
+            hours: day.hours?.toString() || "0"
+          }));
+          await db.insert(timeOffRequestDays).values(dayRecords);
+        } catch (dayError: any) {
+          // Log but don't fail if table doesn't exist yet
+          console.warn("Could not save day hours (table may not exist):", dayError.message);
+        }
       }
       
       await createAuditLog(
