@@ -7160,7 +7160,7 @@ export default function EnhancedClientDetail() {
                 {activeHubSection === "meetings" && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">PX Meetings</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">Meeting Agenda & Notes</h3>
                       <a href="/hr?tab=px-meetings" className="text-sm text-primary hover:underline">
                         View All Meetings
                       </a>
