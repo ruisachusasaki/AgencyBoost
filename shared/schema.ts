@@ -845,6 +845,10 @@ export const tasks = pgTable("tasks", {
   // Tags
   tags: text("tags").array().default([]), // array of tag names
   
+  // Status history tracking for stage analytics
+  // Array of { status, enteredAt, exitedAt, durationMs, timeTrackedInStage }
+  statusHistory: jsonb("status_history").default(sql`'[]'`),
+  
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
