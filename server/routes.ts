@@ -1828,7 +1828,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/reports/time-entries/:taskId/:entryId", requireAuth(), async (req, res) => {
     try {
       const user = (req as any).session?.user;
-      const userRoles = user?.roles || [];
+      const userId = (req as any).session?.userId || user?.id || user?.staffId;
+      
+      // Fetch staff member to get their roles (session might not have roles)
+      let userRoles: string[] = user?.roles || [];
+      if (userRoles.length === 0 && userId) {
+        const staffMember = await appStorage.getStaffMember(userId);
+        if (staffMember?.roles) {
+          userRoles = staffMember.roles;
+        }
+      }
+      
       const isAdminOrManager = userRoles.some((r: string) => r.toLowerCase() === 'admin' || r.toLowerCase() === 'manager');
       
       if (!isAdminOrManager) {
@@ -1846,7 +1856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log the action
       await appStorage.createAuditLog({
-        userId: user?.id || 'unknown',
+        userId: userId || 'unknown',
         userName: user?.email || 'Unknown',
         action: 'update',
         entityType: 'task',
@@ -1861,7 +1871,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to update time entry" });
     }
   });
-
   
 
   // Task Stage Analytics Report API endpoint
