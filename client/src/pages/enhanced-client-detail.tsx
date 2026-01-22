@@ -2236,6 +2236,9 @@ export default function EnhancedClientDetail() {
   // Selected contact for communication (index into availableContacts array, 0 = primary client)
   const [selectedContactIndex, setSelectedContactIndex] = useState(0);
   
+  // Selected contacts for SMS multi-select (array of contact indices)
+  const [selectedSmsContactIndices, setSelectedSmsContactIndices] = useState<number[]>([0]);
+  
   // Handler functions for communication forms
   const handleSmsFieldChange = (field: string, value: string) => {
     setSmsData(prev => ({ ...prev, [field]: value }));
@@ -2299,24 +2302,59 @@ export default function EnhancedClientDetail() {
   };
 
   const handleSendSms = () => {
-    const recipientPhone = selectedContact?.phone || contactPhoneNumber;
+    // Get all selected contacts with phone numbers
+    const selectedContacts = selectedSmsContactIndices
+      .map(index => availableContacts[index])
+      .filter(contact => contact?.phone);
     
-    if (!smsData.fromNumber || !smsData.message.trim() || !recipientPhone) {
+    if (!smsData.fromNumber || !smsData.message.trim() || selectedContacts.length === 0) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please fill in all required fields"
+        description: selectedContacts.length === 0 
+          ? "Please select at least one contact with a phone number"
+          : "Please fill in all required fields"
       });
       return;
     }
 
-    const formattedToNumber = formatPhoneNumber(recipientPhone);
-
-    sendSmsMutation.mutate({
-      fromNumber: smsData.fromNumber,
-      to: formattedToNumber,
-      message: smsData.message,
-      clientId: client?.id
+    // Send SMS to all selected contacts
+    let successCount = 0;
+    let errorCount = 0;
+    
+    const sendPromises = selectedContacts.map(contact => {
+      const formattedToNumber = formatPhoneNumber(contact.phone!);
+      return sendSmsMutation.mutateAsync({
+        fromNumber: smsData.fromNumber,
+        to: formattedToNumber,
+        message: smsData.message,
+        clientId: client?.id
+      }).then(() => {
+        successCount++;
+      }).catch(() => {
+        errorCount++;
+      });
+    });
+    
+    Promise.all(sendPromises).then(() => {
+      if (successCount > 0) {
+        toast({
+          title: "SMS Sent",
+          variant: "success",
+          description: successCount === 1 
+            ? "Your message has been sent successfully."
+            : `Your message has been sent to ${successCount} contacts.`,
+        });
+        setShowSmsSendModal(false);
+        setSmsData(prev => ({ ...prev, message: '' }));
+      }
+      if (errorCount > 0) {
+        toast({
+          variant: "destructive",
+          title: "Partial Failure",
+          description: `Failed to send SMS to ${errorCount} contact(s).`
+        });
+      }
     });
   };
 
@@ -6014,18 +6052,56 @@ export default function EnhancedClientDetail() {
                           </div>
                           
                           <div>
-                            <Label htmlFor="sms-to">
-                              To {selectedContact && !selectedContact.isPrimary && (
-                                <span className="font-normal text-muted-foreground">({selectedContact.name})</span>
-                              )}
+                            <Label className="mb-2 block">
+                              To ({selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length} selected)
                             </Label>
-                            <Input
-                              id="sms-to"
-                              value={selectedContact?.phone || ''}
-                              disabled
-                              className="bg-gray-50 dark:bg-gray-800"
-                              data-testid="input-sms-to"
-                            />
+                            {availableContacts.length > 1 ? (
+                              <div className="border rounded-md p-2 bg-gray-50 dark:bg-gray-800 max-h-40 overflow-y-auto space-y-1">
+                                {availableContacts.map((contact, index) => (
+                                  <label
+                                    key={contact.id}
+                                    className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                                      !contact.phone ? 'opacity-50' : ''
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedSmsContactIndices.includes(index)}
+                                      disabled={!contact.phone}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedSmsContactIndices(prev => [...prev, index]);
+                                        } else {
+                                          setSelectedSmsContactIndices(prev => prev.filter(i => i !== index));
+                                        }
+                                      }}
+                                      className="rounded border-gray-300"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-sm truncate">{contact.name}</span>
+                                        {contact.isPrimary && (
+                                          <Badge variant="outline" className="text-xs">Primary</Badge>
+                                        )}
+                                      </div>
+                                      {contact.phone ? (
+                                        <span className="text-xs text-muted-foreground">{contact.phone}</span>
+                                      ) : (
+                                        <span className="text-xs text-red-500">No phone number</span>
+                                      )}
+                                    </div>
+                                  </label>
+                                ))}
+                              </div>
+                            ) : (
+                              <Input
+                                id="sms-to"
+                                value={availableContacts[0]?.phone || ''}
+                                disabled
+                                className="bg-gray-50 dark:bg-gray-800"
+                                data-testid="input-sms-to"
+                              />
+                            )}
                           </div>
                           
                           <div>
@@ -6080,32 +6156,26 @@ export default function EnhancedClientDetail() {
                         <div className="flex gap-2 pt-4">
                           <Button
                             onClick={() => {
-                              console.log('🔥 SMS BUTTON CLICKED!');
-                              console.log('Contact phone:', selectedContact?.phone);
-                              console.log('Button disabled?', !selectedContact?.phone);
-                              console.log('Current showSmsChoiceModal:', showSmsChoiceModal);
                               setShowSmsChoiceModal(true);
-                              console.log('Just called setShowSmsChoiceModal(true)');
                             }}
-                            disabled={!selectedContact?.phone}
+                            disabled={selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length === 0}
                             className="w-full"
                             data-testid="button-send-sms"
                             title={
-                              !selectedContact?.phone 
-                                ? (availableContacts.length > 1 
-                                    ? "Selected contact has no phone number" 
-                                    : "Client has no phone number")
-                                : `Send SMS to ${selectedContact.name}`
+                              selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length === 0
+                                ? "Select at least one contact with a phone number"
+                                : `Send SMS to ${selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length} contact(s)`
                             }
                           >
                             <Send className="h-4 w-4 mr-2" />
-                            Send SMS
+                            Send SMS {selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length > 1 && 
+                              `(${selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length})`}
                           </Button>
                         </div>
                         
                         
-                        {/* Show helpful message when selected contact has no phone */}
-                        {!selectedContact?.phone && (
+                        {/* Show helpful message when no contacts with phone are selected */}
+                        {selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length === 0 && (
                           <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded text-sm text-yellow-700 dark:text-yellow-400">
                             <div className="flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
@@ -6114,7 +6184,7 @@ export default function EnhancedClientDetail() {
                             <ul className="mt-1 ml-4 space-y-1 text-xs">
                               <li>
                                 {availableContacts.length > 1 
-                                  ? `• Select a contact with a phone number, or add a phone to ${selectedContact?.name || 'the contact'}`
+                                  ? "• Select at least one contact with a phone number"
                                   : "• Client needs a phone number in their profile"}
                               </li>
                             </ul>
