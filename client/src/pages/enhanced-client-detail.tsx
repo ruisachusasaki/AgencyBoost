@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, Video } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 import ContactCardField from "@/components/contact-card-field";
 
@@ -2203,7 +2203,7 @@ export default function EnhancedClientDetail() {
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
   const [activeRightSection, setActiveRightSection] = useState<"notes">("notes");
-  const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team" | "health">("notes");
+  const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team" | "meetings" | "health">("notes");
   const [showCompletedTasks, setShowCompletedTasks] = useState(false);
   const [taskStatusFilter, setTaskStatusFilter] = useState<string>("all");
   const [taskPriorityFilter, setTaskPriorityFilter] = useState<string>("all");
@@ -2818,6 +2818,17 @@ export default function EnhancedClientDetail() {
       return response.json();
     },
     enabled: !!clientId && activeHubSection === "documents",
+  });
+
+  // Fetch PX meetings for this client
+  const { data: clientMeetings = [], isLoading: meetingsLoading } = useQuery({
+    queryKey: ['/api/px-meetings', 'client', clientId],
+    queryFn: async () => {
+      const response = await fetch(`/api/px-meetings?clientId=${clientId}`);
+      if (!response.ok) throw new Error('Failed to fetch client meetings');
+      return response.json();
+    },
+    enabled: !!clientId && activeHubSection === "meetings",
   });
 
   // Get all bundle IDs from client products
@@ -6631,6 +6642,24 @@ export default function EnhancedClientDetail() {
                       </TooltipContent>
                     </Tooltip>
                     
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveHubSection("meetings")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeHubSection === "meetings"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <Video className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Meetings</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
                   </div>
                 </TooltipProvider>
               </CardHeader>
@@ -7124,6 +7153,96 @@ export default function EnhancedClientDetail() {
                 {activeHubSection === "team" && (
                   <div className="space-y-4">
                     <TeamAssignmentSection clientId={clientId!} />
+                  </div>
+                )}
+
+                {/* Meetings Section */}
+                {activeHubSection === "meetings" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">PX Meetings</h3>
+                      <a href="/hr?tab=px-meetings" className="text-sm text-primary hover:underline">
+                        View All Meetings
+                      </a>
+                    </div>
+                    {meetingsLoading ? (
+                      <div className="flex items-center gap-2 p-4">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <div className="text-sm">Loading meetings...</div>
+                      </div>
+                    ) : clientMeetings.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <Video className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                        <p className="text-sm">No PX meetings linked to this client</p>
+                        <p className="text-xs mt-1">Link meetings from PX &gt; Meetings</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {clientMeetings.map((meeting: any) => {
+                          const meetingDate = meeting.meetingDate ? new Date(meeting.meetingDate) : null;
+                          const isUpcoming = meetingDate && meetingDate > new Date();
+                          const isPast = meetingDate && meetingDate < new Date();
+                          
+                          return (
+                            <a
+                              key={meeting.id}
+                              href={`/hr?tab=px-meetings&meetingId=${meeting.id}`}
+                              className="block p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Video className="h-4 w-4 text-primary flex-shrink-0" />
+                                    <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                      {meeting.title}
+                                    </h4>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+                                    {meetingDate ? (
+                                      <span className="flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        {meetingDate.toLocaleDateString('en-US', { 
+                                          weekday: 'short',
+                                          month: 'short', 
+                                          day: 'numeric',
+                                          year: 'numeric'
+                                        })}
+                                      </span>
+                                    ) : (
+                                      <span className="text-gray-400">No date set</span>
+                                    )}
+                                    {meeting.recordingLink && (
+                                      <span className="flex items-center gap-1 text-primary">
+                                        <ExternalLink className="h-3 w-3" />
+                                        Recording
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex-shrink-0 ml-2">
+                                  {isUpcoming && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                      Upcoming
+                                    </span>
+                                  )}
+                                  {isPast && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                      Past
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {meeting.attendeeIds && meeting.attendeeIds.length > 0 && (
+                                <div className="mt-2 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                  <Users className="h-3 w-3" />
+                                  <span>{meeting.attendeeIds.length} attendee{meeting.attendeeIds.length !== 1 ? 's' : ''}</span>
+                                </div>
+                              )}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
 
