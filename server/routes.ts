@@ -34001,6 +34001,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { attendeeIds, ...meetingData } = req.body;
       
+      // Get existing meeting to check if client is being changed
+      const existingMeeting = await appStorage.getPxMeeting(req.params.id);
+      const oldClientId = existingMeeting?.clientId;
+      
       const updated = await appStorage.updatePxMeeting(
         req.params.id,
         meetingData,
@@ -34009,6 +34013,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updated) {
         return res.status(404).json({ error: "Meeting not found" });
+      }
+      
+      // If client is assigned and its different from before, log an activity
+      const newClientId = meetingData.clientId;
+      if (newClientId && newClientId !== oldClientId) {
+        try {
+          const user = (req as any).user;
+          const userId = user?.staffId || user?.id;
+          const meetingDate = updated.meetingDate ? new Date(updated.meetingDate).toLocaleDateString() : "Unscheduled";
+          
+          await appStorage.createActivity({
+            type: "meeting",
+            description: `PX Meeting "${updated.title}" was linked to this client`,
+            details: {
+              meetingId: updated.id,
+              meetingTitle: updated.title,
+              meetingDate: meetingDate,
+              action: "linked"
+            },
+            clientId: newClientId,
+            userId: userId || null
+          });
+        } catch (activityError) {
+          console.error("Error creating activity for PX meeting:", activityError);
+          // Dont fail the update if activity creation fails
+        }
       }
       
       res.json(updated);
