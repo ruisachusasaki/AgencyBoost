@@ -79,6 +79,7 @@ interface PxMeeting {
   actionItems?: string;
   notes?: string;
   isPrivate?: boolean;
+  enabledElements?: string[];
   createdById?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -96,11 +97,21 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const { toast } = useToast();
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createDialogStep, setCreateDialogStep] = useState<1 | 2>(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [tagFilter, setTagFilter] = useState<string>("__all__");
   const [clientFilter, setClientFilter] = useState<string>("__all__");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
+  // Define available meeting elements
+  const meetingElements = [
+    { id: "whatsWorkingKpis", label: "What's Working / KPI's", icon: ChartBar },
+    { id: "salesOpportunities", label: "Sales Opportunities", icon: TrendingUp },
+    { id: "areasOfOpportunities", label: "Areas of Opportunities", icon: AlertCircle },
+    { id: "actionPlan", label: "Action Plan", icon: Target },
+    { id: "actionItems", label: "Action Items", icon: ListTodo },
+  ];
+
   const [formData, setFormData] = useState({
     title: "",
     meetingDate: new Date(),
@@ -110,6 +121,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     attendeeIds: [] as string[],
     facilitatorId: "",
     noteTakerId: "",
+    enabledElements: ["whatsWorkingKpis", "salesOpportunities", "areasOfOpportunities", "actionPlan", "actionItems"] as string[],
   });
   
   const [editFormData, setEditFormData] = useState({
@@ -191,6 +203,15 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     } catch {
       return value ? [{ id: `item-0-${Date.now()}`, content: value, isCompleted: false }] : [];
     }
+  };
+
+  // Helper to check if a meeting element is enabled
+  const isElementEnabled = (elementId: string): boolean => {
+    // If no enabledElements set, default to all enabled
+    if (!selectedMeeting?.enabledElements || selectedMeeting.enabledElements.length === 0) {
+      return true;
+    }
+    return selectedMeeting.enabledElements.includes(elementId);
   };
 
   useEffect(() => {
@@ -343,12 +364,15 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     });
   };
 
-  const handleCreate = () => {
+  const handleNextStep = () => {
     if (!formData.title.trim()) {
       toast({ title: "Please enter a meeting title", variant: "destructive" });
       return;
     }
-    
+    setCreateDialogStep(2);
+  };
+
+  const handleCreate = () => {
     createMutation.mutate({
       title: formData.title,
       meetingDate: format(formData.meetingDate, "yyyy-MM-dd"),
@@ -358,7 +382,36 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       attendeeIds: formData.attendeeIds,
       facilitatorId: formData.facilitatorId || null,
       noteTakerId: formData.noteTakerId || null,
+      enabledElements: formData.enabledElements,
     });
+  };
+
+  const toggleMeetingElement = (elementId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      enabledElements: prev.enabledElements.includes(elementId)
+        ? prev.enabledElements.filter(e => e !== elementId)
+        : [...prev.enabledElements, elementId],
+    }));
+  };
+
+  const handleCloseCreateDialog = (open: boolean) => {
+    setIsCreateDialogOpen(open);
+    if (!open) {
+      setCreateDialogStep(1);
+      // Reset form data
+      setFormData({
+        title: "",
+        meetingDate: new Date(),
+        meetingTime: "10:00",
+        meetingDuration: 60,
+        recordingLink: "",
+        attendeeIds: [],
+        facilitatorId: "",
+        noteTakerId: "",
+        enabledElements: ["whatsWorkingKpis", "salesOpportunities", "areasOfOpportunities", "actionPlan", "actionItems"],
+      });
+    }
   };
 
   const handleUpdate = () => {
@@ -814,203 +867,218 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
             <Separator />
 
-            <div>
-              <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
-                <ChartBar className="h-4 w-4 text-green-500" />
-                What's Working / KPI's
-              </Label>
-              <Textarea
-                value={editFormData.whatsWorkingKpis}
-                onChange={(e) => handleFormChange({ whatsWorkingKpis: e.target.value })}
-                placeholder="Enter what's working and KPI highlights..."
-                className="min-h-[100px]"
-              />
-            </div>
-
-            <Separator />
-
-            <div>
-              <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-blue-500" />
-                Sales Opportunities
-              </Label>
-              <div className="space-y-2">
-                {salesOpportunities.map((opp) => (
-                  <div key={opp.id} className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                    <input
-                      type="checkbox"
-                      checked={opp.isCompleted}
-                      onChange={() => handleToggleSalesOpp(opp.id)}
-                      className="h-4 w-4 rounded-full cursor-pointer accent-primary"
-                    />
-                    <span className={`flex-1 ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
-                      {opp.content}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveSalesOpp(opp.id)}
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add a sales opportunity..."
-                    value={newSalesOpp}
-                    onChange={(e) => setNewSalesOpp(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddSalesOpp();
-                      }
-                    }}
+            {isElementEnabled("whatsWorkingKpis") && (
+              <>
+                <div>
+                  <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                    <ChartBar className="h-4 w-4 text-green-500" />
+                    What's Working / KPI's
+                  </Label>
+                  <Textarea
+                    value={editFormData.whatsWorkingKpis}
+                    onChange={(e) => handleFormChange({ whatsWorkingKpis: e.target.value })}
+                    placeholder="Enter what's working and KPI highlights..."
+                    className="min-h-[100px]"
                   />
-                  <Button size="sm" onClick={handleAddSalesOpp}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
                 </div>
-              </div>
-            </div>
+                <Separator />
+              </>
+            )}
 
-            <Separator />
-
-            <div>
-              <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-yellow-500" />
-                Areas of Opportunities
-              </Label>
-              <div className="space-y-2">
-                {areasOfOpportunities.map((opp) => (
-                  <div key={opp.id} className="flex items-center gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
-                    <input
-                      type="checkbox"
-                      checked={opp.isCompleted}
-                      onChange={() => handleToggleAreaOpp(opp.id)}
-                      className="h-4 w-4 rounded-full cursor-pointer accent-primary"
-                    />
-                    <span className={`flex-1 ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
-                      {opp.content}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveAreaOpp(opp.id)}
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add an area of opportunity..."
-                    value={newAreaOpp}
-                    onChange={(e) => setNewAreaOpp(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddAreaOpp();
-                      }
-                    }}
-                  />
-                  <Button size="sm" onClick={handleAddAreaOpp}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div>
-              <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
-                <Target className="h-4 w-4 text-purple-500" />
-                Action Plan
-              </Label>
-              <Textarea
-                value={editFormData.actionPlan}
-                onChange={(e) => handleFormChange({ actionPlan: e.target.value })}
-                placeholder="Enter the action plan..."
-                className="min-h-[100px]"
-              />
-            </div>
-
-            <Separator />
-
-            <div>
-              <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
-                <ListTodo className="h-4 w-4 text-orange-500" />
-                Action Items
-              </Label>
-              <div className="space-y-2">
-                {actionItems.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2 p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
-                    <input
-                      type="checkbox"
-                      checked={item.isCompleted}
-                      onChange={() => handleToggleActionItem(item.id)}
-                      className="h-4 w-4 rounded-full cursor-pointer accent-primary"
-                    />
-                    <span className={`flex-1 ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
-                      {item.content}
-                    </span>
-                    {item.taskId ? (
-                      <Link href={`/tasks/${item.taskId}`}>
+            {isElementEnabled("salesOpportunities") && (
+              <>
+                <div>
+                  <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-blue-500" />
+                    Sales Opportunities
+                  </Label>
+                  <div className="space-y-2">
+                    {salesOpportunities.map((opp) => (
+                      <div key={opp.id} className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                        <input
+                          type="checkbox"
+                          checked={opp.isCompleted}
+                          onChange={() => handleToggleSalesOpp(opp.id)}
+                          className="h-4 w-4 rounded-full cursor-pointer accent-primary"
+                        />
+                        <span className={`flex-1 ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                          {opp.content}
+                        </span>
                         <Button
-                          size="sm"
                           variant="ghost"
-                          className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
-                          title="View Task"
+                          size="sm"
+                          onClick={() => handleRemoveSalesOpp(opp.id)}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                         >
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          View Task
+                          <X className="h-4 w-4" />
                         </Button>
-                      </Link>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleOpenConvertToTask(item)}
-                        className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
-                        title="Convert to Task"
-                      >
-                        <Briefcase className="h-3 w-3 mr-1" />
-                        Task
+                      </div>
+                    ))}
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add a sales opportunity..."
+                        value={newSalesOpp}
+                        onChange={(e) => setNewSalesOpp(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddSalesOpp();
+                          }
+                        }}
+                      />
+                      <Button size="sm" onClick={handleAddSalesOpp}>
+                        <Plus className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveActionItem(item.id)}
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    </div>
                   </div>
-                ))}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add an action item..."
-                    value={newActionItem}
-                    onChange={(e) => setNewActionItem(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddActionItem();
-                      }
-                    }}
-                  />
-                  <Button size="sm" onClick={handleAddActionItem}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
                 </div>
-              </div>
-            </div>
+                <Separator />
+              </>
+            )}
 
-            <Separator />
+            {isElementEnabled("areasOfOpportunities") && (
+              <>
+                <div>
+                  <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-yellow-500" />
+                    Areas of Opportunities
+                  </Label>
+                  <div className="space-y-2">
+                    {areasOfOpportunities.map((opp) => (
+                      <div key={opp.id} className="flex items-center gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                        <input
+                          type="checkbox"
+                          checked={opp.isCompleted}
+                          onChange={() => handleToggleAreaOpp(opp.id)}
+                          className="h-4 w-4 rounded-full cursor-pointer accent-primary"
+                        />
+                        <span className={`flex-1 ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                          {opp.content}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveAreaOpp(opp.id)}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add an area of opportunity..."
+                        value={newAreaOpp}
+                        onChange={(e) => setNewAreaOpp(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddAreaOpp();
+                          }
+                        }}
+                      />
+                      <Button size="sm" onClick={handleAddAreaOpp}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <Separator />
+              </>
+            )}
+
+            {isElementEnabled("actionPlan") && (
+              <>
+                <div>
+                  <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                    <Target className="h-4 w-4 text-purple-500" />
+                    Action Plan
+                  </Label>
+                  <Textarea
+                    value={editFormData.actionPlan}
+                    onChange={(e) => handleFormChange({ actionPlan: e.target.value })}
+                    placeholder="Enter the action plan..."
+                    className="min-h-[100px]"
+                  />
+                </div>
+                <Separator />
+              </>
+            )}
+
+            {isElementEnabled("actionItems") && (
+              <>
+                <div>
+                  <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
+                    <ListTodo className="h-4 w-4 text-orange-500" />
+                    Action Items
+                  </Label>
+                  <div className="space-y-2">
+                    {actionItems.map((item) => (
+                      <div key={item.id} className="flex items-center gap-2 p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
+                        <input
+                          type="checkbox"
+                          checked={item.isCompleted}
+                          onChange={() => handleToggleActionItem(item.id)}
+                          className="h-4 w-4 rounded-full cursor-pointer accent-primary"
+                        />
+                        <span className={`flex-1 ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                          {item.content}
+                        </span>
+                        {item.taskId ? (
+                          <Link href={`/tasks/${item.taskId}`}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
+                              title="View Task"
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              View Task
+                            </Button>
+                          </Link>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleOpenConvertToTask(item)}
+                            className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
+                            title="Convert to Task"
+                          >
+                            <Briefcase className="h-3 w-3 mr-1" />
+                            Task
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveActionItem(item.id)}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add an action item..."
+                        value={newActionItem}
+                        onChange={(e) => setNewActionItem(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddActionItem();
+                          }
+                        }}
+                      />
+                      <Button size="sm" onClick={handleAddActionItem}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <Separator />
+              </>
+            )}
 
             <div>
               <Label className="text-base font-semibold mb-3 block flex items-center gap-2">
@@ -1258,13 +1326,20 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         </CardContent>
       </Card>
 
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <Dialog open={isCreateDialogOpen} onOpenChange={handleCloseCreateDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Create New Meeting</DialogTitle>
-            <DialogDescription>Schedule a new PX team meeting</DialogDescription>
+            <DialogTitle>
+              {createDialogStep === 1 ? "Create New Meeting" : "Select Meeting Elements"}
+            </DialogTitle>
+            <DialogDescription>
+              {createDialogStep === 1 
+                ? "Schedule a new PX team meeting" 
+                : "Choose which segments to include in this meeting"}
+            </DialogDescription>
           </DialogHeader>
           
+          {createDialogStep === 1 ? (
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="title">Meeting Title *</Label>
@@ -1519,14 +1594,63 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
               />
             </div>
           </div>
+          ) : (
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Select which meeting elements you want to include. Unchecked elements will not appear in the meeting details.
+            </p>
+            <div className="space-y-3">
+              {meetingElements.map((element) => {
+                const Icon = element.icon;
+                const isChecked = formData.enabledElements.includes(element.id);
+                return (
+                  <div
+                    key={element.id}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                      isChecked 
+                        ? "border-primary bg-primary/5" 
+                        : "border-border hover:border-muted-foreground/50"
+                    )}
+                    onClick={() => toggleMeetingElement(element.id)}
+                  >
+                    <div className={cn(
+                      "h-5 w-5 rounded border flex items-center justify-center",
+                      isChecked ? "bg-primary border-primary" : "border-muted-foreground"
+                    )}>
+                      {isChecked && <Check className="h-3 w-3 text-white" />}
+                    </div>
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{element.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          )}
 
           <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button onClick={handleCreate} disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Creating..." : "Create Meeting"}
-            </Button>
+            {createDialogStep === 1 ? (
+              <>
+                <Button variant="outline" onClick={() => handleCloseCreateDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleNextStep}>
+                  Next
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setCreateDialogStep(1)}>
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  Back
+                </Button>
+                <Button onClick={handleCreate} disabled={createMutation.isPending}>
+                  {createMutation.isPending ? "Creating..." : "Create Meeting"}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

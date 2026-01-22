@@ -4806,6 +4806,10 @@ export const pxMeetings = pgTable("px_meetings", {
   facilitatorId: uuid("facilitator_id").references(() => staff.id),
   noteTakerId: uuid("note_taker_id").references(() => staff.id),
   
+  // Enabled meeting elements (stores which segments are visible)
+  // Default: all elements enabled - ["whatsWorkingKpis", "salesOpportunities", "areasOfOpportunities", "actionPlan", "actionItems"]
+  enabledElements: text("enabled_elements").array(),
+  
   // Metadata
   createdById: uuid("created_by_id").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
