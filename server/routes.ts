@@ -23347,13 +23347,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get staffId (auto-set to current user if not provided)
       const staffId = req.body.staffId || rawUserId;
       
+      // Extract dayHours before processing (not part of main schema)
+      const { dayHours, ...bodyWithoutDayHours } = req.body;
+      
       // If timeOffTypeId is provided, look up the type and populate the legacy type field
-      let legacyType = req.body.type || "vacation"; // Default for backward compat
-      if (req.body.timeOffTypeId) {
+      let legacyType = bodyWithoutDayHours.type || "vacation"; // Default for backward compat
+      if (bodyWithoutDayHours.timeOffTypeId) {
         const [typeRecord] = await db
           .select()
           .from(timeOffTypes)
-          .where(eq(timeOffTypes.id, req.body.timeOffTypeId))
+          .where(eq(timeOffTypes.id, bodyWithoutDayHours.timeOffTypeId))
           .limit(1);
         
         if (!typeRecord) {
@@ -23376,15 +23379,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Convert totalHours from number to string for decimal field
       const cleanedBody = {
-        ...req.body,
+        ...bodyWithoutDayHours,
         staffId,
         type: legacyType, // Populate legacy field
-        timeOffTypeId: req.body.timeOffTypeId || null,
-        totalHours: req.body.totalHours?.toString() || "0"
+        timeOffTypeId: bodyWithoutDayHours.timeOffTypeId || null,
+        totalHours: bodyWithoutDayHours.totalHours?.toString() || "0"
       };
       
       const validatedData = insertTimeOffRequestSchema.parse(cleanedBody);
       const [newRequest] = await db.insert(timeOffRequests).values(validatedData).returning();
+      
+      // Save individual day hours if provided
+      if (dayHours && Array.isArray(dayHours) && dayHours.length > 0) {
+        const dayRecords = dayHours.map((day) => ({
+          timeOffRequestId: newRequest.id,
+          date: day.date,
+          hours: day.hours?.toString() || "0"
+        }));
+        await db.insert(timeOffRequestDays).values(dayRecords);
+      }
       
       await createAuditLog(
         "created",
