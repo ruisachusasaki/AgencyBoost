@@ -846,7 +846,7 @@ function FormPreviewDialog({
   });
   
   // Fetch clients for client question type
-  const { data: clientsData } = useQuery<{ clients: { id: number; name: string; status: string }[] }>({
+  const { data: clientsData } = useQuery<{ clients: { id: number; name: string; company: string; status: string }[] }>({
     queryKey: ["/api/clients"],
   });
   
@@ -876,7 +876,8 @@ function FormPreviewDialog({
       return departments.map((d) => ({ id: `dept-${d.id}`, optionText: d.name }));
     }
     if (question.questionType === "client") {
-      return activeClients.map((c) => ({ id: `client-${c.id}`, optionText: c.name }));
+      // Use company (business name) for display, fall back to contact name if no company
+      return activeClients.map((c) => ({ id: `client-${c.id}`, optionText: c.company || c.name }));
     }
     return question.options.map((o) => ({ id: o.id, optionText: o.optionText }));
   };
@@ -1202,7 +1203,7 @@ function LogicRulesBuilder({
   });
   
   // Fetch clients for client question type
-  const { data: clientsData } = useQuery<{ clients: { id: number; name: string; status: string }[] }>({
+  const { data: clientsData } = useQuery<{ clients: { id: number; name: string; company: string; status: string }[] }>({
     queryKey: ["/api/clients"],
   });
   
@@ -1402,7 +1403,7 @@ function LogicRulesBuilder({
                           className="h-4 w-4"
                         />
                         <label htmlFor={`client-${client.id}`} className="text-sm cursor-pointer">
-                          {client.name}
+                          {client.company || client.name}
                         </label>
                       </div>
                     ))
@@ -1492,7 +1493,7 @@ function AssignmentRulesBuilder({
   });
   
   // Fetch clients for client question type
-  const { data: clientsData } = useQuery<{ clients: { id: number; name: string; status: string }[] }>({
+  const { data: clientsData } = useQuery<{ clients: { id: number; name: string; company: string; status: string }[] }>({
     queryKey: ["/api/clients"],
   });
   
@@ -1736,7 +1737,7 @@ function AssignmentRulesBuilder({
                                   htmlFor={`${index}-client-${client.id}`}
                                   className="text-sm cursor-pointer"
                                 >
-                                  {client.name}
+                                  {client.company || client.name}
                                 </label>
                               </div>
                             ))
