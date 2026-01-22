@@ -135,7 +135,10 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     actionPlan: "",
     notes: "",
     isPrivate: false,
+    attendeeIds: [] as string[],
   });
+  
+  const [isEditAttendeesOpen, setIsEditAttendeesOpen] = useState(false);
   
   const [newTag, setNewTag] = useState("");
   
@@ -231,6 +234,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         actionPlan: selectedMeeting.actionPlan || "",
         notes: selectedMeeting.notes || "",
         isPrivate: selectedMeeting.isPrivate || false,
+        attendeeIds: selectedMeeting.attendees?.map(a => a.id) || [],
       });
       setSalesOpportunities(parseJsonArray(selectedMeeting.salesOpportunities));
       setAreasOfOpportunities(parseJsonArray(selectedMeeting.areasOfOpportunities));
@@ -434,6 +438,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         actionItems: JSON.stringify(actionItems),
         notes: editFormData.notes,
         isPrivate: editFormData.isPrivate,
+        attendeeIds: editFormData.attendeeIds,
       },
     });
   };
@@ -529,6 +534,16 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         ? prev.attendeeIds.filter(id => id !== staffId)
         : [...prev.attendeeIds, staffId],
     }));
+  };
+
+  const toggleEditAttendee = (staffId: string) => {
+    setEditFormData(prev => ({
+      ...prev,
+      attendeeIds: prev.attendeeIds.includes(staffId)
+        ? prev.attendeeIds.filter(id => id !== staffId)
+        : [...prev.attendeeIds, staffId],
+    }));
+    setHasUnsavedChanges(true);
   };
 
   const filteredMeetings = meetings.filter(meeting => {
@@ -769,6 +784,80 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   onChange={(e) => handleFormChange({ recordingLink: e.target.value })}
                 />
               </div>
+            </div>
+
+            {/* Attendees Section */}
+            <div className="space-y-2">
+              <Label>Attendees</Label>
+              <Popover open={isEditAttendeesOpen} onOpenChange={setIsEditAttendeesOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    {editFormData.attendeeIds.length === 0
+                      ? "Add attendees..."
+                      : `${editFormData.attendeeIds.length} attendee${editFormData.attendeeIds.length !== 1 ? 's' : ''}`}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search staff..." />
+                    <CommandList>
+                      <CommandEmpty>No staff found.</CommandEmpty>
+                      <CommandGroup>
+                        {allStaff.map((member) => {
+                          const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown';
+                          const initials = `${member.firstName?.[0] || ''}${member.lastName?.[0] || ''}`.toUpperCase() || '??';
+                          return (
+                            <CommandItem
+                              key={member.id}
+                              onSelect={() => toggleEditAttendee(member.id)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  editFormData.attendeeIds.includes(member.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <Avatar className="h-6 w-6 mr-2">
+                                <AvatarImage src={member.profileImagePath || undefined} />
+                                <AvatarFallback className="text-xs">
+                                  {initials}
+                                </AvatarFallback>
+                              </Avatar>
+                              {fullName}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              
+              {editFormData.attendeeIds.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {editFormData.attendeeIds.map(id => {
+                    const member = allStaff.find(s => s.id === id);
+                    if (!member) return null;
+                    const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown';
+                    return (
+                      <Badge key={id} variant="secondary" className="flex items-center gap-1">
+                        <Avatar className="h-4 w-4">
+                          <AvatarImage src={member.profileImagePath || undefined} />
+                          <AvatarFallback className="text-[8px]">
+                            {member.firstName?.[0]}{member.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        {fullName}
+                        <X 
+                          className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                          onClick={() => toggleEditAttendee(id)}
+                        />
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             
             <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
