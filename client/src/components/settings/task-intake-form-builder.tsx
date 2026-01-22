@@ -743,11 +743,11 @@ function LogicRulesBuilder({
   });
   
   // Fetch clients for client question type
-  const { data: clients = [] } = useQuery<{ id: number; name: string; status: string }[]>({
+  const { data: clientsData } = useQuery<{ clients: { id: number; name: string; status: string }[] }>({
     queryKey: ["/api/clients"],
   });
   
-  const activeClients = clients.filter((c) => c.status === "active");
+  const activeClients = (clientsData?.clients || []).filter((c) => c.status === "active");
   
   const invalidateFormQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
@@ -1033,11 +1033,11 @@ function AssignmentRulesBuilder({
   });
   
   // Fetch clients for client question type
-  const { data: clients = [] } = useQuery<{ id: number; name: string; status: string }[]>({
+  const { data: clientsData } = useQuery<{ clients: { id: number; name: string; status: string }[] }>({
     queryKey: ["/api/clients"],
   });
   
-  const activeClients = clients.filter((c) => c.status === "active");
+  const activeClients = (clientsData?.clients || []).filter((c) => c.status === "active");
   
   const invalidateFormQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
