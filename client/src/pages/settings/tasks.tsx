@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Edit, Trash2, GripVertical, Eye, EyeOff, Settings, Flag, Layers, Folder, ArrowUp, ArrowDown, ArrowLeft, X, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Edit, Trash2, GripVertical, Eye, EyeOff, Settings, Flag, Layers, Folder, ArrowUp, ArrowDown, ArrowLeft, X, ChevronUp, ChevronDown, ClipboardList, MessageSquare, Hash, Calendar, Type, ListChecks, ArrowRight, Copy } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import * as LucideIcons from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskCategorySchema, insertTeamWorkflowSchema } from "@shared/schema";
+import { TaskIntakeFormBuilder } from "@/components/settings/task-intake-form-builder";
 import { z } from "zod";
 
 // Color options for task statuses and priorities
@@ -829,7 +830,7 @@ export default function TasksSettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="statuses" className="flex items-center gap-2">
             <Layers className="h-4 w-4" />
             Statuses
@@ -845,6 +846,10 @@ export default function TasksSettingsPage() {
           <TabsTrigger value="workflows" className="flex items-center gap-2">
             <GripVertical className="h-4 w-4" />
             Workflows
+          </TabsTrigger>
+          <TabsTrigger value="intake-form" className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Intake Form
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -1380,6 +1385,11 @@ export default function TasksSettingsPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Task Intake Form Tab */}
+        <TabsContent value="intake-form" className="space-y-6">
+          <TaskIntakeFormBuilder />
         </TabsContent>
 
         {/* Task Settings Tab */}
