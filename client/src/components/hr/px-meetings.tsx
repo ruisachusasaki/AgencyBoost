@@ -361,6 +361,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       attendeeIds: [],
       facilitatorId: "",
       noteTakerId: "",
+      enabledElements: ["whatsWorkingKpis", "salesOpportunities", "areasOfOpportunities", "actionPlan", "actionItems"],
     });
   };
 
@@ -1602,7 +1603,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             <div className="space-y-3">
               {meetingElements.map((element) => {
                 const Icon = element.icon;
-                const isChecked = formData.enabledElements.includes(element.id);
+                const isChecked = formData.enabledElements?.includes(element.id) ?? true;
                 return (
                   <div
                     key={element.id}
