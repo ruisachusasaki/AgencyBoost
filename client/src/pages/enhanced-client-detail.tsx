@@ -5912,8 +5912,8 @@ export default function EnhancedClientDetail() {
                 </Tabs>
               </CardHeader>
               <CardContent>
-                {/* Contact Selector - Available for all communication types */}
-                {availableContacts.length > 1 && (
+                {/* Contact Selector - Available for call/email (SMS has its own multi-select) */}
+                {availableContacts.length > 1 && communicationTab !== "sms" && (
                   <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <Label className="text-sm font-medium mb-2 block">
                       <Users className="h-4 w-4 inline mr-2" />
@@ -6051,49 +6051,88 @@ export default function EnhancedClientDetail() {
                             </Select>
                           </div>
                           
-                          <div>
-                            <Label className="mb-2 block">
-                              To ({selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length} selected)
-                            </Label>
-                            {availableContacts.length > 1 ? (
-                              <div className="border rounded-md p-2 bg-gray-50 dark:bg-gray-800 max-h-40 overflow-y-auto space-y-1">
-                                {availableContacts.map((contact, index) => (
-                                  <label
-                                    key={contact.id}
-                                    className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                                      !contact.phone ? 'opacity-50' : ''
-                                    }`}
+                          {/* SMS Contact Multi-Select with dropdown aesthetic */}
+                          {availableContacts.length > 1 ? (
+                            <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                              <Label className="text-sm font-medium mb-2 block">
+                                <Users className="h-4 w-4 inline mr-2" />
+                                Select Contacts
+                              </Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className="w-full justify-between h-auto min-h-10 py-2"
                                   >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedSmsContactIndices.includes(index)}
-                                      disabled={!contact.phone}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setSelectedSmsContactIndices(prev => [...prev, index]);
-                                        } else {
-                                          setSelectedSmsContactIndices(prev => prev.filter(i => i !== index));
-                                        }
-                                      }}
-                                      className="rounded border-gray-300"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium text-sm truncate">{contact.name}</span>
-                                        {contact.isPrimary && (
-                                          <Badge variant="outline" className="text-xs">Primary</Badge>
-                                        )}
+                                    <span className="text-left truncate">
+                                      {selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length === 0 
+                                        ? "Select contacts..."
+                                        : selectedSmsContactIndices
+                                            .filter(i => availableContacts[i]?.phone)
+                                            .map(i => availableContacts[i]?.name)
+                                            .join(", ")}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0" align="start">
+                                  <div className="max-h-60 overflow-y-auto p-1">
+                                    {availableContacts.map((contact, index) => (
+                                      <label
+                                        key={contact.id}
+                                        className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                                          !contact.phone ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedSmsContactIndices.includes(index)}
+                                          disabled={!contact.phone}
+                                          onChange={(e) => {
+                                            if (e.target.checked) {
+                                              setSelectedSmsContactIndices(prev => [...prev, index]);
+                                            } else {
+                                              setSelectedSmsContactIndices(prev => prev.filter(i => i !== index));
+                                            }
+                                          }}
+                                          className="rounded border-gray-300"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-medium text-sm truncate">{contact.name}</span>
+                                            {contact.isPrimary && (
+                                              <Badge variant="outline" className="text-xs">Primary</Badge>
+                                            )}
+                                          </div>
+                                          {contact.phone ? (
+                                            <span className="text-xs text-muted-foreground">{contact.phone}</span>
+                                          ) : (
+                                            <span className="text-xs text-red-500">No phone number</span>
+                                          )}
+                                        </div>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                              {/* Show selected contacts' phones */}
+                              {selectedSmsContactIndices.filter(i => availableContacts[i]?.phone).length > 0 && (
+                                <div className="mt-2 text-xs text-muted-foreground flex flex-wrap gap-2">
+                                  {selectedSmsContactIndices
+                                    .filter(i => availableContacts[i]?.phone)
+                                    .map(i => (
+                                      <div key={availableContacts[i]?.id} className="flex items-center gap-1">
+                                        <Phone className="h-3 w-3" />
+                                        <span>{availableContacts[i]?.phone}</span>
                                       </div>
-                                      {contact.phone ? (
-                                        <span className="text-xs text-muted-foreground">{contact.phone}</span>
-                                      ) : (
-                                        <span className="text-xs text-red-500">No phone number</span>
-                                      )}
-                                    </div>
-                                  </label>
-                                ))}
-                              </div>
-                            ) : (
+                                    ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div>
+                              <Label htmlFor="sms-to">To</Label>
                               <Input
                                 id="sms-to"
                                 value={availableContacts[0]?.phone || ''}
@@ -6101,8 +6140,8 @@ export default function EnhancedClientDetail() {
                                 className="bg-gray-50 dark:bg-gray-800"
                                 data-testid="input-sms-to"
                               />
-                            )}
-                          </div>
+                            </div>
+                          )}
                           
                           <div>
                             <div className="flex items-center justify-between mb-2">
