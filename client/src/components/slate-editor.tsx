@@ -1238,63 +1238,80 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
               onClick={() => {
                 if (!urlDialog.url) return;
                 
-                // Focus editor and restore the saved selection before inserting so content goes inline
-                ReactEditor.focus(editor);
-                if (urlDialog.savedSelection) {
-                  Transforms.select(editor, urlDialog.savedSelection);
-                }
-                
-                if (urlDialog.type === 'embed') {
-                  const embedBlock: EmbedElement = {
-                    type: 'embed',
-                    embedType: urlDialog.embedType as any,
-                    url: urlDialog.url,
-                    children: [{ text: '' }]
-                  };
-                  Transforms.insertNodes(editor, embedBlock);
-                } else if (urlDialog.type === 'image') {
-                  const imageBlock: ImageElement = {
-                    type: 'image',
-                    url: urlDialog.url,
-                    alt: urlDialog.altText || '',
-                    children: [{ text: '' }]
-                  };
-                  Transforms.insertNodes(editor, imageBlock);
-                } else if (urlDialog.type === 'link') {
-                  const selection = editor.selection;
-                  const isCollapsed = selection ? Range.isCollapsed(selection) : true;
-                  
-                  if (isCollapsed) {
-                    const linkBlock: LinkElement = {
-                      type: 'link',
-                      url: urlDialog.url,
-                      children: [{ text: urlDialog.linkText || urlDialog.url }]
-                    };
-                    Transforms.insertNodes(editor, linkBlock);
-                  } else {
-                    const isLinkActive = (() => {
-                      const [link] = Editor.nodes(editor, {
-                        match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'link',
-                      });
-                      return !!link;
-                    })();
-                    
-                    if (isLinkActive) {
-                      Transforms.unwrapNodes(editor, {
-                        match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'link',
-                      });
-                    }
-                    
-                    const link: LinkElement = {
-                      type: 'link',
-                      url: urlDialog.url,
-                      children: []
-                    };
-                    Transforms.wrapNodes(editor, link, { split: true });
-                    Transforms.collapse(editor, { edge: 'end' });
+                try {
+                  // Focus editor and restore the saved selection before inserting so content goes inline
+                  try {
+                    ReactEditor.focus(editor);
+                  } catch (focusError) {
+                    // Editor focus may fail in some environments, continue anyway
+                    console.warn('Editor focus failed, continuing with insert:', focusError);
                   }
+                  
+                  if (urlDialog.savedSelection) {
+                    try {
+                      Transforms.select(editor, urlDialog.savedSelection);
+                    } catch (selectError) {
+                      // Selection restore may fail if content changed, insert at end instead
+                      console.warn('Selection restore failed, inserting at end:', selectError);
+                      Transforms.select(editor, Editor.end(editor, []));
+                    }
+                  }
+                  
+                  if (urlDialog.type === 'embed') {
+                    const embedBlock: EmbedElement = {
+                      type: 'embed',
+                      embedType: urlDialog.embedType as any,
+                      url: urlDialog.url,
+                      children: [{ text: '' }]
+                    };
+                    Transforms.insertNodes(editor, embedBlock);
+                  } else if (urlDialog.type === 'image') {
+                    const imageBlock: ImageElement = {
+                      type: 'image',
+                      url: urlDialog.url,
+                      alt: urlDialog.altText || '',
+                      children: [{ text: '' }]
+                    };
+                    Transforms.insertNodes(editor, imageBlock);
+                  } else if (urlDialog.type === 'link') {
+                    const selection = editor.selection;
+                    const isCollapsed = selection ? Range.isCollapsed(selection) : true;
+                    
+                    if (isCollapsed) {
+                      const linkBlock: LinkElement = {
+                        type: 'link',
+                        url: urlDialog.url,
+                        children: [{ text: urlDialog.linkText || urlDialog.url }]
+                      };
+                      Transforms.insertNodes(editor, linkBlock);
+                    } else {
+                      const isLinkActive = (() => {
+                        const [link] = Editor.nodes(editor, {
+                          match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'link',
+                        });
+                        return !!link;
+                      })();
+                      
+                      if (isLinkActive) {
+                        Transforms.unwrapNodes(editor, {
+                          match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'link',
+                        });
+                      }
+                      
+                      const link: LinkElement = {
+                        type: 'link',
+                        url: urlDialog.url,
+                        children: []
+                      };
+                      Transforms.wrapNodes(editor, link, { split: true });
+                      Transforms.collapse(editor, { edge: 'end' });
+                    }
+                  }
+                } catch (insertError) {
+                  console.error('Error inserting content:', insertError);
                 }
                 
+                // Always close the dialog, even if insertion failed
                 setUrlDialog({ open: false, type: null, title: '', url: '', altText: '', linkText: '', savedSelection: null, imageMode: 'url', isUploading: false });
               }}
               disabled={!urlDialog.url}
