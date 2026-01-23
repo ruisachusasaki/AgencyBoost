@@ -51,6 +51,7 @@ import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
+import { useHasPermissions } from "@/hooks/use-has-permission";
 import TimeOffRequestForm from "@/components/forms/time-off-request-form";
 import ApprovalBoard from "@/components/hr/approval-board";
 import ExpenseReportForm from "@/components/hr/expense-report-form";
@@ -292,8 +293,35 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   const isManager = directReports.length > 0;
   const isAdmin = ((currentUser as any)?.role?.toLowerCase() === 'admin') || (currentUser as any)?.id?.startsWith('dev-admin'); // Include dev admin detection with case-insensitive check
   const isAccounting = (currentUser as any)?.role?.toLowerCase() === 'accounting';
+  
+  // Granular HR permissions
+  const { permissions: hrPermissions } = useHasPermissions([
+    'hr.view_staff_directory',
+    'hr.manage_staff',
+    'hr.view_time_off_requests',
+    'hr.manage_time_off_requests',
+    'hr.view_job_applications',
+    'hr.manage_job_applications',
+    'hr.view_job_openings',
+    'hr.manage_job_openings',
+    'hr.view_expense_reports',
+    'hr.manage_expense_reports',
+  ]);
+  
+  // Permission-based access (falls back to role-based for backwards compatibility)
+  const canViewStaffDirectory = isAdmin || hrPermissions['hr.view_staff_directory'];
+  const canManageStaff = isAdmin || hrPermissions['hr.manage_staff'];
+  const canViewTimeOffRequests = isAdmin || hrPermissions['hr.view_time_off_requests'];
+  const canManageTimeOffRequests = isAdmin || hrPermissions['hr.manage_time_off_requests'];
+  const canViewJobApplications = isAdmin || hrPermissions['hr.view_job_applications'];
+  const canManageJobApplications = isAdmin || hrPermissions['hr.manage_job_applications'];
+  const canViewJobOpenings = isAdmin || hrPermissions['hr.view_job_openings'];
+  const canManageJobOpeningsPermission = isAdmin || hrPermissions['hr.manage_job_openings'];
+  const canViewExpenseReports = isAdmin || isAccounting || hrPermissions['hr.view_expense_reports'];
+  const canManageExpenseReports = isAdmin || hrPermissions['hr.manage_expense_reports'];
+  
   const canViewAllData = isAdmin;
-  const canManageJobOpenings = isManager || isAdmin;
+  const canManageJobOpenings = isManager || isAdmin || canManageJobOpeningsPermission;
   
 
   // Fetch time off requests with pagination
@@ -1019,21 +1047,21 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
           {(() => {
             const allTabs = [
               ...(isManager || isAdmin ? [{ id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 }] : []),
-              { id: "staff-directory", name: "Staff Directory", icon: Users, count: filteredStaffData.length },
-              { id: "org-chart", name: "Org Chart", icon: Network, count: 0 },
-              { id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length },
-              { id: "time-off-calendar", name: "Who's Off", icon: Calendar, count: 0 },
-              ...(isManager ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length }] : []),
-              { id: "job-openings", name: "Job Openings", icon: FileText, count: activeJobOpenings.length },
-              { id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length },
-              ...(isManager || isAdmin ? [{ id: "onboarding-submissions", name: "Onboarding Submissions", icon: UserCheck, count: onboardingSubmissions?.length || 0 }] : []),
+              ...(canViewStaffDirectory ? [{ id: "staff-directory", name: "Staff Directory", icon: Users, count: filteredStaffData.length }] : []),
+              ...(canViewStaffDirectory ? [{ id: "org-chart", name: "Org Chart", icon: Network, count: 0 }] : []),
+              ...(canViewTimeOffRequests ? [{ id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length }] : []),
+              ...(canViewTimeOffRequests ? [{ id: "time-off-calendar", name: "Who's Off", icon: Calendar, count: 0 }] : []),
+              ...(canManageTimeOffRequests ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length }] : []),
+              ...(canViewJobOpenings ? [{ id: "job-openings", name: "Job Openings", icon: FileText, count: activeJobOpenings.length }] : []),
+              ...(canViewJobApplications ? [{ id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length }] : []),
+              ...(canManageJobApplications || isManager || isAdmin ? [{ id: "onboarding-submissions", name: "Onboarding Submissions", icon: UserCheck, count: onboardingSubmissions?.length || 0 }] : []),
               { id: "expense-report", name: "Expense Report", icon: DollarSign, count: 0 },
-              ...(isAdmin || isAccounting ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0 }] : []),
-              ...(isManager || isAdmin ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0 }] : []),
-              ...(isManager || isAdmin ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0 }] : []),
-              ...(isManager || isAdmin ? [{ id: "one-on-one", name: "1v1 Meetings", icon: MessageCircle, count: 0 }] : []),
-              ...(isManager || isAdmin ? [{ id: "px-meetings", name: "Meetings", icon: Presentation, count: 0 }] : []),
-              ...(isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
+              ...(canViewExpenseReports ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0 }] : []),
+              ...(canManageStaff || isManager || isAdmin ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0 }] : []),
+              ...(canManageStaff || isManager || isAdmin ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0 }] : []),
+              ...(canManageStaff || isManager || isAdmin ? [{ id: "one-on-one", name: "1v1 Meetings", icon: MessageCircle, count: 0 }] : []),
+              ...(canManageStaff || isManager || isAdmin ? [{ id: "px-meetings", name: "Meetings", icon: Presentation, count: 0 }] : []),
+              ...(canManageStaff || isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
             ];
             
             const visibleTabs = allTabs.slice(0, visibleTabsCount);

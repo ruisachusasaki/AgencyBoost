@@ -127,9 +127,11 @@ function Router() {
       <Route path="/clients">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Clients />
-            </MainLayout>
+            <RequirePermission module="clients">
+              <MainLayout>
+                <Clients />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -137,9 +139,11 @@ function Router() {
       <Route path="/clients/:id">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <EnhancedClientDetail />
-            </MainLayout>
+            <RequirePermission module="clients">
+              <MainLayout>
+                <EnhancedClientDetail />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -147,9 +151,11 @@ function Router() {
       <Route path="/marketing">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Campaigns />
-            </MainLayout>
+            <RequirePermission module="campaigns">
+              <MainLayout>
+                <Campaigns />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -157,7 +163,7 @@ function Router() {
       <Route path="/sales">
         {() => (
           <AuthGate>
-            <RequirePermission module="sales" permission="canView">
+            <RequirePermission module="sales">
               <MainLayout>
                 <Sales />
               </MainLayout>
@@ -169,9 +175,11 @@ function Router() {
       <Route path="/leads">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Leads />
-            </MainLayout>
+            <RequirePermission module="leads">
+              <MainLayout>
+                <Leads />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -179,9 +187,11 @@ function Router() {
       <Route path="/leads/:id">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <LeadDetail />
-            </MainLayout>
+            <RequirePermission module="leads">
+              <MainLayout>
+                <LeadDetail />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -189,9 +199,11 @@ function Router() {
       <Route path="/tasks">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Tasks />
-            </MainLayout>
+            <RequirePermission module="tasks">
+              <MainLayout>
+                <Tasks />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -199,9 +211,11 @@ function Router() {
       <Route path="/tasks/:taskId">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <TaskDetail />
-            </MainLayout>
+            <RequirePermission module="tasks">
+              <MainLayout>
+                <TaskDetail />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -209,9 +223,11 @@ function Router() {
       <Route path="/task-templates">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <TaskTemplatesPage />
-            </MainLayout>
+            <RequirePermission module="tasks" permission="tasks.manage_task_templates">
+              <MainLayout>
+                <TaskTemplatesPage />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -219,9 +235,11 @@ function Router() {
       <Route path="/reports">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Reports />
-            </MainLayout>
+            <RequirePermission module="reports">
+              <MainLayout>
+                <Reports />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -230,9 +248,11 @@ function Router() {
       <Route path="/workflows">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Workflows />
-            </MainLayout>
+            <RequirePermission module="workflows">
+              <MainLayout>
+                <Workflows />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -240,9 +260,11 @@ function Router() {
       <Route path="/workflows/build">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <WorkflowBuilder />
-            </MainLayout>
+            <RequirePermission module="workflows" permission="workflows.manage_workflows">
+              <MainLayout>
+                <WorkflowBuilder />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -250,9 +272,11 @@ function Router() {
       <Route path="/hr/applicant/:id">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <ApplicantDetailPage />
-            </MainLayout>
+            <RequirePermission module="hr" permission="hr.view_job_applications">
+              <MainLayout>
+                <ApplicantDetailPage />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -260,9 +284,11 @@ function Router() {
       <Route path="/hr/px-meetings/:meetingId">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <HRPage initialTab="px-meetings" meetingId={params.meetingId} />
-            </MainLayout>
+            <RequirePermission module="hr">
+              <MainLayout>
+                <HRPage initialTab="px-meetings" meetingId={params.meetingId} />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -270,9 +296,11 @@ function Router() {
       <Route path="/hr/:tab">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <HRPage initialTab={params.tab} />
-            </MainLayout>
+            <RequirePermission module="hr">
+              <MainLayout>
+                <HRPage initialTab={params.tab} />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -280,9 +308,11 @@ function Router() {
       <Route path="/hr">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <HRPage />
-            </MainLayout>
+            <RequirePermission module="hr">
+              <MainLayout>
+                <HRPage />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -290,9 +320,11 @@ function Router() {
       <Route path="/training">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Training />
-            </MainLayout>
+            <RequirePermission module="training">
+              <MainLayout>
+                <Training />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -300,9 +332,11 @@ function Router() {
       <Route path="/training/analytics">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <TrainingAnalytics />
-            </MainLayout>
+            <RequirePermission module="training" permission="training.view_analytics">
+              <MainLayout>
+                <TrainingAnalytics />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -310,9 +344,11 @@ function Router() {
       <Route path="/training/courses/:id">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <CourseDetail />
-            </MainLayout>
+            <RequirePermission module="training" permission="training.view_courses">
+              <MainLayout>
+                <CourseDetail />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -320,9 +356,11 @@ function Router() {
       <Route path="/training/lessons/:id">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <LessonDetail />
-            </MainLayout>
+            <RequirePermission module="training" permission="training.view_lessons">
+              <MainLayout>
+                <LessonDetail />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -330,9 +368,11 @@ function Router() {
       <Route path="/training/courses/:id/edit">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <EditCourse />
-            </MainLayout>
+            <RequirePermission module="training" permission="training.manage_courses">
+              <MainLayout>
+                <EditCourse />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -340,9 +380,11 @@ function Router() {
       <Route path="/training/courses/:id/lessons">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <LessonManagement />
-            </MainLayout>
+            <RequirePermission module="training" permission="training.manage_lessons">
+              <MainLayout>
+                <LessonManagement />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -350,9 +392,11 @@ function Router() {
       <Route path="/training/courses/:id/lessons/create">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <CreateLesson />
-            </MainLayout>
+            <RequirePermission module="training" permission="training.manage_lessons">
+              <MainLayout>
+                <CreateLesson />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -360,9 +404,11 @@ function Router() {
       <Route path="/training/courses/:courseId/lessons/:id/edit">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <EditLesson />
-            </MainLayout>
+            <RequirePermission module="training" permission="training.manage_lessons">
+              <MainLayout>
+                <EditLesson />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -370,9 +416,11 @@ function Router() {
       <Route path="/training/create">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <CreateCourse />
-            </MainLayout>
+            <RequirePermission module="training" permission="training.manage_courses">
+              <MainLayout>
+                <CreateCourse />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -380,9 +428,11 @@ function Router() {
       <Route path="/resources">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <KnowledgeBase />
-            </MainLayout>
+            <RequirePermission module="knowledge_base">
+              <MainLayout>
+                <KnowledgeBase />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -390,9 +440,11 @@ function Router() {
       <Route path="/resources/articles/:id">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <ArticleView />
-            </MainLayout>
+            <RequirePermission module="knowledge_base" permission="knowledge_base.view_articles">
+              <MainLayout>
+                <ArticleView />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -401,9 +453,11 @@ function Router() {
       <Route path="/articles/:id">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <ArticleView />
-            </MainLayout>
+            <RequirePermission module="knowledge_base" permission="knowledge_base.view_articles">
+              <MainLayout>
+                <ArticleView />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -411,9 +465,11 @@ function Router() {
       <Route path="/calendar">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <CalendarMain />
-            </MainLayout>
+            <RequirePermission module="calendar">
+              <MainLayout>
+                <CalendarMain />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -421,9 +477,11 @@ function Router() {
       <Route path="/calendar/settings">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <CalendarSettings />
-            </MainLayout>
+            <RequirePermission module="calendar" permission="calendar.manage_all_events">
+              <MainLayout>
+                <CalendarSettings />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -431,9 +489,11 @@ function Router() {
       <Route path="/calendar-settings">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <CalendarSettings />
-            </MainLayout>
+            <RequirePermission module="calendar" permission="calendar.manage_all_events">
+              <MainLayout>
+                <CalendarSettings />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -441,9 +501,11 @@ function Router() {
       <Route path="/settings">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Settings />
-            </MainLayout>
+            <RequirePermission module="settings">
+              <MainLayout>
+                <Settings />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -451,9 +513,11 @@ function Router() {
       <Route path="/settings/business-profile">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <BusinessProfile />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <BusinessProfile />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -481,9 +545,11 @@ function Router() {
       <Route path="/settings/staff">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Staff />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <Staff />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -491,9 +557,11 @@ function Router() {
       <Route path="/settings/staff/:id">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <StaffDetail />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <StaffDetail />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -501,9 +569,11 @@ function Router() {
       <Route path="/settings/teams/:id">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <TeamDetail />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <TeamDetail />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -511,9 +581,11 @@ function Router() {
       <Route path="/settings/hr-settings">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <HRSettings />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <HRSettings />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -521,9 +593,11 @@ function Router() {
       <Route path="/settings/clients">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <ClientsSettings />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <ClientsSettings />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -531,9 +605,11 @@ function Router() {
       <Route path="/settings/sales">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <SalesSettings />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <SalesSettings />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -541,9 +617,11 @@ function Router() {
       <Route path="/settings/leads">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <LeadsSettings />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <LeadsSettings />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -551,9 +629,11 @@ function Router() {
       <Route path="/settings/roles-permissions">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <RolesPermissions />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_roles_permissions">
+              <MainLayout>
+                <RolesPermissions />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -561,9 +641,11 @@ function Router() {
       <Route path="/settings/permission-audit">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <PermissionAudit />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_roles_permissions">
+              <MainLayout>
+                <PermissionAudit />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -571,9 +653,11 @@ function Router() {
       <Route path="/settings/integrations">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Integrations />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_integrations">
+              <MainLayout>
+                <Integrations />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -581,9 +665,11 @@ function Router() {
       <Route path="/settings/ai-assistant">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <AiAssistantSettings />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_integrations">
+              <MainLayout>
+                <AiAssistantSettings />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -591,9 +677,11 @@ function Router() {
       <Route path="/settings/custom-fields">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <CustomFields />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_custom_fields">
+              <MainLayout>
+                <CustomFields />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -601,9 +689,11 @@ function Router() {
       <Route path="/settings/custom-fields/:id/edit">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <EditFolder />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.manage_custom_fields">
+              <MainLayout>
+                <EditFolder />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -611,9 +701,11 @@ function Router() {
       <Route path="/settings/calendar-settings">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <CalendarSettings />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <CalendarSettings />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -621,9 +713,11 @@ function Router() {
       <Route path="/settings/calendar/:id/edit">
         {(params) => (
           <AuthGate>
-            <MainLayout>
-              <CalendarEdit />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.manage_general_settings">
+              <MainLayout>
+                <CalendarEdit />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -631,9 +725,11 @@ function Router() {
       <Route path="/settings/tags">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Tags />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <Tags />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -641,9 +737,11 @@ function Router() {
       <Route path="/settings/products">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <Products />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <Products />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -651,9 +749,11 @@ function Router() {
       <Route path="/settings/tasks">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <TasksSettings />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <TasksSettings />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -661,9 +761,11 @@ function Router() {
       <Route path="/settings/automation-triggers">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <AutomationTriggers />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <AutomationTriggers />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>
@@ -671,9 +773,11 @@ function Router() {
       <Route path="/settings/audit-logs">
         {() => (
           <AuthGate>
-            <MainLayout>
-              <AuditLogs />
-            </MainLayout>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <AuditLogs />
+              </MainLayout>
+            </RequirePermission>
           </AuthGate>
         )}
       </Route>

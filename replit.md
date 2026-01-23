@@ -28,6 +28,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 
 ### Technical Implementations
 - **Authentication & Authorization**: Direct Google OAuth 2.0 authentication (migrated from Replit Auth OIDC) with multi-user support, automatic migration logic, session management, and role-based access control (Admin, Manager, User, Accounting).
+    - **Granular Permission System**: Three-level permission enforcement: (1) Module-level page access using RequirePermission route wrappers, (2) Sub-tab/section visibility using useHasPermissions hook to filter tabs dynamically, (3) Action-level controls using PermissionGate component for delete/export buttons. Permission keys follow "module.permission_key" format (e.g., "clients.delete_clients", "reports.view_sales_reports"). Admin users automatically have all permissions. Permissions defined in shared/permission-templates.ts.
 - **Data Management**: Relational schema, CRUD operations, audit logs, sorting, pagination, CSV import/export, and custom fields.
 - **Google Calendar Integration**: Per-user OAuth 2.0 with Google Calendar API, featuring two-way sync, incremental sync, contact creation from attendees, availability blocking, workflow triggers, optimized storage, event caching, and sync preferences.
 - **Business Timezone**: Account-level timezone setting with a lightweight API endpoint, React hook, and timezone-aware helper functions for consistent date calculations.

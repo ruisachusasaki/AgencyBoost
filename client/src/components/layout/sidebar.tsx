@@ -80,9 +80,9 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       return true;
     }
     
-    // Check granular permissions first (new system)
+    // Check granular permissions (flat array format from API)
+    // User can access module if ANY permission for that module is enabled
     if (currentUser?.granularPermissions && currentUser.granularPermissions.length > 0) {
-      // Check if any granular permission for this module is enabled
       const hasGranularPermission = currentUser.granularPermissions.some(
         (gp: any) => gp.module === module && gp.enabled === true
       );
@@ -119,12 +119,13 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       "/training": "training",
       "/resources": "knowledge_base",
       "/reports": "reports",
+      "/settings": "settings",
     };
     
     const module = moduleMap[item.href];
     
-    // Always show Dashboard and Settings
-    if (item.href === "/" || item.href === "/settings") {
+    // Always show Dashboard
+    if (item.href === "/") {
       return true;
     }
     

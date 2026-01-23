@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
+import { useHasPermissions } from "@/hooks/use-has-permission";
+import { PermissionGate } from "@/components/PermissionGate";
 import { useBusinessTimezone, getLocalDateString, getTodayInTimezone, getStartOfWeekInTimezone, getEndOfWeekInTimezone } from "@/hooks/use-business-timezone";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
@@ -113,6 +115,16 @@ export default function Reports() {
   
   // Business timezone for consistent date handling across the team
   const { timezone: businessTimezone } = useBusinessTimezone();
+  
+  // Granular report permissions (aligned with permission templates)
+  const { permissions: reportPermissions } = useHasPermissions([
+    'reports.view_sales_reports',
+    'reports.view_client_reports',
+    'reports.view_pipeline_reports',
+    'reports.view_team_reports',
+    'reports.view_1on1_performance',
+    'reports.export_reports',
+  ]);
   
   // Time display mode state
   const [timeDisplayMode, setTimeDisplayMode] = useState<'friendly' | 'decimal'>('friendly');
@@ -1393,10 +1405,12 @@ export default function Reports() {
               Decimal
             </span>
           </div>
-          <Button onClick={handleExportReport} className="flex items-center gap-2" data-testid="button-export-report">
-            <Download className="h-4 w-4" />
-            Export Report
-          </Button>
+          <PermissionGate permission="reports.export_reports">
+            <Button onClick={handleExportReport} className="flex items-center gap-2" data-testid="button-export-report">
+              <Download className="h-4 w-4" />
+              Export Report
+            </Button>
+          </PermissionGate>
         </div>
       </div>
 
@@ -1405,13 +1419,13 @@ export default function Reports() {
         <nav className="-mb-px flex space-x-8">
           <TooltipProvider delayDuration={300}>
             {[
-              { id: "overview", name: "Business Overview", icon: BarChart3, count: null, description: "High-level metrics including active projects, campaigns, leads, and task completion rates across your agency" },
-              { id: "health", name: "Client Health", icon: Heart, count: null, description: "Weekly health scores tracking client engagement, response times, and satisfaction indicators" },
-              { id: "tasks", name: "Tasks", icon: Clock, count: null, description: "Time tracking reports showing hours logged by team members, clients, and projects with detailed breakdowns" },
-              { id: "team", name: "Team Workload", icon: Users, count: null, description: "Staff assignment distribution showing how many clients each team member is managing" },
-              { id: "mrr", name: "MRR Report", icon: DollarSign, count: null, description: "Monthly Recurring Revenue breakdown by client, showing retainer values and revenue distribution" },
-              { id: "one-on-one", name: "1v1 Performance", icon: Target, count: null, description: "Individual performance metrics from 1-on-1 meetings, tracking KPIs and progress over time" }
-            ].map((tab) => {
+              { id: "overview", name: "Business Overview", icon: BarChart3, count: null, description: "High-level metrics including active projects, campaigns, leads, and task completion rates across your agency", permission: null },
+              { id: "health", name: "Client Health", icon: Heart, count: null, description: "Weekly health scores tracking client engagement, response times, and satisfaction indicators", permission: "reports.view_client_reports" },
+              { id: "tasks", name: "Tasks", icon: Clock, count: null, description: "Time tracking reports showing hours logged by team members, clients, and projects with detailed breakdowns", permission: "reports.view_team_reports" },
+              { id: "team", name: "Team Workload", icon: Users, count: null, description: "Staff assignment distribution showing how many clients each team member is managing", permission: "reports.view_team_reports" },
+              { id: "mrr", name: "MRR Report", icon: DollarSign, count: null, description: "Monthly Recurring Revenue breakdown by client, showing retainer values and revenue distribution", permission: "reports.view_sales_reports" },
+              { id: "one-on-one", name: "1v1 Performance", icon: Target, count: null, description: "Individual performance metrics from 1-on-1 meetings, tracking KPIs and progress over time", permission: "reports.view_1on1_performance" }
+            ].filter(tab => !tab.permission || reportPermissions[tab.permission]).map((tab) => {
               const Icon = tab.icon;
               return (
                 <Tooltip key={tab.id}>

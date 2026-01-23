@@ -8,19 +8,31 @@ import { Button } from "@/components/ui/button";
 interface RequirePermissionProps {
   children: ReactNode;
   module: string;
-  permission?: 'canView' | 'canCreate' | 'canEdit' | 'canDelete' | 'canManage';
+  permission?: string;
   fallbackPath?: string;
 }
 
+/**
+ * RequirePermission component wraps pages/sections to enforce access control
+ * 
+ * Usage for module-level access (any permission in module):
+ * <RequirePermission module="hr">
+ *   <HRPage />
+ * </RequirePermission>
+ * 
+ * Usage for specific permission:
+ * <RequirePermission module="tasks" permission="tasks.manage_task_templates">
+ *   <TemplatesSection />
+ * </RequirePermission>
+ */
 export default function RequirePermission({ 
   children, 
   module, 
-  permission = 'canView',
+  permission,
   fallbackPath = '/'
 }: RequirePermissionProps) {
   const [, setLocation] = useLocation();
 
-  // Fetch current user data for permission checking
   const { data: currentUser, isLoading, error } = useQuery({
     queryKey: ['/api/auth/current-user'],
     retry: false,
@@ -35,7 +47,6 @@ export default function RequirePermission({
     },
   });
 
-  // Show loading state while checking permissions
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
@@ -47,7 +58,6 @@ export default function RequirePermission({
     );
   }
 
-  // Show error state if user fetch failed
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 p-6">
@@ -65,25 +75,38 @@ export default function RequirePermission({
     );
   }
 
-  // Check if user has the required permission
-  const hasPermission = () => {
-    // Only admins get automatic access
+  const checkHasPermission = (): boolean => {
+    // Admin role has all permissions
     if (currentUser?.role === 'Admin' || currentUser?.role === 'admin') {
       return true;
     }
-    
-    if (!currentUser?.permissions) {
-      // DENY by default if no permissions data - only admins get fallback access
-      return false;
+
+    // Check granular permissions (flat array format from API)
+    if (currentUser?.granularPermissions && currentUser.granularPermissions.length > 0) {
+      // If specific permission is provided, check for exact match
+      if (permission) {
+        return currentUser.granularPermissions.some(
+          (gp: any) => gp.permissionKey === permission && gp.enabled === true
+        );
+      }
+      
+      // Otherwise check if user has ANY permission for the module
+      return currentUser.granularPermissions.some(
+        (gp: any) => gp.module === module && gp.enabled === true
+      );
     }
     
-    // Check if user has the required permission for the module
-    const userPermission = currentUser.permissions.find((p: any) => p.module === module);
-    return userPermission?.[permission] === true;
+    // Fallback to legacy permissions
+    if (currentUser?.permissions) {
+      const modulePermission = currentUser.permissions.find((p: any) => p.module === module);
+      return modulePermission?.canView === true;
+    }
+
+    // DENY by default
+    return false;
   };
 
-  // Show access denied if user doesn't have permission
-  if (!hasPermission()) {
+  if (!checkHasPermission()) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 p-6">
         <Alert variant="destructive" className="max-w-md">
@@ -100,6 +123,5 @@ export default function RequirePermission({
     );
   }
 
-  // User has permission, render the protected content
   return <>{children}</>;
 }

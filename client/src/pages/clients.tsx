@@ -16,6 +16,8 @@ import { SimpleAddClientForm } from "@/components/forms/simple-add-client-form";
 import { ClientDeletionModal } from "@/components/client-deletion-modal";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useHasPermissions } from "@/hooks/use-has-permission";
+import { PermissionGate } from "@/components/PermissionGate";
 import { format } from "date-fns";
 import { formatPhoneNumber } from "@/lib/utils";
 import type { Client } from "@shared/schema";
@@ -183,6 +185,13 @@ export default function Clients() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  
+  // Granular clients permissions
+  const { permissions: clientPermissions } = useHasPermissions([
+    'clients.delete_clients',
+    'clients.export_data',
+    'clients.manage_clients',
+  ]);
 
   const { data: clientsData, isLoading } = useQuery<PaginatedClientsResponse>({
     queryKey: [`/api/clients?page=${currentPage}&limit=${pageSize}`],
@@ -961,31 +970,33 @@ export default function Clients() {
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          {/* Delete Button */}
-          <Dialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" data-testid="button-bulk-delete">
-                <Trash2 className="h-4 w-4 mr-1" />
-                Delete
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Delete {selectedClients.size} client(s)?</DialogTitle>
-              </DialogHeader>
-              <p className="text-sm text-muted-foreground">
-                Are you sure you want to delete {selectedClients.size} client(s)? This action cannot be undone.
-              </p>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setBulkDeleteConfirmOpen(false)} data-testid="button-cancel-bulk-delete">
-                  Cancel
+          {/* Delete Button - requires delete permission */}
+          <PermissionGate permission="clients.delete_clients">
+            <Dialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" data-testid="button-bulk-delete">
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
                 </Button>
-                <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleteMutation.isPending} data-testid="button-confirm-bulk-delete">
-                  {bulkDeleteMutation.isPending ? "Deleting..." : `Delete ${selectedClients.size} Client(s)`}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete {selectedClients.size} client(s)?</DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground">
+                  Are you sure you want to delete {selectedClients.size} client(s)? This action cannot be undone.
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setBulkDeleteConfirmOpen(false)} data-testid="button-cancel-bulk-delete">
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleteMutation.isPending} data-testid="button-confirm-bulk-delete">
+                    {bulkDeleteMutation.isPending ? "Deleting..." : `Delete ${selectedClients.size} Client(s)`}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </PermissionGate>
 
           {/* Assignee Button */}
           <Dialog open={bulkAssigneeDialogOpen} onOpenChange={setBulkAssigneeDialogOpen}>
@@ -1024,11 +1035,13 @@ export default function Clients() {
             </DialogContent>
           </Dialog>
 
-          {/* Export Button */}
-          <Button variant="outline" size="sm" onClick={handleBulkExport} disabled={isExporting} data-testid="button-bulk-export">
-            <Download className="h-4 w-4 mr-1" />
-            {isExporting ? "Exporting..." : "Export"}
-          </Button>
+          {/* Export Button - requires export permission */}
+          <PermissionGate permission="clients.export_data">
+            <Button variant="outline" size="sm" onClick={handleBulkExport} disabled={isExporting} data-testid="button-bulk-export">
+              <Download className="h-4 w-4 mr-1" />
+              {isExporting ? "Exporting..." : "Export"}
+            </Button>
+          </PermissionGate>
 
           {/* Add Tag Button */}
           <Dialog open={bulkAddTagDialogOpen} onOpenChange={setBulkAddTagDialogOpen}>
@@ -1537,13 +1550,15 @@ export default function Clients() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={() => handleDeleteClient(client.id, getClientDisplayName(client))}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Client
-                </DropdownMenuItem>
+                <PermissionGate permission="clients.delete_clients">
+                  <DropdownMenuItem
+                    onClick={() => handleDeleteClient(client.id, getClientDisplayName(client))}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Client
+                  </DropdownMenuItem>
+                </PermissionGate>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
