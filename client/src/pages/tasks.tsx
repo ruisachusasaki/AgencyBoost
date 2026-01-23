@@ -264,18 +264,37 @@ export default function Tasks() {
   // Load saved column preferences when they're fetched (only once)
   useEffect(() => {
     if (savedPreferences?.preferences?.columns && !preferencesLoaded) {
-      const savedCols = savedPreferences.preferences.columns;
-      setColumns(prev => prev.map(col => {
-        const savedCol = savedCols.find((s: { id: string; visible: boolean; width?: number }) => s.id === col.id);
-        if (savedCol) {
-          return { 
-            ...col, 
-            visible: savedCol.visible,
-            width: savedCol.width || col.width || DEFAULT_COLUMN_WIDTHS[col.id] || 120
-          };
+      const savedCols = savedPreferences.preferences.columns as { id: string; visible: boolean; width?: number }[];
+      
+      // Restore column order from saved preferences
+      setColumns(prev => {
+        // Create a map of saved column preferences
+        const savedColMap = new Map(savedCols.map(c => [c.id, c]));
+        
+        // Build ordered columns array based on saved order
+        const orderedColumns: typeof prev = [];
+        
+        // First, add columns in the saved order
+        for (const savedCol of savedCols) {
+          const existingCol = prev.find(c => c.id === savedCol.id);
+          if (existingCol) {
+            orderedColumns.push({
+              ...existingCol,
+              visible: savedCol.visible,
+              width: savedCol.width || existingCol.width || DEFAULT_COLUMN_WIDTHS[existingCol.id] || 120
+            });
+          }
         }
-        return col;
-      }));
+        
+        // Add any new columns that weren't in saved preferences (at the end)
+        for (const col of prev) {
+          if (!savedColMap.has(col.id)) {
+            orderedColumns.push(col);
+          }
+        }
+        
+        return orderedColumns;
+      });
       setPreferencesLoaded(true);
     }
   }, [savedPreferences, preferencesLoaded]);
@@ -1126,7 +1145,17 @@ export default function Tasks() {
     items.splice(result.destination.index, 0, reorderedItem);
 
     // Reconstruct the full columns array with name always first
-    setColumns([columns[0], ...items]);
+    const newColumns = [columns[0], ...items];
+    setColumns(newColumns);
+    
+    // Save the new order to API
+    const columnPrefs = newColumns.map(col => ({ id: col.id, visible: col.visible, width: col.width }));
+    saveColumnPreferencesMutation.mutate(columnPrefs);
+    
+    toast({
+      title: "Column order saved",
+      description: "Your column arrangement has been saved.",
+    });
   };
 
   // Toggle column visibility
