@@ -47,6 +47,8 @@ import type { Descendant } from 'slate';
 import { MentionInput } from '@/components/ui/mention-input';
 import { MentionText } from '@/components/ui/mention-text';
 import { ArticlePermissionsModal } from '@/components/article-permissions-modal';
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
+import { GripVertical } from "lucide-react";
 
 export default function ArticleView() {
   const { id } = useParams();
@@ -159,10 +161,12 @@ export default function ArticleView() {
     return path;
   }, [allArticles]);
 
-  // Get child articles of current article
+  // Get child articles of current article (sorted by order)
   const getChildArticles = useCallback((articleId: string): any[] => {
     if (!articleId || !allArticles.length) return [];
-    return (allArticles as any[]).filter((a: any) => a.parentId === articleId);
+    return (allArticles as any[])
+      .filter((a: any) => a.parentId === articleId)
+      .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
   }, [allArticles]);
 
   // Get related articles (same category or shared tags)
@@ -597,6 +601,79 @@ export default function ArticleView() {
     },
   });
 
+  // Reorder sub-pages mutation with optimistic update
+  const reorderSubpagesMutation = useMutation({
+    mutationFn: async ({ articleOrders }: { articleOrders: { id: string; order: number }[]; optimisticData: any[] }) => {
+      const response = await apiRequest("PUT", `/api/knowledge-base/articles/reorder`, { articleOrders });
+      return await response.json();
+    },
+    onMutate: async ({ optimisticData }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['/api/knowledge-base/articles'] });
+      
+      // Snapshot the previous value
+      const previousArticles = queryClient.getQueryData<any[]>(['/api/knowledge-base/articles']);
+      
+      // Optimistically update the cache
+      if (previousArticles && optimisticData) {
+        const updatedArticles = previousArticles.map(article => {
+          const updated = optimisticData.find((a: any) => a.id === article.id);
+          if (updated) {
+            return { ...article, order: updated.order };
+          }
+          return article;
+        });
+        queryClient.setQueryData(['/api/knowledge-base/articles'], updatedArticles);
+      }
+      
+      return { previousArticles };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/knowledge-base/articles'] });
+      toast({
+        title: "Success",
+        variant: "success",
+        description: "Sub-page order updated",
+      });
+    },
+    onError: (error, variables, context) => {
+      // Rollback to previous state on error
+      if (context?.previousArticles) {
+        queryClient.setQueryData(['/api/knowledge-base/articles'], context.previousArticles);
+      }
+      toast({
+        title: "Error",
+        description: "Failed to reorder sub-pages",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle drag end for sub-page reordering
+  const handleSubpageDragEnd = useCallback((result: DropResult) => {
+    if (!result.destination) return;
+    if (result.source.index === result.destination.index) return;
+    if (reorderSubpagesMutation.isPending) return; // Prevent concurrent reorders
+
+    const childArticles = getChildArticles(id || '');
+    const items = Array.from(childArticles);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Create order updates with optimistic data
+    const reorderedItems = items.map((article, index) => ({
+      ...article,
+      order: index
+    }));
+    
+    const articleOrders = reorderedItems.map(article => ({
+      id: article.id,
+      order: article.order
+    }));
+
+    reorderSubpagesMutation.mutate({ articleOrders, optimisticData: reorderedItems });
+  }, [id, getChildArticles, reorderSubpagesMutation]);
+
   // Debounced auto-save function
   const debouncedAutoSave = useCallback(
     (content: Descendant[], title?: string) => {
@@ -973,7 +1050,7 @@ export default function ArticleView() {
       <div className="flex gap-6">
         {/* Article Content */}
         <div className="flex-1 min-w-0">
-          {/* Child Articles (Sub-pages) - At top */}
+          {/* Child Articles (Sub-pages) - At top with drag-and-drop reordering */}
           {childArticles.length > 0 && (
             <Card className="mb-8">
               <CardContent className="p-6">
@@ -984,26 +1061,55 @@ export default function ArticleView() {
                     {childArticles.length}
                   </Badge>
                 </div>
-                <div className="grid gap-3">
-                  {childArticles.map((child: any) => (
-                    <RouterLink key={child.id} href={`/resources/articles/${child.id}`}>
-                      <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group border border-border/50">
-                        <FileText className="w-4 h-4 mt-0.5 text-muted-foreground group-hover:text-[#00C9C6]" />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium group-hover:text-[#00C9C6] truncate">
-                            {child.title}
-                          </h4>
-                          {child.excerpt && (
-                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                              {child.excerpt}
-                            </p>
-                          )}
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-[#00C9C6]" />
+                <DragDropContext onDragEnd={handleSubpageDragEnd}>
+                  <Droppable droppableId="subpages">
+                    {(provided) => (
+                      <div 
+                        className="grid gap-3"
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                      >
+                        {childArticles.map((child: any, index: number) => (
+                          <Draggable key={child.id} draggableId={child.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={`flex items-start gap-3 p-3 rounded-lg transition-colors group border ${
+                                  snapshot.isDragging 
+                                    ? 'bg-muted shadow-lg border-[#00C9C6]' 
+                                    : 'hover:bg-muted/50 border-border/50'
+                                }`}
+                              >
+                                <div
+                                  {...provided.dragHandleProps}
+                                  className="cursor-grab active:cursor-grabbing mt-0.5"
+                                >
+                                  <GripVertical className="w-4 h-4 text-muted-foreground hover:text-[#00C9C6]" />
+                                </div>
+                                <RouterLink href={`/resources/articles/${child.id}`} className="flex-1 min-w-0 flex items-start gap-3 cursor-pointer">
+                                  <FileText className="w-4 h-4 mt-0.5 text-muted-foreground group-hover:text-[#00C9C6]" />
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="text-sm font-medium group-hover:text-[#00C9C6] truncate">
+                                      {child.title}
+                                    </h4>
+                                    {child.excerpt && (
+                                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                        {child.excerpt}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-[#00C9C6]" />
+                                </RouterLink>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
                       </div>
-                    </RouterLink>
-                  ))}
-                </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
               </CardContent>
             </Card>
           )}
