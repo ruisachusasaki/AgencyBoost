@@ -31,26 +31,45 @@ import { format, startOfDay, startOfWeek, endOfWeek, addDays, addWeeks, isSameDa
 interface Column {
   id: string;
   label: string;
-  width?: string;
+  width?: number;
+  minWidth?: number;
   visible: boolean;
 }
 
+// Default column widths in pixels
+const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
+  name: 200,
+  assignee: 150,
+  startDate: 120,
+  dueDate: 120,
+  status: 120,
+  priority: 100,
+  category: 120,
+  tags: 150,
+  approval: 100,
+  client: 150,
+  project: 150,
+  timeEstimate: 110,
+  timeTracked: 110,
+  createdAt: 120,
+};
+
 // All available columns that can be shown/hidden
 const ALL_AVAILABLE_COLUMNS: Column[] = [
-  { id: "name", label: "Task Name", width: "w-1/6", visible: true },
-  { id: "assignee", label: "Assignee", width: "w-1/8", visible: true },
-  { id: "startDate", label: "Start Date", width: "w-1/8", visible: false },
-  { id: "dueDate", label: "Due Date", width: "w-1/8", visible: true },
-  { id: "status", label: "Status", width: "w-1/10", visible: true },
-  { id: "priority", label: "Priority", width: "w-1/10", visible: true },
-  { id: "category", label: "Category", width: "w-1/10", visible: true },
-  { id: "tags", label: "Tags", width: "w-1/8", visible: true },
-  { id: "approval", label: "Approval", width: "w-1/10", visible: true },
-  { id: "client", label: "Client/Lead", width: "w-1/8", visible: true },
-  { id: "project", label: "Project", width: "w-1/8", visible: false },
-  { id: "timeEstimate", label: "Time Estimate", width: "w-1/10", visible: false },
-  { id: "timeTracked", label: "Time Tracked", width: "w-1/10", visible: false },
-  { id: "createdAt", label: "Created", width: "w-1/10", visible: false },
+  { id: "name", label: "Task Name", width: 200, minWidth: 150, visible: true },
+  { id: "assignee", label: "Assignee", width: 150, minWidth: 100, visible: true },
+  { id: "startDate", label: "Start Date", width: 120, minWidth: 100, visible: false },
+  { id: "dueDate", label: "Due Date", width: 120, minWidth: 100, visible: true },
+  { id: "status", label: "Status", width: 120, minWidth: 80, visible: true },
+  { id: "priority", label: "Priority", width: 100, minWidth: 80, visible: true },
+  { id: "category", label: "Category", width: 120, minWidth: 80, visible: true },
+  { id: "tags", label: "Tags", width: 150, minWidth: 100, visible: true },
+  { id: "approval", label: "Approval", width: 100, minWidth: 80, visible: true },
+  { id: "client", label: "Client/Lead", width: 150, minWidth: 100, visible: true },
+  { id: "project", label: "Project", width: 150, minWidth: 100, visible: false },
+  { id: "timeEstimate", label: "Time Estimate", width: 110, minWidth: 80, visible: false },
+  { id: "timeTracked", label: "Time Tracked", width: 110, minWidth: 80, visible: false },
+  { id: "createdAt", label: "Created", width: 120, minWidth: 100, visible: false },
 ];
 
 interface TaskFilterCondition {
@@ -203,17 +222,28 @@ export default function Tasks() {
   });
 
   // Fetch user's saved column preferences
-  const { data: savedPreferences } = useQuery<{ preferences: { columns?: { id: string; visible: boolean }[] } }>({
+  const { data: savedPreferences } = useQuery<{ preferences: { columns?: { id: string; visible: boolean; width?: number }[] } }>({
     queryKey: ["/api/user-view-preferences/tasks-columns"],
     enabled: !!currentUser,
   });
 
   // Track if preferences have been initially loaded
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  
+  // Track column being resized
+  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
+  const resizeStartXRef = React.useRef(0);
+  const resizeStartWidthRef = React.useRef(0);
+  const columnsRef = React.useRef(columns);
+  
+  // Keep columnsRef in sync with columns state
+  React.useEffect(() => {
+    columnsRef.current = columns;
+  }, [columns]);
 
   // Mutation to save column preferences
   const saveColumnPreferencesMutation = useMutation({
-    mutationFn: async (columnPrefs: { id: string; visible: boolean }[]) => {
+    mutationFn: async (columnPrefs: { id: string; visible: boolean; width?: number }[]) => {
       const response = await apiRequest("POST", "/api/user-view-preferences/tasks-columns", {
         preferences: { columns: columnPrefs }
       });
@@ -236,8 +266,15 @@ export default function Tasks() {
     if (savedPreferences?.preferences?.columns && !preferencesLoaded) {
       const savedCols = savedPreferences.preferences.columns;
       setColumns(prev => prev.map(col => {
-        const savedCol = savedCols.find((s: { id: string; visible: boolean }) => s.id === col.id);
-        return savedCol ? { ...col, visible: savedCol.visible } : col;
+        const savedCol = savedCols.find((s: { id: string; visible: boolean; width?: number }) => s.id === col.id);
+        if (savedCol) {
+          return { 
+            ...col, 
+            visible: savedCol.visible,
+            width: savedCol.width || col.width || DEFAULT_COLUMN_WIDTHS[col.id] || 120
+          };
+        }
+        return col;
       }));
       setPreferencesLoaded(true);
     }
@@ -1101,12 +1138,58 @@ export default function Tasks() {
       const updated = prev.map(col => 
         col.id === columnId ? { ...col, visible: !col.visible } : col
       );
-      // Save to API
-      const columnPrefs = updated.map(col => ({ id: col.id, visible: col.visible }));
+      // Save to API with widths
+      const columnPrefs = updated.map(col => ({ id: col.id, visible: col.visible, width: col.width }));
       saveColumnPreferencesMutation.mutate(columnPrefs);
       return updated;
     });
   };
+
+  // Handle column resize start
+  const handleResizeStart = (e: React.MouseEvent, columnId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const column = columns.find(c => c.id === columnId);
+    if (!column) return;
+    
+    resizeStartXRef.current = e.clientX;
+    resizeStartWidthRef.current = column.width || DEFAULT_COLUMN_WIDTHS[columnId] || 120;
+    setResizingColumn(columnId);
+  };
+
+  // Handle column resize move
+  useEffect(() => {
+    if (!resizingColumn) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const diff = e.clientX - resizeStartXRef.current;
+      const column = columnsRef.current.find(c => c.id === resizingColumn);
+      const minWidth = column?.minWidth || 60;
+      const newWidth = Math.max(minWidth, resizeStartWidthRef.current + diff);
+      
+      setColumns(prev => prev.map(col => 
+        col.id === resizingColumn ? { ...col, width: newWidth } : col
+      ));
+    };
+
+    const handleMouseUp = () => {
+      // Use functional setState to get latest columns state for saving
+      setColumns(currentColumns => {
+        const columnPrefs = currentColumns.map(col => ({ id: col.id, visible: col.visible, width: col.width }));
+        saveColumnPreferencesMutation.mutate(columnPrefs);
+        return currentColumns;
+      });
+      setResizingColumn(null);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingColumn, saveColumnPreferencesMutation]);
 
   // Get only visible columns
   const visibleColumns = useMemo(() => columns.filter(col => col.visible), [columns]);
@@ -1141,26 +1224,41 @@ export default function Tasks() {
     return result;
   };
 
-  // SortableHeader component matching leads.tsx style
-  const SortableHeader = ({ column, children, sortField: columnSortField }: { 
+  // SortableHeader component matching leads.tsx style with resize handle
+  const SortableHeader = ({ column, children, sortField: columnSortField, showResizeHandle = true }: { 
     column: Column; 
     children: React.ReactNode; 
     sortField?: SortField;
+    showResizeHandle?: boolean;
   }) => {
     const isActive = sortField === columnSortField;
-    const canSort = columnSortField && column.id !== "name"; // Don't allow sorting the name column
+    const canSort = columnSortField && column.id !== "name";
+    const columnWidth = column.width || DEFAULT_COLUMN_WIDTHS[column.id] || 120;
+    
+    const ResizeHandle = () => (
+      <div
+        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50 group-hover:bg-slate-300 z-10"
+        onMouseDown={(e) => handleResizeStart(e, column.id)}
+        onClick={(e) => e.stopPropagation()}
+      />
+    );
     
     if (!canSort) {
       return (
-        <TableHead className={column.width}>
+        <TableHead 
+          className="relative group"
+          style={{ width: `${columnWidth}px`, minWidth: `${column.minWidth || 60}px` }}
+        >
           <span className="font-medium">{children}</span>
+          {showResizeHandle && <ResizeHandle />}
         </TableHead>
       );
     }
     
     return (
       <TableHead 
-        className={`${column.width} cursor-pointer hover:bg-slate-50 select-none`}
+        className="relative group cursor-pointer hover:bg-slate-50 select-none"
+        style={{ width: `${columnWidth}px`, minWidth: `${column.minWidth || 60}px` }}
         onClick={() => handleSort(columnSortField)}
       >
         <div className="flex items-center gap-1">
@@ -1182,6 +1280,7 @@ export default function Tasks() {
             />
           </div>
         </div>
+        {showResizeHandle && <ResizeHandle />}
       </TableHead>
     );
   };
@@ -2628,7 +2727,8 @@ export default function Tasks() {
             </div>
           ) : viewMode === "table" ? (
             <DragDropContext onDragEnd={handleColumnDragEnd}>
-              <Table>
+              <div className="overflow-x-auto">
+              <Table className="w-max min-w-full" style={{ tableLayout: 'fixed' }}>
                 <TableHeader>
                   <Droppable droppableId="table-headers" direction="horizontal">
                     {(provided) => (
@@ -2668,6 +2768,8 @@ export default function Tasks() {
                             createdAt: 'createdAt'
                           };
                           
+                          const columnWidth = column.width || DEFAULT_COLUMN_WIDTHS[column.id] || 120;
+                          
                           return (
                             <Draggable
                               key={column.id}
@@ -2678,9 +2780,14 @@ export default function Tasks() {
                                 <TableHead
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
-                                  className={`${column.width} ${
+                                  className={`relative group ${
                                     snapshot.isDragging ? 'bg-blue-50 shadow-lg z-50' : ''
                                   }`}
+                                  style={{ 
+                                    ...provided.draggableProps.style,
+                                    width: `${columnWidth}px`, 
+                                    minWidth: `${column.minWidth || 60}px` 
+                                  }}
                                 >
                                   <div
                                     {...provided.dragHandleProps}
@@ -2711,6 +2818,11 @@ export default function Tasks() {
                                       </div>
                                     )}
                                   </div>
+                                  <div
+                                    className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50 group-hover:bg-slate-300 z-10"
+                                    onMouseDown={(e) => handleResizeStart(e, column.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
                                 </TableHead>
                               )}
                             </Draggable>
@@ -2738,11 +2850,18 @@ export default function Tasks() {
                         </div>
                       </TableCell>
                       
-                      {visibleColumns.map((column) => (
-                        <TableCell key={column.id} className="py-3">
-                          {renderCellContent(column, task)}
-                        </TableCell>
-                      ))}
+                      {visibleColumns.map((column) => {
+                        const columnWidth = column.width || DEFAULT_COLUMN_WIDTHS[column.id] || 120;
+                        return (
+                          <TableCell 
+                            key={column.id} 
+                            className="py-3"
+                            style={{ width: `${columnWidth}px`, minWidth: `${column.minWidth || 60}px` }}
+                          >
+                            {renderCellContent(column, task)}
+                          </TableCell>
+                        );
+                      })}
                       <TableCell className="py-3">
                         <div className="flex items-center gap-1">
                           <Link href={`/tasks/${task.id}`}>
@@ -2766,6 +2885,7 @@ export default function Tasks() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </DragDropContext>
           ) : (
             <KanbanView 

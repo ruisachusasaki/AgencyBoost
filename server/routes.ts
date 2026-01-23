@@ -1825,52 +1825,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
-PLACEHOLDER_FOR_REPLACEMENT
+  app.patch("/api/reports/time-entries/:taskId/:entryId", requireAuth(), async (req, res) => {
+    try {
+      console.log("[TIME_ENTRY_PATCH] === START ===");
+      console.log("[TIME_ENTRY_PATCH] params:", JSON.stringify(req.params));
+      console.log("[TIME_ENTRY_PATCH] body:", JSON.stringify(req.body));
+      
+      const user = (req as any).session?.user;
+      const userId = (req as any).session?.userId || user?.id || user?.staffId;
+      
+      console.log("[TIME_ENTRY_PATCH] session user:", JSON.stringify({ id: user?.id, email: user?.email, roles: user?.roles }));
+      console.log("[TIME_ENTRY_PATCH] userId:", userId);
+      
+      // Fetch staff member to get their roles (session might not have roles)
+      let userRoles: string[] = user?.roles || [];
+      if (userRoles.length === 0 && userId) {
+        const staffMember = await appStorage.getStaffMember(userId);
+        console.log("[TIME_ENTRY_PATCH] fetched staff roles:", staffMember?.roles);
+        if (staffMember?.roles) {
+          userRoles = staffMember.roles;
+        }
+      }
+      
+      console.log("[TIME_ENTRY_PATCH] final userRoles:", JSON.stringify(userRoles));
+      
+      const isAdminOrManager = userRoles.some((r: string) => r.toLowerCase() === 'admin' || r.toLowerCase() === 'manager');
+      
+      console.log("[TIME_ENTRY_PATCH] isAdminOrManager:", isAdminOrManager);
+      
+      if (!isAdminOrManager) {
+        console.log("[TIME_ENTRY_PATCH] REJECTED: not admin or manager");
+        return res.status(403).json({ error: "Only admins and managers can edit time entries" });
+      }
+      
+      const { taskId, entryId } = req.params;
+      const { duration, startTime, endTime } = req.body;
+      
+      console.log("[TIME_ENTRY_PATCH] calling updateTimeEntry:", JSON.stringify({ taskId, entryId, duration }));
+      
+      const updatedTask = await appStorage.updateTimeEntry(taskId, entryId, { duration, startTime, endTime });
+      
+      console.log("[TIME_ENTRY_PATCH] updatedTask result:", updatedTask ? "FOUND" : "NOT FOUND");
+      
+      if (!updatedTask) {
+        console.log("[TIME_ENTRY_PATCH] ERROR: time entry not found - taskId:", taskId, "entryId:", entryId);
+        return res.status(404).json({ error: "Time entry not found" });
+      }
+      
+      // Log the action
+      await appStorage.createAuditLog({
+        userId: userId || 'unknown',
+        userName: user?.email || 'Unknown',
+        action: 'update',
+        entityType: 'task',
+        entityId: taskId,
+        details: `Updated time entry ${entryId}: duration=${duration}`,
+        timestamp: new Date(),
+      });
+      
+      console.log("[TIME_ENTRY_PATCH] === SUCCESS ===");
+      res.json({ success: true, task: updatedTask });
+    } catch (error) {
+      console.error("[TIME_ENTRY_PATCH] EXCEPTION:", error);
+      res.status(500).json({ error: "Failed to update time entry" });
+    }
+  });
   
 
   // Task Stage Analytics Report API endpoint
