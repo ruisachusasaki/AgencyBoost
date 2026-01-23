@@ -1240,7 +1240,7 @@ export default function Tasks() {
               <TooltipTrigger asChild>
                 <Avatar className="h-7 w-7 cursor-pointer">
                   {assignedStaff.profileImagePath ? (
-                    <AvatarImage src={assignedStaff.profileImagePath} alt={getStaffName(task.assignedTo) || ""} />
+                    <AvatarImage src={`/objects${assignedStaff.profileImagePath}`} alt={getStaffName(task.assignedTo) || ""} />
                   ) : null}
                   <AvatarFallback className="text-xs bg-primary/10 text-primary">
                     {getStaffInitials(assignedStaff)}
