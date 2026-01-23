@@ -1825,52 +1825,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/reports/time-entries/:taskId/:entryId", requireAuth(), async (req, res) => {
-    try {
-      const user = (req as any).session?.user;
-      const userId = (req as any).session?.userId || user?.id || user?.staffId;
-      
-      // Fetch staff member to get their roles (session might not have roles)
-      let userRoles: string[] = user?.roles || [];
-      if (userRoles.length === 0 && userId) {
-        const staffMember = await appStorage.getStaffMember(userId);
-        if (staffMember?.roles) {
-          userRoles = staffMember.roles;
-        }
-      }
-      
-      const isAdminOrManager = userRoles.some((r: string) => r.toLowerCase() === 'admin' || r.toLowerCase() === 'manager');
-      
-      if (!isAdminOrManager) {
-        return res.status(403).json({ error: "Only admins and managers can edit time entries" });
-      }
-      
-      const { taskId, entryId } = req.params;
-      const { duration, startTime, endTime } = req.body;
-      
-      const updatedTask = await appStorage.updateTimeEntry(taskId, entryId, { duration, startTime, endTime });
-      
-      if (!updatedTask) {
-        return res.status(404).json({ error: "Time entry not found" });
-      }
-      
-      // Log the action
-      await appStorage.createAuditLog({
-        userId: userId || 'unknown',
-        userName: user?.email || 'Unknown',
-        action: 'update',
-        entityType: 'task',
-        entityId: taskId,
-        details: `Updated time entry ${entryId}: duration=${duration}`,
-        timestamp: new Date(),
-      });
-      
-      res.json({ success: true, task: updatedTask });
-    } catch (error) {
-      console.error("Error updating time entry:", error);
-      res.status(500).json({ error: "Failed to update time entry" });
-    }
-  });
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
+PLACEHOLDER_FOR_REPLACEMENT
   
 
   // Task Stage Analytics Report API endpoint
