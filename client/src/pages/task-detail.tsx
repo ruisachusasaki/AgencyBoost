@@ -1330,11 +1330,11 @@ export default function TaskDetail() {
                       setManualTimeDateOpen(false);
                     }}
                     disabled={(date) => {
-                      // Compare dates only (ignore time) to avoid timezone issues
+                      // Use local date string comparison to avoid timezone issues
                       const today = new Date();
-                      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                      const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-                      return dateStart > todayStart;
+                      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                      return dateStr > todayStr;
                     }}
                     initialFocus
                   />
