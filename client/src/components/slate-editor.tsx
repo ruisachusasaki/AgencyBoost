@@ -617,6 +617,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
 
 
     // Handle Tab key for indenting/nesting list items
+    // Uses simple wrap/unwrap approach for reliable multi-level nesting
     if (event.key === 'Tab') {
       const { selection } = editor;
       if (selection) {
@@ -624,26 +625,59 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         const [listMatch] = Editor.nodes(editor, {
           match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && 
             (n.type === 'bulleted-list' || n.type === 'numbered-list'),
+          mode: 'lowest',
         });
         
         if (listMatch) {
           event.preventDefault();
+          const [listNode] = listMatch;
+          const listType = (listNode as any).type;
+          
+          // Get the current list-item
           const [listItemMatch] = Editor.nodes(editor, {
             match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'list-item',
+            mode: 'lowest',
           });
           
           if (listItemMatch) {
-            const [listItemNode, listItemPath] = listItemMatch;
-            const [listNode] = listMatch;
+            const [, listItemPath] = listItemMatch;
             
             if (event.shiftKey) {
-              // Shift+Tab: Outdent - lift the list item out of nested list
-              Transforms.liftNodes(editor, { at: listItemPath });
+              // Shift+Tab: Outdent - try to lift out of nested list
+              // Count how many lists we're nested in
+              const allLists = Array.from(Editor.nodes(editor, {
+                match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && 
+                  (n.type === 'bulleted-list' || n.type === 'numbered-list'),
+              }));
+              
+              if (allLists.length > 1) {
+                // We're nested - lift out one level
+                Transforms.liftNodes(editor, { at: listItemPath });
+              } else {
+                // At top level - unwrap from list and list-item to become paragraph
+                Editor.withoutNormalizing(editor, () => {
+                  Transforms.setNodes(
+                    editor,
+                    { type: 'paragraph' } as any,
+                    { 
+                      match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'list-item',
+                      mode: 'lowest'
+                    }
+                  );
+                  Transforms.liftNodes(editor, {
+                    match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'paragraph',
+                    mode: 'lowest'
+                  });
+                });
+              }
             } else {
-              // Tab: Indent - wrap in a nested list
-              const listType = (listNode as any).type;
+              // Tab: Indent - wrap in a new nested list of same type
+              // This creates proper multi-level nesting structure
               const newList = { type: listType, children: [] };
-              Transforms.wrapNodes(editor, newList, { at: listItemPath });
+              Transforms.wrapNodes(editor, newList as any, { 
+                match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'list-item',
+                mode: 'lowest'
+              });
             }
             return;
           }
