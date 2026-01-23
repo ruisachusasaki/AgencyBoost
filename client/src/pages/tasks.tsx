@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2, FileText, Settings2, Clock, Eye, EyeOff } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import TaskForm from "@/components/forms/task-form";
 import { TaskDependencyIcons } from "@/components/task-dependency-icons";
@@ -372,6 +374,18 @@ export default function Tasks() {
     if (!staffId) return null;
     const staffMember = staff.find(s => s.id === staffId);
     return staffMember ? `${staffMember.firstName} ${staffMember.lastName}` : "Unknown";
+  };
+
+  const getStaffMember = (staffId: string | null) => {
+    if (!staffId) return null;
+    return staff.find(s => s.id === staffId) || null;
+  };
+
+  const getStaffInitials = (staffMember: Staff | null) => {
+    if (!staffMember) return "?";
+    const first = staffMember.firstName?.[0] || "";
+    const last = staffMember.lastName?.[0] || "";
+    return (first + last).toUpperCase() || "?";
   };
 
   // Get unique values for dropdown fields from actual task data
@@ -1219,11 +1233,25 @@ export default function Tasks() {
         );
       
       case "assignee":
-        return task.assignedTo ? (
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-slate-400" />
-            <span className="text-sm">{getStaffName(task.assignedTo)}</span>
-          </div>
+        const assignedStaff = getStaffMember(task.assignedTo);
+        return task.assignedTo && assignedStaff ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Avatar className="h-7 w-7 cursor-pointer">
+                  {assignedStaff.profileImage ? (
+                    <AvatarImage src={assignedStaff.profileImage} alt={getStaffName(task.assignedTo) || ""} />
+                  ) : null}
+                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                    {getStaffInitials(assignedStaff)}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{getStaffName(task.assignedTo)}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ) : (
           <span className="text-slate-400 text-sm">Unassigned</span>
         );
