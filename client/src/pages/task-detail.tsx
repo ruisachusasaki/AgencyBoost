@@ -57,7 +57,11 @@ export default function TaskDetail() {
   const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null);
   const [highlightedAnnotationId, setHighlightedAnnotationId] = useState<string | null>(null);
   const [showManualTimeDialog, setShowManualTimeDialog] = useState(false);
-  const [manualTimeDate, setManualTimeDate] = useState(new Date().toISOString().split('T')[0]);
+  const getLocalDateString = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+  const [manualTimeDate, setManualTimeDate] = useState(getLocalDateString());
   const [manualTimeHours, setManualTimeHours] = useState("");
   const [manualTimeMinutes, setManualTimeMinutes] = useState("");
   const [manualTimeNotes, setManualTimeNotes] = useState("");
@@ -418,7 +422,7 @@ export default function TaskDetail() {
       });
       // Reset form
       setShowManualTimeDialog(false);
-      setManualTimeDate(new Date().toISOString().split('T')[0]);
+      setManualTimeDate(getLocalDateString());
       setManualTimeHours("");
       setManualTimeMinutes("");
       setManualTimeNotes("");
@@ -1325,7 +1329,11 @@ export default function TaskDetail() {
                       }
                       setManualTimeDateOpen(false);
                     }}
-                    disabled={(date) => date > new Date()}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(23, 59, 59, 999);
+                      return date > today;
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
