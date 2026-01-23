@@ -4721,16 +4721,25 @@ export default function Reports() {
                 if (!editingTimeEntry) return;
                 
                 try {
+                  console.log("DEBUG save - editingTimeEntry:", editingTimeEntry);
+                  console.log("DEBUG save - editedDurations:", editedDurations);
+                  
                   for (const entry of editingTimeEntry.entries) {
                     const editedMinutes = editedDurations[entry.id];
+                    console.log("DEBUG save - processing entry:", { id: entry.id, taskId: entry.taskId, editedMinutes });
                     if (editedMinutes !== undefined) {
-                      const response = await fetch(`/api/reports/time-entries/${entry.taskId}/${entry.id}`, {
+                      const url = `/api/reports/time-entries/${entry.taskId}/${entry.id}`;
+                      console.log("DEBUG save - PATCH url:", url);
+                      const response = await fetch(url, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ duration: editedMinutes })
                       });
+                      console.log("DEBUG save - response status:", response.status);
                       if (!response.ok) {
-                        throw new Error('Failed to update time entry');
+                        const errorData = await response.json().catch(() => ({}));
+                        console.log("DEBUG save - error data:", errorData);
+                        throw new Error(errorData.error || 'Failed to update time entry');
                       }
                     }
                   }
@@ -4742,6 +4751,7 @@ export default function Reports() {
                   setEditingTimeEntry(null);
                   setEditedDurations({});
                 } catch (error) {
+                  console.error("DEBUG save - error:", error);
                   toast({
                     title: "Error",
                     description: "Failed to update time entries. Please try again.",
