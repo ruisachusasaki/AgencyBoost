@@ -1806,12 +1806,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/time-entries/:userId/:date", requireAuth(), async (req, res) => {
     try {
       const user = (req as any).session?.user;
-      console.log("DEBUG time-entries endpoint - user:", { id: user?.id, role: user?.role, email: user?.email });
-      const userRoles = user?.roles || [];
+      const currentUserId = (req as any).session?.userId || user?.id || user?.staffId;
+      console.log("DEBUG time-entries endpoint - user:", { id: user?.id, role: user?.role, email: user?.email, currentUserId });
+      
+      // Fetch staff member to get their roles (session might not have roles)
+      let userRoles: string[] = user?.roles || [];
+      if (userRoles.length === 0 && currentUserId) {
+        const staffMember = await appStorage.getStaffMember(currentUserId);
+        console.log("DEBUG time-entries endpoint - fetched staff roles:", staffMember?.roles);
+        if (staffMember?.roles) {
+          userRoles = staffMember.roles;
+        }
+      }
+      
       const isAdminOrManager = userRoles.some((r: string) => r.toLowerCase() === 'admin' || r.toLowerCase() === 'manager');
+      console.log("DEBUG time-entries endpoint - isAdminOrManager:", isAdminOrManager, "userRoles:", userRoles);
       
       // Only admins and managers can view other users' time entries
-      if (!isAdminOrManager && user?.id !== req.params.userId) {
+      if (!isAdminOrManager && currentUserId !== req.params.userId) {
         return res.status(403).json({ error: "Not authorized to view other users' time entries" });
       }
       
