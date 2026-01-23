@@ -54,7 +54,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 - **File & Media**: Advanced uploads, inline media display, voice recording, secure object storage, and collaborative annotation.
 - **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, enhanced search, draft/published workflow with version history, auto-generated sticky Table of Contents, breadcrumb navigation, and related articles suggestions.
 - **AI Assistant**: OpenAI-powered chat widget that indexes Knowledge Base content (SOPs/Playbooks) to provide quick answers to team questions. Features a floating chat interface in the bottom-right corner, keyword-based article search, conversation history, and source citations.
-- **User Preferences**: Per-user view customization system storing column visibility.
+- **User Preferences**: Per-user view customization system storing column visibility and widths. Tasks Table View supports drag-to-resize columns with pixel-based width persistence.
 - **Notification System**: Database-backed system with bell icon, @mention detection, settings panel, and My Mentions widget.
 - **User Profile Settings**: Rich text editor (TipTap) for email signature with HTML formatting support.
 - **Multi-Dashboard System**: Users can create multiple named dashboards with tab-based navigation and management dialogs.
