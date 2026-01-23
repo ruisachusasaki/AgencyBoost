@@ -87,14 +87,23 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   
   const [activeMeetingId, setActiveMeetingId] = useState<string | undefined>(deriveMeetingId);
   
-  // Sync activeMeetingId when URL changes
+  // Sync activeMeetingId when meetingId prop changes (from route params)
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlMeetingId = urlParams.get('meetingId') || undefined;
-    if (urlMeetingId !== activeMeetingId) {
-      setActiveMeetingId(urlMeetingId);
+    if (meetingId !== activeMeetingId) {
+      setActiveMeetingId(meetingId);
     }
-  }, [location]);
+  }, [meetingId]);
+  
+  // Also sync activeMeetingId when URL query params change (legacy support)
+  useEffect(() => {
+    if (!meetingId) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlMeetingId = urlParams.get('meetingId') || undefined;
+      if (urlMeetingId !== activeMeetingId) {
+        setActiveMeetingId(urlMeetingId);
+      }
+    }
+  }, [location, meetingId]);
   
   const [activeTab, setActiveTab] = useState(deriveInitialTab);
   const queryClient = useQueryClient();
