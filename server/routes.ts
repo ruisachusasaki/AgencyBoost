@@ -23720,10 +23720,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .orderBy(asc(taskIntakeOptions.order))
         : [];
       
-      const result = triggerQuestions.map(q => ({
-        ...q,
-        options: allOptions.filter(opt => opt.questionId === q.id),
-      }));
+      // Get departments for department-type questions
+      const allDepartments = await db
+        .select({ id: departments.id, name: departments.name })
+        .from(departments)
+        .orderBy(asc(departments.name));
+      
+      const result = triggerQuestions.map(q => {
+        // For department type questions, use departments as options
+        if (q.questionType === 'department') {
+          return {
+            ...q,
+            options: allDepartments.map(dept => ({
+              id: dept.id,
+              questionId: q.id,
+              optionText: dept.name,
+              order: 0,
+            })),
+          };
+        }
+        return {
+          ...q,
+          options: allOptions.filter(opt => opt.questionId === q.id),
+        };
+      });
       
       res.json(result);
     } catch (error) {
