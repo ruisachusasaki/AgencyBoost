@@ -158,7 +158,7 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
   const invalidateSections = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/task-intake/sections"] });
     expandedSections.forEach(sectionId => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-intake-sections", sectionId, "questions"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/task-intake-sections/${sectionId}/questions`] });
     });
   }, [queryClient, expandedSections]);
 
@@ -214,7 +214,7 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
       return response.json();
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/task-intake-sections", variables.sectionId, "questions"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/task-intake-sections/${variables.sectionId}/questions`] });
       invalidateSections();
     },
   });
@@ -403,7 +403,7 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
       
       const sectionId = source.droppableId.replace('questions-', '');
       queryClient.setQueryData<TaskIntakeQuestion[]>(
-        ["/api/task-intake-sections", sectionId, "questions"],
+        [`/api/task-intake-sections/${sectionId}/questions`],
         (oldData) => {
           if (!oldData) return oldData;
           const items = Array.from(oldData);
@@ -413,7 +413,7 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
         }
       );
       
-      const questionsData = queryClient.getQueryData<TaskIntakeQuestion[]>(["/api/task-intake-sections", sectionId, "questions"]);
+      const questionsData = queryClient.getQueryData<TaskIntakeQuestion[]>([`/api/task-intake-sections/${sectionId}/questions`]);
       if (questionsData) {
         reorderQuestionsMutation.mutate({ 
           sectionId, 
@@ -737,7 +737,7 @@ function SectionRow({
   onAddQuestion,
 }: SectionRowProps) {
   const { data: questions, isLoading } = useQuery<TaskIntakeQuestion[]>({
-    queryKey: ["/api/task-intake-sections", section.id, "questions"],
+    queryKey: [`/api/task-intake-sections/${section.id}/questions`],
     enabled: isExpanded,
   });
 
