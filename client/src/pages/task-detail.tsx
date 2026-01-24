@@ -1312,7 +1312,7 @@ export default function TaskDetail() {
                     data-testid="input-manual-time-date"
                   >
                     {manualTimeDate ? (
-                      format(new Date(manualTimeDate), "MMM d, yyyy")
+                      format(new Date(manualTimeDate + 'T12:00:00'), "MMM d, yyyy")
                     ) : (
                       "Select date"
                     )}
@@ -1322,7 +1322,7 @@ export default function TaskDetail() {
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={manualTimeDate ? new Date(manualTimeDate) : undefined}
+                    selected={manualTimeDate ? new Date(manualTimeDate + 'T12:00:00') : undefined}
                     onSelect={(date) => {
                       if (date) {
                         setManualTimeDate(date.toISOString().split('T')[0]);

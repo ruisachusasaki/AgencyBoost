@@ -1891,6 +1891,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         action: 'update',
         entityType: 'task',
         entityId: taskId,
+        entityName: updatedTask?.title || 'Time Entry',
         details: `Updated time entry ${entryId}: duration=${duration}`,
         timestamp: new Date(),
       });
