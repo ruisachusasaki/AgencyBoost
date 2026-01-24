@@ -69,7 +69,7 @@ import {
   clientRoadmapComments, insertClientRoadmapCommentSchema, clientRoadmapEntries, insertClientRoadmapEntrySchema, staffLinkedEmails,
   surveys, surveyFolders, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers,
   insertSurveySchema, insertSurveyFolderSchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema,
-  taskIntakeForms, taskIntakeSections, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules,
+  taskIntakeForms, taskIntakeSections, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules, taskIntakeSubmissions, taskIntakeAnswers,
   insertTaskIntakeFormSchema, insertTaskIntakeSectionSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema,
   aiIntegrations,
   aiAssistantSettings,
@@ -24168,6 +24168,427 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting assignment rule:", error);
       res.status(500).json({ error: "Failed to delete assignment rule" });
+    }
+  });
+
+  // ==========================================
+  // Task Intake Submission Endpoints
+  // ==========================================
+
+  // POST /api/task-intake/submit - Submit intake form and create task
+  app.post("/api/task-intake/submit", requireAuth(), async (req, res) => {
+    try {
+      const staffId = req.user?.id;
+      if (!staffId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const { formId, answers, visibleSectionIds } = req.body;
+
+      if (!formId || !answers || !visibleSectionIds) {
+        return res.status(400).json({ error: "Missing required fields: formId, answers, visibleSectionIds" });
+      }
+
+      // Step A: Validate submission
+      // Get all questions for the form
+      const questions = await db.select()
+        .from(taskIntakeQuestions)
+        .where(eq(taskIntakeQuestions.formId, formId));
+
+      // Build a map for easy lookup
+      const questionMap = new Map(questions.map(q => [q.id, q]));
+
+      // Check required fields in visible sections
+      const errors: { questionId: string; message: string }[] = [];
+      for (const question of questions) {
+        // Only validate questions in visible sections
+        if (question.sectionId && visibleSectionIds.includes(question.sectionId)) {
+          const answer = answers[question.id];
+          
+          if (question.isRequired) {
+            if (answer === undefined || answer === null || answer === '' || 
+                (Array.isArray(answer) && answer.length === 0)) {
+              errors.push({ questionId: question.id, message: `Required field: ${question.questionText}` });
+            }
+          }
+
+          // Validate format based on question type
+          if (answer !== undefined && answer !== null && answer !== '') {
+            if (question.questionType === 'number' && isNaN(Number(answer))) {
+              errors.push({ questionId: question.id, message: 'Must be a valid number' });
+            }
+            if (question.questionType === 'date' && isNaN(Date.parse(answer))) {
+              errors.push({ questionId: question.id, message: 'Must be a valid date' });
+            }
+            if (question.questionType === 'url' && answer && !/^https?:\/\/.+/.test(answer)) {
+              errors.push({ questionId: question.id, message: 'Must be a valid URL (starting with http:// or https://)' });
+            }
+          }
+        }
+      }
+
+      if (errors.length > 0) {
+        return res.status(400).json({ error: "Validation failed", errors });
+      }
+
+      // Check for duplicate submission (same task name + user in last 60 seconds)
+      const taskNameQuestion = questions.find(q => q.internalLabel === 'task_name');
+      const taskNameAnswer = taskNameQuestion ? answers[taskNameQuestion.id] : null;
+
+      if (taskNameAnswer) {
+        const recentSubmissions = await db.select()
+          .from(taskIntakeSubmissions)
+          .innerJoin(taskIntakeAnswers, eq(taskIntakeAnswers.submissionId, taskIntakeSubmissions.id))
+          .where(
+            and(
+              eq(taskIntakeSubmissions.submittedBy, staffId),
+              eq(taskIntakeSubmissions.formId, formId),
+              gte(taskIntakeSubmissions.submittedAt, new Date(Date.now() - 60000))
+            )
+          )
+          .limit(1);
+
+        if (recentSubmissions.length > 0) {
+          // Check if any of those have the same task name
+          for (const sub of recentSubmissions) {
+            if (sub.task_intake_answers.answerValue === taskNameAnswer && 
+                sub.task_intake_answers.questionId === taskNameQuestion?.id) {
+              return res.status(400).json({ 
+                error: "Duplicate submission detected. Please wait before submitting again." 
+              });
+            }
+          }
+        }
+      }
+
+      // Step B: Create submission record
+      const [submission] = await db.insert(taskIntakeSubmissions)
+        .values({
+          formId,
+          submittedBy: staffId,
+          status: 'pending',
+        })
+        .returning();
+
+      // Create answer records
+      const answerRecords = [];
+      for (const [questionId, answerValue] of Object.entries(answers)) {
+        const question = questionMap.get(questionId);
+        if (question) {
+          const wasVisible = question.sectionId ? visibleSectionIds.includes(question.sectionId) : true;
+          answerRecords.push({
+            submissionId: submission.id,
+            questionId,
+            sectionId: question.sectionId,
+            answerValue: typeof answerValue === 'object' ? JSON.stringify(answerValue) : String(answerValue || ''),
+            wasVisible,
+          });
+        }
+      }
+
+      if (answerRecords.length > 0) {
+        await db.insert(taskIntakeAnswers).values(answerRecords);
+      }
+
+      // Step C: Extract key fields for task
+      const getAnswerByLabel = (label: string): string | null => {
+        const q = questions.find(q => q.internalLabel === label);
+        if (!q) return null;
+        const val = answers[q.id];
+        return val !== undefined ? (typeof val === 'object' ? JSON.stringify(val) : String(val)) : null;
+      };
+
+      const taskTitle = getAnswerByLabel('task_name') || 'Untitled Task';
+      const clientId = getAnswerByLabel('client_select');
+      const dueDateStr = getAnswerByLabel('due_date');
+      const priorityLevel = getAnswerByLabel('priority_level') || 'normal';
+      const department = getAnswerByLabel('department');
+
+      // Map priority level to task priority
+      const priorityMap: Record<string, string> = {
+        'standard': 'normal',
+        'rush': 'high',
+        'asap': 'urgent',
+      };
+      const priority = priorityMap[priorityLevel?.toLowerCase()] || 'normal';
+
+      // Step D: Create the task
+      const [newTask] = await db.insert(tasks)
+        .values({
+          title: taskTitle,
+          description: '', // Description will be generated in Step 8
+          status: 'todo',
+          priority,
+          clientId: clientId && clientId !== 'no_client' ? clientId : null,
+          dueDate: dueDateStr ? new Date(dueDateStr) : null,
+          // Store department in metadata or use categoryId if applicable
+        })
+        .returning();
+
+      // Step E: Update submission with taskId
+      await db.update(taskIntakeSubmissions)
+        .set({ 
+          taskId: newTask.id,
+          status: 'task_created',
+          updatedAt: new Date(),
+        })
+        .where(eq(taskIntakeSubmissions.id, submission.id));
+
+      // Step F: Return response
+      res.json({
+        success: true,
+        submissionId: submission.id,
+        taskId: newTask.id,
+        taskUrl: `/tasks/${newTask.id}`,
+      });
+
+    } catch (error) {
+      console.error("Error submitting task intake form:", error);
+      res.status(500).json({ error: "Failed to submit form" });
+    }
+  });
+
+  // GET /api/task-intake/submissions/:submissionId - Get submission with answers grouped by section
+  app.get("/api/task-intake/submissions/:submissionId", requireAuth(), async (req, res) => {
+    try {
+      const { submissionId } = req.params;
+
+      // Get the submission
+      const [submission] = await db.select({
+        id: taskIntakeSubmissions.id,
+        taskId: taskIntakeSubmissions.taskId,
+        formId: taskIntakeSubmissions.formId,
+        submittedBy: taskIntakeSubmissions.submittedBy,
+        submittedAt: taskIntakeSubmissions.submittedAt,
+        status: taskIntakeSubmissions.status,
+      })
+        .from(taskIntakeSubmissions)
+        .where(eq(taskIntakeSubmissions.id, submissionId));
+
+      if (!submission) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+
+      // Get submitter info
+      const [submitter] = await db.select({
+        id: staff.id,
+        name: sql<string>`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, ${staff.email})`,
+      })
+        .from(staff)
+        .where(eq(staff.id, submission.submittedBy));
+
+      // Get all answers for this submission
+      const answersData = await db.select({
+        answerId: taskIntakeAnswers.id,
+        questionId: taskIntakeAnswers.questionId,
+        sectionId: taskIntakeAnswers.sectionId,
+        answerValue: taskIntakeAnswers.answerValue,
+        wasVisible: taskIntakeAnswers.wasVisible,
+        questionText: taskIntakeQuestions.questionText,
+        questionType: taskIntakeQuestions.questionType,
+        internalLabel: taskIntakeQuestions.internalLabel,
+        questionOrder: taskIntakeQuestions.order,
+      })
+        .from(taskIntakeAnswers)
+        .innerJoin(taskIntakeQuestions, eq(taskIntakeAnswers.questionId, taskIntakeQuestions.id))
+        .where(eq(taskIntakeAnswers.submissionId, submissionId))
+        .orderBy(asc(taskIntakeQuestions.order));
+
+      // Get sections for grouping
+      const sections = await db.select({
+        id: taskIntakeSections.id,
+        sectionName: taskIntakeSections.sectionName,
+        orderIndex: taskIntakeSections.orderIndex,
+      })
+        .from(taskIntakeSections)
+        .where(eq(taskIntakeSections.formId, submission.formId))
+        .orderBy(asc(taskIntakeSections.orderIndex));
+
+      // Group answers by section
+      const sectionMap = new Map<string, {
+        sectionId: string;
+        sectionName: string;
+        wasVisible: boolean;
+        answers: Array<{
+          questionId: string;
+          questionText: string;
+          internalLabel: string | null;
+          answerValue: string | null;
+          questionType: string;
+        }>;
+      }>();
+
+      // Initialize sections
+      for (const section of sections) {
+        sectionMap.set(section.id, {
+          sectionId: section.id,
+          sectionName: section.sectionName,
+          wasVisible: false, // Will be set based on answers
+          answers: [],
+        });
+      }
+
+      // Populate answers
+      for (const answer of answersData) {
+        if (answer.sectionId) {
+          const section = sectionMap.get(answer.sectionId);
+          if (section) {
+            if (answer.wasVisible) {
+              section.wasVisible = true;
+            }
+            section.answers.push({
+              questionId: answer.questionId,
+              questionText: answer.questionText,
+              internalLabel: answer.internalLabel,
+              answerValue: answer.answerValue,
+              questionType: answer.questionType,
+            });
+          }
+        }
+      }
+
+      // Convert to array and filter to only sections with answers
+      const sectionsWithAnswers = Array.from(sectionMap.values())
+        .filter(s => s.answers.length > 0);
+
+      res.json({
+        id: submission.id,
+        taskId: submission.taskId,
+        submittedBy: submitter || { id: submission.submittedBy, name: 'Unknown User' },
+        submittedAt: submission.submittedAt,
+        status: submission.status,
+        sections: sectionsWithAnswers,
+      });
+
+    } catch (error) {
+      console.error("Error fetching submission:", error);
+      res.status(500).json({ error: "Failed to fetch submission" });
+    }
+  });
+
+  // GET /api/tasks/:taskId/intake-submission - Get submission by task ID
+  app.get("/api/tasks/:taskId/intake-submission", requireAuth(), async (req, res) => {
+    try {
+      const { taskId } = req.params;
+
+      // Find submission by taskId
+      const [submission] = await db.select({
+        id: taskIntakeSubmissions.id,
+      })
+        .from(taskIntakeSubmissions)
+        .where(eq(taskIntakeSubmissions.taskId, taskId));
+
+      if (!submission) {
+        return res.status(404).json({ error: "No intake submission found for this task" });
+      }
+
+      // Redirect to the main submission endpoint logic
+      // Reuse the same logic by making an internal call
+      const submissionId = submission.id;
+
+      // Get the full submission data
+      const [fullSubmission] = await db.select({
+        id: taskIntakeSubmissions.id,
+        taskId: taskIntakeSubmissions.taskId,
+        formId: taskIntakeSubmissions.formId,
+        submittedBy: taskIntakeSubmissions.submittedBy,
+        submittedAt: taskIntakeSubmissions.submittedAt,
+        status: taskIntakeSubmissions.status,
+      })
+        .from(taskIntakeSubmissions)
+        .where(eq(taskIntakeSubmissions.id, submissionId));
+
+      // Get submitter info
+      const [submitter] = await db.select({
+        id: staff.id,
+        name: sql<string>`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, ${staff.email})`,
+      })
+        .from(staff)
+        .where(eq(staff.id, fullSubmission.submittedBy));
+
+      // Get all answers
+      const answersData = await db.select({
+        answerId: taskIntakeAnswers.id,
+        questionId: taskIntakeAnswers.questionId,
+        sectionId: taskIntakeAnswers.sectionId,
+        answerValue: taskIntakeAnswers.answerValue,
+        wasVisible: taskIntakeAnswers.wasVisible,
+        questionText: taskIntakeQuestions.questionText,
+        questionType: taskIntakeQuestions.questionType,
+        internalLabel: taskIntakeQuestions.internalLabel,
+        questionOrder: taskIntakeQuestions.order,
+      })
+        .from(taskIntakeAnswers)
+        .innerJoin(taskIntakeQuestions, eq(taskIntakeAnswers.questionId, taskIntakeQuestions.id))
+        .where(eq(taskIntakeAnswers.submissionId, submissionId))
+        .orderBy(asc(taskIntakeQuestions.order));
+
+      // Get sections
+      const sections = await db.select({
+        id: taskIntakeSections.id,
+        sectionName: taskIntakeSections.sectionName,
+        orderIndex: taskIntakeSections.orderIndex,
+      })
+        .from(taskIntakeSections)
+        .where(eq(taskIntakeSections.formId, fullSubmission.formId))
+        .orderBy(asc(taskIntakeSections.orderIndex));
+
+      // Group by section
+      const sectionMap = new Map<string, {
+        sectionId: string;
+        sectionName: string;
+        wasVisible: boolean;
+        answers: Array<{
+          questionId: string;
+          questionText: string;
+          internalLabel: string | null;
+          answerValue: string | null;
+          questionType: string;
+        }>;
+      }>();
+
+      for (const section of sections) {
+        sectionMap.set(section.id, {
+          sectionId: section.id,
+          sectionName: section.sectionName,
+          wasVisible: false,
+          answers: [],
+        });
+      }
+
+      for (const answer of answersData) {
+        if (answer.sectionId) {
+          const section = sectionMap.get(answer.sectionId);
+          if (section) {
+            if (answer.wasVisible) {
+              section.wasVisible = true;
+            }
+            section.answers.push({
+              questionId: answer.questionId,
+              questionText: answer.questionText,
+              internalLabel: answer.internalLabel,
+              answerValue: answer.answerValue,
+              questionType: answer.questionType,
+            });
+          }
+        }
+      }
+
+      const sectionsWithAnswers = Array.from(sectionMap.values())
+        .filter(s => s.answers.length > 0);
+
+      res.json({
+        id: fullSubmission.id,
+        taskId: fullSubmission.taskId,
+        submittedBy: submitter || { id: fullSubmission.submittedBy, name: 'Unknown User' },
+        submittedAt: fullSubmission.submittedAt,
+        status: fullSubmission.status,
+        sections: sectionsWithAnswers,
+      });
+
+    } catch (error) {
+      console.error("Error fetching task intake submission:", error);
+      res.status(500).json({ error: "Failed to fetch intake submission" });
     }
   });
 
