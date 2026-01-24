@@ -3047,7 +3047,7 @@ export default function Reports() {
                                                   const targetUserId = isAllUsers ? row.id : userIdFilter;
                                                   const taskIdFilter = isAllUsers ? null : row.id;
                                                   
-                                                  const response = await fetch(`/api/reports/time-entries/${targetUserId}/${dateString}`);
+                                                  const response = await fetch(`/api/reports/time-entries/${targetUserId}/${dateString}`, { credentials: 'include' });
                                                   if (!response.ok) {
                                                     const errorText = await response.text();
                                                     toast({
@@ -4733,6 +4733,7 @@ export default function Reports() {
                       const response = await fetch(url, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
                         body: JSON.stringify({ duration: editedMinutes })
                       });
                       console.log("DEBUG save - response status:", response.status);
