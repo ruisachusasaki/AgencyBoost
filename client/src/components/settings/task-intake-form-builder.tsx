@@ -599,7 +599,7 @@ export function TaskIntakeFormBuilder() {
       </Accordion>
       
       <Dialog open={isQuestionDialogOpen} onOpenChange={setIsQuestionDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+        <DialogContent key={editingQuestion?.id || 'new'} className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle>
             <DialogDescription>
