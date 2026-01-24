@@ -27,6 +27,7 @@ import TaskForm from "@/components/forms/task-form";
 import TaskComments from "@/components/task-comments";
 import TaskActivities from "@/components/task-activities";
 import TaskDescriptionCard from "@/components/task-description-card";
+import { TaskIntakeSubmissionViewer } from "@/components/task-intake-submission-viewer";
 import TaskAttachments from "@/components/task-attachments";
 import { SubTaskList } from "@/components/sub-task-list";
 import { TaskPath } from "@/components/task-path";
@@ -585,6 +586,7 @@ export default function TaskDetail() {
                 className="text-2xl font-bold bg-transparent border-0 shadow-none p-0 h-auto focus-visible:ring-1 focus-visible:ring-primary"
                 autoFocus
               />
+    
             ) : (
               <h1 
                 className="text-2xl font-bold text-slate-900 cursor-pointer hover:text-slate-700 transition-colors hover:bg-slate-100 p-1 rounded"
@@ -1127,8 +1129,12 @@ export default function TaskDetail() {
           {/* Task Description */}
           <TaskDescriptionCard 
             task={task} 
-            onUpdate={updateTask} 
+            onUpdate={updateTask}
           />
+
+          {/* Intake Form Submission - shows if task was created via intake form */}
+          <TaskIntakeSubmissionViewer taskId={taskId!} />
+
 
           {/* Sub-tasks - ClickUp-style hierarchical tasks (up to 5 levels deep) */}
           <Card>
@@ -1247,7 +1253,6 @@ export default function TaskDetail() {
                     </FormItem>
                   )}
                 />
-                
                 <FormField
                   control={templateForm.control}
                   name="description"
