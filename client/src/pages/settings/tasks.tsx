@@ -50,7 +50,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskCategorySchema, insertTeamWorkflowSchema } from "@shared/schema";
 import { TaskIntakeFormBuilder } from "@/components/settings/task-intake-form-builder";
-import { TaskIntakeAssignmentRules } from "@/components/settings/task-intake-assignment-rules";
 import { z } from "zod";
 
 // Color options for task statuses and priorities
@@ -852,10 +851,6 @@ export default function TasksSettingsPage() {
             <ClipboardList className="h-4 w-4" />
             Intake Form
           </TabsTrigger>
-          <TabsTrigger value="assignment-rules" className="flex items-center gap-2">
-            <ArrowUpDown className="h-4 w-4" />
-            Assignment Rules
-          </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             Settings
@@ -1395,10 +1390,6 @@ export default function TasksSettingsPage() {
         {/* Task Intake Form Tab */}
         <TabsContent value="intake-form" className="space-y-6">
           <TaskIntakeFormBuilder />
-        </TabsContent>
-        {/* Assignment Rules Tab */}
-        <TabsContent value="assignment-rules" className="space-y-6">
-          <TaskIntakeAssignmentRules />
         </TabsContent>
 
 
