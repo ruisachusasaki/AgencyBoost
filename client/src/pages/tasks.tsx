@@ -523,6 +523,8 @@ export default function Tasks() {
     return tasks.filter(task => {
       const results = filter.conditions.map(condition => {
         if (!condition.field || !condition.operator) return true;
+        // Skip timeFilter - it's handled separately via UI state
+        if (condition.field === 'timeFilter') return true;
 
         const getValue = (field: string): string => {
           switch (field) {
