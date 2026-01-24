@@ -23295,6 +23295,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch sections" });
     }
   });
+  // Get all sections with visibility summary for debugging
+  app.get("/api/task-intake/sections/debug", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const sections = await db
+        .select()
+        .from(taskIntakeSections)
+        .orderBy(asc(taskIntakeSections.orderIndex));
+      
+      // Get all TRIGGER questions for reference
+      const triggerQuestions = await db
+        .select({
+          id: taskIntakeQuestions.id,
+          internalLabel: taskIntakeQuestions.internalLabel,
+        })
+        .from(taskIntakeQuestions)
+        .where(sql`${taskIntakeQuestions.internalLabel} LIKE 'TRIGGER%'`);
+      
+      const triggerMap = new Map(triggerQuestions.map(q => [q.id, q.internalLabel]));
+      
+      // Add human-readable visibility summary
+      const sectionsWithSummary = sections.map(section => {
+        let visibilitySummary = "Always visible";
+        
+        if (section.visibilityConditions) {
+          const vc = section.visibilityConditions as { operator: string; conditions: Array<{ questionId: string; value: string }> };
+          const conditions = vc.conditions.map(c => {
+            const triggerLabel = triggerMap.get(c.questionId) || c.questionId;
+            return `${triggerLabel} = "${c.value}"`;
+          });
+          visibilitySummary = `${vc.operator}: ${conditions.join(vc.operator === 'AND' ? ' AND ' : ' OR ')}`;
+        }
+        
+        return {
+          ...section,
+          visibilitySummary,
+        };
+      });
+      
+      res.json({
+        sections: sectionsWithSummary,
+        triggerQuestions: triggerQuestions.map(q => ({
+          id: q.id,
+          label: q.internalLabel,
+        })),
+        stats: {
+          totalSections: sections.length,
+          conditionalSections: sections.filter(s => s.visibilityConditions).length,
+          alwaysVisible: sections.filter(s => !s.visibilityConditions).length,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching sections debug info:", error);
+      res.status(500).json({ error: "Failed to fetch sections debug info" });
+    }
+  });
   
   // Seed all sections for the Task Intake Form (admin utility - idempotent)
   app.post("/api/task-intake/sections/seed", requireAuth(), requireAdmin(), async (req, res) => {

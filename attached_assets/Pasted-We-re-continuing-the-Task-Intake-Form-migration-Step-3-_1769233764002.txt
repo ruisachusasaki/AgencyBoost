@@ -1,0 +1,511 @@
+We're continuing the Task Intake Form migration. Step 3 (all questions seeded) is complete.
+
+## CONTEXT
+
+This is Step 4: Wire up section visibility conditions. We have 23 sections and ~130 questions. Questions with "TRIGGER" in their internalLabel control which sections appear.
+
+## HOW VISIBILITY CONDITIONS WORK
+
+Each section has a `visibilityConditions` JSONB field. When null, the section always shows. When populated, the section only shows if the conditions evaluate to true.
+
+Structure:
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "uuid-of-trigger-question",
+      "operator": "equals",
+      "value": "Option Text Exactly As Stored"
+    }
+  ]
+}
+```
+
+For OR logic (section shows if ANY condition is true):
+```json
+{
+  "operator": "OR",
+  "conditions": [
+    { "questionId": "uuid-1", "operator": "equals", "value": "Yes" },
+    { "questionId": "uuid-2", "operator": "equals", "value": "Yes" }
+  ]
+}
+```
+
+## WHAT TO DO
+
+### 1. First, query all TRIGGER questions
+
+Find all questions where internalLabel contains "TRIGGER". You'll need their IDs and the exact option values.
+
+Expected TRIGGER questions:
+- TRIGGER - priority_level (options: Low, Medium, High, Urgent)
+- TRIGGER - department (options: Creative, DevOps, Data)
+- TRIGGER - creative_type (options: Copywriting, Graphic, Landing Page, Video, Motion Graphic)
+- TRIGGER - copy_live_event (options: Yes, No)
+- TRIGGER - graphic_live_event (options: Yes, No)
+- TRIGGER - lp_live_event (options: Yes, No)
+- TRIGGER - video_has_storyboard (options: Yes, No)
+- TRIGGER - video_live_event (options: Yes, No)
+- TRIGGER - motion_live_event (options: Yes, No)
+- TRIGGER - devops_type (options: Landing Page, Webinar, Troubleshooting, Phone Integration, Market Launch, A2P Registration)
+- TRIGGER - devops_lp_scope (options: Single Page, Full Funnel, Funnel with Product Sales)
+- TRIGGER - devops_lp_ab_test (options: Yes, No)
+- TRIGGER - data_type (options: New Dashboard, New Dashboard Page, One-Off Report, Update Existing Report, Data Pull Request, Test Reporting, Other)
+
+### 2. Update each section's visibilityConditions
+
+Use the TRIGGER question IDs to set conditions. Here's the mapping:
+
+---
+
+**ALWAYS VISIBLE (keep visibilityConditions as null):**
+- Task Basics
+- Department Selection
+
+---
+
+**CREATIVE BRANCH:**
+
+**"Creative Type" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "Creative"
+    }
+  ]
+}
+```
+
+**"Creative - Copy Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "Creative"
+    },
+    {
+      "questionId": "<ID of TRIGGER - creative_type>",
+      "operator": "equals",
+      "value": "Copywriting"
+    }
+  ]
+}
+```
+
+**"Creative - Graphic Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "Creative"
+    },
+    {
+      "questionId": "<ID of TRIGGER - creative_type>",
+      "operator": "equals",
+      "value": "Graphic"
+    }
+  ]
+}
+```
+
+**"Creative - Landing Page Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "Creative"
+    },
+    {
+      "questionId": "<ID of TRIGGER - creative_type>",
+      "operator": "equals",
+      "value": "Landing Page"
+    }
+  ]
+}
+```
+
+**"Creative - Video Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "Creative"
+    },
+    {
+      "questionId": "<ID of TRIGGER - creative_type>",
+      "operator": "equals",
+      "value": "Video"
+    }
+  ]
+}
+```
+
+**"Creative - Motion Graphic Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "Creative"
+    },
+    {
+      "questionId": "<ID of TRIGGER - creative_type>",
+      "operator": "equals",
+      "value": "Motion Graphic"
+    }
+  ]
+}
+```
+
+**"Creative - Live Event Details" section:**
+This one is special - it shows if ANY of the live event trigger questions = Yes
+```json
+{
+  "operator": "OR",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - copy_live_event>",
+      "operator": "equals",
+      "value": "Yes"
+    },
+    {
+      "questionId": "<ID of TRIGGER - graphic_live_event>",
+      "operator": "equals",
+      "value": "Yes"
+    },
+    {
+      "questionId": "<ID of TRIGGER - lp_live_event>",
+      "operator": "equals",
+      "value": "Yes"
+    },
+    {
+      "questionId": "<ID of TRIGGER - video_live_event>",
+      "operator": "equals",
+      "value": "Yes"
+    },
+    {
+      "questionId": "<ID of TRIGGER - motion_live_event>",
+      "operator": "equals",
+      "value": "Yes"
+    }
+  ]
+}
+```
+
+---
+
+**DEVOPS BRANCH:**
+
+**"DevOps Type" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "DevOps"
+    }
+  ]
+}
+```
+
+**"DevOps - Landing Page Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "DevOps"
+    },
+    {
+      "questionId": "<ID of TRIGGER - devops_type>",
+      "operator": "equals",
+      "value": "Landing Page"
+    }
+  ]
+}
+```
+
+**"DevOps - Landing Page A/B Test Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "DevOps"
+    },
+    {
+      "questionId": "<ID of TRIGGER - devops_type>",
+      "operator": "equals",
+      "value": "Landing Page"
+    },
+    {
+      "questionId": "<ID of TRIGGER - devops_lp_ab_test>",
+      "operator": "equals",
+      "value": "Yes"
+    }
+  ]
+}
+```
+
+**"DevOps - Webinar Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "DevOps"
+    },
+    {
+      "questionId": "<ID of TRIGGER - devops_type>",
+      "operator": "equals",
+      "value": "Webinar"
+    }
+  ]
+}
+```
+
+**"DevOps - Troubleshooting Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "DevOps"
+    },
+    {
+      "questionId": "<ID of TRIGGER - devops_type>",
+      "operator": "equals",
+      "value": "Troubleshooting"
+    }
+  ]
+}
+```
+
+**"DevOps - Phone Integration Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "DevOps"
+    },
+    {
+      "questionId": "<ID of TRIGGER - devops_type>",
+      "operator": "equals",
+      "value": "Phone Integration"
+    }
+  ]
+}
+```
+
+**"DevOps - Market Launch Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "DevOps"
+    },
+    {
+      "questionId": "<ID of TRIGGER - devops_type>",
+      "operator": "equals",
+      "value": "Market Launch"
+    }
+  ]
+}
+```
+
+**"DevOps - A2P Registration Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "DevOps"
+    },
+    {
+      "questionId": "<ID of TRIGGER - devops_type>",
+      "operator": "equals",
+      "value": "A2P Registration"
+    }
+  ]
+}
+```
+
+---
+
+**DATA BRANCH:**
+
+**"Data Task Type" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "Data"
+    }
+  ]
+}
+```
+
+**"Data - Test Reporting Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "Data"
+    },
+    {
+      "questionId": "<ID of TRIGGER - data_type>",
+      "operator": "equals",
+      "value": "Test Reporting"
+    }
+  ]
+}
+```
+
+**"Data - New Dashboard Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "Data"
+    },
+    {
+      "questionId": "<ID of TRIGGER - data_type>",
+      "operator": "equals",
+      "value": "New Dashboard"
+    }
+  ]
+}
+```
+
+**"Data - New Dashboard Page Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "Data"
+    },
+    {
+      "questionId": "<ID of TRIGGER - data_type>",
+      "operator": "equals",
+      "value": "New Dashboard Page"
+    }
+  ]
+}
+```
+
+**"Data - One-Off Report Details" section:**
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "Data"
+    },
+    {
+      "questionId": "<ID of TRIGGER - data_type>",
+      "operator": "equals",
+      "value": "One-Off Report"
+    }
+  ]
+}
+```
+
+**"Data - Extra Information" section:**
+This shows for ALL Data tasks, so just needs department = Data
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "<ID of TRIGGER - department>",
+      "operator": "equals",
+      "value": "Data"
+    }
+  ]
+}
+```
+
+---
+
+### 3. Create a script to apply these updates
+
+Write a script that:
+1. Queries all TRIGGER questions to get their IDs
+2. Updates each section with the appropriate visibilityConditions
+3. Can be re-run safely (idempotent)
+
+### 4. Create a utility endpoint to verify
+
+Add or update GET /api/task-intake/sections to include:
+- The section's visibilityConditions
+- A human-readable summary of what triggers it (for debugging)
+
+## VERIFICATION
+
+After running, query sections and verify:
+1. "Task Basics" and "Department Selection" have null visibilityConditions
+2. "Creative Type" section shows when department = Creative
+3. "Creative - Video Details" shows when department = Creative AND creative_type = Video
+4. "Creative - Live Event Details" has OR logic across 5 trigger questions
+5. All DevOps sections have proper chained conditions
+6. All Data sections have proper chained conditions
+
+## DO NOT
+
+- Do not build the visibility evaluation logic in the frontend yet (that's Step 6)
+- Do not modify the UI yet (that's Step 5)
+- Do not add intra-section logic yet (like "Why urgent?" showing only when Priority = Urgent) - we'll handle that separately
+
+Please implement this step and confirm when complete. List any sections where you weren't sure about the visibility logic.
