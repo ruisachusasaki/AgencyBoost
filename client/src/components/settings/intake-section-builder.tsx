@@ -104,6 +104,7 @@ type TriggerQuestion = {
 
 const questionTypeIcons: Record<string, any> = {
   single_choice: Circle,
+  multi_choice: CheckCircle2,
   multiple_choice: CheckCircle2,
   text: Type,
   textarea: Type,

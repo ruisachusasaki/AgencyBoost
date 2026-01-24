@@ -5,9 +5,10 @@ import {
   Plus, Edit, Trash2, GripVertical, Save, X, ChevronDown, ChevronUp, 
   MessageSquare, Hash, Calendar, Type, ListChecks, ArrowRight, Copy,
   CheckCircle2, Circle, ToggleLeft, Building2, Users, Eye, ChevronLeft,
-  Check, RotateCcw
+  Check, RotateCcw, LayoutGrid, List
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { IntakeSectionBuilder } from "./intake-section-builder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -160,8 +161,10 @@ export function TaskIntakeFormBuilder() {
   const [isQuestionDialogOpen, setIsQuestionDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<TaskIntakeQuestion | null>(null);
   const [optionInputs, setOptionInputs] = useState<string[]>([""]);
-  const [expandedSections, setExpandedSections] = useState<string[]>(["questions"]);
+  const [expandedSections, setExpandedSections] = useState<string[]>(["sections"]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"sections" | "flat">("sections");
+  const [targetSectionId, setTargetSectionId] = useState<string | null>(null);
   
   const { data: forms, isLoading: formsLoading } = useQuery<TaskIntakeForm[]>({
     queryKey: ["/api/task-intake-forms"],
@@ -209,6 +212,7 @@ export function TaskIntakeFormBuilder() {
   
   const invalidateFormQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/task-intake/sections"] });
     if (formId) {
       queryClient.invalidateQueries({ queryKey: [`/api/task-intake-forms/${formId}`] });
     }
@@ -292,7 +296,7 @@ export function TaskIntakeFormBuilder() {
     });
   };
   
-  const handleOpenQuestionDialog = (question?: TaskIntakeQuestion) => {
+  const handleOpenQuestionDialog = (question?: TaskIntakeQuestion, sectionId?: string) => {
     if (question) {
       setEditingQuestion(question);
       form.reset({
@@ -305,13 +309,15 @@ export function TaskIntakeFormBuilder() {
         allowOther: question.settings?.allowOther || false,
       });
       setOptionInputs(
-        question.options.length > 0
+        question.options?.length > 0
           ? question.options.map((o) => o.optionText)
           : [""]
       );
+      setTargetSectionId(question.sectionId || sectionId || null);
     } else {
       setEditingQuestion(null);
       resetQuestionForm();
+      setTargetSectionId(sectionId || null);
     }
     setIsQuestionDialogOpen(true);
   };
@@ -349,7 +355,10 @@ export function TaskIntakeFormBuilder() {
     if (editingQuestion) {
       updateQuestionMutation.mutate({ questionId: editingQuestion.id, data: payload });
     } else if (activeForm) {
-      createQuestionMutation.mutate({ formId: activeForm.id, data: payload });
+      createQuestionMutation.mutate({ 
+        formId: activeForm.id, 
+        data: { ...payload, sectionId: targetSectionId } 
+      });
     }
   };
   
@@ -446,11 +455,26 @@ export function TaskIntakeFormBuilder() {
       </div>
       
       <Accordion type="multiple" value={expandedSections} onValueChange={setExpandedSections}>
+        <AccordionItem value="sections">
+          <AccordionTrigger className="text-base font-medium">
+            <div className="flex items-center gap-2">
+              <LayoutGrid className="h-5 w-5" />
+              Sections & Questions
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <IntakeSectionBuilder 
+              formId={activeForm.id}
+              onOpenQuestionDialog={handleOpenQuestionDialog}
+            />
+          </AccordionContent>
+        </AccordionItem>
+        
         <AccordionItem value="questions">
           <AccordionTrigger className="text-base font-medium">
             <div className="flex items-center gap-2">
-              <ListChecks className="h-5 w-5" />
-              Questions ({questions.length})
+              <List className="h-5 w-5" />
+              All Questions (Flat View) ({questions.length})
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -458,7 +482,7 @@ export function TaskIntakeFormBuilder() {
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-center">
                   <CardDescription>
-                    Each question appears on its own slide. Drag to reorder.
+                    All questions in a flat list. Drag to reorder within the form.
                   </CardDescription>
                   <Button size="sm" onClick={() => handleOpenQuestionDialog()}>
                     <Plus className="h-4 w-4 mr-1" />
