@@ -1,0 +1,414 @@
+We're continuing the Task Intake Form migration. Step 2 (sections seeded) is complete.
+
+## CONTEXT
+
+This is Step 3: Seed all questions into their sections. We have 23 sections. Now we populate them with questions.
+
+## IMPORTANT INSTRUCTIONS
+
+1. Look up each section by sectionName to get its ID - do NOT hardcode UUIDs
+2. For each question, set the sectionId to link it to the correct section
+3. Use orderIndex starting at 0 within each section, incrementing by 10
+4. Create options in task_intake_options for any single_choice or multi_choice questions
+5. Mark questions as isRequired: true unless noted otherwise
+6. Some questions will be "trigger questions" that control section visibility - add internalLabel: "TRIGGER" to these so we can find them in Step 4
+
+## QUESTION TYPES REFERENCE
+
+- "text" - single line text input
+- "textarea" - multi-line text input  
+- "single_choice" - radio buttons / dropdown (create options)
+- "multi_choice" - checkboxes (create options)
+- "number" - numeric input
+- "date" - date picker
+- "url" - URL input (text with URL validation)
+
+## SEED THE FOLLOWING QUESTIONS
+
+### SECTION: "Task Basics"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | What is the name of this task? | text | true | - | task_name |
+| 10 | Is this a personal task or team task? | single_choice | true | Personal, Team | task_scope |
+| 20 | Which client is this for? | single_choice | true | [Note: This should pull from clients table dynamically - for now create with placeholder option "Select Client"] | client_select |
+| 30 | What is the due date? | date | false | - | due_date |
+| 40 | What is the priority level? | single_choice | true | Low, Medium, High, Urgent | TRIGGER - priority_level |
+| 50 | Why is this urgent? What's driving the deadline? | textarea | true | - | urgent_reason |
+
+Note: Question 50 (urgent reason) should have a settings field indicating it only shows when priority = Urgent. We'll handle this with intra-section logic later, but for now just create it.
+
+---
+
+### SECTION: "Department Selection"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Which department is this task for? | single_choice | true | Creative, DevOps, Data | TRIGGER - department |
+
+---
+
+### SECTION: "Creative Type"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | What type of creative is needed? | single_choice | true | Copywriting, Graphic, Landing Page, Video, Motion Graphic | TRIGGER - creative_type |
+| 10 | What KPI are we trying to improve? | text | false | - | creative_kpi |
+| 20 | Link to Google Drive location for RAW files | url | false | - | raw_files_link |
+| 30 | Link to Google Drive location for APPROVED files | url | false | - | approved_files_link |
+| 40 | Canva link (if applicable) | url | false | - | canva_link |
+| 50 | Loom link (if applicable) | url | false | - | loom_link |
+| 60 | What's the CTA (Call to Action)? | text | false | - | creative_cta |
+| 70 | Who is the desired audience? | textarea | false | - | creative_audience |
+
+---
+
+### SECTION: "Creative - Copy Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | How many copy variations do you need? | number | true | - | copy_variations_count |
+| 10 | Where will this copy be used? | multi_choice | true | Advertising (limited character count), Landing Pages, Social Media Organic Post, Email, Print, Other | copy_usage_location |
+| 20 | If "Other" selected above, please explain | text | false | - | copy_usage_other |
+| 30 | Any legal or compliance requirements? (Disclaimers, restricted phrases, etc.) | textarea | false | - | copy_legal_requirements |
+| 40 | Can you provide an example of copy you like? | textarea | false | - | copy_example |
+| 50 | Is this for a live event client? | single_choice | true | Yes, No | TRIGGER - copy_live_event |
+
+---
+
+### SECTION: "Creative - Graphic Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Where will this graphic be used? | multi_choice | true | Landing Pages, Social Media Organic Post, Email, Print, Other | graphic_usage_location |
+| 10 | If "Other" selected above, please provide details | text | false | - | graphic_usage_other |
+| 20 | What graphic size(s) are needed? | multi_choice | true | 16:9 (Horizontal) - YouTube/Website, 9:16 (Vertical) - Reels/TikTok/Shorts, 1:1 (Square) - Instagram/Facebook Feed, 4:5 (Portrait) - Facebook/Instagram, Custom | graphic_sizes |
+| 30 | If "Custom" selected, what are the dimensions? | text | false | - | graphic_custom_size |
+| 40 | What file format(s) are needed? | multi_choice | true | PNG (Transparent background), WEBP (Smaller file size), PDF (Print/high-res), Other | graphic_formats |
+| 50 | If "Other" format, please explain | text | false | - | graphic_format_other |
+| 60 | How many graphics do you need? | number | true | - | graphic_count |
+| 70 | Is this for a live event client? | single_choice | true | Yes, No | TRIGGER - graphic_live_event |
+
+---
+
+### SECTION: "Creative - Landing Page Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Would you like the creative team to make improvements or replicate control? | single_choice | true | Improve, Replicate | lp_creative_approach |
+| 10 | Engager Link to Landing Page | url | false | - | lp_engager_link |
+| 20 | Link to Save LP Graphics | url | false | - | lp_graphics_save_link |
+| 30 | CRO Evaluation Doc Link | url | false | - | lp_cro_doc |
+| 40 | What is the page type? | single_choice | true | Lead Generation, Sales Page, Webinar/Event Registration, Product Page, Other | lp_page_type |
+| 50 | If "Other" page type, please explain | text | false | - | lp_page_type_other |
+| 60 | Where will this landing page be used? | multi_choice | true | Paid Ads, Organic Traffic, Email Campaign, Social Media, Other | lp_traffic_source |
+| 70 | If "Other" traffic source, please explain | text | false | - | lp_traffic_other |
+| 80 | How many variations do you need? | number | true | - | lp_variation_count |
+| 90 | Top Competitors' Landing Pages (if known) | textarea | false | - | lp_competitors |
+| 100 | What social proof is available? | multi_choice | false | Testimonials, Case Studies, Trust Badges, Video Proof, Media Mentions | lp_social_proof |
+| 110 | Links to social proof assets | textarea | false | - | lp_social_proof_links |
+| 120 | Do you have the copy ready? | single_choice | true | Yes, No - use placeholder | lp_copy_ready |
+| 130 | If yes, link to copy | url | false | - | lp_copy_link |
+| 140 | Example Landing Page (if applicable) | url | false | - | lp_example |
+| 150 | Opt-In or Checkout Element | single_choice | true | Opt-In Form (on page), Opt-In Form (separate step), Checkout (on page), Checkout (separate step) | lp_conversion_element |
+| 160 | If separate step, provide link or funnel position details | text | false | - | lp_separate_step_details |
+| 170 | Confirmation required after opt-in or checkout? (email, phone, etc.) | textarea | false | - | lp_confirmation_details |
+| 180 | Is a separate Thank You / Confirmation page needed? | single_choice | true | Yes, No - confirmation handled another way | lp_thankyou_needed |
+| 190 | If yes, details on messaging & additional CTAs | textarea | false | - | lp_thankyou_details |
+| 200 | Link to Images/Video for Landing Page | url | false | - | lp_media_link |
+| 210 | Process Map Link (Lucidchart, etc.) | url | false | - | lp_process_map |
+| 220 | Is this for a live event client? | single_choice | true | Yes, No | TRIGGER - lp_live_event |
+
+---
+
+### SECTION: "Creative - Video Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Google Drive Link to Script & Shot List | url | true | - | video_script_link |
+| 10 | Google Drive Link for Working File | url | false | - | video_working_link |
+| 20 | Google Drive Link for Final Cut | url | false | - | video_final_link |
+| 30 | Should the CTA be included in the video? | single_choice | true | Yes, No | video_include_cta |
+| 40 | Do you have a storyboard? | single_choice | true | Yes, No | TRIGGER - video_has_storyboard |
+| 50 | Would you like a storyboard created? | single_choice | true | Yes, No | video_want_storyboard |
+| 60 | How many video variations do you need? | number | true | - | video_variation_count |
+| 70 | Where will this video be used? | multi_choice | true | Ads, Landing Page, Social Media/Organic, Other | video_usage |
+| 80 | If "Other" usage, please explain | text | false | - | video_usage_other |
+| 90 | What aspect ratio is needed? | single_choice | true | 16:9 (Horizontal) - YouTube/Website, 9:16 (Vertical) - Reels/TikTok/Shorts, 1:1 (Square) - Instagram/Facebook Feed, 4:5 (Portrait) - Instagram/Facebook, Custom | video_aspect_ratio |
+| 100 | If "Custom" aspect ratio, please specify | text | false | - | video_aspect_custom |
+| 110 | What is the target duration? | single_choice | true | Under 30 seconds, Under 1 minute, Based on script (no limit) | video_duration |
+| 120 | Do you want subtitles or captions? | multi_choice | true | Subtitles (small text at bottom), Open Captions (large animated text highlighting keywords), No Subtitles, No Captions | video_subtitles |
+| 130 | Do you want intro or outro? | multi_choice | false | Intro (logo animation at beginning), Outro (logo animation at end) | video_intro_outro |
+| 140 | Is background music needed? | single_choice | true | Yes, No | video_music |
+| 150 | Are sound effects needed? | single_choice | true | Yes, No | video_sfx |
+| 160 | Did the client grant permission to use AI technology? (deepfake faces, voiceovers, b-roll) | single_choice | true | Yes, No | video_ai_permission |
+| 170 | Example video link (if applicable) | url | false | - | video_example |
+| 180 | Is the copy ready? | single_choice | true | Yes, No | video_copy_ready |
+| 190 | If yes, link to copy for video | url | false | - | video_copy_link |
+| 200 | Is this for a live event client? | single_choice | true | Yes, No | TRIGGER - video_live_event |
+
+---
+
+### SECTION: "Creative - Motion Graphic Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | How many motion graphics do you need? | number | true | - | motion_count |
+| 10 | Where will this motion graphic be used? | multi_choice | true | Ads, Landing Page, Social Media/Organic, Email, Other | motion_usage |
+| 20 | If "Other" usage, please explain | text | false | - | motion_usage_other |
+| 30 | Is this for a live event client? | single_choice | true | Yes, No | TRIGGER - motion_live_event |
+
+---
+
+### SECTION: "Creative - Live Event Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Process Map Link (Lucidchart, etc.) | url | false | - | live_event_process_map |
+| 10 | What are the city/cities? | text | true | - | live_event_cities |
+| 20 | What are the event date(s)? | text | true | - | live_event_dates |
+| 30 | Who are the speakers? | textarea | true | - | live_event_speakers |
+
+---
+
+### SECTION: "DevOps Type"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | What is this request for? | single_choice | true | Landing Page, Webinar, Troubleshooting, Phone Integration, Market Launch, A2P Registration | TRIGGER - devops_type |
+| 10 | Link to Content Documents (Email Copy / Landing Page Copy) | url | false | - | devops_content_docs |
+| 20 | Engager Link to Landing Page (Builder) | url | false | - | devops_engager_lp |
+| 30 | Engager Link to Automations Page | url | false | - | devops_engager_automations |
+
+---
+
+### SECTION: "DevOps - Landing Page Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | What is the scope of the Landing Page? | single_choice | true | Single Page, Full Funnel (LP + Step 2 + Thank You etc.), Funnel with Product Sales | TRIGGER - devops_lp_scope |
+| 10 | If Funnel with Product Sales, link to Outline of Products and Pricing Document | url | false | - | devops_lp_products_doc |
+| 20 | Process Map Link (Lucidchart, etc.) | url | true | - | devops_lp_process_map |
+| 30 | The following assets are needed. What is the LP? | text | true | - | devops_lp_main |
+| 40 | What are all the steps? (Step 2, TY page, Upsell, etc.) | textarea | true | - | devops_lp_steps |
+| 50 | Favicon | text | false | - | devops_lp_favicon |
+| 60 | What are the emails? (all email assets done and approved) | textarea | true | - | devops_lp_emails |
+| 70 | What are the SMS? | textarea | false | - | devops_lp_sms |
+| 80 | What are the tracking pixels? | textarea | false | - | devops_lp_pixels |
+| 90 | Existing customer list for Provely | text | false | - | devops_lp_provely |
+| 100 | Who is the final QA? | single_choice | true | Internal, External, Both | devops_lp_qa |
+| 110 | What is the form/survey design needed? (mobile & desktop) | textarea | false | - | devops_lp_form_design |
+| 120 | Is it going to be an A/B test? | single_choice | true | Yes, No | TRIGGER - devops_lp_ab_test |
+
+---
+
+### SECTION: "DevOps - Landing Page A/B Test Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | What are the test details to be included in testing log? | textarea | true | - | ab_test_details |
+| 10 | What are the variations for A/B Testing? | textarea | true | - | ab_test_variations |
+| 20 | What is the traffic volume %? | text | true | - | ab_test_traffic |
+| 30 | What is the name of the test? | text | true | - | ab_test_name |
+| 40 | Which channels are included? | multi_choice | true | Paid Ads, Email, Organic, Other | ab_test_channels |
+| 50 | What are the necessary tags/custom fields? | textarea | false | - | ab_test_tags |
+| 60 | Do we need survey/forms? | single_choice | true | Yes, No | ab_test_forms_needed |
+| 70 | If yes, which survey/forms? | textarea | false | - | ab_test_forms_details |
+| 80 | What are the markets included? | textarea | true | - | ab_test_markets |
+| 90 | Is copy needed? | single_choice | true | Yes, No | ab_test_copy_needed |
+| 100 | If yes, which copy? | textarea | false | - | ab_test_copy_details |
+
+---
+
+### SECTION: "DevOps - Webinar Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | What platform will the webinar be on? | text | true | - | webinar_platform |
+| 10 | Process Map Link (Lucidchart, etc.) | url | true | - | webinar_process_map |
+| 20 | What are the webinar dates? | text | true | - | webinar_dates |
+| 30 | What is the topic? | text | true | - | webinar_topic |
+| 40 | Is it going to be live or recorded? | single_choice | true | Live, Recorded | webinar_type |
+| 50 | Who are the hosts and panelists? (names/titles) | textarea | true | - | webinar_hosts |
+| 60 | Is this an internal or external webinar? | single_choice | true | Internal, External | webinar_audience_type |
+| 70 | Who is the audience? | textarea | true | - | webinar_audience |
+| 80 | What is the tag outline? | textarea | false | - | webinar_tags |
+| 90 | Email Sequence - Sender Name | text | true | - | webinar_email_sender_name |
+| 100 | Email Sequence - Sender Email | text | true | - | webinar_email_sender_email |
+| 110 | Email Sequence - Subject Line | text | false | - | webinar_email_subject |
+| 120 | Email Sequence - Preview Text | text | false | - | webinar_email_preview |
+| 130 | Email Sequence - Timing/Cadence | text | true | - | webinar_email_timing |
+| 140 | Email Sequence - Platform | text | true | - | webinar_email_platform |
+| 150 | Email Sequence - Invite Sequence Link | url | false | - | webinar_email_invite_link |
+| 160 | Email Sequence - Reminder Sequence Link | url | false | - | webinar_email_reminder_link |
+| 170 | Email Sequence - Post-Reg Sequence Link | url | false | - | webinar_email_postreg_link |
+| 180 | SMS - Sender Name | text | false | - | webinar_sms_sender |
+| 190 | SMS - Timing/Cadence | text | false | - | webinar_sms_timing |
+| 200 | SMS - Platform | text | false | - | webinar_sms_platform |
+| 210 | SMS - Invite Sequence Link | url | false | - | webinar_sms_invite_link |
+| 220 | SMS - Reminder Sequence Link | url | false | - | webinar_sms_reminder_link |
+| 230 | SMS - Post-Reg Sequence Link | url | false | - | webinar_sms_postreg_link |
+| 240 | What webinar automations are needed? | multi_choice | true | Invite automations, Registration automations, Reminder automations, Attendees automation sequence, PNA automation sequence | webinar_automations |
+
+---
+
+### SECTION: "DevOps - Troubleshooting Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Link to what's broken | url | true | - | troubleshoot_link |
+| 10 | Loom showing what's broken | url | true | - | troubleshoot_loom |
+
+---
+
+### SECTION: "DevOps - Phone Integration Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Describe the phone integration or AI calls needed | textarea | true | - | phone_integration_details |
+| 10 | What system(s) need to be integrated? | textarea | true | - | phone_integration_systems |
+| 20 | Expected timeline (note: typically 3-4 days) | text | false | - | phone_integration_timeline |
+
+---
+
+### SECTION: "DevOps - Market Launch Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Describe the market launch requirements | textarea | true | - | market_launch_details |
+| 10 | What markets are being launched? | textarea | true | - | market_launch_markets |
+| 20 | Target launch date | date | true | - | market_launch_date |
+
+---
+
+### SECTION: "DevOps - A2P Registration Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Describe the A2P registration requirements | textarea | true | - | a2p_details |
+| 10 | What phone numbers/campaigns need registration? | textarea | true | - | a2p_campaigns |
+
+---
+
+### SECTION: "Data Task Type"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Link to Existing Report (if applicable) | url | false | - | data_existing_report |
+| 10 | Link to Example Report (if applicable) | url | false | - | data_example_report |
+| 20 | Main Request Type | single_choice | true | New Dashboard, New Dashboard Page, One-Off Report, Update Existing Report, Data Pull Request, Test Reporting, Other | TRIGGER - data_type |
+| 30 | If "Other" request type, please explain | textarea | false | - | data_type_other |
+| 40 | Secondary Items Needed | multi_choice | false | Connect to New Data Sources, Define new custom fields or tags, Create new calculations, Other | data_secondary |
+| 50 | If "Other" secondary items, please explain | textarea | false | - | data_secondary_other |
+| 60 | Who will need to QA or approve this task? | multi_choice | true | Account Manager, Client, Executive Team Member, Other | data_qa_approver |
+| 70 | If "Other" approver, please specify | text | false | - | data_qa_other |
+
+---
+
+### SECTION: "Data - Test Reporting Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Test Hypothesis (what is being tested, why, expected outcome) | textarea | true | - | test_hypothesis |
+| 10 | Will this test help support the main KPIs for the client? | textarea | true | - | test_kpi_support |
+| 20 | Audience / Segment (markets, lists, groups) | textarea | true | - | test_audience |
+| 30 | Tags / Tracking Setup (custom fields, UTM tags, identifiers) | textarea | true | - | test_tracking |
+| 40 | Duration & Timeframe (start date, expected run length) | text | true | - | test_duration |
+| 50 | Success Criteria (top 2-3 KPIs to judge test) | textarea | true | - | test_success_criteria |
+| 60 | Test Owner (who set up/owns the test) | text | true | - | test_owner |
+
+---
+
+### SECTION: "Data - New Dashboard Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Who is the primary user of this dashboard? | single_choice | true | Client, Internal, Sales Team, Other | dashboard_primary_user |
+| 10 | If "Other" user, please specify | text | false | - | dashboard_user_other |
+| 20 | What are the top 3 KPIs or metrics this dashboard must show? (KPI 1) | text | true | - | dashboard_kpi_1 |
+| 30 | KPI 2 | text | true | - | dashboard_kpi_2 |
+| 40 | KPI 3 | text | true | - | dashboard_kpi_3 |
+| 50 | What filters should be available? | multi_choice | true | Date range, Campaign name, Market, Other | dashboard_filters |
+| 60 | If "Other" filters, please specify | text | false | - | dashboard_filters_other |
+| 70 | What visualizations are preferred? | multi_choice | true | Table, Line graph, Bar chart, Scoreboard numbers, Other | dashboard_visualizations |
+| 80 | If "Other" visualizations, please specify | text | false | - | dashboard_viz_other |
+| 90 | How often should the data update? | single_choice | true | Daily, Weekly, Monthly, Other | dashboard_update_frequency |
+| 100 | If "Other" frequency, please specify | text | false | - | dashboard_freq_other |
+
+---
+
+### SECTION: "Data - New Dashboard Page Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Which existing dashboard should this page be added to? (paste link) | url | true | - | dashboard_page_parent |
+| 10 | What is the goal of this new page? | single_choice | true | Track event performance, Compare campaigns, Other | dashboard_page_goal |
+| 20 | If "Other" goal, please specify | text | false | - | dashboard_page_goal_other |
+| 30 | List the charts or metrics to be included on this page | textarea | true | - | dashboard_page_charts |
+| 40 | Are any new data sources needed for this page? | textarea | false | - | dashboard_page_sources |
+| 50 | Should any filters be added or reused from existing dashboard? | single_choice | true | Yes, No | dashboard_page_filters |
+| 60 | If yes, which filters? | textarea | false | - | dashboard_page_filters_detail |
+
+---
+
+### SECTION: "Data - One-Off Report Details"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | What specific data points or columns do you need? | textarea | true | - | report_data_points |
+| 10 | Over what time range should the data be pulled? | text | true | - | report_time_range |
+| 20 | How should the data be grouped or segmented? | single_choice | true | By campaign, By client, By week, Other | report_grouping |
+| 30 | If "Other" grouping, please specify | text | false | - | report_grouping_other |
+| 40 | Preferred format of the report | single_choice | true | Google Sheets, Excel, PDF, Other | report_format |
+| 50 | If "Other" format, please specify | text | false | - | report_format_other |
+| 60 | Does this report need to be shared or presented to someone? | single_choice | true | Yes, No | report_shared |
+| 70 | If yes, who? | text | false | - | report_shared_who |
+| 80 | Do you need a visualization (chart or graph) in the report? | single_choice | true | Yes, No | report_viz_needed |
+| 90 | If yes, what type? | text | false | - | report_viz_type |
+
+---
+
+### SECTION: "Data - Extra Information"
+
+| Order | Question Text | Type | Required | Options | Internal Label |
+|-------|--------------|------|----------|---------|----------------|
+| 0 | Any naming conventions or specific titles required? | textarea | false | - | data_naming_conventions |
+| 10 | Are there existing formulas, metrics, or calculations that must be replicated? | single_choice | false | Yes, No | data_existing_formulas |
+| 20 | If yes, please link or paste example | textarea | false | - | data_formulas_detail |
+| 30 | Are any new fields, tags, or segmentations required for this request? | textarea | false | - | data_new_fields |
+| 40 | Should this report/dashboard be duplicated for other clients or verticals? | single_choice | false | Yes, No | data_duplicate |
+| 50 | Any compliance, legal, or privacy considerations to account for? | textarea | false | - | data_compliance |
+
+---
+
+## IMPLEMENTATION NOTES
+
+1. Create a seed script that:
+   - Fetches all sections by name to get their IDs
+   - Loops through each section's questions
+   - Creates the question record with proper sectionId
+   - Creates option records for single_choice and multi_choice questions
+
+2. Handle idempotency:
+   - Check if question already exists (by internalLabel within section) before creating
+   - This allows re-running the seed without duplicates
+
+3. Store the internalLabel exactly as shown - we'll use these to wire up visibility conditions in Step 4
+
+4. For questions marked "TRIGGER" in internal label, make sure to add that prefix so we can easily query them later
+
+## VERIFICATION
+
+After running:
+1. Query total question count - should be approximately 130+ questions
+2. Verify each section has the correct questions
+3. Verify all single_choice and multi_choice questions have their options created
+4. Verify TRIGGER questions are identifiable
+
+## DO NOT
+
+- Do not update any section visibility conditions yet (that's Step 4)
+- Do not build or modify UI yet (that's Step 5)
+- Do not delete the old logic_rules table yet
+
+Please implement this step and confirm when complete. Let me know the total question count and any issues encountered.

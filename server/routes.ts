@@ -23397,6 +23397,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Seed all questions into sections (admin utility - idempotent)
+  app.post("/api/task-intake/questions/seed", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { intakeQuestionsSeed } = await import("./seed-intake-questions");
+      
+      // Get the form
+      const [existingForm] = await db.select().from(taskIntakeForms).limit(1);
+      if (!existingForm) {
+        return res.status(400).json({ error: "No task intake form exists. Run section seed first." });
+      }
+      const formId = existingForm.id;
+      
+      // Get all sections for this form
+      const sections = await db
+        .select()
+        .from(taskIntakeSections)
+        .where(eq(taskIntakeSections.formId, formId));
+      
+      const sectionMap = new Map(sections.map(s => [s.sectionName, s.id]));
+      
+      // Get existing questions to avoid duplicates
+      const existingQuestions = await db
+        .select({ internalLabel: taskIntakeQuestions.internalLabel, sectionId: taskIntakeQuestions.sectionId })
+        .from(taskIntakeQuestions)
+        .where(eq(taskIntakeQuestions.formId, formId));
+      
+      const existingLabels = new Set(existingQuestions.map(q => `${q.sectionId}:${q.internalLabel}`));
+      
+      let totalCreated = 0;
+      let totalSkipped = 0;
+      let optionsCreated = 0;
+      const errors: string[] = [];
+      
+      for (const sectionData of intakeQuestionsSeed) {
+        const sectionId = sectionMap.get(sectionData.sectionName);
+        if (!sectionId) {
+          errors.push(`Section not found: ${sectionData.sectionName}`);
+          continue;
+        }
+        
+        for (const q of sectionData.questions) {
+          const labelKey = `${sectionId}:${q.internalLabel}`;
+          if (existingLabels.has(labelKey)) {
+            totalSkipped++;
+            continue;
+          }
+          
+          // Create the question
+          const [newQuestion] = await db.insert(taskIntakeQuestions).values({
+            formId,
+            sectionId,
+            questionText: q.questionText,
+            questionType: q.questionType,
+            isRequired: q.isRequired,
+            order: q.orderIndex,
+            internalLabel: q.internalLabel,
+            helpText: q.helpText || null,
+            settings: {},
+          }).returning();
+          
+          totalCreated++;
+          
+          // Create options if present
+          if (q.options && q.options.length > 0) {
+            const optionsToInsert = q.options.map((optText, idx) => ({
+              questionId: newQuestion.id,
+              optionText: optText,
+              order: idx,
+            }));
+            await db.insert(taskIntakeOptions).values(optionsToInsert);
+            optionsCreated += q.options.length;
+          }
+        }
+      }
+      
+      // Get final counts
+      const [questionCount] = await db
+        .select({ count: sql`COUNT(*)` })
+        .from(taskIntakeQuestions)
+        .where(eq(taskIntakeQuestions.formId, formId));
+      
+      const [triggerCount] = await db
+        .select({ count: sql`COUNT(*)` })
+        .from(taskIntakeQuestions)
+        .where(and(
+          eq(taskIntakeQuestions.formId, formId),
+          sql`${taskIntakeQuestions.internalLabel} LIKE 'TRIGGER%'`
+        ));
+      
+      res.json({
+        message: `Seeded ${totalCreated} questions, ${optionsCreated} options. Skipped ${totalSkipped} existing.`,
+        totalQuestions: Number(questionCount.count),
+        triggerQuestions: Number(triggerCount.count),
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error) {
+      console.error("Error seeding task intake questions:", error);
+      res.status(500).json({ error: "Failed to seed questions", details: String(error) });
+    }
+  });
+  
+  // Get all trigger questions (for visibility wiring)
+  app.get("/api/task-intake/questions/triggers", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const triggerQuestions = await db
+        .select({
+          id: taskIntakeQuestions.id,
+          sectionId: taskIntakeQuestions.sectionId,
+          questionText: taskIntakeQuestions.questionText,
+          internalLabel: taskIntakeQuestions.internalLabel,
+          questionType: taskIntakeQuestions.questionType,
+        })
+        .from(taskIntakeQuestions)
+        .where(sql`${taskIntakeQuestions.internalLabel} LIKE 'TRIGGER%'`)
+        .orderBy(asc(taskIntakeQuestions.order));
+      
+      // Get options for each trigger question
+      const questionIds = triggerQuestions.map(q => q.id);
+      const allOptions = questionIds.length > 0 
+        ? await db
+            .select()
+            .from(taskIntakeOptions)
+            .where(inArray(taskIntakeOptions.questionId, questionIds))
+            .orderBy(asc(taskIntakeOptions.order))
+        : [];
+      
+      const result = triggerQuestions.map(q => ({
+        ...q,
+        options: allOptions.filter(opt => opt.questionId === q.id),
+      }));
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching trigger questions:", error);
+      res.status(500).json({ error: "Failed to fetch trigger questions" });
+    }
+  });
+  
   // Get all sections for a form (ordered by orderIndex)
   app.get("/api/task-intake-forms/:formId/sections", requireAuth(), requireAdmin(), async (req, res) => {
     try {
