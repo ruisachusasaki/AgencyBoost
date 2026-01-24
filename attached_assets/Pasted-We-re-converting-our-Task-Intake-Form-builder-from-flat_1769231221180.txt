@@ -1,0 +1,104 @@
+We're converting our Task Intake Form builder from flat skip-logic to a hierarchical section-based system. This is Step 1 of a multi-step migration.
+
+## CONTEXT
+
+Current location: Settings > Tasks > Intake Form tab
+Current tables:
+- task_intake_questions (stores individual questions)
+- task_intake_options (stores options for choice questions)
+- task_intake_logic_rules (stores skip logic - we'll deprecate this)
+
+We want to ADD a sections layer. Sections contain questions. Sections have visibility conditions that determine when they show.
+
+## WHAT TO DO IN THIS STEP
+
+### 1. Create new table: task_intake_sections
+```sql
+task_intake_sections
+- id: uuid, primary key
+- formId: uuid, foreign key to task_intake_forms (or however you're storing the form reference)
+- sectionName: text, not null (display name like "Video Details")
+- internalLabel: text, nullable (admin notes)
+- orderIndex: integer, not null, default 0
+- visibilityConditions: jsonb, nullable (null = always visible)
+- descriptionTemplate: text, nullable (for generating task description output)
+- isActive: boolean, default true
+- createdAt: timestamp
+- updatedAt: timestamp
+```
+
+### 2. Modify task_intake_questions table
+
+Add a new column:
+- sectionId: uuid, nullable, foreign key to task_intake_sections
+
+This should be nullable for now since existing questions don't have sections yet.
+
+### 3. Create the Drizzle/Prisma schema (whatever ORM we're using)
+
+Make sure:
+- Section has a one-to-many relationship to Questions
+- Questions can be queried by sectionId
+- Sections can be ordered by orderIndex
+
+### 4. Create API endpoints for sections
+
+Add these endpoints:
+- GET /api/task-intake/sections - list all sections (ordered by orderIndex)
+- POST /api/task-intake/sections - create a new section
+- PUT /api/task-intake/sections/:id - update a section
+- DELETE /api/task-intake/sections/:id - delete a section (should also handle orphaning questions or prevent deletion if questions exist)
+- PUT /api/task-intake/sections/reorder - bulk update orderIndex for drag-drop reordering
+
+### 5. Update questions endpoints
+
+Modify existing question endpoints so:
+- When creating a question, you can optionally pass sectionId
+- When fetching questions, you can filter by sectionId
+- Add a way to move a question to a different section
+
+## IMPORTANT
+
+- DO NOT delete or modify the existing logic_rules table yet - we'll deprecate it later
+- DO NOT change the existing Intake Form UI yet - that's a future step
+- DO NOT delete existing questions - we're starting fresh but the table structure should support both old and new
+- DO preserve all existing functionality - this is additive only
+
+## VISIBILITYCONDITIONS JSONB STRUCTURE
+
+For reference, here's what the visibilityConditions field will store (you don't need to build the evaluation logic yet, just store it):
+```json
+{
+  "operator": "AND",
+  "conditions": [
+    {
+      "questionId": "uuid-of-trigger-question",
+      "operator": "equals",
+      "value": "Creative"
+    }
+  ]
+}
+```
+
+Or for OR logic:
+```json
+{
+  "operator": "OR", 
+  "conditions": [
+    { "questionId": "uuid-1", "operator": "equals", "value": "Yes" },
+    { "questionId": "uuid-2", "operator": "equals", "value": "Yes" }
+  ]
+}
+```
+
+Supported operators for conditions: "equals", "not_equals", "includes" (for multi-select), "not_empty"
+
+## TESTING
+
+After implementation, I should be able to:
+1. Create a section via API
+2. See it in the database
+3. Create a question with a sectionId
+4. Query questions filtered by section
+
+Please implement this step and confirm when ready for Step 2.

@@ -4901,10 +4901,28 @@ export const taskIntakeForms = pgTable("task_intake_forms", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Task Intake Sections - container for grouping questions with conditional visibility
+export const taskIntakeSections = pgTable("task_intake_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull().references(() => taskIntakeForms.id, { onDelete: "cascade" }),
+  sectionName: text("section_name").notNull(),
+  internalLabel: text("internal_label"), // admin notes
+  orderIndex: integer("order_index").notNull().default(0),
+  visibilityConditions: jsonb("visibility_conditions"), // null = always visible
+  descriptionTemplate: text("description_template"), // for generating task description output
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_task_intake_sections_form").on(table.formId),
+  index("idx_task_intake_sections_order").on(table.orderIndex),
+]);
+
 // Task Intake Questions - one question per slide/step
 export const taskIntakeQuestions = pgTable("task_intake_questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   formId: varchar("form_id").notNull().references(() => taskIntakeForms.id, { onDelete: "cascade" }),
+  sectionId: varchar("section_id").references(() => taskIntakeSections.id, { onDelete: "set null" }), // nullable for backward compatibility
   questionText: text("question_text").notNull(),
   questionType: text("question_type").notNull(), // single_choice, multi_choice, text, number, date
   helpText: text("help_text"), // optional hint below the question
@@ -4917,6 +4935,7 @@ export const taskIntakeQuestions = pgTable("task_intake_questions", {
 }, (table) => [
   index("idx_task_intake_questions_form").on(table.formId),
   index("idx_task_intake_questions_order").on(table.order),
+  index("idx_task_intake_questions_section").on(table.sectionId),
 ]);
 
 // Task Intake Options - for single_choice and multi_choice questions
@@ -4974,6 +4993,14 @@ export const insertTaskIntakeFormSchema = createInsertSchema(taskIntakeForms).om
 });
 export type TaskIntakeForm = typeof taskIntakeForms.$inferSelect;
 export type InsertTaskIntakeForm = z.infer<typeof insertTaskIntakeFormSchema>;
+
+export const insertTaskIntakeSectionSchema = createInsertSchema(taskIntakeSections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type TaskIntakeSection = typeof taskIntakeSections.$inferSelect;
+export type InsertTaskIntakeSection = z.infer<typeof insertTaskIntakeSectionSchema>;
 
 export const insertTaskIntakeQuestionSchema = createInsertSchema(taskIntakeQuestions).omit({
   id: true,

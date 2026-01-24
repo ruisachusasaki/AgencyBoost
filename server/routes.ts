@@ -69,8 +69,8 @@ import {
   clientRoadmapComments, insertClientRoadmapCommentSchema, clientRoadmapEntries, insertClientRoadmapEntrySchema, staffLinkedEmails,
   surveys, surveyFolders, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers,
   insertSurveySchema, insertSurveyFolderSchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema,
-  taskIntakeForms, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules,
-  insertTaskIntakeFormSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema,
+  taskIntakeForms, taskIntakeSections, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules,
+  insertTaskIntakeFormSchema, insertTaskIntakeSectionSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema,
   aiIntegrations,
   aiAssistantSettings,
   slackWorkspaces
@@ -23276,6 +23276,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to delete task intake form" });
     }
   });
+
+  // ============================================
+  // TASK INTAKE SECTIONS
+  // ============================================
+  
+  // Get all sections for a form (ordered by orderIndex)
+  app.get("/api/task-intake-forms/:formId/sections", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { formId } = req.params;
+      
+      const sections = await db
+        .select()
+        .from(taskIntakeSections)
+        .where(eq(taskIntakeSections.formId, formId))
+        .orderBy(asc(taskIntakeSections.orderIndex));
+      
+      res.json(sections);
+    } catch (error) {
+      console.error("Error fetching task intake sections:", error);
+      res.status(500).json({ error: "Failed to fetch sections" });
+    }
+  });
+  
+  // Create a new section
+  app.post("/api/task-intake-forms/:formId/sections", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { formId } = req.params;
+      const sectionData = req.body;
+      
+      // Get max orderIndex
+      const existingSections = await db
+        .select({ orderIndex: taskIntakeSections.orderIndex })
+        .from(taskIntakeSections)
+        .where(eq(taskIntakeSections.formId, formId))
+        .orderBy(desc(taskIntakeSections.orderIndex))
+        .limit(1);
+      
+      const nextOrder = existingSections.length > 0 ? existingSections[0].orderIndex + 1 : 0;
+      
+      const [newSection] = await db
+        .insert(taskIntakeSections)
+        .values({
+          ...sectionData,
+          formId,
+          orderIndex: sectionData.orderIndex ?? nextOrder,
+        })
+        .returning();
+      
+      res.json(newSection);
+    } catch (error) {
+      console.error("Error creating task intake section:", error);
+      res.status(500).json({ error: "Failed to create section" });
+    }
+  });
+  
+  // Update a section
+  app.put("/api/task-intake-sections/:sectionId", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { sectionId } = req.params;
+      const sectionData = req.body;
+      
+      const [updatedSection] = await db
+        .update(taskIntakeSections)
+        .set({
+          ...sectionData,
+          updatedAt: new Date(),
+        })
+        .where(eq(taskIntakeSections.id, sectionId))
+        .returning();
+      
+      if (!updatedSection) {
+        return res.status(404).json({ error: "Section not found" });
+      }
+      
+      res.json(updatedSection);
+    } catch (error) {
+      console.error("Error updating task intake section:", error);
+      res.status(500).json({ error: "Failed to update section" });
+    }
+  });
+  
+  // Delete a section (only if no questions are assigned)
+  app.delete("/api/task-intake-sections/:sectionId", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { sectionId } = req.params;
+      
+      // Check if any questions are assigned to this section
+      const questionsInSection = await db
+        .select({ id: taskIntakeQuestions.id })
+        .from(taskIntakeQuestions)
+        .where(eq(taskIntakeQuestions.sectionId, sectionId))
+        .limit(1);
+      
+      if (questionsInSection.length > 0) {
+        return res.status(400).json({ 
+          error: "Cannot delete section with questions. Move or delete the questions first." 
+        });
+      }
+      
+      await db.delete(taskIntakeSections).where(eq(taskIntakeSections.id, sectionId));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting task intake section:", error);
+      res.status(500).json({ error: "Failed to delete section" });
+    }
+  });
+  
+  // Bulk reorder sections
+  app.put("/api/task-intake-forms/:formId/sections/reorder", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { formId } = req.params;
+      const { sections } = req.body; // Array of { id, orderIndex }
+      
+      // Update each section's orderIndex
+      for (const section of sections) {
+        await db
+          .update(taskIntakeSections)
+          .set({ orderIndex: section.orderIndex, updatedAt: new Date() })
+          .where(and(eq(taskIntakeSections.id, section.id), eq(taskIntakeSections.formId, formId)));
+      }
+      
+      // Return updated sections
+      const updatedSections = await db
+        .select()
+        .from(taskIntakeSections)
+        .where(eq(taskIntakeSections.formId, formId))
+        .orderBy(asc(taskIntakeSections.orderIndex));
+      
+      res.json(updatedSections);
+    } catch (error) {
+      console.error("Error reordering task intake sections:", error);
+      res.status(500).json({ error: "Failed to reorder sections" });
+    }
+  });
+
   
   // ============================================
   // TASK INTAKE QUESTIONS
@@ -23406,6 +23542,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to delete question" });
     }
   });
+  
+  // Get questions by section
+  app.get("/api/task-intake-sections/:sectionId/questions", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { sectionId } = req.params;
+      
+      const questions = await db
+        .select()
+        .from(taskIntakeQuestions)
+        .where(eq(taskIntakeQuestions.sectionId, sectionId))
+        .orderBy(asc(taskIntakeQuestions.order));
+      
+      // Get options for each question
+      const questionIds = questions.map(q => q.id);
+      const allOptions = questionIds.length > 0 
+        ? await db
+            .select()
+            .from(taskIntakeOptions)
+            .where(inArray(taskIntakeOptions.questionId, questionIds))
+            .orderBy(asc(taskIntakeOptions.order))
+        : [];
+      
+      // Map options to questions
+      const questionsWithOptions = questions.map(q => ({
+        ...q,
+        options: allOptions.filter(opt => opt.questionId === q.id)
+      }));
+      
+      res.json(questionsWithOptions);
+    } catch (error) {
+      console.error("Error fetching questions by section:", error);
+      res.status(500).json({ error: "Failed to fetch questions" });
+    }
+  });
+  
+  // Move question to a different section
+  app.put("/api/task-intake-questions/:questionId/move-to-section", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { questionId } = req.params;
+      const { sectionId } = req.body; // null to remove from section
+      
+      const [updatedQuestion] = await db
+        .update(taskIntakeQuestions)
+        .set({ 
+          sectionId: sectionId || null,
+          updatedAt: new Date() 
+        })
+        .where(eq(taskIntakeQuestions.id, questionId))
+        .returning();
+      
+      if (!updatedQuestion) {
+        return res.status(404).json({ error: "Question not found" });
+      }
+      
+      res.json(updatedQuestion);
+    } catch (error) {
+      console.error("Error moving question to section:", error);
+      res.status(500).json({ error: "Failed to move question" });
+    }
+  });
+
   
   // ============================================
   // TASK INTAKE LOGIC RULES
