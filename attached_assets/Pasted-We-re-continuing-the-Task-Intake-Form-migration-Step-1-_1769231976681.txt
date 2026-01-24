@@ -1,0 +1,247 @@
+We're continuing the Task Intake Form migration. Step 1 (sections table + API) is complete.
+
+## CONTEXT
+
+This is Step 2: Seed all sections for the single Task Intake Form. We're creating the section structure based on our task scoping document.
+
+There is only ONE form ever. If a form record doesn't exist yet, create one called "Task Intake Form" and use its ID for all sections.
+
+## WHAT TO DO IN THIS STEP
+
+### 1. Create (or get) the single Task Intake Form record
+
+If task_intake_forms table exists and has a record, use that ID.
+If not, create one with name "Task Intake Form" and use that ID.
+
+### 2. Seed the following sections
+
+Create these sections in this exact order. Use orderIndex starting at 0 and incrementing by 10 (gives room for future insertions).
+
+IMPORTANT: Set visibilityConditions to null for ALL sections right now. We'll update them after questions exist.
+```javascript
+const sections = [
+  // ============ COMMON (Always Visible) ============
+  {
+    sectionName: "Task Basics",
+    internalLabel: "Always visible - core task info",
+    orderIndex: 0,
+    visibilityConditions: null, // null = always visible
+    descriptionTemplate: null, // we'll add templates later
+  },
+  
+  // ============ DEPARTMENT SELECTION ============
+  {
+    sectionName: "Department Selection",
+    internalLabel: "Always visible - determines which branch to show",
+    orderIndex: 10,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+
+  // ============ CREATIVE BRANCH ============
+  {
+    sectionName: "Creative Type",
+    internalLabel: "Visible when Department = Creative",
+    orderIndex: 100,
+    visibilityConditions: null, // Will be: Department = Creative
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "Creative - Copy Details",
+    internalLabel: "Visible when Creative Type = Copywriting",
+    orderIndex: 110,
+    visibilityConditions: null, // Will be: Creative Type = Copywriting
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "Creative - Graphic Details",
+    internalLabel: "Visible when Creative Type = Graphic",
+    orderIndex: 120,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "Creative - Landing Page Details",
+    internalLabel: "Visible when Creative Type = Landing Page",
+    orderIndex: 130,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "Creative - Video Details",
+    internalLabel: "Visible when Creative Type = Video",
+    orderIndex: 140,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "Creative - Motion Graphic Details",
+    internalLabel: "Visible when Creative Type = Motion Graphic",
+    orderIndex: 150,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "Creative - Live Event Details",
+    internalLabel: "Visible when any creative type has 'Is this for a live event?' = Yes",
+    orderIndex: 160,
+    visibilityConditions: null, // Will be OR condition across multiple questions
+    descriptionTemplate: null,
+  },
+
+  // ============ DEVOPS BRANCH ============
+  {
+    sectionName: "DevOps Type",
+    internalLabel: "Visible when Department = DevOps",
+    orderIndex: 200,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "DevOps - Landing Page Details",
+    internalLabel: "Visible when DevOps Type = Landing Page",
+    orderIndex: 210,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "DevOps - Landing Page A/B Test Details",
+    internalLabel: "Visible when DevOps LP and 'Is it an A/B test?' = Yes",
+    orderIndex: 215,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "DevOps - Webinar Details",
+    internalLabel: "Visible when DevOps Type = Webinar",
+    orderIndex: 220,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "DevOps - Troubleshooting Details",
+    internalLabel: "Visible when DevOps Type = Troubleshooting",
+    orderIndex: 230,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "DevOps - Phone Integration Details",
+    internalLabel: "Visible when DevOps Type = Phone Integration",
+    orderIndex: 240,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "DevOps - Market Launch Details",
+    internalLabel: "Visible when DevOps Type = Market Launch",
+    orderIndex: 250,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "DevOps - A2P Registration Details",
+    internalLabel: "Visible when DevOps Type = A2P Registration",
+    orderIndex: 260,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+
+  // ============ DATA BRANCH ============
+  {
+    sectionName: "Data Task Type",
+    internalLabel: "Visible when Department = Data",
+    orderIndex: 300,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "Data - Test Reporting Details",
+    internalLabel: "Visible when Data Task Type = Test Reporting",
+    orderIndex: 310,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "Data - New Dashboard Details",
+    internalLabel: "Visible when Data Task Type = New Dashboard",
+    orderIndex: 320,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "Data - New Dashboard Page Details",
+    internalLabel: "Visible when Data Task Type = New Dashboard Page",
+    orderIndex: 330,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "Data - One-Off Report Details",
+    internalLabel: "Visible when Data Task Type = One-Off Report",
+    orderIndex: 340,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+  {
+    sectionName: "Data - Extra Information",
+    internalLabel: "Visible for all Data tasks - shared questions",
+    orderIndex: 350,
+    visibilityConditions: null,
+    descriptionTemplate: null,
+  },
+];
+```
+
+### 3. Create a seed script or API call
+
+Either:
+- Create a seed script that runs once to insert these sections
+- Or create them via sequential API calls
+
+Make sure to:
+- Check if sections already exist (by sectionName) to avoid duplicates on re-run
+- Link all sections to the single form's ID
+- Set isActive = true for all
+
+### 4. Create an admin utility to view sections
+
+Add a simple way to see all sections in the console or via API:
+- GET /api/task-intake/sections should return all sections ordered by orderIndex
+- Include the section ID in the response (we'll need these IDs for the next step)
+
+## VERIFICATION
+
+After this step, calling GET /api/task-intake/sections should return 23 sections in the correct order:
+1. Task Basics
+2. Department Selection
+3. Creative Type
+4. Creative - Copy Details
+5. Creative - Graphic Details
+6. Creative - Landing Page Details
+7. Creative - Video Details
+8. Creative - Motion Graphic Details
+9. Creative - Live Event Details
+10. DevOps Type
+11. DevOps - Landing Page Details
+12. DevOps - Landing Page A/B Test Details
+13. DevOps - Webinar Details
+14. DevOps - Troubleshooting Details
+15. DevOps - Phone Integration Details
+16. DevOps - Market Launch Details
+17. DevOps - A2P Registration Details
+18. Data Task Type
+19. Data - Test Reporting Details
+20. Data - New Dashboard Details
+21. Data - New Dashboard Page Details
+22. Data - One-Off Report Details
+23. Data - Extra Information
+
+## DO NOT
+
+- Do not create any questions yet (that's Step 3)
+- Do not build UI yet (that's Step 5)
+- Do not wire up visibility conditions yet (that's Step 4)
+- Do not modify existing questions or logic rules
+
+Please implement this step and confirm when ready. Show me the list of sections with their IDs when complete.

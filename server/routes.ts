@@ -23281,6 +23281,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // TASK INTAKE SECTIONS
   // ============================================
   
+  // Get ALL sections across all forms (for admin utility)
+  app.get("/api/task-intake/sections", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const sections = await db
+        .select()
+        .from(taskIntakeSections)
+        .orderBy(asc(taskIntakeSections.orderIndex));
+      
+      res.json(sections);
+    } catch (error) {
+      console.error("Error fetching all task intake sections:", error);
+      res.status(500).json({ error: "Failed to fetch sections" });
+    }
+  });
+  
+  // Seed all sections for the Task Intake Form (admin utility - idempotent)
+  app.post("/api/task-intake/sections/seed", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      // Get or create the single form
+      let [existingForm] = await db.select().from(taskIntakeForms).limit(1);
+      
+      if (!existingForm) {
+        // Create the default form if none exists
+        const userId = req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ error: "User not authenticated" });
+        }
+        [existingForm] = await db.insert(taskIntakeForms).values({
+          name: "Task Intake Form",
+          description: "Form for submitting new tasks",
+          isActive: true,
+          createdBy: userId,
+        }).returning();
+      }
+      
+      const formId = existingForm.id;
+      
+      // Section definitions
+      const sectionsToSeed = [
+        // COMMON (Always Visible)
+        { sectionName: "Task Basics", internalLabel: "Always visible - core task info", orderIndex: 0 },
+        { sectionName: "Department Selection", internalLabel: "Always visible - determines which branch to show", orderIndex: 10 },
+        
+        // CREATIVE BRANCH
+        { sectionName: "Creative Type", internalLabel: "Visible when Department = Creative", orderIndex: 100 },
+        { sectionName: "Creative - Copy Details", internalLabel: "Visible when Creative Type = Copywriting", orderIndex: 110 },
+        { sectionName: "Creative - Graphic Details", internalLabel: "Visible when Creative Type = Graphic", orderIndex: 120 },
+        { sectionName: "Creative - Landing Page Details", internalLabel: "Visible when Creative Type = Landing Page", orderIndex: 130 },
+        { sectionName: "Creative - Video Details", internalLabel: "Visible when Creative Type = Video", orderIndex: 140 },
+        { sectionName: "Creative - Motion Graphic Details", internalLabel: "Visible when Creative Type = Motion Graphic", orderIndex: 150 },
+        { sectionName: "Creative - Live Event Details", internalLabel: "Visible when any creative type has Is this for a live event? = Yes", orderIndex: 160 },
+        
+        // DEVOPS BRANCH
+        { sectionName: "DevOps Type", internalLabel: "Visible when Department = DevOps", orderIndex: 200 },
+        { sectionName: "DevOps - Landing Page Details", internalLabel: "Visible when DevOps Type = Landing Page", orderIndex: 210 },
+        { sectionName: "DevOps - Landing Page A/B Test Details", internalLabel: "Visible when DevOps LP and Is it an A/B test? = Yes", orderIndex: 215 },
+        { sectionName: "DevOps - Webinar Details", internalLabel: "Visible when DevOps Type = Webinar", orderIndex: 220 },
+        { sectionName: "DevOps - Troubleshooting Details", internalLabel: "Visible when DevOps Type = Troubleshooting", orderIndex: 230 },
+        { sectionName: "DevOps - Phone Integration Details", internalLabel: "Visible when DevOps Type = Phone Integration", orderIndex: 240 },
+        { sectionName: "DevOps - Market Launch Details", internalLabel: "Visible when DevOps Type = Market Launch", orderIndex: 250 },
+        { sectionName: "DevOps - A2P Registration Details", internalLabel: "Visible when DevOps Type = A2P Registration", orderIndex: 260 },
+        
+        // DATA BRANCH
+        { sectionName: "Data Task Type", internalLabel: "Visible when Department = Data", orderIndex: 300 },
+        { sectionName: "Data - Test Reporting Details", internalLabel: "Visible when Data Task Type = Test Reporting", orderIndex: 310 },
+        { sectionName: "Data - New Dashboard Details", internalLabel: "Visible when Data Task Type = New Dashboard", orderIndex: 320 },
+        { sectionName: "Data - New Dashboard Page Details", internalLabel: "Visible when Data Task Type = New Dashboard Page", orderIndex: 330 },
+        { sectionName: "Data - One-Off Report Details", internalLabel: "Visible when Data Task Type = One-Off Report", orderIndex: 340 },
+        { sectionName: "Data - Extra Information", internalLabel: "Visible for all Data tasks - shared questions", orderIndex: 350 },
+      ];
+      
+      // Get existing section names to avoid duplicates
+      const existingSections = await db
+        .select({ sectionName: taskIntakeSections.sectionName })
+        .from(taskIntakeSections)
+        .where(eq(taskIntakeSections.formId, formId));
+      
+      const existingNames = new Set(existingSections.map(s => s.sectionName));
+      
+      // Filter to only new sections
+      const newSections = sectionsToSeed.filter(s => !existingNames.has(s.sectionName));
+      
+      let insertedCount = 0;
+      if (newSections.length > 0) {
+        const toInsert = newSections.map(s => ({
+          formId,
+          sectionName: s.sectionName,
+          internalLabel: s.internalLabel,
+          orderIndex: s.orderIndex,
+          visibilityConditions: null,
+          descriptionTemplate: null,
+          isActive: true,
+        }));
+        
+        await db.insert(taskIntakeSections).values(toInsert);
+        insertedCount = newSections.length;
+      }
+      
+      // Return all sections
+      const allSections = await db
+        .select()
+        .from(taskIntakeSections)
+        .where(eq(taskIntakeSections.formId, formId))
+        .orderBy(asc(taskIntakeSections.orderIndex));
+      
+      res.json({
+        message: `Seeded ${insertedCount} new sections. Total: ${allSections.length} sections.`,
+        formId,
+        sections: allSections,
+      });
+    } catch (error) {
+      console.error("Error seeding task intake sections:", error);
+      res.status(500).json({ error: "Failed to seed sections" });
+    }
+  });
+  
   // Get all sections for a form (ordered by orderIndex)
   app.get("/api/task-intake-forms/:formId/sections", requireAuth(), requireAdmin(), async (req, res) => {
     try {
