@@ -23143,6 +23143,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch task intake form" });
     }
   });
+
+  // Get form data for form renderer (returns sections with questions and options, ordered)
+  app.get("/api/task-intake/form", requireAuth(), async (req, res) => {
+    try {
+      // Get the active form
+      const [activeForm] = await db
+        .select()
+        .from(taskIntakeForms)
+        .where(eq(taskIntakeForms.isActive, true))
+        .limit(1);
+      
+      if (!activeForm) {
+        return res.status(404).json({ error: "No active task intake form found" });
+      }
+      
+      // Get all active sections ordered by orderIndex
+      const sections = await db
+        .select()
+        .from(taskIntakeSections)
+        .where(and(
+          eq(taskIntakeSections.formId, activeForm.id),
+          eq(taskIntakeSections.isActive, true)
+        ))
+        .orderBy(asc(taskIntakeSections.orderIndex));
+      
+      // Get all questions for this form's sections
+      const sectionIds = sections.map(s => s.id);
+      let questions: any[] = [];
+      let options: any[] = [];
+      
+      if (sectionIds.length > 0) {
+        questions = await db
+          .select()
+          .from(taskIntakeQuestions)
+          .where(and(
+            eq(taskIntakeQuestions.formId, activeForm.id),
+            inArray(taskIntakeQuestions.sectionId, sectionIds)
+          ))
+          .orderBy(asc(taskIntakeQuestions.order));
+        
+        const questionIds = questions.map(q => q.id);
+        
+        if (questionIds.length > 0) {
+          options = await db
+            .select()
+            .from(taskIntakeOptions)
+            .where(inArray(taskIntakeOptions.questionId, questionIds))
+            .orderBy(asc(taskIntakeOptions.order));
+        }
+      }
+      
+      // Build the response with sections containing their questions
+      const sectionsWithQuestions = sections.map(section => ({
+        id: section.id,
+        sectionName: section.sectionName,
+        internalLabel: section.internalLabel,
+        orderIndex: section.orderIndex,
+        visibilityConditions: section.visibilityConditions,
+        descriptionTemplate: section.descriptionTemplate,
+        questions: questions
+          .filter(q => q.sectionId === section.id)
+          .map(q => ({
+            id: q.id,
+            questionText: q.questionText,
+            questionType: q.questionType,
+            helpText: q.helpText,
+            internalLabel: q.internalLabel,
+            isRequired: q.isRequired,
+            order: q.order,
+            settings: q.settings || {},
+            options: options
+              .filter(o => o.questionId === q.id)
+              .map(o => ({
+                id: o.id,
+                optionText: o.optionText,
+                order: o.order
+              }))
+          }))
+      }));
+      
+      res.json({
+        formId: activeForm.id,
+        formName: activeForm.name,
+        sections: sectionsWithQuestions
+      });
+    } catch (error) {
+      console.error("Error fetching task intake form for renderer:", error);
+      res.status(500).json({ error: "Failed to fetch task intake form" });
+    }
+  });
   
   // Get all task intake forms (admin)
   app.get("/api/task-intake-forms", requireAuth(), requireAdmin(), async (req, res) => {

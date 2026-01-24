@@ -1,0 +1,266 @@
+We're continuing the Task Intake Form migration. Step 5 (Builder UI) is complete.
+
+CONTEXT
+
+This is Step 6: Build the Form Renderer with Visibility Logic. This is what users see when they create a new task. It's a wizard-style form that shows one section at a time, with sections appearing/disappearing based on answers.
+
+Location: Under Tasks > Add Task or Under a specific task > Sub-task > “+ Add Sub-Task”. Also accessible via the [Preview] button in the Builder.
+
+WHAT TO BUILD
+
+1. Form Renderer Component
+
+A wizard-style form that:
+- Shows one section at a time
+- Displays a progress indicator showing visible sections
+- Evaluates visibility conditions in real-time as user answers
+- Allows navigation back to previous sections
+- Validates required fields before proceeding
+- Submits all answers at the end
+
+2. Layout Structure
+
+PROGRESS BAR / STEPPER:
+- Shows all currently visible sections as steps
+- Highlights current section
+- Allows clicking back to previous completed sections
+- Updates dynamically as answers change visibility
+
+SECTION DISPLAY:
+- Section name as header
+- All questions in that section displayed vertically
+- Each question rendered based on its questionType
+- Required indicator on required questions
+- Validation errors shown inline
+
+NAVIGATION:
+- [Back] button (disabled on first section)
+- [Next] button (validates current section, then advances)
+- [Submit] button (shown on final visible section)
+
+3. Question Type Renderers
+
+Build a renderer for each question type:
+
+TEXT:
+- Single line text input
+- Respect any min/max length in settings
+
+TEXTAREA:
+- Multi-line text input
+- Respect any min/max length in settings
+
+SINGLE_CHOICE:
+- Radio buttons for 4 or fewer options
+- Dropdown select for 5+ options
+- Respect displayType in settings if specified
+
+MULTI_CHOICE:
+- Checkboxes for each option
+- "Select all that apply" helper text
+
+NUMBER:
+- Numeric input
+- Respect min/max in settings if specified
+
+DATE:
+- Date picker component
+
+URL:
+- Text input with URL validation
+
+4. Visibility Evaluation Engine
+
+Create a function that evaluates whether a section should be visible:
+
+evaluateSectionVisibility(section, allAnswers) returns boolean
+
+Logic:
+- If visibilityConditions is null, return true (always visible)
+- If operator is "AND", return true only if ALL conditions pass
+- If operator is "OR", return true if ANY condition passes
+
+For each condition:
+- Get the answer for condition.questionId from allAnswers
+- Apply the operator:
+  - "equals": answer === condition.value
+  - "not_equals": answer !== condition.value
+  - "includes": answer (array) includes condition.value
+  - "not_empty": answer is not null/undefined/empty string
+
+Handle edge cases:
+- If the trigger question hasn't been answered yet, condition fails (section hidden)
+- If trigger question is in a section that's not visible, condition fails
+
+5. Dynamic Section List
+
+As the user answers questions, recalculate which sections are visible:
+
+getVisibleSections(allSections, allAnswers) returns Section[]
+
+This should:
+1. Start with sections that have null visibilityConditions (always visible)
+2. Evaluate each conditional section
+3. Return ordered list of visible sections
+4. Re-run whenever answers change
+
+IMPORTANT: When a section becomes hidden due to answer changes:
+- Keep the answers in state (in case user changes back)
+- Remove section from progress stepper
+- If user was on that section, navigate to the previous visible section
+
+6. Intra-Section Conditional Questions
+
+Some questions within a section should only show based on other answers in the same section. For example: "Why is this urgent?" only shows when Priority = Urgent.
+
+For now, handle these common patterns:
+- Questions with "other" in internalLabel show when the previous question's answer includes "Other"
+- The "urgent_reason" question shows when "priority_level" = "Urgent"
+- The "video_want_storyboard" question shows when "video_has_storyboard" = "No"
+
+Store these intra-section rules in question settings field as:
+{
+  "showWhen": {
+    "questionInternalLabel": "priority_level",
+    "operator": "equals", 
+    "value": "Urgent"
+  }
+}
+
+If this gets complex, we can add a UI for it later. For now, handle it in code for the known cases.
+
+7. Form State Management
+
+Track:
+- allAnswers: object mapping questionId to answer value
+- currentSectionIndex: which section user is viewing (index into visible sections)
+- visibleSections: computed list of sections to show
+- validationErrors: object mapping questionId to error message
+- isSubmitting: boolean
+
+When answer changes:
+1. Update allAnswers
+2. Recalculate visibleSections
+3. Clear validation error for that question if now valid
+
+8. Validation
+
+Before advancing to next section:
+1. Check all required questions in current section have answers
+2. Check type-specific validation (URL format, number ranges, etc.)
+3. If errors, show inline and prevent advance
+4. If valid, proceed to next section
+
+9. Form Submission
+
+When user clicks Submit on final section:
+1. Validate all visible sections one more time
+2. Collect all answers from visible sections only (exclude hidden section answers)
+3. POST to task creation endpoint (we'll build this in Step 7)
+4. Show loading state
+5. On success, redirect to new task or show confirmation
+6. On error, show error message
+
+10. Preview Mode
+
+When accessed from Builder's [Preview] button:
+- Add a banner at top: "Preview Mode - submissions will not be saved"
+- Disable actual submission
+- Show a "Close Preview" button that returns to Builder
+
+11. API Endpoint for Form Data
+
+GET /api/task-intake/form
+- Returns all sections with their questions and options
+- Ordered by section orderIndex, questions ordered within
+- Only returns active sections (isActive = true)
+- Include visibilityConditions for client-side evaluation
+
+Response structure:
+{
+  "formId": "uuid",
+  "formName": "Task Intake Form",
+  "sections": [
+    {
+      "id": "uuid",
+      "sectionName": "Task Basics",
+      "orderIndex": 0,
+      "visibilityConditions": null,
+      "questions": [
+        {
+          "id": "uuid",
+          "questionText": "What is the name of this task?",
+          "questionType": "text",
+          "isRequired": true,
+          "internalLabel": "task_name",
+          "settings": {},
+          "options": []
+        },
+        {
+          "id": "uuid",
+          "questionText": "What is the priority level?",
+          "questionType": "single_choice",
+          "isRequired": true,
+          "internalLabel": "TRIGGER - priority_level",
+          "settings": {},
+          "options": [
+            { "id": "uuid", "optionText": "Low", "order": 0 },
+            { "id": "uuid", "optionText": "Medium", "order": 1 },
+            { "id": "uuid", "optionText": "High", "order": 2 },
+            { "id": "uuid", "optionText": "Urgent", "order": 3 }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+TESTING SCENARIOS
+
+After implementation, test these flows:
+
+Test 1 - Creative Copy Path:
+1. Fill out Task Basics
+2. Select Department = Creative
+3. Verify "Creative Type" section appears
+4. Select Type = Copywriting
+5. Verify "Creative - Copy Details" section appears
+6. Verify other creative sections (Video, Graphic, etc.) do NOT appear
+7. Answer "Is this for a live event?" = Yes
+8. Verify "Creative - Live Event Details" section appears
+9. Complete and submit
+
+Test 2 - DevOps Landing Page with A/B Test:
+1. Fill out Task Basics
+2. Select Department = DevOps
+3. Verify "DevOps Type" section appears
+4. Select Type = Landing Page
+5. Verify "DevOps - Landing Page Details" section appears
+6. Answer "Is it going to be an A/B test?" = Yes
+7. Verify "DevOps - Landing Page A/B Test Details" section appears
+8. Complete and submit
+
+Test 3 - Changing Answers:
+1. Fill out through Creative > Video path
+2. Go back and change Department to DevOps
+3. Verify all Creative sections disappear
+4. Verify DevOps sections appear
+5. Verify Creative answers are preserved if you switch back
+
+Test 4 - Validation:
+1. Try to advance without filling required fields
+2. Verify inline errors appear
+3. Verify cannot proceed until fixed
+
+PRESERVE EXISTING FUNCTIONALITY
+
+- This is a new component/page, should not affect existing task creation if there is one
+- Keep existing task creation available until this is fully tested
+
+DO NOT
+
+- Do not build the description generation yet (that's Step 8)
+- Do not build assignment rules integration yet (that's Step 9)
+- Do not remove any existing functionality
+
+Please implement this step and confirm when complete. Let me know the URL/location where I can test the form.
