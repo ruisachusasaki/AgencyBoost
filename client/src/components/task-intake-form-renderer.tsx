@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,8 +20,15 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Check, AlertCircle, X, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, AlertCircle, X, Loader2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
+
+interface Client {
+  id: string;
+  name: string;
+  company: string | null;
+}
 
 interface IntakeOption {
   id: string;
@@ -305,6 +313,7 @@ interface QuestionRendererProps {
   onChange: (value: string | string[] | number | null) => void;
   error?: string;
   disabled?: boolean;
+  clients?: Client[];
 }
 
 function QuestionRenderer({
@@ -313,10 +322,34 @@ function QuestionRenderer({
   onChange,
   error,
   disabled = false,
+  clients = [],
 }: QuestionRendererProps) {
   const settings = question.settings || {};
 
   const renderInput = () => {
+    // Special handling for client_select question
+    if (question.internalLabel === "client_select") {
+      return (
+        <Select
+          value={String(value || "")}
+          onValueChange={(val) => onChange(val)}
+          disabled={disabled}
+        >
+          <SelectTrigger className={cn("w-full max-w-md", error && "border-destructive")}>
+            <SelectValue placeholder="Select a client" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="no_client">No client (internal task)</SelectItem>
+            {clients.map((client) => (
+              <SelectItem key={client.id} value={client.id}>
+                {client.name}{client.company ? ` - ${client.company}` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    }
+
     switch (question.questionType) {
       case "text":
         return (
@@ -561,14 +594,25 @@ export function TaskIntakeFormRenderer({
   initialAnswers = {},
 }: TaskIntakeFormRendererProps) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [answers, setAnswers] = useState<Answers>(initialAnswers);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [completedSections, setCompletedSections] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState<{
+    taskId: string;
+    taskUrl: string;
+  } | null>(null);
 
   const { data: formData, isLoading, error } = useQuery<IntakeFormData>({
     queryKey: ["/api/task-intake/form"],
+  });
+
+  // Fetch clients for the client_select dropdown
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ["/api/clients"],
+    select: (data) => data.map(c => ({ id: c.id, name: c.name, company: c.company })),
   });
 
   const visibleSections = useMemo(() => {
@@ -687,13 +731,52 @@ export function TaskIntakeFormRenderer({
     setIsSubmitting(true);
     try {
       if (onSubmit) {
+        // Use provided onSubmit handler
         await onSubmit(answers, visibleSections);
+        toast({
+          title: "Success",
+          description: "Form submitted successfully",
+        });
+      } else if (formData?.formId) {
+        // Default API submission
+        const visibleSectionIds = visibleSections.map(s => s.id);
+        const response = await apiRequest("/api/task-intake/submit", {
+          method: "POST",
+          body: JSON.stringify({
+            formId: formData.formId,
+            answers,
+            visibleSectionIds,
+          }),
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          setSubmissionResult({
+            taskId: result.taskId,
+            taskUrl: result.taskUrl,
+          });
+          toast({
+            title: "Task Created!",
+            description: "Your task has been created successfully.",
+          });
+          // Auto-redirect after 2 seconds
+          setTimeout(() => {
+            setLocation(result.taskUrl);
+          }, 2000);
+        } else {
+          throw new Error(result.error || "Failed to submit form");
+        }
       }
-      toast({
-        title: "Success",
-        description: "Form submitted successfully",
-      });
-    } catch (err) {
+    } catch (err: any) {
+      // Handle validation errors from API
+      if (err.errors && Array.isArray(err.errors)) {
+        const errorMap: ValidationErrors = {};
+        err.errors.forEach((e: { questionId: string; message: string }) => {
+          errorMap[e.questionId] = e.message;
+        });
+        setValidationErrors(errorMap);
+      }
       toast({
         title: "Error",
         description: err instanceof Error ? err.message : "Failed to submit form",
@@ -702,7 +785,7 @@ export function TaskIntakeFormRenderer({
     } finally {
       setIsSubmitting(false);
     }
-  }, [validateCurrentSection, visibleSections, answers, isPreview, onSubmit, toast]);
+  }, [validateCurrentSection, visibleSections, answers, isPreview, onSubmit, toast, formData?.formId, setLocation]);
 
   if (isLoading) {
     return (
@@ -747,6 +830,29 @@ export function TaskIntakeFormRenderer({
 
   const isFirstSection = currentSectionIndex === 0;
   const isLastSection = currentSectionIndex === visibleSections.length - 1;
+
+  // Show success state after submission
+  if (submissionResult) {
+    return (
+      <Card className="max-w-3xl mx-auto">
+        <CardContent className="py-12 text-center space-y-6">
+          <div className="w-16 h-16 mx-auto bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+            <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-2">Task Created!</h2>
+            <p className="text-muted-foreground">
+              Your task has been created successfully. Redirecting...
+            </p>
+          </div>
+          <Button onClick={() => setLocation(submissionResult.taskUrl)} className="gap-2">
+            <ExternalLink className="h-4 w-4" />
+            View Task Now
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -803,6 +909,7 @@ export function TaskIntakeFormRenderer({
                     onChange={(value) => handleAnswerChange(question.id, value)}
                     error={validationErrors[question.id]}
                     disabled={isSubmitting}
+                    clients={clients}
                   />
                 ))}
               </div>
