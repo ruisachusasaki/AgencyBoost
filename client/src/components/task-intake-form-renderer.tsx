@@ -183,6 +183,20 @@ function evaluateQuestionVisibility(
 ): boolean {
   const settings = question.settings || {};
   
+  // Check hideWhen condition first - if met, hide the question
+  if (settings.hideWhen) {
+    const { triggerQuestionId, requiredValues } = settings.hideWhen;
+    const answer = answers[triggerQuestionId];
+    
+    if (answer !== undefined && answer !== null) {
+      const answerStr = Array.isArray(answer) ? answer : [String(answer)];
+      const shouldHide = requiredValues.some((val: string) => answerStr.includes(val));
+      if (shouldHide) {
+        return false;
+      }
+    }
+  }
+  
   if (settings.showWhen) {
     const { questionInternalLabel, operator, value } = settings.showWhen;
     const triggerQuestion = sectionQuestions.find(q => 

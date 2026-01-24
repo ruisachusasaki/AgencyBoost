@@ -81,6 +81,13 @@ export async function generateDescription(
     return '';
   }
 
+  // Check if this is a personal task - return blank description
+  for (const answer of Object.values(answers)) {
+    if (answer === 'Personal Task') {
+      return '';
+    }
+  }
+
   // Get all visible sections with their templates
   const sections = await db
     .select({

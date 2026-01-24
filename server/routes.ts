@@ -24359,11 +24359,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build a map for easy lookup
       const questionMap = new Map(questions.map(q => [q.id, q]));
 
-      // Check required fields in visible sections
+      // Helper function to check if a question is hidden by hideWhen condition
+      const isQuestionHiddenByCondition = (question: any): boolean => {
+        const settings = question.settings as Record<string, any> | null;
+        if (!settings?.hideWhen) return false;
+        
+        const { triggerQuestionId, requiredValues } = settings.hideWhen;
+        if (!triggerQuestionId || !Array.isArray(requiredValues)) return false;
+        
+        const triggerAnswer = answers[triggerQuestionId];
+        if (triggerAnswer === undefined || triggerAnswer === null) return false;
+        
+        const answerValues = Array.isArray(triggerAnswer) ? triggerAnswer : [String(triggerAnswer)];
+        return requiredValues.some((val: string) => answerValues.includes(val));
+      };
+
+      // Check required fields in visible sections (respecting question-level visibility)
       const errors: { questionId: string; message: string }[] = [];
       for (const question of questions) {
-        // Only validate questions in visible sections
+        // Only validate questions in visible sections that are not hidden by hideWhen
         if (question.sectionId && visibleSectionIds.includes(question.sectionId)) {
+          // Skip validation for questions hidden by hideWhen condition
+          if (isQuestionHiddenByCondition(question)) {
+            continue;
+          }
+          
           const answer = answers[question.id];
           
           if (question.isRequired) {
