@@ -20,9 +20,12 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Check, AlertCircle, X, Loader2, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, AlertCircle, X, Loader2, ExternalLink, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 
 interface Client {
   id: string;
@@ -408,16 +411,39 @@ function QuestionRenderer({
         );
 
       case "date":
+        const dateValue = value ? new Date(value as string) : undefined;
         return (
-          <Input
-            type="date"
-            value={String(value || "")}
-            onChange={(e) => onChange(e.target.value)}
-            min={settings.minDate}
-            max={settings.maxDate}
-            disabled={disabled}
-            className={cn("w-48", error && "border-destructive")}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={disabled}
+                className={cn(
+                  "w-full max-w-xs pl-3 text-left font-normal",
+                  !value && "text-muted-foreground",
+                  error && "border-destructive"
+                )}
+              >
+                {dateValue ? (
+                  format(dateValue, "PPP")
+                ) : (
+                  <span>Pick a date</span>
+                )}
+                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={dateValue}
+                onSelect={(date) => {
+                  onChange(date ? format(date, "yyyy-MM-dd") : null);
+                }}
+                disabled={disabled}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         );
 
       case "url":
