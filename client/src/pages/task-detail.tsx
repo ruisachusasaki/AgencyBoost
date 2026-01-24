@@ -1330,11 +1330,10 @@ export default function TaskDetail() {
                       setManualTimeDateOpen(false);
                     }}
                     disabled={(date) => {
-                      // Use local date string comparison to avoid timezone issues
-                      const today = new Date();
-                      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                      return dateStr > todayStr;
+                      // Allow today and past dates, disable future dates
+                      const now = new Date();
+                      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+                      return date > todayMidnight;
                     }}
                     initialFocus
                   />
