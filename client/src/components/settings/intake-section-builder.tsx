@@ -3,12 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Plus, Edit, Trash2, GripVertical, Settings2, ChevronDown, ChevronRight,
-  FolderOpen, Folder, Star, Eye, Type, Hash, Calendar, Circle, CheckCircle2,
-  Building2, Users, Upload
+  FolderOpen, Folder, Star, Type, Hash, Calendar, Circle, CheckCircle2,
+  Building2, Users, Upload, AlertCircle
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -46,8 +46,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-type QuestionType = "single_choice" | "multiple_choice" | "text" | "number" | "date" | "file" | "textarea" | "client" | "department";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type TaskIntakeOption = {
   id: string;
@@ -61,7 +60,7 @@ type TaskIntakeQuestion = {
   formId: string;
   sectionId: string;
   questionText: string;
-  questionType: QuestionType;
+  questionType: string;
   helpText?: string;
   internalLabel?: string;
   isRequired: boolean;
@@ -125,7 +124,6 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
   const queryClient = useQueryClient();
   
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-  const [sectionQuestions, setSectionQuestions] = useState<Map<string, TaskIntakeQuestion[]>>(new Map());
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
   const [isVisibilityModalOpen, setIsVisibilityModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<TaskIntakeSection | null>(null);
@@ -147,6 +145,8 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
     conditions: [],
   });
 
+  const [visibilityError, setVisibilityError] = useState<string | null>(null);
+
   const { data: sections, isLoading: sectionsLoading } = useQuery<TaskIntakeSection[]>({
     queryKey: ["/api/task-intake/sections"],
   });
@@ -157,7 +157,10 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
 
   const invalidateSections = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/task-intake/sections"] });
-  }, [queryClient]);
+    expandedSections.forEach(sectionId => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-intake-sections", sectionId, "questions"] });
+    });
+  }, [queryClient, expandedSections]);
 
   const updateSectionMutation = useMutation({
     mutationFn: async ({ sectionId, data }: { sectionId: string; data: any }) => {
@@ -184,6 +187,7 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
       invalidateSections();
       setIsVisibilityModalOpen(false);
       setEditingSection(null);
+      setVisibilityError(null);
       toast({ title: "Success", description: "Visibility conditions updated" });
     },
     onError: () => {
@@ -210,7 +214,7 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
       return response.json();
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/task-intake-sections/${variables.sectionId}/questions`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/task-intake-sections", variables.sectionId, "questions"] });
       invalidateSections();
     },
   });
@@ -245,16 +249,6 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
     },
   });
 
-  const fetchSectionQuestions = async (sectionId: string) => {
-    try {
-      const response = await fetch(`/api/task-intake-sections/${sectionId}/questions`);
-      const data = await response.json();
-      setSectionQuestions(prev => new Map(prev).set(sectionId, data));
-    } catch (error) {
-      console.error("Failed to fetch section questions:", error);
-    }
-  };
-
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => {
       const next = new Set(prev);
@@ -262,9 +256,6 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
         next.delete(sectionId);
       } else {
         next.add(sectionId);
-        if (!sectionQuestions.has(sectionId)) {
-          fetchSectionQuestions(sectionId);
-        }
       }
       return next;
     });
@@ -291,6 +282,7 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
 
   const openVisibilityModal = (section: TaskIntakeSection) => {
     setEditingSection(section);
+    setVisibilityError(null);
     
     if (section.visibilityConditions) {
       setVisibilityFormData({
@@ -331,19 +323,38 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
   const handleSaveVisibility = () => {
     if (!editingSection) return;
 
-    let visibilityConditions: VisibilityConditions = null;
-    
-    if (visibilityFormData.mode === "conditional" && visibilityFormData.conditions.length > 0) {
-      visibilityConditions = {
-        operator: visibilityFormData.operator,
-        conditions: visibilityFormData.conditions.filter(c => c.questionId && c.value),
-      };
-    }
+    setVisibilityError(null);
 
-    updateVisibilityMutation.mutate({
-      sectionId: editingSection.id,
-      visibilityConditions,
-    });
+    if (visibilityFormData.mode === "conditional") {
+      const validConditions = visibilityFormData.conditions.filter(c => c.questionId && c.value);
+      
+      if (validConditions.length === 0) {
+        setVisibilityError("Please add at least one complete condition (trigger question and value)");
+        return;
+      }
+
+      const incompleteConditions = visibilityFormData.conditions.filter(
+        c => (c.questionId && !c.value) || (!c.questionId && c.value)
+      );
+
+      if (incompleteConditions.length > 0) {
+        setVisibilityError("Some conditions are incomplete. Please select both a trigger question and a value for each condition.");
+        return;
+      }
+
+      updateVisibilityMutation.mutate({
+        sectionId: editingSection.id,
+        visibilityConditions: {
+          operator: visibilityFormData.operator,
+          conditions: validConditions,
+        },
+      });
+    } else {
+      updateVisibilityMutation.mutate({
+        sectionId: editingSection.id,
+        visibilityConditions: null,
+      });
+    }
   };
 
   const addVisibilityCondition = () => {
@@ -369,28 +380,47 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
     }));
   };
 
-  const handleSectionDragEnd = (result: DropResult) => {
-    if (!result.destination || !sections) return;
-    
-    const items = Array.from(sections);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-    
-    reorderSectionsMutation.mutate(items.map(s => s.id));
-  };
-
-  const handleQuestionDragEnd = (result: DropResult, sectionId: string) => {
+  const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-    
-    const questions = sectionQuestions.get(sectionId);
-    if (!questions) return;
-    
-    const items = Array.from(questions);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-    
-    setSectionQuestions(prev => new Map(prev).set(sectionId, items));
-    reorderQuestionsMutation.mutate({ sectionId, questionIds: items.map(q => q.id) });
+
+    const { source, destination, type } = result;
+
+    if (type === "SECTION") {
+      if (!sections) return;
+      const items = Array.from(sections);
+      const [reorderedItem] = items.splice(source.index, 1);
+      items.splice(destination.index, 0, reorderedItem);
+      reorderSectionsMutation.mutate(items.map(s => s.id));
+    } else if (type === "QUESTION") {
+      if (source.droppableId !== destination.droppableId) {
+        toast({
+          title: "Cannot move question",
+          description: "Questions can only be reordered within their section",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const sectionId = source.droppableId.replace('questions-', '');
+      queryClient.setQueryData<TaskIntakeQuestion[]>(
+        ["/api/task-intake-sections", sectionId, "questions"],
+        (oldData) => {
+          if (!oldData) return oldData;
+          const items = Array.from(oldData);
+          const [reorderedItem] = items.splice(source.index, 1);
+          items.splice(destination.index, 0, reorderedItem);
+          return items;
+        }
+      );
+      
+      const questionsData = queryClient.getQueryData<TaskIntakeQuestion[]>(["/api/task-intake-sections", sectionId, "questions"]);
+      if (questionsData) {
+        reorderQuestionsMutation.mutate({ 
+          sectionId, 
+          questionIds: questionsData.map(q => q.id) 
+        });
+      }
+    }
   };
 
   const getSelectedTriggerOptions = (questionId: string): TaskIntakeOption[] => {
@@ -412,21 +442,15 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-medium">Task Intake Form Builder</h3>
+          <h3 className="text-lg font-medium">Section-Based Builder</h3>
           <p className="text-sm text-muted-foreground">
             Organize questions into sections with conditional visibility
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" onClick={() => openSectionModal()}>
-            <Plus className="h-4 w-4 mr-1" />
-            Add Section
-          </Button>
-          <Button size="sm" variant="outline" disabled>
-            <Eye className="h-4 w-4 mr-1" />
-            Preview
-          </Button>
-        </div>
+        <Button size="sm" onClick={() => openSectionModal()}>
+          <Plus className="h-4 w-4 mr-1" />
+          Add Section
+        </Button>
       </div>
 
       <Card>
@@ -436,8 +460,8 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
               No sections yet. Add your first section to organize questions.
             </div>
           ) : (
-            <DragDropContext onDragEnd={handleSectionDragEnd}>
-              <Droppable droppableId="sections">
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="sections" type="SECTION">
                 {(provided) => (
                   <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
                     {sections.map((section, index) => (
@@ -455,11 +479,9 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
                               onEdit={() => openSectionModal(section)}
                               onEditVisibility={() => openVisibilityModal(section)}
                               dragHandleProps={provided.dragHandleProps}
-                              questions={sectionQuestions.get(section.id) || []}
                               onEditQuestion={(q) => onOpenQuestionDialog(q, section.id)}
                               onDeleteQuestion={(id) => setDeleteQuestionId(id)}
                               onAddQuestion={() => onOpenQuestionDialog(undefined, section.id)}
-                              onQuestionDragEnd={(result) => handleQuestionDragEnd(result, section.id)}
                             />
                           </div>
                         )}
@@ -535,12 +557,22 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {visibilityError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{visibilityError}</AlertDescription>
+              </Alert>
+            )}
+            
             <RadioGroup
               value={visibilityFormData.mode}
-              onValueChange={(value) => setVisibilityFormData(prev => ({ 
-                ...prev, 
-                mode: value as "always" | "conditional" 
-              }))}
+              onValueChange={(value) => {
+                setVisibilityFormData(prev => ({ 
+                  ...prev, 
+                  mode: value as "always" | "conditional" 
+                }));
+                setVisibilityError(null);
+              }}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="always" id="always" />
@@ -574,6 +606,11 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
                 </div>
 
                 <div className="space-y-3">
+                  {visibilityFormData.conditions.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No conditions added. Add at least one condition to use conditional visibility.
+                    </p>
+                  )}
                   {visibilityFormData.conditions.map((condition, index) => (
                     <div key={index} className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
                       <Select
@@ -603,6 +640,7 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
                       <Select
                         value={condition.value}
                         onValueChange={(value) => updateVisibilityCondition(index, "value", value)}
+                        disabled={!condition.questionId}
                       >
                         <SelectTrigger className="flex-1">
                           <SelectValue placeholder="Select value" />
@@ -682,11 +720,9 @@ interface SectionRowProps {
   onEdit: () => void;
   onEditVisibility: () => void;
   dragHandleProps: any;
-  questions: TaskIntakeQuestion[];
   onEditQuestion: (question: TaskIntakeQuestion) => void;
   onDeleteQuestion: (questionId: string) => void;
   onAddQuestion: () => void;
-  onQuestionDragEnd: (result: DropResult) => void;
 }
 
 function SectionRow({
@@ -696,12 +732,15 @@ function SectionRow({
   onEdit,
   onEditVisibility,
   dragHandleProps,
-  questions,
   onEditQuestion,
   onDeleteQuestion,
   onAddQuestion,
-  onQuestionDragEnd,
 }: SectionRowProps) {
+  const { data: questions, isLoading } = useQuery<TaskIntakeQuestion[]>({
+    queryKey: ["/api/task-intake-sections", section.id, "questions"],
+    enabled: isExpanded,
+  });
+
   const isTriggerQuestion = (q: TaskIntakeQuestion) => 
     q.internalLabel?.includes("TRIGGER");
 
@@ -762,77 +801,93 @@ function SectionRow({
 
       <CollapsibleContent>
         <div className="pl-12 pr-4 pb-3 space-y-2">
-          {questions.length === 0 ? (
-            <div className="text-sm text-muted-foreground py-2 px-3 bg-background rounded border border-dashed">
-              No questions in this section yet
+          {isLoading ? (
+            <div className="space-y-1">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
             </div>
+          ) : !questions || questions.length === 0 ? (
+            <Droppable droppableId={`questions-${section.id}`} type="QUESTION">
+              {(provided) => (
+                <div 
+                  {...provided.droppableProps} 
+                  ref={provided.innerRef}
+                  className="text-sm text-muted-foreground py-2 px-3 bg-background rounded border border-dashed min-h-[40px]"
+                >
+                  No questions in this section yet
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
           ) : (
-            <DragDropContext onDragEnd={onQuestionDragEnd}>
-              <Droppable droppableId={`questions-${section.id}`}>
-                {(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-1">
-                    {questions.map((question, index) => {
-                      const Icon = questionTypeIcons[question.questionType] || Type;
-                      const isTrigger = isTriggerQuestion(question);
-                      
-                      return (
-                        <Draggable key={question.id} draggableId={question.id} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              className={`flex items-center gap-2 p-2 rounded border bg-background ${
-                                snapshot.isDragging ? "ring-2 ring-primary" : ""
-                              }`}
-                            >
-                              <div {...provided.dragHandleProps} className="cursor-grab">
-                                <GripVertical className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                              
-                              <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                              
-                              {isTrigger && (
-                                <Star className="h-3 w-3 text-yellow-500 shrink-0" fill="currentColor" />
-                              )}
-                              
-                              <span className="flex-1 text-sm truncate">
-                                {question.internalLabel || question.questionText}
-                              </span>
-                              
-                              {question.isRequired && (
-                                <Badge variant="outline" className="text-xs shrink-0">
-                                  Required
-                                </Badge>
-                              )}
-                              
-                              <div className="flex gap-1">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-7 w-7"
-                                  onClick={() => onEditQuestion(question)}
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-7 w-7 text-destructive"
-                                  onClick={() => onDeleteQuestion(question.id)}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
+            <Droppable droppableId={`questions-${section.id}`} type="QUESTION">
+              {(provided) => (
+                <div 
+                  {...provided.droppableProps} 
+                  ref={provided.innerRef}
+                  className="space-y-1"
+                >
+                  {questions.map((question, index) => {
+                    const Icon = questionTypeIcons[question.questionType] || Type;
+                    const isTrigger = isTriggerQuestion(question);
+                    
+                    return (
+                      <Draggable key={question.id} draggableId={question.id} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={`flex items-center gap-2 p-2 rounded border bg-background ${
+                              snapshot.isDragging ? "ring-2 ring-primary shadow-lg" : ""
+                            }`}
+                          >
+                            <div {...provided.dragHandleProps} className="cursor-grab">
+                              <GripVertical className="h-4 w-4 text-muted-foreground" />
                             </div>
-                          )}
-                        </Draggable>
-                      );
-                    })}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
+                            
+                            <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                            
+                            {isTrigger && (
+                              <Star className="h-3 w-3 text-yellow-500 shrink-0" fill="currentColor" />
+                            )}
+                            
+                            <span className="flex-1 text-sm truncate">
+                              {question.internalLabel || question.questionText}
+                            </span>
+                            
+                            {question.isRequired && (
+                              <Badge variant="outline" className="text-xs shrink-0">
+                                Required
+                              </Badge>
+                            )}
+                            
+                            <div className="flex gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7"
+                                onClick={() => onEditQuestion(question)}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-destructive"
+                                onClick={() => onDeleteQuestion(question.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
           )}
           
           <Button
