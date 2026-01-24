@@ -143,6 +143,7 @@ const questionFormSchema = z.object({
   isRequired: z.boolean().default(true),
   options: z.array(z.object({ optionText: z.string() })).optional(),
   displayType: z.enum(["radio", "dropdown"]).default("radio"),
+  allowOther: z.boolean().default(false),
 });
 
 type QuestionFormData = z.infer<typeof questionFormSchema>;
@@ -188,6 +189,7 @@ export function TaskIntakeFormBuilder() {
       isRequired: true,
       options: [],
       displayType: "radio",
+      allowOther: false,
     },
   });
   
@@ -277,6 +279,8 @@ export function TaskIntakeFormBuilder() {
       internalLabel: "",
       isRequired: true,
       options: [],
+      displayType: "radio",
+      allowOther: false,
     });
     setOptionInputs([""]);
   };
@@ -298,6 +302,7 @@ export function TaskIntakeFormBuilder() {
         internalLabel: question.internalLabel || "",
         isRequired: question.isRequired,
         displayType: question.settings?.displayType || "radio",
+        allowOther: question.settings?.allowOther || false,
       });
       setOptionInputs(
         question.options.length > 0
@@ -328,8 +333,11 @@ export function TaskIntakeFormBuilder() {
       return;
     }
     
-    const settings = questionType === "single_choice" 
-      ? { displayType: data.displayType }
+    const settings = (questionType === "single_choice" || questionType === "multi_choice")
+      ? { 
+          displayType: questionType === "single_choice" ? data.displayType : undefined,
+          allowOther: data.allowOther 
+        }
       : undefined;
     
     const payload = {
@@ -704,6 +712,29 @@ export function TaskIntakeFormBuilder() {
               )}
               
               {needsOptions && (
+                <FormField
+                  control={form.control}
+                  name="allowOther"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Allow "Other" Option</FormLabel>
+                        <FormDescription>
+                          Let respondents enter a custom answer if none of the options fit
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              {needsOptions && (
                 <div className="space-y-3">
                   <Label>Answer Options</Label>
                   {optionInputs.map((option, index) => (
@@ -1032,44 +1063,77 @@ function FormPreviewDialog({
                 {/* Single choice with radio buttons */}
                 {currentQuestion.questionType === "single_choice" && 
                   currentQuestion.settings?.displayType !== "dropdown" && (
-                  <RadioGroup
-                    value={(answers[currentQuestion.id] as string) || ""}
-                    onValueChange={handleSingleChoiceChange}
-                    className="space-y-3"
-                  >
-                    {getOptionsForQuestion(currentQuestion).map((option) => (
-                      <div
-                        key={option.id}
-                        className="flex items-center space-x-3 border rounded-lg p-3 hover:bg-accent cursor-pointer"
-                        onClick={() => handleSingleChoiceChange(option.id)}
-                      >
-                        <RadioGroupItem value={option.id} id={option.id} />
-                        <Label htmlFor={option.id} className="flex-1 cursor-pointer">
-                          {option.optionText}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
+                  <div className="space-y-3">
+                    <RadioGroup
+                      value={(answers[currentQuestion.id] as string) || ""}
+                      onValueChange={handleSingleChoiceChange}
+                      className="space-y-3"
+                    >
+                      {getOptionsForQuestion(currentQuestion).map((option) => (
+                        <div
+                          key={option.id}
+                          className="flex items-center space-x-3 border rounded-lg p-3 hover:bg-accent cursor-pointer"
+                          onClick={() => handleSingleChoiceChange(option.id)}
+                        >
+                          <RadioGroupItem value={option.id} id={option.id} />
+                          <Label htmlFor={option.id} className="flex-1 cursor-pointer">
+                            {option.optionText}
+                          </Label>
+                        </div>
+                      ))}
+                      {currentQuestion.settings?.allowOther && (
+                        <div
+                          className="flex items-center space-x-3 border rounded-lg p-3 hover:bg-accent cursor-pointer"
+                          onClick={() => handleSingleChoiceChange("__other__")}
+                        >
+                          <RadioGroupItem value="__other__" id={`${currentQuestion.id}-other`} />
+                          <Label htmlFor={`${currentQuestion.id}-other`} className="flex-1 cursor-pointer">
+                            Other
+                          </Label>
+                        </div>
+                      )}
+                    </RadioGroup>
+                    {currentQuestion.settings?.allowOther && answers[currentQuestion.id] === "__other__" && (
+                      <Input
+                        placeholder="Please specify..."
+                        value={(answers[`${currentQuestion.id}_other_text`] as string) || ""}
+                        onChange={(e) => setAnswers(prev => ({ ...prev, [`${currentQuestion.id}_other_text`]: e.target.value }))}
+                        className="mt-2"
+                      />
+                    )}
+                  </div>
                 )}
                 
                 {/* Single choice with dropdown */}
                 {currentQuestion.questionType === "single_choice" && 
                   currentQuestion.settings?.displayType === "dropdown" && (
-                  <Select
-                    value={(answers[currentQuestion.id] as string) || ""}
-                    onValueChange={handleSingleChoiceChange}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select an option..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getOptionsForQuestion(currentQuestion).map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.optionText}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-3">
+                    <Select
+                      value={(answers[currentQuestion.id] as string) || ""}
+                      onValueChange={handleSingleChoiceChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select an option..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getOptionsForQuestion(currentQuestion).map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.optionText}
+                          </SelectItem>
+                        ))}
+                        {currentQuestion.settings?.allowOther && (
+                          <SelectItem value="__other__">Other</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {currentQuestion.settings?.allowOther && answers[currentQuestion.id] === "__other__" && (
+                      <Input
+                        placeholder="Please specify..."
+                        value={(answers[`${currentQuestion.id}_other_text`] as string) || ""}
+                        onChange={(e) => setAnswers(prev => ({ ...prev, [`${currentQuestion.id}_other_text`]: e.target.value }))}
+                      />
+                    )}
+                  </div>
                 )}
                 
                 {/* Client and Department use dropdown by default */}
@@ -1113,6 +1177,33 @@ function FormPreviewDialog({
                         </div>
                       );
                     })}
+                    {currentQuestion.settings?.allowOther && (
+                      <>
+                        <div
+                          className="flex items-center space-x-3 border rounded-lg p-3 hover:bg-accent cursor-pointer"
+                          onClick={() => {
+                            const isOtherChecked = ((answers[currentQuestion.id] as string[]) || []).includes("__other__");
+                            handleMultiChoiceChange("__other__", !isOtherChecked);
+                          }}
+                        >
+                          <Checkbox
+                            id={`${currentQuestion.id}-other`}
+                            checked={((answers[currentQuestion.id] as string[]) || []).includes("__other__")}
+                            onCheckedChange={(checked) => handleMultiChoiceChange("__other__", !!checked)}
+                          />
+                          <Label htmlFor={`${currentQuestion.id}-other`} className="flex-1 cursor-pointer">
+                            Other
+                          </Label>
+                        </div>
+                        {((answers[currentQuestion.id] as string[]) || []).includes("__other__") && (
+                          <Input
+                            placeholder="Please specify..."
+                            value={(answers[`${currentQuestion.id}_other_text`] as string) || ""}
+                            onChange={(e) => setAnswers(prev => ({ ...prev, [`${currentQuestion.id}_other_text`]: e.target.value }))}
+                          />
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
                 
