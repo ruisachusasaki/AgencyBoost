@@ -4986,19 +4986,6 @@ export const taskIntakeAssignmentRules = pgTable("task_intake_assignment_rules",
   index("idx_task_intake_assignment_priority").on(table.priority),
 ]);
 
-// Role Assignments Table - Maps roles to users for assignment rules
-export const roleAssignments = pgTable("role_assignments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  roleName: text("role_name").notNull(),
-  userId: uuid("user_id").references(() => staff.id, { onDelete: "set null" }),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("idx_role_assignments_name").on(table.roleName),
-  index("idx_role_assignments_user").on(table.userId),
-]);
-
 // Schema exports and types
 export const insertTaskIntakeFormSchema = createInsertSchema(taskIntakeForms).omit({
   id: true,
@@ -5046,14 +5033,6 @@ export const insertTaskIntakeAssignmentRuleSchema = createInsertSchema(taskIntak
 });
 export type TaskIntakeAssignmentRule = typeof taskIntakeAssignmentRules.$inferSelect;
 export type InsertTaskIntakeAssignmentRule = z.infer<typeof insertTaskIntakeAssignmentRuleSchema>;
-
-export const insertRoleAssignmentSchema = createInsertSchema(roleAssignments).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export type RoleAssignment = typeof roleAssignments.$inferSelect;
-export type InsertRoleAssignment = z.infer<typeof insertRoleAssignmentSchema>;
 
 // Task Intake Submissions - stores form submissions before/after task creation
 export const taskIntakeSubmissions = pgTable("task_intake_submissions", {
