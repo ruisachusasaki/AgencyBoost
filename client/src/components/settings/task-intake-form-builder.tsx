@@ -472,6 +472,7 @@ export function TaskIntakeFormBuilder() {
                     No questions yet. Add your first question to get started.
                   </div>
                 ) : (
+                  <>
                   <DragDropContext onDragEnd={handleDragEnd}>
                     <Droppable droppableId="questions">
                       {(provided) => (
@@ -540,6 +541,14 @@ export function TaskIntakeFormBuilder() {
                       )}
                     </Droppable>
                   </DragDropContext>
+                  
+                  <div className="mt-4 pt-4 border-t">
+                    <Button size="sm" onClick={() => handleOpenQuestionDialog()} className="w-full">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Question
+                    </Button>
+                  </div>
+                </>
                 )}
               </CardContent>
             </Card>
