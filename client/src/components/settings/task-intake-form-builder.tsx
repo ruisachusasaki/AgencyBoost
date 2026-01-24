@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { IntakeSectionBuilder } from "./intake-section-builder";
+import { TaskIntakeFormRenderer } from "@/components/task-intake-form-renderer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -877,8 +878,8 @@ export function TaskIntakeFormBuilder() {
       <FormPreviewDialog
         open={isPreviewOpen}
         onOpenChange={setIsPreviewOpen}
-        questions={questions}
-        logicRules={logicRules}
+        
+        
         formName={activeForm.name}
       />
     </div>
@@ -889,419 +890,35 @@ export function TaskIntakeFormBuilder() {
 function FormPreviewDialog({
   open,
   onOpenChange,
-  questions,
-  logicRules,
   formName,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  questions: TaskIntakeQuestion[];
-  logicRules: TaskIntakeLogicRule[];
   formName: string;
 }) {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
-  const [questionHistory, setQuestionHistory] = useState<number[]>([0]);
-  const [isComplete, setIsComplete] = useState(false);
-  
-  // Fetch departments for department question type
-  const { data: departments = [] } = useQuery<{ id: string; name: string }[]>({
-    queryKey: ["/api/departments"],
-  });
-  
-  // Fetch clients for client question type
-  const { data: clientsData } = useQuery<{ clients: { id: number; name: string; company: string; status: string }[] }>({
-    queryKey: ["/api/clients"],
-  });
-  
-  const activeClients = (clientsData?.clients || []).filter((c) => c.status === "active");
-  
-  const currentQuestion = questions[currentQuestionIndex];
-  const progress = questions.length > 0 ? ((questionHistory.length) / questions.length) * 100 : 0;
-  
-  const resetPreview = () => {
-    setCurrentQuestionIndex(0);
-    setAnswers({});
-    setQuestionHistory([0]);
-    setIsComplete(false);
-  };
-  
-  // Reset when dialog opens
-  const handleOpenChange = (newOpen: boolean) => {
-    if (newOpen) {
-      resetPreview();
-    }
-    onOpenChange(newOpen);
-  };
-  
-  // Get options for the current question (handles client/department dynamic options)
-  const getOptionsForQuestion = (question: TaskIntakeQuestion) => {
-    if (question.questionType === "department") {
-      return departments.map((d) => ({ id: `dept-${d.id}`, optionText: d.name }));
-    }
-    if (question.questionType === "client") {
-      // Use company (business name) for display, fall back to contact name if no company
-      return activeClients.map((c) => ({ id: `client-${c.id}`, optionText: c.company || c.name }));
-    }
-    return question.options.map((o) => ({ id: o.id, optionText: o.optionText }));
-  };
-  
-  // Find the next question based on logic rules
-  const findNextQuestion = (questionId: string, answer: string | string[]): number | "end" => {
-    const answerArray = Array.isArray(answer) ? answer : [answer];
-    
-    // Check if any logic rule matches
-    const matchingRules = logicRules.filter((rule) => {
-      if (rule.sourceQuestionId !== questionId || !rule.enabled) return false;
-      const conditionOptionIds = rule.conditions.map((c: any) => c.optionId);
-      return answerArray.some((a) => conditionOptionIds.includes(a));
-    });
-    
-    if (matchingRules.length > 0) {
-      // Use the first matching rule (rules are ordered by priority)
-      const rule = matchingRules[0];
-      if (rule.isEndForm) {
-        return "end";
-      }
-      if (rule.targetQuestionId) {
-        const targetIndex = questions.findIndex((q) => q.id === rule.targetQuestionId);
-        if (targetIndex !== -1) {
-          return targetIndex;
-        }
-      }
-    }
-    
-    // Default: go to next question in order
-    const currentIndex = questions.findIndex((q) => q.id === questionId);
-    if (currentIndex < questions.length - 1) {
-      return currentIndex + 1;
-    }
-    return "end";
-  };
-  
-  const handleNext = () => {
-    if (!currentQuestion) return;
-    
-    const answer = answers[currentQuestion.id];
-    if (currentQuestion.isRequired && (!answer || (Array.isArray(answer) && answer.length === 0))) {
-      return; // Don't proceed if required and not answered
-    }
-    
-    const nextQuestionResult = findNextQuestion(currentQuestion.id, answer || "");
-    
-    if (nextQuestionResult === "end") {
-      setIsComplete(true);
-    } else {
-      setCurrentQuestionIndex(nextQuestionResult);
-      setQuestionHistory([...questionHistory, nextQuestionResult]);
-    }
-  };
-  
-  const handleBack = () => {
-    if (questionHistory.length > 1) {
-      const newHistory = questionHistory.slice(0, -1);
-      setQuestionHistory(newHistory);
-      setCurrentQuestionIndex(newHistory[newHistory.length - 1]);
-      setIsComplete(false);
-    }
-  };
-  
-  const handleSingleChoiceChange = (value: string) => {
-    if (currentQuestion) {
-      setAnswers({ ...answers, [currentQuestion.id]: value });
-    }
-  };
-  
-  const handleMultiChoiceChange = (optionId: string, checked: boolean) => {
-    if (!currentQuestion) return;
-    const currentAnswers = (answers[currentQuestion.id] as string[]) || [];
-    if (checked) {
-      setAnswers({ ...answers, [currentQuestion.id]: [...currentAnswers, optionId] });
-    } else {
-      setAnswers({ ...answers, [currentQuestion.id]: currentAnswers.filter((a) => a !== optionId) });
-    }
-  };
-  
-  const handleTextChange = (value: string) => {
-    if (currentQuestion) {
-      setAnswers({ ...answers, [currentQuestion.id]: value });
-    }
-  };
-  
-  const canProceed = () => {
-    if (!currentQuestion) return false;
-    if (!currentQuestion.isRequired) return true;
-    const answer = answers[currentQuestion.id];
-    if (!answer) return false;
-    if (Array.isArray(answer) && answer.length === 0) return false;
-    if (typeof answer === "string" && answer.trim() === "") return false;
-    return true;
-  };
-  
-  if (questions.length === 0) return null;
-  
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
             Preview: {formName}
           </DialogTitle>
           <DialogDescription>
-            Test your form flow. This preview won't create an actual task.
+            Test your form flow with the section-based wizard. This preview won't create an actual task.
           </DialogDescription>
         </DialogHeader>
         
         <div className="py-4">
-          <Progress value={progress} className="mb-6" />
-          
-          {isComplete ? (
-            <div className="text-center py-8">
-              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Check className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Form Complete!</h3>
-              <p className="text-muted-foreground mb-4">
-                All questions have been answered. In the actual form, a task would be created here.
-              </p>
-              <div className="border rounded-lg p-4 text-left max-h-60 overflow-y-auto">
-                <h4 className="font-medium mb-2">Answers Summary:</h4>
-                {Object.entries(answers).map(([questionId, answer]) => {
-                  const question = questions.find((q) => q.id === questionId);
-                  if (!question) return null;
-                  const displayAnswer = Array.isArray(answer) ? answer.join(", ") : answer;
-                  return (
-                    <div key={questionId} className="mb-2 text-sm">
-                      <span className="font-medium">{getQuestionDisplayName(question)}:</span>{" "}
-                      <span className="text-muted-foreground">{displayAnswer || "(no answer)"}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : currentQuestion ? (
-            <div className="space-y-6">
-              <div className="text-center">
-                <Badge variant="outline" className="mb-2">
-                  Question {questionHistory.length} of {questions.length}
-                </Badge>
-                <h3 className="text-xl font-semibold mt-2">{currentQuestion.questionText}</h3>
-                {currentQuestion.helpText && (
-                  <p className="text-muted-foreground mt-1">{currentQuestion.helpText}</p>
-                )}
-              </div>
-              
-              <div className="pt-4">
-                {/* Single choice with radio buttons */}
-                {currentQuestion.questionType === "single_choice" && 
-                  currentQuestion.settings?.displayType !== "dropdown" && (
-                  <div className="space-y-3">
-                    <RadioGroup
-                      value={(answers[currentQuestion.id] as string) || ""}
-                      onValueChange={handleSingleChoiceChange}
-                      className="space-y-3"
-                    >
-                      {getOptionsForQuestion(currentQuestion).map((option) => (
-                        <div
-                          key={option.id}
-                          className="flex items-center space-x-3 border rounded-lg p-3 hover:bg-accent cursor-pointer"
-                          onClick={() => handleSingleChoiceChange(option.id)}
-                        >
-                          <RadioGroupItem value={option.id} id={option.id} />
-                          <Label htmlFor={option.id} className="flex-1 cursor-pointer">
-                            {option.optionText}
-                          </Label>
-                        </div>
-                      ))}
-                      {currentQuestion.settings?.allowOther && (
-                        <div
-                          className="flex items-center space-x-3 border rounded-lg p-3 hover:bg-accent cursor-pointer"
-                          onClick={() => handleSingleChoiceChange("__other__")}
-                        >
-                          <RadioGroupItem value="__other__" id={`${currentQuestion.id}-other`} />
-                          <Label htmlFor={`${currentQuestion.id}-other`} className="flex-1 cursor-pointer">
-                            Other
-                          </Label>
-                        </div>
-                      )}
-                    </RadioGroup>
-                    {currentQuestion.settings?.allowOther && answers[currentQuestion.id] === "__other__" && (
-                      <Input
-                        placeholder="Please specify..."
-                        value={(answers[`${currentQuestion.id}_other_text`] as string) || ""}
-                        onChange={(e) => setAnswers(prev => ({ ...prev, [`${currentQuestion.id}_other_text`]: e.target.value }))}
-                        className="mt-2"
-                      />
-                    )}
-                  </div>
-                )}
-                
-                {/* Single choice with dropdown */}
-                {currentQuestion.questionType === "single_choice" && 
-                  currentQuestion.settings?.displayType === "dropdown" && (
-                  <div className="space-y-3">
-                    <Select
-                      value={(answers[currentQuestion.id] as string) || ""}
-                      onValueChange={handleSingleChoiceChange}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select an option..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getOptionsForQuestion(currentQuestion).map((option) => (
-                          <SelectItem key={option.id} value={option.id}>
-                            {option.optionText}
-                          </SelectItem>
-                        ))}
-                        {currentQuestion.settings?.allowOther && (
-                          <SelectItem value="__other__">Other</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {currentQuestion.settings?.allowOther && answers[currentQuestion.id] === "__other__" && (
-                      <Input
-                        placeholder="Please specify..."
-                        value={(answers[`${currentQuestion.id}_other_text`] as string) || ""}
-                        onChange={(e) => setAnswers(prev => ({ ...prev, [`${currentQuestion.id}_other_text`]: e.target.value }))}
-                      />
-                    )}
-                  </div>
-                )}
-                
-                {/* Client and Department use dropdown by default */}
-                {(currentQuestion.questionType === "client" || 
-                  currentQuestion.questionType === "department") && (
-                  <Select
-                    value={(answers[currentQuestion.id] as string) || ""}
-                    onValueChange={handleSingleChoiceChange}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={`Select a ${currentQuestion.questionType}...`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getOptionsForQuestion(currentQuestion).map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.optionText}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                
-                {currentQuestion.questionType === "multi_choice" && (
-                  <div className="space-y-3">
-                    {getOptionsForQuestion(currentQuestion).map((option) => {
-                      const isChecked = ((answers[currentQuestion.id] as string[]) || []).includes(option.id);
-                      return (
-                        <div
-                          key={option.id}
-                          className="flex items-center space-x-3 border rounded-lg p-3 hover:bg-accent cursor-pointer"
-                          onClick={() => handleMultiChoiceChange(option.id, !isChecked)}
-                        >
-                          <Checkbox
-                            id={option.id}
-                            checked={isChecked}
-                            onCheckedChange={(checked) => handleMultiChoiceChange(option.id, !!checked)}
-                          />
-                          <Label htmlFor={option.id} className="flex-1 cursor-pointer">
-                            {option.optionText}
-                          </Label>
-                        </div>
-                      );
-                    })}
-                    {currentQuestion.settings?.allowOther && (
-                      <>
-                        <div
-                          className="flex items-center space-x-3 border rounded-lg p-3 hover:bg-accent cursor-pointer"
-                          onClick={() => {
-                            const isOtherChecked = ((answers[currentQuestion.id] as string[]) || []).includes("__other__");
-                            handleMultiChoiceChange("__other__", !isOtherChecked);
-                          }}
-                        >
-                          <Checkbox
-                            id={`${currentQuestion.id}-other`}
-                            checked={((answers[currentQuestion.id] as string[]) || []).includes("__other__")}
-                            onCheckedChange={(checked) => handleMultiChoiceChange("__other__", !!checked)}
-                          />
-                          <Label htmlFor={`${currentQuestion.id}-other`} className="flex-1 cursor-pointer">
-                            Other
-                          </Label>
-                        </div>
-                        {((answers[currentQuestion.id] as string[]) || []).includes("__other__") && (
-                          <Input
-                            placeholder="Please specify..."
-                            value={(answers[`${currentQuestion.id}_other_text`] as string) || ""}
-                            onChange={(e) => setAnswers(prev => ({ ...prev, [`${currentQuestion.id}_other_text`]: e.target.value }))}
-                          />
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-                
-                {currentQuestion.questionType === "text" && (
-                  <Textarea
-                    placeholder="Type your answer here..."
-                    value={(answers[currentQuestion.id] as string) || ""}
-                    onChange={(e) => handleTextChange(e.target.value)}
-                    className="min-h-[100px]"
-                  />
-                )}
-                
-                {currentQuestion.questionType === "number" && (
-                  <Input
-                    type="number"
-                    placeholder="Enter a number..."
-                    value={(answers[currentQuestion.id] as string) || ""}
-                    onChange={(e) => handleTextChange(e.target.value)}
-                  />
-                )}
-                
-                {currentQuestion.questionType === "date" && (
-                  <Input
-                    type="date"
-                    value={(answers[currentQuestion.id] as string) || ""}
-                    onChange={(e) => handleTextChange(e.target.value)}
-                  />
-                )}
-              </div>
-            </div>
-          ) : null}
+          <TaskIntakeFormRenderer
+            isPreview={true}
+            onClose={() => onOpenChange(false)}
+          />
         </div>
-        
-        <DialogFooter className="flex justify-between sm:justify-between">
-          <div className="flex gap-2">
-            {questionHistory.length > 1 && !isComplete && (
-              <Button variant="outline" onClick={handleBack}>
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Back
-              </Button>
-            )}
-            {isComplete && (
-              <Button variant="outline" onClick={resetPreview}>
-                <RotateCcw className="h-4 w-4 mr-1" />
-                Start Over
-              </Button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
-              Close
-            </Button>
-            {!isComplete && (
-              <Button onClick={handleNext} disabled={!canProceed()}>
-                {currentQuestionIndex === questions.length - 1 ? "Finish" : "Next"}
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            )}
-          </div>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
 function LogicRulesBuilder({
   formId,
   questions,

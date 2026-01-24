@@ -191,12 +191,23 @@ function evaluateQuestionVisibility(
           }
           return String(answer || "") === value;
         case "not_equals":
+          if (Array.isArray(answer)) {
+            return !answer.includes(value);
+          }
           return String(answer || "") !== value;
         case "includes":
           if (Array.isArray(answer)) {
             return answer.includes(value);
           }
           return String(answer || "").includes(value);
+        case "not_empty":
+          if (answer === undefined || answer === null) {
+            return false;
+          }
+          if (Array.isArray(answer)) {
+            return answer.length > 0;
+          }
+          return String(answer).trim() !== "";
         default:
           return true;
       }
