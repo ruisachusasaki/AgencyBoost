@@ -94,6 +94,7 @@ import { nanoid } from "nanoid";
 import { calculateHealthMetrics, analyzeHealthStatus } from "@shared/utils/healthAnalysis";
 import { emitTrigger } from "./workflow-engine";
 import { generateDescription, mapPriority } from "./description-template-engine";
+import { evaluateAssignmentRules, generateConditionSummary } from "./assignment-rule-engine";
 import { 
   requireAuth, 
   requirePermission,
@@ -24173,6 +24174,165 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
+  // Task Intake Assignment Rules Endpoints
+  // ==========================================
+
+  // GET /api/task-intake/assignment-rules - Get all assignment rules
+  app.get("/api/task-intake/assignment-rules", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { formId } = req.query;
+      
+      let query = db.select({
+        id: taskIntakeAssignmentRules.id,
+        formId: taskIntakeAssignmentRules.formId,
+        name: taskIntakeAssignmentRules.name,
+        conditions: taskIntakeAssignmentRules.conditions,
+        assignToRole: taskIntakeAssignmentRules.assignToRole,
+        assignToStaffId: taskIntakeAssignmentRules.assignToStaffId,
+        setCategoryId: taskIntakeAssignmentRules.setCategoryId,
+        setTags: taskIntakeAssignmentRules.setTags,
+        priority: taskIntakeAssignmentRules.priority,
+        enabled: taskIntakeAssignmentRules.enabled,
+        createdAt: taskIntakeAssignmentRules.createdAt,
+        categoryName: taskCategories.name,
+        staffName: sql<string>`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, ${staff.email})`,
+      })
+        .from(taskIntakeAssignmentRules)
+        .leftJoin(taskCategories, eq(taskIntakeAssignmentRules.setCategoryId, taskCategories.id))
+        .leftJoin(staff, eq(taskIntakeAssignmentRules.assignToStaffId, staff.id))
+        .orderBy(asc(taskIntakeAssignmentRules.priority));
+
+      if (formId) {
+        query = query.where(eq(taskIntakeAssignmentRules.formId, String(formId)));
+      }
+
+      const rules = await query;
+      
+      const rulesWithSummary = rules.map(rule => ({
+        ...rule,
+        conditionSummary: generateConditionSummary(rule.conditions),
+      }));
+
+      res.json(rulesWithSummary);
+    } catch (error) {
+      console.error("Error fetching assignment rules:", error);
+      res.status(500).json({ error: "Failed to fetch assignment rules" });
+    }
+  });
+
+  // POST /api/task-intake/assignment-rules - Create new assignment rule
+  app.post("/api/task-intake/assignment-rules", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { formId, name, conditions, assignToRole, assignToStaffId, setCategoryId, setTags, priority, enabled } = req.body;
+
+      if (!formId || !name) {
+        return res.status(400).json({ error: "formId and name are required" });
+      }
+
+      const [newRule] = await db.insert(taskIntakeAssignmentRules)
+        .values({
+          formId,
+          name,
+          conditions: conditions || [],
+          assignToRole: assignToRole || null,
+          assignToStaffId: assignToStaffId || null,
+          setCategoryId: setCategoryId || null,
+          setTags: setTags || [],
+          priority: priority ?? 10,
+          enabled: enabled !== false,
+        })
+        .returning();
+
+      res.status(201).json(newRule);
+    } catch (error) {
+      console.error("Error creating assignment rule:", error);
+      res.status(500).json({ error: "Failed to create assignment rule" });
+    }
+  });
+
+  // PUT /api/task-intake/assignment-rules/:id - Update assignment rule
+  app.put("/api/task-intake/assignment-rules/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, conditions, assignToRole, assignToStaffId, setCategoryId, setTags, priority, enabled } = req.body;
+
+      const [updatedRule] = await db.update(taskIntakeAssignmentRules)
+        .set({
+          name,
+          conditions: conditions || [],
+          assignToRole: assignToRole || null,
+          assignToStaffId: assignToStaffId || null,
+          setCategoryId: setCategoryId || null,
+          setTags: setTags || [],
+          priority: priority ?? 10,
+          enabled: enabled !== false,
+          updatedAt: new Date(),
+        })
+        .where(eq(taskIntakeAssignmentRules.id, id))
+        .returning();
+
+      if (!updatedRule) {
+        return res.status(404).json({ error: "Assignment rule not found" });
+      }
+
+      res.json(updatedRule);
+    } catch (error) {
+      console.error("Error updating assignment rule:", error);
+      res.status(500).json({ error: "Failed to update assignment rule" });
+    }
+  });
+
+  // DELETE /api/task-intake/assignment-rules/:id - Delete assignment rule
+  app.delete("/api/task-intake/assignment-rules/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const [deletedRule] = await db.delete(taskIntakeAssignmentRules)
+        .where(eq(taskIntakeAssignmentRules.id, id))
+        .returning();
+
+      if (!deletedRule) {
+        return res.status(404).json({ error: "Assignment rule not found" });
+      }
+
+      res.json({ success: true, deletedId: id });
+    } catch (error) {
+      console.error("Error deleting assignment rule:", error);
+      res.status(500).json({ error: "Failed to delete assignment rule" });
+    }
+  });
+
+  // GET /api/assignment-roles - Get unique roles/positions from staff table
+  app.get("/api/assignment-roles", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const staffWithPositions = await db.select({
+        position: staff.position,
+        staffId: staff.id,
+        staffName: sql<string>`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, ${staff.email})`,
+      })
+        .from(staff)
+        .orderBy(staff.position);
+
+      const roleMap = new Map<string, { roleName: string; assignedTo: { id: string; name: string } | null }>();
+      
+      for (const s of staffWithPositions) {
+        if (s.position && !roleMap.has(s.position)) {
+          roleMap.set(s.position, {
+            roleName: s.position,
+            assignedTo: { id: s.staffId, name: s.staffName },
+          });
+        }
+      }
+
+      const roles = Array.from(roleMap.values());
+      res.json(roles);
+    } catch (error) {
+      console.error("Error fetching assignment roles:", error);
+      res.status(500).json({ error: "Failed to fetch assignment roles" });
+    }
+  });
+
+  // ==========================================
   // Task Intake Submission Endpoints
   // ==========================================
 
@@ -24311,7 +24471,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate description from intake form answers using templates
       const generatedDescription = await generateDescription(visibleSectionIds, answers, formId);
 
-      // Step D: Create the task with generated description
+      // Step D: Evaluate assignment rules
+      const assignmentResult = await evaluateAssignmentRules(formId, answers);
+      console.log("[TaskIntake] Assignment rules result:", assignmentResult);
+
+      // Step E: Create the task with generated description and assignments
       const [newTask] = await db.insert(tasks)
         .values({
           title: taskTitle,
@@ -24320,10 +24484,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           priority,
           clientId: clientId && clientId !== 'no_client' ? clientId : null,
           dueDate: dueDateStr ? new Date(dueDateStr) : null,
+          assignedTo: assignmentResult.assignToUserId || undefined,
+          categoryId: assignmentResult.categoryId || undefined,
+          tags: assignmentResult.tags.length > 0 ? assignmentResult.tags : undefined,
         })
         .returning();
 
-      // Step E: Update submission with taskId
+      // Step F: Update submission with taskId
       await db.update(taskIntakeSubmissions)
         .set({ 
           taskId: newTask.id,
@@ -24332,7 +24499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .where(eq(taskIntakeSubmissions.id, submission.id));
 
-      // Step F: Return response
+      // Step G: Return response
       res.json({
         success: true,
         submissionId: submission.id,
