@@ -4971,18 +4971,19 @@ export const taskIntakeLogicRules = pgTable("task_intake_logic_rules", {
 export const taskIntakeAssignmentRules = pgTable("task_intake_assignment_rules", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   formId: varchar("form_id").notNull().references(() => taskIntakeForms.id, { onDelete: "cascade" }),
-  name: text("name").notNull(), // descriptive name for the rule
-  // Conditions: JSON array with AND logic between groups, OR within group
-  // Example: [{questionId: "q1", optionIds: ["opt1", "opt2"]}, {questionId: "q2", optionIds: ["opt3"]}]
-  // Means: (q1=opt1 OR q1=opt2) AND (q2=opt3)
+  name: text("name").notNull(),
   conditions: jsonb("conditions").notNull().default([]),
-  assignToStaffId: uuid("assign_to_staff_id").references(() => staff.id),
-  priority: integer("priority").default(0), // higher priority rules evaluated first
+  assignToRole: text("assign_to_role"), // Role/position name like "Creative Project Manager"
+  assignToStaffId: uuid("assign_to_staff_id").references(() => staff.id), // Fallback direct assignment
+  setCategoryId: varchar("set_category_id").references(() => taskCategories.id),
+  setTags: text("set_tags").array().default([]),
+  priority: integer("priority").default(10), // Lower number = higher priority
   enabled: boolean("enabled").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("idx_task_intake_assignment_form").on(table.formId),
+  index("idx_task_intake_assignment_priority").on(table.priority),
 ]);
 
 // Schema exports and types
