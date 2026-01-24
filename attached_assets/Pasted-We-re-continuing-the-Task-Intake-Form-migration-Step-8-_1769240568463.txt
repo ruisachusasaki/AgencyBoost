@@ -1,0 +1,253 @@
+We're continuing the Task Intake Form migration. Step 8 (Description Generation) is complete.
+
+CONTEXT
+
+This is Step 9: Assignment Rules Integration. We want tasks to automatically route to the correct person based on form answers. Assignment should be based on ROLE/POSITION, not specific users, so if the Creative Project Manager changes, we just update who holds that role.
+
+The task table has an "assignedTo" field for the assigned user, and a "categoryId" field for task category. We also have existing categories for Creative, DevOps, and Data.
+
+WHAT TO BUILD
+
+1. Assignment Rules Table
+
+Create a new table to store assignment rules:
+
+task_intake_assignment_rules
+- id: uuid, primary key
+- formId: uuid, foreign key to task_intake_forms
+- ruleName: text (admin-friendly name like "Creative Tasks to Creative PM")
+- conditions: jsonb (same structure as section visibility conditions)
+- assignToRole: text (role/position name like "Creative Project Manager")
+- assignToUserId: uuid, nullable (optional direct user assignment as fallback)
+- setCategoryId: uuid, nullable, foreign key to task categories (auto-set category)
+- setTags: text array, nullable (auto-add these tags)
+- priority: integer (lower number = higher priority, for rule ordering)
+- isActive: boolean, default true
+- createdAt: timestamp
+- updatedAt: timestamp
+
+2. Role-to-User Mapping
+
+We need a way to map roles to current users. Options:
+
+Option A: Add a "role" field to your existing users/staff table if not present
+Option B: Create a simple role_assignments table:
+
+role_assignments
+- id: uuid, primary key
+- roleName: text (e.g., "Creative Project Manager", "DevOps Lead", "Data Analyst Lead")
+- userId: uuid, foreign key to users
+- isActive: boolean, default true
+- createdAt: timestamp
+- updatedAt: timestamp
+
+This allows one role to be held by one person (or we could allow multiple and pick the first active one).
+
+Check if your users table already has a role or position field. If yes, we can use that. If not, create the role_assignments table.
+
+3. Seed Default Assignment Rules
+
+Create these initial rules:
+
+Rule 1: Creative Tasks
+- ruleName: "Creative Tasks → Creative Project Manager"
+- conditions: {"operator": "AND", "conditions": [{"questionId": "<department question id>", "operator": "equals", "value": "Creative"}]}
+- assignToRole: "Creative Project Manager"
+- setCategoryId: <ID of Creative category>
+- priority: 10
+
+Rule 2: DevOps Tasks
+- ruleName: "DevOps Tasks → DevOps Lead"
+- conditions: {"operator": "AND", "conditions": [{"questionId": "<department question id>", "operator": "equals", "value": "DevOps"}]}
+- assignToRole: "DevOps Lead"
+- setCategoryId: <ID of DevOps category>
+- priority: 10
+
+Rule 3: Data Tasks
+- ruleName: "Data Tasks → Data Team Lead"
+- conditions: {"operator": "AND", "conditions": [{"questionId": "<department question id>", "operator": "equals", "value": "Data"}]}
+- assignToRole: "Data Team Lead"
+- setCategoryId: <ID of Data category>
+- priority: 10
+
+Look up the actual question ID for the department question (internalLabel = "TRIGGER - department") and the actual category IDs.
+
+4. Assignment Rule Evaluation Function
+
+Create a function:
+
+evaluateAssignmentRules(rules, answers) returns { assignToUserId, categoryId, tags }
+
+Logic:
+1. Sort rules by priority (ascending - lower number first)
+2. For each rule:
+   a. Evaluate conditions against answers (same logic as section visibility)
+   b. If conditions match:
+      - Look up assignToRole in role_assignments to get userId
+      - Return { assignToUserId: userId, categoryId: rule.setCategoryId, tags: rule.setTags }
+3. If no rules match, return { assignToUserId: null, categoryId: null, tags: [] }
+
+5. Update Task Creation Flow
+
+Modify POST /api/task-intake/submit to use assignment rules:
+
+After generating description and before creating task:
+1. Fetch all active assignment rules for this form
+2. Call evaluateAssignmentRules(rules, answers)
+3. Use returned values when creating task:
+   - assignedTo: result.assignToUserId (if not null)
+   - categoryId: result.categoryId (if not null, otherwise keep any existing logic)
+   - tags: merge result.tags with any existing tags
+
+6. Assignment Rules Admin UI
+
+Add a new tab or section in Settings > Tasks called "Assignment Rules"
+
+Layout:
+
+HEADER:
+- Title: "Task Assignment Rules"
+- [+ Add Rule] button
+
+RULES LIST (table or cards):
+| Priority | Rule Name | Conditions | Assigns To | Category | Tags | Active | Actions |
+|----------|-----------|------------|------------|----------|------|--------|---------|
+| 10 | Creative Tasks → Creative PM | Department = Creative | Creative Project Manager | Creative | | ✓ | [Edit] [Delete] |
+| 10 | DevOps Tasks → DevOps Lead | Department = DevOps | DevOps Lead | DevOps | | ✓ | [Edit] [Delete] |
+| 10 | Data Tasks → Data Team Lead | Department = Data | Data Team Lead | Data | | ✓ | [Edit] [Delete] |
+
+Conditions column should show human-readable summary.
+Assigns To column shows the role name.
+
+7. Assignment Rule Editor Modal
+
+When clicking [+ Add Rule] or [Edit]:
+
+FIELDS:
+- Rule Name (text input, required)
+- Priority (number input, default 10, lower = evaluated first)
+- Active (checkbox)
+
+CONDITIONS SECTION:
+(Same UI as section visibility conditions editor from Step 5)
+- Match: AND/OR dropdown
+- List of conditions with Question dropdown, Operator dropdown, Value dropdown
+- [+ Add Condition] button
+
+ASSIGNMENT SECTION:
+- Assign To Role (dropdown of available roles, or text input to create new)
+- OR Assign To User (dropdown of users, optional fallback)
+- Set Category (dropdown of categories, optional)
+- Add Tags (multi-select or tag input, optional)
+
+BUTTONS:
+- Cancel
+- Save Rule
+
+8. Role Management UI
+
+Add a simple role management section (could be in Settings > Team or Settings > Tasks > Roles):
+
+HEADER:
+- Title: "Assignment Roles"
+- [+ Add Role] button
+
+ROLES LIST:
+| Role Name | Assigned To | Actions |
+|-----------|-------------|---------|
+| Creative Project Manager | John Smith | [Edit] [Delete] |
+| DevOps Lead | Jane Doe | [Edit] [Delete] |
+| Data Team Lead | Bob Wilson | [Edit] [Delete] |
+
+ROLE EDITOR MODAL:
+- Role Name (text input)
+- Assigned User (dropdown of active staff/users)
+- Save / Cancel
+
+9. API Endpoints
+
+GET /api/task-intake/assignment-rules
+- Returns all rules ordered by priority
+- Include human-readable condition summary
+
+POST /api/task-intake/assignment-rules
+- Create new rule
+
+PUT /api/task-intake/assignment-rules/:id
+- Update existing rule
+
+DELETE /api/task-intake/assignment-rules/:id
+- Delete rule (soft delete or hard delete)
+
+GET /api/assignment-roles
+- Returns all roles with current assigned user
+
+POST /api/assignment-roles
+- Create new role
+
+PUT /api/assignment-roles/:id
+- Update role (change name or assigned user)
+
+DELETE /api/assignment-roles/:id
+- Delete role
+
+10. Handle Edge Cases
+
+No matching rule:
+- Task is created but assignedTo remains null
+- Could show warning to admin or default to a "catch-all" assignment
+
+Role has no assigned user:
+- Log warning
+- Task is created with assignedTo = null
+- Consider showing this in the admin UI (role needs assignment)
+
+Multiple rules match:
+- First matching rule by priority wins
+- If same priority, first one in database order wins
+
+VERIFICATION
+
+After implementation:
+
+Test 1 - Creative Auto-Assignment:
+1. Set up: Ensure "Creative Project Manager" role exists and is assigned to a user
+2. Create task via intake form: Department = Creative
+3. Verify task is created with:
+   - assignedTo = the Creative PM user
+   - categoryId = Creative category
+4. Check task appears in that user's assigned tasks
+
+Test 2 - DevOps Auto-Assignment:
+1. Set up: Ensure "DevOps Lead" role exists and is assigned to a user
+2. Create task via intake form: Department = DevOps
+3. Verify correct assignment
+
+Test 3 - Rule Priority:
+1. Create a more specific rule with priority 5: "Urgent Creative → Creative Director"
+   - Conditions: Department = Creative AND Priority = Urgent
+   - Assign to: Creative Director role
+2. Create urgent creative task
+3. Verify it goes to Creative Director, not Creative PM
+
+Test 4 - Admin UI:
+1. Navigate to Settings > Tasks > Assignment Rules
+2. View existing rules
+3. Edit a rule and save
+4. Create a new rule
+5. Verify changes persist
+
+Test 5 - Role Management:
+1. Navigate to role management
+2. Change who is assigned to "Creative Project Manager"
+3. Create new Creative task
+4. Verify it goes to the NEW person
+
+DO NOT
+
+- Do not remove any existing assignment functionality
+- Do not auto-assign if a rule explicitly sets assignToUserId to null (allow unassigned)
+
+Please implement this step and confirm when complete. Let me know:
+1. Does your users table already have a role/position field?
+2. What are the exact category IDs or names for Creative, DevOps, Data?

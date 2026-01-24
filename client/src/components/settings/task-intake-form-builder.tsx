@@ -5,7 +5,7 @@ import {
   Plus, Edit, Trash2, GripVertical, Save, X, ChevronDown, ChevronUp, 
   MessageSquare, Hash, Calendar, Type, ListChecks, ArrowRight, Copy,
   CheckCircle2, Circle, ToggleLeft, Building2, Users, Eye, ChevronLeft,
-  Check, RotateCcw, LayoutGrid, List
+  Check, RotateCcw, LayoutGrid, List, Link, AlignLeft
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { IntakeSectionBuilder } from "./intake-section-builder";
@@ -64,7 +64,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 
-type QuestionType = "single_choice" | "multi_choice" | "text" | "number" | "date" | "client" | "department";
+type QuestionType = "single_choice" | "multi_choice" | "text" | "number" | "date" | "client" | "department" | "url" | "textarea";
 
 type TaskIntakeOption = {
   id: string;
@@ -125,6 +125,8 @@ const questionTypeIcons: Record<QuestionType, any> = {
   date: Calendar,
   client: Building2,
   department: Users,
+  url: Link,
+  textarea: AlignLeft,
 };
 
 const questionTypeLabels: Record<QuestionType, string> = {
@@ -135,11 +137,13 @@ const questionTypeLabels: Record<QuestionType, string> = {
   date: "Date",
   client: "Client (from active clients)",
   department: "Department (from teams)",
+  url: "URL",
+  textarea: "Long Text",
 };
 
 const questionFormSchema = z.object({
   questionText: z.string().min(1, "Question text is required"),
-  questionType: z.enum(["single_choice", "multi_choice", "text", "number", "date", "client", "department"]),
+  questionType: z.enum(["single_choice", "multi_choice", "text", "number", "date", "client", "department", "url", "textarea"]),
   helpText: z.string().optional(),
   internalLabel: z.string().optional(),
   isRequired: z.boolean().default(true),
