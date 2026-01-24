@@ -1957,6 +1957,7 @@ async function runStartupMigrations() {
     await initializeDefaultTimeOffTypes();
     await syncStaffRolesToUserRoles();
     await syncTaskTagsToSettingsTags();
+    await seedIntakeDescriptionTemplates();
     log("✅ All startup migrations completed successfully");
   } catch (error) {
     log(`⚠️ Startup migrations encountered an error: ${error}`);
@@ -2017,3 +2018,21 @@ async function runStartupMigrations() {
     });
   });
 })();
+
+// Seed description templates for task intake sections
+async function seedIntakeDescriptionTemplates() {
+  log("Running startup migration: seedIntakeDescriptionTemplates");
+  try {
+    const { sectionDescriptionTemplates } = await import("./seed-description-templates");
+    const { taskIntakeSections } = await import("@shared/schema");
+    
+    for (const [sectionName, template] of Object.entries(sectionDescriptionTemplates)) {
+      await db.update(taskIntakeSections)
+        .set({ descriptionTemplate: template, updatedAt: new Date() })
+        .where(eq(taskIntakeSections.sectionName, sectionName));
+    }
+    log("Task intake description templates seeded successfully");
+  } catch (error) {
+    log(`Error seeding intake description templates: ${error}`);
+  }
+}

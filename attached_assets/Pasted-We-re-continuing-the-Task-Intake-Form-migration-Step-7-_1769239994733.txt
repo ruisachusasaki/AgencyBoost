@@ -1,0 +1,186 @@
+We're continuing the Task Intake Form migration. Step 7 (Task Creation & Answer Storage) is complete.
+
+CONTEXT
+
+This is Step 8: Description Generation from Answers. The whole point of forcing proper scoping is to give the fulfillment team a clear, complete brief. We'll generate this from the intake answers and store it in the task's description field.
+
+The task table has a "description" field (text) that we'll populate.
+
+WHAT TO BUILD
+
+1. Description Template System
+
+Each section has a descriptionTemplate field (text, currently null). We'll populate these with templates that use variable substitution.
+
+Template syntax:
+- {{variable_name}} - replaced with answer value (uses question's internalLabel)
+- {{#if variable_name}}content{{/if}} - conditional block, only shows if variable has value
+- {{#each variable_name}}content{{/each}} - for multi-choice, loops through selected values
+
+2. Update Section Templates
+
+Create a migration or seed script to update each section's descriptionTemplate. I'm providing these as escaped strings you can use directly.
+
+SECTION: "Task Basics"
+descriptionTemplate = "## Task Overview\n\n**Task Name:** {{task_name}}\n**Type:** {{task_scope}} task\n**Client:** {{client_select}}\n**Due Date:** {{due_date}}\n**Priority:** {{priority_level}}\n{{#if urgent_reason}}\n**Urgency Reason:** {{urgent_reason}}\n{{/if}}"
+
+SECTION: "Department Selection"
+descriptionTemplate = "**Department:** {{department}}"
+
+SECTION: "Creative Type"
+descriptionTemplate = "---\n## Creative Request\n\n**Creative Type:** {{creative_type}}\n{{#if creative_kpi}}**Target KPI:** {{creative_kpi}}{{/if}}\n{{#if creative_cta}}**CTA:** {{creative_cta}}{{/if}}\n{{#if creative_audience}}**Target Audience:** {{creative_audience}}{{/if}}\n\n**Asset Links:**\n{{#if raw_files_link}}- RAW Files: {{raw_files_link}}{{/if}}\n{{#if approved_files_link}}- Approved Files: {{approved_files_link}}{{/if}}\n{{#if canva_link}}- Canva: {{canva_link}}{{/if}}\n{{#if loom_link}}- Loom: {{loom_link}}{{/if}}"
+
+SECTION: "Creative - Copy Details"
+descriptionTemplate = "---\n## Copy Details\n\n**Variations Needed:** {{copy_variations_count}}\n**Usage:** {{copy_usage_location}}\n{{#if copy_usage_other}}({{copy_usage_other}}){{/if}}\n\n{{#if copy_legal_requirements}}\n**Legal/Compliance Requirements:**\n{{copy_legal_requirements}}\n{{/if}}\n\n{{#if copy_example}}\n**Example/Reference:**\n{{copy_example}}\n{{/if}}"
+
+SECTION: "Creative - Graphic Details"
+descriptionTemplate = "---\n## Graphic Details\n\n**Usage:** {{graphic_usage_location}}\n{{#if graphic_usage_other}}({{graphic_usage_other}}){{/if}}\n**Sizes Needed:** {{graphic_sizes}}\n{{#if graphic_custom_size}}(Custom: {{graphic_custom_size}}){{/if}}\n**Formats:** {{graphic_formats}}\n{{#if graphic_format_other}}({{graphic_format_other}}){{/if}}\n**Quantity:** {{graphic_count}}"
+
+SECTION: "Creative - Landing Page Details"
+descriptionTemplate = "---\n## Landing Page Details\n\n**Approach:** {{lp_creative_approach}}\n**Page Type:** {{lp_page_type}}\n{{#if lp_page_type_other}}({{lp_page_type_other}}){{/if}}\n**Traffic Source:** {{lp_traffic_source}}\n{{#if lp_traffic_other}}({{lp_traffic_other}}){{/if}}\n**Variations Needed:** {{lp_variation_count}}\n\n**Links:**\n{{#if lp_engager_link}}- Engager LP: {{lp_engager_link}}{{/if}}\n{{#if lp_graphics_save_link}}- Graphics Folder: {{lp_graphics_save_link}}{{/if}}\n{{#if lp_cro_doc}}- CRO Doc: {{lp_cro_doc}}{{/if}}\n{{#if lp_media_link}}- Media Assets: {{lp_media_link}}{{/if}}\n{{#if lp_process_map}}- Process Map: {{lp_process_map}}{{/if}}\n{{#if lp_example}}- Example LP: {{lp_example}}{{/if}}\n{{#if lp_competitors}}\n**Competitor References:**\n{{lp_competitors}}\n{{/if}}\n\n**Conversion Element:** {{lp_conversion_element}}\n{{#if lp_separate_step_details}}{{lp_separate_step_details}}{{/if}}\n{{#if lp_confirmation_details}}\n**Confirmation Requirements:** {{lp_confirmation_details}}\n{{/if}}\n\n**Thank You Page:** {{lp_thankyou_needed}}\n{{#if lp_thankyou_details}}{{lp_thankyou_details}}{{/if}}\n\n**Social Proof Available:** {{lp_social_proof}}\n{{#if lp_social_proof_links}}\n{{lp_social_proof_links}}\n{{/if}}\n\n**Copy Status:** {{lp_copy_ready}}\n{{#if lp_copy_link}}Link: {{lp_copy_link}}{{/if}}"
+
+SECTION: "Creative - Video Details"
+descriptionTemplate = "---\n## Video Details\n\n**Variations Needed:** {{video_variation_count}}\n**Usage:** {{video_usage}}\n{{#if video_usage_other}}({{video_usage_other}}){{/if}}\n\n**Specifications:**\n- Aspect Ratio: {{video_aspect_ratio}}{{#if video_aspect_custom}} ({{video_aspect_custom}}){{/if}}\n- Duration: {{video_duration}}\n- Subtitles/Captions: {{video_subtitles}}\n{{#if video_intro_outro}}- Intro/Outro: {{video_intro_outro}}{{/if}}\n- Background Music: {{video_music}}\n- Sound Effects: {{video_sfx}}\n- CTA in Video: {{video_include_cta}}\n- AI Permission: {{video_ai_permission}}\n\n**Storyboard:** {{video_has_storyboard}}\n{{#if video_want_storyboard}}(Storyboard requested: {{video_want_storyboard}}){{/if}}\n\n**Asset Links:**\n- Script/Shot List: {{video_script_link}}\n{{#if video_working_link}}- Working File: {{video_working_link}}{{/if}}\n{{#if video_final_link}}- Final Cut Folder: {{video_final_link}}{{/if}}\n{{#if video_example}}- Example: {{video_example}}{{/if}}\n\n**Copy Status:** {{video_copy_ready}}\n{{#if video_copy_link}}Link: {{video_copy_link}}{{/if}}"
+
+SECTION: "Creative - Motion Graphic Details"
+descriptionTemplate = "---\n## Motion Graphic Details\n\n**Quantity:** {{motion_count}}\n**Usage:** {{motion_usage}}\n{{#if motion_usage_other}}({{motion_usage_other}}){{/if}}"
+
+SECTION: "Creative - Live Event Details"
+descriptionTemplate = "---\n## Live Event Information\n\n**City/Cities:** {{live_event_cities}}\n**Date(s):** {{live_event_dates}}\n**Speaker(s):** {{live_event_speakers}}\n{{#if live_event_process_map}}**Process Map:** {{live_event_process_map}}{{/if}}"
+
+SECTION: "DevOps Type"
+descriptionTemplate = "---\n## DevOps Request\n\n**Request Type:** {{devops_type}}\n\n**Links:**\n{{#if devops_content_docs}}- Content Docs: {{devops_content_docs}}{{/if}}\n{{#if devops_engager_lp}}- Engager LP: {{devops_engager_lp}}{{/if}}\n{{#if devops_engager_automations}}- Automations: {{devops_engager_automations}}{{/if}}"
+
+SECTION: "DevOps - Landing Page Details"
+descriptionTemplate = "---\n## DevOps Landing Page Details\n\n**Scope:** {{devops_lp_scope}}\n{{#if devops_lp_products_doc}}- Products/Pricing Doc: {{devops_lp_products_doc}}{{/if}}\n**Process Map:** {{devops_lp_process_map}}\n\n**Page Structure:**\n- Main LP: {{devops_lp_main}}\n- Steps: {{devops_lp_steps}}\n\n**Assets Checklist:**\n{{#if devops_lp_favicon}}- Favicon: {{devops_lp_favicon}}{{/if}}\n- Emails: {{devops_lp_emails}}\n{{#if devops_lp_sms}}- SMS: {{devops_lp_sms}}{{/if}}\n{{#if devops_lp_pixels}}- Tracking Pixels: {{devops_lp_pixels}}{{/if}}\n{{#if devops_lp_provely}}- Provely List: {{devops_lp_provely}}{{/if}}\n\n**QA Responsibility:** {{devops_lp_qa}}\n{{#if devops_lp_form_design}}\n**Form/Survey Design:**\n{{devops_lp_form_design}}\n{{/if}}\n\n**A/B Test:** {{devops_lp_ab_test}}"
+
+SECTION: "DevOps - Landing Page A/B Test Details"
+descriptionTemplate = "---\n## A/B Test Configuration\n\n**Test Name:** {{ab_test_name}}\n**Traffic Split:** {{ab_test_traffic}}\n**Channels:** {{ab_test_channels}}\n**Markets:** {{ab_test_markets}}\n\n**Test Details:**\n{{ab_test_details}}\n\n**Variations:**\n{{ab_test_variations}}\n\n{{#if ab_test_tags}}**Tags/Custom Fields:** {{ab_test_tags}}{{/if}}\n\n**Forms Needed:** {{ab_test_forms_needed}}\n{{#if ab_test_forms_details}}{{ab_test_forms_details}}{{/if}}\n\n**Copy Needed:** {{ab_test_copy_needed}}\n{{#if ab_test_copy_details}}{{ab_test_copy_details}}{{/if}}"
+
+SECTION: "DevOps - Webinar Details"
+descriptionTemplate = "---\n## Webinar Details\n\n**Platform:** {{webinar_platform}}\n**Topic:** {{webinar_topic}}\n**Date(s):** {{webinar_dates}}\n**Type:** {{webinar_type}}\n**Audience:** {{webinar_audience_type}} - {{webinar_audience}}\n**Hosts/Panelists:** {{webinar_hosts}}\n**Process Map:** {{webinar_process_map}}\n\n{{#if webinar_tags}}**Tag Outline:** {{webinar_tags}}{{/if}}\n\n**Email Sequence:**\n- Sender: {{webinar_email_sender_name}} ({{webinar_email_sender_email}})\n{{#if webinar_email_subject}}- Subject: {{webinar_email_subject}}{{/if}}\n{{#if webinar_email_preview}}- Preview: {{webinar_email_preview}}{{/if}}\n- Timing: {{webinar_email_timing}}\n- Platform: {{webinar_email_platform}}\n{{#if webinar_email_invite_link}}- Invite Link: {{webinar_email_invite_link}}{{/if}}\n{{#if webinar_email_reminder_link}}- Reminder Link: {{webinar_email_reminder_link}}{{/if}}\n{{#if webinar_email_postreg_link}}- Post-Reg Link: {{webinar_email_postreg_link}}{{/if}}\n\n{{#if webinar_sms_sender}}\n**SMS Sequence:**\n- Sender: {{webinar_sms_sender}}\n- Timing: {{webinar_sms_timing}}\n- Platform: {{webinar_sms_platform}}\n{{#if webinar_sms_invite_link}}- Invite: {{webinar_sms_invite_link}}{{/if}}\n{{#if webinar_sms_reminder_link}}- Reminder: {{webinar_sms_reminder_link}}{{/if}}\n{{#if webinar_sms_postreg_link}}- Post-Reg: {{webinar_sms_postreg_link}}{{/if}}\n{{/if}}\n\n**Automations Needed:** {{webinar_automations}}"
+
+SECTION: "DevOps - Troubleshooting Details"
+descriptionTemplate = "---\n## Troubleshooting Request\n\n**Link to Issue:** {{troubleshoot_link}}\n**Loom Recording:** {{troubleshoot_loom}}"
+
+SECTION: "DevOps - Phone Integration Details"
+descriptionTemplate = "---\n## Phone Integration Request\n\n**Details:**\n{{phone_integration_details}}\n\n**Systems to Integrate:**\n{{phone_integration_systems}}\n\n{{#if phone_integration_timeline}}**Expected Timeline:** {{phone_integration_timeline}}{{/if}}\n\n_Note: Phone integrations typically take 3-4 days._"
+
+SECTION: "DevOps - Market Launch Details"
+descriptionTemplate = "---\n## Market Launch Request\n\n**Markets:**\n{{market_launch_markets}}\n\n**Target Launch Date:** {{market_launch_date}}\n\n**Requirements:**\n{{market_launch_details}}"
+
+SECTION: "DevOps - A2P Registration Details"
+descriptionTemplate = "---\n## A2P Registration Request\n\n**Details:**\n{{a2p_details}}\n\n**Campaigns/Numbers:**\n{{a2p_campaigns}}"
+
+SECTION: "Data Task Type"
+descriptionTemplate = "---\n## Data Request\n\n**Request Type:** {{data_type}}\n{{#if data_type_other}}({{data_type_other}}){{/if}}\n\n{{#if data_existing_report}}**Existing Report:** {{data_existing_report}}{{/if}}\n{{#if data_example_report}}**Example Report:** {{data_example_report}}{{/if}}\n\n{{#if data_secondary}}**Secondary Items:** {{data_secondary}}{{/if}}\n{{#if data_secondary_other}}({{data_secondary_other}}){{/if}}\n\n**QA/Approver:** {{data_qa_approver}}\n{{#if data_qa_other}}({{data_qa_other}}){{/if}}"
+
+SECTION: "Data - Test Reporting Details"
+descriptionTemplate = "---\n## Test Reporting Details\n\n**Hypothesis:**\n{{test_hypothesis}}\n\n**KPI Support:**\n{{test_kpi_support}}\n\n**Audience/Segment:** {{test_audience}}\n**Tracking Setup:** {{test_tracking}}\n**Duration:** {{test_duration}}\n**Success Criteria:** {{test_success_criteria}}\n**Test Owner:** {{test_owner}}"
+
+SECTION: "Data - New Dashboard Details"
+descriptionTemplate = "---\n## New Dashboard Details\n\n**Primary User:** {{dashboard_primary_user}}\n{{#if dashboard_user_other}}({{dashboard_user_other}}){{/if}}\n\n**Top 3 KPIs:**\n1. {{dashboard_kpi_1}}\n2. {{dashboard_kpi_2}}\n3. {{dashboard_kpi_3}}\n\n**Filters:** {{dashboard_filters}}\n{{#if dashboard_filters_other}}({{dashboard_filters_other}}){{/if}}\n\n**Visualizations:** {{dashboard_visualizations}}\n{{#if dashboard_viz_other}}({{dashboard_viz_other}}){{/if}}\n\n**Update Frequency:** {{dashboard_update_frequency}}\n{{#if dashboard_freq_other}}({{dashboard_freq_other}}){{/if}}"
+
+SECTION: "Data - New Dashboard Page Details"
+descriptionTemplate = "---\n## New Dashboard Page Details\n\n**Add to Dashboard:** {{dashboard_page_parent}}\n**Goal:** {{dashboard_page_goal}}\n{{#if dashboard_page_goal_other}}({{dashboard_page_goal_other}}){{/if}}\n\n**Charts/Metrics:**\n{{dashboard_page_charts}}\n\n{{#if dashboard_page_sources}}**New Data Sources:** {{dashboard_page_sources}}{{/if}}\n\n**Reuse Filters:** {{dashboard_page_filters}}\n{{#if dashboard_page_filters_detail}}{{dashboard_page_filters_detail}}{{/if}}"
+
+SECTION: "Data - One-Off Report Details"
+descriptionTemplate = "---\n## One-Off Report Details\n\n**Data Points/Columns:**\n{{report_data_points}}\n\n**Time Range:** {{report_time_range}}\n**Grouping:** {{report_grouping}}\n{{#if report_grouping_other}}({{report_grouping_other}}){{/if}}\n**Format:** {{report_format}}\n{{#if report_format_other}}({{report_format_other}}){{/if}}\n\n**Sharing:** {{report_shared}}\n{{#if report_shared_who}}({{report_shared_who}}){{/if}}\n\n**Visualization:** {{report_viz_needed}}\n{{#if report_viz_type}}({{report_viz_type}}){{/if}}"
+
+SECTION: "Data - Extra Information"
+descriptionTemplate = "---\n## Additional Data Requirements\n\n{{#if data_naming_conventions}}**Naming Conventions:** {{data_naming_conventions}}{{/if}}\n\n**Existing Formulas to Replicate:** {{data_existing_formulas}}\n{{#if data_formulas_detail}}{{data_formulas_detail}}{{/if}}\n\n{{#if data_new_fields}}**New Fields/Tags/Segmentations:** {{data_new_fields}}{{/if}}\n\n**Duplicate for Other Clients:** {{data_duplicate}}\n\n{{#if data_compliance}}**Compliance/Privacy Considerations:** {{data_compliance}}{{/if}}"
+
+3. Template Engine Function
+
+Create a function to process templates:
+
+generateDescription(sections, answers) returns string
+
+Logic:
+1. Get all visible sections (from submission's visibleSectionIds)
+2. For each visible section in order:
+   a. Get the section's descriptionTemplate
+   b. If template is null or empty, skip
+   c. Process template with answer values
+3. Concatenate all processed templates with newlines between
+4. Clean up output (remove multiple consecutive blank lines)
+5. Return final description string
+
+Template processing rules:
+- Replace {{variable_name}} with the answer value for the question that has that internalLabel
+- You need to look up questionId by internalLabel to get the answer from the answers object
+- Handle {{#if variable_name}}content{{/if}} blocks - only include content if variable has a truthy value
+- Handle {{#each variable_name}}content{{/each}} for arrays (multi-choice answers)
+- If a variable is undefined, null, or empty string, replace with empty string
+- For multi-choice arrays, join values with ", "
+- After processing, clean up any leftover empty lines or orphaned labels
+
+4. Update Task Creation Flow
+
+Modify the POST /api/task-intake/submit endpoint from Step 7:
+
+After creating the submission and before creating the task:
+1. Call generateDescription(visibleSections, answers)
+2. Use the result as the task's description field
+
+The task creation should now use:
+- title: from task_name answer
+- description: from generateDescription() result
+- clientId: from client_select answer
+- dueDate: from due_date answer
+- priority: map priority_level to your priority values (see mapping below)
+- tags: optionally include department and creative_type/devops_type/data_type
+
+5. Priority Mapping
+
+Map intake priority to task priority:
+- "Urgent" maps to "urgent"
+- "High" maps to "high"
+- "Medium" maps to "normal"
+- "Low" maps to "low"
+
+6. Markdown Rendering
+
+The task's description field will now contain formatted markdown. Ensure the task detail page renders markdown properly including headers (##), bold text (**text**), lists (- item), and links.
+
+If you don't have markdown rendering on task detail, add a simple markdown renderer using a library like react-markdown or marked.
+
+VERIFICATION
+
+After implementation:
+
+Test 1 - Creative Copy Task:
+1. Create task: Creative > Copywriting path
+2. Fill all fields
+3. Submit
+4. View task detail
+5. Verify description shows formatted Task Overview + Creative Request + Copy Details sections
+6. Verify it does NOT show Video, Graphic, DevOps, Data sections
+
+Test 2 - DevOps LP with A/B Test:
+1. Create task: DevOps > Landing Page > A/B Test = Yes
+2. Fill all fields
+3. Submit
+4. View task detail
+5. Verify description shows DevOps Type + LP Details + A/B Test Details sections
+6. Verify proper formatting with all links clickable
+
+Test 3 - Conditional Content:
+1. Create task with some optional fields filled, some empty
+2. Submit
+3. Verify empty fields don't show labels with blank values
+4. Verify {{#if}} blocks work correctly - no orphaned labels
+
+Test 4 - Multi-Choice Formatting:
+1. Create task with multi-choice questions (like graphic sizes, usage locations)
+2. Select multiple options
+3. Verify they display as comma-separated list in description
+
+DO NOT
+
+- Do not build assignment rules yet (that's Step 9)
+- Do not remove old task creation flow yet
+
+Please implement this step and confirm when complete. Also let me know:
+1. Do you have existing task categories that map to Creative/DevOps/Data?
+2. Does your task detail view already render markdown?

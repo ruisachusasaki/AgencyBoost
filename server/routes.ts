@@ -93,6 +93,7 @@ import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
 import { calculateHealthMetrics, analyzeHealthStatus } from "@shared/utils/healthAnalysis";
 import { emitTrigger } from "./workflow-engine";
+import { generateDescription, mapPriority } from "./description-template-engine";
 import { 
   requireAuth, 
   requirePermission,
@@ -24304,24 +24305,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const priorityLevel = getAnswerByLabel('priority_level') || 'normal';
       const department = getAnswerByLabel('department');
 
-      // Map priority level to task priority
-      const priorityMap: Record<string, string> = {
-        'standard': 'normal',
-        'rush': 'high',
-        'asap': 'urgent',
-      };
-      const priority = priorityMap[priorityLevel?.toLowerCase()] || 'normal';
+      // Map priority level to task priority using imported function
+      const priority = mapPriority(priorityLevel);
 
-      // Step D: Create the task
+      // Generate description from intake form answers using templates
+      const generatedDescription = await generateDescription(visibleSectionIds, answers, formId);
+
+      // Step D: Create the task with generated description
       const [newTask] = await db.insert(tasks)
         .values({
           title: taskTitle,
-          description: '', // Description will be generated in Step 8
+          description: generatedDescription,
           status: 'todo',
           priority,
           clientId: clientId && clientId !== 'no_client' ? clientId : null,
           dueDate: dueDateStr ? new Date(dueDateStr) : null,
-          // Store department in metadata or use categoryId if applicable
         })
         .returning();
 

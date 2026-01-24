@@ -5,6 +5,8 @@ import { FolderOpen, Edit, Check, X, ChevronDown, ChevronUp } from "lucide-react
 import { Task } from "@shared/schema";
 import { RichTextEditor } from "@/components/rich-text-editor";
 
+import { marked } from "marked";
+import DOMPurify from "dompurify";
 interface TaskDescriptionCardProps {
   task: Task;
   onUpdate: (updates: Partial<Task>) => Promise<void>;
@@ -46,6 +48,25 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
   const handleCancel = () => {
     setEditValue(task.description || "");
     setIsEditing(false);
+  };
+
+  // Convert markdown to HTML if content appears to be markdown
+  const convertMarkdownToHtml = (content: string): string => {
+    if (!content) return "";
+    // Check if content already contains significant HTML
+    const hasHtmlTags = /<(div|p|h[1-6]|ul|ol|li|table|br|span|a|strong|em)[^>]*>/i.test(content);
+    if (hasHtmlTags) {
+      // Already HTML, sanitize and return
+      return DOMPurify.sanitize(content);
+    }
+    // Content appears to be markdown, convert it
+    try {
+      const html = marked.parse(content, { async: false }) as string;
+      return DOMPurify.sanitize(html);
+    } catch (e) {
+      // If marked fails, return the content as-is
+      return DOMPurify.sanitize(content);
+    }
   };
 
   // Strip HTML tags for length calculation
@@ -140,7 +161,7 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
                   }
                   onClick={() => setIsEditing(true)}
                   data-testid="text-description"
-                  dangerouslySetInnerHTML={{ __html: task.description }}
+                  dangerouslySetInnerHTML={{ __html: convertMarkdownToHtml(task.description || "") }}
                 />
                 
                 {needsExpansion && (
