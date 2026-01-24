@@ -419,7 +419,7 @@ function QuestionRenderer({
                 variant="outline"
                 disabled={disabled}
                 className={cn(
-                  "w-full max-w-xs pl-3 text-left font-normal",
+                  "w-full max-w-xs pl-3 text-left font-normal mt-1",
                   !value && "text-muted-foreground",
                   error && "border-destructive"
                 )}
