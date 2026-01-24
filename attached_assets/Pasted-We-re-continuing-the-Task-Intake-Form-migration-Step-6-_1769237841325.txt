@@ -1,0 +1,229 @@
+We're continuing the Task Intake Form migration. Step 6 (Form Renderer) is complete.
+
+CONTEXT
+
+This is Step 7: Task Creation & Answer Storage. When a user submits the intake form, we need to create a task and store all their answers.
+
+WHAT TO BUILD
+
+1. Answer Storage Table
+
+Create a new table to store form submissions:
+
+task_intake_submissions
+- id: uuid, primary key
+- taskId: uuid, foreign key to tasks table (nullable initially, linked after task created)
+- formId: uuid, foreign key to task_intake_forms
+- submittedBy: uuid, foreign key to users table
+- submittedAt: timestamp
+- status: text, default 'pending' (values: pending, task_created, cancelled)
+- createdAt: timestamp
+- updatedAt: timestamp
+
+task_intake_answers
+- id: uuid, primary key
+- submissionId: uuid, foreign key to task_intake_submissions
+- questionId: uuid, foreign key to task_intake_questions
+- sectionId: uuid, foreign key to task_intake_sections
+- answerValue: text (store all answers as text/JSON string)
+- wasVisible: boolean (true if the section was visible when submitted)
+- createdAt: timestamp
+
+2. Submission API Endpoint
+
+POST /api/task-intake/submit
+
+Request body:
+{
+  "formId": "uuid",
+  "answers": {
+    "questionId1": "answer value",
+    "questionId2": ["multi", "choice", "values"],
+    "questionId3": "2025-01-15"
+  },
+  "visibleSectionIds": ["uuid1", "uuid2", "uuid3"]
+}
+
+This endpoint should:
+
+Step A - Validate submission:
+- Verify all required questions in visible sections have answers
+- Verify answer formats are correct (dates, numbers, etc.)
+- Return 400 with errors if validation fails
+
+Step B - Create submission record:
+- Create task_intake_submissions record with status 'pending'
+- Create task_intake_answers records for each answer
+- Set wasVisible = true for answers in visibleSectionIds, false otherwise
+
+Step C - Extract key fields for task:
+- Find answer for "task_name" (internalLabel) → task title
+- Find answer for "client_select" → client association
+- Find answer for "due_date" → task due date
+- Find answer for "priority_level" → task priority
+- Find answer for "department" → task department/category
+
+Step D - Create the task:
+- Create record in your existing tasks table
+- Use extracted fields from Step C
+- Link submissionId to the task
+- Set task status to your default initial status
+
+Step E - Update submission:
+- Update submission record with taskId
+- Set status to 'task_created'
+
+Step F - Return response:
+{
+  "success": true,
+  "submissionId": "uuid",
+  "taskId": "uuid",
+  "taskUrl": "/tasks/uuid"
+}
+
+3. Answer Retrieval Endpoint
+
+GET /api/task-intake/submissions/:submissionId
+
+Returns:
+{
+  "id": "uuid",
+  "taskId": "uuid",
+  "submittedBy": { "id": "uuid", "name": "User Name" },
+  "submittedAt": "2025-01-23T...",
+  "status": "task_created",
+  "sections": [
+    {
+      "sectionId": "uuid",
+      "sectionName": "Task Basics",
+      "wasVisible": true,
+      "answers": [
+        {
+          "questionId": "uuid",
+          "questionText": "What is the name of this task?",
+          "internalLabel": "task_name",
+          "answerValue": "New video ad for Tax Lien Code",
+          "questionType": "text"
+        }
+      ]
+    }
+  ]
+}
+
+This endpoint structures answers by section for easy display.
+
+4. Get Submission by Task ID
+
+GET /api/tasks/:taskId/intake-submission
+
+Returns the same structure as above, but looks up by taskId instead of submissionId.
+This lets you view the original intake answers from the task detail page.
+
+5. Update Form Renderer
+
+Modify the form submission handler from Step 6:
+
+When user clicks Submit:
+1. Gather all answers from state
+2. Get list of currently visible section IDs
+3. POST to /api/task-intake/submit
+4. On success:
+   - Show success message with task link
+   - Redirect to new task after 2 seconds, OR
+   - Show "View Task" button
+5. On error:
+   - Display validation errors inline
+   - Do not clear form
+
+6. Task Detail Integration
+
+Add a section to the task detail page to show intake submission:
+
+IF task has an associated intake submission:
+- Show expandable section: "📋 Intake Form Submission"
+- When expanded, show answers grouped by section
+- Only show sections where wasVisible = true
+- Format answers nicely based on question type:
+  - Multi-choice: show as comma-separated list
+  - URLs: show as clickable links
+  - Dates: format nicely
+
+If task does NOT have intake submission (created before this system):
+- Don't show the section at all
+
+7. Handle Client Dropdown
+
+The "Which client is this for?" question currently has a placeholder option.
+
+Update the form renderer to:
+- Fetch actual clients from your clients API/table
+- Populate the dropdown dynamically
+- Store the selected client ID as the answer
+
+If there's no clients table yet, keep the placeholder for now and add a note.
+
+8. Handle Edge Cases
+
+Duplicate submission prevention:
+- Disable submit button while submitting
+- Check for duplicate submissions in last 60 seconds with same task name + user
+
+User leaves page:
+- Consider storing draft in localStorage
+- Prompt "You have unsaved changes" on navigation away
+- (This can be a future enhancement - note it but don't block on it)
+
+VERIFICATION
+
+After implementation:
+
+Test 1 - Basic Submission:
+1. Fill out complete Creative > Copy form
+2. Submit
+3. Verify task is created in tasks table
+4. Verify all answers are stored in task_intake_answers
+5. Verify redirect to new task works
+6. View task and verify intake submission section shows answers
+
+Test 2 - Validation Rejection:
+1. Leave required fields empty
+2. Try to submit
+3. Verify 400 error and validation messages
+
+Test 3 - Hidden Section Answers:
+1. Fill out Creative > Video path
+2. Answer several Video questions
+3. Go back and change to Creative > Copy
+4. Submit
+5. Verify Video answers are stored with wasVisible = false
+6. Verify task detail only shows Copy answers (visible sections)
+
+Test 4 - View Existing Task:
+1. Find task created in Test 1
+2. View task detail page
+3. Verify intake submission section displays correctly
+
+MAPPING TO EXISTING TASK FIELDS
+
+Based on intake answers, map to your existing task table fields:
+
+Intake Question (internalLabel) → Task Field
+-------------------------------------------
+task_name → title (or name, whatever your field is)
+client_select → clientId (foreign key)
+due_date → dueDate
+priority_level → priority
+department → department (or category, or tags)
+task_scope → (store in metadata or description for now)
+
+If your tasks table has different fields, adjust the mapping accordingly. Let me know what fields your tasks table has if you need help with mapping.
+
+DO NOT
+
+- Do not build description generation yet (that's Step 8)
+- Do not build assignment rules yet (that's Step 9)
+- Do not remove any existing task creation methods yet
+
+Please implement this step and confirm when complete. Also let me know:
+1. What fields your existing tasks table has
+2. Whether you have a clients table to pull from

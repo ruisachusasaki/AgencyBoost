@@ -5032,3 +5032,50 @@ export const insertTaskIntakeAssignmentRuleSchema = createInsertSchema(taskIntak
 });
 export type TaskIntakeAssignmentRule = typeof taskIntakeAssignmentRules.$inferSelect;
 export type InsertTaskIntakeAssignmentRule = z.infer<typeof insertTaskIntakeAssignmentRuleSchema>;
+
+// Task Intake Submissions - stores form submissions before/after task creation
+export const taskIntakeSubmissions = pgTable("task_intake_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "set null" }), // nullable initially, linked after task created
+  formId: varchar("form_id").notNull().references(() => taskIntakeForms.id),
+  submittedBy: uuid("submitted_by").notNull().references(() => staff.id),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  status: text("status").notNull().default("pending"), // pending, task_created, cancelled
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_task_intake_submissions_task").on(table.taskId),
+  index("idx_task_intake_submissions_form").on(table.formId),
+  index("idx_task_intake_submissions_user").on(table.submittedBy),
+]);
+
+// Task Intake Answers - stores individual answers for each submission
+export const taskIntakeAnswers = pgTable("task_intake_answers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  submissionId: varchar("submission_id").notNull().references(() => taskIntakeSubmissions.id, { onDelete: "cascade" }),
+  questionId: varchar("question_id").notNull().references(() => taskIntakeQuestions.id),
+  sectionId: varchar("section_id").references(() => taskIntakeSections.id),
+  answerValue: text("answer_value"), // store all answers as text/JSON string
+  wasVisible: boolean("was_visible").default(true), // true if section was visible when submitted
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_task_intake_answers_submission").on(table.submissionId),
+  index("idx_task_intake_answers_question").on(table.questionId),
+]);
+
+// Schema exports for submissions and answers
+export const insertTaskIntakeSubmissionSchema = createInsertSchema(taskIntakeSubmissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  submittedAt: true,
+});
+export type TaskIntakeSubmission = typeof taskIntakeSubmissions.$inferSelect;
+export type InsertTaskIntakeSubmission = z.infer<typeof insertTaskIntakeSubmissionSchema>;
+
+export const insertTaskIntakeAnswerSchema = createInsertSchema(taskIntakeAnswers).omit({
+  id: true,
+  createdAt: true,
+});
+export type TaskIntakeAnswer = typeof taskIntakeAnswers.$inferSelect;
+export type InsertTaskIntakeAnswer = z.infer<typeof insertTaskIntakeAnswerSchema>;
