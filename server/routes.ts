@@ -28601,8 +28601,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current user's department using raw SQL
       let userDepartmentId: string | null = null;
       if (userId) {
-        const userResult = await db.execute(sql`SELECT department_id FROM staff WHERE id = ${userId} LIMIT 1`);
-        userDepartmentId = (userResult.rows[0] as any)?.department_id || null;
+        const userResult = await db.execute(sql`SELECT department FROM staff WHERE id = ${userId} LIMIT 1`);
+        userDepartmentId = (userResult.rows[0] as any)?.department || null;
       }
       
       // Fetch all courses with raw SQL to avoid Drizzle builder issues
