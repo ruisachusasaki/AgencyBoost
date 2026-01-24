@@ -23,37 +23,33 @@ function evaluateCondition(condition: RuleCondition, answers: Record<string, any
   const answer = answers[condition.questionId];
   if (answer === undefined || answer === null) return false;
 
-  const answerStr = String(answer).toLowerCase().trim();
-  const compareValue = Array.isArray(condition.value) 
+  const answerValues: string[] = Array.isArray(answer) 
+    ? answer.map(v => String(v).toLowerCase().trim())
+    : [String(answer).toLowerCase().trim()];
+
+  const compareValues: string[] = Array.isArray(condition.value) 
     ? condition.value.map(v => String(v).toLowerCase().trim())
-    : String(condition.value).toLowerCase().trim();
+    : [String(condition.value).toLowerCase().trim()];
 
   switch (condition.operator) {
     case 'equals':
-      return Array.isArray(compareValue) 
-        ? compareValue.includes(answerStr)
-        : answerStr === compareValue;
+      return answerValues.some(av => compareValues.includes(av));
     case 'not_equals':
-      return Array.isArray(compareValue)
-        ? !compareValue.includes(answerStr)
-        : answerStr !== compareValue;
+      return !answerValues.some(av => compareValues.includes(av));
     case 'contains':
-      return Array.isArray(compareValue)
-        ? compareValue.some(v => answerStr.includes(v))
-        : answerStr.includes(compareValue);
+      return answerValues.some(av => compareValues.some(cv => av.includes(cv)));
     case 'in':
-      if (Array.isArray(compareValue)) {
-        return compareValue.includes(answerStr);
-      }
-      return answerStr === compareValue;
+      return answerValues.some(av => compareValues.includes(av));
+    case 'any':
+      return answerValues.some(av => compareValues.includes(av));
     default:
-      return answerStr === compareValue;
+      return answerValues.some(av => compareValues.includes(av));
   }
 }
 
 function evaluateConditions(conditions: any, answers: Record<string, any>): boolean {
   if (!conditions || (Array.isArray(conditions) && conditions.length === 0)) {
-    return false;
+    return true;
   }
 
   if (Array.isArray(conditions)) {
@@ -81,6 +77,7 @@ async function findUserByRole(role: string): Promise<string | null> {
   const [foundStaff] = await db.select({ id: staff.id })
     .from(staff)
     .where(eq(staff.position, role))
+    .orderBy(asc(staff.firstName), asc(staff.lastName))
     .limit(1);
 
   return foundStaff?.id || null;
@@ -128,10 +125,10 @@ export async function evaluateAssignmentRules(
 }
 
 export function generateConditionSummary(conditions: any): string {
-  if (!conditions) return 'No conditions';
+  if (!conditions) return 'Match all (catch-all)';
 
   if (Array.isArray(conditions) && conditions.length === 0) {
-    return 'No conditions';
+    return 'Match all (catch-all)';
   }
 
   if (Array.isArray(conditions)) {
