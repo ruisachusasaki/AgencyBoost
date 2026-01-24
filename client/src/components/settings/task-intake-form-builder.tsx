@@ -524,7 +524,7 @@ export function TaskIntakeFormBuilder() {
                                     <Badge variant="outline" className="shrink-0">
                                       {index + 1}
                                     </Badge>
-                                    <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                                    {Icon ? <Icon className="h-4 w-4 text-muted-foreground shrink-0" /> : <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />}
                                     <div className="flex-1 min-w-0">
                                       <p className="font-medium truncate">
                                         {question.internalLabel ? (
