@@ -23284,12 +23284,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get ALL sections across all forms (for admin utility)
   app.get("/api/task-intake/sections", requireAuth(), requireAdmin(), async (req, res) => {
     try {
+      // Get sections with question counts
       const sections = await db
         .select()
         .from(taskIntakeSections)
         .orderBy(asc(taskIntakeSections.orderIndex));
       
-      res.json(sections);
+      // Get question counts per section
+      const questionCounts = await db
+        .select({
+          sectionId: taskIntakeQuestions.sectionId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(taskIntakeQuestions)
+        .groupBy(taskIntakeQuestions.sectionId);
+      
+      const countMap = new Map(questionCounts.map(qc => [qc.sectionId, qc.count]));
+      
+      // Get all TRIGGER questions for visibility summary
+      const triggerQuestions = await db
+        .select({
+          id: taskIntakeQuestions.id,
+          internalLabel: taskIntakeQuestions.internalLabel,
+        })
+        .from(taskIntakeQuestions)
+        .where(sql`${taskIntakeQuestions.internalLabel} LIKE 'TRIGGER%'`);
+      
+      const triggerMap = new Map(triggerQuestions.map(q => [q.id, q.internalLabel]));
+      
+      // Build enhanced sections with counts and visibility summary
+      const enhancedSections = sections.map(section => {
+        let visibilitySummary = "Always visible";
+        
+        if (section.visibilityConditions) {
+          const vc = section.visibilityConditions as { operator: string; conditions: Array<{ questionId: string; operator: string; value: string }> };
+          if (vc.conditions && vc.conditions.length > 0) {
+            const conditions = vc.conditions.map(c => {
+              const triggerLabel = triggerMap.get(c.questionId) || 'Unknown';
+              const cleanLabel = triggerLabel.replace('TRIGGER - ', '');
+              return `${cleanLabel} = ${c.value}`;
+            });
+            if (vc.operator === 'OR') {
+              visibilitySummary = `When: ${conditions.join(' OR ')}`;
+            } else {
+              visibilitySummary = `When: ${conditions.join(' AND ')}`;
+            }
+          }
+        }
+        
+        return {
+          ...section,
+          questionCount: countMap.get(section.id) || 0,
+          visibilitySummary,
+        };
+      });
+      
+      res.json(enhancedSections);
     } catch (error) {
       console.error("Error fetching all task intake sections:", error);
       res.status(500).json({ error: "Failed to fetch sections" });

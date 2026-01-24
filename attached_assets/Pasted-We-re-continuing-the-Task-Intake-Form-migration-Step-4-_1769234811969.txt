@@ -1,0 +1,150 @@
+We're continuing the Task Intake Form migration. Step 4 (visibility conditions wired up) is complete.
+
+CONTEXT
+
+This is Step 5: Build the Section-Based Builder UI. Currently the Intake Form tab shows a flat list of questions with skip-logic rules. We're replacing this with a section-based tree view.
+
+Location: Settings > Tasks > Intake Form tab
+
+WHAT TO BUILD
+
+1. Main Layout Structure
+
+Replace the current flat question list with a hierarchical tree view layout:
+
+HEADER ROW:
+- Title: "Task Intake Form Builder"
+- [+ Add Section] button on left
+- [Preview] button on right (disabled for now, will build in Step 6)
+
+SECTION LIST:
+Each section displays as a collapsible row with:
+- Folder icon
+- Section name (clickable to expand/collapse)
+- Visibility badge showing conditions in human-readable form
+- Action buttons: Edit Conditions [⚙️], Edit Section [✎], Drag Handle [↕]
+
+When a section is expanded, show its questions indented beneath:
+- Question text (truncated if long)
+- Star icon if TRIGGER question (internalLabel contains "TRIGGER")
+- [Required] badge if isRequired = true
+- Edit button [✎]
+- Delete button [🗑️]
+- Drag handle for reordering
+
+At the bottom of each expanded section: [+ Add Question] button
+
+Visibility badge examples:
+- "Always Visible" when visibilityConditions is null
+- "When: Department = Creative" for single condition
+- "When: Department = DevOps AND Type = Landing Page" for multiple AND conditions  
+- "When: Any Live Event = Yes" for OR conditions
+
+2. Section Editor Modal
+
+When clicking edit [✎] on a section, open a modal with:
+- Section Name (text input, required)
+- Internal Label (text input, optional, for admin notes)
+- Active checkbox (uncheck to hide section from form)
+- Cancel and Save buttons
+
+3. Visibility Conditions Editor Modal
+
+When clicking [⚙️] on a section, open a modal with:
+- Section name displayed at top (read-only)
+- Radio: "Always visible" vs "Show when conditions are met"
+- If conditional, show:
+  - Match dropdown: "AND" (all must be true) or "OR" (any must be true)
+  - List of conditions, each with:
+    - Question dropdown (show all questions, highlight TRIGGER questions at top)
+    - Operator dropdown: "equals", "not_equals", "includes", "not_empty"
+    - Value dropdown (populated based on selected question's options) or text input for non-choice questions
+    - Delete condition button
+  - [+ Add Condition] button
+- Cancel and Save buttons
+
+When saving, construct the visibilityConditions JSON:
+{
+  "operator": "AND" or "OR",
+  "conditions": [
+    {
+      "questionId": "uuid",
+      "operator": "equals",
+      "value": "Option Text"
+    }
+  ]
+}
+
+4. API Endpoints Needed
+
+GET /api/task-intake/sections
+- Returns all sections ordered by orderIndex
+- Include question count per section
+- Include human-readable visibility summary string
+
+GET /api/task-intake/sections/:id/questions
+- Returns all questions for a section, ordered by orderIndex
+- Include options for choice questions
+
+PUT /api/task-intake/sections/reorder
+- Body: { sectionIds: ["uuid1", "uuid2", ...] } in new order
+- Updates orderIndex for all sections
+
+PUT /api/task-intake/questions/reorder
+- Body: { questionIds: ["uuid1", "uuid2", ...], sectionId: "uuid" }
+- Updates orderIndex for questions within a section
+
+PUT /api/task-intake/questions/:id/move
+- Body: { newSectionId: "uuid" }
+- Moves question to different section
+
+5. Drag and Drop
+
+Implement drag-drop for:
+- Reordering sections (drag section to new position)
+- Reordering questions within a section
+
+Use whatever DnD library is already in the project, or add @dnd-kit/core if none exists.
+
+6. State Management
+
+- Fetch sections on component mount
+- Lazy-load questions when section is expanded (or fetch all upfront if under 200 questions)
+- Optimistic updates for reordering
+- Refresh data after edits
+
+7. Styling Notes
+
+- Use existing design system/components from the app
+- Sections should have subtle background color to distinguish from questions
+- TRIGGER questions should have a visible star icon or "Trigger" badge
+- Collapsed sections should show question count, e.g., "Creative Type (8 questions)"
+- Indent questions under sections with padding-left or a left border indicator
+
+PRESERVE EXISTING FUNCTIONALITY
+
+- Keep the existing question editor modal if it exists, just ensure it includes sectionId field
+- Keep any existing assignment rules UI intact
+- Don't delete the old logic rules table or UI yet
+
+VERIFICATION
+
+After implementation:
+1. Navigate to Settings > Tasks > Intake Form
+2. See all 23 sections displayed in order
+3. Expand a section and see its questions
+4. Edit a section name and save successfully
+5. Open visibility conditions editor and see current conditions displayed
+6. Modify visibility conditions and save successfully
+7. Reorder sections via drag-drop
+8. Reorder questions within a section via drag-drop
+9. Add a new test question to a section
+10. Delete the test question
+
+DO NOT
+
+- Do not build the form preview/renderer yet (that's Step 6)
+- Do not build the description template editor yet (that's Step 8)
+- Do not remove old data or tables yet
+
+Please implement this step and confirm when complete.
