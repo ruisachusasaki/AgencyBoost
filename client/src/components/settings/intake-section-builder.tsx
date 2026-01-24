@@ -157,6 +157,7 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
 
   const invalidateSections = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/task-intake/sections"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/task-intake/questions/triggers"] });
     expandedSections.forEach(sectionId => {
       queryClient.invalidateQueries({ queryKey: [`/api/task-intake-sections/${sectionId}/questions`] });
     });

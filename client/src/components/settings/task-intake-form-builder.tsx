@@ -206,6 +206,8 @@ export function TaskIntakeFormBuilder() {
   const invalidateFormQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
     queryClient.invalidateQueries({ queryKey: ["/api/task-intake/sections"] });
+    // Invalidate trigger questions for visibility conditions
+    queryClient.invalidateQueries({ queryKey: ["/api/task-intake/questions/triggers"] });
     // Invalidate all section question queries (pattern match)
     queryClient.invalidateQueries({ 
       predicate: (query) => {
