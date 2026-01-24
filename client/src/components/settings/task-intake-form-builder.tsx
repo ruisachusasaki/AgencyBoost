@@ -206,6 +206,13 @@ export function TaskIntakeFormBuilder() {
   const invalidateFormQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/task-intake-forms"] });
     queryClient.invalidateQueries({ queryKey: ["/api/task-intake/sections"] });
+    // Invalidate all section question queries (pattern match)
+    queryClient.invalidateQueries({ 
+      predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.includes('/api/task-intake-sections/') && key.includes('/questions');
+      }
+    });
     if (formId) {
       queryClient.invalidateQueries({ queryKey: [`/api/task-intake-forms/${formId}`] });
     }
