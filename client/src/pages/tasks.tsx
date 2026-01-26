@@ -20,7 +20,7 @@ import TaskForm from "@/components/forms/task-form";
 import { TaskDependencyIcons } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useHasPermission } from "@/hooks/use-has-permission";
+import { useHasPermission, useRolePermissions } from "@/hooks/use-has-permission";
 import type { Task, Client, Campaign, Staff, TaskStatus, TaskPriority, TaskCategory, TaskTemplate } from "@shared/schema";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -299,11 +299,9 @@ export default function Tasks() {
     }
   }, [savedPreferences, preferencesLoaded]);
 
-  // Check if current user is admin
-  const isAdmin = currentUser?.role === 'Admin';
-  const isManager = currentUser?.role === 'Manager';
-  const { hasPermission: hasTaskTemplatesPermission } = useHasPermission('tasks.manage_task_templates');
-  const canManageTaskTemplates = isAdmin || isManager || hasTaskTemplatesPermission;
+  // Use role-based permission hook for consistent permission checks
+  const { canManageTaskTemplates, canManageUniversalSmartLists, isAdmin } = useRolePermissions();
+  const { hasPermission: hasTaskTemplatesPermission } = useHasPermission('tasks.templates.manage');
 
   // Auto-select first workflow if none selected and workflows are available
   React.useEffect(() => {
@@ -940,9 +938,9 @@ export default function Tasks() {
       const smartList = getVisibleSmartLists().find(list => list.id === smartListId);
       const currentUserId = currentUser?.id;
       
-      // Only allow deletion if user is the creator or admin for universal lists
+      // Only allow deletion if user is the creator or has universal smart list management permission
       const canDelete = smartList?.createdBy === currentUserId || 
-                       (smartList?.visibility === 'universal' && isAdmin);
+                       (smartList?.visibility === 'universal' && canManageUniversalSmartLists);
       
       if (!canDelete) {
         toast({

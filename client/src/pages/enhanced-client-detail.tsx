@@ -31,6 +31,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate, ClientHealthScore } from "@shared/schema";
 import { format, formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useRolePermissions } from "@/hooks/use-has-permission";
 import { apiRequest } from "@/lib/queryClient";
 import { getCurrentWeekRange } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
@@ -1076,7 +1077,7 @@ function RoadmapTabContent({ client, queryClient, currentUser }: { client: Clien
                       <><Save className="h-4 w-4 mr-2" />Save</>
                     )}
                   </Button>
-                  {currentUser?.role === 'Admin' && (
+                  {canDeleteRoadmapEntries && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" data-testid={`btn-delete-roadmap-${entry.id}`}>
@@ -2752,6 +2753,9 @@ export default function EnhancedClientDetail() {
       return response.json();
     },
   });
+  
+  // Use role-based permission hook for consistent permission checks
+  const { isAdmin, isAdminOrManager, canDeleteRoadmapEntries, canManageClientNotes, canDeleteDocuments, canViewCosts, canManageDndSettings, canDeleteProducts } = useRolePermissions();
 
   // Fetch user permissions
   const { data: userPermissions } = useQuery({
@@ -3138,19 +3142,10 @@ export default function EnhancedClientDetail() {
     return '600px';
   };
 
-  // Check if current user can delete products/bundles (Admin, Accounting, Manager roles)
-  const canDeleteProducts = currentUser && ['Admin', 'Accounting', 'Manager'].includes(currentUser.role);
-  
-  // Check if current user can view costs (Manager and Admin roles only)
-  const canViewCosts = currentUser && ['Manager', 'Admin'].includes(currentUser.role);
-
-  // Check if current user is admin (only admins can uncheck DND settings)
-  const isAdmin = currentUser && currentUser.role === 'Admin';
-
   // Handle DND setting changes with admin-only uncheck restriction
   const handleDNDChange = (setting: 'dndAll' | 'dndEmail' | 'dndSms' | 'dndCalls', checked: boolean) => {
     // If trying to uncheck (disable DND) and user is not admin, prevent the action
-    if (!checked && !isAdmin) {
+    if (!checked && !canManageDndSettings) {
       toast({
         title: "Access Denied",
         description: "Only Administrators can disable Do Not Disturb settings",
@@ -6946,7 +6941,7 @@ export default function EnhancedClientDetail() {
                                   <span className="text-xs text-gray-500">
                                     {new Date(note.createdAt).toLocaleDateString()} at {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                   </span>
-                                  {currentUser?.role === 'Admin' && (
+                                  {canManageClientNotes && (
                                     <div className="flex gap-1">
                                       <Button 
                                         variant="ghost" 
@@ -7342,7 +7337,7 @@ export default function EnhancedClientDetail() {
                                   >
                                     <ExternalLink className="h-3 w-3" />
                                   </Button>
-                                  {currentUser?.role === 'Admin' && (
+                                  {canDeleteDocuments && (
                                     <Button
                                       variant="ghost"
                                       size="sm"

@@ -1,5 +1,6 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRolePermissions } from "@/hooks/use-has-permission";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -200,8 +201,8 @@ export default function TaskDetail() {
     queryKey: ['/api/auth/current-user'],
   });
 
-  // Check if user can add manual time (Admins and Managers only)
-  const canAddManualTime = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
+  // Use role-based permission hook for consistent permission checks
+  const { canAddManualTime } = useRolePermissions();
 
   // Get workflow-specific statuses for this task
   const selectedWorkflow = teamWorkflows.find(w => w.id === task?.workflowId);

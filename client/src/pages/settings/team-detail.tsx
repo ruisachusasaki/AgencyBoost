@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { FormLabelWithTooltip } from "@/components/ui/form-label-with-tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { useRolePermissions } from "@/hooks/use-has-permission";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -140,6 +141,9 @@ export default function TeamDetail() {
       return response.json();
     },
   });
+  
+  // Use role-based permission hook for consistent permission checks
+  const { isAdmin, canDeleteTeams } = useRolePermissions();
 
   // Fetch roles for proper role name display
   const { data: roles = [] } = useQuery<Role[]>({
@@ -515,7 +519,7 @@ export default function TeamDetail() {
             <Edit className="h-4 w-4 mr-2" />
             Edit Team
           </Button>
-          {currentUser?.role === 'Admin' && (
+          {canDeleteTeams && (
             <Button 
               variant="outline" 
               size="sm" 

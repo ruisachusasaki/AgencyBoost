@@ -28,7 +28,15 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
 
 ### Technical Implementations
 - **Authentication & Authorization**: Direct Google OAuth 2.0 authentication (migrated from Replit Auth OIDC) with multi-user support, automatic migration logic, session management, and role-based access control (Admin, Manager, User, Accounting).
-    - **Granular Permission System**: Three-level permission enforcement: (1) Module-level page access using RequirePermission route wrappers, (2) Sub-tab/section visibility using useHasPermissions hook to filter tabs dynamically, (3) Action-level controls using PermissionGate component for delete/export buttons. Permission keys follow "module.permission_key" format (e.g., "clients.delete_clients", "reports.view_sales_reports"). Admin users automatically have all permissions. Permissions defined in shared/permission-templates.ts.
+    - **Hierarchical Permission System**: Comprehensive permission enforcement with module → tab → action structure:
+        - **Permission Format**: Keys follow hierarchical "module.tab.action" format (e.g., "clients.list.view", "tasks.templates.manage", "reports.sales.export")
+        - **13 Permission Modules**: clients, sales, tasks, leads, campaigns, workflows, calendar, hr, training, knowledge_base, reports, settings
+        - **Three-Level Enforcement**: (1) Module-level page access using RequirePermission route wrappers in App.tsx, (2) Tab/section visibility using useHasPermissions and useRolePermissions hooks, (3) Action-level controls using PermissionGate component
+        - **Role Templates**: Pre-configured permission sets for Admin (all permissions), Manager (team oversight), Accounting (financial access), User (basic operations) defined in shared/role-templates.ts
+        - **Permission Files**: Templates in shared/permission-templates.ts, role defaults in shared/role-templates.ts, migration mapping in server/migrations/migrate-permissions.ts
+        - **Hook Usage**: useRolePermissions() provides semantic permission flags (canEditAllTimeEntries, canManageArticles, canDeleteProducts, etc.) to replace hardcoded role === 'Admin' checks
+        - **Backward Compatibility**: Migration script maps old flat permission keys to new hierarchical format, supporting both formats during transition
+        - **Admin Bypass**: Admin role automatically has all permissions (bypasses all checks)
 - **Data Management**: Relational schema, CRUD operations, audit logs, sorting, pagination, CSV import/export, and custom fields.
 - **Google Calendar Integration**: Per-user OAuth 2.0 with Google Calendar API, featuring two-way sync, incremental sync, contact creation from attendees, availability blocking, workflow triggers, optimized storage, event caching, and sync preferences.
 - **Business Timezone**: Account-level timezone setting with a lightweight API endpoint, React hook, and timezone-aware helper functions for consistent date calculations.

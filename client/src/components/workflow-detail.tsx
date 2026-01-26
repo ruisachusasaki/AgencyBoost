@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useRolePermissions } from "@/hooks/use-has-permission";
 import { 
   Play, Pause, Edit, Trash2, BarChart3, Clock, CheckSquare, 
   Mail, MessageSquare, Tag, Phone, Zap, ArrowRight, Calendar,
@@ -43,6 +44,9 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
     queryKey: ['/api/auth/current-user'],
     enabled: isOpen,
   });
+  
+  // Use role-based permission hook for consistent permission checks
+  const { canManageWorkflowTemplates } = useRolePermissions();
 
   // Fetch workflow executions
   const { data: executions = [] } = useQuery({
@@ -142,11 +146,8 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
 
   const actions = Array.isArray(workflow.actions) ? workflow.actions : [];
 
-  // Check if user can save workflows as templates (Admins and Managers only)
-  const canSaveAsTemplate = () => {
-    if (!currentUser) return false;
-    return currentUser.role === 'Admin' || currentUser.role === 'Manager';
-  };
+  // Check if user can save workflows as templates
+  const canSaveAsTemplate = () => canManageWorkflowTemplates;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

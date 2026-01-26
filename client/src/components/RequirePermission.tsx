@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { Loader2, Lock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { permissionMatches } from "@/hooks/use-has-permission";
 
 interface RequirePermissionProps {
   children: ReactNode;
@@ -83,14 +84,22 @@ export default function RequirePermission({
 
     // Check granular permissions (flat array format from API)
     if (currentUser?.granularPermissions && currentUser.granularPermissions.length > 0) {
-      // If specific permission is provided, check for exact match
+      // If specific permission is provided, check for exact match only (strict enforcement)
       if (permission) {
-        return currentUser.granularPermissions.some(
-          (gp: any) => gp.permissionKey === permission && gp.enabled === true
+        // Check for permission match using the shared permissionMatches function
+        // This handles both old (clients.view_clients) and new (clients.list.view) formats
+        // through normalization, maintaining backward compatibility
+        const hasMatch = currentUser.granularPermissions.some(
+          (gp: any) => gp.enabled === true && permissionMatches(gp.permissionKey, permission)
         );
+        
+        if (hasMatch) return true;
+        
+        // DENY if specific permission is required but not found
+        return false;
       }
       
-      // Otherwise check if user has ANY permission for the module
+      // Otherwise check if user has ANY permission for the module (module-level access)
       return currentUser.granularPermissions.some(
         (gp: any) => gp.module === module && gp.enabled === true
       );

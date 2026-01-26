@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
-import { useHasPermissions } from "@/hooks/use-has-permission";
+import { useHasPermissions, useRolePermissions } from "@/hooks/use-has-permission";
 import { PermissionGate } from "@/components/PermissionGate";
 import { useBusinessTimezone, getLocalDateString, getTodayInTimezone, getStartOfWeekInTimezone, getEndOfWeekInTimezone } from "@/hooks/use-business-timezone";
 import { apiRequest } from "@/lib/queryClient";
@@ -178,11 +178,9 @@ export default function Reports() {
     }
   );
   
-  // Check if current user is admin or manager - check roles array
-  const userRoles = currentUser?.roles || [];
-  const isAdmin = userRoles.some((r: string) => r.toLowerCase() === 'admin');
-  const isManager = userRoles.some((r: string) => r.toLowerCase() === 'manager');
-  const canEditTimeEntries = isAdmin || isManager;
+  // Use role-based permission hook for consistent permission checks
+  const { isAdmin, canEditOthersTimesheets, canExportAdminReports, canEditAllTimeEntries } = useRolePermissions();
+  const canEditTimeEntries = canEditAllTimeEntries;
   
   // Task-specific time period controls
   const [taskDateRange, setTaskDateRange] = useState("this-week");
@@ -233,7 +231,7 @@ export default function Reports() {
     if (!timeTrackingData || isExporting) return;
 
     // Check permissions for admin-only export formats
-    if (exportFormat === 'admin-summary' && !isAdmin) {
+    if (exportFormat === 'admin-summary' && !canExportAdminReports) {
       toast({
         title: "Access Denied",
         description: "Admin summary export is only available to administrators.",
@@ -2202,7 +2200,7 @@ export default function Reports() {
                         <SelectItem value="time-tracking">Time Tracking Report</SelectItem>
                         <SelectItem value="timesheet">Timesheet View</SelectItem>
                         <SelectItem value="by-user-client">By User & Client</SelectItem>
-                        {isAdmin && <SelectItem value="admin-by-client">Total by Client (Admin)</SelectItem>}
+                        {canExportAdminReports && <SelectItem value="admin-by-client">Total by Client (Admin)</SelectItem>}
                         <SelectItem value="productivity">Productivity Analysis</SelectItem>
                         <SelectItem value="workload">Workload Distribution</SelectItem>
                         <SelectItem value="stage-analytics">Stage Analytics</SelectItem>
@@ -2304,14 +2302,14 @@ export default function Reports() {
                   {taskReportType === "timesheet" && (
                     <div className="flex items-center gap-2">
                       <label className="text-sm text-slate-600">
-                        {isAdmin ? 'Filter by User:' : 'Your Timesheet:'}
+                        {canEditOthersTimesheets ? 'Filter by User:' : 'Your Timesheet:'}
                       </label>
-                      <Select value={userIdFilter} onValueChange={setUserIdFilter} disabled={!isAdmin}>
+                      <Select value={userIdFilter} onValueChange={setUserIdFilter} disabled={!canEditOthersTimesheets}>
                         <SelectTrigger className="w-48" data-testid="select-user-filter">
                           <SelectValue placeholder="All Users" />
                         </SelectTrigger>
                         <SelectContent>
-                          {isAdmin && <SelectItem value="all">All Users</SelectItem>}
+                          {canEditOthersTimesheets && <SelectItem value="all">All Users</SelectItem>}
                           {(timeTrackingData?.userSummaries || []).map((user) => (
                             <SelectItem key={user.userId} value={user.userId}>
                               {user.userName || 'Unknown User'}
@@ -2410,7 +2408,7 @@ export default function Reports() {
                             <SelectItem value="detailed">Detailed Timesheet</SelectItem>
                             <SelectItem value="user-summary">User Summary</SelectItem>
                             <SelectItem value="client-breakdown">Client Breakdown</SelectItem>
-                            {isAdmin && <SelectItem value="admin-summary">Admin Summary</SelectItem>}
+                            {canExportAdminReports && <SelectItem value="admin-summary">Admin Summary</SelectItem>}
                           </SelectContent>
                         </Select>
                       </div>
@@ -2730,7 +2728,7 @@ export default function Reports() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                {!isAdmin ? (
+                {!canExportAdminReports ? (
                   <div className="p-8 text-center text-slate-500" data-testid="admin-access-denied">
                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <div className="text-2xl">🔒</div>

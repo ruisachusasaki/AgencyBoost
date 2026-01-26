@@ -15,6 +15,7 @@ import LeadAppointmentsDisplay from "@/components/forms/lead-appointments-displa
 import { CallButton } from "@/components/voip";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useRolePermissions } from "@/hooks/use-has-permission";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -50,8 +51,8 @@ export default function LeadDetail() {
     queryKey: ["/api/auth/current-user"],
   });
 
-  // Check if user is admin or manager
-  const isAdminOrManager = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
+  // Use role-based permission hook for consistent permission checks
+  const { isAdminOrManager } = useRolePermissions();
 
   // Fetch lead data - using the specific lead endpoint
   const { data: lead, isLoading: leadLoading } = useQuery<Lead>({

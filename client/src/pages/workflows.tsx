@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useRolePermissions } from "@/hooks/use-has-permission";
 import { apiRequest } from "@/lib/queryClient";
 import { Plus, Play, Pause, Layout, GitBranch, Zap, Calendar, Users, Target, ChevronRight, Activity, Settings, FolderPlus, FolderOpen, ArrowLeft, Folder, Edit, Trash2, ChevronUp, ChevronDown, Grid, List } from "lucide-react";
 import type { Workflow, EnhancedTask, WorkflowTemplate, TemplateFolder } from "@shared/schema";
@@ -50,6 +51,9 @@ export default function WorkflowsPage() {
   const { data: currentUser } = useQuery({
     queryKey: ['/api/auth/current-user'],
   });
+  
+  // Use role-based permission hook for consistent permission checks
+  const { isAdmin, canManageWorkflowTemplates } = useRolePermissions();
 
   // Fetch workflow templates
   const { data: workflowTemplates = [], isLoading: templatesLoading } = useQuery({
@@ -852,7 +856,7 @@ export default function WorkflowsPage() {
                     >
                       {useTemplateMutation.isPending ? "Creating..." : "Use Template"}
                     </Button>
-                    {currentUser?.role === 'Admin' && (
+                    {canManageWorkflowTemplates && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button 

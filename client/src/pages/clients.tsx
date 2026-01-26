@@ -16,7 +16,7 @@ import { SimpleAddClientForm } from "@/components/forms/simple-add-client-form";
 import { ClientDeletionModal } from "@/components/client-deletion-modal";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useHasPermissions } from "@/hooks/use-has-permission";
+import { useHasPermissions, useRolePermissions } from "@/hooks/use-has-permission";
 import { PermissionGate } from "@/components/PermissionGate";
 import { format } from "date-fns";
 import { formatPhoneNumber } from "@/lib/utils";
@@ -321,8 +321,8 @@ export default function Clients() {
     queryKey: ['/api/team-workflows'],
   });
 
-  // Check if current user is admin
-  const isAdmin = currentUser?.role === 'Admin';
+  // Use role-based permission hook instead of hardcoded role checks
+  const { canManageUniversalSmartLists } = useRolePermissions();
 
   // Load Smart Lists from database
   const { data: smartListsData = [] } = useQuery<SmartList[]>({
@@ -1382,7 +1382,7 @@ export default function Clients() {
       return;
     }
 
-    if (listToDelete.createdBy !== currentUser?.id && !isAdmin) {
+    if (listToDelete.createdBy !== currentUser?.id && !canManageUniversalSmartLists) {
       toast({
         title: "Permission Denied",
         variant: "success",
@@ -1546,7 +1546,7 @@ export default function Clients() {
           </a>
         ) : '-';
       case 'actions':
-        return isAdmin ? (
+        return (
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1555,7 +1555,7 @@ export default function Clients() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <PermissionGate permission="clients.delete_clients">
+                <PermissionGate permission="clients.list.delete">
                   <DropdownMenuItem
                     onClick={() => handleDeleteClient(client.id, getClientDisplayName(client))}
                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -1567,7 +1567,7 @@ export default function Clients() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        ) : null;
+        );
       default:
         // Handle custom field columns (key format: customField_{fieldId})
         if (columnKey.startsWith('customField_')) {

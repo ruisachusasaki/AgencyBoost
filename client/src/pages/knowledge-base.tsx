@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useRolePermissions } from "@/hooks/use-has-permission";
 import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown, Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, X, Check, Minus, CirclePlus, PlayCircle, Code, Sparkles, CheckSquare, Compass, ThumbsUp, Repeat1, Target, TrendingUp, Globe, Lock, Unlock, Clock, MessageCircle, UserCheck, DollarSign, Calculator, CreditCard, Banknote, HandCoins, PieChart, Receipt, Briefcase, Building, Building2, Store, ShoppingCart, Handshake, UserPlus, Phone as PhoneIcon, Megaphone, TrendingDown, Filter, SlidersHorizontal, GripVertical } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -550,8 +551,9 @@ export default function KnowledgeBase() {
     }
   });
 
-  const canManageCategories = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager');
-  const isAdmin = currentUser?.role === 'Admin';
+  // Use role-based permission hook for consistent permission checks
+  const { canManageArticles, isAdmin } = useRolePermissions();
+  const canManageCategories = canManageArticles;
   
   // Admins can always drag-and-drop to reorder (no toggle needed)
 

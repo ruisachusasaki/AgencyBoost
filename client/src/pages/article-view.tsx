@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useRolePermissions } from "@/hooks/use-has-permission";
 import { 
   ArrowLeft, ArrowRight, Eye, Heart, Bookmark, Calendar, User, Tag, 
   MessageCircle, Send, Edit, Trash2, Save, X, Settings,
@@ -75,6 +76,9 @@ export default function ArticleView() {
       return response.json();
     }
   });
+  
+  // Use role-based permission hook for consistent permission checks
+  const { canManageArticles } = useRolePermissions();
 
   // Fetch staff data for mention conversion
   const { data: staff = [] } = useQuery({
@@ -882,8 +886,8 @@ export default function ArticleView() {
               <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
             </Button>
 
-            {/* Add Sub-page button - only for Admins and Managers */}
-            {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
+            {/* Add Sub-page button - only for users with article management permission */}
+            {canManageArticles && (
               <RouterLink href={`/resources?createArticle=true&parentId=${id}&categoryId=${(article as any)?.categoryId || ''}`}>
                 <Button
                   variant="ghost"
@@ -896,8 +900,8 @@ export default function ArticleView() {
               </RouterLink>
             )}
 
-            {/* More Actions Dropdown - only for Admins and Managers */}
-            {currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Manager') && (
+            {/* More Actions Dropdown - only for users with article management permission */}
+            {canManageArticles && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" data-testid="button-more-actions">

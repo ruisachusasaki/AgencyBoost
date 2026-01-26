@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
+import { useRolePermissions } from "@/hooks/use-has-permission";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Save, Play, Settings, Users, Briefcase, DollarSign, Mail, Calendar, FileText, Zap, Target, Search, X, Trash2, Globe, UserCircle, GraduationCap, GitBranch, ArrowRight, Hash, MessageSquare, CheckSquare, Tag, Clock, Phone, BellRing, Plus, TrendingUp, AlertCircle, BookOpen, Trophy, BarChart3, UserCheck } from "lucide-react";
 import type { Workflow } from "@shared/schema";
@@ -35,6 +36,9 @@ export default function WorkflowBuilderPage() {
   const { data: currentUser } = useQuery({
     queryKey: ['/api/auth/current-user'],
   });
+  
+  // Use role-based permission hook for consistent permission checks
+  const { canManageWorkflowTemplates } = useRolePermissions();
   
   // Parse URL parameters to see if we're editing an existing workflow
   const searchParams = new URLSearchParams(window.location.search);
@@ -341,11 +345,8 @@ export default function WorkflowBuilderPage() {
     navigate("/workflows");
   };
 
-  // Check if user can save workflows as templates (Admins and Managers only)
-  const canSaveAsTemplate = () => {
-    if (!currentUser) return false;
-    return currentUser.role === 'Admin' || currentUser.role === 'Manager';
-  };
+  // Check if user can save workflows as templates
+  const canSaveAsTemplate = () => canManageWorkflowTemplates;
 
   const handleAddTrigger = () => {
     setShowTriggerPane(true);
