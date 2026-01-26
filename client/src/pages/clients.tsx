@@ -192,6 +192,11 @@ export default function Clients() {
     'clients.export_data',
     'clients.manage_clients',
   ]);
+  
+  // Check if user can perform any bulk actions (determines checkbox visibility)
+  const canPerformBulkActions = clientPermissions['clients.delete_clients'] || 
+                                 clientPermissions['clients.export_data'] || 
+                                 clientPermissions['clients.manage_clients'];
 
   const { data: clientsData, isLoading } = useQuery<PaginatedClientsResponse>({
     queryKey: [`/api/clients?page=${currentPage}&limit=${pageSize}`],
@@ -1645,10 +1650,12 @@ export default function Clients() {
           <Users className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Client
-        </Button>
+        <PermissionGate permission="clients.manage_clients">
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Client
+          </Button>
+        </PermissionGate>
       </div>
 
       {/* Tab Navigation */}
@@ -1892,17 +1899,19 @@ export default function Clients() {
               <Table className="min-w-full">
                 <TableHeader>
                   <TableRow>
-                    {/* Checkbox column */}
-                    <TableHead className="w-12">
-                      <div className="flex items-center justify-center">
-                        <Checkbox
-                          checked={selectedClients.size > 0 && selectedClients.size === filteredAndSortedClients.length}
-                          onCheckedChange={handleSelectAll}
-                          data-testid="select-all-clients"
-                          className="bulk-select-checkbox"
-                        />
-                      </div>
-                    </TableHead>
+                    {/* Checkbox column - only show if user can perform bulk actions */}
+                    {canPerformBulkActions && (
+                      <TableHead className="w-12">
+                        <div className="flex items-center justify-center">
+                          <Checkbox
+                            checked={selectedClients.size > 0 && selectedClients.size === filteredAndSortedClients.length}
+                            onCheckedChange={handleSelectAll}
+                            data-testid="select-all-clients"
+                            className="bulk-select-checkbox"
+                          />
+                        </div>
+                      </TableHead>
+                    )}
                     
                     {availableColumns.filter(col => visibleColumns.has(col.key)).map((column) => {
                       if (column.sortable) {
@@ -1931,17 +1940,19 @@ export default function Clients() {
                   ) : (
                     filteredAndSortedClients.map((client) => (
                       <TableRow key={client.id} className="hover:bg-slate-50">
-                        {/* Checkbox cell */}
-                        <TableCell className="py-3">
-                          <div className="flex items-center justify-center">
-                            <Checkbox
-                              checked={selectedClients.has(client.id)}
-                              onCheckedChange={(checked) => handleSelectClient(client.id, checked as boolean)}
-                              data-testid={`select-client-${client.id}`}
-                              className="bulk-select-checkbox"
-                            />
-                          </div>
-                        </TableCell>
+                        {/* Checkbox cell - only show if user can perform bulk actions */}
+                        {canPerformBulkActions && (
+                          <TableCell className="py-3">
+                            <div className="flex items-center justify-center">
+                              <Checkbox
+                                checked={selectedClients.has(client.id)}
+                                onCheckedChange={(checked) => handleSelectClient(client.id, checked as boolean)}
+                                data-testid={`select-client-${client.id}`}
+                                className="bulk-select-checkbox"
+                              />
+                            </div>
+                          </TableCell>
+                        )}
                         
                         {availableColumns.filter(col => visibleColumns.has(col.key)).map((column) => (
                           <TableCell key={column.key} className="py-3">
