@@ -14,8 +14,15 @@ import { useToast } from "@/hooks/use-toast";
 import GridLayout, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import { canAccessWidget } from "@shared/widget-permissions";
 
 const ResponsiveGridLayout = WidthProvider(GridLayout);
+
+interface UserGranularPermissions {
+  isAdmin: boolean;
+  roles: string[];
+  permissions: string[];
+}
 
 import ClientHealthOverviewWidget from "@/components/widgets/client-health-overview";
 import RecentClientsWidget from "@/components/widgets/recent-clients";
@@ -154,6 +161,23 @@ export default function Dashboard() {
   const { data: availableWidgets = [], isLoading: loadingAvailableWidgets } = useQuery<DashboardWidget[]>({
     queryKey: ["/api/dashboard-widgets"],
   });
+
+  // Fetch user's granular permissions for widget filtering
+  const { data: userPermissions } = useQuery<UserGranularPermissions>({
+    queryKey: ["/api/user-granular-permissions"],
+  });
+
+  // Filter available widgets based on user permissions
+  const permittedWidgets = useMemo(() => {
+    if (!userPermissions) {
+      // While loading, don't filter (or show nothing)
+      return availableWidgets;
+    }
+    
+    return availableWidgets.filter(widget => 
+      canAccessWidget(widget.type, userPermissions.permissions, userPermissions.isAdmin)
+    );
+  }, [availableWidgets, userPermissions]);
 
   const { data: userWidgets = [], isLoading: loadingUserWidgets } = useQuery<UserDashboardWidget[]>({
     queryKey: ["/api/user-dashboard-widgets", selectedDashboardId],
@@ -465,7 +489,8 @@ export default function Dashboard() {
   };
 
   const alreadyAddedTypes = userWidgets.map(w => w.widgetType);
-  const availableToAdd = availableWidgets
+  // Use permittedWidgets to only show widgets user has permission to access
+  const availableToAdd = permittedWidgets
     .filter(w => !alreadyAddedTypes.includes(w.type))
     .filter(w => {
       // Filter by category

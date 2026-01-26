@@ -76,6 +76,7 @@ import {
   slackWorkspaces
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
+import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
 import { z } from "zod";
 import { randomUUID, randomBytes } from "crypto";
 import bcrypt from "bcrypt";
@@ -16513,6 +16514,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(permissions);
     } catch (error) {
       console.error("Error fetching user permissions:", error);
+      res.status(500).json({ error: "Failed to fetch user permissions" });
+    }
+  });
+
+  // GET /api/user-granular-permissions - Get current user's enabled granular permission keys
+  // Used for widget permission filtering and other granular access control
+  app.get("/api/user-granular-permissions", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      // Check if user is admin (bypass all permission checks)
+      const isAdmin = await isCurrentUserAdmin(req);
+      
+      // Get user's role(s)
+      const userRolesList = await db
+        .select({ 
+          roleId: userRoles.roleId,
+          roleName: roles.name
+        })
+        .from(userRoles)
+        .leftJoin(roles, eq(userRoles.roleId, roles.id))
+        .where(eq(userRoles.userId, userId));
+      
+      const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+      const roleNames = userRolesList.map(ur => ur.roleName).filter(Boolean);
+      
+      // Get all enabled granular permissions for user's roles
+      let enabledPermissions = [];
+      
+      if (roleIds.length > 0) {
+        const grantedPerms = await db
+          .select({ permissionKey: granularPermissions.permissionKey })
+          .from(granularPermissions)
+          .where(
+            and(
+              inArray(granularPermissions.roleId, roleIds),
+              eq(granularPermissions.enabled, true)
+            )
+          );
+        
+        enabledPermissions = [...new Set(grantedPerms.map(p => p.permissionKey))];
+      }
+      
+      res.json({
+        isAdmin,
+        roles: roleNames,
+        permissions: enabledPermissions
+      });
+    } catch (error) {
+      console.error("Error fetching user granular permissions:", error);
       res.status(500).json({ error: "Failed to fetch user permissions" });
     }
   });
@@ -34950,6 +35002,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserId(req);
       if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { widgetType } = req.body;
+      
+      // Validate widget type is provided and known
+      if (!widgetType || typeof widgetType !== 'string') {
+        return res.status(400).json({ 
+          error: "Invalid request", 
+          message: "Widget type is required" 
+        });
+      }
+      
+      if (!isKnownWidgetType(widgetType)) {
+        return res.status(400).json({ 
+          error: "Invalid widget type", 
+          message: "The specified widget type is not recognized" 
+        });
+      }
+      
+      // Validate user has permission to add this widget
+      const isAdmin = await isCurrentUserAdmin(req);
+      
+      if (!isAdmin && widgetType) {
+        // Get user's roles and their granular permissions
+        const userRolesList = await db
+          .select({ roleId: userRoles.roleId })
+          .from(userRoles)
+          .where(eq(userRoles.userId, userId));
+        
+        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean) as string[];
+        
+        let enabledPermissions: string[] = [];
+        if (roleIds.length > 0) {
+          const grantedPerms = await db
+            .select({ permissionKey: granularPermissions.permissionKey })
+            .from(granularPermissions)
+            .where(
+              and(
+                inArray(granularPermissions.roleId, roleIds),
+                eq(granularPermissions.enabled, true)
+              )
+            );
+          enabledPermissions = grantedPerms.map(p => p.permissionKey);
+        }
+        
+        // Check if user has permission to access this widget
+        if (!canAccessWidget(widgetType, enabledPermissions, false)) {
+          return res.status(403).json({ 
+            error: "Permission denied", 
+            message: "You don't have permission to add this widget" 
+          });
+        }
       }
 
       const widgetData = {
