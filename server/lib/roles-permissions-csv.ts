@@ -1,7 +1,7 @@
 /**
  * CSV Import/Export utilities for Roles and Permissions
  * 
- * The CSV format dynamically reads from PERMISSION_TEMPLATES, so any new permissions
+ * The CSV format dynamically reads from LEGACY_PERMISSION_TEMPLATES, so any new permissions
  * added to the system automatically appear in exports.
  * 
  * CSV Format:
@@ -9,7 +9,10 @@
  * - Rows 2+: One row per permission, with TRUE/FALSE for each role
  */
 
-import { PERMISSION_TEMPLATES, type PermissionModule, type SubPermission } from "@shared/permission-templates";
+import { getLegacyPermissionTemplates, type LegacyPermissionModule, type SubPermission } from "@shared/permission-templates";
+
+// Get flattened permission templates for backward compatibility
+const LEGACY_PERMISSION_TEMPLATES = getLegacyPermissionTemplates();
 
 export interface RolePermissionData {
   roleName: string;
@@ -38,7 +41,7 @@ export interface PermissionRow {
 function buildLabelToKeyMap(): Map<string, { key: string; module: string }> {
   const map = new Map<string, { key: string; module: string }>();
   
-  for (const module of PERMISSION_TEMPLATES) {
+  for (const module of LEGACY_PERMISSION_TEMPLATES) {
     for (const perm of module.subPermissions) {
       // Use the label (e.g., "View client list") as the key for lookup
       map.set(perm.label.toLowerCase().trim(), { 
@@ -57,7 +60,7 @@ function buildLabelToKeyMap(): Map<string, { key: string; module: string }> {
 function buildKeyToInfoMap(): Map<string, { label: string; module: string; category: string }> {
   const map = new Map<string, { label: string; module: string; category: string }>();
   
-  for (const module of PERMISSION_TEMPLATES) {
+  for (const module of LEGACY_PERMISSION_TEMPLATES) {
     for (const perm of module.subPermissions) {
       map.set(perm.key, {
         label: perm.label,
@@ -71,13 +74,13 @@ function buildKeyToInfoMap(): Map<string, { label: string; module: string; categ
 }
 
 /**
- * Get all permission rows from PERMISSION_TEMPLATES
+ * Get all permission rows from LEGACY_PERMISSION_TEMPLATES
  * Returns them in order, grouped by category
  */
 export function getAllPermissionRows(): PermissionRow[] {
   const rows: PermissionRow[] = [];
   
-  for (const module of PERMISSION_TEMPLATES) {
+  for (const module of LEGACY_PERMISSION_TEMPLATES) {
     for (const perm of module.subPermissions) {
       rows.push({
         category: module.label, // Human-readable category name (e.g., "Clients", "Marketing")
@@ -159,7 +162,7 @@ export function generateTemplateCSV(existingRoleNames: string[] = []): string {
 }
 
 /**
- * Parse CSV content and validate against PERMISSION_TEMPLATES
+ * Parse CSV content and validate against LEGACY_PERMISSION_TEMPLATES
  */
 export function parseCSV(csvContent: string, existingRoleNames: string[]): CSVParseResult {
   const errors: string[] = [];
@@ -336,11 +339,11 @@ function escapeCsvValue(value: string): string {
 }
 
 /**
- * Get all valid permission keys from PERMISSION_TEMPLATES
+ * Get all valid permission keys from LEGACY_PERMISSION_TEMPLATES
  */
 export function getAllValidPermissionKeys(): string[] {
   const keys: string[] = [];
-  for (const module of PERMISSION_TEMPLATES) {
+  for (const module of LEGACY_PERMISSION_TEMPLATES) {
     for (const perm of module.subPermissions) {
       keys.push(perm.key);
     }
