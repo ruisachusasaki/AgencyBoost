@@ -205,12 +205,27 @@ export const MANAGER_PERMISSIONS: string[] = [
   'settings.custom_fields.view',
   'settings.integrations.view',
   'settings.tags.view',
+  'settings.tags.manage',
   'settings.products.view',
+  'settings.products.manage',
   'settings.workflows.view',
   'settings.hr.view',
+  'settings.hr.manage',
   'settings.clients.view',
+  'settings.clients.manage',
   'settings.tasks.view',
+  'settings.tasks.manage',
   'settings.sales.view',
+  'settings.sales.manage',
+  'settings.audit_logs.view',
+  'settings.business_profile.view',
+  'settings.staff.view',
+  'settings.staff.manage',
+  'settings.leads.view',
+  'settings.leads.manage',
+  'settings.calendar.view',
+  'settings.calendar.manage',
+  'settings.ai_assistant.view',
 ];
 
 /**
@@ -255,10 +270,11 @@ export const ACCOUNTING_PERMISSIONS: string[] = [
   'reports.timesheet.view_all',
   'reports.timesheet.export',
   
-  // Settings - view only
+  // Settings - view only for financial relevant sections
   'settings.general.view',
   'settings.products.view',
   'settings.sales.view',
+  'settings.business_profile.view',
 ];
 
 /**

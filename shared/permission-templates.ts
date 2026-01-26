@@ -912,6 +912,51 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
           { key: 'settings.audit_logs.view', label: 'View audit logs', description: 'See activity logs', action: 'view' },
         ],
       },
+      {
+        tab: 'business_profile',
+        label: 'Business Profile',
+        description: 'Manage company/agency profile',
+        permissions: [
+          { key: 'settings.business_profile.view', label: 'View business profile', description: 'See company information', action: 'view' },
+          { key: 'settings.business_profile.manage', label: 'Manage business profile', description: 'Edit company information', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'staff',
+        label: 'Staff',
+        description: 'Manage staff members',
+        permissions: [
+          { key: 'settings.staff.view', label: 'View staff', description: 'See staff list', action: 'view' },
+          { key: 'settings.staff.manage', label: 'Manage staff', description: 'Add/edit/remove staff', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'leads_settings',
+        label: 'Lead Settings',
+        description: 'Configure lead settings',
+        permissions: [
+          { key: 'settings.leads.view', label: 'View lead settings', description: 'See lead configuration', action: 'view' },
+          { key: 'settings.leads.manage', label: 'Manage lead settings', description: 'Configure leads', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'calendar_settings',
+        label: 'Calendar Settings',
+        description: 'Configure calendar settings',
+        permissions: [
+          { key: 'settings.calendar.view', label: 'View calendar settings', description: 'See calendar configuration', action: 'view' },
+          { key: 'settings.calendar.manage', label: 'Manage calendar settings', description: 'Configure calendar', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'ai_assistant',
+        label: 'AI Assistant',
+        description: 'Configure AI assistant settings',
+        permissions: [
+          { key: 'settings.ai_assistant.view', label: 'View AI settings', description: 'See AI configuration', action: 'view' },
+          { key: 'settings.ai_assistant.manage', label: 'Manage AI settings', description: 'Configure AI assistant', action: 'manage' },
+        ],
+      },
     ],
   },
 ];
@@ -1049,6 +1094,31 @@ export const PERMISSION_KEY_MIGRATION_MAP: Record<string, string> = {
   'settings.manage_custom_fields': 'settings.custom_fields.manage',
   'settings.view_integrations': 'settings.integrations.view',
   'settings.manage_integrations': 'settings.integrations.manage',
+  'settings.view_tags': 'settings.tags.view',
+  'settings.manage_tags': 'settings.tags.manage',
+  'settings.view_products': 'settings.products.view',
+  'settings.manage_products': 'settings.products.manage',
+  'settings.view_workflows': 'settings.workflows.view',
+  'settings.manage_workflows': 'settings.workflows.manage',
+  'settings.view_hr': 'settings.hr.view',
+  'settings.manage_hr': 'settings.hr.manage',
+  'settings.view_clients': 'settings.clients.view',
+  'settings.manage_clients': 'settings.clients.manage',
+  'settings.view_tasks': 'settings.tasks.view',
+  'settings.manage_tasks': 'settings.tasks.manage',
+  'settings.view_sales': 'settings.sales.view',
+  'settings.manage_sales': 'settings.sales.manage',
+  'settings.view_audit_logs': 'settings.audit_logs.view',
+  'settings.view_business_profile': 'settings.business_profile.view',
+  'settings.manage_business_profile': 'settings.business_profile.manage',
+  'settings.view_staff': 'settings.staff.view',
+  'settings.manage_staff': 'settings.staff.manage',
+  'settings.view_leads': 'settings.leads.view',
+  'settings.manage_leads': 'settings.leads.manage',
+  'settings.view_calendar': 'settings.calendar.view',
+  'settings.manage_calendar': 'settings.calendar.manage',
+  'settings.view_ai_assistant': 'settings.ai_assistant.view',
+  'settings.manage_ai_assistant': 'settings.ai_assistant.manage',
 };
 
 /**
