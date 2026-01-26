@@ -804,121 +804,12 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
     ],
     tabs: [
       {
-        tab: 'general',
-        label: 'General',
-        description: 'General system settings',
-        permissions: [
-          { key: 'settings.general.view', label: 'View general settings', description: 'See system config', action: 'view' },
-          { key: 'settings.general.edit', label: 'Edit general settings', description: 'Modify system config', action: 'edit' },
-        ],
-      },
-      {
-        tab: 'roles',
-        label: 'Roles & Permissions',
-        description: 'Manage user roles and permissions',
-        permissions: [
-          { key: 'settings.roles.view', label: 'View roles', description: 'See role configurations', action: 'view' },
-          { key: 'settings.roles.create', label: 'Create roles', description: 'Add new roles', action: 'create' },
-          { key: 'settings.roles.edit', label: 'Edit roles', description: 'Modify role permissions', action: 'edit' },
-          { key: 'settings.roles.delete', label: 'Delete roles', description: 'Remove roles', action: 'delete' },
-        ],
-      },
-      {
-        tab: 'custom_fields',
-        label: 'Custom Fields',
-        description: 'Manage custom fields',
-        permissions: [
-          { key: 'settings.custom_fields.view', label: 'View custom fields', description: 'See field definitions', action: 'view' },
-          { key: 'settings.custom_fields.manage', label: 'Manage custom fields', description: 'Create/edit/delete fields', action: 'manage' },
-        ],
-      },
-      {
-        tab: 'integrations',
-        label: 'Integrations',
-        description: 'Manage third-party integrations',
-        permissions: [
-          { key: 'settings.integrations.view', label: 'View integrations', description: 'See integration settings', action: 'view' },
-          { key: 'settings.integrations.manage', label: 'Manage integrations', description: 'Configure integrations', action: 'manage' },
-        ],
-      },
-      {
-        tab: 'tags',
-        label: 'Tags',
-        description: 'Manage tags',
-        permissions: [
-          { key: 'settings.tags.view', label: 'View tags', description: 'See tag settings', action: 'view' },
-          { key: 'settings.tags.manage', label: 'Manage tags', description: 'Create/edit/delete tags', action: 'manage' },
-        ],
-      },
-      {
-        tab: 'products',
-        label: 'Products',
-        description: 'Manage product catalog',
-        permissions: [
-          { key: 'settings.products.view', label: 'View products', description: 'See product catalog', action: 'view' },
-          { key: 'settings.products.manage', label: 'Manage products', description: 'Create/edit/delete products', action: 'manage' },
-        ],
-      },
-      {
-        tab: 'workflows',
-        label: 'Workflow Settings',
-        description: 'Configure workflow settings',
-        permissions: [
-          { key: 'settings.workflows.view', label: 'View workflow settings', description: 'See automation settings', action: 'view' },
-          { key: 'settings.workflows.manage', label: 'Manage workflow settings', description: 'Configure automation', action: 'manage' },
-        ],
-      },
-      {
-        tab: 'hr',
-        label: 'HR Settings',
-        description: 'Configure HR settings',
-        permissions: [
-          { key: 'settings.hr.view', label: 'View HR settings', description: 'See HR configuration', action: 'view' },
-          { key: 'settings.hr.manage', label: 'Manage HR settings', description: 'Configure HR', action: 'manage' },
-        ],
-      },
-      {
-        tab: 'clients_settings',
-        label: 'Client Settings',
-        description: 'Configure client settings',
-        permissions: [
-          { key: 'settings.clients.view', label: 'View client settings', description: 'See client config', action: 'view' },
-          { key: 'settings.clients.manage', label: 'Manage client settings', description: 'Configure clients', action: 'manage' },
-        ],
-      },
-      {
-        tab: 'tasks_settings',
-        label: 'Task Settings',
-        description: 'Configure task settings',
-        permissions: [
-          { key: 'settings.tasks.view', label: 'View task settings', description: 'See task configuration', action: 'view' },
-          { key: 'settings.tasks.manage', label: 'Manage task settings', description: 'Configure tasks', action: 'manage' },
-        ],
-      },
-      {
-        tab: 'sales_settings',
-        label: 'Sales Settings',
-        description: 'Configure sales settings',
-        permissions: [
-          { key: 'settings.sales.view', label: 'View sales settings', description: 'See sales configuration', action: 'view' },
-          { key: 'settings.sales.manage', label: 'Manage sales settings', description: 'Configure sales', action: 'manage' },
-        ],
-      },
-      {
-        tab: 'audit_logs',
-        label: 'Audit Logs',
-        description: 'View system audit logs',
-        permissions: [
-          { key: 'settings.audit_logs.view', label: 'View audit logs', description: 'See activity logs', action: 'view' },
-        ],
-      },
-      {
         tab: 'business_profile',
         label: 'Business Profile',
         description: 'Manage company/agency profile',
         permissions: [
-          { key: 'settings.business_profile.view', label: 'View business profile', description: 'See company information', action: 'view' },
-          { key: 'settings.business_profile.manage', label: 'Manage business profile', description: 'Edit company information', action: 'manage' },
+          { key: 'settings.business_profile.view', label: 'View Business Profile', description: 'See company information', action: 'view' },
+          { key: 'settings.business_profile.manage', label: 'Manage Business Profile', description: 'Edit company information', action: 'manage' },
         ],
       },
       {
@@ -926,26 +817,80 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
         label: 'Staff',
         description: 'Manage staff members',
         permissions: [
-          { key: 'settings.staff.view', label: 'View staff', description: 'See staff list', action: 'view' },
-          { key: 'settings.staff.manage', label: 'Manage staff', description: 'Add/edit/remove staff', action: 'manage' },
+          { key: 'settings.staff.view', label: 'View Staff', description: 'See staff list', action: 'view' },
+          { key: 'settings.staff.manage', label: 'Manage Staff', description: 'Add/edit/remove staff', action: 'manage' },
         ],
       },
       {
-        tab: 'leads_settings',
-        label: 'Lead Settings',
+        tab: 'px_settings',
+        label: 'PX Settings',
+        description: 'Configure PX/HR settings',
+        permissions: [
+          { key: 'settings.px_settings.view', label: 'View PX Settings', description: 'See PX configuration', action: 'view' },
+          { key: 'settings.px_settings.manage', label: 'Manage PX Settings', description: 'Configure PX settings', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'clients',
+        label: 'Clients',
+        description: 'Configure client settings',
+        permissions: [
+          { key: 'settings.clients.view', label: 'View Client Settings', description: 'See client config', action: 'view' },
+          { key: 'settings.clients.manage', label: 'Manage Client Settings', description: 'Configure clients', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'sales',
+        label: 'Sales',
+        description: 'Configure sales settings',
+        permissions: [
+          { key: 'settings.sales.view', label: 'View Sales Settings', description: 'See sales configuration', action: 'view' },
+          { key: 'settings.sales.manage', label: 'Manage Sales Settings', description: 'Configure sales', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'leads',
+        label: 'Leads',
         description: 'Configure lead settings',
         permissions: [
-          { key: 'settings.leads.view', label: 'View lead settings', description: 'See lead configuration', action: 'view' },
-          { key: 'settings.leads.manage', label: 'Manage lead settings', description: 'Configure leads', action: 'manage' },
+          { key: 'settings.leads.view', label: 'View Lead Settings', description: 'See lead configuration', action: 'view' },
+          { key: 'settings.leads.manage', label: 'Manage Lead Settings', description: 'Configure leads', action: 'manage' },
         ],
       },
       {
-        tab: 'calendar_settings',
+        tab: 'roles_permissions',
+        label: 'Roles & Permissions',
+        description: 'Manage user roles and permissions',
+        permissions: [
+          { key: 'settings.roles_permissions.view', label: 'View Roles & Permissions', description: 'See role configurations', action: 'view' },
+          { key: 'settings.roles_permissions.manage', label: 'Manage Roles & Permissions', description: 'Create/edit/delete roles', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'permission_audit',
+        label: 'Permission Audit',
+        description: 'View permission audit reports',
+        permissions: [
+          { key: 'settings.permission_audit.view', label: 'View Permission Audit', description: 'See permission audit', action: 'view' },
+          { key: 'settings.permission_audit.manage', label: 'Manage Permission Audit', description: 'Export audit reports', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'calendar',
         label: 'Calendar Settings',
         description: 'Configure calendar settings',
         permissions: [
-          { key: 'settings.calendar.view', label: 'View calendar settings', description: 'See calendar configuration', action: 'view' },
-          { key: 'settings.calendar.manage', label: 'Manage calendar settings', description: 'Configure calendar', action: 'manage' },
+          { key: 'settings.calendar.view', label: 'View Calendar Settings', description: 'See calendar configuration', action: 'view' },
+          { key: 'settings.calendar.manage', label: 'Manage Calendar Settings', description: 'Configure calendar', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'integrations',
+        label: 'Integrations',
+        description: 'Manage third-party integrations',
+        permissions: [
+          { key: 'settings.integrations.view', label: 'View Integrations', description: 'See integration settings', action: 'view' },
+          { key: 'settings.integrations.manage', label: 'Manage Integrations', description: 'Configure integrations', action: 'manage' },
         ],
       },
       {
@@ -953,8 +898,62 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
         label: 'AI Assistant',
         description: 'Configure AI assistant settings',
         permissions: [
-          { key: 'settings.ai_assistant.view', label: 'View AI settings', description: 'See AI configuration', action: 'view' },
-          { key: 'settings.ai_assistant.manage', label: 'Manage AI settings', description: 'Configure AI assistant', action: 'manage' },
+          { key: 'settings.ai_assistant.view', label: 'View AI Assistant', description: 'See AI configuration', action: 'view' },
+          { key: 'settings.ai_assistant.manage', label: 'Manage AI Assistant', description: 'Configure AI assistant', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'custom_fields',
+        label: 'Custom Fields',
+        description: 'Manage custom fields',
+        permissions: [
+          { key: 'settings.custom_fields.view', label: 'View Custom Fields', description: 'See field definitions', action: 'view' },
+          { key: 'settings.custom_fields.manage', label: 'Manage Custom Fields', description: 'Create/edit/delete fields', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'tags',
+        label: 'Tags',
+        description: 'Manage tags',
+        permissions: [
+          { key: 'settings.tags.view', label: 'View Tags', description: 'See tag settings', action: 'view' },
+          { key: 'settings.tags.manage', label: 'Manage Tags', description: 'Create/edit/delete tags', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'products',
+        label: 'Products',
+        description: 'Manage product catalog',
+        permissions: [
+          { key: 'settings.products.view', label: 'View Products', description: 'See product catalog', action: 'view' },
+          { key: 'settings.products.manage', label: 'Manage Products', description: 'Create/edit/delete products', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'tasks',
+        label: 'Tasks',
+        description: 'Configure task settings',
+        permissions: [
+          { key: 'settings.tasks.view', label: 'View Task Settings', description: 'See task configuration', action: 'view' },
+          { key: 'settings.tasks.manage', label: 'Manage Task Settings', description: 'Configure tasks', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'workflows',
+        label: 'Workflows',
+        description: 'Configure workflow settings',
+        permissions: [
+          { key: 'settings.workflows.view', label: 'View Workflows', description: 'See automation settings', action: 'view' },
+          { key: 'settings.workflows.manage', label: 'Manage Workflows', description: 'Configure automation', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'audit_logs',
+        label: 'Audit Logs',
+        description: 'View system audit logs',
+        permissions: [
+          { key: 'settings.audit_logs.view', label: 'View Audit Logs', description: 'See activity logs', action: 'view' },
+          { key: 'settings.audit_logs.manage', label: 'Manage Audit Logs', description: 'Export audit logs', action: 'manage' },
         ],
       },
     ],
@@ -1085,11 +1084,12 @@ export const PERMISSION_KEY_MIGRATION_MAP: Record<string, string> = {
   'reports.view_1on1_performance': 'reports.one_on_one.view',
   'reports.export_reports': 'reports.sales.export',
   
-  // Settings module
-  'settings.view_general_settings': 'settings.general.view',
-  'settings.manage_general_settings': 'settings.general.edit',
-  'settings.view_roles_permissions': 'settings.roles.view',
-  'settings.manage_roles_permissions': 'settings.roles.edit',
+  // Settings module - legacy key mappings
+  // Old underscore format to new dot format
+  'settings.view_general_settings': 'settings.business_profile.view',
+  'settings.manage_general_settings': 'settings.business_profile.manage',
+  'settings.view_roles_permissions': 'settings.roles_permissions.view',
+  'settings.manage_roles_permissions': 'settings.roles_permissions.manage',
   'settings.view_custom_fields': 'settings.custom_fields.view',
   'settings.manage_custom_fields': 'settings.custom_fields.manage',
   'settings.view_integrations': 'settings.integrations.view',
@@ -1100,8 +1100,8 @@ export const PERMISSION_KEY_MIGRATION_MAP: Record<string, string> = {
   'settings.manage_products': 'settings.products.manage',
   'settings.view_workflows': 'settings.workflows.view',
   'settings.manage_workflows': 'settings.workflows.manage',
-  'settings.view_hr': 'settings.hr.view',
-  'settings.manage_hr': 'settings.hr.manage',
+  'settings.view_hr': 'settings.px_settings.view',
+  'settings.manage_hr': 'settings.px_settings.manage',
   'settings.view_clients': 'settings.clients.view',
   'settings.manage_clients': 'settings.clients.manage',
   'settings.view_tasks': 'settings.tasks.view',
@@ -1109,6 +1109,7 @@ export const PERMISSION_KEY_MIGRATION_MAP: Record<string, string> = {
   'settings.view_sales': 'settings.sales.view',
   'settings.manage_sales': 'settings.sales.manage',
   'settings.view_audit_logs': 'settings.audit_logs.view',
+  'settings.manage_audit_logs': 'settings.audit_logs.manage',
   'settings.view_business_profile': 'settings.business_profile.view',
   'settings.manage_business_profile': 'settings.business_profile.manage',
   'settings.view_staff': 'settings.staff.view',
@@ -1119,6 +1120,19 @@ export const PERMISSION_KEY_MIGRATION_MAP: Record<string, string> = {
   'settings.manage_calendar': 'settings.calendar.manage',
   'settings.view_ai_assistant': 'settings.ai_assistant.view',
   'settings.manage_ai_assistant': 'settings.ai_assistant.manage',
+  'settings.view_permission_audit': 'settings.permission_audit.view',
+  'settings.manage_permission_audit': 'settings.permission_audit.manage',
+  'settings.view_px_settings': 'settings.px_settings.view',
+  'settings.manage_px_settings': 'settings.px_settings.manage',
+  // Old dot format mappings for backward compatibility
+  'settings.general.view': 'settings.business_profile.view',
+  'settings.general.edit': 'settings.business_profile.manage',
+  'settings.roles.view': 'settings.roles_permissions.view',
+  'settings.roles.create': 'settings.roles_permissions.manage',
+  'settings.roles.edit': 'settings.roles_permissions.manage',
+  'settings.roles.delete': 'settings.roles_permissions.manage',
+  'settings.hr.view': 'settings.px_settings.view',
+  'settings.hr.manage': 'settings.px_settings.manage',
 };
 
 /**
