@@ -15,7 +15,7 @@ import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { Role, Permission, InsertRole, GranularPermission } from "@shared/schema";
-import { PERMISSION_TEMPLATES, type PermissionModule, type SubPermission } from "@shared/permission-templates";
+import { getLegacyPermissionTemplates, type LegacyPermissionModule, type SubPermission } from "@shared/permission-templates";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface RoleWithPermissions extends Role {
@@ -51,6 +51,9 @@ interface GranularPermissionState {
   };
 }
 
+// Get flattened permission templates for UI
+const LEGACY_PERMISSION_TEMPLATES = getLegacyPermissionTemplates();
+
 // Helper component for granular permissions editing
 const GranularPermissionsEditor = ({ 
   granularPermissions,
@@ -63,7 +66,7 @@ const GranularPermissionsEditor = ({
 
   const toggleModule = (module: string, enabled: boolean) => {
     const existingModule = granularPermissions[module];
-    const moduleTemplate = PERMISSION_TEMPLATES.find(t => t.module === module);
+    const moduleTemplate = LEGACY_PERMISSION_TEMPLATES.find(t => t.module === module);
     
     // Preserve existing sub-permissions or initialize all to false if this is the first time
     const subPermissions = existingModule?.subPermissions 
@@ -99,7 +102,7 @@ const GranularPermissionsEditor = ({
   const selectAll = () => {
     const allPermissions: GranularPermissionState = {};
     
-    PERMISSION_TEMPLATES.forEach((moduleTemplate) => {
+    LEGACY_PERMISSION_TEMPLATES.forEach((moduleTemplate) => {
       const subPermissions: { [key: string]: boolean } = {};
       moduleTemplate.subPermissions.forEach((subPerm) => {
         subPermissions[subPerm.key] = true;
@@ -117,7 +120,7 @@ const GranularPermissionsEditor = ({
   const deselectAll = () => {
     const allPermissions: GranularPermissionState = {};
     
-    PERMISSION_TEMPLATES.forEach((moduleTemplate) => {
+    LEGACY_PERMISSION_TEMPLATES.forEach((moduleTemplate) => {
       const subPermissions: { [key: string]: boolean } = {};
       moduleTemplate.subPermissions.forEach((subPerm) => {
         subPermissions[subPerm.key] = false;
@@ -133,7 +136,7 @@ const GranularPermissionsEditor = ({
   };
 
   const areAllSelected = () => {
-    return PERMISSION_TEMPLATES.every((moduleTemplate) => {
+    return LEGACY_PERMISSION_TEMPLATES.every((moduleTemplate) => {
       const moduleState = granularPermissions[moduleTemplate.module];
       if (!moduleState?.enabled) return false;
       
@@ -170,7 +173,7 @@ const GranularPermissionsEditor = ({
       </div>
       
       <div className="border rounded-lg divide-y">
-        {PERMISSION_TEMPLATES.map((moduleTemplate) => {
+        {LEGACY_PERMISSION_TEMPLATES.map((moduleTemplate) => {
           const moduleState = granularPermissions[moduleTemplate.module] || { enabled: false, subPermissions: {} };
           const isExpanded = expandedModules.includes(moduleTemplate.module);
           const enabledSubPermissions = Object.values(moduleState.subPermissions).filter(Boolean).length;
@@ -619,7 +622,7 @@ export default function RolesPermissions() {
   };
 
   const formatModuleName = (module: string) => {
-    const moduleTemplate = PERMISSION_TEMPLATES.find(t => t.module === module);
+    const moduleTemplate = LEGACY_PERMISSION_TEMPLATES.find(t => t.module === module);
     return moduleTemplate?.label || module.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 

@@ -1147,6 +1147,31 @@ export interface SubPermission {
 }
 
 /**
+ * Legacy module format for UI backward compatibility
+ */
+export interface LegacyPermissionModule {
+  module: string;
+  label: string;
+  icon?: string;
+  description?: string;
+  subPermissions: SubPermission[];
+}
+
+/**
+ * Get PERMISSION_TEMPLATES in legacy flat format for UI backward compatibility
+ * This flattens the hierarchical tabs->permissions structure into a single subPermissions array
+ */
+export function getLegacyPermissionTemplates(): LegacyPermissionModule[] {
+  return PERMISSION_TEMPLATES.map(module => ({
+    module: module.module,
+    label: module.label,
+    icon: module.icon,
+    description: module.description,
+    subPermissions: getLegacyPermissions(module.module),
+  }));
+}
+
+/**
  * Convert new permission structure to legacy format for backward compatibility
  */
 export function getLegacyPermissions(module: string): SubPermission[] {
