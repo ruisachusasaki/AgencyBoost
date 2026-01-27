@@ -12,12 +12,11 @@ Sales Reports provide comprehensive analytics to help you understand your sales 
 ## What It Does
 
 Sales Reports help you:
-- Track deals through your sales pipeline
+- Track leads through your sales pipeline stages
 - Measure individual sales rep performance
 - Analyze opportunity statuses and outcomes
 - Understand revenue distribution and value
 - Identify trends over time
-- Export data for further analysis
 
 ---
 
@@ -25,17 +24,17 @@ Sales Reports help you:
 
 ### 1. Pipeline Report
 
-Shows deals organized by pipeline stage with value breakdowns.
+Shows leads organized by pipeline stage with value breakdowns.
 
 **What You'll See:**
-- Visual chart of deals by stage
-- Count of deals in each stage
+- Visual chart of leads by stage
+- Count of leads in each stage
 - Total value per stage
 - Percentage of total pipeline
 
 **Use This To:**
 - Identify bottlenecks in your sales process
-- See where deals are getting stuck
+- See where leads are getting stuck
 - Forecast potential revenue
 - Balance your pipeline stages
 
@@ -70,10 +69,10 @@ Click any column header to sort by that metric (ascending or descending).
 
 ### 3. Opportunity Status Report
 
-Breaks down deals by their current status.
+Breaks down leads/opportunities by their current status.
 
 **What You'll See:**
-- Pie chart or bar chart of deal statuses
+- Pie chart or bar chart of opportunity statuses
 - Count per status
 - Value per status
 - Trends over the selected period
@@ -89,7 +88,7 @@ Breaks down deals by their current status.
 **Use This To:**
 - Understand win/loss ratios
 - Track conversion rates
-- Identify where deals fall off
+- Identify where leads fall off
 - Measure sales cycle effectiveness
 
 ---
@@ -200,16 +199,6 @@ All reports share common filter options:
 
 ---
 
-### Export Reports
-
-1. View any report type
-2. Click the **"Export"** button
-3. Download the data as CSV or Excel
-
-**Permission Required:** `sales.reports.export`
-
----
-
 ## Date Range Options
 
 ### Quick Selections
@@ -268,9 +257,10 @@ Only includes deals that haven't been won or lost.
 | Action | Permission Key | Who Has It |
 |--------|---------------|------------|
 | View reports | `sales.reports.view` | Admin, Manager, Accounting |
-| Export reports | `sales.reports.export` | Admin, Manager, Accounting |
 
 **Note:** Users without `sales.reports.view` permission will not see the Reports tab.
+
+**Future Enhancement:** Export functionality (`sales.reports.export`) is planned for a future release.
 
 ---
 
@@ -279,8 +269,8 @@ Only includes deals that haven't been won or lost.
 1. **Regular reviews** - Check reports weekly to stay on top of pipeline health
 2. **Compare periods** - Use date ranges to compare month-over-month or year-over-year
 3. **Filter strategically** - Use rep filters for 1-on-1 reviews
-4. **Export for presentations** - Download data for sales meetings
-5. **Track trends** - Look for patterns in conversion rates over time
+4. **Track trends** - Look for patterns in conversion rates over time
+5. **Use for meetings** - Reference reports during sales team meetings
 
 ---
 
@@ -289,7 +279,7 @@ Only includes deals that haven't been won or lost.
 ### No Data Showing
 
 1. Check your date range - it may be too narrow
-2. Verify you have deals/leads in the system
+2. Verify you have leads in the system
 3. Try removing filters to see all data
 
 ### Slow Loading
@@ -300,9 +290,9 @@ Only includes deals that haven't been won or lost.
 
 ### Unexpected Numbers
 
-1. Verify date range includes the deals you expect
+1. Verify date range includes the leads you expect
 2. Check if filters are excluding data
-3. Remember that pipeline reports only show active deals
+3. Remember that pipeline reports show leads by stage
 
 ---
 

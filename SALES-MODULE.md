@@ -47,9 +47,9 @@ Build professional quotes by combining products and bundles, set desired profit 
 Analyze sales performance with four comprehensive report types, each with customizable filters and date ranges.
 
 **Report Types:**
-- **Pipeline Report** - Deals by stage with value breakdown
+- **Pipeline Report** - Leads by stage with value breakdown
 - **Sales Reps Report** - Individual rep performance metrics
-- **Opportunity Status Report** - Deals by status
+- **Opportunity Status Report** - Leads by status
 - **Opportunity Value Report** - Revenue analysis
 
 📖 **Detailed Documentation:** [docs/sales/REPORTS.md](docs/sales/REPORTS.md)
@@ -82,7 +82,7 @@ Configure sales-specific settings like minimum margin thresholds.
 ---
 
 ### Pipeline & Deals
-Manage deals through pipeline stages from initial contact to closed.
+Pipeline visibility is provided through the Pipeline Report (in Reports tab) and Dashboard Widgets. Currently, leads function as deals and progress through pipeline stages to "Won" or "Lost" status.
 
 📖 **Detailed Documentation:** [docs/sales/PIPELINE-DEALS.md](docs/sales/PIPELINE-DEALS.md)
 
@@ -103,18 +103,19 @@ The Sales module uses hierarchical permissions in the format `module.tab.action`
 | `sales.quotes.approve` | Approve quotes for sending | approve |
 | `sales.quotes.send` | Send quotes to clients | manage |
 | `sales.reports.view` | Access sales analytics | view |
-| `sales.reports.export` | Download sales reports | export |
 
 ### Pipeline/Deals Permissions
-| Permission Key | Description | Action Type |
-|---------------|-------------|-------------|
-| `sales.pipeline.view` | See deals in pipeline | view |
-| `sales.pipeline.manage` | Move deals between stages | manage |
-| `sales.deals.view` | Access deal details | view |
-| `sales.deals.create` | Add new deals | create |
-| `sales.deals.edit` | Modify deal information | edit |
-| `sales.deals.delete` | Remove deals | delete |
-| `sales.deals.close` | Mark deals as won/lost | manage |
+| Permission Key | Description | Action Type | Status |
+|---------------|-------------|-------------|--------|
+| `sales.pipeline.view` | See Pipeline Report, Targets | view | Active |
+| `sales.pipeline.manage` | Manage sales targets | manage | Active |
+| `sales.deals.view` | Access deal details | view | Future |
+| `sales.deals.create` | Add new deals | create | Future |
+| `sales.deals.edit` | Modify deal information | edit | Future |
+| `sales.deals.delete` | Remove deals | delete | Future |
+| `sales.deals.close` | Mark deals as won/lost | manage | Future |
+
+**Note:** Deal-specific permissions (marked "Future") are defined for planned functionality. Currently, leads serve as the primary deal-tracking mechanism.
 
 ### Settings Permissions
 | Permission Key | Description | Action Type |
@@ -126,7 +127,6 @@ The Sales module uses hierarchical permissions in the format `module.tab.action`
 | Permission Key | Description | Action Type |
 |---------------|-------------|-------------|
 | `reports.sales.view` | Access sales analytics from Reports | view |
-| `reports.sales.export` | Download sales data from Reports | export |
 
 ---
 
@@ -138,7 +138,6 @@ The Sales module uses hierarchical permissions in the format `module.tab.action`
 | Create Quotes | ✅ | ✅ | ❌ | ✅ |
 | Approve Quotes | ✅ | ✅ | ❌ | ❌ |
 | View Reports | ✅ | ✅ | ✅ | ❌ |
-| Export Reports | ✅ | ✅ | ✅ | ❌ |
 | Manage Targets | ✅ | ✅ | ❌ | ❌ |
 | Sales Settings | ✅ | ❌ | ❌ | ❌ |
 
