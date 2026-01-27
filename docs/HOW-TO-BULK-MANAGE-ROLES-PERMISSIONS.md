@@ -43,15 +43,15 @@ You'll see something like this:
 
 | Permission | Admin | Manager | User | Accounting |
 |------------|-------|---------|------|------------|
-| clients.list.view | TRUE | TRUE | TRUE | TRUE |
-| clients.list.create | TRUE | TRUE | FALSE | FALSE |
-| clients.list.edit | TRUE | TRUE | FALSE | FALSE |
-| clients.list.delete | TRUE | FALSE | FALSE | FALSE |
-| sales.quotes.view | TRUE | TRUE | TRUE | TRUE |
-| sales.quotes.create | TRUE | TRUE | FALSE | FALSE |
+| View client list | TRUE | TRUE | TRUE | TRUE |
+| Create new clients | TRUE | TRUE | FALSE | FALSE |
+| Edit clients | TRUE | TRUE | FALSE | FALSE |
+| Delete clients | TRUE | FALSE | FALSE | FALSE |
+| View quotes | TRUE | TRUE | TRUE | TRUE |
+| Create quotes | TRUE | TRUE | FALSE | FALSE |
 | ... | ... | ... | ... | ... |
 
-**The first column** lists every permission in the system.
+**The first column** lists every permission in the system (using easy-to-read names).
 **Each additional column** represents a role.
 **TRUE** means the role HAS that permission.
 **FALSE** means the role does NOT have that permission.
@@ -65,7 +65,7 @@ You'll see something like this:
 Simply change **TRUE** to **FALSE** (to remove access) or **FALSE** to **TRUE** (to grant access).
 
 **Example:** To give the "User" role permission to create clients:
-- Find the row: `clients.list.create`
+- Find the row: `Create new clients`
 - Find the "User" column
 - Change `FALSE` to `TRUE`
 
@@ -79,10 +79,10 @@ Simply change **TRUE** to **FALSE** (to remove access) or **FALSE** to **TRUE** 
 
 | Permission | Admin | Manager | User | Accounting | Sales Team |
 |------------|-------|---------|------|------------|------------|
-| clients.list.view | TRUE | TRUE | TRUE | TRUE | TRUE |
-| clients.list.create | TRUE | TRUE | FALSE | FALSE | TRUE |
-| sales.quotes.view | TRUE | TRUE | TRUE | TRUE | TRUE |
-| sales.quotes.create | TRUE | TRUE | FALSE | FALSE | TRUE |
+| View client list | TRUE | TRUE | TRUE | TRUE | TRUE |
+| Create new clients | TRUE | TRUE | FALSE | FALSE | TRUE |
+| View quotes | TRUE | TRUE | TRUE | TRUE | TRUE |
+| Create quotes | TRUE | TRUE | FALSE | FALSE | TRUE |
 
 ---
 
@@ -124,17 +124,17 @@ The system will:
 
 ### Do NOT Change the Permission Names
 
-The first column contains system permission names. These must stay exactly as they are.
+The first column contains permission names. These must stay exactly as they are.
 
 **Wrong:**
 | Permission |
 |------------|
-| View Clients | ← Changed from "clients.list.view"
+| See client list | ← Changed from "View client list"
 
 **Correct:**
 | Permission |
 |------------|
-| clients.list.view | ← Keep exactly as exported
+| View client list | ← Keep exactly as exported
 
 ### Do NOT Delete Rows
 
