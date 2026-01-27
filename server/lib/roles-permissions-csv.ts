@@ -37,21 +37,38 @@ export interface PermissionRow {
 /**
  * Build a mapping from permission label (description) to permission key
  * This allows CSV to use human-readable labels while we map to internal keys
+ * 
+ * Uses both category+label as primary key to handle duplicate labels across modules
+ * Falls back to label-only lookup for backward compatibility
  */
-function buildLabelToKeyMap(): Map<string, { key: string; module: string }> {
-  const map = new Map<string, { key: string; module: string }>();
+function buildLabelToKeyMap(): { 
+  byLabelAndCategory: Map<string, { key: string; module: string }>;
+  byLabelOnly: Map<string, { key: string; module: string }>;
+} {
+  const byLabelAndCategory = new Map<string, { key: string; module: string }>();
+  const byLabelOnly = new Map<string, { key: string; module: string }>();
   
   for (const module of LEGACY_PERMISSION_TEMPLATES) {
     for (const perm of module.subPermissions) {
-      // Use the label (e.g., "View client list") as the key for lookup
-      map.set(perm.label.toLowerCase().trim(), { 
+      const labelKey = perm.label.toLowerCase().trim();
+      const categoryKey = module.label.toLowerCase().trim();
+      const compositeKey = `${categoryKey}::${labelKey}`;
+      
+      // Store with composite key (category + label) - handles duplicates correctly
+      byLabelAndCategory.set(compositeKey, { 
+        key: perm.key, 
+        module: module.module 
+      });
+      
+      // Also store by label only for backward compatibility (last one wins for duplicates)
+      byLabelOnly.set(labelKey, { 
         key: perm.key, 
         module: module.module 
       });
     }
   }
   
-  return map;
+  return { byLabelAndCategory, byLabelOnly };
 }
 
 /**
@@ -167,7 +184,7 @@ export function generateTemplateCSV(existingRoleNames: string[] = []): string {
 export function parseCSV(csvContent: string, existingRoleNames: string[]): CSVParseResult {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const labelToKeyMap = buildLabelToKeyMap();
+  const { byLabelAndCategory, byLabelOnly } = buildLabelToKeyMap();
   
   // Parse CSV lines
   const lines = csvContent.split(/\r?\n/).filter(line => line.trim());
@@ -256,11 +273,17 @@ export function parseCSV(csvContent: string, existingRoleNames: string[]): CSVPa
       continue;
     }
     
-    // Look up the permission key from the description
-    const permInfo = labelToKeyMap.get(description.toLowerCase());
+    // Look up the permission key - try category+label first, then label-only
+    const compositeKey = `${category.toLowerCase()}::${description.toLowerCase()}`;
+    let permInfo = byLabelAndCategory.get(compositeKey);
+    
+    // Fallback to label-only lookup for backward compatibility
+    if (!permInfo) {
+      permInfo = byLabelOnly.get(description.toLowerCase());
+    }
     
     if (!permInfo) {
-      errors.push(`Line ${lineNum}: Unknown permission "${description}" - this permission does not exist in the system`);
+      errors.push(`Line ${lineNum}: Unknown permission "${description}" (${category}) - this permission does not exist in the system`);
       continue;
     }
     
