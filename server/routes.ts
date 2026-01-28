@@ -15060,7 +15060,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all permissions for a user across all modules - SECURED
   app.get("/api/users/:userId/permissions", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const { userId } = req.params;
@@ -15162,7 +15162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Permission Audit Log API Routes - SECURED (Admin only)
   app.get("/api/permission-audit-logs", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const filters = {
@@ -15200,7 +15200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/permission-audit-logs/:id", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const auditLog = await permissionAuditService.getAuditLogDetails(req.params.id);
@@ -15269,7 +15269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/notification-settings/:userId", requireAuth(), async (req, res) => {
     try {
-      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const { userId } = req.params;
@@ -17364,7 +17364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
 
       // Get current user with proper authentication
-      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
 
       // Check if user has permission to delete documents (Admin only)
@@ -25283,7 +25283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get pending time off requests for manager's direct reports (or all for admins) - SECURED
   app.get("/api/hr/time-off-requests/pending-for-approval", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
-      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
 
       // Check if current user is admin
@@ -25306,7 +25306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(
             and(
               eq(timeOffRequests.status, "pending"),
-              eq(staff.managerId, rawUserId)
+              eq(staff.managerId, currentUserId)
             )
           )
           .orderBy(desc(timeOffRequests.createdAt));
