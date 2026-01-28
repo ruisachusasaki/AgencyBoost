@@ -10,7 +10,8 @@ Welcome to the AgencyBoost CRM documentation. This folder contains all project d
 docs/
 ├── README.md              ← You are here (master index)
 ├── modules/               ← Feature documentation by module
-│   └── sales/             ← Sales module docs
+│   ├── sales/             ← Sales module docs
+│   └── tasks/             ← Tasks module docs
 ├── guides/                ← How-to guides for users
 ├── qa/                    ← QA checklists and test plans
 └── technical/             ← Technical specs and setup guides
@@ -34,6 +35,22 @@ Complete documentation for the Sales features including quotes, reports, and tar
 | [Settings](modules/sales/SETTINGS.md) | Sales settings (minimum margin threshold) |
 | [Pipeline & Deals](modules/sales/PIPELINE-DEALS.md) | Pipeline analytics and deal tracking |
 
+### Tasks Module
+Complete documentation for the Tasks features including sub-tasks, templates, intake forms, and time tracking.
+
+| Document | Description |
+|----------|-------------|
+| [Tasks Overview](modules/tasks/README.md) | Main overview of the Tasks module |
+| [Tasks List](modules/tasks/TASKS-LIST.md) | Task list view, filtering, sorting, and bulk actions |
+| [Task Detail](modules/tasks/TASK-DETAIL.md) | Single task view, editing, and status workflow |
+| [Sub-Tasks & Dependencies](modules/tasks/SUB-TASKS.md) | Hierarchical sub-tasks and task dependencies |
+| [Templates](modules/tasks/TEMPLATES.md) | Creating and using task templates |
+| [Intake Forms](modules/tasks/INTAKE-FORMS.md) | Task intake form builder and submission |
+| [Assignment Rules](modules/tasks/ASSIGNMENT-RULES.md) | Automatic task assignment configuration |
+| [Time Tracking](modules/tasks/TIME-TRACKING.md) | Time entries, timesheet view, and global timer |
+| [Recurring Tasks](modules/tasks/RECURRING-TASKS.md) | Setting up recurring task schedules |
+| [Task Settings](modules/tasks/SETTINGS.md) | Configuring statuses, priorities, categories, and workflows |
+
 ---
 
 ## Guides
@@ -55,6 +72,7 @@ Quality assurance test plans and results for each module.
 |----------|-------------|
 | [Sales QA Checklist](qa/Sales_QA_Items.md) | Complete QA test items for Sales module |
 | [Sales QA Results](qa/Sales_QA_Results.md) | Test results from automated E2E testing (Jan 28, 2026) |
+| [Tasks QA Checklist](qa/Tasks_QA_Items.md) | Complete QA test items for Tasks module |
 
 ---
 
