@@ -2520,8 +2520,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Security check for DND changes - Only Admin users can UNCHECK (disable) DND settings
-      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!rawUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const dndFieldsBeingDisabled = [];
       if (validatedData.dndAll === false && oldClient.dndAll === true) {
