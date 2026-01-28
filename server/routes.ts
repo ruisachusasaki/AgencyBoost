@@ -2521,7 +2521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Security check for DND changes - Only Admin users can UNCHECK (disable) DND settings
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
-      if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+      if (!rawUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const dndFieldsBeingDisabled = [];
       if (validatedData.dndAll === false && oldClient.dndAll === true) {
@@ -31104,7 +31104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/training/analytics", requireAuth(), requireGranularPermission('training.view_analytics'), async (req, res) => {
     try {
       const { courseId, userId } = req.query;
-      const currentUserId = getAuthenticatedUserIdOrFail(req, res);
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
       if (!currentUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Total courses and categories
