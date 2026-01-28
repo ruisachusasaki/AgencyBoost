@@ -3,6 +3,16 @@
 ## Overview
 AgencyBoost is a comprehensive CRM system designed for marketing agencies. Its primary purpose is to enhance operational efficiency and oversight through features like client asset approval workflows, robust automation, sales reporting, and a responsive user interface. It aims to streamline client, project, campaign, lead, task, and invoice management, providing a modern solution for agencies.
 
+## Documentation
+All project documentation is organized in the `docs/` folder. See [docs/README.md](docs/README.md) for the complete index.
+
+| Folder | Contents |
+|--------|----------|
+| `docs/modules/` | Feature documentation by module (Sales, etc.) |
+| `docs/guides/` | How-to guides for users (permissions, bulk actions) |
+| `docs/qa/` | QA checklists and test plans |
+| `docs/technical/` | Technical specs, setup guides, deployment plans |
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 Bundle architecture preference: Collection-based bundles.
