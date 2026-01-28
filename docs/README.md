@@ -49,11 +49,12 @@ Step-by-step how-to guides for common tasks.
 
 ## QA Checklists
 
-Quality assurance test plans for each module.
+Quality assurance test plans and results for each module.
 
 | Document | Description |
 |----------|-------------|
 | [Sales QA Checklist](qa/Sales_QA_Items.md) | Complete QA test items for Sales module |
+| [Sales QA Results](qa/Sales_QA_Results.md) | Test results from automated E2E testing (Jan 28, 2026) |
 
 ---
 
