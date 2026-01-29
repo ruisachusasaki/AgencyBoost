@@ -676,10 +676,15 @@ export function TaskIntakeFormRenderer({
     queryKey: ["/api/task-intake/form"],
   });
 
-  // Fetch clients for the client_select dropdown
+  // Fetch clients for the client_select dropdown (active clients only)
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
-    select: (data) => data.map(c => ({ id: c.id, name: c.name, company: c.company })),
+    select: (data: any) => {
+      const clientsList = data?.clients || [];
+      return clientsList
+        .filter((c: any) => c.status === "active")
+        .map((c: any) => ({ id: String(c.id), name: c.name, company: c.company }));
+    },
   });
 
   // Fetch departments/teams for the department dropdown
