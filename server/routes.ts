@@ -1812,18 +1812,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUserId = (req as any).session?.userId || user?.id || user?.staffId;
       console.log("DEBUG time-entries endpoint - user:", { id: user?.id, role: user?.role, email: user?.email, currentUserId });
       
-      // Fetch staff member to get their roles (session might not have roles)
-      let userRoles: string[] = user?.roles || [];
-      if (userRoles.length === 0 && currentUserId) {
-        const staffMember = await appStorage.getStaffMember(currentUserId);
-        console.log("DEBUG time-entries endpoint - fetched staff roles:", staffMember?.roles);
-        if (staffMember?.roles) {
-          userRoles = staffMember.roles;
+      // Fetch staff member with their role name from the roles table
+      let userRoleName: string | null = null;
+      if (currentUserId) {
+        const staffWithRole = await db.select({
+          id: staff.id,
+          roleId: staff.roleId,
+          roleName: roles.name
+        })
+        .from(staff)
+        .leftJoin(roles, eq(staff.roleId, roles.id))
+        .where(eq(staff.id, currentUserId))
+        .limit(1);
+        
+        if (staffWithRole.length > 0 && staffWithRole[0].roleName) {
+          userRoleName = staffWithRole[0].roleName;
         }
+        console.log("DEBUG time-entries endpoint - fetched staff role:", userRoleName);
       }
       
-      const isAdminOrManager = userRoles.some((r: string) => r.toLowerCase() === 'admin' || r.toLowerCase() === 'manager');
-      console.log("DEBUG time-entries endpoint - isAdminOrManager:", isAdminOrManager, "userRoles:", userRoles);
+      const isAdminOrManager = userRoleName && (userRoleName.toLowerCase() === 'admin' || userRoleName.toLowerCase() === 'manager');
+      console.log("DEBUG time-entries endpoint - isAdminOrManager:", isAdminOrManager, "userRoleName:", userRoleName);
       
       // Only admins and managers can view other users' time entries
       if (!isAdminOrManager && currentUserId !== req.params.userId) {
