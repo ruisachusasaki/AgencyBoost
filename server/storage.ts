@@ -10483,8 +10483,26 @@ export class DbStorage implements IStorage {
   }
 
   // Surveys
-  async getSurveys(): Promise<Survey[]> {
-    return await db.select().from(surveys).orderBy(desc(surveys.createdAt));
+  async getSurveys(): Promise<(Survey & { createdByName: string })[]> {
+    const results = await db.select({
+      id: surveys.id,
+      name: surveys.name,
+      description: surveys.description,
+      status: surveys.status,
+      settings: surveys.settings,
+      shortCode: surveys.shortCode,
+      createdBy: surveys.createdBy,
+      createdAt: surveys.createdAt,
+      updatedAt: surveys.updatedAt,
+      folderId: surveys.folderId,
+      submissionCount: surveys.submissionCount,
+      createdByName: sql<string>`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, 'Unknown')`,
+    })
+    .from(surveys)
+    .leftJoin(staff, eq(surveys.createdBy, staff.id))
+    .orderBy(desc(surveys.createdAt));
+    
+    return results as (Survey & { createdByName: string })[];
   }
 
   async getSurvey(id: string): Promise<Survey | undefined> {

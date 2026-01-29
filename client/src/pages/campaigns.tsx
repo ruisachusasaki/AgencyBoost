@@ -83,7 +83,7 @@ export default function Campaigns() {
   const [smsSortDirection, setSmsSortDirection] = useState<'asc' | 'desc'>('asc');
   const [formsSortField, setFormsSortField] = useState<'name' | 'lastUpdated' | null>(null);
   const [formsSortDirection, setFormsSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [surveySortField, setSurveySortField] = useState<'name' | 'status' | 'responses' | 'created' | null>(null);
+  const [surveySortField, setSurveySortField] = useState<'name' | 'status' | 'responses' | 'createdBy' | null>(null);
   const [surveySortDirection, setSurveySortDirection] = useState<'asc' | 'desc'>('asc');
   
   const queryClient = useQueryClient();
@@ -980,7 +980,7 @@ export default function Campaigns() {
     </TableHead>
   );
 
-  const SurveySortableHeader = ({ field, children }: { field: 'name' | 'status' | 'responses' | 'created'; children: React.ReactNode }) => (
+  const SurveySortableHeader = ({ field, children }: { field: 'name' | 'status' | 'responses' | 'createdBy'; children: React.ReactNode }) => (
     <TableHead 
       className="cursor-pointer hover:bg-gray-50 select-none"
       onClick={() => handleSurveySort(field)}
@@ -2305,7 +2305,7 @@ export default function Campaigns() {
                     <SurveySortableHeader field="status">Status</SurveySortableHeader>
                     <SurveySortableHeader field="responses">Responses</SurveySortableHeader>
                     <TableHead>Public URL</TableHead>
-                    <SurveySortableHeader field="created">Created</SurveySortableHeader>
+                    <SurveySortableHeader field="createdBy">Created by</SurveySortableHeader>
                     <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -2389,9 +2389,9 @@ export default function Campaigns() {
                       } else if (surveySortField === 'responses') {
                         aVal = a.submissionCount || 0;
                         bVal = b.submissionCount || 0;
-                      } else if (surveySortField === 'created') {
-                        aVal = new Date(a.createdAt).getTime();
-                        bVal = new Date(b.createdAt).getTime();
+                      } else if (surveySortField === 'createdBy') {
+                        aVal = (a.createdByName || '').toLowerCase();
+                        bVal = (b.createdByName || '').toLowerCase();
                       }
                       
                       if (aVal < bVal) return surveySortDirection === 'asc' ? -1 : 1;
@@ -2453,7 +2453,7 @@ export default function Campaigns() {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {new Date(survey.createdAt).toLocaleDateString()}
+                        {survey.createdByName || 'Unknown'}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
