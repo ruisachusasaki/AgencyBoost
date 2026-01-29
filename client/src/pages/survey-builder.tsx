@@ -1177,14 +1177,42 @@ export default function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
             <DialogTitle>Add New Slide</DialogTitle>
           </DialogHeader>
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
               const titleValue = (formData.get("title") as string)?.trim();
-              addSlideMutation.mutate({
-                title: titleValue || null,
-                buttonText: formData.get("buttonText") as string || "Next",
-              });
+              const buttonText = formData.get("buttonText") as string || "Next";
+              
+              // If no survey exists yet, create it first
+              if (!activeSurveyId) {
+                try {
+                  const newSurvey = await apiRequest("POST", "/api/surveys", { 
+                    name: surveyName, 
+                    description: surveyDescription 
+                  });
+                  setActiveSurveyId(newSurvey.id);
+                  setLocation(`/survey-builder/${newSurvey.id}`);
+                  queryClient.invalidateQueries({ queryKey: ["/api/surveys"] });
+                  
+                  // Now add the slide to the newly created survey
+                  const newSlide = await apiRequest("POST", `/api/surveys/${newSurvey.id}/slides`, {
+                    title: titleValue || null,
+                    buttonText,
+                    order: 0,
+                  });
+                  queryClient.invalidateQueries({ queryKey: ["/api/surveys", newSurvey.id, "slides"] });
+                  setSelectedSlideId(newSlide.id);
+                  setIsAddSlideDialogOpen(false);
+                  toast({ title: "Survey & Slide created", description: "Your survey and first slide have been created" });
+                } catch (error) {
+                  toast({ title: "Error", description: "Failed to create survey", variant: "destructive" });
+                }
+              } else {
+                addSlideMutation.mutate({
+                  title: titleValue || null,
+                  buttonText,
+                });
+              }
             }}
             className="space-y-4"
           >

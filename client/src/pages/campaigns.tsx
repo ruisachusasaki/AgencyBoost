@@ -83,7 +83,7 @@ export default function Campaigns() {
   const [smsSortDirection, setSmsSortDirection] = useState<'asc' | 'desc'>('asc');
   const [formsSortField, setFormsSortField] = useState<'name' | 'lastUpdated' | null>(null);
   const [formsSortDirection, setFormsSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [surveySortField, setSurveySortField] = useState<'name' | 'status' | 'responses' | 'createdBy' | null>(null);
+  const [surveySortField, setSurveySortField] = useState<'name' | 'status' | 'createdBy' | null>(null);
   const [surveySortDirection, setSurveySortDirection] = useState<'asc' | 'desc'>('asc');
   
   const queryClient = useQueryClient();
@@ -105,7 +105,7 @@ export default function Campaigns() {
   });
 
   // Fetch surveys for surveys tab
-  const { data: surveysData = [] } = useQuery<Array<{id: string; name: string; description?: string; status: string; shortCode: string; folderId?: string; createdAt: string; submissionCount?: number}>>({
+  const { data: surveysData = [] } = useQuery<Array<{id: string; name: string; description?: string; status: string; shortCode: string; folderId?: string; createdAt: string; createdByName?: string}>>({
     queryKey: ['/api/surveys'],
   });
 
@@ -980,7 +980,7 @@ export default function Campaigns() {
     </TableHead>
   );
 
-  const SurveySortableHeader = ({ field, children }: { field: 'name' | 'status' | 'responses' | 'createdBy'; children: React.ReactNode }) => (
+  const SurveySortableHeader = ({ field, children }: { field: 'name' | 'status' | 'createdBy'; children: React.ReactNode }) => (
     <TableHead 
       className="cursor-pointer hover:bg-gray-50 select-none"
       onClick={() => handleSurveySort(field)}
@@ -2303,7 +2303,6 @@ export default function Campaigns() {
                   <TableRow>
                     <SurveySortableHeader field="name">Name</SurveySortableHeader>
                     <SurveySortableHeader field="status">Status</SurveySortableHeader>
-                    <SurveySortableHeader field="responses">Responses</SurveySortableHeader>
                     <TableHead>Public URL</TableHead>
                     <SurveySortableHeader field="createdBy">Created by</SurveySortableHeader>
                     <TableHead className="w-[100px]">Actions</TableHead>
@@ -2386,9 +2385,6 @@ export default function Campaigns() {
                       } else if (surveySortField === 'status') {
                         aVal = a.status.toLowerCase();
                         bVal = b.status.toLowerCase();
-                      } else if (surveySortField === 'responses') {
-                        aVal = a.submissionCount || 0;
-                        bVal = b.submissionCount || 0;
                       } else if (surveySortField === 'createdBy') {
                         aVal = (a.createdByName || '').toLowerCase();
                         bVal = (b.createdByName || '').toLowerCase();
@@ -2425,12 +2421,6 @@ export default function Campaigns() {
                             'Draft'
                           )}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                          {survey.submissionCount || 0}
-                        </div>
                       </TableCell>
                       <TableCell>
                         {survey.status === 'published' ? (

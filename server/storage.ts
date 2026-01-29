@@ -10490,12 +10490,13 @@ export class DbStorage implements IStorage {
       description: surveys.description,
       status: surveys.status,
       settings: surveys.settings,
+      styling: surveys.styling,
       shortCode: surveys.shortCode,
+      folderId: surveys.folderId,
       createdBy: surveys.createdBy,
+      updatedBy: surveys.updatedBy,
       createdAt: surveys.createdAt,
       updatedAt: surveys.updatedAt,
-      folderId: surveys.folderId,
-      submissionCount: surveys.submissionCount,
       createdByName: sql<string>`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, 'Unknown')`,
     })
     .from(surveys)
