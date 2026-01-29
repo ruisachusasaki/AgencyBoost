@@ -1419,7 +1419,12 @@ export default function Campaigns() {
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4 text-green-500" />
                           <div>
-                            <div className="font-medium">{template.name}</div>
+                            <div 
+                              className="font-medium text-primary hover:underline cursor-pointer"
+                              onClick={() => handleEditTemplate(template)}
+                            >
+                              {template.name}
+                            </div>
                             {template.tags && template.tags.length > 0 && (
                               <div className="flex gap-1 mt-1">
                                 {template.tags.slice(0, 2).map((tag, index) => (
@@ -1715,7 +1720,12 @@ export default function Campaigns() {
                         <div className="flex items-center gap-2">
                           <MessageCircle className="h-4 w-4 text-green-500" />
                           <div>
-                            <div className="font-medium">{template.name}</div>
+                            <div 
+                              className="font-medium text-primary hover:underline cursor-pointer"
+                              onClick={() => handleEditTemplate(template)}
+                            >
+                              {template.name}
+                            </div>
                             {template.tags && template.tags.length > 0 && (
                               <div className="flex gap-1 mt-1">
                                 {template.tags.slice(0, 2).map((tag, index) => (
