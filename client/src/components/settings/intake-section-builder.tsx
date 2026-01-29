@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { 
   Plus, Edit, Trash2, GripVertical, Settings2, ChevronDown, ChevronRight,
   FolderOpen, Folder, Star, Type, Hash, Calendar, Circle, CheckCircle2,
-  Building2, Users, Upload, AlertCircle
+  Building2, Users, Upload, AlertCircle, Link
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
@@ -112,6 +112,7 @@ const questionTypeIcons: Record<string, any> = {
   file: Upload,
   client: Building2,
   department: Users,
+  url: Link,
 };
 
 interface IntakeSectionBuilderProps {
