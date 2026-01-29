@@ -120,6 +120,7 @@ export default function Tasks() {
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [showCompleted, setShowCompleted] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
+  const [overdueFilter, setOverdueFilter] = useState<string>("all");
   const [workflowFilter, setWorkflowFilter] = useState<string>("all");
   const [timeFilter, setTimeFilter] = useState<string>("all");
   
@@ -593,7 +594,7 @@ export default function Tasks() {
       priorityFilter !== "all" ||
       clientFilter !== "all" ||
       categoryFilter !== "all" ||
-      workflowFilter !== "all" ||
+      overdueFilter !== "all" ||
       timeFilter !== "all" ||
       showCompleted ||
       showCancelled ||
@@ -609,7 +610,7 @@ export default function Tasks() {
     setPriorityFilter("all");
     setClientFilter("all");
     setCategoryFilter("all");
-    setWorkflowFilter("all");
+    setOverdueFilter("all");
     setTimeFilter("all");
     setShowCompleted(false);
     setShowCancelled(false);
@@ -1026,9 +1027,17 @@ export default function Tasks() {
       const matchesCategory = categoryFilter === "all" || 
         (categoryFilter === "none" && !task.categoryId) ||
         task.categoryId === categoryFilter;
-      const matchesWorkflow = workflowFilter === "all" || 
-        (workflowFilter === "none" && !task.workflowId) ||
-        task.workflowId === workflowFilter;
+      
+      // Overdue filter - check if task is overdue (due date is in the past and task is not completed)
+      let matchesOverdue = true;
+      if (overdueFilter === "overdue") {
+        const today = startOfDay(new Date());
+        const isOverdue = task.dueDate && 
+          new Date(task.dueDate) < today && 
+          task.status !== "completed" && 
+          task.status !== "cancelled";
+        matchesOverdue = !!isOverdue;
+      }
 
       // Time filter based on due date
       let matchesTime = true;
@@ -1082,7 +1091,7 @@ export default function Tasks() {
       const shouldShowCompleted = showCompleted || task.status !== "completed";
       const shouldShowCancelled = showCancelled || task.status !== "cancelled";
       
-      return matchesSearch && matchesStatus && matchesAssignee && matchesPriority && matchesClient && matchesProject && matchesCategory && matchesWorkflow && matchesTime && shouldShowCompleted && shouldShowCancelled;
+      return matchesSearch && matchesStatus && matchesAssignee && matchesPriority && matchesClient && matchesProject && matchesCategory && matchesOverdue && matchesTime && shouldShowCompleted && shouldShowCancelled;
     })
     .sort((a, b) => {
       let aValue: any = '';
@@ -1132,7 +1141,7 @@ export default function Tasks() {
     });
 
     return filtered;
-  }, [tasks, currentFilter, searchTerm, statusFilter, assigneeFilter, priorityFilter, clientFilter, categoryFilter, workflowFilter, timeFilter, showCompleted, showCancelled, sortField, sortDirection, staff, clients, taskCategories]);
+  }, [tasks, currentFilter, searchTerm, statusFilter, assigneeFilter, priorityFilter, clientFilter, categoryFilter, overdueFilter, timeFilter, showCompleted, showCancelled, sortField, sortDirection, staff, clients, taskCategories]);
 
   // Handle column reordering (excluding name column)
   const handleColumnDragEnd = (result: any) => {
@@ -2653,19 +2662,14 @@ export default function Tasks() {
                 </SelectContent>
               </Select>
               
-              {/* Workflow Filter */}
-              <Select value={workflowFilter} onValueChange={setWorkflowFilter}>
+              {/* Overdue Filter */}
+              <Select value={overdueFilter} onValueChange={setOverdueFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Workflows" />
+                  <SelectValue placeholder="All Tasks" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Workflows</SelectItem>
-                  <SelectItem value="none">No Workflow</SelectItem>
-                  {workflows?.map((workflow) => (
-                    <SelectItem key={workflow.id} value={workflow.id}>
-                      {workflow.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">All Tasks</SelectItem>
+                  <SelectItem value="overdue">Overdue Only</SelectItem>
                 </SelectContent>
               </Select>
               
@@ -2733,12 +2737,12 @@ export default function Tasks() {
           {viewMode === "table" && filteredAndSortedTasks.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-500 mb-4">
-                {searchTerm || statusFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all" || clientFilter !== "all" || categoryFilter !== "all" || workflowFilter !== "all" || timeFilter !== "all"
+                {searchTerm || statusFilter !== "all" || assigneeFilter !== "all" || priorityFilter !== "all" || clientFilter !== "all" || categoryFilter !== "all" || overdueFilter !== "all" || timeFilter !== "all"
                   ? "No tasks found matching your criteria." 
                   : "No tasks found."
                 }
               </p>
-              {!searchTerm && statusFilter === "all" && assigneeFilter === "all" && priorityFilter === "all" && clientFilter === "all" && categoryFilter === "all" && workflowFilter === "all" && timeFilter === "all" && (
+              {!searchTerm && statusFilter === "all" && assigneeFilter === "all" && priorityFilter === "all" && clientFilter === "all" && categoryFilter === "all" && overdueFilter === "all" && timeFilter === "all" && (
                 <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>Create Your First Task</Button>
