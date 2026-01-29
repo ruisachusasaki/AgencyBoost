@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarUI } from "@/components/ui/calendar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -29,7 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { Client, Tag, InsertTag, EmailTemplate, SmsTemplate, ClientHealthScore } from "@shared/schema";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useRolePermissions } from "@/hooks/use-has-permission";
 import { apiRequest } from "@/lib/queryClient";
@@ -2064,6 +2065,29 @@ const EditableField = ({
               className="min-h-[60px]"
               autoFocus
             />
+          ) : type === 'date' ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal h-8",
+                    !fieldEditValue && "text-muted-foreground"
+                  )}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {fieldEditValue ? format(parseISO(fieldEditValue), "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarUI
+                  mode="single"
+                  selected={fieldEditValue ? parseISO(fieldEditValue) : undefined}
+                  onSelect={(date) => date && setFieldEditValue(format(date, "yyyy-MM-dd"))}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           ) : (
             <Input
               type={type === 'currency' ? 'number' : type}
