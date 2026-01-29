@@ -151,6 +151,7 @@ export default function Reports() {
   // Client breakdown specific state
   const [clientBreakdownView, setClientBreakdownView] = useState("by-user-client");
   const [userIdFilter, setUserIdFilter] = useState("all");
+  const [cachedUserList, setCachedUserList] = useState<Array<{ userId: string; userName: string }>>([]);
   const [tagFilter, setTagFilter] = useState<string[]>([]); // Multi-select tag filter
   
   // Detailed Staff Workload specific state
@@ -422,6 +423,14 @@ export default function Reports() {
       enabled: activeTab === "tasks"
     }
   );
+
+  // Cache the full user list when viewing "All Users" to keep dropdown populated
+  useEffect(() => {
+    if (userIdFilter === "all" && timeTrackingData?.userSummaries && timeTrackingData.userSummaries.length > 0) {
+      setCachedUserList(timeTrackingData.userSummaries.map(u => ({ userId: u.userId, userName: u.userName })));
+    }
+  }, [userIdFilter, timeTrackingData?.userSummaries]);
+
 
   // Stage Analytics query
   const { data: stageAnalyticsData, isLoading: stageAnalyticsLoading } = useQuery<{
@@ -2310,7 +2319,7 @@ export default function Reports() {
                         </SelectTrigger>
                         <SelectContent>
                           {canEditOthersTimesheets && <SelectItem value="all">All Users</SelectItem>}
-                          {(timeTrackingData?.userSummaries || []).map((user) => (
+                          {(cachedUserList.length > 0 ? cachedUserList : timeTrackingData?.userSummaries || []).map((user) => (
                             <SelectItem key={user.userId} value={user.userId}>
                               {user.userName || 'Unknown User'}
                             </SelectItem>
