@@ -2026,7 +2026,7 @@ export default function Campaigns() {
                   <TableRow>
                     <FormsSortableHeader field="name">Name</FormsSortableHeader>
                     <FormsSortableHeader field="lastUpdated">Last Updated</FormsSortableHeader>
-                    <TableHead className="w-[20%]">Updated By</TableHead>
+                    <TableHead className="w-[20%]">Created by</TableHead>
                     <TableHead className="w-[15%]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -2092,7 +2092,7 @@ export default function Campaigns() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm text-gray-600">{item.updatedBy}</div>
+                        <div className="text-sm text-gray-600">{item.createdBy || item.updatedBy || 'Unknown'}</div>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
