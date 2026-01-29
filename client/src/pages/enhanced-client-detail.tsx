@@ -5193,9 +5193,10 @@ export default function EnhancedClientDetail() {
                                       setEditingSections(prev => new Set([...prev, section.id]));
                                     }}
                                     data-testid={`button-edit-${section.key}`}
+                                    title="Edit"
+                                    className="h-8 w-8 p-0"
                                   >
-                                    <Edit2 className="h-4 w-4 mr-2" />
-                                    Edit
+                                    <Edit2 className="h-4 w-4" />
                                   </Button>
                                 ) : (
                                   <div className="flex items-center gap-2">
