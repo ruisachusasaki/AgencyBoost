@@ -154,6 +154,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const [areasOfOpportunities, setAreasOfOpportunities] = useState<CheckableItem[]>([]);
   const [actionItems, setActionItems] = useState<CheckableItem[]>([]);
   const [newSalesOpp, setNewSalesOpp] = useState("");
+  const [newSalesOppNotes, setNewSalesOppNotes] = useState("");
+  const [expandedSalesOppId, setExpandedSalesOppId] = useState<string | null>(null);
   const [newAreaOpp, setNewAreaOpp] = useState("");
   const [newAreaOppNotes, setNewAreaOppNotes] = useState("");
   const [expandedAreaOppId, setExpandedAreaOppId] = useState<string | null>(null);
@@ -464,20 +466,37 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
   const handleAddSalesOpp = () => {
     if (newSalesOpp.trim()) {
-      setSalesOpportunities([...salesOpportunities, { id: `sales-${Date.now()}`, content: newSalesOpp.trim(), isCompleted: false }]);
+      const newId = `sales-${Date.now()}`;
+      setSalesOpportunities([...salesOpportunities, { 
+        id: newId, 
+        content: newSalesOpp.trim(), 
+        isCompleted: false,
+        notes: newSalesOppNotes.trim() || undefined
+      }]);
       setHasUnsavedChanges(true);
       setNewSalesOpp("");
+      setNewSalesOppNotes("");
     }
   };
 
   const handleRemoveSalesOpp = (id: string) => {
     setSalesOpportunities(salesOpportunities.filter(item => item.id !== id));
+    if (expandedSalesOppId === id) {
+      setExpandedSalesOppId(null);
+    }
     setHasUnsavedChanges(true);
   };
 
   const handleToggleSalesOpp = (id: string) => {
     setSalesOpportunities(salesOpportunities.map(item => 
       item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
+    ));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleUpdateSalesOppNotes = (id: string, notes: string) => {
+    setSalesOpportunities(salesOpportunities.map(item => 
+      item.id === id ? { ...item, notes: notes || undefined } : item
     ));
     setHasUnsavedChanges(true);
   };
@@ -1004,41 +1023,75 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   </Label>
                   <div className="space-y-2">
                     {salesOpportunities.map((opp) => (
-                      <div key={opp.id} className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                        <input
-                          type="checkbox"
-                          checked={opp.isCompleted}
-                          onChange={() => handleToggleSalesOpp(opp.id)}
-                          className="h-4 w-4 rounded-full cursor-pointer accent-primary"
-                        />
-                        <span className={`flex-1 ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
-                          {opp.content}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveSalesOpp(opp.id)}
-                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                      <div key={opp.id} className="bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center gap-2 p-2">
+                          <input
+                            type="checkbox"
+                            checked={opp.isCompleted}
+                            onChange={() => handleToggleSalesOpp(opp.id)}
+                            className="h-4 w-4 rounded-full cursor-pointer accent-primary"
+                          />
+                          <span className={`flex-1 ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                            {opp.content}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setExpandedSalesOppId(expandedSalesOppId === opp.id ? null : opp.id)}
+                            className={cn(
+                              "h-6 w-6 p-0",
+                              opp.notes ? "text-blue-600" : "text-muted-foreground hover:text-blue-600"
+                            )}
+                            title={opp.notes ? "View/edit notes" : "Add notes"}
+                          >
+                            <StickyNote className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveSalesOpp(opp.id)}
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {expandedSalesOppId === opp.id && (
+                          <div className="px-2 pb-2">
+                            <Textarea
+                              placeholder="Add notes for this sales opportunity..."
+                              value={opp.notes || ""}
+                              onChange={(e) => handleUpdateSalesOppNotes(opp.id, e.target.value)}
+                              className="min-h-[60px] text-sm bg-white dark:bg-gray-800"
+                            />
+                          </div>
+                        )}
                       </div>
                     ))}
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Add a sales opportunity..."
-                        value={newSalesOpp}
-                        onChange={(e) => setNewSalesOpp(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddSalesOpp();
-                          }
-                        }}
-                      />
-                      <Button size="sm" onClick={handleAddSalesOpp}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add a sales opportunity..."
+                          value={newSalesOpp}
+                          onChange={(e) => setNewSalesOpp(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddSalesOpp();
+                            }
+                          }}
+                        />
+                        <Button size="sm" onClick={handleAddSalesOpp}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {newSalesOpp.trim() && (
+                        <Textarea
+                          placeholder="Add notes (optional)..."
+                          value={newSalesOppNotes}
+                          onChange={(e) => setNewSalesOppNotes(e.target.value)}
+                          className="min-h-[60px] text-sm"
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
