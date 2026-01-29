@@ -147,6 +147,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     content: string;
     isCompleted: boolean;
     taskId?: string;
+    notes?: string;
   }
   
   const [salesOpportunities, setSalesOpportunities] = useState<CheckableItem[]>([]);
@@ -154,6 +155,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const [actionItems, setActionItems] = useState<CheckableItem[]>([]);
   const [newSalesOpp, setNewSalesOpp] = useState("");
   const [newAreaOpp, setNewAreaOpp] = useState("");
+  const [newAreaOppNotes, setNewAreaOppNotes] = useState("");
+  const [expandedAreaOppId, setExpandedAreaOppId] = useState<string | null>(null);
   const [newActionItem, setNewActionItem] = useState("");
   
   const [isAttendeesOpen, setIsAttendeesOpen] = useState(false);
@@ -481,20 +484,37 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
   const handleAddAreaOpp = () => {
     if (newAreaOpp.trim()) {
-      setAreasOfOpportunities([...areasOfOpportunities, { id: `area-${Date.now()}`, content: newAreaOpp.trim(), isCompleted: false }]);
+      const newId = `area-${Date.now()}`;
+      setAreasOfOpportunities([...areasOfOpportunities, { 
+        id: newId, 
+        content: newAreaOpp.trim(), 
+        isCompleted: false,
+        notes: newAreaOppNotes.trim() || undefined
+      }]);
       setHasUnsavedChanges(true);
       setNewAreaOpp("");
+      setNewAreaOppNotes("");
     }
   };
 
   const handleRemoveAreaOpp = (id: string) => {
     setAreasOfOpportunities(areasOfOpportunities.filter(item => item.id !== id));
+    if (expandedAreaOppId === id) {
+      setExpandedAreaOppId(null);
+    }
     setHasUnsavedChanges(true);
   };
 
   const handleToggleAreaOpp = (id: string) => {
     setAreasOfOpportunities(areasOfOpportunities.map(item => 
       item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
+    ));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleUpdateAreaOppNotes = (id: string, notes: string) => {
+    setAreasOfOpportunities(areasOfOpportunities.map(item => 
+      item.id === id ? { ...item, notes: notes || undefined } : item
     ));
     setHasUnsavedChanges(true);
   };
@@ -1035,41 +1055,75 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   </Label>
                   <div className="space-y-2">
                     {areasOfOpportunities.map((opp) => (
-                      <div key={opp.id} className="flex items-center gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
-                        <input
-                          type="checkbox"
-                          checked={opp.isCompleted}
-                          onChange={() => handleToggleAreaOpp(opp.id)}
-                          className="h-4 w-4 rounded-full cursor-pointer accent-primary"
-                        />
-                        <span className={`flex-1 ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
-                          {opp.content}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveAreaOpp(opp.id)}
-                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                      <div key={opp.id} className="bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                        <div className="flex items-center gap-2 p-2">
+                          <input
+                            type="checkbox"
+                            checked={opp.isCompleted}
+                            onChange={() => handleToggleAreaOpp(opp.id)}
+                            className="h-4 w-4 rounded-full cursor-pointer accent-primary"
+                          />
+                          <span className={`flex-1 ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                            {opp.content}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setExpandedAreaOppId(expandedAreaOppId === opp.id ? null : opp.id)}
+                            className={cn(
+                              "h-6 w-6 p-0",
+                              opp.notes ? "text-yellow-600" : "text-muted-foreground hover:text-yellow-600"
+                            )}
+                            title={opp.notes ? "View/edit notes" : "Add notes"}
+                          >
+                            <StickyNote className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveAreaOpp(opp.id)}
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {expandedAreaOppId === opp.id && (
+                          <div className="px-2 pb-2">
+                            <Textarea
+                              placeholder="Add notes for this area of opportunity..."
+                              value={opp.notes || ""}
+                              onChange={(e) => handleUpdateAreaOppNotes(opp.id, e.target.value)}
+                              className="min-h-[60px] text-sm bg-white dark:bg-gray-800"
+                            />
+                          </div>
+                        )}
                       </div>
                     ))}
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Add an area of opportunity..."
-                        value={newAreaOpp}
-                        onChange={(e) => setNewAreaOpp(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddAreaOpp();
-                          }
-                        }}
-                      />
-                      <Button size="sm" onClick={handleAddAreaOpp}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add an area of opportunity..."
+                          value={newAreaOpp}
+                          onChange={(e) => setNewAreaOpp(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddAreaOpp();
+                            }
+                          }}
+                        />
+                        <Button size="sm" onClick={handleAddAreaOpp}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {newAreaOpp.trim() && (
+                        <Textarea
+                          placeholder="Add notes (optional)..."
+                          value={newAreaOppNotes}
+                          onChange={(e) => setNewAreaOppNotes(e.target.value)}
+                          className="min-h-[60px] text-sm"
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
