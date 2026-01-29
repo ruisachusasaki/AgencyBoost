@@ -1348,8 +1348,9 @@ export default function Campaigns() {
                   <TableRow>
                     <EmailSortableHeader field="name">Name</EmailSortableHeader>
                     <EmailSortableHeader field="subject">Subject</EmailSortableHeader>
-                    <TableHead className="w-[20%]">Type</TableHead>
-                    <TableHead className="w-[15%]">Actions</TableHead>
+                    <TableHead className="w-[15%]">Created by</TableHead>
+                    <TableHead className="w-[15%]">Type</TableHead>
+                    <TableHead className="w-[10%]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1371,6 +1372,7 @@ export default function Campaigns() {
                       <TableCell className="text-gray-500">
                         {folder.description || "No description"}
                       </TableCell>
+                      <TableCell></TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
                           Folder
@@ -1451,6 +1453,9 @@ export default function Campaigns() {
                             {template.previewText}
                           </div>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-gray-600">{(template as any).createdByName || 'Unknown'}</span>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
@@ -1649,8 +1654,9 @@ export default function Campaigns() {
                   <TableRow>
                     <SmsSortableHeader field="name">Name</SmsSortableHeader>
                     <SmsSortableHeader field="content">Content Preview</SmsSortableHeader>
-                    <TableHead className="w-[20%]">Type</TableHead>
-                    <TableHead className="w-[15%]">Actions</TableHead>
+                    <TableHead className="w-[15%]">Created by</TableHead>
+                    <TableHead className="w-[15%]">Type</TableHead>
+                    <TableHead className="w-[10%]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1672,6 +1678,7 @@ export default function Campaigns() {
                       <TableCell className="text-gray-500">
                         {folder.description || "No description"}
                       </TableCell>
+                      <TableCell></TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
                           Folder
@@ -1750,6 +1757,9 @@ export default function Campaigns() {
                         <div className="text-xs text-gray-500 mt-1">
                           {template.content.length} characters
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-gray-600">{(template as any).createdByName || 'Unknown'}</span>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">

@@ -73,7 +73,8 @@ import {
   insertTaskIntakeFormSchema, insertTaskIntakeSectionSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema,
   aiIntegrations,
   aiAssistantSettings,
-  slackWorkspaces
+  slackWorkspaces,
+  emailTemplates, smsTemplates
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
@@ -8394,9 +8395,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email Template routes - SECURED (Users with client access)
   app.get("/api/email-templates", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
-      const templates = await appStorage.getEmailTemplates();
+      const templates = await db.select({
+        id: emailTemplates.id,
+        name: emailTemplates.name,
+        subject: emailTemplates.subject,
+        content: emailTemplates.content,
+        plainTextContent: emailTemplates.plainTextContent,
+        previewText: emailTemplates.previewText,
+        folderId: emailTemplates.folderId,
+        tags: emailTemplates.tags,
+        isPublic: emailTemplates.isPublic,
+        usageCount: emailTemplates.usageCount,
+        lastUsed: emailTemplates.lastUsed,
+        createdBy: emailTemplates.createdBy,
+        createdByName: sql`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, 'Unknown')`.as('createdByName'),
+        createdAt: emailTemplates.createdAt,
+        updatedAt: emailTemplates.updatedAt
+      })
+      .from(emailTemplates)
+      .leftJoin(staff, eq(emailTemplates.createdBy, staff.id))
+      .orderBy(asc(emailTemplates.name));
       res.json(templates);
     } catch (error) {
+      console.error("Failed to fetch email templates:", error);
       res.status(500).json({ message: "Failed to fetch email templates" });
     }
   });
@@ -8600,9 +8621,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SMS Template routes - SECURED
   app.get("/api/sms-templates", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
-      const templates = await appStorage.getSmsTemplates();
+      const templates = await db.select({
+        id: smsTemplates.id,
+        name: smsTemplates.name,
+        content: smsTemplates.content,
+        folderId: smsTemplates.folderId,
+        tags: smsTemplates.tags,
+        isPublic: smsTemplates.isPublic,
+        usageCount: smsTemplates.usageCount,
+        lastUsed: smsTemplates.lastUsed,
+        createdBy: smsTemplates.createdBy,
+        createdByName: sql`COALESCE(${staff.firstName} || ' ' || ${staff.lastName}, 'Unknown')`.as('createdByName'),
+        createdAt: smsTemplates.createdAt,
+        updatedAt: smsTemplates.updatedAt
+      })
+      .from(smsTemplates)
+      .leftJoin(staff, eq(smsTemplates.createdBy, staff.id))
+      .orderBy(asc(smsTemplates.name));
       res.json(templates);
     } catch (error) {
+      console.error("Failed to fetch SMS templates:", error);
       res.status(500).json({ message: "Failed to fetch SMS templates" });
     }
   });
