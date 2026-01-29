@@ -1858,24 +1858,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = (req as any).session?.user;
       const userId = (req as any).session?.userId || user?.id || user?.staffId;
       
-      console.log("[TIME_ENTRY_PATCH] session user:", JSON.stringify({ id: user?.id, email: user?.email, roles: user?.roles }));
+      console.log("[TIME_ENTRY_PATCH] session user:", JSON.stringify({ id: user?.id, email: user?.email }));
       console.log("[TIME_ENTRY_PATCH] userId:", userId);
       
-      // Fetch staff member to get their roles (session might not have roles)
-      let userRoles: string[] = user?.roles || [];
-      if (userRoles.length === 0 && userId) {
-        const staffMember = await appStorage.getStaffMember(userId);
-        console.log("[TIME_ENTRY_PATCH] fetched staff roles:", staffMember?.roles);
-        if (staffMember?.roles) {
-          userRoles = staffMember.roles;
+      // Fetch staff member with their role name from the roles table (same fix as GET endpoint)
+      let userRoleName: string | null = null;
+      if (userId) {
+        const staffWithRole = await db.select({
+          id: staff.id,
+          roleId: staff.roleId,
+          roleName: roles.name
+        })
+        .from(staff)
+        .leftJoin(roles, eq(staff.roleId, roles.id))
+        .where(eq(staff.id, userId))
+        .limit(1);
+        
+        if (staffWithRole.length > 0 && staffWithRole[0].roleName) {
+          userRoleName = staffWithRole[0].roleName;
         }
+        console.log("[TIME_ENTRY_PATCH] fetched staff role:", userRoleName);
       }
       
-      console.log("[TIME_ENTRY_PATCH] final userRoles:", JSON.stringify(userRoles));
+      const isAdminOrManager = userRoleName && (userRoleName.toLowerCase() === 'admin' || userRoleName.toLowerCase() === 'manager');
       
-      const isAdminOrManager = userRoles.some((r: string) => r.toLowerCase() === 'admin' || r.toLowerCase() === 'manager');
-      
-      console.log("[TIME_ENTRY_PATCH] isAdminOrManager:", isAdminOrManager);
+      console.log("[TIME_ENTRY_PATCH] isAdminOrManager:", isAdminOrManager, "userRoleName:", userRoleName);
       
       if (!isAdminOrManager) {
         console.log("[TIME_ENTRY_PATCH] REJECTED: not admin or manager");
