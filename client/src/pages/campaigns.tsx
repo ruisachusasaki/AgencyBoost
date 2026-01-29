@@ -2335,7 +2335,6 @@ export default function Campaigns() {
                           </TableCell>
                           <TableCell>-</TableCell>
                           <TableCell>-</TableCell>
-                          <TableCell>-</TableCell>
                           <TableCell>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
