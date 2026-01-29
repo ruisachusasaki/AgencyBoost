@@ -1664,14 +1664,32 @@ function MeetingEditor({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <Label htmlFor="meeting-date">Meeting Date</Label>
-                  <Input
-                    id="meeting-date"
-                    type="date"
-                    value={meetingDate}
-                    onChange={(e) => setMeetingDate(e.target.value)}
-                    disabled={isReadOnly}
-                    data-testid="input-meeting-date"
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="meeting-date"
+                        variant="outline"
+                        disabled={isReadOnly}
+                        data-testid="input-meeting-date"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !meetingDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {meetingDate ? format(parseISO(meetingDate), "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={meetingDate ? parseISO(meetingDate) : undefined}
+                        onSelect={(date) => date && setMeetingDate(format(date, "yyyy-MM-dd"))}
+                        disabled={isReadOnly}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <Label htmlFor="meeting-time">Time</Label>
@@ -1705,14 +1723,32 @@ function MeetingEditor({
                 </div>
                 <div>
                   <Label htmlFor="week-of">Week Of</Label>
-                  <Input
-                    id="week-of"
-                    type="date"
-                    value={weekOf}
-                    onChange={(e) => setWeekOf(e.target.value)}
-                    disabled={isReadOnly}
-                    data-testid="input-week-of"
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="week-of"
+                        variant="outline"
+                        disabled={isReadOnly}
+                        data-testid="input-week-of"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !weekOf && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {weekOf ? format(parseISO(weekOf), "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={weekOf ? parseISO(weekOf) : undefined}
+                        onSelect={(date) => date && setWeekOf(format(date, "yyyy-MM-dd"))}
+                        disabled={isReadOnly}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
