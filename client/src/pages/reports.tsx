@@ -1368,7 +1368,10 @@ export default function Reports() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">Reports</h1>
+          <div className="flex items-center gap-3">
+            <BarChart3 className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold text-slate-900">Reports</h1>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -1391,7 +1394,10 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Reports & Analytics</h1>
+        <div className="flex items-center gap-3">
+          <BarChart3 className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold text-slate-900">Reports & Analytics</h1>
+        </div>
         <div className="flex items-center gap-4">
           {/* Time Display Toggle */}
           <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
