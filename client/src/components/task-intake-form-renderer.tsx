@@ -33,6 +33,11 @@ interface Client {
   company: string | null;
 }
 
+interface Department {
+  id: string;
+  name: string;
+}
+
 interface IntakeOption {
   id: string;
   optionText: string;
@@ -331,6 +336,7 @@ interface QuestionRendererProps {
   error?: string;
   disabled?: boolean;
   clients?: Client[];
+  departments?: Department[];
 }
 
 function QuestionRenderer({
@@ -340,6 +346,7 @@ function QuestionRenderer({
   error,
   disabled = false,
   clients = [],
+  departments = [],
 }: QuestionRendererProps) {
   const settings = question.settings || {};
 
@@ -530,6 +537,26 @@ function QuestionRenderer({
           </div>
         );
 
+      case "department":
+        return (
+          <Select
+            value={String(value || "")}
+            onValueChange={(val) => onChange(val)}
+            disabled={disabled}
+          >
+            <SelectTrigger className={cn("w-full max-w-md", error && "border-destructive")}>
+              <SelectValue placeholder="Select a department" />
+            </SelectTrigger>
+            <SelectContent>
+              {departments.map((dept) => (
+                <SelectItem key={dept.id} value={dept.name}>
+                  {dept.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+
       default:
         return (
           <Input
@@ -653,6 +680,11 @@ export function TaskIntakeFormRenderer({
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
     select: (data) => data.map(c => ({ id: c.id, name: c.name, company: c.company })),
+  });
+
+  // Fetch departments/teams for the department dropdown
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ["/api/departments"],
   });
 
   const visibleSections = useMemo(() => {
@@ -950,6 +982,7 @@ export function TaskIntakeFormRenderer({
                     error={validationErrors[question.id]}
                     disabled={isSubmitting}
                     clients={clients}
+                    departments={departments}
                   />
                 ))}
               </div>
