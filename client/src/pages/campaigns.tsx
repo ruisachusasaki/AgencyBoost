@@ -83,6 +83,8 @@ export default function Campaigns() {
   const [smsSortDirection, setSmsSortDirection] = useState<'asc' | 'desc'>('asc');
   const [formsSortField, setFormsSortField] = useState<'name' | 'lastUpdated' | null>(null);
   const [formsSortDirection, setFormsSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [surveySortField, setSurveySortField] = useState<'name' | 'status' | 'responses' | 'created' | null>(null);
+  const [surveySortDirection, setSurveySortDirection] = useState<'asc' | 'desc'>('asc');
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -210,6 +212,15 @@ export default function Campaigns() {
     } else {
       setFormsSortField(field);
       setFormsSortDirection('asc');
+    }
+  };
+
+  const handleSurveySort = (field: 'name' | 'status' | 'responses' | 'created') => {
+    if (surveySortField === field) {
+      setSurveySortDirection(surveySortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSurveySortField(field);
+      setSurveySortDirection('asc');
     }
   };
 
@@ -960,6 +971,33 @@ export default function Campaigns() {
           <ChevronDown 
             className={`h-3 w-3 -mt-1 ${
               formsSortField === field && formsSortDirection === 'desc' 
+                ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+        </div>
+      </div>
+    </TableHead>
+  );
+
+  const SurveySortableHeader = ({ field, children }: { field: 'name' | 'status' | 'responses' | 'created'; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-gray-50 select-none"
+      onClick={() => handleSurveySort(field)}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        <div className="flex flex-col ml-1">
+          <ChevronUp 
+            className={`h-3 w-3 ${
+              surveySortField === field && surveySortDirection === 'asc' 
+                ? 'text-blue-600' 
+                : 'text-gray-400'
+            }`} 
+          />
+          <ChevronDown 
+            className={`h-3 w-3 -mt-1 ${
+              surveySortField === field && surveySortDirection === 'desc' 
                 ? 'text-blue-600' 
                 : 'text-gray-400'
             }`} 
@@ -2263,11 +2301,11 @@ export default function Campaigns() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Responses</TableHead>
+                    <SurveySortableHeader field="name">Name</SurveySortableHeader>
+                    <SurveySortableHeader field="status">Status</SurveySortableHeader>
+                    <SurveySortableHeader field="responses">Responses</SurveySortableHeader>
                     <TableHead>Public URL</TableHead>
-                    <TableHead>Created</TableHead>
+                    <SurveySortableHeader field="created">Created</SurveySortableHeader>
                     <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -2335,6 +2373,30 @@ export default function Campaigns() {
                         ? survey.folderId === selectedSurveyFolder
                         : !survey.folderId;
                       return matchesSearch && matchesFolder;
+                    })
+                    .sort((a, b) => {
+                      if (!surveySortField) return 0;
+                      
+                      let aVal: string | number = '';
+                      let bVal: string | number = '';
+                      
+                      if (surveySortField === 'name') {
+                        aVal = a.name.toLowerCase();
+                        bVal = b.name.toLowerCase();
+                      } else if (surveySortField === 'status') {
+                        aVal = a.status.toLowerCase();
+                        bVal = b.status.toLowerCase();
+                      } else if (surveySortField === 'responses') {
+                        aVal = a.submissionCount || 0;
+                        bVal = b.submissionCount || 0;
+                      } else if (surveySortField === 'created') {
+                        aVal = new Date(a.createdAt).getTime();
+                        bVal = new Date(b.createdAt).getTime();
+                      }
+                      
+                      if (aVal < bVal) return surveySortDirection === 'asc' ? -1 : 1;
+                      if (aVal > bVal) return surveySortDirection === 'asc' ? 1 : -1;
+                      return 0;
                     })
                     .map((survey) => (
                     <TableRow key={survey.id}>
