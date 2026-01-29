@@ -34,7 +34,7 @@ import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useRolePermissions } from "@/hooks/use-has-permission";
 import { apiRequest } from "@/lib/queryClient";
-import { getCurrentWeekRange } from "@/lib/utils";
+import { cn, getCurrentWeekRange } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import ClientHealthModal from "@/components/client-health-modal";
 import type { HealthStatusResult } from "@shared/utils/healthAnalysis";
