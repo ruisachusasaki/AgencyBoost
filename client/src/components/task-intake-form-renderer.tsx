@@ -20,7 +20,8 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Check, AlertCircle, X, Loader2, ExternalLink, CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, AlertCircle, X, Loader2, ExternalLink, CalendarIcon, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { Calendar } from "@/components/ui/calendar";
@@ -49,6 +50,7 @@ interface IntakeQuestion {
   questionText: string;
   questionType: string;
   helpText: string | null;
+  tooltip: string | null;
   internalLabel: string | null;
   isRequired: boolean;
   order: number;
@@ -571,10 +573,24 @@ function QuestionRenderer({
 
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium">
-        {question.questionText}
-        {question.isRequired && <span className="text-destructive ml-1 mr-2">*</span>}
-      </Label>
+      <div className="flex items-center gap-1.5">
+        <Label className="text-sm font-medium">
+          {question.questionText}
+          {question.isRequired && <span className="text-destructive ml-1 mr-2">*</span>}
+        </Label>
+        {question.tooltip && (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="text-sm">{question.tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
       {question.helpText && (
         <p className="text-sm text-muted-foreground">{question.helpText}</p>
       )}
