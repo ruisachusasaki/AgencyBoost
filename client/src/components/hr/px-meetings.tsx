@@ -238,6 +238,9 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
   useEffect(() => {
     if (selectedMeeting) {
+      console.log('[PX Debug] Loading meeting - salesOpportunities raw:', selectedMeeting.salesOpportunities);
+      console.log('[PX Debug] Loading meeting - areasOfOpportunities raw:', selectedMeeting.areasOfOpportunities);
+      
       const meetingDateStr = typeof selectedMeeting.meetingDate === 'string' 
         ? selectedMeeting.meetingDate 
         : selectedMeeting.meetingDate?.toString?.() || '';
@@ -255,8 +258,12 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         isPrivate: selectedMeeting.isPrivate || false,
         attendeeIds: selectedMeeting.attendees?.map(a => a.id) || [],
       });
-      setSalesOpportunities(parseJsonArray(selectedMeeting.salesOpportunities));
-      setAreasOfOpportunities(parseJsonArray(selectedMeeting.areasOfOpportunities));
+      const parsedSalesOpps = parseJsonArray(selectedMeeting.salesOpportunities);
+      const parsedAreasOpps = parseJsonArray(selectedMeeting.areasOfOpportunities);
+      console.log('[PX Debug] Parsed salesOpportunities:', parsedSalesOpps);
+      console.log('[PX Debug] Parsed areasOfOpportunities:', parsedAreasOpps);
+      setSalesOpportunities(parsedSalesOpps);
+      setAreasOfOpportunities(parsedAreasOpps);
       setActionItems(parseJsonArray(selectedMeeting.actionItems));
       setHasUnsavedChanges(false);
     }
@@ -441,6 +448,11 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const handleUpdate = () => {
     if (!selectedMeeting || !meetingId) return;
     
+    const salesOppData = JSON.stringify(salesOpportunities);
+    const areasOppData = JSON.stringify(areasOfOpportunities);
+    console.log('[PX Debug] Saving salesOpportunities:', salesOppData);
+    console.log('[PX Debug] Saving areasOfOpportunities:', areasOppData);
+    
     updateMutation.mutate({
       id: meetingId,
       data: {
@@ -451,8 +463,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         clientId: editFormData.clientId || null,
         tags: editFormData.tags,
         whatsWorkingKpis: editFormData.whatsWorkingKpis,
-        salesOpportunities: JSON.stringify(salesOpportunities),
-        areasOfOpportunities: JSON.stringify(areasOfOpportunities),
+        salesOpportunities: salesOppData,
+        areasOfOpportunities: areasOppData,
         actionPlan: editFormData.actionPlan,
         actionItems: JSON.stringify(actionItems),
         notes: editFormData.notes,

@@ -35478,6 +35478,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/px-meetings/:id", requireAuth(), async (req, res) => {
     try {
       const { attendeeIds, ...meetingData } = req.body;
+      console.log("[PX Debug Server] Received meetingData.salesOpportunities:", meetingData.salesOpportunities);
+      console.log("[PX Debug Server] Received meetingData.areasOfOpportunities:", meetingData.areasOfOpportunities);
       
       // Get existing meeting to check if client is being changed
       const existingMeeting = await appStorage.getPxMeeting(req.params.id);
