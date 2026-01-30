@@ -192,6 +192,8 @@ export default function Clients() {
     'clients.delete_clients',
     'clients.export_data',
     'clients.manage_clients',
+    'clients.list.import',
+    'clients.list.export',
   ]);
   
   // Check if user can perform any bulk actions (determines checkbox visibility)
@@ -1823,30 +1825,36 @@ export default function Clients() {
         </div>
         
         <div className="flex gap-2">
-          <input
-            type="file"
-            accept=".csv"
-            onChange={handleFileImport}
-            className="hidden"
-            id="csv-import"
-          />
-          <Button
-            variant="outline"
-            onClick={() => document.getElementById('csv-import')?.click()}
-            disabled={isImporting}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            {isImporting ? 'Importing...' : 'Import'}
-          </Button>
+          {clientPermissions['clients.list.import'] && (
+            <>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleFileImport}
+                className="hidden"
+                id="csv-import"
+              />
+              <Button
+                variant="outline"
+                onClick={() => document.getElementById('csv-import')?.click()}
+                disabled={isImporting}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {isImporting ? 'Importing...' : 'Import'}
+              </Button>
+            </>
+          )}
           
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            disabled={isExporting}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            {isExporting ? 'Exporting...' : 'Export'}
-          </Button>
+          {(clientPermissions['clients.list.export'] || clientPermissions['clients.export_data']) && (
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              disabled={isExporting}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isExporting ? 'Exporting...' : 'Export'}
+            </Button>
+          )}
           
           <Button
             variant="outline"
