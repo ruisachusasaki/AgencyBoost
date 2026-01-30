@@ -22,7 +22,7 @@ import { format } from "date-fns";
 import { formatPhoneNumber } from "@/lib/utils";
 import type { Client } from "@shared/schema";
 
-type SortField = 'name' | 'company' | 'phone' | 'email' | 'contactOwner' | 'createdAt' | 'lastActivity';
+type SortField = 'client' | 'name' | 'phone' | 'email' | 'contactOwner' | 'createdAt' | 'lastActivity';
 type SortDirection = 'asc' | 'desc';
 
 interface FilterCondition {
@@ -57,8 +57,8 @@ interface Column {
 }
 
 const AVAILABLE_COLUMNS: Column[] = [
+  { key: 'client', label: 'Client', sortable: true, defaultVisible: true },
   { key: 'name', label: 'Name', sortable: true, defaultVisible: true },
-  { key: 'company', label: 'Business', sortable: true, defaultVisible: true },
   { key: 'phone', label: 'Phone Number', sortable: true, defaultVisible: true },
   { key: 'email', label: 'Email', sortable: true, defaultVisible: true },
   { key: 'contactOwner', label: 'Contact Owner', sortable: true, defaultVisible: true },
@@ -690,8 +690,8 @@ export default function Clients() {
 
         const getValue = (field: string): string => {
           switch (field) {
+            case 'client': return getBusinessDisplayName(client);
             case 'name': return getClientDisplayName(client);
-            case 'company': return getBusinessDisplayName(client);
             case 'email': return client.email || '';
             case 'phone': return getClientPhoneNumber(client);
             case 'city': return client.city || '';
@@ -785,7 +785,7 @@ export default function Clients() {
           aValue = getClientDisplayName(a).toLowerCase();
           bValue = getClientDisplayName(b).toLowerCase();
           break;
-        case 'company':
+        case 'client':
           aValue = getBusinessDisplayName(a).toLowerCase();
           bValue = getBusinessDisplayName(b).toLowerCase();
           break;
@@ -1472,17 +1472,17 @@ export default function Clients() {
 
   const renderCellContent = (client: Client, columnKey: string) => {
     switch (columnKey) {
-      case 'name':
+      case 'client':
         return (
           <button
             onClick={() => setLocation(`/clients/${client.id}`)}
             className="text-blue-600 hover:text-blue-800 underline cursor-pointer text-left"
           >
-            {getClientDisplayName(client)}
+            {getBusinessDisplayName(client) || getClientDisplayName(client)}
           </button>
         );
-      case 'company':
-        return getBusinessDisplayName(client) || '-';
+      case 'name':
+        return getClientDisplayName(client) || '-';
       case 'phone':
         const phoneNum = getClientPhoneNumber(client);
         return phoneNum ? formatPhoneNumber(phoneNum) : '-';
