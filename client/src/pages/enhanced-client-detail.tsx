@@ -324,11 +324,12 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
                     <SelectValue placeholder="Not Assigned">
                       {assignedStaff ? (
                         <div className="flex items-center gap-2">
-                          {assignedStaff.profileImage || assignedStaff.profileImagePath ? (
+                          {assignedStaff.profileImagePath ? (
                             <img 
-                              src={assignedStaff.profileImage || (assignedStaff.profileImagePath ? `/objects${assignedStaff.profileImagePath}` : undefined)} 
+                              src={`/objects${assignedStaff.profileImagePath}`} 
                               alt="" 
                               className="w-4 h-4 rounded-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                           ) : (
                             <div className="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center">
@@ -371,11 +372,12 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
                     {(staffList as any[]).map((staff: any) => (
                       <SelectItem key={staff.id} value={staff.id} className="select-item" data-position={position.key}>
                         <div className="flex items-center gap-2">
-                          {staff.profileImage || staff.profileImagePath ? (
+                          {staff.profileImagePath ? (
                             <img 
-                              src={staff.profileImage || (staff.profileImagePath ? `/objects${staff.profileImagePath}` : undefined)} 
+                              src={`/objects${staff.profileImagePath}`} 
                               alt="" 
                               className="w-4 h-4 rounded-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                           ) : (
                             <div className="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center">
