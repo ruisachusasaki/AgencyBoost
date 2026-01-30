@@ -573,7 +573,7 @@ function QuestionRenderer({
     <div className="space-y-2">
       <Label className="text-sm font-medium">
         {question.questionText}
-        {question.isRequired && <span className="text-destructive ml-1">*</span>}
+        {question.isRequired && <span className="text-destructive ml-1 mr-2">*</span>}
       </Label>
       {question.helpText && (
         <p className="text-sm text-muted-foreground">{question.helpText}</p>
