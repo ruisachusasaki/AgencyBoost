@@ -64,8 +64,8 @@ function NotificationButton() {
   // Delete notification mutation
   const deleteNotificationMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const response = await apiRequest('DELETE', `/api/notifications/${notificationId}`);
-      return response.json();
+      await apiRequest('DELETE', `/api/notifications/${notificationId}`);
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
