@@ -323,6 +323,43 @@ export default function Reports() {
     queryKey: ["/api/tasks"],
   });
 
+  // Quotes query for Business Overview metrics
+  const { data: quotesData = [] } = useQuery<Array<{
+    id: string;
+    clientId: string | null;
+    name: string;
+    clientBudget: string;
+    totalCost: string;
+    status: string;
+    createdAt: string;
+  }>>({
+    queryKey: ["/api/quotes"],
+    enabled: activeTab === "overview",
+  });
+
+  // Sales targets query for Business Overview
+  const { data: salesTargetsData = [] } = useQuery<Array<{
+    id: string;
+    year: number;
+    month: number;
+    targetAmount: string;
+  }>>({
+    queryKey: ["/api/sales-targets"],
+    enabled: activeTab === "overview",
+  });
+
+  // Staff query for utilization metrics
+  const { data: staffData = [] } = useQuery<Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    department: string | null;
+    position: string | null;
+  }>>({
+    queryKey: ["/api/staff"],
+    enabled: activeTab === "overview",
+  });
+
   // Tags query for filtering
   const { data: tagsData } = useQuery<{ id: string; name: string; color: string }[]>({
     queryKey: ["/api/tags"],
@@ -363,6 +400,24 @@ export default function Reports() {
     reportType: taskReportType
   };
   }, [taskDateRange, customTaskDateFrom, customTaskDateTo, userIdFilter, clientFilter, tagFilter, taskReportType, businessTimezone]);
+
+  // Overview-specific time tracking filters (uses dateRange from overview tab)
+  const overviewTimeTrackingFilters = useMemo(() => {
+    const daysAgo = parseInt(dateRange) || 30;
+    const dateTo = getTodayInTimezone(businessTimezone);
+    const dateFromDate = new Date();
+    dateFromDate.setDate(dateFromDate.getDate() - daysAgo);
+    const dateFrom = getLocalDateString(dateFromDate, businessTimezone);
+    
+    return {
+      dateFrom,
+      dateTo,
+      userId: undefined,
+      clientId: clientFilter !== "all" ? clientFilter : undefined,
+      tags: undefined,
+      reportType: "time" as const
+    };
+  }, [dateRange, clientFilter, businessTimezone]);
   
   // Time entry update mutation
   const updateTimeEntryMutation = useMutation({
@@ -404,7 +459,7 @@ export default function Reports() {
     grandTotal: number;
   }>(
     {
-      queryKey: ["/api/reports/time-tracking", timeTrackingFilters],
+      queryKey: ["/api/reports/time-tracking", activeTab === "overview" ? overviewTimeTrackingFilters : timeTrackingFilters],
       queryFn: async ({ queryKey }) => {
         const [, filters] = queryKey;
         const response = await fetch("/api/reports/time-tracking", {
@@ -420,7 +475,7 @@ export default function Reports() {
         // Return the data directly, not the wrapped response
         return result.data || result;
       },
-      enabled: activeTab === "tasks"
+      enabled: activeTab === "tasks" || activeTab === "overview"
     }
   );
 
@@ -704,6 +759,117 @@ export default function Reports() {
     topPerformingClients: calculateTopHealthClients(healthScores, clients),
     atRiskClients: healthScores.filter(h => h.healthIndicator === 'Red').slice(0, 5)
   };
+
+  // Business Overview metrics calculations
+  const businessOverviewMetrics = useMemo(() => {
+    const dateFilter = getDateFilter();
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    // Quote metrics
+    const pendingQuotes = quotesData.filter(q => ['pending_approval', 'approved', 'sent'].includes(q.status));
+    const quotePipelineValue = pendingQuotes.reduce((sum, q) => sum + Number(q.clientBudget || 0), 0);
+    
+    const closedQuotes = quotesData.filter(q => ['accepted', 'rejected'].includes(q.status));
+    const acceptedQuotes = quotesData.filter(q => q.status === 'accepted');
+    const winRate = closedQuotes.length > 0 
+      ? ((acceptedQuotes.length / closedQuotes.length) * 100).toFixed(1)
+      : "0.0";
+
+    // Sales target for current month
+    const currentMonthTarget = salesTargetsData.find(
+      t => t.year === currentYear && t.month === currentMonth
+    );
+    const monthlyTarget = currentMonthTarget ? Number(currentMonthTarget.targetAmount) : 0;
+    
+    // Calculate actual sales (accepted quotes this month)
+    const monthStart = new Date(currentYear, currentMonth - 1, 1);
+    const acceptedThisMonth = quotesData.filter(q => 
+      q.status === 'accepted' && 
+      new Date(q.createdAt) >= monthStart
+    );
+    const actualSales = acceptedThisMonth.reduce((sum, q) => sum + Number(q.clientBudget || 0), 0);
+    const salesTargetProgress = monthlyTarget > 0 ? (actualSales / monthlyTarget) * 100 : 0;
+
+    // Overdue tasks count
+    const overdueTasks = tasks.filter(t => {
+      if (!t.dueDate) return false;
+      const dueDate = new Date(t.dueDate);
+      return dueDate < now && t.status !== 'completed';
+    });
+
+    // New clients in date range
+    const newClients = clients.filter(c => {
+      if (!c.createdAt) return false;
+      return new Date(c.createdAt) >= dateFilter;
+    });
+
+    // Lead source performance
+    const leadsBySource: Record<string, number> = {};
+    leads.forEach(lead => {
+      const sourceName = lead.source || 'Unknown';
+      leadsBySource[sourceName] = (leadsBySource[sourceName] || 0) + 1;
+    });
+    const leadSourcePerformance = Object.entries(leadsBySource)
+      .map(([source, count]) => ({ source, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Average time to convert (leads that became clients)
+    const wonLeads = leads.filter(l => l.status === 'won' && l.createdAt);
+    const avgTimeToConvert = wonLeads.length > 0
+      ? wonLeads.reduce((sum, lead) => {
+          const createdDate = new Date(lead.createdAt!);
+          const updatedDate = new Date(lead.updatedAt || lead.createdAt!);
+          const daysDiff = Math.ceil((updatedDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+          return sum + daysDiff;
+        }, 0) / wonLeads.length
+      : 0;
+
+    // Hours by department (from time tracking data)
+    const hoursByDepartment: Record<string, number> = {};
+    if (timeTrackingData?.userSummaries) {
+      timeTrackingData.userSummaries.forEach(user => {
+        // Map user roles to departments
+        const dept = user.userRole || 'Other';
+        hoursByDepartment[dept] = (hoursByDepartment[dept] || 0) + (user.totalTime || 0);
+      });
+    }
+
+    // Team utilization (simplified: total hours logged this period)
+    const totalHoursLogged = timeTrackingData?.grandTotal || 0;
+    const activeStaffCount = staffData.length || 1;
+    // Assume 40 hours per week per staff, calculate based on date range
+    const daysInRange = parseInt(dateRange) || 30;
+    const weeksInRange = daysInRange / 7;
+    const expectedHours = activeStaffCount * 40 * weeksInRange;
+    const utilizationRate = expectedHours > 0 ? (totalHoursLogged / 60 / expectedHours) * 100 : 0;
+
+    // Get unique clients at risk (latest Red health scores)
+    const clientsAtRisk = new Set(
+      healthScores
+        .filter(h => h.healthIndicator === 'Red')
+        .map(h => h.clientId)
+    ).size;
+
+    return {
+      quotePipelineValue,
+      winRate,
+      monthlyTarget,
+      actualSales,
+      salesTargetProgress,
+      overdueTasksCount: overdueTasks.length,
+      newClientsCount: newClients.length,
+      avgHealthScore: healthAnalytics.avgHealthScore,
+      clientsAtRisk,
+      leadSourcePerformance,
+      avgTimeToConvert: Math.round(avgTimeToConvert),
+      hoursByDepartment,
+      utilizationRate: Math.min(utilizationRate, 100).toFixed(1),
+      totalHoursLogged: totalHoursLogged / 60, // Convert to hours
+    };
+  }, [quotesData, salesTargetsData, tasks, clients, leads, healthScores, timeTrackingData, staffData, dateRange]);
 
   // Get task date filter based on task-specific controls
   const getTaskDateFilter = () => {
@@ -1516,113 +1682,259 @@ export default function Reports() {
         </CardHeader>
       </Card>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Sales Pipeline Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="shadow-sm border border-slate-200">
-          <CardContent className="p-6">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Quote Pipeline</p>
+                <p className="text-2xl font-bold text-slate-900">${businessOverviewMetrics.quotePipelineValue.toLocaleString()}</p>
+                <p className="text-xs text-teal-600 mt-1">Pending quotes value</p>
+              </div>
+              <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-teal-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border border-slate-200">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Win Rate</p>
+                <p className="text-2xl font-bold text-slate-900">{businessOverviewMetrics.winRate}%</p>
+                <p className="text-xs text-green-600 mt-1">Quotes accepted</p>
+              </div>
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <Target className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border border-slate-200">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Overdue Tasks</p>
+                <p className="text-2xl font-bold text-slate-900">{businessOverviewMetrics.overdueTasksCount}</p>
+                <p className="text-xs text-red-600 mt-1">Need attention</p>
+              </div>
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border border-slate-200">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">New Clients</p>
+                <p className="text-2xl font-bold text-slate-900">{businessOverviewMetrics.newClientsCount}</p>
+                <p className="text-xs text-purple-600 mt-1">This period</p>
+              </div>
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Monthly Sales Target Progress */}
+      <Card className="shadow-sm border border-slate-200">
+        <CardHeader className="border-b border-slate-200">
+          <h3 className="text-lg font-semibold text-slate-900">Monthly Sales Target Progress</h3>
+        </CardHeader>
+        <CardContent className="p-6">
+          {businessOverviewMetrics.monthlyTarget > 0 ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-600">Actual Sales</p>
+                  <p className="text-2xl font-bold text-teal-600">${businessOverviewMetrics.actualSales.toLocaleString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-slate-600">Target</p>
+                  <p className="text-2xl font-bold text-slate-900">${businessOverviewMetrics.monthlyTarget.toLocaleString()}</p>
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-slate-600">Progress</span>
+                  <span className="text-sm font-medium text-slate-900">{Math.min(businessOverviewMetrics.salesTargetProgress, 100).toFixed(1)}%</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-4">
+                  <div 
+                    className={`h-4 rounded-full transition-all ${
+                      businessOverviewMetrics.salesTargetProgress >= 100 ? 'bg-green-500' :
+                      businessOverviewMetrics.salesTargetProgress >= 75 ? 'bg-teal-500' :
+                      businessOverviewMetrics.salesTargetProgress >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${Math.min(businessOverviewMetrics.salesTargetProgress, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-slate-500">No sales target set for this month</p>
+              <p className="text-xs text-slate-400 mt-1">Set targets in Settings &gt; Sales</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Client Engagement Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="shadow-sm border border-slate-200">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Avg Health Score</p>
+                <p className="text-2xl font-bold text-slate-900">{businessOverviewMetrics.avgHealthScore}</p>
+                <p className="text-xs text-slate-500 mt-1">Out of 3.00</p>
+              </div>
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <Heart className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border border-slate-200">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Clients at Risk</p>
+                <p className="text-2xl font-bold text-slate-900">{businessOverviewMetrics.clientsAtRisk}</p>
+                <p className="text-xs text-red-600 mt-1">Red health status</p>
+              </div>
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border border-slate-200">
+          <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Total Clients</p>
-                <p className="text-3xl font-bold text-slate-900">{filteredClients.length}</p>
-                <p className="text-sm text-teal-600 mt-1 flex items-center gap-1">
-                  <Building2 className="h-3 w-3" />
-                  Active accounts
-                </p>
+                <p className="text-2xl font-bold text-slate-900">{filteredClients.length}</p>
+                <p className="text-xs text-teal-600 mt-1">Active accounts</p>
               </div>
-              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-teal-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">New Leads</p>
-                <p className="text-3xl font-bold text-slate-900">{metrics.newLeads}</p>
-                <p className="text-sm text-purple-600 mt-1 flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  To be qualified
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-teal-600" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Capacity & Utilization + Lead Management */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-sm border border-slate-200">
           <CardHeader className="border-b border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900">Conversion Rates</h3>
+            <h3 className="text-lg font-semibold text-slate-900">Team Utilization</h3>
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-slate-600">Campaign CTR</span>
-                  <span className="text-sm font-medium text-slate-900">{conversionRate}%</span>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-600">Utilization Rate</p>
+                  <p className="text-2xl font-bold text-slate-900">{businessOverviewMetrics.utilizationRate}%</p>
                 </div>
-                <div className="w-full bg-slate-200 rounded-full h-2">
-                  <div 
-                    className="bg-teal-600 h-2 rounded-full" 
-                    style={{ width: `${Math.min(parseFloat(conversionRate), 100)}%` }}
-                  />
+                <div>
+                  <p className="text-sm text-slate-600">Hours Logged</p>
+                  <p className="text-2xl font-bold text-teal-600">{businessOverviewMetrics.totalHoursLogged.toFixed(1)}h</p>
                 </div>
               </div>
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-slate-600">Lead Conversion</span>
-                  <span className="text-sm font-medium text-slate-900">{leadConversionRate}%</span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-slate-600">Capacity Used</span>
+                  <span className="text-sm font-medium text-slate-900">{businessOverviewMetrics.utilizationRate}%</span>
                 </div>
-                <div className="w-full bg-slate-200 rounded-full h-2">
+                <div className="w-full bg-slate-200 rounded-full h-3">
                   <div 
-                    className="bg-green-600 h-2 rounded-full" 
-                    style={{ width: `${Math.min(parseFloat(leadConversionRate), 100)}%` }}
+                    className={`h-3 rounded-full ${
+                      parseFloat(businessOverviewMetrics.utilizationRate) >= 90 ? 'bg-green-500' :
+                      parseFloat(businessOverviewMetrics.utilizationRate) >= 70 ? 'bg-teal-500' :
+                      parseFloat(businessOverviewMetrics.utilizationRate) >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}
+                    style={{ width: `${Math.min(parseFloat(businessOverviewMetrics.utilizationRate), 100)}%` }}
                   />
                 </div>
               </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-slate-600">Task Completion</span>
-                  <span className="text-sm font-medium text-slate-900">{taskCompletionRate}%</span>
+              {Object.keys(businessOverviewMetrics.hoursByDepartment).length > 0 && (
+                <div className="pt-4 border-t border-slate-200">
+                  <p className="text-sm font-medium text-slate-700 mb-3">Hours by Role</p>
+                  <div className="space-y-2">
+                    {Object.entries(businessOverviewMetrics.hoursByDepartment)
+                      .sort(([,a], [,b]) => b - a)
+                      .slice(0, 5)
+                      .map(([dept, minutes]) => (
+                        <div key={dept} className="flex items-center justify-between text-sm">
+                          <span className="text-slate-600">{dept}</span>
+                          <span className="font-medium text-slate-900">{(minutes / 60).toFixed(1)}h</span>
+                        </div>
+                      ))
+                    }
+                  </div>
                 </div>
-                <div className="w-full bg-slate-200 rounded-full h-2">
-                  <div 
-                    className="bg-purple-600 h-2 rounded-full" 
-                    style={{ width: `${Math.min(parseFloat(taskCompletionRate), 100)}%` }}
-                  />
-                </div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm border border-slate-200">
           <CardHeader className="border-b border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900">Lead Pipeline</h3>
+            <h3 className="text-lg font-semibold text-slate-900">Lead Management</h3>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="space-y-3">
-              {Object.entries(leadStatusBreakdown).map(([status, count]) => (
-                <div key={status} className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 capitalize">{status}</span>
-                  <Badge variant="outline" className="text-xs">
-                    {count}
-                  </Badge>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+                <div>
+                  <p className="text-sm text-slate-600">Avg Time to Convert</p>
+                  <p className="text-2xl font-bold text-slate-900">{businessOverviewMetrics.avgTimeToConvert} days</p>
                 </div>
-              ))}
+                <div>
+                  <p className="text-sm text-slate-600">New Leads</p>
+                  <p className="text-2xl font-bold text-purple-600">{metrics.newLeads}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-700 mb-3">Top Lead Sources</p>
+                {businessOverviewMetrics.leadSourcePerformance.length > 0 ? (
+                  <div className="space-y-2">
+                    {businessOverviewMetrics.leadSourcePerformance.map((item, index) => (
+                      <div key={item.source} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-medium text-purple-600">{index + 1}</span>
+                          </div>
+                          <span className="text-sm text-slate-700">{item.source}</span>
+                        </div>
+                        <Badge variant="outline" className="text-xs">{item.count} leads</Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">No lead source data available</p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Clients by Vertical & Top Clients */}
+      {/* Clients by Vertical & Lead Pipeline */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-sm border border-slate-200">
           <CardHeader className="border-b border-slate-200">
@@ -1695,34 +2007,19 @@ export default function Reports() {
 
         <Card className="shadow-sm border border-slate-200">
           <CardHeader className="border-b border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900">Top Clients by Revenue</h3>
+            <h3 className="text-lg font-semibold text-slate-900">Lead Pipeline</h3>
           </CardHeader>
           <CardContent className="p-6">
-            {topClients.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-slate-500">No revenue data available</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {topClients.map((item, index) => (
-                  <div key={item.client?.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-slate-600">
-                          {index + 1}
-                        </span>
-                      </div>
-                      <span className="font-medium text-slate-900">
-                        {item.client?.name}
-                      </span>
-                    </div>
-                    <span className="font-semibold text-slate-900">
-                      ${item.revenue.toLocaleString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="space-y-3">
+              {Object.entries(leadStatusBreakdown).map(([status, count]) => (
+                <div key={status} className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 capitalize">{status}</span>
+                  <Badge variant="outline" className="text-xs">
+                    {count}
+                  </Badge>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -1739,8 +2036,8 @@ export default function Reports() {
               <p className="text-sm text-slate-600">Total Clients</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-slate-900">{filteredProjects.length}</p>
-              <p className="text-sm text-slate-600">Total Projects</p>
+              <p className="text-2xl font-bold text-slate-900">{quotesData.length}</p>
+              <p className="text-sm text-slate-600">Total Quotes</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-slate-900">{filteredCampaigns.length}</p>
