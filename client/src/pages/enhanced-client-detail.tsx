@@ -2131,7 +2131,7 @@ const EditableField = ({
       ) : (
         <div className="group cursor-pointer" onClick={() => startEditing(fieldId, value)}>
           {type === 'email' && value ? (
-            <div className="flex items-center gap-2 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 p-1 rounded">
+            <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 group-hover:border-primary/50 p-2 rounded-md transition-colors">
               <a href={`mailto:${value}`} className={`${className} hover:underline flex-1`} onClick={(e) => e.stopPropagation()}>
                 {value}
               </a>
@@ -2149,11 +2149,11 @@ const EditableField = ({
               </Button>
             </div>
           ) : type === 'phone' && value ? (
-            <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+            <p className={`${className} border border-gray-200 dark:border-gray-700 group-hover:bg-gray-50 group-hover:border-primary/50 p-2 rounded-md transition-colors`}>
               {formatPhoneNumber(value)}
             </p>
           ) : type === 'url' && value ? (
-            <div className="flex items-center gap-2 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 p-1 rounded">
+            <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 group-hover:border-primary/50 p-2 rounded-md transition-colors">
               <a href={value} target="_blank" rel="noopener noreferrer" className={`${className} hover:underline flex-1 break-all`} style={{ wordWrap: 'break-word', overflowWrap: 'break-word', maxWidth: '100%' }} onClick={(e) => e.stopPropagation()}>
                 {value.length > 60 ? `${value.substring(0, 60)}...` : value}
               </a>
@@ -2171,15 +2171,15 @@ const EditableField = ({
               </Button>
             </div>
           ) : type === 'currency' && value ? (
-            <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+            <p className={`${className} border border-gray-200 dark:border-gray-700 group-hover:bg-gray-50 group-hover:border-primary/50 p-2 rounded-md transition-colors`}>
               ${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           ) : type === 'multiline' && value ? (
-            <div className={`${className} group-hover:bg-gray-50 p-1 rounded whitespace-pre-wrap`}>
+            <div className={`${className} border border-gray-200 dark:border-gray-700 group-hover:bg-gray-50 group-hover:border-primary/50 p-2 rounded-md whitespace-pre-wrap transition-colors`}>
               {value || "Not specified"}
             </div>
           ) : (type === 'dropdown_multiple' || type === 'checkbox') ? (
-            <div className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+            <div className={`${className} border border-gray-200 dark:border-gray-700 group-hover:bg-gray-50 group-hover:border-primary/50 p-2 rounded-md transition-colors`}>
               {value ? (
                 value.split(',').map((item: string, index: number) => {
                   const trimmedItem = item.trim();
@@ -2194,11 +2194,11 @@ const EditableField = ({
               )}
             </div>
           ) : type === 'radio' && value ? (
-            <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+            <p className={`${className} border border-gray-200 dark:border-gray-700 group-hover:bg-gray-50 group-hover:border-primary/50 p-2 rounded-md transition-colors`}>
               <Badge variant="outline" className="text-xs">{value}</Badge>
             </p>
           ) : (
-            <p className={`${className} group-hover:bg-gray-50 p-1 rounded`}>
+            <p className={`${className} border border-gray-200 dark:border-gray-700 group-hover:bg-gray-50 group-hover:border-primary/50 p-2 rounded-md transition-colors`}>
               {value || "Not specified"}
             </p>
           )}
