@@ -27096,7 +27096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const currentUserId = getAuthenticatedUserId(req);
       console.log("📊 1-on-1 Performance Report - currentUserId:", currentUserId);
-      if (!rawUserId) {
+      if (!currentUserId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
