@@ -5210,18 +5210,26 @@ export default function EnhancedClientDetail() {
                               </AccordionTrigger>
                               <div className="flex items-center gap-2 ml-4">
                                 {!isEditing ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      setEditingSections(prev => new Set([...prev, section.id]));
-                                    }}
-                                    data-testid={`button-edit-${section.key}`}
-                                    title="Edit"
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                  </Button>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            setEditingSections(prev => new Set([...prev, section.id]));
+                                          }}
+                                          data-testid={`button-edit-${section.key}`}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <Edit2 className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Edit</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 ) : (
                                   <div className="flex items-center gap-2">
                                     <Button
