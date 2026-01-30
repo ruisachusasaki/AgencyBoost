@@ -287,14 +287,15 @@ export default function Clients() {
 
   // Load saved column preferences on mount (runs once)
   React.useEffect(() => {
-    if (savedPreferences && !hasLoadedPreferencesRef.current) {
-      if (savedPreferences.preferences?.visibleColumns) {
+    if (savedPreferences !== undefined && !hasLoadedPreferencesRef.current) {
+      if (savedPreferences?.preferences?.visibleColumns) {
         // Always include columns marked as alwaysVisible
         const alwaysVisibleKeys = AVAILABLE_COLUMNS.filter(col => col.alwaysVisible).map(col => col.key);
         const savedColumns = new Set(savedPreferences.preferences.visibleColumns);
         alwaysVisibleKeys.forEach(key => savedColumns.add(key));
         setVisibleColumns(savedColumns);
       }
+      // Mark as loaded even if there were no saved preferences, so saving can work
       hasLoadedPreferencesRef.current = true;
     }
   }, [savedPreferences]);
