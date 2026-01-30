@@ -1519,15 +1519,15 @@ export default function Reports() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600">Active Projects</p>
-                <p className="text-3xl font-bold text-slate-900">{metrics.activeProjects}</p>
+                <p className="text-sm font-medium text-slate-600">Total Clients</p>
+                <p className="text-3xl font-bold text-slate-900">{filteredClients.length}</p>
                 <p className="text-sm text-teal-600 mt-1 flex items-center gap-1">
-                  <FolderOpen className="h-3 w-3" />
-                  In progress
+                  <Building2 className="h-3 w-3" />
+                  Active accounts
                 </p>
               </div>
               <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
-                <FolderOpen className="h-6 w-6 text-teal-600" />
+                <Building2 className="h-6 w-6 text-teal-600" />
               </div>
             </div>
           </CardContent>
@@ -1639,39 +1639,74 @@ export default function Reports() {
         </Card>
       </div>
 
-      {/* Campaign Performance & Top Clients */}
+      {/* Clients by Vertical & Top Clients */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-sm border border-slate-200">
           <CardHeader className="border-b border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900">Campaign Performance</h3>
+            <h3 className="text-lg font-semibold text-slate-900">Clients by Vertical</h3>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-slate-900">{metrics.activeCampaigns}</p>
-                <p className="text-sm text-slate-600">Active Campaigns</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-slate-900">
-                  ${metrics.campaignSpend.toLocaleString()}
-                </p>
-                <p className="text-sm text-slate-600">Total Spend</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <p className="text-lg font-semibold text-slate-900">
-                  {metrics.campaignImpressions.toLocaleString()}
-                </p>
-                <p className="text-sm text-slate-600">Impressions</p>
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-semibold text-slate-900">
-                  {metrics.campaignClicks.toLocaleString()}
-                </p>
-                <p className="text-sm text-slate-600">Clicks</p>
-              </div>
-            </div>
+            {(() => {
+              const verticalCounts: Record<string, number> = {};
+              filteredClients.forEach((client: any) => {
+                const vertical = client.customFieldValues?.['Client Vertical'] || 'Not Specified';
+                verticalCounts[vertical] = (verticalCounts[vertical] || 0) + 1;
+              });
+              
+              const verticalData = Object.entries(verticalCounts)
+                .map(([name, value]) => ({ name, value }))
+                .sort((a, b) => b.value - a.value);
+              
+              const COLORS = ['#00C9C6', '#8B5CF6', '#F59E0B', '#EC4899', '#10B981', '#3B82F6', '#EF4444', '#6366F1'];
+              
+              if (verticalData.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <PieChart className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-slate-500">No client vertical data available</p>
+                  </div>
+                );
+              }
+              
+              return (
+                <div className="flex flex-col">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <RechartsPieChart>
+                      <Pie
+                        data={verticalData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {verticalData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip 
+                        formatter={(value: number, name: string) => [`${value} clients`, name]}
+                      />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                  <div className="mt-4 space-y-2 max-h-[150px] overflow-y-auto">
+                    {verticalData.map((item, index) => (
+                      <div key={item.name} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          />
+                          <span className="text-slate-700">{item.name}</span>
+                        </div>
+                        <span className="font-medium text-slate-900">{item.value} ({((item.value / filteredClients.length) * 100).toFixed(1)}%)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
 
