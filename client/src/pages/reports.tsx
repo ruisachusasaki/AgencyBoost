@@ -1553,7 +1553,7 @@ export default function Reports() {
       </div>
 
       {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-sm border border-slate-200">
           <CardHeader className="border-b border-slate-200">
             <h3 className="text-lg font-semibold text-slate-900">Conversion Rates</h3>
@@ -1596,26 +1596,6 @@ export default function Reports() {
                   />
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border border-slate-200">
-          <CardHeader className="border-b border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900">Project Status</h3>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="space-y-3">
-              {Object.entries(projectStatusBreakdown).map(([status, count]) => (
-                <div key={status} className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 capitalize">
-                    {status.replace('_', ' ')}
-                  </span>
-                  <Badge variant="outline" className="text-xs">
-                    {count}
-                  </Badge>
-                </div>
-              ))}
             </div>
           </CardContent>
         </Card>
