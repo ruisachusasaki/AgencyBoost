@@ -54,10 +54,11 @@ interface Column {
   label: string;
   sortable: boolean;
   defaultVisible: boolean;
+  alwaysVisible?: boolean;
 }
 
 const AVAILABLE_COLUMNS: Column[] = [
-  { key: 'client', label: 'Client', sortable: true, defaultVisible: true },
+  { key: 'client', label: 'Client', sortable: true, defaultVisible: true, alwaysVisible: true },
   { key: 'name', label: 'Name', sortable: true, defaultVisible: true },
   { key: 'phone', label: 'Phone Number', sortable: true, defaultVisible: true },
   { key: 'email', label: 'Email', sortable: true, defaultVisible: true },
@@ -286,7 +287,11 @@ export default function Clients() {
   React.useEffect(() => {
     if (savedPreferences && !hasLoadedPreferencesRef.current) {
       if (savedPreferences.preferences?.visibleColumns) {
-        setVisibleColumns(new Set(savedPreferences.preferences.visibleColumns));
+        // Always include columns marked as alwaysVisible
+        const alwaysVisibleKeys = AVAILABLE_COLUMNS.filter(col => col.alwaysVisible).map(col => col.key);
+        const savedColumns = new Set(savedPreferences.preferences.visibleColumns);
+        alwaysVisibleKeys.forEach(key => savedColumns.add(key));
+        setVisibleColumns(savedColumns);
       }
       hasLoadedPreferencesRef.current = true;
     }
@@ -1268,6 +1273,10 @@ export default function Clients() {
   };
 
   const toggleColumnVisibility = (columnKey: string) => {
+    // Don't allow toggling always-visible columns
+    const column = availableColumns.find(col => col.key === columnKey);
+    if (column?.alwaysVisible) return;
+    
     const newVisibleColumns = new Set(visibleColumns);
     if (newVisibleColumns.has(columnKey)) {
       newVisibleColumns.delete(columnKey);
@@ -1871,7 +1880,9 @@ export default function Clients() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 max-h-96 overflow-y-auto">
-              {availableColumns.map((column) => (
+              {availableColumns
+                .filter((column) => !column.alwaysVisible)
+                .map((column) => (
                 <DropdownMenuCheckboxItem
                   key={column.key}
                   checked={visibleColumns.has(column.key)}
