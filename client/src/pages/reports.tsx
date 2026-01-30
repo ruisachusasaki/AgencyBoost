@@ -2047,10 +2047,10 @@ export default function Reports() {
                       <HealthSortableHeader field="weekStartDate">Week</HealthSortableHeader>
                       <HealthSortableHeader field="healthIndicator">Health Status</HealthSortableHeader>
                       <HealthSortableHeader field="averageScore">Score</HealthSortableHeader>
-                      <TableHead>Goals</TableHead>
-                      <TableHead>Fulfillment</TableHead>
-                      <TableHead>Relationship</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <HealthSortableHeader field="goals">Goals</HealthSortableHeader>
+                      <HealthSortableHeader field="fulfillment">Fulfillment</HealthSortableHeader>
+                      <HealthSortableHeader field="relationship">Relationship</HealthSortableHeader>
+                      <HealthSortableHeader field="clientActions">Actions</HealthSortableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
