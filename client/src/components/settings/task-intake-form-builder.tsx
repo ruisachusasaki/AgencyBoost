@@ -5,7 +5,7 @@ import {
   Plus, Edit, Trash2, GripVertical, Save, X, ChevronDown, ChevronUp, 
   MessageSquare, Hash, Calendar, Type, ListChecks, ArrowRight, Copy,
   CheckCircle2, Circle, ToggleLeft, Building2, Users, Eye, ChevronLeft,
-  Check, RotateCcw, LayoutGrid, List, Link, AlignLeft
+  Check, RotateCcw, LayoutGrid, List, Link, AlignLeft, Info
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { IntakeSectionBuilder } from "./intake-section-builder";
@@ -79,6 +79,7 @@ type TaskIntakeQuestion = {
   questionText: string;
   questionType: QuestionType;
   helpText?: string;
+  tooltip?: string;
   internalLabel?: string;
   isRequired: boolean;
   order: number;
@@ -133,6 +134,7 @@ const questionFormSchema = z.object({
   questionText: z.string().min(1, "Question text is required"),
   questionType: z.enum(["single_choice", "multi_choice", "text", "number", "date", "client", "department", "url", "textarea"]),
   helpText: z.string().optional(),
+  tooltip: z.string().optional(),
   internalLabel: z.string().optional(),
   isRequired: z.boolean().default(true),
   options: z.array(z.object({ optionText: z.string() })).optional(),
@@ -182,6 +184,7 @@ export function TaskIntakeFormBuilder() {
       questionText: "",
       questionType: "single_choice",
       helpText: "",
+      tooltip: "",
       isRequired: true,
       options: [],
       displayType: "radio",
@@ -282,6 +285,7 @@ export function TaskIntakeFormBuilder() {
       questionText: "",
       questionType: "single_choice",
       helpText: "",
+      tooltip: "",
       internalLabel: "",
       isRequired: true,
       options: [],
@@ -305,6 +309,7 @@ export function TaskIntakeFormBuilder() {
         questionText: question.questionText,
         questionType: question.questionType,
         helpText: question.helpText || "",
+        tooltip: question.tooltip || "",
         internalLabel: question.internalLabel || "",
         isRequired: question.isRequired,
         displayType: question.settings?.displayType || "radio",
@@ -809,6 +814,29 @@ export function TaskIntakeFormBuilder() {
                     </FormControl>
                     <FormDescription>
                       This text appears below the question to provide additional context.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="tooltip"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      Tooltip (Optional)
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Tooltip text shown when user hovers over (i) icon"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      This text appears in a tooltip when users hover over the info icon next to the question.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

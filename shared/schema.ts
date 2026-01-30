@@ -4926,6 +4926,7 @@ export const taskIntakeQuestions = pgTable("task_intake_questions", {
   questionText: text("question_text").notNull(),
   questionType: text("question_type").notNull(), // single_choice, multi_choice, text, number, date
   helpText: text("help_text"), // optional hint below the question
+  tooltip: text("tooltip"), // tooltip content shown on hover with (i) icon
   internalLabel: text("internal_label"), // admin-only label for organizing questions in logic rules
   isRequired: boolean("is_required").default(true),
   order: integer("order").notNull().default(0),
