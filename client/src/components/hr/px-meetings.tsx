@@ -44,7 +44,9 @@ import {
   Building2,
   Lock,
   Briefcase,
-  ExternalLink
+  ExternalLink,
+  User,
+  UserPlus
 } from "lucide-react";
 
 interface Staff {
@@ -148,6 +150,9 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     isCompleted: boolean;
     taskId?: string;
     notes?: string;
+    createdById?: string;
+    assignedToId?: string;
+    createdAt?: string;
   }
   
   const [salesOpportunities, setSalesOpportunities] = useState<CheckableItem[]>([]);
@@ -206,7 +211,16 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         if (typeof item === 'string') {
           return { id: `item-${index}-${Date.now()}`, content: item, isCompleted: false };
         }
-        return { id: item.id || `item-${index}-${Date.now()}`, content: item.content || '', isCompleted: item.isCompleted || false };
+        return { 
+          id: item.id || `item-${index}-${Date.now()}`, 
+          content: item.content || '', 
+          isCompleted: item.isCompleted || false,
+          taskId: item.taskId,
+          notes: item.notes,
+          createdById: item.createdById,
+          assignedToId: item.assignedToId,
+          createdAt: item.createdAt
+        };
       });
     } catch {
       return value ? [{ id: `item-0-${Date.now()}`, content: value, isCompleted: false }] : [];
@@ -467,11 +481,14 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const handleAddSalesOpp = () => {
     if (newSalesOpp.trim()) {
       const newId = `sales-${Date.now()}`;
+      const currentUserId = currentUser?.staffId || currentUser?.id;
       setSalesOpportunities([...salesOpportunities, { 
         id: newId, 
         content: newSalesOpp.trim(), 
         isCompleted: false,
-        notes: newSalesOppNotes.trim() || undefined
+        notes: newSalesOppNotes.trim() || undefined,
+        createdById: currentUserId,
+        createdAt: new Date().toISOString()
       }]);
       setHasUnsavedChanges(true);
       setNewSalesOpp("");
@@ -504,11 +521,14 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const handleAddAreaOpp = () => {
     if (newAreaOpp.trim()) {
       const newId = `area-${Date.now()}`;
+      const currentUserId = currentUser?.staffId || currentUser?.id;
       setAreasOfOpportunities([...areasOfOpportunities, { 
         id: newId, 
         content: newAreaOpp.trim(), 
         isCompleted: false,
-        notes: newAreaOppNotes.trim() || undefined
+        notes: newAreaOppNotes.trim() || undefined,
+        createdById: currentUserId,
+        createdAt: new Date().toISOString()
       }]);
       setHasUnsavedChanges(true);
       setNewAreaOpp("");
@@ -540,7 +560,14 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
   const handleAddActionItem = () => {
     if (newActionItem.trim()) {
-      setActionItems([...actionItems, { id: `action-${Date.now()}`, content: newActionItem.trim(), isCompleted: false }]);
+      const currentUserId = currentUser?.staffId || currentUser?.id;
+      setActionItems([...actionItems, { 
+        id: `action-${Date.now()}`, 
+        content: newActionItem.trim(), 
+        isCompleted: false,
+        createdById: currentUserId,
+        createdAt: new Date().toISOString()
+      }]);
       setHasUnsavedChanges(true);
       setNewActionItem("");
     }
@@ -554,6 +581,42 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const handleToggleActionItem = (id: string) => {
     setActionItems(actionItems.map(item => 
       item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
+    ));
+    setHasUnsavedChanges(true);
+  };
+
+  // Helper to get staff name by ID
+  const getStaffName = (staffId: string | undefined): string => {
+    if (!staffId) return "";
+    const staffMember = allStaff.find(s => s.id === staffId);
+    if (staffMember) {
+      return staffMember.firstName && staffMember.lastName 
+        ? `${staffMember.firstName} ${staffMember.lastName}`
+        : staffMember.name || "Unknown";
+    }
+    return "";
+  };
+
+  // Update assignment for sales opportunity
+  const handleUpdateSalesOppAssignment = (id: string, assignedToId: string | undefined) => {
+    setSalesOpportunities(salesOpportunities.map(item => 
+      item.id === id ? { ...item, assignedToId } : item
+    ));
+    setHasUnsavedChanges(true);
+  };
+
+  // Update assignment for area of opportunity
+  const handleUpdateAreaOppAssignment = (id: string, assignedToId: string | undefined) => {
+    setAreasOfOpportunities(areasOfOpportunities.map(item => 
+      item.id === id ? { ...item, assignedToId } : item
+    ));
+    setHasUnsavedChanges(true);
+  };
+
+  // Update assignment for action item
+  const handleUpdateActionItemAssignment = (id: string, assignedToId: string | undefined) => {
+    setActionItems(actionItems.map(item => 
+      item.id === id ? { ...item, assignedToId } : item
     ));
     setHasUnsavedChanges(true);
   };
@@ -1031,9 +1094,41 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                             onChange={() => handleToggleSalesOpp(opp.id)}
                             className="h-4 w-4 rounded-full cursor-pointer accent-primary"
                           />
-                          <span className={`flex-1 ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
-                            {opp.content}
-                          </span>
+                          <div className="flex-1 min-w-0">
+                            <span className={`block ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                              {opp.content}
+                            </span>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              {opp.createdById && (
+                                <span className="flex items-center gap-1">
+                                  <User className="h-3 w-3" />
+                                  Added by {getStaffName(opp.createdById)}
+                                </span>
+                              )}
+                              {opp.assignedToId && (
+                                <span className="flex items-center gap-1">
+                                  <UserPlus className="h-3 w-3" />
+                                  Assigned to {getStaffName(opp.assignedToId)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Select
+                            value={opp.assignedToId || "__unassigned__"}
+                            onValueChange={(value) => handleUpdateSalesOppAssignment(opp.id, value === "__unassigned__" ? undefined : value)}
+                          >
+                            <SelectTrigger className="w-[140px] h-7 text-xs">
+                              <SelectValue placeholder="Assign to..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                              {allStaff.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>
+                                  {s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1116,9 +1211,41 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                             onChange={() => handleToggleAreaOpp(opp.id)}
                             className="h-4 w-4 rounded-full cursor-pointer accent-primary"
                           />
-                          <span className={`flex-1 ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
-                            {opp.content}
-                          </span>
+                          <div className="flex-1 min-w-0">
+                            <span className={`block ${opp.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                              {opp.content}
+                            </span>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              {opp.createdById && (
+                                <span className="flex items-center gap-1">
+                                  <User className="h-3 w-3" />
+                                  Added by {getStaffName(opp.createdById)}
+                                </span>
+                              )}
+                              {opp.assignedToId && (
+                                <span className="flex items-center gap-1">
+                                  <UserPlus className="h-3 w-3" />
+                                  Assigned to {getStaffName(opp.assignedToId)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Select
+                            value={opp.assignedToId || "__unassigned__"}
+                            onValueChange={(value) => handleUpdateAreaOppAssignment(opp.id, value === "__unassigned__" ? undefined : value)}
+                          >
+                            <SelectTrigger className="w-[140px] h-7 text-xs">
+                              <SelectValue placeholder="Assign to..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                              {allStaff.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>
+                                  {s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1211,48 +1338,82 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   </Label>
                   <div className="space-y-2">
                     {actionItems.map((item) => (
-                      <div key={item.id} className="flex items-center gap-2 p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
-                        <input
-                          type="checkbox"
-                          checked={item.isCompleted}
-                          onChange={() => handleToggleActionItem(item.id)}
-                          className="h-4 w-4 rounded-full cursor-pointer accent-primary"
-                        />
-                        <span className={`flex-1 ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
-                          {item.content}
-                        </span>
-                        {item.taskId ? (
-                          <Link href={`/tasks/${item.taskId}`}>
+                      <div key={item.id} className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={item.isCompleted}
+                            onChange={() => handleToggleActionItem(item.id)}
+                            className="h-4 w-4 rounded-full cursor-pointer accent-primary"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className={`block ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                              {item.content}
+                            </span>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              {item.createdById && (
+                                <span className="flex items-center gap-1">
+                                  <User className="h-3 w-3" />
+                                  Added by {getStaffName(item.createdById)}
+                                </span>
+                              )}
+                              {item.assignedToId && (
+                                <span className="flex items-center gap-1">
+                                  <UserPlus className="h-3 w-3" />
+                                  Assigned to {getStaffName(item.assignedToId)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Select
+                            value={item.assignedToId || "__unassigned__"}
+                            onValueChange={(value) => handleUpdateActionItemAssignment(item.id, value === "__unassigned__" ? undefined : value)}
+                          >
+                            <SelectTrigger className="w-[140px] h-7 text-xs">
+                              <SelectValue placeholder="Assign to..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                              {allStaff.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>
+                                  {s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {item.taskId ? (
+                            <Link href={`/tasks/${item.taskId}`}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
+                                title="View Task"
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                View Task
+                              </Button>
+                            </Link>
+                          ) : (
                             <Button
                               size="sm"
                               variant="ghost"
+                              onClick={() => handleOpenConvertToTask(item)}
                               className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
-                              title="View Task"
+                              title="Convert to Task"
                             >
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              View Task
+                              <Briefcase className="h-3 w-3 mr-1" />
+                              Task
                             </Button>
-                          </Link>
-                        ) : (
+                          )}
                           <Button
-                            size="sm"
                             variant="ghost"
-                            onClick={() => handleOpenConvertToTask(item)}
-                            className="h-7 px-2 text-xs text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10"
-                            title="Convert to Task"
+                            size="sm"
+                            onClick={() => handleRemoveActionItem(item.id)}
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                           >
-                            <Briefcase className="h-3 w-3 mr-1" />
-                            Task
+                            <X className="h-4 w-4" />
                           </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveActionItem(item.id)}
-                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        </div>
                       </div>
                     ))}
                     <div className="flex gap-2">
