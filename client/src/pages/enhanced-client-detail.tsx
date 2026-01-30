@@ -4618,6 +4618,9 @@ export default function EnhancedClientDetail() {
       // Also invalidate to ensure fresh data on next fetch
       await queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
       
+      // Invalidate the clients list so the table view shows updated data
+      await queryClient.invalidateQueries({ queryKey: ['/api/clients'], exact: false });
+      
       toast({
         title: "Field Updated",
         variant: "success",
