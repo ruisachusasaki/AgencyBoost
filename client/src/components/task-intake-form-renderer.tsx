@@ -351,8 +351,8 @@ function QuestionRenderer({
   const settings = question.settings || {};
 
   const renderInput = () => {
-    // Special handling for client_select question
-    if (question.internalLabel === "client_select") {
+    // Special handling for client_select question (by internalLabel or questionType)
+    if (question.internalLabel === "client_select" || question.questionType === "client") {
       return (
         <Select
           value={String(value || "")}
@@ -687,9 +687,9 @@ export function TaskIntakeFormRenderer({
     },
   });
 
-  // Fetch departments/teams for the department dropdown
+  // Fetch departments/teams for the department dropdown (using task-intake endpoint for permissions)
   const { data: departments = [] } = useQuery<Department[]>({
-    queryKey: ["/api/departments"],
+    queryKey: ["/api/task-intake/departments"],
   });
 
   const visibleSections = useMemo(() => {

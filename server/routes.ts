@@ -23252,6 +23252,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Get departments for task intake form (no special permissions required)
+  app.get("/api/task-intake/departments", requireAuth(), async (req, res) => {
+    try {
+      const departmentList = await db.select({
+        id: departments.id,
+        name: departments.name,
+      })
+      .from(departments)
+      .where(eq(departments.isActive, true))
+      .orderBy(asc(departments.name));
+      
+      res.json(departmentList);
+    } catch (error) {
+      console.error("Error fetching departments for task intake:", error);
+      res.status(500).json({ error: "Failed to fetch departments" });
+    }
+  });
   // Get form data for form renderer (returns sections with questions and options, ordered)
   app.get("/api/task-intake/form", requireAuth(), async (req, res) => {
     try {
@@ -23312,6 +23330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         descriptionTemplate: section.descriptionTemplate,
         questions: questions
           .filter(q => q.sectionId === section.id)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
           .map(q => ({
             id: q.id,
             questionText: q.questionText,
