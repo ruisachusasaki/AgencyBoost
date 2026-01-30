@@ -934,8 +934,11 @@ export default function Reports() {
   function calculateTopHealthClients(scores: Array<ClientHealthScore & { clientName: string; clientEmail: string }>, clientsList: Client[]) {
     const clientScores = scores.reduce((acc, score) => {
       if (!acc[score.clientId]) {
+        // Look up the business name from the clients list
+        const client = clientsList.find(c => c.id === score.clientId);
+        const businessName = client?.companyName || score.clientName;
         acc[score.clientId] = {
-          clientName: score.clientName,
+          clientName: businessName,
           scores: [],
           avgScore: 0
         };
