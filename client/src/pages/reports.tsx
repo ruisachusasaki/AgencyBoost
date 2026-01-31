@@ -302,7 +302,12 @@ export default function Reports() {
   };
 
   const { data: clientsData, isLoading: clientsLoading } = useQuery<{clients: Client[]}>({
-    queryKey: ["/api/clients"],
+    queryKey: ["/api/clients", { limit: 10000 }],
+    queryFn: async () => {
+      const response = await fetch('/api/clients?limit=10000');
+      if (!response.ok) throw new Error('Failed to fetch clients');
+      return response.json();
+    }
   });
 
   const clients = clientsData?.clients || [];
@@ -1942,10 +1947,11 @@ export default function Reports() {
           </CardHeader>
           <CardContent className="p-6">
             {(() => {
-              const CLIENT_VERTICAL_FIELD_ID = 'cac6e6ee-bdf9-48bd-81a7-48672d2453ae';
               const verticalCounts: Record<string, number> = {};
               filteredClients.forEach((client: any) => {
-                const vertical = client.customFieldValues?.[CLIENT_VERTICAL_FIELD_ID] || 'Not Specified';
+                // Use pre-extracted clientVertical from backend, or fall back to customFieldValues
+                const CLIENT_VERTICAL_FIELD_ID = 'cac6e6ee-bdf9-48bd-81a7-48672d2453ae';
+                const vertical = client.clientVertical || client.customFieldValues?.[CLIENT_VERTICAL_FIELD_ID] || 'Not Specified';
                 verticalCounts[vertical] = (verticalCounts[vertical] || 0) + 1;
               });
               
