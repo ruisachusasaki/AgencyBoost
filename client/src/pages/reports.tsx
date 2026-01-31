@@ -1942,9 +1942,10 @@ export default function Reports() {
           </CardHeader>
           <CardContent className="p-6">
             {(() => {
+              const CLIENT_VERTICAL_FIELD_ID = 'cac6e6ee-bdf9-48bd-81a7-48672d2453ae';
               const verticalCounts: Record<string, number> = {};
               filteredClients.forEach((client: any) => {
-                const vertical = client.customFieldValues?.['Client Vertical'] || 'Not Specified';
+                const vertical = client.customFieldValues?.[CLIENT_VERTICAL_FIELD_ID] || 'Not Specified';
                 verticalCounts[vertical] = (verticalCounts[vertical] || 0) + 1;
               });
               
