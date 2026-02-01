@@ -1947,8 +1947,9 @@ export default function Reports() {
           </CardHeader>
           <CardContent className="p-6">
             {(() => {
+              // Use ALL clients for vertical distribution (not date-filtered)
               const verticalCounts: Record<string, number> = {};
-              filteredClients.forEach((client: any) => {
+              clients.forEach((client: any) => {
                 // Use pre-extracted clientVertical from backend, or fall back to customFieldValues
                 const CLIENT_VERTICAL_FIELD_ID = 'cac6e6ee-bdf9-48bd-81a7-48672d2453ae';
                 const vertical = client.clientVertical || client.customFieldValues?.[CLIENT_VERTICAL_FIELD_ID] || 'Not Specified';
@@ -2002,7 +2003,7 @@ export default function Reports() {
                           />
                           <span className="text-slate-700">{item.name}</span>
                         </div>
-                        <span className="font-medium text-slate-900">{item.value} ({((item.value / filteredClients.length) * 100).toFixed(1)}%)</span>
+                        <span className="font-medium text-slate-900">{item.value} ({((item.value / clients.length) * 100).toFixed(1)}%)</span>
                       </div>
                     ))}
                   </div>
