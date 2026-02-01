@@ -20,7 +20,9 @@ import {
   ExternalLink,
   Copy,
   ArrowLeft,
-  Filter
+  Filter,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { CalendarCreationModal } from "@/components/CalendarCreationModal";
 
@@ -62,6 +64,10 @@ export default function CalendarSettings() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [ownerFilter, setOwnerFilter] = useState<string>("all");
   
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
   // Google Calendar integration states
   const [googleCalendarStatus, setGoogleCalendarStatus] = useState<"loading" | "connected" | "disconnected">("loading");
   const [connectedCalendars, setConnectedCalendars] = useState<ConnectedCalendar[]>([]);
@@ -100,6 +106,18 @@ export default function CalendarSettings() {
       return true;
     });
   }, [calendars, statusFilter, typeFilter, ownerFilter]);
+  
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredCalendars.length / itemsPerPage);
+  const paginatedCalendars = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredCalendars.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredCalendars, currentPage, itemsPerPage]);
+  
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, typeFilter, ownerFilter]);
 
   // Get unique owners for filter dropdown
   const calendarOwners = useMemo(() => {
@@ -565,7 +583,7 @@ export default function CalendarSettings() {
                 </CardContent>
               </Card>
             ) : (
-              filteredCalendars.map((calendar: CalendarData) => (
+              paginatedCalendars.map((calendar: CalendarData) => (
               <Card key={calendar.id} className="border border-gray-200 dark:border-gray-700">
                 <CardHeader className="pb-4">
                   <div className="flex justify-between items-start">
@@ -657,6 +675,48 @@ export default function CalendarSettings() {
                 </CardContent>
               </Card>
               ))
+            )}
+            
+            {/* Pagination Controls */}
+            {filteredCalendars.length > itemsPerPage && (
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Showing {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredCalendars.length)} of {filteredCalendars.length} calendars
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <Button
+                        key={page}
+                        variant={page === currentPage ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </div>
