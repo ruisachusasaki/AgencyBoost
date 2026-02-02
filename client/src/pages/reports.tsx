@@ -55,6 +55,7 @@ import {
   Pencil,
   ArrowLeftRight,
   ArrowRight,
+  StickyNote,
 } from "lucide-react";
 import { 
   exportTimeTrackingData,
@@ -138,6 +139,13 @@ export default function Reports() {
   const [showLatestOnly, setShowLatestOnly] = useState(false);
   const [healthSortField, setHealthSortField] = useState<string>("weekStartDate");
   const [healthSortOrder, setHealthSortOrder] = useState<"asc" | "desc">("desc");
+  const [healthNotesModalOpen, setHealthNotesModalOpen] = useState(false);
+  const [selectedHealthScore, setSelectedHealthScore] = useState<{
+    clientName: string;
+    weeklyRecap: string | null;
+    opportunities: string | null;
+    solutions: string | null;
+  } | null>(null);
 
   // Tasks-specific state
   const [taskReportType, setTaskReportType] = useState("time-tracking");
@@ -2356,6 +2364,7 @@ export default function Reports() {
                       <HealthSortableHeader field="fulfillment">Fulfillment</HealthSortableHeader>
                       <HealthSortableHeader field="relationship">Relationship</HealthSortableHeader>
                       <HealthSortableHeader field="clientActions">Actions</HealthSortableHeader>
+                      <TableHead className="text-center">Notes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2426,6 +2435,38 @@ export default function Reports() {
                           }`}>
                             {score.clientActions}
                           </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-8 w-8 p-0 ${
+                                    (score.weeklyRecap || score.opportunities || score.solutions) 
+                                      ? 'text-[#00C9C6] hover:text-[#00a8a6] hover:bg-[#00C9C6]/10' 
+                                      : 'text-slate-300 hover:text-slate-400'
+                                  }`}
+                                  onClick={() => {
+                                    setSelectedHealthScore({
+                                      clientName: score.clientCompany || score.clientName,
+                                      weeklyRecap: score.weeklyRecap,
+                                      opportunities: score.opportunities,
+                                      solutions: score.solutions,
+                                    });
+                                    setHealthNotesModalOpen(true);
+                                  }}
+                                  data-testid={`button-health-notes-${index}`}
+                                >
+                                  <StickyNote className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{(score.weeklyRecap || score.opportunities || score.solutions) ? 'View Notes' : 'No Notes'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -2513,6 +2554,76 @@ export default function Reports() {
               </div>
             </div>
           )}
+
+          {/* Health Notes Modal */}
+          <Dialog open={healthNotesModalOpen} onOpenChange={setHealthNotesModalOpen}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <StickyNote className="h-5 w-5 text-[#00C9C6]" />
+                  Health Notes - {selectedHealthScore?.clientName}
+                </DialogTitle>
+                <DialogDescription>
+                  Weekly health notes from client health tracking
+                </DialogDescription>
+              </DialogHeader>
+              
+              {selectedHealthScore && (
+                <div className="space-y-6 py-4">
+                  {/* Weekly Recap */}
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-[#00C9C6] rounded-full"></span>
+                      Weekly Recap
+                    </h4>
+                    <div className="bg-slate-50 rounded-lg p-4 min-h-[80px]">
+                      {selectedHealthScore.weeklyRecap ? (
+                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedHealthScore.weeklyRecap}</p>
+                      ) : (
+                        <p className="text-sm text-slate-400 italic">No weekly recap notes</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Opportunities */}
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Opportunities
+                    </h4>
+                    <div className="bg-slate-50 rounded-lg p-4 min-h-[80px]">
+                      {selectedHealthScore.opportunities ? (
+                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedHealthScore.opportunities}</p>
+                      ) : (
+                        <p className="text-sm text-slate-400 italic">No opportunities noted</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Solutions */}
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                      Solutions
+                    </h4>
+                    <div className="bg-slate-50 rounded-lg p-4 min-h-[80px]">
+                      {selectedHealthScore.solutions ? (
+                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedHealthScore.solutions}</p>
+                      ) : (
+                        <p className="text-sm text-slate-400 italic">No solutions noted</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setHealthNotesModalOpen(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
