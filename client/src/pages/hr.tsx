@@ -2649,11 +2649,11 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
         </div>
       )}
 
-      {activeTab === "approvals" && isManager && (
+      {activeTab === "approvals" && (isManager || isAdmin) && (
         <div className="space-y-6">
           <div>
             <h2 className="text-2xl font-bold">Time Off Approvals</h2>
-            <p className="text-slate-600">Review and approve time off requests from your team</p>
+            <p className="text-slate-600">Review and approve time off requests{isAdmin && !isManager ? ' from all team members' : ' from your team'}</p>
           </div>
 
           <ApprovalBoard />
