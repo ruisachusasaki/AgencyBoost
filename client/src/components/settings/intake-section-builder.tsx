@@ -199,7 +199,8 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
 
   const reorderSectionsMutation = useMutation({
     mutationFn: async (sectionIds: string[]) => {
-      const response = await apiRequest("PUT", `/api/task-intake-forms/${formId}/sections/reorder`, { sectionIds });
+      const sections = sectionIds.map((id, index) => ({ id, orderIndex: index }));
+      const response = await apiRequest("PUT", `/api/task-intake-forms/${formId}/sections/reorder`, { sections });
       return response.json();
     },
     onSuccess: () => {
