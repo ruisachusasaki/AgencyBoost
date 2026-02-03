@@ -5400,7 +5400,7 @@ export class DbStorage implements IStorage {
   }
   
   async getTimeEntriesByDateRange(dateFrom: string, dateTo: string, userId?: string, clientId?: string): Promise<Array<Task & { timeEntries: import("@shared/schema").TimeEntry[] }>> {
-    console.log(`🔍 getTimeEntriesByDateRange called with userId: ${userId}`);
+    console.log(`🔍 getTimeEntriesByDateRange called with:`, { dateFrom, dateTo, userId, clientId });
     
     // For dev-admin users, ignore the userId filter to show all data
     let effectiveUserId = userId;
@@ -5440,19 +5440,48 @@ export class DbStorage implements IStorage {
       .where(and(...conditions));
     
     // Filter time entries to only include those in the date range and for the specified user
-    return tasksData.map(({ task, clientCompany, clientName }) => ({
-      ...task,
-      clientName: clientCompany || clientName || undefined,
-      timeEntries: task.timeEntries && Array.isArray(task.timeEntries) 
-        ? (task.timeEntries as any[]).filter((entry: any) => {
-            if (!entry.startTime) return false;
-            const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
-            const dateMatch = entryDate >= dateFrom && entryDate <= dateTo;
-            const userMatch = !effectiveUserId || entry.userId === effectiveUserId;
-            return dateMatch && userMatch;
-          }) as import("@shared/schema").TimeEntry[]
-        : []
-    }));
+    console.log(`🔍 getTimeEntriesByDateRange: Found ${tasksData.length} tasks with potential time entries`);
+    
+    const result = tasksData.map(({ task, clientCompany, clientName }) => {
+      const originalEntries = (task.timeEntries && Array.isArray(task.timeEntries)) ? task.timeEntries as any[] : [];
+      const filteredEntries = originalEntries.filter((entry: any) => {
+        if (!entry.startTime) return false;
+        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+        const dateMatch = entryDate >= dateFrom && entryDate <= dateTo;
+        const userMatch = !effectiveUserId || entry.userId === effectiveUserId;
+        
+        // Debug log for filtering
+        if (originalEntries.length > 0 && effectiveUserId) {
+          console.log(`📊 Entry filter check:`, {
+            taskId: task.id,
+            entryUserId: entry.userId,
+            filterUserId: effectiveUserId,
+            userMatch,
+            entryDate,
+            dateFrom,
+            dateTo,
+            dateMatch
+          });
+        }
+        
+        return dateMatch && userMatch;
+      }) as import("@shared/schema").TimeEntry[];
+      
+      if (originalEntries.length > 0) {
+        console.log(`📊 Task ${task.id}: ${originalEntries.length} original entries -> ${filteredEntries.length} after filtering`);
+      }
+      
+      return {
+        ...task,
+        clientName: clientCompany || clientName || undefined,
+        timeEntries: filteredEntries
+      };
+    });
+    
+    const tasksWithEntries = result.filter(t => t.timeEntries.length > 0);
+    console.log(`🔍 getTimeEntriesByDateRange: Returning ${tasksWithEntries.length} tasks with entries`);
+    
+    return result;
   }
   
   async updateTimeEntry(taskId: string, entryId: string, updates: { duration?: number; startTime?: string; endTime?: string }): Promise<Task | undefined> {
