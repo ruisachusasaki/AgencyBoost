@@ -383,8 +383,9 @@ export default function TaskDetail() {
       }
       
       // Create the time entry with the selected date
-      const entryDate = new Date(data.date);
-      entryDate.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
+      // Parse date as local time by appending T12:00:00 (noon) to avoid timezone issues
+      // This ensures the date stays correct regardless of timezone when converted to ISO
+      const entryDate = new Date(data.date + 'T12:00:00');
       
       const newEntry = {
         id: Date.now().toString(),
