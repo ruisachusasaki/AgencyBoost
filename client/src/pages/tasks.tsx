@@ -17,6 +17,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import TaskForm from "@/components/forms/task-form";
+import { TaskIntakeDialog } from "@/components/task-intake-dialog";
 import { TaskDependencyIcons } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -2249,26 +2250,18 @@ export default function Tasks() {
               </Button>
             </Link>
           )}
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
+          <TaskIntakeDialog
+            trigger={
               <Button data-testid="button-add-task">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Task
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Add New Task</DialogTitle>
-              </DialogHeader>
-              <TaskForm
-                onSuccess={() => {
-                  setIsCreateDialogOpen(false);
-                  setDefaultLeadId(null);
-                }}
-                defaultLeadId={defaultLeadId || undefined}
-              />
-            </DialogContent>
-          </Dialog>
+            }
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+              setDefaultLeadId(null);
+            }}
+          />
         </div>
       </div>
 

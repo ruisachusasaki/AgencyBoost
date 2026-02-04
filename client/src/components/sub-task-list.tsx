@@ -1,23 +1,12 @@
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, ChevronDown, Plus, Calendar as CalendarIcon, User, Clock, Flag, ExternalLink } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronRight, ChevronDown, Plus, User, Clock, Flag, ExternalLink } from "lucide-react";
 import { Button } from "./ui/button";
-import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Calendar } from "./ui/calendar";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "wouter";
-import { apiRequest } from "../lib/queryClient";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { TaskIntakeDialog } from "./task-intake-dialog";
 
 interface Task {
   id: string;
@@ -32,90 +21,20 @@ interface Task {
   createdAt?: Date;
 }
 
-interface Staff {
-  id: string;
-  firstName: string;
-  lastName: string;
-}
-
 interface SubTaskListProps {
   parentTaskId: string;
   level?: number;
   maxLevel?: number;
 }
 
-interface SubTaskFormData {
-  title: string;
-  description: string;
-  status: string;
-  priority: string;
-  assignedTo?: string;
-  startDate?: Date | null;
-  dueDate?: Date | null;
-}
-
 export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskListProps) {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
-  const [showAddForm, setShowAddForm] = useState(false);
   const queryClient = useQueryClient();
-
-  // Fetch parent task to inherit client and project information
-  const { data: parentTask } = useQuery<Task & { clientId?: string; projectId?: string }>({
-    queryKey: [`/api/tasks/${parentTaskId}`],
-    enabled: !!parentTaskId
-  });
 
   // Fetch sub-tasks for the parent task
   const { data: subTasks = [], isLoading } = useQuery<Task[]>({
     queryKey: [`/api/tasks/${parentTaskId}/subtasks`],
     enabled: !!parentTaskId
-  });
-
-  // Fetch staff for assignee dropdown
-  const { data: staff = [] } = useQuery<Staff[]>({
-    queryKey: ["/api/staff"]
-  });
-
-  // Create sub-task mutation
-  const createSubTaskMutation = useMutation({
-    mutationFn: (data: SubTaskFormData) => {
-      console.log("Creating sub-task with data:", data);
-      const requestData = {
-        ...data,
-        assignedTo: data.assignedTo === "unassigned" ? null : data.assignedTo,
-        parentTaskId,
-        level: (level || 0) + 1,
-        // Inherit client and project from parent task
-        clientId: parentTask?.clientId || null,
-        projectId: parentTask?.projectId || null,
-      };
-      console.log("Sending API request with:", requestData);
-      return apiRequest("POST", `/api/tasks/${parentTaskId}/subtasks`, requestData);
-    },
-    onSuccess: (data) => {
-      console.log("Sub-task created successfully:", data);
-      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${parentTaskId}/subtasks`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${parentTaskId}`] });
-      setShowAddForm(false);
-      form.reset();
-    },
-    onError: (error) => {
-      console.error("Failed to create sub-task:", error);
-      // You can add toast notification here later
-    }
-  });
-
-  const form = useForm<SubTaskFormData>({
-    defaultValues: {
-      title: "",
-      description: "",
-      status: "pending",
-      priority: "normal",
-      assignedTo: "unassigned",
-      startDate: null,
-      dueDate: null,
-    }
   });
 
   const toggleTaskExpansion = (taskId: string) => {
@@ -128,10 +47,6 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
       }
       return newSet;
     });
-  };
-
-  const onSubmit = (data: SubTaskFormData) => {
-    createSubTaskMutation.mutate(data);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -245,275 +160,33 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
         </React.Fragment>
       ))}
       
-      {/* Add Sub-task Button and Form - Only show when there are no sub-tasks OR at top level */}
+      {/* Add Sub-task Button - Only show when there are no sub-tasks OR at top level */}
       {level < maxLevel - 1 && (subTasks.length === 0 || level === 0) && (
-        <>
-          {!showAddForm ? (
-            <TableRow>
-              <TableCell colSpan={4} className="py-3">
-                <div style={{ paddingLeft: `${level * 24}px` }}>
+        <TableRow>
+          <TableCell colSpan={4} className="py-3">
+            <div style={{ paddingLeft: `${level * 24}px` }}>
+              <TaskIntakeDialog
+                parentTaskId={parentTaskId}
+                trigger={
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowAddForm(true)}
-                    className="h-8 px-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                    className="h-8 px-3 text-primary hover:text-primary/80 hover:bg-primary/10"
                     data-testid="add-subtask-button"
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Add Sub-task
                   </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ) : (
-            <TableRow>
-              <TableCell colSpan={4} className="py-3">
-                <div style={{ paddingLeft: `${level * 24}px` }}>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <FormField
-                          control={form.control}
-                          name="title"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Task Title</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter task title..." {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="assignedTo"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Assignee</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select assignee" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                                  {staff.map((member) => (
-                                    <SelectItem key={member.id} value={member.id}>
-                                      {member.firstName} {member.lastName}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <FormField
-                          control={form.control}
-                          name="priority"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Priority</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select priority" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="urgent">
-                                    <div className="flex items-center gap-2">
-                                      <Flag className="h-3 w-3 text-red-500" />
-                                      <span>Urgent</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="high">
-                                    <div className="flex items-center gap-2">
-                                      <Flag className="h-3 w-3 text-yellow-500" />
-                                      <span>High</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="normal">
-                                    <div className="flex items-center gap-2">
-                                      <Flag className="h-3 w-3 text-blue-500" />
-                                      <span>Normal</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="low">
-                                    <div className="flex items-center gap-2">
-                                      <Flag className="h-3 w-3 text-gray-500" />
-                                      <span>Low</span>
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="status"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Status</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select status" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="pending">Pending</SelectItem>
-                                  <SelectItem value="in_progress">In Progress</SelectItem>
-                                  <SelectItem value="completed">Completed</SelectItem>
-                                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <FormField
-                          control={form.control}
-                          name="startDate"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                              <FormLabel>Start Date</FormLabel>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <FormControl>
-                                    <Button
-                                      variant="outline"
-                                      className={cn(
-                                        "w-full pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                      )}
-                                      data-testid="input-start-date"
-                                    >
-                                      {field.value ? (
-                                        format(field.value, "PPP")
-                                      ) : (
-                                        <span>Pick a start date</span>
-                                      )}
-                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                  </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={field.value || undefined}
-                                    onSelect={field.onChange}
-                                    disabled={(date) => date < new Date("1900-01-01")}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="dueDate"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                              <FormLabel>Due Date</FormLabel>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <FormControl>
-                                    <Button
-                                      variant="outline"
-                                      className={cn(
-                                        "w-full pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                      )}
-                                      data-testid="input-due-date"
-                                    >
-                                      {field.value ? (
-                                        format(field.value, "PPP")
-                                      ) : (
-                                        <span>Pick a due date</span>
-                                      )}
-                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                  </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={field.value || undefined}
-                                    onSelect={field.onChange}
-                                    disabled={(date) => date < new Date("1900-01-01")}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      
-                      <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Enter task description..." 
-                                className="min-h-[80px]"
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="submit"
-                          size="sm"
-                          disabled={createSubTaskMutation.isPending}
-                          data-testid="create-subtask-submit"
-                        >
-                          {createSubTaskMutation.isPending ? "Creating..." : "Create Sub-task"}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setShowAddForm(false);
-                            form.reset();
-                          }}
-                          data-testid="create-subtask-cancel"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
-        </>
+                }
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: [`/api/tasks/${parentTaskId}/subtasks`] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+                  queryClient.invalidateQueries({ queryKey: [`/api/tasks/${parentTaskId}`] });
+                }}
+              />
+            </div>
+          </TableCell>
+        </TableRow>
       )}
     </>
   );
