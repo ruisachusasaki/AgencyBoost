@@ -4252,6 +4252,7 @@ export const oneOnOneTalkingPoints = pgTable("one_on_one_talking_points", {
   addedBy: uuid("added_by").notNull().references(() => staff.id), // Who added this point
   orderIndex: integer("order_index").default(0),
   isCompleted: boolean("is_completed").default(false),
+  notes: text("notes"), // Optional notes for the talking point
   createdAt: timestamp("created_at").defaultNow(),
 });
 

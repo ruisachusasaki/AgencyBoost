@@ -88,6 +88,7 @@ interface TalkingPoint {
   addedBy: string;
   orderIndex: number;
   isCompleted: boolean;
+  notes?: string;
 }
 
 interface Win {
@@ -1001,6 +1002,8 @@ function MeetingEditor({
   
   // New item inputs
   const [newTalkingPoint, setNewTalkingPoint] = useState("");
+  const [newTalkingPointNotes, setNewTalkingPointNotes] = useState("");
+  const [expandedTalkingPointId, setExpandedTalkingPointId] = useState<string | null>(null);
   const [newWin, setNewWin] = useState("");
   const [newActionItem, setNewActionItem] = useState("");
   const [newGoal, setNewGoal] = useState("");
@@ -1072,8 +1075,11 @@ function MeetingEditor({
   });
 
   const updateTalkingPointMutation = useMutation({
-    mutationFn: async ({ id, isCompleted }: { id: string; isCompleted: boolean }) => {
-      return await apiRequest("PUT", `/api/hr/one-on-one/talking-points/${id}`, { isCompleted });
+    mutationFn: async ({ id, isCompleted, notes }: { id: string; isCompleted?: boolean; notes?: string }) => {
+      const updates: any = {};
+      if (isCompleted !== undefined) updates.isCompleted = isCompleted;
+      if (notes !== undefined) updates.notes = notes;
+      return await apiRequest("PUT", `/api/hr/one-on-one/talking-points/${id}`, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting?.id, "details"] });
@@ -1307,8 +1313,10 @@ function MeetingEditor({
         meetingId: meeting.id,
         content: newTalkingPoint.trim(),
         orderIndex: talkingPoints.length,
+        notes: newTalkingPointNotes.trim() || undefined,
       });
       setNewTalkingPoint("");
+      setNewTalkingPointNotes("");
     } else {
       // New meeting - add to local state
       const tempId = `temp-${Date.now()}`;
@@ -1319,8 +1327,22 @@ function MeetingEditor({
         addedBy: "",
         orderIndex: talkingPoints.length,
         isCompleted: false,
+        notes: newTalkingPointNotes.trim() || undefined,
       }]);
       setNewTalkingPoint("");
+      setNewTalkingPointNotes("");
+    }
+  };
+  
+  const handleUpdateTalkingPointNotes = (pointId: string, notes: string) => {
+    // Update local state
+    setTalkingPoints(talkingPoints.map(p => 
+      p.id === pointId ? { ...p, notes: notes || undefined } : p
+    ));
+    
+    // Update in database if meeting is saved
+    if (meeting && !pointId.startsWith('temp-')) {
+      updateTalkingPointMutation.mutate({ id: pointId, notes: notes || undefined });
     }
   };
 
@@ -1840,39 +1862,76 @@ function MeetingEditor({
                 </Label>
                 <div className="space-y-2">
                   {talkingPoints.map((point) => (
-                    <div key={point.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                      <input
-                        type="checkbox"
-                        checked={point.isCompleted}
-                        onChange={() => handleToggleTalkingPoint(point.id)}
-                        className="h-4 w-4 cursor-pointer"
-                        data-testid={`checkbox-talking-point-${point.id}`}
-                      />
-                      <span className={point.isCompleted ? "line-through text-muted-foreground" : ""}>
-                        {point.content}
-                      </span>
+                    <div key={point.id} className="bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-2 p-2">
+                        <input
+                          type="checkbox"
+                          checked={point.isCompleted}
+                          onChange={() => handleToggleTalkingPoint(point.id)}
+                          className="h-4 w-4 cursor-pointer"
+                          data-testid={`checkbox-talking-point-${point.id}`}
+                        />
+                        <span className={cn("flex-1", point.isCompleted ? "line-through text-muted-foreground" : "")}>
+                          {point.content}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setExpandedTalkingPointId(expandedTalkingPointId === point.id ? null : point.id)}
+                          className={cn(
+                            "h-6 w-6 p-0",
+                            point.notes ? "text-primary" : "text-muted-foreground hover:text-primary"
+                          )}
+                          title={point.notes ? "View/edit notes" : "Add notes"}
+                          data-testid={`button-notes-talking-point-${point.id}`}
+                        >
+                          <StickyNote className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {expandedTalkingPointId === point.id && (
+                        <div className="px-2 pb-2">
+                          <Textarea
+                            placeholder="Add notes for this talking point..."
+                            value={point.notes || ""}
+                            onChange={(e) => handleUpdateTalkingPointNotes(point.id, e.target.value)}
+                            className="min-h-[60px] text-sm bg-white dark:bg-gray-900"
+                            data-testid={`textarea-notes-talking-point-${point.id}`}
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Add a talking point..."
-                      value={newTalkingPoint}
-                      onChange={(e) => setNewTalkingPoint(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddTalkingPoint();
-                        }
-                      }}
-                      data-testid="input-new-talking-point"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={handleAddTalkingPoint}
-                      data-testid="button-add-talking-point"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add a talking point..."
+                        value={newTalkingPoint}
+                        onChange={(e) => setNewTalkingPoint(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddTalkingPoint();
+                          }
+                        }}
+                        data-testid="input-new-talking-point"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleAddTalkingPoint}
+                        data-testid="button-add-talking-point"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {newTalkingPoint.trim() && (
+                      <Textarea
+                        placeholder="Add notes (optional)..."
+                        value={newTalkingPointNotes}
+                        onChange={(e) => setNewTalkingPointNotes(e.target.value)}
+                        className="min-h-[60px] text-sm"
+                        data-testid="textarea-new-talking-point-notes"
+                      />
+                    )}
                   </div>
                 </div>
               </div>
