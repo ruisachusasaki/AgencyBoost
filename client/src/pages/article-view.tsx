@@ -605,6 +605,46 @@ export default function ArticleView() {
     },
   });
 
+  // Category change mutation (for moving articles to different folders)
+  const categoryMutation = useMutation({
+    mutationFn: async (categoryId: string) => {
+      const response = await apiRequest("PUT", `/api/knowledge-base/articles/${id}`, { categoryId, parentId: null });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/knowledge-base/articles'] });
+      toast({
+        title: "Success",
+        variant: "success",
+        description: "Article moved to new folder successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to move article",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Build hierarchical category tree for Move To menu
+  const buildCategoryTree = useCallback((parentId: string | null = null, level: number = 0): any[] => {
+    const result: any[] = [];
+    const children = (categories as any[])
+      .filter((cat: any) => cat.parentId === parentId || (parentId === null && !cat.parentId))
+      .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+    
+    for (const cat of children) {
+      result.push({ ...cat, level });
+      result.push(...buildCategoryTree(cat.id, level + 1));
+    }
+    return result;
+  }, [categories]);
+
+  const categoryTree = buildCategoryTree();
+
   // Reorder sub-pages mutation with optimistic update
   const reorderSubpagesMutation = useMutation({
     mutationFn: async ({ articleOrders }: { articleOrders: { id: string; order: number }[]; optimisticData: any[] }) => {
@@ -946,16 +986,34 @@ export default function ArticleView() {
                   
                   <DropdownMenuSeparator />
                   
-                  {/* Move To Sub-menu */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        <ArrowRight className="w-4 h-4 mr-2" />
-                        Move To
-                        <ChevronRight className="w-4 h-4 ml-auto" />
+                  {/* Move To Sub-menu - Shows all categories/folders hierarchically */}
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="font-medium">
+                    <ArrowRight className="w-4 h-4 mr-2" />
+                    Move To Folder
+                  </DropdownMenuItem>
+                  <ScrollArea className="max-h-[300px]">
+                    {categoryTree.map((cat: any) => (
+                      <DropdownMenuItem 
+                        key={cat.id}
+                        onClick={() => categoryMutation.mutate(cat.id)}
+                        disabled={(article as any)?.categoryId === cat.id && !(article as any)?.parentId}
+                        className="truncate"
+                        style={{ paddingLeft: `${(cat.level * 16) + 32}px` }}
+                      >
+                        {cat.level > 0 && <span className="text-muted-foreground mr-1">└</span>}
+                        {cat.icon && <span className="mr-1">{cat.icon}</span>}
+                        {cat.name}
                       </DropdownMenuItem>
-                    </DropdownMenuTrigger>
-                  </DropdownMenu>
+                    ))}
+                  </ScrollArea>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  {/* Nest Under Article - Shows articles in the same category */}
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="font-medium">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Nest Under Article
+                  </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => parentMutation.mutate(null)}
                     disabled={!(article as any)?.parentId}
@@ -963,20 +1021,21 @@ export default function ArticleView() {
                   >
                     Top Level (No Parent)
                   </DropdownMenuItem>
-                  {(allArticles as any[])
-                    .filter((a: any) => a.id !== id)
-                    .slice(0, 10)
-                    .map((potentialParent: any) => (
-                      <DropdownMenuItem 
-                        key={potentialParent.id}
-                        onClick={() => parentMutation.mutate(potentialParent.id)}
-                        disabled={(article as any)?.parentId === potentialParent.id}
-                        className="pl-8 truncate"
-                      >
-                        {potentialParent.title}
-                      </DropdownMenuItem>
-                    ))
-                  }
+                  <ScrollArea className="max-h-[200px]">
+                    {(allArticles as any[])
+                      .filter((a: any) => a.id !== id && a.categoryId === (article as any)?.categoryId)
+                      .map((potentialParent: any) => (
+                        <DropdownMenuItem 
+                          key={potentialParent.id}
+                          onClick={() => parentMutation.mutate(potentialParent.id)}
+                          disabled={(article as any)?.parentId === potentialParent.id}
+                          className="pl-8 truncate"
+                        >
+                          {potentialParent.title}
+                        </DropdownMenuItem>
+                      ))
+                    }
+                  </ScrollArea>
                   
                   <DropdownMenuSeparator />
                   
