@@ -24489,12 +24489,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const { formId, answers, visibleSectionIds } = req.body;
+      const { formId, answers, visibleSectionIds, parentTaskId } = req.body;
 
       if (!formId || !answers || !visibleSectionIds) {
         return res.status(400).json({ error: "Missing required fields: formId, answers, visibleSectionIds" });
       }
 
+      // Handle subtask creation - get parent task info for level calculation
+      let subtaskLevel = 0;
+      let inheritedClientId: string | null = null;
+      let inheritedProjectId: string | null = null;
+      if (parentTaskId) {
+        const [parentTask] = await db.select({
+          level: tasks.level,
+          clientId: tasks.clientId,
+          projectId: tasks.projectId,
+        })
+          .from(tasks)
+          .where(eq(tasks.id, parentTaskId));
+        
+        if (parentTask) {
+          subtaskLevel = (parentTask.level || 0) + 1;
+          inheritedClientId = parentTask.clientId;
+          inheritedProjectId = parentTask.projectId;
+        }
+      }
       // Step A: Validate submission
       // Get all questions for the form
       const questions = await db.select()
@@ -24647,11 +24666,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: generatedDescription,
           status: 'todo',
           priority,
-          clientId: clientId && clientId !== 'no_client' ? clientId : null,
+          clientId: parentTaskId ? inheritedClientId : (clientId && clientId !== 'no_client' ? clientId : null),
           dueDate: dueDateStr ? new Date(dueDateStr) : null,
           assignedTo: assignmentResult.assignToUserId || undefined,
           categoryId: assignmentResult.categoryId || undefined,
           tags: assignmentResult.tags.length > 0 ? assignmentResult.tags : undefined,
+          parentTaskId: parentTaskId || null,
+          level: parentTaskId ? subtaskLevel : 0,
+          projectId: parentTaskId ? inheritedProjectId : null,
         })
         .returning();
 
