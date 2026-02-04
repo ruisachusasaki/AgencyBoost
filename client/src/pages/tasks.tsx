@@ -16,7 +16,6 @@ import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, GripVertical, Flag, 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import TaskForm from "@/components/forms/task-form";
 import { TaskIntakeDialog } from "@/components/task-intake-dialog";
 import { TaskDependencyIcons } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
@@ -110,8 +109,6 @@ export default function Tasks() {
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("table");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [defaultLeadId, setDefaultLeadId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -152,17 +149,10 @@ export default function Tasks() {
   
   const [location, setLocation] = useLocation();
   
-  // Handle URL parameters for opening modal with pre-filled lead
+  // Handle URL parameters - clean up if present (legacy support)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const openModal = urlParams.get('openModal');
-    const leadIdParam = urlParams.get('leadId');
-    
-    if (openModal === 'true') {
-      if (leadIdParam) {
-        setDefaultLeadId(leadIdParam);
-      }
-      setIsCreateDialogOpen(true);
+    if (urlParams.has('openModal') || urlParams.has('leadId')) {
       // Clean up URL params
       window.history.replaceState({}, '', '/tasks');
     }
@@ -2259,7 +2249,6 @@ export default function Tasks() {
             }
             onSuccess={() => {
               queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
-              setDefaultLeadId(null);
             }}
           />
         </div>
@@ -2736,19 +2725,12 @@ export default function Tasks() {
                 }
               </p>
               {!searchTerm && statusFilter === "all" && assigneeFilter === "all" && priorityFilter === "all" && clientFilter === "all" && categoryFilter === "all" && overdueFilter === "all" && timeFilter === "all" && (
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>Create Your First Task</Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Add New Task</DialogTitle>
-                    </DialogHeader>
-                    <TaskForm
-                      onSuccess={() => setIsCreateDialogOpen(false)}
-                    />
-                  </DialogContent>
-                </Dialog>
+                <TaskIntakeDialog
+                  trigger={<Button>Create Your First Task</Button>}
+                  onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+                  }}
+                />
               )}
             </div>
           ) : viewMode === "table" ? (

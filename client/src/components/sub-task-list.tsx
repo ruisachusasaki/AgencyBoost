@@ -37,6 +37,11 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
     enabled: !!parentTaskId
   });
 
+  // Fetch staff for displaying assignee names
+  const { data: staff = [] } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
+    queryKey: ["/api/staff"]
+  });
+
   const toggleTaskExpansion = (taskId: string) => {
     setExpandedTasks(prev => {
       const newSet = new Set(prev);
