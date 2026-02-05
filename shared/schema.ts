@@ -5082,3 +5082,54 @@ export const insertTaskIntakeAnswerSchema = createInsertSchema(taskIntakeAnswers
 });
 export type TaskIntakeAnswer = typeof taskIntakeAnswers.$inferSelect;
 export type InsertTaskIntakeAnswer = z.infer<typeof insertTaskIntakeAnswerSchema>;
+
+// ===== TOOL DIRECTORY =====
+// Tool Directory Categories
+export const toolDirectoryCategories = pgTable("tool_directory_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  icon: text("icon"), // lucide icon name
+  color: text("color"), // hex color
+  order: integer("order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Tool Directory Tools
+export const toolDirectoryTools = pgTable("tool_directory_tools", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  url: text("url").notNull(),
+  logoUrl: text("logo_url"),
+  categoryId: varchar("category_id").references(() => toolDirectoryCategories.id, { onDelete: "set null" }),
+  tags: text("tags").array(),
+  isFeatured: boolean("is_featured").default(false),
+  isActive: boolean("is_active").default(true),
+  order: integer("order").default(0),
+  createdBy: uuid("created_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_tool_directory_tools_category").on(table.categoryId),
+]);
+
+// Schema exports for Tool Directory
+export const insertToolDirectoryCategorySchema = createInsertSchema(toolDirectoryCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type ToolDirectoryCategory = typeof toolDirectoryCategories.$inferSelect;
+export type InsertToolDirectoryCategory = z.infer<typeof insertToolDirectoryCategorySchema>;
+
+export const insertToolDirectoryToolSchema = createInsertSchema(toolDirectoryTools).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type ToolDirectoryTool = typeof toolDirectoryTools.$inferSelect;
+export type InsertToolDirectoryTool = z.infer<typeof insertToolDirectoryToolSchema>;
