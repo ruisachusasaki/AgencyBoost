@@ -710,7 +710,7 @@ export function TaskIntakeDialog({
     select: (data: any) => {
       const clientsList = data?.clients || [];
       return clientsList
-        .filter((c: any) => c.status === "active")
+        .filter((c: any) => c.status?.toLowerCase() === "active")
         .map((c: any) => ({ id: String(c.id), name: c.name, company: c.company }));
     },
   });
