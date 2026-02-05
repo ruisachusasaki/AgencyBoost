@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { taskIntakeSections, taskIntakeQuestions } from "@shared/schema";
+import { taskIntakeSections, taskIntakeQuestions, clients } from "@shared/schema";
 import { eq, inArray } from "drizzle-orm";
 
 interface AnswerMap {
@@ -128,6 +128,23 @@ export async function generateDescription(
     const label = questionIdToLabel[questionId];
     if (label) {
       variables[label] = answer;
+    }
+  }
+
+  // Resolve client_select from ID to business name
+  if (variables['client_select'] && typeof variables['client_select'] === 'string') {
+    const clientId = variables['client_select'];
+    try {
+      const client = await db
+        .select({ businessName: clients.businessName })
+        .from(clients)
+        .where(eq(clients.id, clientId))
+        .limit(1);
+      if (client.length > 0 && client[0].businessName) {
+        variables['client_select'] = client[0].businessName;
+      }
+    } catch (e) {
+      // Keep original value if lookup fails
     }
   }
 
