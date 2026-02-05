@@ -19,6 +19,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -668,8 +669,9 @@ function ProgressStepper({
 }
 
 interface TaskIntakeDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: React.ReactNode;
   parentTaskId?: string;
   onSuccess?: () => void;
   defaultClientId?: string;
@@ -677,13 +679,18 @@ interface TaskIntakeDialogProps {
 }
 
 export function TaskIntakeDialog({
-  open,
-  onOpenChange,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  trigger,
   parentTaskId,
   onSuccess,
   defaultClientId,
   defaultLeadId,
 }: TaskIntakeDialogProps) {
+  // Support both controlled and uncontrolled usage
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const onOpenChange = controlledOnOpenChange || setInternalOpen;
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [answers, setAnswers] = useState<Answers>({});
@@ -896,6 +903,11 @@ export function TaskIntakeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
+      {trigger && (
+        <DialogTrigger asChild>
+          {trigger}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
