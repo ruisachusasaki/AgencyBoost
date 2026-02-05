@@ -2678,9 +2678,10 @@ export default function EnhancedClientDetail() {
   });
 
   // Fetch all clients for Next Client navigation
-  const { data: allClients = [] } = useQuery<Client[]>({
-    queryKey: ['/api/clients'],
+  const { data: allClientsResponse } = useQuery<{ clients: Client[], pagination: any }>({
+    queryKey: ['/api/clients', { limit: 1000 }],
   });
+  const allClients = allClientsResponse?.clients || [];
 
   // Find next client in the list (sorted by createdAt descending, matching the All Clients page default)
   const nextClient = useMemo(() => {
