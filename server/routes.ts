@@ -24652,18 +24652,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Map priority level to task priority using imported function
       const priority = mapPriority(priorityLevel);
 
-      // Generate description from intake form answers using templates
-      const generatedDescription = await generateDescription(visibleSectionIds, answers, formId);
+      // Get description from the description_additional_notes field
+      const taskDescription = getAnswerByLabel('description_additional_notes') || '';
 
       // Step D: Evaluate assignment rules
       const assignmentResult = await evaluateAssignmentRules(formId, answers);
       console.log("[TaskIntake] Assignment rules result:", assignmentResult);
 
-      // Step E: Create the task with generated description and assignments
+      // Step E: Create the task with description and assignments
       const [newTask] = await db.insert(tasks)
         .values({
           title: taskTitle,
-          description: generatedDescription,
+          description: taskDescription,
           status: 'todo',
           priority,
           clientId: parentTaskId ? inheritedClientId : (clientId && clientId !== 'no_client' ? clientId : null),
