@@ -150,7 +150,7 @@ export function ToolDirectory() {
       const res = await apiRequest("POST", "/api/tool-directory/tools", {
         ...data,
         tags: data.tags ? data.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
-        categoryId: data.categoryId || null,
+        categoryId: data.categoryId && data.categoryId !== "none" ? data.categoryId : null,
       });
       return res.json();
     },
@@ -168,7 +168,7 @@ export function ToolDirectory() {
       const res = await apiRequest("PUT", `/api/tool-directory/tools/${id}`, {
         ...data,
         tags: data.tags ? data.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
-        categoryId: data.categoryId || null,
+        categoryId: data.categoryId && data.categoryId !== "none" ? data.categoryId : null,
       });
       return res.json();
     },
@@ -666,7 +666,7 @@ export function ToolDirectory() {
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Category</SelectItem>
+                  <SelectItem value="none">No Category</SelectItem>
                   {activeCategories.map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                   ))}
