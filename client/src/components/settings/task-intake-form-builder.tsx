@@ -63,6 +63,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type QuestionType = "single_choice" | "multi_choice" | "text" | "number" | "date" | "client" | "department" | "url" | "textarea";
 
@@ -645,15 +646,35 @@ export function TaskIntakeFormBuilder() {
                 name="internalLabel"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Internal Label (Optional)</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormLabel>Internal Label</FormLabel>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-sm p-3">
+                            <div className="space-y-2 text-sm">
+                              <p className="font-medium">How Internal Labels Work:</p>
+                              <p>This connects your question to the Description Template.</p>
+                              <div className="bg-muted p-2 rounded text-xs font-mono">
+                                <p>Template: {"{{live_event_cities}}"}</p>
+                                <p>Internal Label: live_event_cities</p>
+                              </div>
+                              <p className="text-muted-foreground">Check your section's Description Template to find the variable names (text inside {"{{}}"}) and use those exact names here.</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <FormControl>
                       <Input
-                        placeholder="e.g., Department, Creative Type, Budget"
+                        placeholder="e.g., live_event_cities, creative_kpi"
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      Admin-only name for easier identification in Logic Rules. Not visible to users.
+                      Must match the variable name in your Description Template (e.g., if template uses {"{{my_field}}"}, enter "my_field" here)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
