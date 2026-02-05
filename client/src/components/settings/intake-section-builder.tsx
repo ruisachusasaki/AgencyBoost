@@ -1,10 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Plus, Edit, Trash2, GripVertical, Settings2, ChevronDown, ChevronRight,
   FolderOpen, Folder, Star, Type, Hash, Calendar, Circle, CheckCircle2,
-  Building2, Users, Upload, AlertCircle, Link
+  Building2, Users, Upload, AlertCircle, Link, AlertTriangle
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,47 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+// Helper to extract template variables from a description template
+const extractTemplateVariables = (template: string | undefined | null): string[] => {
+  if (!template) return [];
+  const matches = template.match(/\{\{(\w+)\}\}/g);
+  if (!matches) return [];
+  // Extract unique variable names, removing the {{ and }}
+  const variables = [...new Set(matches.map(m => m.replace(/\{\{|\}\}/g, '')))];
+  return variables.sort();
+};
+
+// Helper to normalize internal labels (remove TRIGGER prefix)
+const normalizeLabel = (label: string | undefined): string | undefined => {
+  if (!label) return undefined;
+  return label.replace(/^TRIGGER\s*-\s*/i, '').trim();
+};
+
+// Helper to check for template/question mismatches
+const getTemplateMismatch = (
+  template: string | undefined | null,
+  questions: { internalLabel?: string }[]
+): { missingQuestions: string[]; unusedLabels: string[] } => {
+  const templateVars = extractTemplateVariables(template);
+  const questionLabels = questions
+    .map(q => normalizeLabel(q.internalLabel))
+    .filter((label): label is string => !!label);
+  
+  // Template variables that don't have matching questions
+  const missingQuestions = templateVars.filter(v => !questionLabels.includes(v));
+  
+  // Question labels that aren't in the template
+  const unusedLabels = questionLabels.filter(l => !templateVars.includes(l));
+  
+  return { missingQuestions, unusedLabels };
+};
 
 type TaskIntakeOption = {
   id: string;
@@ -747,6 +788,14 @@ function SectionRow({
   const isTriggerQuestion = (q: TaskIntakeQuestion) => 
     q.internalLabel?.includes("TRIGGER");
 
+  // Check for template/question mismatches when questions are loaded
+  const mismatch = useMemo(() => {
+    if (!questions || !section.descriptionTemplate) return null;
+    const result = getTemplateMismatch(section.descriptionTemplate, questions);
+    if (result.missingQuestions.length === 0 && result.unusedLabels.length === 0) return null;
+    return result;
+  }, [questions, section.descriptionTemplate]);
+
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggle}>
       <div className="flex items-center gap-2 p-3">
@@ -778,6 +827,36 @@ function SectionRow({
             </span>
           </button>
         </CollapsibleTrigger>
+
+        {/* Warning indicator for template/question mismatch */}
+        {mismatch && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-sm">
+                <div className="text-sm space-y-1">
+                  {mismatch.missingQuestions.length > 0 && (
+                    <p>
+                      <strong className="text-amber-500">Template expects:</strong>{" "}
+                      {mismatch.missingQuestions.slice(0, 5).join(", ")}
+                      {mismatch.missingQuestions.length > 5 && ` +${mismatch.missingQuestions.length - 5} more`}
+                    </p>
+                  )}
+                  {mismatch.unusedLabels.length > 0 && (
+                    <p>
+                      <strong className="text-blue-500">Not in template:</strong>{" "}
+                      {mismatch.unusedLabels.join(", ")}
+                    </p>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
 
         <Badge 
           variant={section.visibilityConditions ? "secondary" : "outline"}
