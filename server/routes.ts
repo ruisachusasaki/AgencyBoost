@@ -24578,7 +24578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check for duplicate submission (same task name + user in last 60 seconds)
-      const taskNameQuestion = questions.find(q => q.internalLabel === 'task_name');
+      const taskNameQuestion = questions.find(q => q.internalLabel?.toLowerCase() === 'task_name');
       const taskNameAnswer = taskNameQuestion ? answers[taskNameQuestion.id] : null;
 
       if (taskNameAnswer) {
@@ -24638,13 +24638,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Step C: Extract key fields for task
       const getAnswerByLabel = (label: string): string | null => {
-        const q = questions.find(q => q.internalLabel === label);
+        const q = questions.find(q => q.internalLabel?.toLowerCase() === label.toLowerCase());
         if (!q) return null;
         const val = answers[q.id];
         return val !== undefined ? (typeof val === 'object' ? JSON.stringify(val) : String(val)) : null;
       };
 
       const taskTitle = getAnswerByLabel('task_name') || 'Untitled Task';
+      console.log("[TaskIntake] Creating task with title:", taskTitle, "| task_name question found:", !!questions.find(q => q.internalLabel?.toLowerCase() === "task_name"), "| Answer keys count:", Object.keys(answers).length);
       const clientId = getAnswerByLabel('client_select');
       const dueDateStr = getAnswerByLabel('due_date');
       const priorityLevel = getAnswerByLabel('priority_level') || 'normal';
