@@ -1343,6 +1343,7 @@ export default function KnowledgeBase() {
             Find answers, guides, and documentation
           </p>
         </div>
+        {currentView !== 'tools' && (
         <div className="flex gap-2">
           <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
             <DialogTrigger asChild>
@@ -1538,12 +1539,12 @@ export default function KnowledgeBase() {
             </DialogContent>
           </Dialog>
         </div>
+        )}
       </div>
 
       {/* Navigation Tabs */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6 items-center">
-        <div className="lg:col-span-1">
-          <div className="flex items-center gap-2">
+      <div className="mb-6">
+        <div className="flex flex-wrap items-center gap-2">
             <button
               data-testid="tab-articles"
               onClick={() => {
@@ -1583,13 +1584,12 @@ export default function KnowledgeBase() {
               <Wrench className="w-4 h-4 mr-2 inline" />
               Tool Directory
             </button>
-          </div>
         </div>
+      </div>
         
-        
-        {/* Search and Sort - only show for articles view, aligned with articles column */}
-        {currentView === 'articles' && (
-          <div className="lg:col-span-3 space-y-3">
+      {/* Search and Sort - only show for articles view */}
+      {currentView === 'articles' && (
+        <div className="mb-6 space-y-3">
             <div className="flex items-center gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -1695,9 +1695,8 @@ export default function KnowledgeBase() {
                 )}
               </div>
             )}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {currentView === 'tools' ? (
         <ToolDirectory />
