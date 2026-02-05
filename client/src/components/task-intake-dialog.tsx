@@ -188,9 +188,9 @@ function getVisibleSections(
   allSections: IntakeSection[],
   answers: Answers
 ): IntakeSection[] {
-  return allSections.filter(section => 
-    evaluateSectionVisibility(section, answers, allSections)
-  );
+  return allSections
+    .filter(section => evaluateSectionVisibility(section, answers, allSections))
+    .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
 }
 
 function evaluateQuestionVisibility(
@@ -729,9 +729,9 @@ export function TaskIntakeDialog({
 
   const visibleQuestions = useMemo(() => {
     if (!currentSection) return [];
-    return currentSection.questions.filter(q => 
-      evaluateQuestionVisibility(q, answers, currentSection.questions)
-    );
+    return currentSection.questions
+      .filter(q => evaluateQuestionVisibility(q, answers, currentSection.questions))
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   }, [currentSection, answers]);
 
   const handleAnswerChange = useCallback((questionId: string, value: string | string[] | number | null) => {
