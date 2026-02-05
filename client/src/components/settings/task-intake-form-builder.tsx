@@ -150,6 +150,16 @@ const getQuestionDisplayName = (question: TaskIntakeQuestion) => {
   return question.internalLabel || question.questionText;
 };
 
+// Helper to extract template variables from a description template
+const extractTemplateVariables = (template: string | undefined | null): string[] => {
+  if (!template) return [];
+  const matches = template.match(/\{\{(\w+)\}\}/g);
+  if (!matches) return [];
+  // Extract unique variable names, removing the {{ and }}
+  const variables = [...new Set(matches.map(m => m.replace(/\{\{|\}\}/g, '')))];
+  return variables.sort();
+};
+
 export function TaskIntakeFormBuilder() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -168,6 +178,14 @@ export function TaskIntakeFormBuilder() {
   
   const { data: staffList } = useQuery<any[]>({
     queryKey: ["/api/staff"],
+  });
+  
+  const { data: allSections } = useQuery<Array<{
+    id: string;
+    sectionName: string;
+    descriptionTemplate?: string;
+  }>>({
+    queryKey: ["/api/task-intake/sections"],
   });
   
   const activeForm = forms?.[0];
@@ -676,6 +694,34 @@ export function TaskIntakeFormBuilder() {
                     <FormDescription>
                       Must match the variable name in your Description Template (e.g., if template uses {"{{my_field}}"}, enter "my_field" here)
                     </FormDescription>
+                    {/* Show expected template variables for current section */}
+                    {targetSectionId && allSections && (() => {
+                      const currentSection = allSections.find(s => s.id === targetSectionId);
+                      const templateVars = extractTemplateVariables(currentSection?.descriptionTemplate);
+                      if (templateVars.length === 0) return null;
+                      return (
+                        <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+                          <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                            Expected labels for "{currentSection?.sectionName}":
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {templateVars.map(v => (
+                              <Badge 
+                                key={v} 
+                                variant="secondary" 
+                                className="text-xs font-mono cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800"
+                                onClick={() => field.onChange(v)}
+                              >
+                                {v}
+                              </Badge>
+                            ))}
+                          </div>
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            Click a label to use it
+                          </p>
+                        </div>
+                      );
+                    })()}
                     <FormMessage />
                   </FormItem>
                 )}
