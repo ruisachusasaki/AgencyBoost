@@ -101,7 +101,16 @@ function evaluateCondition(
 ): boolean {
   const answer = answers[condition.questionId];
   
+  console.log('[evaluateCondition] Checking condition:', {
+    questionId: condition.questionId,
+    operator: condition.operator,
+    expectedValue: condition.value,
+    actualAnswer: answer,
+    allAnswerKeys: Object.keys(answers)
+  });
+  
   if (answer === undefined || answer === null) {
+    console.log('[evaluateCondition] Answer is undefined/null, returning false');
     return false;
   }
 
@@ -145,6 +154,12 @@ function evaluateSectionVisibility(
   }
 
   const { operator, conditions } = section.visibilityConditions;
+  
+  console.log('[evaluateSectionVisibility] Evaluating section:', section.sectionName, {
+    operator,
+    conditionsCount: conditions?.length || 0,
+    conditions
+  });
   
   if (!conditions || conditions.length === 0) {
     return true;
