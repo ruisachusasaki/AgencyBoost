@@ -24484,7 +24484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/task-intake/submit - Submit intake form and create task
   app.post("/api/task-intake/submit", requireAuth(), async (req, res) => {
     try {
-      const staffId = req.user?.id;
+      const staffId = req.session?.userId;
       if (!staffId) {
         return res.status(401).json({ error: "Authentication required" });
       }
