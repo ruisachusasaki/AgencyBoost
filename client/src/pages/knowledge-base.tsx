@@ -28,12 +28,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useRolePermissions } from "@/hooks/use-has-permission";
-import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown, Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, X, Check, Minus, CirclePlus, PlayCircle, Code, Sparkles, CheckSquare, Compass, ThumbsUp, Repeat1, Target, TrendingUp, Globe, Lock, Unlock, Clock, MessageCircle, UserCheck, DollarSign, Calculator, CreditCard, Banknote, HandCoins, PieChart, Receipt, Briefcase, Building, Building2, Store, ShoppingCart, Handshake, UserPlus, Phone as PhoneIcon, Megaphone, TrendingDown, Filter, SlidersHorizontal, GripVertical } from "lucide-react";
+import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown, Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, X, Check, Minus, CirclePlus, PlayCircle, Code, Sparkles, CheckSquare, Compass, ThumbsUp, Repeat1, Target, TrendingUp, Globe, Lock, Unlock, Clock, MessageCircle, UserCheck, DollarSign, Calculator, CreditCard, Banknote, HandCoins, PieChart, Receipt, Briefcase, Building, Building2, Store, ShoppingCart, Handshake, UserPlus, Phone as PhoneIcon, Megaphone, TrendingDown, Filter, SlidersHorizontal, GripVertical, Wrench } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { IconPicker } from "@/components/ui/icon-picker";
 import { CategoryPermissionsModal } from "@/components/category-permissions-modal";
+import { ToolDirectory } from "@/components/tool-directory";
 
 // Direct icon mapping with specific imports
 const iconMap: Record<string, any> = {
@@ -471,7 +472,7 @@ export default function KnowledgeBase() {
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<'articles' | 'bookmarks'>('articles');
+  const [currentView, setCurrentView] = useState<'articles' | 'bookmarks' | 'tools'>('articles');
   const [sortBy, setSortBy] = useState<'order' | 'recent' | 'popular' | 'views'>('order');
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [newCategory, setNewCategory] = useState({
@@ -1570,6 +1571,18 @@ export default function KnowledgeBase() {
               <Bookmark className="w-4 h-4 mr-2 inline" />
               My Bookmarks
             </button>
+            <button
+              data-testid="tab-tools"
+              onClick={() => setCurrentView('tools')}
+              className={`px-4 py-2 rounded-md font-medium transition-colors whitespace-nowrap ${
+                currentView === 'tools'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-muted'
+              }`}
+            >
+              <Wrench className="w-4 h-4 mr-2 inline" />
+              Tool Directory
+            </button>
           </div>
         </div>
         
@@ -1686,7 +1699,9 @@ export default function KnowledgeBase() {
         )}
       </div>
 
-      {currentView === 'articles' ? (
+      {currentView === 'tools' ? (
+        <ToolDirectory />
+      ) : currentView === 'articles' ? (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Categories Sidebar */}
           <div className="lg:col-span-1">
