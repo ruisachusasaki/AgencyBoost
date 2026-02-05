@@ -829,14 +829,11 @@ export function TaskIntakeDialog({
     try {
       if (formData?.formId) {
         const visibleSectionIds = visibleSections.map(s => s.id);
-        const response = await apiRequest("/api/task-intake/submit", {
-          method: "POST",
-          body: JSON.stringify({
-            formId: formData.formId,
-            answers,
-            visibleSectionIds,
-            parentTaskId: parentTaskId || null,
-          }),
+        const response = await apiRequest("POST", "/api/task-intake/submit", {
+          formId: formData.formId,
+          answers,
+          visibleSectionIds,
+          parentTaskId: parentTaskId || null,
         });
         
         const result = await response.json();
