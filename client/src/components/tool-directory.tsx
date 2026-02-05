@@ -326,10 +326,13 @@ export function ToolDirectory() {
       </div>
 
       {!selectedCategory && !searchTerm && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className={viewMode === "grid" 
+          ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          : "space-y-2"
+        }>
           {activeCategories.map((category) => {
             const toolCount = tools.filter(t => t.categoryId === category.id).length;
-            return (
+            return viewMode === "grid" ? (
               <Card 
                 key={category.id} 
                 className="cursor-pointer hover:shadow-md transition-shadow group"
@@ -372,6 +375,42 @@ export function ToolDirectory() {
                 <CardContent className="pt-0">
                   <p className="text-sm text-muted-foreground">{toolCount} tool{toolCount !== 1 ? "s" : ""}</p>
                 </CardContent>
+              </Card>
+            ) : (
+              <Card 
+                key={category.id} 
+                className="cursor-pointer hover:shadow-md transition-shadow group"
+                onClick={() => setSelectedCategory(category.id)}
+              >
+                <div className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-4">
+                    <div 
+                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: category.color || "#00C9C6" }}
+                    >
+                      {renderIcon(category.icon, "w-5 h-5 text-white")}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{category.name}</span>
+                        <Badge variant="secondary" className="text-xs">{toolCount} tool{toolCount !== 1 ? "s" : ""}</Badge>
+                      </div>
+                      {category.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-1">{category.description}</p>
+                      )}
+                    </div>
+                  </div>
+                  {isAdmin && (
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openCategoryModal(category)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeletingCategory(category)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </Card>
             );
           })}
