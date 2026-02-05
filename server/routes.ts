@@ -24659,6 +24659,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Step D: Evaluate assignment rules
       const assignmentResult = await evaluateAssignmentRules(formId, answers);
       console.log("[TaskIntake] Assignment rules result:", assignmentResult);
+      // Special handling for Personal Tasks - auto-assign to the person creating the task
+      const taskScope = getAnswerByLabel('task_scope');
+      const isPersonalTask = taskScope?.toLowerCase().includes('personal');
+      if (isPersonalTask) {
+        console.log("[TaskIntake] Personal Task detected - auto-assigning to creator:", staffId);
+        assignmentResult.assignToUserId = staffId;
+      }
 
       // Step E: Create the task with description and assignments
       const [newTask] = await db.insert(tasks)
