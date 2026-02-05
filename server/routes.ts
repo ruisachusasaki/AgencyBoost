@@ -74,7 +74,8 @@ import {
   aiIntegrations,
   aiAssistantSettings,
   slackWorkspaces,
-  emailTemplates, smsTemplates
+  emailTemplates, smsTemplates,
+  toolDirectoryCategories, toolDirectoryTools
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
@@ -35581,6 +35582,222 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting PX meeting:", error);
       res.status(500).json({ error: "Failed to delete PX meeting" });
+    }
+  });
+
+  // ===== TOOL DIRECTORY ENDPOINTS =====
+
+  // Get all tool categories
+  app.get("/api/tool-directory/categories", requireAuth(), async (req, res) => {
+    try {
+      const categories = await db.select().from(toolDirectoryCategories)
+        .orderBy(asc(toolDirectoryCategories.order), asc(toolDirectoryCategories.name));
+      res.json(categories);
+    } catch (error: any) {
+      console.error("Error fetching tool categories:", error);
+      res.status(500).json({ error: "Failed to fetch categories" });
+    }
+  });
+
+  // Create tool category (admin only)
+  app.post("/api/tool-directory/categories", requireAuth(), requireRole(['Admin']), async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+      const { name, description, icon, color } = req.body;
+      if (!name) return res.status(400).json({ error: "Name is required" });
+
+      const maxOrder = await db.select({ max: sql<number>`COALESCE(MAX("order"), 0)` })
+        .from(toolDirectoryCategories);
+
+      const [newCategory] = await db.insert(toolDirectoryCategories).values({
+        name,
+        description,
+        icon,
+        color,
+        order: (maxOrder[0]?.max || 0) + 1,
+        createdBy: userId,
+      }).returning();
+
+      res.status(201).json(newCategory);
+    } catch (error: any) {
+      console.error("Error creating tool category:", error);
+      res.status(500).json({ error: "Failed to create category" });
+    }
+  });
+
+  // Update tool category (admin only)
+  app.put("/api/tool-directory/categories/:id", requireAuth(), requireRole(['Admin']), async (req, res) => {
+    try {
+      const { name, description, icon, color, order, isActive } = req.body;
+
+      const [updated] = await db.update(toolDirectoryCategories)
+        .set({
+          ...(name !== undefined && { name }),
+          ...(description !== undefined && { description }),
+          ...(icon !== undefined && { icon }),
+          ...(color !== undefined && { color }),
+          ...(order !== undefined && { order }),
+          ...(isActive !== undefined && { isActive }),
+          updatedAt: new Date(),
+        })
+        .where(eq(toolDirectoryCategories.id, req.params.id))
+        .returning();
+
+      if (!updated) return res.status(404).json({ error: "Category not found" });
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating tool category:", error);
+      res.status(500).json({ error: "Failed to update category" });
+    }
+  });
+
+  // Delete tool category (admin only)
+  app.delete("/api/tool-directory/categories/:id", requireAuth(), requireRole(['Admin']), async (req, res) => {
+    try {
+      // Check if category has tools
+      const toolsInCategory = await db.select({ count: sql<number>`COUNT(*)` })
+        .from(toolDirectoryTools)
+        .where(eq(toolDirectoryTools.categoryId, req.params.id));
+
+      if (toolsInCategory[0]?.count > 0) {
+        return res.status(400).json({ error: "Cannot delete category with tools. Move or delete tools first." });
+      }
+
+      await db.delete(toolDirectoryCategories)
+        .where(eq(toolDirectoryCategories.id, req.params.id));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting tool category:", error);
+      res.status(500).json({ error: "Failed to delete category" });
+    }
+  });
+
+  // Get all tools (with optional filtering)
+  app.get("/api/tool-directory/tools", requireAuth(), async (req, res) => {
+    try {
+      const { categoryId, search, featured } = req.query;
+
+      let query = db.select({
+        tool: toolDirectoryTools,
+        category: toolDirectoryCategories,
+      })
+        .from(toolDirectoryTools)
+        .leftJoin(toolDirectoryCategories, eq(toolDirectoryTools.categoryId, toolDirectoryCategories.id))
+        .where(eq(toolDirectoryTools.isActive, true));
+
+      const conditions = [eq(toolDirectoryTools.isActive, true)];
+
+      if (categoryId && typeof categoryId === 'string') {
+        conditions.push(eq(toolDirectoryTools.categoryId, categoryId));
+      }
+
+      if (featured === 'true') {
+        conditions.push(eq(toolDirectoryTools.isFeatured, true));
+      }
+
+      if (search && typeof search === 'string') {
+        conditions.push(
+          or(
+            ilike(toolDirectoryTools.name, `%${search}%`),
+            ilike(toolDirectoryTools.description, `%${search}%`)
+          )!
+        );
+      }
+
+      const results = await db.select({
+        tool: toolDirectoryTools,
+        category: toolDirectoryCategories,
+      })
+        .from(toolDirectoryTools)
+        .leftJoin(toolDirectoryCategories, eq(toolDirectoryTools.categoryId, toolDirectoryCategories.id))
+        .where(and(...conditions))
+        .orderBy(asc(toolDirectoryTools.order), asc(toolDirectoryTools.name));
+
+      const tools = results.map(r => ({
+        ...r.tool,
+        category: r.category,
+      }));
+
+      res.json(tools);
+    } catch (error: any) {
+      console.error("Error fetching tools:", error);
+      res.status(500).json({ error: "Failed to fetch tools" });
+    }
+  });
+
+  // Create tool (admin only)
+  app.post("/api/tool-directory/tools", requireAuth(), requireRole(['Admin']), async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+      const { name, description, url, logoUrl, categoryId, tags, isFeatured } = req.body;
+      if (!name || !url) return res.status(400).json({ error: "Name and URL are required" });
+
+      const maxOrder = await db.select({ max: sql<number>`COALESCE(MAX("order"), 0)` })
+        .from(toolDirectoryTools);
+
+      const [newTool] = await db.insert(toolDirectoryTools).values({
+        name,
+        description,
+        url,
+        logoUrl,
+        categoryId: categoryId || null,
+        tags: tags || [],
+        isFeatured: isFeatured || false,
+        order: (maxOrder[0]?.max || 0) + 1,
+        createdBy: userId,
+      }).returning();
+
+      res.status(201).json(newTool);
+    } catch (error: any) {
+      console.error("Error creating tool:", error);
+      res.status(500).json({ error: "Failed to create tool" });
+    }
+  });
+
+  // Update tool (admin only)
+  app.put("/api/tool-directory/tools/:id", requireAuth(), requireRole(['Admin']), async (req, res) => {
+    try {
+      const { name, description, url, logoUrl, categoryId, tags, isFeatured, isActive, order } = req.body;
+
+      const [updated] = await db.update(toolDirectoryTools)
+        .set({
+          ...(name !== undefined && { name }),
+          ...(description !== undefined && { description }),
+          ...(url !== undefined && { url }),
+          ...(logoUrl !== undefined && { logoUrl }),
+          ...(categoryId !== undefined && { categoryId }),
+          ...(tags !== undefined && { tags }),
+          ...(isFeatured !== undefined && { isFeatured }),
+          ...(isActive !== undefined && { isActive }),
+          ...(order !== undefined && { order }),
+          updatedAt: new Date(),
+        })
+        .where(eq(toolDirectoryTools.id, req.params.id))
+        .returning();
+
+      if (!updated) return res.status(404).json({ error: "Tool not found" });
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating tool:", error);
+      res.status(500).json({ error: "Failed to update tool" });
+    }
+  });
+
+  // Delete tool (admin only)
+  app.delete("/api/tool-directory/tools/:id", requireAuth(), requireRole(['Admin']), async (req, res) => {
+    try {
+      await db.delete(toolDirectoryTools)
+        .where(eq(toolDirectoryTools.id, req.params.id));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting tool:", error);
+      res.status(500).json({ error: "Failed to delete tool" });
     }
   });
   return httpServer;
