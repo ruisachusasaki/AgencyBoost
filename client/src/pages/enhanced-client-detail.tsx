@@ -2677,6 +2677,28 @@ export default function EnhancedClientDetail() {
     enabled: !!clientId,
   });
 
+  // Fetch all clients for Next Client navigation
+  const { data: allClients = [] } = useQuery<Client[]>({
+    queryKey: ['/api/clients'],
+  });
+
+  // Find next client in the list (sorted by createdAt descending, matching the All Clients page default)
+  const nextClient = useMemo(() => {
+    if (!client || allClients.length === 0) return null;
+    
+    // Sort clients by createdAt descending (matching All Clients page default sort)
+    const sortedClients = [...allClients].sort((a, b) => {
+      const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bDate - aDate; // descending order
+    });
+    
+    const currentIndex = sortedClients.findIndex(c => c.id === client.id);
+    if (currentIndex === -1 || currentIndex === sortedClients.length - 1) return null;
+    
+    return sortedClients[currentIndex + 1];
+  }, [client, allClients]);
+
   // Get client health status for highlighting
   const { data: healthStatus, isLoading: healthStatusLoading } = useQuery<HealthStatusResult>({
     queryKey: [`/api/clients/${clientId}/health-status`],
@@ -4734,12 +4756,23 @@ export default function EnhancedClientDetail() {
   return (
     <>
       <div className="space-y-6">
-        {/* Back Button */}
-      <div className="flex items-center space-x-2">
+        {/* Back Button and Next Client Navigation */}
+      <div className="flex items-center justify-between">
         <Button variant="outline" size="sm" onClick={() => setLocation("/clients")} className="flex items-center space-x-2">
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Clients</span>
         </Button>
+        {nextClient && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setLocation(`/clients/${nextClient.id}`)} 
+            className="flex items-center space-x-2"
+          >
+            <span>Next Client</span>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* Header */}
