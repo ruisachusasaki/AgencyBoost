@@ -4026,7 +4026,7 @@ export default function ActionConfigPanel({
                 onChange={(e) => updateSetting("send_email", e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300"
               />
-              <Label htmlFor="send_email">Send Email to Manager (coming soon)</Label>
+              <Label htmlFor="send_email">Send Email to Manager</Label>
             </div>
 
             <div className="flex items-center gap-2">

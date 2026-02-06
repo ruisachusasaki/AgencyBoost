@@ -453,6 +453,149 @@ export class NotificationService {
   }
 
   /**
+   * Send a direct email via Mailgun (public method for use by other services like workflow engine)
+   */
+  async sendDirectEmail(options: { to: string; subject: string; text: string; html?: string }): Promise<{ sent: boolean; error?: string }> {
+    if (!this.mailgunClient || !this.emailConfig) {
+      return { sent: false, error: "Mailgun not configured" };
+    }
+
+    try {
+      await this.mailgunClient.messages.create(this.emailConfig.domain, {
+        from: `${this.emailConfig.fromName} <${this.emailConfig.fromEmail}>`,
+        to: [options.to],
+        subject: options.subject,
+        text: options.text,
+        html: options.html || options.text,
+      });
+      return { sent: true };
+    } catch (err: any) {
+      console.error('[NotificationService] sendDirectEmail error:', err.message);
+      return { sent: false, error: err.message };
+    }
+  }
+
+  /**
+   * Check if Mailgun email is configured and ready
+   */
+  isEmailConfigured(): boolean {
+    return !!(this.mailgunClient && this.emailConfig);
+  }
+
+  /**
+   * Generate a branded HTML email for reports
+   */
+  generateReportEmailHtml(options: { title: string; bodyHtml: string; actionUrl?: string; actionText?: string }): string {
+    const appUrl = process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+      : 'https://agencyflow.app';
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${options.title}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      background: linear-gradient(135deg, #00C9C6 0%, #00A8A6 100%);
+      color: white;
+      padding: 30px 20px;
+      text-align: center;
+      border-radius: 8px 8px 0 0;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 600;
+    }
+    .content {
+      background: #ffffff;
+      padding: 30px 20px;
+      border: 1px solid #e0e0e0;
+      border-top: none;
+    }
+    .staff-row {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+    }
+    .staff-row:last-child {
+      border-bottom: none;
+    }
+    .staff-name {
+      font-weight: 600;
+      color: #333;
+    }
+    .staff-hours {
+      color: #e53e3e;
+      font-weight: 500;
+    }
+    .staff-detail {
+      color: #666;
+      font-size: 13px;
+    }
+    .summary {
+      background: #f7fafc;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #555;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 24px;
+      background: #00C9C6;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
+      margin: 20px 0;
+    }
+    .footer {
+      background: #f5f5f5;
+      padding: 20px;
+      text-align: center;
+      font-size: 13px;
+      color: #666;
+      border-radius: 0 0 8px 8px;
+      border: 1px solid #e0e0e0;
+      border-top: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${options.title}</h1>
+  </div>
+  <div class="content">
+    ${options.bodyHtml}
+    ${options.actionUrl ? `
+      <a href="${appUrl}${options.actionUrl}" class="button">
+        ${options.actionText || 'View Details'}
+      </a>
+    ` : ''}
+  </div>
+  <div class="footer">
+    <p>This is an automated report from AgencyBoost.</p>
+    <p><a href="${appUrl}/settings/my-profile">Manage notification preferences</a></p>
+  </div>
+</body>
+</html>
+    `.trim();
+  }
+
+  /**
    * Get URL for context type
    */
   private getContextUrl(contextType: string, contextId: string): string {
@@ -466,4 +609,14 @@ export class NotificationService {
     
     return urlMapping[contextType] || '/';
   }
+}
+
+let _sharedInstance: NotificationService | null = null;
+
+export function setNotificationServiceInstance(instance: NotificationService) {
+  _sharedInstance = instance;
+}
+
+export function getNotificationService(): NotificationService | null {
+  return _sharedInstance;
 }

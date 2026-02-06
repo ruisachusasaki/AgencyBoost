@@ -13,6 +13,7 @@ import { workflows, workflowExecutions, clients, enhancedTasks, staff, automatio
 import { eq, and, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { slackService } from "./slack-service";
+import { getNotificationService } from "./notification-service";
 
 // ===== TYPE DEFINITIONS =====
 
@@ -890,7 +891,7 @@ async function executeNotifyManagerHoursReport(action: WorkflowAction, context: 
 
   if (sendEmail && managerEmail) {
     const emailSubject = `Weekly Hours Report: ${subordinates.length} team member(s) below threshold (${weekStart} - ${weekEnd})`;
-    const emailBody = [
+    const emailTextBody = [
       `Hi ${managerName},`,
       "",
       reportMessage,
@@ -898,8 +899,52 @@ async function executeNotifyManagerHoursReport(action: WorkflowAction, context: 
       "— AgencyBoost Automation",
     ].join("\n");
 
-    console.log(`    📧 Email queued to ${managerEmail}: ${emailSubject}`);
-    results.push({ type: "email", sent: true, to: managerEmail, subject: emailSubject });
+    const notifService = getNotificationService();
+    if (notifService && notifService.isEmailConfigured()) {
+      try {
+        const staffRowsHtml = subordinates.map((sub: any) => {
+          return `<div class="staff-row">
+            <span class="staff-name">${sub.staffName}</span>
+            <span class="staff-detail"> (${sub.staffDepartment}/${sub.staffPosition})</span><br/>
+            <span class="staff-hours">${sub.totalHoursLogged}h total</span>
+            <span class="staff-detail"> — ${sub.taskHoursLogged}h tasks, ${sub.calendarHoursLogged}h calendar</span>
+          </div>`;
+        }).join("");
+
+        const bodyHtml = `
+          <p>Hi ${managerName},</p>
+          <p>The following team members logged fewer hours than the threshold for the week of <strong>${weekStart}</strong> to <strong>${weekEnd}</strong>:</p>
+          ${staffRowsHtml}
+          <div class="summary">Total staff below threshold: <strong>${subordinates.length}</strong></div>
+        `;
+
+        const html = notifService.generateReportEmailHtml({
+          title: `Weekly Hours Report`,
+          bodyHtml,
+        });
+
+        const emailResult = await notifService.sendDirectEmail({
+          to: managerEmail,
+          subject: emailSubject,
+          text: emailTextBody,
+          html,
+        });
+
+        if (emailResult.sent) {
+          console.log(`    📧 Email sent to ${managerEmail}: ${emailSubject}`);
+          results.push({ type: "email", sent: true, to: managerEmail, subject: emailSubject });
+        } else {
+          console.error(`    ❌ Email failed to ${managerEmail}: ${emailResult.error}`);
+          results.push({ type: "email", sent: false, to: managerEmail, error: emailResult.error });
+        }
+      } catch (err: any) {
+        console.error(`    ❌ Email error to ${managerEmail}:`, err.message);
+        results.push({ type: "email", sent: false, to: managerEmail, error: err.message });
+      }
+    } else {
+      console.warn(`    ⚠️  Mailgun not configured, email skipped for ${managerEmail}`);
+      results.push({ type: "email", sent: false, to: managerEmail, error: "Mailgun not configured" });
+    }
   }
 
   if (sendSlack && slackService.isConfigured()) {

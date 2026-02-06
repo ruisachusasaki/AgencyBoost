@@ -88,7 +88,7 @@ import { google } from "googleapis";
 import twilio from "twilio";
 import mailgun from "mailgun.js";
 import formData from "form-data";
-import { NotificationService } from "./notification-service";
+import { NotificationService, setNotificationServiceInstance } from "./notification-service";
 import { EncryptionService } from "./encryption";
 import { eq, like, ilike, or, and, asc, desc, sql, inArray, isNotNull, gte, lte, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -168,6 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Initialize NotificationService for multi-channel notifications
   const notificationService = new NotificationService(appStorage);
+  setNotificationServiceInstance(notificationService);
 
   // Configure multer for file uploads  
   const multerStorage = multer.memoryStorage();
