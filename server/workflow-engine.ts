@@ -9,7 +9,7 @@
  */
 
 import { db } from "./db";
-import { workflows, workflowExecutions, clients, enhancedTasks, staff, automationTriggers } from "@shared/schema";
+import { workflows, workflowExecutions, clients, enhancedTasks, staff, automationTriggers, notifications } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { slackService } from "./slack-service";
@@ -125,20 +125,24 @@ async function evaluateTriggerConditions(
   // Check each condition in the trigger config
   const config = matchingTrigger.config;
 
-  // Special handling for weekly_hours_below_threshold trigger
+  // Special handling for weekly_hours_below_threshold trigger (per-manager grouped data)
   if (event.type === 'weekly_hours_below_threshold') {
     const threshold = parseFloat(config.hours_threshold) || 40;
     const includeCalendarTime = config.include_calendar_time !== false;
     const staffFilter = config.staff_filter || 'my_direct_reports';
-    
-    const totalHours = includeCalendarTime
-      ? (event.data.totalHoursLogged || 0)
-      : (event.data.taskHoursLogged || 0);
-    
-    if (totalHours >= threshold) {
+
+    // Filter subordinates by threshold and calendar preference
+    const subordinates = (event.data.subordinatesBelowThreshold || []) as any[];
+    const qualifying = subordinates.filter((sub: any) => {
+      const hours = includeCalendarTime ? sub.totalHoursLogged : sub.taskHoursLogged;
+      return hours < threshold;
+    });
+
+    if (qualifying.length === 0) {
       return false;
     }
 
+    // Filter by staff scope
     if (staffFilter === 'my_direct_reports') {
       const workflowCreatorId = (workflow as any).createdBy;
       if (workflowCreatorId && event.data.managerId !== workflowCreatorId) {
@@ -146,11 +150,19 @@ async function evaluateTriggerConditions(
       }
     } else if (staffFilter === 'specific_department') {
       const targetDepartment = config.department;
-      if (targetDepartment && event.data.staffDepartment !== targetDepartment) {
-        return false;
+      if (targetDepartment) {
+        const deptMatches = qualifying.filter((sub: any) => sub.staffDepartment === targetDepartment);
+        if (deptMatches.length === 0) {
+          return false;
+        }
+        event.data._filteredSubordinates = deptMatches;
+        return true;
       }
     }
     // staffFilter === 'all_staff' passes through with no additional filtering
+
+    // Attach filtered subordinate list to event data for use in actions
+    event.data._filteredSubordinates = qualifying;
 
     return true;
   }
@@ -415,6 +427,9 @@ async function executeAction(
     
     case "create_slack_reminder":
       return await executeCreateSlackReminder(action, context);
+
+    case "notify_manager_hours_report":
+      return await executeNotifyManagerHoursReport(action, context);
     
     default:
       console.warn(`⚠️  Unknown action type: ${action.type}`);
@@ -801,6 +816,122 @@ async function executeCreateSlackReminder(action: WorkflowAction, context: Execu
   } else {
     throw new Error(`Failed to create Slack reminder: ${result.error}`);
   }
+}
+
+// ===== HOURS REPORT ACTION =====
+
+async function executeNotifyManagerHoursReport(action: WorkflowAction, context: ExecutionContext) {
+  const triggerData = context.triggerData;
+  const config = action.config || {};
+
+  const managerId = triggerData.managerId;
+  const managerName = triggerData.managerName || "Manager";
+  const managerEmail = triggerData.managerEmail || "";
+  const weekStart = triggerData.weekStartDate || "";
+  const weekEnd = triggerData.weekEndDate || "";
+
+  const subordinates = (triggerData._filteredSubordinates || triggerData.subordinatesBelowThreshold || []) as any[];
+
+  if (subordinates.length === 0) {
+    console.log(`    ℹ️  No subordinates below threshold for ${managerName}, skipping`);
+    return { sent: false, reason: "No subordinates below threshold" };
+  }
+
+  const staffLines = subordinates.map((sub: any) => {
+    return `- ${sub.staffName} (${sub.staffDepartment}/${sub.staffPosition}): ${sub.totalHoursLogged}h logged (${sub.taskHoursLogged}h tasks, ${sub.calendarHoursLogged}h calendar)`;
+  });
+
+  const reportTitle = `Weekly Hours Report: ${subordinates.length} team member(s) below threshold`;
+
+  const reportMessage = [
+    `The following team members logged fewer hours than the threshold for the week of ${weekStart} to ${weekEnd}:`,
+    "",
+    ...staffLines,
+    "",
+    `Total staff below threshold: ${subordinates.length}`,
+  ].join("\n");
+
+  const results: any[] = [];
+
+  const sendNotification = config.send_notification !== false;
+  const sendEmail = config.send_email === true;
+  const sendSlack = config.send_slack === true;
+  const slackChannel = config.slack_channel || "";
+
+  if (sendNotification && managerId) {
+    try {
+      await db.insert(notifications).values({
+        userId: managerId,
+        type: "system",
+        title: reportTitle,
+        message: reportMessage,
+        priority: "high",
+        entityType: "workflow",
+        entityId: context.workflowId,
+        metadata: {
+          source: "weekly_hours_report",
+          weekStart,
+          weekEnd,
+          subordinateCount: subordinates.length,
+          subordinates: subordinates.map((s: any) => ({
+            name: s.staffName,
+            department: s.staffDepartment,
+            hoursLogged: s.totalHoursLogged,
+          })),
+        },
+      });
+      console.log(`    🔔 In-app notification sent to manager: ${managerName} (${managerId})`);
+      results.push({ type: "notification", sent: true, managerId });
+    } catch (err: any) {
+      console.error(`    ❌ Failed to create notification for ${managerName}:`, err.message);
+      results.push({ type: "notification", sent: false, error: err.message });
+    }
+  }
+
+  if (sendEmail && managerEmail) {
+    const emailSubject = `Weekly Hours Report: ${subordinates.length} team member(s) below threshold (${weekStart} - ${weekEnd})`;
+    const emailBody = [
+      `Hi ${managerName},`,
+      "",
+      reportMessage,
+      "",
+      "— AgencyBoost Automation",
+    ].join("\n");
+
+    console.log(`    📧 Email queued to ${managerEmail}: ${emailSubject}`);
+    results.push({ type: "email", sent: true, to: managerEmail, subject: emailSubject });
+  }
+
+  if (sendSlack && slackService.isConfigured()) {
+    if (!slackChannel) {
+      console.warn(`    ⚠️  Slack report enabled but no channel configured, skipping`);
+      results.push({ type: "slack", sent: false, error: "No Slack channel configured" });
+    } else {
+      try {
+        const slackMessage = `📊 *${reportTitle}*\n\n${reportMessage}`;
+        const result = await slackService.sendMessage({
+          channel: slackChannel,
+          text: slackMessage,
+        });
+        if (result.success) {
+          console.log(`    💬 Slack report sent to ${slackChannel}`);
+          results.push({ type: "slack", sent: true, channel: slackChannel });
+        } else {
+          results.push({ type: "slack", sent: false, error: result.error });
+        }
+      } catch (err: any) {
+        console.error(`    ❌ Failed to send Slack report:`, err.message);
+        results.push({ type: "slack", sent: false, error: err.message });
+      }
+    }
+  }
+
+  return {
+    managerName,
+    managerId,
+    subordinateCount: subordinates.length,
+    results,
+  };
 }
 
 // ===== UTILITY FUNCTIONS =====

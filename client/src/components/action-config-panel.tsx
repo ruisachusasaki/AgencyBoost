@@ -3998,6 +3998,75 @@ export default function ActionConfigPanel({
           </div>
         );
 
+      case "notify_manager_hours_report":
+        return (
+          <div className="space-y-4">
+            <div className="p-3 bg-teal-50 border border-teal-200 rounded-lg dark:bg-teal-900/30 dark:border-teal-700">
+              <p className="text-sm text-teal-800 dark:text-teal-200">
+                <strong>Notify Manager - Hours Report</strong> — Sends each manager a consolidated report listing their subordinates who logged fewer hours than the threshold.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="send_notification"
+                checked={settings.send_notification !== false}
+                onChange={(e) => updateSetting("send_notification", e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="send_notification">Send In-App Notification</Label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="send_email"
+                checked={settings.send_email === true}
+                onChange={(e) => updateSetting("send_email", e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="send_email">Send Email to Manager (coming soon)</Label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="send_slack"
+                checked={settings.send_slack === true}
+                onChange={(e) => updateSetting("send_slack", e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="send_slack">Send Slack Report</Label>
+            </div>
+
+            {settings.send_slack && (
+              <div>
+                <Label htmlFor="slack_channel">Slack Channel</Label>
+                <Input
+                  id="slack_channel"
+                  value={settings.slack_channel || ""}
+                  onChange={(e) => updateSetting("slack_channel", e.target.value)}
+                  placeholder="#managers"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  The Slack channel where the weekly hours report will be posted
+                </p>
+              </div>
+            )}
+
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-xs text-gray-600 dark:text-gray-300 font-medium mb-2">How it works:</p>
+              <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1 list-disc list-inside">
+                <li>Each manager receives ONE consolidated report</li>
+                <li>The report lists all their subordinates who fell below the hours threshold</li>
+                <li>Includes task hours, calendar hours, and total hours for each person</li>
+                <li>Works automatically for ALL managers — no need for separate automations</li>
+              </ul>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="space-y-4">
@@ -4056,6 +4125,8 @@ export default function ActionConfigPanel({
         return LucideIcons.Edit;
       case "create_slack_reminder":
         return LucideIcons.Clock;
+      case "notify_manager_hours_report":
+        return LucideIcons.ClipboardList;
       default:
         return FileText;
     }

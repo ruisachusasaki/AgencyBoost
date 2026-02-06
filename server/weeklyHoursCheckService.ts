@@ -43,6 +43,7 @@ interface WorkflowHoursConfig {
   checkDay: string;
   includeCalendarTime: boolean;
   staffFilter: string;
+  department?: string;
 }
 
 function extractHoursConfigs(activeWorkflows: any[]): WorkflowHoursConfig[] {
@@ -59,15 +60,37 @@ function extractHoursConfigs(activeWorkflows: any[]): WorkflowHoursConfig[] {
             checkDay: config.check_day || "Monday",
             includeCalendarTime: config.include_calendar_time !== false,
             staffFilter: config.staff_filter || "my_direct_reports",
+            department: config.department || undefined,
           });
         }
       }
     } catch {
-      // skip malformed
     }
   }
 
   return configs;
+}
+
+interface StaffMemberInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  department: string | null;
+  position: string | null;
+  managerId: string | null;
+  isActive: boolean | null;
+}
+
+interface StaffHoursData {
+  staffId: string;
+  staffName: string;
+  staffEmail: string;
+  staffDepartment: string;
+  staffPosition: string;
+  taskHoursLogged: number;
+  calendarHoursLogged: number;
+  totalHoursLogged: number;
 }
 
 async function runWeeklyHoursCheck() {
@@ -82,7 +105,7 @@ async function runWeeklyHoursCheck() {
     const activeWorkflows = await db
       .select()
       .from(workflows)
-      .where(eq(workflows.isActive, true));
+      .where(eq(workflows.status, "active"));
 
     const configs = extractHoursConfigs(activeWorkflows);
 
@@ -190,39 +213,61 @@ async function runWeeklyHoursCheck() {
       staffHours.set(entry.userId, existing);
     }
 
-    const lowestThreshold = Math.min(...relevantConfigs.map((c) => c.hoursThreshold));
+    const highestThreshold = Math.max(...relevantConfigs.map((c) => c.hoursThreshold));
 
-    let triggeredCount = 0;
+    const staffByManager: Map<string, {
+      manager: StaffMemberInfo | null;
+      subordinates: StaffHoursData[];
+    }> = new Map();
+
     for (const staffMember of allStaff) {
-      const hours = staffHours.get(staffMember.id) || { taskHours: 0, calendarHours: 0 };
-
-      const totalWithCalendar = hours.taskHours + hours.calendarHours;
-      const totalTaskOnly = hours.taskHours;
-
-      if (totalWithCalendar >= lowestThreshold && totalTaskOnly >= lowestThreshold) {
+      if (!staffMember.managerId) {
         continue;
       }
 
-      const managerInfo = staffMember.managerId
-        ? allStaff.find((s) => s.id === staffMember.managerId)
-        : null;
+      const hours = staffHours.get(staffMember.id) || { taskHours: 0, calendarHours: 0 };
+      const totalWithCalendar = hours.taskHours + hours.calendarHours;
+
+      if (totalWithCalendar >= highestThreshold) {
+        continue;
+      }
+
+      const managerId = staffMember.managerId;
+      const managerInfo = allStaff.find((s) => s.id === managerId) || null;
+
+      if (!staffByManager.has(managerId)) {
+        staffByManager.set(managerId, {
+          manager: managerInfo,
+          subordinates: [],
+        });
+      }
+
+      staffByManager.get(managerId)!.subordinates.push({
+        staffId: staffMember.id,
+        staffName: `${staffMember.firstName} ${staffMember.lastName}`,
+        staffEmail: staffMember.email || "",
+        staffDepartment: staffMember.department || "Unassigned",
+        staffPosition: staffMember.position || "Unknown",
+        taskHoursLogged: Math.round(hours.taskHours * 100) / 100,
+        calendarHoursLogged: Math.round(hours.calendarHours * 100) / 100,
+        totalHoursLogged: Math.round(totalWithCalendar * 100) / 100,
+      });
+    }
+
+    let triggeredCount = 0;
+    for (const [managerId, groupData] of staffByManager) {
+      const { manager, subordinates } = groupData;
 
       await emitTrigger({
         type: "weekly_hours_below_threshold",
         data: {
-          staffId: staffMember.id,
-          staffName: `${staffMember.firstName} ${staffMember.lastName}`,
-          staffEmail: staffMember.email || "",
-          staffDepartment: staffMember.department || "Unassigned",
-          staffPosition: staffMember.position || "Unknown",
-          managerId: staffMember.managerId || null,
-          managerName: managerInfo
-            ? `${managerInfo.firstName} ${managerInfo.lastName}`
-            : "No Manager",
-          managerEmail: managerInfo?.email || "",
-          totalHoursLogged: Math.round(totalWithCalendar * 100) / 100,
-          taskHoursLogged: Math.round(hours.taskHours * 100) / 100,
-          calendarHoursLogged: Math.round(hours.calendarHours * 100) / 100,
+          managerId,
+          managerName: manager
+            ? `${manager.firstName} ${manager.lastName}`
+            : "Unknown Manager",
+          managerEmail: manager?.email || "",
+          subordinatesBelowThreshold: subordinates,
+          subordinateCount: subordinates.length,
           weekStartDate: weekStartStr,
           weekEndDate: weekEndStr,
           checkDay: currentDay,
@@ -239,7 +284,7 @@ async function runWeeklyHoursCheck() {
     }
 
     console.log(
-      `[WeeklyHoursCheck] Completed check - ${triggeredCount}/${allStaff.length} staff below threshold`
+      `[WeeklyHoursCheck] Completed check - ${triggeredCount} manager group(s) emitted`
     );
   } catch (error) {
     console.error("[WeeklyHoursCheck] Error during check:", error);
