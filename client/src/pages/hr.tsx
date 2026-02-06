@@ -1067,26 +1067,28 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
         <nav className="-mb-px flex w-full">
           {(() => {
             const allTabs = [
-              ...(isManager || isAdmin ? [{ id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0 }] : []),
-              ...(canViewStaffDirectory ? [{ id: "staff-directory", name: "Staff Directory", icon: Users, count: filteredStaffData.length }] : []),
-              ...(canViewStaffDirectory ? [{ id: "org-chart", name: "Org Chart", icon: Network, count: 0 }] : []),
-              ...(canViewTimeOffRequests ? [{ id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length }] : []),
-              ...(canViewTimeOffRequests ? [{ id: "time-off-calendar", name: "Who's Off", icon: Calendar, count: 0 }] : []),
-              ...(canManageTimeOffRequests ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length }] : []),
-              ...(canViewJobOpenings ? [{ id: "job-openings", name: "Job Openings", icon: FileText, count: activeJobOpenings.length }] : []),
-              ...(canViewJobApplications ? [{ id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length }] : []),
-              ...(canManageJobApplications || isManager || isAdmin ? [{ id: "onboarding-submissions", name: "Onboarding Submissions", icon: UserCheck, count: onboardingSubmissions?.length || 0 }] : []),
-              { id: "expense-report", name: "Expense Report", icon: DollarSign, count: 0 },
-              ...(canViewExpenseReports ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0 }] : []),
-              ...(canViewOffboarding ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0 }] : []),
-              ...(canViewOffboarding ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0 }] : []),
-              ...(canViewOneOnOne ? [{ id: "one-on-one", name: "1v1 Meetings", icon: MessageCircle, count: 0 }] : []),
-              ...(canViewPxMeetings ? [{ id: "px-meetings", name: "Meetings", icon: Presentation, count: 0 }] : []),
-              ...(canManageStaff || isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
+              ...(isManager || isAdmin ? [{ id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0, overflowOnly: false }] : []),
+              ...(canViewStaffDirectory ? [{ id: "staff-directory", name: "Staff Directory", icon: Users, count: filteredStaffData.length, overflowOnly: false }] : []),
+              ...(canViewStaffDirectory ? [{ id: "org-chart", name: "Org Chart", icon: Network, count: 0, overflowOnly: false }] : []),
+              ...(canViewTimeOffRequests ? [{ id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length, overflowOnly: false }] : []),
+              ...(canViewTimeOffRequests ? [{ id: "time-off-calendar", name: "Who's Off", icon: Calendar, count: 0, overflowOnly: false }] : []),
+              ...(canManageTimeOffRequests ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length, overflowOnly: false }] : []),
+              ...(canViewJobOpenings ? [{ id: "job-openings", name: "Job Openings", icon: FileText, count: activeJobOpenings.length, overflowOnly: false }] : []),
+              ...(canViewJobApplications ? [{ id: "applications", name: "Applications", icon: UserPlus, count: recentApplications.length, overflowOnly: false }] : []),
+              ...(canManageJobApplications || isManager || isAdmin ? [{ id: "onboarding-submissions", name: "Onboarding Submissions", icon: UserCheck, count: onboardingSubmissions?.length || 0, overflowOnly: false }] : []),
+              { id: "expense-report", name: "Expense Report", icon: DollarSign, count: 0, overflowOnly: true },
+              ...(canViewExpenseReports ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0, overflowOnly: true }] : []),
+              ...(canViewOffboarding ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0, overflowOnly: true }] : []),
+              ...(canViewOffboarding ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0, overflowOnly: true }] : []),
+              ...(canViewOneOnOne ? [{ id: "one-on-one", name: "1v1 Meetings", icon: MessageCircle, count: 0, overflowOnly: true }] : []),
+              ...(canViewPxMeetings ? [{ id: "px-meetings", name: "Meetings", icon: Presentation, count: 0, overflowOnly: true }] : []),
+              ...(canManageStaff || isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0, overflowOnly: true }] : [])
             ];
             
-            const visibleTabs = allTabs.slice(0, visibleTabsCount);
-            const overflowTabs = allTabs.slice(visibleTabsCount);
+            const primaryTabs = allTabs.filter(t => !t.overflowOnly);
+            const alwaysOverflowTabs = allTabs.filter(t => t.overflowOnly);
+            const visibleTabs = primaryTabs.slice(0, visibleTabsCount);
+            const overflowTabs = [...primaryTabs.slice(visibleTabsCount), ...alwaysOverflowTabs];
             
             return (
               <>
