@@ -157,13 +157,15 @@ async function evaluateTriggerConditions(
           return false;
         }
         event.data._filteredSubordinates = deptMatches;
+        event.data._hoursThreshold = threshold;
         return true;
       }
     }
     // staffFilter === 'all_staff' passes through with no additional filtering
 
-    // Attach filtered subordinate list to event data for use in actions
+    // Attach filtered subordinate list and threshold to event data for use in actions
     event.data._filteredSubordinates = qualifying;
+    event.data._hoursThreshold = threshold;
 
     return true;
   }
@@ -890,11 +892,34 @@ async function executeNotifyManagerHoursReport(action: WorkflowAction, context: 
   }
 
   if (sendEmail && managerEmail) {
-    const emailSubject = `Weekly Hours Report: ${subordinates.length} team member(s) below threshold (${weekStart} - ${weekEnd})`;
-    const emailTextBody = [
+    const threshold = triggerData._hoursThreshold || 40;
+
+    const staffListText = subordinates.map((sub: any) => {
+      return `• ${sub.staffName} (${sub.staffDepartment}/${sub.staffPosition}): ${sub.totalHoursLogged}h total — ${sub.taskHoursLogged}h tasks, ${sub.calendarHoursLogged}h calendar`;
+    }).join("\n");
+
+    const replaceMergeTags = (template: string): string => {
+      return template
+        .replace(/\{\{manager_name\}\}/g, managerName)
+        .replace(/\{\{staff_count\}\}/g, String(subordinates.length))
+        .replace(/\{\{week_start\}\}/g, weekStart)
+        .replace(/\{\{week_end\}\}/g, weekEnd)
+        .replace(/\{\{threshold\}\}/g, String(threshold))
+        .replace(/\{\{staff_list\}\}/g, staffListText);
+    };
+
+    const customSubject = config.email_subject ? replaceMergeTags(config.email_subject) : null;
+    const customBody = config.email_body ? replaceMergeTags(config.email_body) : null;
+
+    const emailSubject = customSubject || `Weekly Hours Report: ${subordinates.length} team member(s) below threshold (${weekStart} - ${weekEnd})`;
+    const emailTextBody = customBody || [
       `Hi ${managerName},`,
       "",
-      reportMessage,
+      `The following team members logged fewer hours than the ${threshold}h threshold for the week of ${weekStart} to ${weekEnd}:`,
+      "",
+      staffListText,
+      "",
+      `Total staff below threshold: ${subordinates.length}`,
       "",
       "— AgencyBoost Automation",
     ].join("\n");
@@ -902,21 +927,27 @@ async function executeNotifyManagerHoursReport(action: WorkflowAction, context: 
     const notifService = getNotificationService();
     if (notifService && notifService.isEmailConfigured()) {
       try {
-        const staffRowsHtml = subordinates.map((sub: any) => {
-          return `<div class="staff-row">
-            <span class="staff-name">${sub.staffName}</span>
-            <span class="staff-detail"> (${sub.staffDepartment}/${sub.staffPosition})</span><br/>
-            <span class="staff-hours">${sub.totalHoursLogged}h total</span>
-            <span class="staff-detail"> — ${sub.taskHoursLogged}h tasks, ${sub.calendarHoursLogged}h calendar</span>
-          </div>`;
-        }).join("");
+        let bodyHtml: string;
 
-        const bodyHtml = `
-          <p>Hi ${managerName},</p>
-          <p>The following team members logged fewer hours than the threshold for the week of <strong>${weekStart}</strong> to <strong>${weekEnd}</strong>:</p>
-          ${staffRowsHtml}
-          <div class="summary">Total staff below threshold: <strong>${subordinates.length}</strong></div>
-        `;
+        if (customBody) {
+          bodyHtml = `<div style="white-space: pre-wrap; font-size: 14px; line-height: 1.6;">${customBody.replace(/\n/g, "<br/>")}</div>`;
+        } else {
+          const staffRowsHtml = subordinates.map((sub: any) => {
+            return `<div class="staff-row">
+              <span class="staff-name">${sub.staffName}</span>
+              <span class="staff-detail"> (${sub.staffDepartment}/${sub.staffPosition})</span><br/>
+              <span class="staff-hours">${sub.totalHoursLogged}h total</span>
+              <span class="staff-detail"> — ${sub.taskHoursLogged}h tasks, ${sub.calendarHoursLogged}h calendar</span>
+            </div>`;
+          }).join("");
+
+          bodyHtml = `
+            <p>Hi ${managerName},</p>
+            <p>The following team members logged fewer hours than the <strong>${threshold}h</strong> threshold for the week of <strong>${weekStart}</strong> to <strong>${weekEnd}</strong>:</p>
+            ${staffRowsHtml}
+            <div class="summary">Total staff below threshold: <strong>${subordinates.length}</strong></div>
+          `;
+        }
 
         const html = notifService.generateReportEmailHtml({
           title: `Weekly Hours Report`,

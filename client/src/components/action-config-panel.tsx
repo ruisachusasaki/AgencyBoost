@@ -4040,6 +4040,91 @@ export default function ActionConfigPanel({
               <Label htmlFor="send_slack">Send Slack Report</Label>
             </div>
 
+            {settings.send_email && (
+              <div className="space-y-4 ml-6 border-l-2 border-teal-200 pl-4 dark:border-teal-700">
+                <div>
+                  <Label htmlFor="email_subject">Email Subject</Label>
+                  <Input
+                    id="email_subject"
+                    value={settings.email_subject || ""}
+                    onChange={(e) => updateSetting("email_subject", e.target.value)}
+                    placeholder="Weekly Hours Report: {{staff_count}} team member(s) below threshold ({{week_start}} - {{week_end}})"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Leave blank for default subject
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="email_body">Email Body</Label>
+                  <textarea
+                    id="email_body"
+                    value={settings.email_body || ""}
+                    onChange={(e) => updateSetting("email_body", e.target.value)}
+                    placeholder={"Hi {{manager_name}},\n\nThe following team members logged fewer hours than the threshold for the week of {{week_start}} to {{week_end}}:\n\n{{staff_list}}\n\nTotal staff below threshold: {{staff_count}}"}
+                    className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
+                    rows={8}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Leave blank for the default email template
+                  </p>
+                </div>
+
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
+                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Available Merge Tags:</p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {[
+                      { tag: "{{manager_name}}", desc: "Manager's name" },
+                      { tag: "{{staff_count}}", desc: "Number of staff below threshold" },
+                      { tag: "{{week_start}}", desc: "Week start date" },
+                      { tag: "{{week_end}}", desc: "Week end date" },
+                      { tag: "{{threshold}}", desc: "Hours threshold" },
+                      { tag: "{{staff_list}}", desc: "Formatted list of staff & hours" },
+                    ].map((item) => (
+                      <div key={item.tag} className="flex items-start gap-1">
+                        <code className="text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-teal-700 dark:text-teal-300 whitespace-nowrap">{item.tag}</code>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{item.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {(settings.email_subject || settings.email_body) && (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden dark:border-gray-700">
+                    <div className="bg-gray-100 dark:bg-gray-800 px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                      <p className="text-xs font-medium text-gray-600 dark:text-gray-300">Email Preview</p>
+                    </div>
+                    <div className="p-3 bg-white dark:bg-gray-900 space-y-2">
+                      {settings.email_subject && (
+                        <div>
+                          <span className="text-xs text-gray-400">Subject: </span>
+                          <span className="text-sm font-medium">
+                            {(settings.email_subject as string)
+                              .replace(/\{\{manager_name\}\}/g, "Jane Smith")
+                              .replace(/\{\{staff_count\}\}/g, "3")
+                              .replace(/\{\{week_start\}\}/g, "Jan 27")
+                              .replace(/\{\{week_end\}\}/g, "Feb 2")
+                              .replace(/\{\{threshold\}\}/g, "40")}
+                          </span>
+                        </div>
+                      )}
+                      {settings.email_body && (
+                        <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap border-t pt-2 border-gray-100 dark:border-gray-700">
+                          {(settings.email_body as string)
+                            .replace(/\{\{manager_name\}\}/g, "Jane Smith")
+                            .replace(/\{\{staff_count\}\}/g, "3")
+                            .replace(/\{\{week_start\}\}/g, "Jan 27")
+                            .replace(/\{\{week_end\}\}/g, "Feb 2")
+                            .replace(/\{\{threshold\}\}/g, "40")
+                            .replace(/\{\{staff_list\}\}/g, "• John Doe (Creative/Designer): 28h total — 20h tasks, 8h calendar\n• Sarah Lee (DevOps/Engineer): 32h total — 30h tasks, 2h calendar\n• Mike Chen (Data/Analyst): 15h total — 12h tasks, 3h calendar")}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {settings.send_slack && (
               <div>
                 <Label htmlFor="slack_channel">Slack Channel</Label>
