@@ -124,6 +124,36 @@ async function evaluateTriggerConditions(
 
   // Check each condition in the trigger config
   const config = matchingTrigger.config;
+
+  // Special handling for weekly_hours_below_threshold trigger
+  if (event.type === 'weekly_hours_below_threshold') {
+    const threshold = parseFloat(config.hours_threshold) || 40;
+    const includeCalendarTime = config.include_calendar_time !== false;
+    const staffFilter = config.staff_filter || 'my_direct_reports';
+    
+    const totalHours = includeCalendarTime
+      ? (event.data.totalHoursLogged || 0)
+      : (event.data.taskHoursLogged || 0);
+    
+    if (totalHours >= threshold) {
+      return false;
+    }
+
+    if (staffFilter === 'my_direct_reports') {
+      const workflowCreatorId = (workflow as any).createdBy;
+      if (workflowCreatorId && event.data.managerId !== workflowCreatorId) {
+        return false;
+      }
+    } else if (staffFilter === 'specific_department') {
+      const targetDepartment = config.department;
+      if (targetDepartment && event.data.staffDepartment !== targetDepartment) {
+        return false;
+      }
+    }
+    // staffFilter === 'all_staff' passes through with no additional filtering
+
+    return true;
+  }
   
   for (const [key, expectedValue] of Object.entries(config)) {
     // Skip metadata fields

@@ -135,6 +135,22 @@ async function initializeDefaultAutomationTriggers() {
           },
           isActive: true,
           createdAt: new Date()
+        },
+        {
+          id: "trigger-weekly-hours-below-threshold",
+          name: "Weekly Hours Below Threshold",
+          type: "weekly_hours_below_threshold",
+          description: "Triggers when a staff member logs fewer hours than the configured threshold for the previous week. Fires once per week per staff member who is below the threshold.",
+          category: "hr_management",
+          configSchema: {
+            hours_threshold: { type: "number", label: "Minimum Hours Threshold", placeholder: "40", default: 40 },
+            check_day: { type: "string", label: "Day to Check", options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], default: "Monday" },
+            include_calendar_time: { type: "boolean", label: "Include Calendar Time Entries", default: true },
+            staff_filter: { type: "string", label: "Staff Filter", options: ["all_staff", "my_direct_reports", "specific_department"], default: "my_direct_reports" },
+            department: { type: "string", label: "Department (for specific department filter)", placeholder: "e.g. Creative, DevOps, Data" }
+          },
+          isActive: true,
+          createdAt: new Date()
         }
       ];
       
@@ -2015,6 +2031,14 @@ async function runStartupMigrations() {
         log("✅ Google Calendar background sync started");
       }).catch(err => {
         log(`⚠️ Failed to start background calendar sync: ${err.message}`);
+      });
+
+      // Start weekly hours check service for automation triggers
+      import('./weeklyHoursCheckService').then(({ startWeeklyHoursCheck }) => {
+        startWeeklyHoursCheck();
+        log("✅ Weekly hours check service started");
+      }).catch(err => {
+        log(`⚠️ Failed to start weekly hours check service: ${err.message}`);
       });
     });
   });

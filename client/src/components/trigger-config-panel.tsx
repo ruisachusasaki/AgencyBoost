@@ -2733,6 +2733,27 @@ export default function TriggerConfigPanel({
               </>
             )}
 
+            {/* For weekly hours below threshold trigger */}
+            {triggerDefinition.type === 'weekly_hours_below_threshold' && (
+              <>
+                {triggerDefinition.configSchema.hours_threshold && 
+                  renderConfigField("hours_threshold", triggerDefinition.configSchema.hours_threshold)
+                }
+                {triggerDefinition.configSchema.check_day && 
+                  renderConfigField("check_day", triggerDefinition.configSchema.check_day)
+                }
+                {triggerDefinition.configSchema.include_calendar_time && 
+                  renderConfigField("include_calendar_time", triggerDefinition.configSchema.include_calendar_time)
+                }
+                {triggerDefinition.configSchema.staff_filter && 
+                  renderConfigField("staff_filter", triggerDefinition.configSchema.staff_filter)
+                }
+                {conditions.staff_filter === 'specific_department' && triggerDefinition.configSchema.department && 
+                  renderConfigField("department", triggerDefinition.configSchema.department)
+                }
+              </>
+            )}
+
             {/* For webhook triggers, show core fields first */}
             {triggerDefinition.type === 'inbound_webhook' && (
               <>
@@ -2792,6 +2813,7 @@ export default function TriggerConfigPanel({
              triggerDefinition.type !== 'inbound_webhook' &&
              triggerDefinition.type !== 'appointment_booked' &&
              triggerDefinition.type !== 'appointment_status_changed' &&
+             triggerDefinition.type !== 'weekly_hours_below_threshold' &&
               Object.entries(triggerDefinition.configSchema).map(([fieldName, fieldSchema]) => {
                 if (fieldName === "form_id") return null; // Already rendered above
                 if (fieldName === "survey_id") return null; // Already rendered above
