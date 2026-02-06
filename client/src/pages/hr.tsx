@@ -3373,7 +3373,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
         </div>
       )}
 
-      {activeTab === "offboarding-form" && (isManager || isAdmin) && (
+      {activeTab === "offboarding-form" && canViewOffboarding && (
         <div className="space-y-6">
           <div>
             <h2 className="text-2xl font-bold">Submit Offboarding Form</h2>
@@ -3384,7 +3384,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
         </div>
       )}
 
-      {activeTab === "offboarding-submissions" && (isManager || isAdmin) && (
+      {activeTab === "offboarding-submissions" && canViewOffboarding && (
         <div className="space-y-6">
           <div>
             <h2 className="text-2xl font-bold">Offboarding Submissions</h2>
@@ -3395,11 +3395,11 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
         </div>
       )}
 
-      {activeTab === "one-on-one" && (isManager || isAdmin) && (
+      {activeTab === "one-on-one" && canViewOneOnOne && (
         <OneOnOneMeetings />
       )}
 
-      {activeTab === "px-meetings" && (isManager || isAdmin) && (
+      {activeTab === "px-meetings" && canViewPxMeetings && (
         <PxMeetings meetingId={activeMeetingId} />
       )}
 
