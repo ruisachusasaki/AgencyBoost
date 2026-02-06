@@ -315,6 +315,15 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
     'hr.manage_job_openings',
     'hr.view_expense_reports',
     'hr.manage_expense_reports',
+    'hr.px_meetings.view',
+    'hr.px_meetings.create',
+    'hr.px_meetings.manage',
+    'hr.one_on_one.view_own',
+    'hr.one_on_one.view_all',
+    'hr.one_on_one.create',
+    'hr.one_on_one.manage',
+    'hr.offboarding.view',
+    'hr.offboarding.manage',
   ]);
   
   // Permission-based access (falls back to role-based for backwards compatibility)
@@ -328,6 +337,9 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   const canManageJobOpeningsPermission = isAdmin || hrPermissions['hr.manage_job_openings'];
   const canViewExpenseReports = isAdmin || isAccounting || hrPermissions['hr.view_expense_reports'];
   const canManageExpenseReports = isAdmin || hrPermissions['hr.manage_expense_reports'];
+  const canViewPxMeetings = isAdmin || isManager || hrPermissions['hr.px_meetings.view'];
+  const canViewOneOnOne = isAdmin || isManager || hrPermissions['hr.one_on_one.view_own'] || hrPermissions['hr.one_on_one.view_all'];
+  const canViewOffboarding = isAdmin || isManager || hrPermissions['hr.offboarding.view'] || hrPermissions['hr.offboarding.manage'];
   
   const canViewAllData = isAdmin;
   const canManageJobOpenings = isManager || isAdmin || canManageJobOpeningsPermission;
@@ -1066,10 +1078,10 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
               ...(canManageJobApplications || isManager || isAdmin ? [{ id: "onboarding-submissions", name: "Onboarding Submissions", icon: UserCheck, count: onboardingSubmissions?.length || 0 }] : []),
               { id: "expense-report", name: "Expense Report", icon: DollarSign, count: 0 },
               ...(canViewExpenseReports ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0 }] : []),
-              ...(canManageStaff || isManager || isAdmin ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0 }] : []),
-              ...(canManageStaff || isManager || isAdmin ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0 }] : []),
-              ...(canManageStaff || isManager || isAdmin ? [{ id: "one-on-one", name: "1v1 Meetings", icon: MessageCircle, count: 0 }] : []),
-              ...(canManageStaff || isManager || isAdmin ? [{ id: "px-meetings", name: "Meetings", icon: Presentation, count: 0 }] : []),
+              ...(canViewOffboarding ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0 }] : []),
+              ...(canViewOffboarding ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0 }] : []),
+              ...(canViewOneOnOne ? [{ id: "one-on-one", name: "1v1 Meetings", icon: MessageCircle, count: 0 }] : []),
+              ...(canViewPxMeetings ? [{ id: "px-meetings", name: "Meetings", icon: Presentation, count: 0 }] : []),
               ...(canManageStaff || isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0 }] : [])
             ];
             
