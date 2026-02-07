@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -190,17 +190,24 @@ export default function WorkflowBuilderPage() {
     return filtered;
   }, {});
 
-  // Populate form with existing data when editing
+  // Track whether we've done the initial population from server data
+  const initialPopulationDone = useRef(false);
+  const lastAutoSaveJson = useRef<string>("");
+
+  // Populate form with existing data when editing (only on first load)
   useEffect(() => {
-    if (existingWorkflow && editingWorkflowId) {
+    if (existingWorkflow && editingWorkflowId && !initialPopulationDone.current) {
       const workflow = existingWorkflow as any;
-      setWorkflowData({
+      const newData = {
         name: workflow.name || "",
         description: workflow.description || "",
         status: workflow.status || "draft",
-        triggers: workflow.triggers || (workflow.trigger ? [workflow.trigger] : []), // Handle backward compatibility properly
+        triggers: workflow.triggers || (workflow.trigger ? [workflow.trigger] : []),
         actions: workflow.actions || []
-      });
+      };
+      setWorkflowData(newData);
+      lastAutoSaveJson.current = JSON.stringify({ triggers: newData.triggers, actions: newData.actions });
+      initialPopulationDone.current = true;
     }
   }, [existingWorkflow, editingWorkflowId]);
 
@@ -211,29 +218,33 @@ export default function WorkflowBuilderPage() {
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
-      // No navigation or toast for auto-save
+      // Don't invalidate queries here - it causes an infinite loop:
+      // invalidate → refetch → setWorkflowData (new refs) → auto-save → repeat
     },
     onError: () => {
       // Silent auto-save errors
     }
   });
 
-  // Auto-save when triggers or actions change (debounced)
+  // Auto-save when triggers or actions change (debounced, with value comparison)
   useEffect(() => {
-    if (!editingWorkflowId) return; // Only auto-save when editing existing workflows
-    
+    if (!editingWorkflowId) return;
+    if (!initialPopulationDone.current) return;
+
+    const currentJson = JSON.stringify({ triggers: workflowData.triggers, actions: workflowData.actions });
+    if (currentJson === lastAutoSaveJson.current) return;
+
     const timeoutId = setTimeout(() => {
       if (workflowData.name.trim()) {
+        lastAutoSaveJson.current = currentJson;
         autoSaveMutation.mutate({
           ...workflowData
-          // createdBy will be set by backend from authenticated session
         });
       }
-    }, 1000); // 1 second debounce
+    }, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [workflowData.triggers, workflowData.actions]); // Only trigger on triggers/actions changes
+  }, [workflowData.triggers, workflowData.actions]);
 
   // Create workflow mutation
   const createWorkflowMutation = useMutation({

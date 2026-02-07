@@ -4,22 +4,23 @@ async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     
-    // Try to parse JSON error responses to preserve special fields
+    let errorData: any = null;
     try {
-      const errorData = JSON.parse(text);
-      
-      // Create a proper Error instance and assign custom properties
+      errorData = JSON.parse(text);
+    } catch {
+      // Not JSON - will use text directly
+    }
+    
+    if (errorData) {
       const error = new Error(errorData.message || `${res.status}: ${text}`) as any;
       error.details = errorData.details;
       error.unsatisfiedDependencies = errorData.unsatisfiedDependencies;
       error.isDependencyError = errorData.isDependencyError;
       error.status = res.status;
-      
       throw error;
-    } catch (parseError) {
-      // If JSON parsing fails, throw the original text
-      throw new Error(`${res.status}: ${text}`);
     }
+    
+    throw new Error(`${res.status}: ${text}`);
   }
 }
 
