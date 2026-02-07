@@ -10770,27 +10770,27 @@ export class DbStorage implements IStorage {
   async getPxMeetings(): Promise<Array<PxMeeting & { attendees: Array<{ id: string; name: string }> }>> {
     const meetings = await db.select().from(pxMeetings).orderBy(desc(pxMeetings.meetingDate), desc(pxMeetings.meetingTime));
     
-    const meetingsWithAttendees = await Promise.all(
-      meetings.map(async (meeting) => {
-        // Use raw SQL to handle varchar to uuid cast
-        const attendeeRows = await db.execute(sql`
-          SELECT s.id, s.first_name as "firstName", s.last_name as "lastName"
-          FROM px_meeting_attendees pma
-          INNER JOIN staff s ON pma.user_id::uuid = s.id
-          WHERE pma.meeting_id = ${meeting.id}
-        `);
-        
-        return {
-          ...meeting,
-          attendees: (attendeeRows.rows as Array<{ id: string; firstName: string | null; lastName: string | null }>).map(a => ({ 
-            id: a.id, 
-            name: `${a.firstName || ''} ${a.lastName || ''}`.trim() || 'Unknown'
-          })),
-        };
-      })
-    );
-    
-    return meetingsWithAttendees;
+    if (meetings.length === 0) return [];
+
+    const meetingIds = meetings.map(m => m.id);
+    const attendeeRows = await db.execute(sql`
+      SELECT pma.meeting_id as "meetingId", s.id, s.first_name as "firstName", s.last_name as "lastName"
+      FROM px_meeting_attendees pma
+      INNER JOIN staff s ON pma.user_id::uuid = s.id
+      WHERE pma.meeting_id = ANY(${meetingIds})
+    `);
+
+    const attendeesByMeeting = new Map<string, Array<{ id: string; name: string }>>();
+    for (const row of attendeeRows.rows as Array<{ meetingId: string; id: string; firstName: string | null; lastName: string | null }>) {
+      const list = attendeesByMeeting.get(row.meetingId) || [];
+      list.push({ id: row.id, name: `${row.firstName || ''} ${row.lastName || ''}`.trim() || 'Unknown' });
+      attendeesByMeeting.set(row.meetingId, list);
+    }
+
+    return meetings.map(meeting => ({
+      ...meeting,
+      attendees: attendeesByMeeting.get(meeting.id) || [],
+    }));
   }
 
   async getPxMeeting(id: string): Promise<(PxMeeting & { attendees: Array<{ id: string; name: string }> }) | undefined> {
