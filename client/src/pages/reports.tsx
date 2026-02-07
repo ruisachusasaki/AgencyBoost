@@ -2840,7 +2840,7 @@ export default function Reports() {
                       </Popover>
                     </div>
                   )}
-                  {(taskReportType === "by-user-client" || taskReportType === "admin-by-client") && (
+                  {(taskReportType === "by-user-client" || taskReportType === "admin-by-client" || taskReportType === "by-category") && (
                     <div className="flex items-center gap-2">
                       <label className="text-sm text-slate-600">User:</label>
                       <Select value={userIdFilter} onValueChange={setUserIdFilter}>
