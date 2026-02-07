@@ -127,7 +127,8 @@ export default function WorkflowBuilderPage() {
       knowledge_training: GraduationCap,
       notification_alert: Zap,
       internal: Settings,
-      integration: Globe
+      integration: Globe,
+      hr_management: UserCircle
     };
     return iconMap[category] || FileText;
   };
@@ -145,7 +146,8 @@ export default function WorkflowBuilderPage() {
       internal: 'Internal Control',
       calendar_time: 'Calendar & Time',
       file_document: 'File & Document',
-      integration: 'Integration'
+      integration: 'Integration',
+      hr_management: 'HR Management'
     };
     return categoryNames[category] || category;
   };
@@ -163,7 +165,8 @@ export default function WorkflowBuilderPage() {
       internal: 'text-gray-600',
       calendar_time: 'text-red-600',
       file_document: 'text-indigo-600',
-      integration: 'text-teal-600'
+      integration: 'text-teal-600',
+      hr_management: 'text-rose-600'
     };
     return colorMap[category] || 'text-gray-600';
   };
