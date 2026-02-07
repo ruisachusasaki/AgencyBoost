@@ -370,7 +370,7 @@ export default function Reports() {
     position: string | null;
   }>>({
     queryKey: ["/api/staff"],
-    enabled: activeTab === "overview",
+    enabled: activeTab === "overview" || activeTab === "tasks",
   });
 
   // Tags query for filtering
@@ -2838,7 +2838,15 @@ export default function Reports() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Users</SelectItem>
-                          {/* Note: Would need staff/users query here, using sample for now */}
+                          {staffData
+                            .slice()
+                            .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
+                            .map((staff) => (
+                              <SelectItem key={staff.id} value={staff.id}>
+                                {staff.firstName} {staff.lastName}
+                              </SelectItem>
+                            ))
+                          }
                         </SelectContent>
                       </Select>
                     </div>
