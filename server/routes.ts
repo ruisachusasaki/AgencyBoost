@@ -26706,6 +26706,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Start 1-on-1 Meeting - records meeting start time
+  app.post("/api/hr/one-on-one/meetings/:meetingId/start", requireAuth(), async (req, res) => {
+    try {
+      const { meetingId } = req.params;
+      const [meeting] = await db.select().from(oneOnOneMeetings).where(eq(oneOnOneMeetings.id, meetingId));
+      
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      
+      if (meeting.meetingStartedAt) {
+        return res.status(400).json({ error: "Meeting has already been started" });
+      }
+      
+      const now = new Date();
+      const [updated] = await db.update(oneOnOneMeetings)
+        .set({ meetingStartedAt: now, updatedAt: now })
+        .where(eq(oneOnOneMeetings.id, meetingId))
+        .returning();
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error starting 1-on-1 meeting:", error);
+      res.status(500).json({ error: "Failed to start meeting" });
+    }
+  });
+
+  // Finish 1-on-1 Meeting - records end time and creates time entries for both participants
+  app.post("/api/hr/one-on-one/meetings/:meetingId/finish", requireAuth(), async (req, res) => {
+    try {
+      const { meetingId } = req.params;
+      const [meeting] = await db.select().from(oneOnOneMeetings).where(eq(oneOnOneMeetings.id, meetingId));
+      
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      
+      if (!meeting.meetingStartedAt) {
+        return res.status(400).json({ error: "Meeting has not been started yet" });
+      }
+      
+      if (meeting.meetingEndedAt) {
+        return res.status(400).json({ error: "Meeting has already been finished" });
+      }
+      
+      const now = new Date();
+      const startTime = new Date(meeting.meetingStartedAt);
+      const durationSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+      const durationMinutes = Math.floor(durationSeconds / 60);
+      
+      const [updated] = await db.update(oneOnOneMeetings)
+        .set({ meetingEndedAt: now, updatedAt: now })
+        .where(eq(oneOnOneMeetings.id, meetingId))
+        .returning();
+      
+      // Get direct report name for the task title
+      const [directReport] = await db.select().from(staff).where(eq(staff.id, meeting.directReportId));
+      const directReportName = directReport ? `${directReport.firstName} ${directReport.lastName}` : 'Unknown';
+      
+      const participantIds = [meeting.managerId, meeting.directReportId].filter(Boolean);
+      const taskTitle = `1-on-1 Meeting: ${directReportName}`;
+      
+      for (const staffId of participantIds) {
+        const existingTasks = await db.select().from(tasks)
+          .where(
+            and(
+              eq(tasks.title, taskTitle),
+              eq(tasks.assignedTo, staffId)
+            )
+          );
+        
+        let taskId: string;
+        let existingEntries: any[] = [];
+        
+        if (existingTasks.length > 0) {
+          taskId = existingTasks[0].id;
+          existingEntries = (existingTasks[0].timeEntries as any[]) || [];
+        } else {
+          const [newTask] = await db.insert(tasks).values({
+            title: taskTitle,
+            description: `Time tracked for 1-on-1 Meeting with ${directReportName}`,
+            status: "completed",
+            priority: "normal",
+            assignedTo: staffId,
+            tags: [],
+            timeEntries: sql`'[]'`,
+          }).returning();
+          taskId = newTask.id;
+        }
+        
+        const timeEntry = {
+          id: `1on1-${meetingId}-${staffId}-${Date.now()}`,
+          taskId: taskId,
+          taskTitle: taskTitle,
+          startTime: startTime.toISOString(),
+          endTime: now.toISOString(),
+          userId: staffId,
+          isRunning: false,
+          duration: durationMinutes,
+        };
+        
+        const updatedEntries = [...existingEntries, timeEntry];
+        const totalTracked = updatedEntries.reduce((sum: number, e: any) => sum + (e.duration || 0), 0);
+        
+        await db.update(tasks)
+          .set({ 
+            timeEntries: updatedEntries,
+            timeTracked: totalTracked,
+          })
+          .where(eq(tasks.id, taskId));
+      }
+      
+      res.json({
+        ...updated,
+        timeEntriesCreated: participantIds.length,
+        durationSeconds,
+      });
+    } catch (error: any) {
+      console.error("Error finishing 1-on-1 meeting:", error);
+      res.status(500).json({ error: "Failed to finish meeting" });
+    }
+  });
+
+  // Reset 1-on-1 Meeting timer
+  app.post("/api/hr/one-on-one/meetings/:meetingId/reset-timer", requireAuth(), async (req, res) => {
+    try {
+      const { meetingId } = req.params;
+      const [meeting] = await db.select().from(oneOnOneMeetings).where(eq(oneOnOneMeetings.id, meetingId));
+      
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      
+      if (meeting.meetingEndedAt) {
+        return res.status(400).json({ error: "Cannot reset timer after meeting has been finished" });
+      }
+      
+      const now = new Date();
+      const [updated] = await db.update(oneOnOneMeetings)
+        .set({ meetingStartedAt: null, updatedAt: now })
+        .where(eq(oneOnOneMeetings.id, meetingId))
+        .returning();
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error resetting 1-on-1 meeting timer:", error);
+      res.status(500).json({ error: "Failed to reset meeting timer" });
+    }
+  });
+
   // Talking Points Routes
   app.post("/api/hr/one-on-one/talking-points", requireAuth(), async (req, res) => {
     try {

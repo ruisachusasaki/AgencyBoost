@@ -44,7 +44,11 @@ import {
   ChevronRight,
   Trophy,
   X,
-  ExternalLink
+  ExternalLink,
+  Timer,
+  RotateCcw,
+  Play,
+  Square
 } from "lucide-react";
 
 interface DirectReport {
@@ -77,6 +81,8 @@ interface Meeting {
   privateNotes?: string;
   recordingLink?: string;
   calendarEventId?: string;
+  meetingStartedAt?: string;
+  meetingEndedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -1277,6 +1283,86 @@ function MeetingEditor({
     },
   });
 
+  const startMeetingMutation = useMutation({
+    mutationFn: async () => {
+      if (!meeting) throw new Error("No meeting");
+      const res = await apiRequest("POST", `/api/hr/one-on-one/meetings/${meeting.id}/start`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });
+      if (meeting) {
+        queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting.id, "details"] });
+      }
+      toast({ title: "Meeting started", description: "Timer is now running for both participants." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to start meeting", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const finishMeetingMutation = useMutation({
+    mutationFn: async () => {
+      if (!meeting) throw new Error("No meeting");
+      const res = await apiRequest("POST", `/api/hr/one-on-one/meetings/${meeting.id}/finish`);
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });
+      if (meeting) {
+        queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting.id, "details"] });
+      }
+      const mins = Math.floor((data.durationSeconds || 0) / 60);
+      const secs = (data.durationSeconds || 0) % 60;
+      toast({
+        title: "Meeting finished",
+        description: `Duration: ${mins}m ${secs}s. Time entries created for ${data.timeEntriesCreated} participant(s).`,
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to finish meeting", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const resetTimerMutation = useMutation({
+    mutationFn: async () => {
+      if (!meeting) throw new Error("No meeting");
+      const res = await apiRequest("POST", `/api/hr/one-on-one/meetings/${meeting.id}/reset-timer`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });
+      if (meeting) {
+        queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting.id, "details"] });
+      }
+      toast({ title: "Timer reset" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to reset timer", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!meeting?.meetingStartedAt || meeting?.meetingEndedAt) {
+      setElapsed(0);
+      return;
+    }
+    const startTime = new Date(meeting.meetingStartedAt).getTime();
+    const tick = () => setElapsed(Math.floor((Date.now() - startTime) / 1000));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [meeting?.meetingStartedAt, meeting?.meetingEndedAt]);
+
+  const formatElapsed = (totalSeconds: number) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  };
+
   const handleDelete = () => {
     deleteMeetingMutation.mutate();
   };
@@ -1683,6 +1769,72 @@ function MeetingEditor({
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Meeting Timer Controls */}
+              {meeting && (
+                <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <Timer className="h-5 w-5 text-muted-foreground" />
+                    {meeting.meetingEndedAt ? (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50 dark:bg-green-950/30">
+                          Completed
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          Duration: {formatElapsed(Math.floor((new Date(meeting.meetingEndedAt).getTime() - new Date(meeting.meetingStartedAt!).getTime()) / 1000))}
+                        </span>
+                      </div>
+                    ) : meeting.meetingStartedAt ? (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-red-600 border-red-300 bg-red-50 dark:bg-red-950/30 animate-pulse">
+                          In Progress
+                        </Badge>
+                        <span className="text-sm font-mono font-semibold tabular-nums">
+                          {formatElapsed(elapsed)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        Start the meeting to track time for both participants
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!meeting.meetingStartedAt && !meeting.meetingEndedAt && (
+                      <Button
+                        onClick={() => startMeetingMutation.mutate()}
+                        disabled={startMeetingMutation.isPending}
+                        className="bg-primary hover:bg-primary/90"
+                        size="sm"
+                      >
+                        <Play className="h-4 w-4 mr-1" />
+                        {startMeetingMutation.isPending ? "Starting..." : "Start Meeting"}
+                      </Button>
+                    )}
+                    {meeting.meetingStartedAt && !meeting.meetingEndedAt && (
+                      <>
+                        <Button
+                          onClick={() => resetTimerMutation.mutate()}
+                          disabled={resetTimerMutation.isPending}
+                          variant="ghost"
+                          size="sm"
+                          title="Reset timer"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={() => finishMeetingMutation.mutate()}
+                          disabled={finishMeetingMutation.isPending}
+                          variant="destructive"
+                          size="sm"
+                        >
+                          <Square className="h-4 w-4 mr-1" />
+                          {finishMeetingMutation.isPending ? "Finishing..." : "Finish Meeting"}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* Meeting Details */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
