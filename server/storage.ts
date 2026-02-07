@@ -10777,7 +10777,7 @@ export class DbStorage implements IStorage {
       SELECT pma.meeting_id as "meetingId", s.id, s.first_name as "firstName", s.last_name as "lastName"
       FROM px_meeting_attendees pma
       INNER JOIN staff s ON pma.user_id::uuid = s.id
-      WHERE pma.meeting_id = ANY(${meetingIds})
+      WHERE pma.meeting_id IN (${sql.join(meetingIds.map(id => sql`${id}`), sql`, `)})
     `);
 
     const attendeesByMeeting = new Map<string, Array<{ id: string; name: string }>>();
