@@ -370,7 +370,6 @@ export default function Reports() {
     position: string | null;
   }>>({
     queryKey: ["/api/staff"],
-    enabled: activeTab === "overview" || activeTab === "tasks",
   });
 
   // Tags query for filtering
@@ -6220,12 +6219,9 @@ function OneOnOnePerformanceReport() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
-                  <SelectItem value="Design">Design</SelectItem>
-                  <SelectItem value="Development">Development</SelectItem>
-                  <SelectItem value="Marketing">Marketing</SelectItem>
-                  <SelectItem value="Sales">Sales</SelectItem>
-                  <SelectItem value="Support">Support</SelectItem>
-                  <SelectItem value="Management">Management</SelectItem>
+                  {Array.from(new Set(staffData.map(s => s.department).filter(Boolean))).sort().map(dept => (
+                    <SelectItem key={dept} value={dept!}>{dept}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
