@@ -35509,6 +35509,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/px-meetings", requireAuth(), async (req, res) => {
     try {
       const { attendeeIds, ...meetingData } = req.body;
+      
+      if (meetingData.isRecurring) {
+        const validEndTypes = ["never", "after_occurrences", "on_date"];
+        if (meetingData.recurringEndType && !validEndTypes.includes(meetingData.recurringEndType)) {
+          return res.status(400).json({ error: "Invalid recurring end type" });
+        }
+        if (meetingData.recurringEndType === "after_occurrences" && (!meetingData.recurringOccurrences || meetingData.recurringOccurrences < 1)) {
+          return res.status(400).json({ error: "Number of occurrences must be at least 1" });
+        }
+        if (meetingData.recurringEndType === "on_date" && !meetingData.recurringEndDate) {
+          return res.status(400).json({ error: "End date is required for date-based recurring meetings" });
+        }
+      }
+      
       const user = req.session?.user;
       
       const meeting = await appStorage.createPxMeeting(
@@ -35520,51 +35534,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // If recurring, generate future meeting instances
-      if (meetingData.isRecurring && meetingData.recurringFrequency && meetingData.recurringEndDate) {
+      if (meetingData.isRecurring && meetingData.recurringFrequency) {
         const validFrequencies = ["weekly", "biweekly", "monthly"];
         const freq = meetingData.recurringFrequency;
+        const endType = meetingData.recurringEndType || "never";
         
         if (validFrequencies.includes(freq)) {
           const startDate = new Date(meetingData.meetingDate);
-          const endDate = new Date(meetingData.recurringEndDate);
+          let currentDate = new Date(startDate);
+          let occurrenceCount = 0;
+          const maxOccurrences = endType === "after_occurrences" ? (meetingData.recurringOccurrences || 10) : 520;
+          const endDate = endType === "on_date" && meetingData.recurringEndDate ? new Date(meetingData.recurringEndDate) : null;
           
-          if (endDate > startDate) {
-            let currentDate = new Date(startDate);
-            
-            while (true) {
-              if (freq === "weekly") {
-                currentDate.setDate(currentDate.getDate() + 7);
-              } else if (freq === "biweekly") {
-                currentDate.setDate(currentDate.getDate() + 14);
-              } else if (freq === "monthly") {
-                currentDate.setMonth(currentDate.getMonth() + 1);
-              }
-              
-              if (currentDate > endDate) break;
-              
-              const year = currentDate.getFullYear();
-              const month = String(currentDate.getMonth() + 1).padStart(2, "0");
-              const day = String(currentDate.getDate()).padStart(2, "0");
-              const formattedDate = `${year}-${month}-${day}`;
-              
-              await appStorage.createPxMeeting(
-                {
-                  title: meetingData.title,
-                  meetingDate: formattedDate,
-                  meetingTime: meetingData.meetingTime,
-                  meetingDuration: meetingData.meetingDuration,
-                  recordingLink: null,
-                  facilitatorId: meetingData.facilitatorId || null,
-                  noteTakerId: meetingData.noteTakerId || null,
-                  enabledElements: meetingData.enabledElements || null,
-                  isRecurring: true,
-                  recurringFrequency: freq,
-                  recurringParentId: meeting.id,
-                  createdById: user?.id,
-                },
-                attendeeIds || []
-              );
+          while (true) {
+            if (freq === "weekly") {
+              currentDate.setDate(currentDate.getDate() + 7);
+            } else if (freq === "biweekly") {
+              currentDate.setDate(currentDate.getDate() + 14);
+            } else if (freq === "monthly") {
+              currentDate.setMonth(currentDate.getMonth() + 1);
             }
+            
+            occurrenceCount++;
+            
+            if (endType === "on_date" && endDate && currentDate > endDate) break;
+            if (endType === "after_occurrences" && occurrenceCount > maxOccurrences) break;
+            if (endType === "never" && occurrenceCount > maxOccurrences) break;
+            
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+            const day = String(currentDate.getDate()).padStart(2, "0");
+            const formattedDate = `${year}-${month}-${day}`;
+            
+            await appStorage.createPxMeeting(
+              {
+                title: meetingData.title,
+                meetingDate: formattedDate,
+                meetingTime: meetingData.meetingTime,
+                meetingDuration: meetingData.meetingDuration,
+                recordingLink: null,
+                facilitatorId: meetingData.facilitatorId || null,
+                noteTakerId: meetingData.noteTakerId || null,
+                enabledElements: meetingData.enabledElements || null,
+                isRecurring: true,
+                recurringFrequency: freq,
+                recurringEndType: endType,
+                recurringParentId: meeting.id,
+                createdById: user?.id,
+              },
+              attendeeIds || []
+            );
           }
         }
       }
