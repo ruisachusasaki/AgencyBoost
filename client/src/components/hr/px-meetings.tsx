@@ -51,7 +51,8 @@ import {
   Play,
   Square,
   Timer,
-  RotateCcw
+  RotateCcw,
+  ArrowRightToLine
 } from "lucide-react";
 
 interface Staff {
@@ -172,6 +173,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     createdById?: string;
     assignedToId?: string;
     createdAt?: string;
+    pushedToNextMeeting?: boolean;
+    pushedFromMeetingId?: string;
   }
   
   const [salesOpportunities, setSalesOpportunities] = useState<CheckableItem[]>([]);
@@ -238,7 +241,9 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
           notes: item.notes,
           createdById: item.createdById,
           assignedToId: item.assignedToId,
-          createdAt: item.createdAt
+          createdAt: item.createdAt,
+          pushedToNextMeeting: item.pushedToNextMeeting,
+          pushedFromMeetingId: item.pushedFromMeetingId,
         };
       });
     } catch {
@@ -390,6 +395,35 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     },
     onError: (error: any) => {
       toast({ title: "Failed to reset timer", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const pushToNextMutation = useMutation({
+    mutationFn: async ({ meetingId: mId, segment, itemId }: { meetingId: string; segment: string; itemId: string }) => {
+      const res = await apiRequest("POST", `/api/px-meetings/${mId}/push-item`, { segment, itemId });
+      return await res.json();
+    },
+    onSuccess: (data, variables) => {
+      if (variables.segment === "salesOpportunities") {
+        setSalesOpportunities(prev => prev.map(item =>
+          item.id === variables.itemId ? { ...item, pushedToNextMeeting: true } : item
+        ));
+      } else {
+        setAreasOfOpportunities(prev => prev.map(item =>
+          item.id === variables.itemId ? { ...item, pushedToNextMeeting: true } : item
+        ));
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/px-meetings"] });
+      if (meetingId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/px-meetings/${meetingId}`] });
+      }
+      toast({
+        title: "Pushed to next meeting",
+        description: `Item will appear in the ${format(parseISO(data.pushedToMeetingDate), "MMM d, yyyy")} meeting`,
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to push item", description: error.message, variant: "destructive" });
     },
   });
 
@@ -1286,6 +1320,12 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                               {opp.content}
                             </span>
                             <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              {opp.pushedFromMeetingId && (
+                                <span className="flex items-center gap-1 text-primary">
+                                  <ArrowRightToLine className="h-3 w-3" />
+                                  Carried over
+                                </span>
+                              )}
                               {opp.createdById && (
                                 <span className="flex items-center gap-1">
                                   <User className="h-3 w-3" />
@@ -1328,6 +1368,27 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                           >
                             <StickyNote className="h-4 w-4" />
                           </Button>
+                          {selectedMeeting?.isRecurring && !opp.pushedToNextMeeting && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (selectedMeeting?.id) {
+                                  pushToNextMutation.mutate({ meetingId: selectedMeeting.id, segment: "salesOpportunities", itemId: opp.id });
+                                }
+                              }}
+                              disabled={pushToNextMutation.isPending}
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                              title="Push to next meeting"
+                            >
+                              <ArrowRightToLine className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {opp.pushedToNextMeeting && (
+                            <Badge variant="outline" className="text-xs text-primary border-primary/30 px-1.5 py-0">
+                              Pushed
+                            </Badge>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1403,6 +1464,12 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                               {opp.content}
                             </span>
                             <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              {opp.pushedFromMeetingId && (
+                                <span className="flex items-center gap-1 text-primary">
+                                  <ArrowRightToLine className="h-3 w-3" />
+                                  Carried over
+                                </span>
+                              )}
                               {opp.createdById && (
                                 <span className="flex items-center gap-1">
                                   <User className="h-3 w-3" />
@@ -1445,6 +1512,27 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                           >
                             <StickyNote className="h-4 w-4" />
                           </Button>
+                          {selectedMeeting?.isRecurring && !opp.pushedToNextMeeting && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (selectedMeeting?.id) {
+                                  pushToNextMutation.mutate({ meetingId: selectedMeeting.id, segment: "areasOfOpportunities", itemId: opp.id });
+                                }
+                              }}
+                              disabled={pushToNextMutation.isPending}
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                              title="Push to next meeting"
+                            >
+                              <ArrowRightToLine className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {opp.pushedToNextMeeting && (
+                            <Badge variant="outline" className="text-xs text-primary border-primary/30 px-1.5 py-0">
+                              Pushed
+                            </Badge>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"

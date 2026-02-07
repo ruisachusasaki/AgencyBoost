@@ -36071,6 +36071,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Push item from PX meeting segment to next recurring meeting
+  app.post("/api/px-meetings/:id/push-item", requireAuth(), async (req, res) => {
+    try {
+      const meetingId = req.params.id;
+      const { segment, itemId } = req.body;
+
+      if (!segment || !itemId) {
+        return res.status(400).json({ error: "segment and itemId are required" });
+      }
+
+      if (!["salesOpportunities", "areasOfOpportunities"].includes(segment)) {
+        return res.status(400).json({ error: "Invalid segment. Must be salesOpportunities or areasOfOpportunities" });
+      }
+
+      // Get current meeting
+      const [currentMeeting] = await db.select().from(pxMeetings).where(eq(pxMeetings.id, meetingId));
+      if (!currentMeeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+
+      // Determine the series parent ID
+      const seriesParentId = currentMeeting.recurringParentId || currentMeeting.id;
+
+      // Find the next meeting in the series (by date after current)
+      const nextMeetings = await db.select().from(pxMeetings)
+        .where(
+          and(
+            or(
+              eq(pxMeetings.recurringParentId, seriesParentId),
+              eq(pxMeetings.id, seriesParentId)
+            ),
+            gt(pxMeetings.meetingDate, currentMeeting.meetingDate)
+          )
+        )
+        .orderBy(asc(pxMeetings.meetingDate))
+        .limit(1);
+
+      if (nextMeetings.length === 0) {
+        return res.status(404).json({ error: "No next meeting found in this recurring series" });
+      }
+
+      const nextMeeting = nextMeetings[0];
+
+      // Parse current meeting's segment items safely
+      let currentItems: any[];
+      try {
+        const rawCurrent = (currentMeeting as any)[segment] || "[]";
+        currentItems = JSON.parse(rawCurrent);
+        if (!Array.isArray(currentItems)) currentItems = [];
+      } catch {
+        return res.status(400).json({ error: "Current meeting segment data is malformed" });
+      }
+
+      const itemToPush = currentItems.find((item: any) => item.id === itemId);
+
+      if (!itemToPush) {
+        return res.status(404).json({ error: "Item not found in current meeting" });
+      }
+
+      if (itemToPush.pushedToNextMeeting) {
+        return res.status(409).json({ error: "This item has already been pushed to the next meeting" });
+      }
+
+      // Mark the item as pushed in current meeting
+      const updatedCurrentItems = currentItems.map((item: any) =>
+        item.id === itemId ? { ...item, pushedToNextMeeting: true } : item
+      );
+
+      // Parse next meeting's segment items safely and append the pushed item
+      let nextItems: any[];
+      try {
+        const rawNext = (nextMeeting as any)[segment] || "[]";
+        nextItems = JSON.parse(rawNext);
+        if (!Array.isArray(nextItems)) nextItems = [];
+      } catch {
+        nextItems = [];
+      }
+      const newItem = {
+        id: randomUUID(),
+        content: itemToPush.content,
+        isCompleted: false,
+        notes: itemToPush.notes || "",
+        assignedToId: itemToPush.assignedToId,
+        createdById: itemToPush.createdById,
+        createdAt: new Date().toISOString(),
+        pushedFromMeetingId: meetingId,
+      };
+      nextItems.push(newItem);
+
+      const now = new Date();
+
+      // Update current meeting
+      await db.update(pxMeetings)
+        .set({ [segment]: JSON.stringify(updatedCurrentItems), updatedAt: now })
+        .where(eq(pxMeetings.id, meetingId));
+
+      // Update next meeting
+      await db.update(pxMeetings)
+        .set({ [segment]: JSON.stringify(nextItems), updatedAt: now })
+        .where(eq(pxMeetings.id, nextMeeting.id));
+
+      res.json({
+        success: true,
+        pushedToMeetingId: nextMeeting.id,
+        pushedToMeetingDate: nextMeeting.meetingDate,
+        newItemId: newItem.id,
+      });
+    } catch (error: any) {
+      console.error("Error pushing item to next meeting:", error);
+      res.status(500).json({ error: "Failed to push item to next meeting" });
+    }
+  });
   // ===== TOOL DIRECTORY ENDPOINTS =====
 
   // Get all tool categories
