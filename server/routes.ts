@@ -35722,7 +35722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attendees = await db.select().from(pxMeetingAttendees)
         .where(eq(pxMeetingAttendees.meetingId, meetingId));
       
-      const attendeeIds = attendees.map(a => a.staffId);
+      const attendeeIds = attendees.map(a => a.userId);
       
       if (meeting.createdById && !attendeeIds.includes(meeting.createdById)) {
         attendeeIds.push(meeting.createdById);
@@ -35767,11 +35767,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           endTime: now.toISOString(),
           userId: staffId,
           isRunning: false,
-          duration: durationSeconds,
+          duration: Math.floor(durationSeconds / 60),
         };
         
         const updatedEntries = [...existingEntries, timeEntry];
-        const totalTracked = Math.floor(updatedEntries.reduce((sum, e) => sum + (e.duration || 0), 0) / 60);
+        const totalTracked = updatedEntries.reduce((sum, e) => sum + (e.duration || 0), 0);
         
         await db.update(tasks)
           .set({ 
