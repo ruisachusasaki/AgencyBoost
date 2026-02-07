@@ -56,6 +56,7 @@ import {
   ArrowLeftRight,
   ArrowRight,
   StickyNote,
+  Layers,
 } from "lucide-react";
 import { 
   exportTimeTrackingData,
@@ -466,6 +467,20 @@ export default function Reports() {
         totalTime: number;
         tasksWorked: number;
         dailyTotals: Record<string, number>;
+      }>;
+    }>;
+    categoryBreakdowns?: Array<{
+      categoryId: string;
+      categoryName: string;
+      categoryColor: string;
+      totalTime: number;
+      tasksCount: number;
+      users: Array<{
+        userId: string;
+        userName: string;
+        userRole: string;
+        totalTime: number;
+        tasksWorked: number;
       }>;
     }>;
     grandTotal: number;
@@ -2648,6 +2663,7 @@ export default function Reports() {
                         <SelectItem value="time-tracking">Time Tracking Report</SelectItem>
                         <SelectItem value="timesheet">Timesheet View</SelectItem>
                         <SelectItem value="by-user-client">By User & Client</SelectItem>
+                        <SelectItem value="by-category">By Category</SelectItem>
                         {canExportAdminReports && <SelectItem value="admin-by-client">Total by Client (Admin)</SelectItem>}
                         <SelectItem value="productivity">Productivity Analysis</SelectItem>
                         <SelectItem value="workload">Workload Distribution</SelectItem>
@@ -3891,6 +3907,103 @@ export default function Reports() {
               </>
             )}
             </div>
+          )}
+
+          {/* By Category View */}
+          {taskReportType === "by-category" && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layers className="h-5 w-5 text-[#00C9C6]" />
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Time by Category</h3>
+                  </div>
+                  <span className="text-sm font-medium text-[#00C9C6]">
+                    Total: {formatDuration(timeTrackingData?.grandTotal || 0, timeDisplayMode)}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {timeTrackingLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#00C9C6]" />
+                  </div>
+                ) : !timeTrackingData?.categoryBreakdowns || timeTrackingData.categoryBreakdowns.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500">
+                    <Layers className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                    <p className="font-medium">No time tracked by category for this period</p>
+                    <p className="text-sm mt-1">Adjust your date range or filters to see results</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {timeTrackingData.categoryBreakdowns.map((category) => {
+                      const percentage = timeTrackingData.grandTotal > 0
+                        ? Math.round((category.totalTime / timeTrackingData.grandTotal) * 100)
+                        : 0;
+                      return (
+                        <div key={category.categoryId} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-4 h-4 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: category.categoryColor || '#94a3b8' }}
+                              />
+                              <div>
+                                <h4 className="font-semibold text-slate-900 dark:text-slate-100">{category.categoryName}</h4>
+                                <p className="text-xs text-slate-500">{category.tasksCount} task{category.tasksCount !== 1 ? 's' : ''} · {percentage}% of total</p>
+                              </div>
+                            </div>
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                              {formatDuration(category.totalTime, timeDisplayMode)}
+                            </span>
+                          </div>
+                          <div className="px-4 pb-1">
+                            <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mt-0 mb-3">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{
+                                  width: `${percentage}%`,
+                                  backgroundColor: category.categoryColor || '#94a3b8'
+                                }}
+                              />
+                            </div>
+                          </div>
+                          {category.users.length > 0 && (
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-xs">User</TableHead>
+                                  <TableHead className="text-xs">Role</TableHead>
+                                  <TableHead className="text-xs text-right">Hours</TableHead>
+                                  <TableHead className="text-xs text-right">Tasks</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {category.users
+                                  .slice()
+                                  .sort((a, b) => b.totalTime - a.totalTime)
+                                  .map((user) => (
+                                    <TableRow key={user.userId}>
+                                      <TableCell className="text-sm font-medium">{user.userName}</TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline" className="text-xs">{user.userRole}</Badge>
+                                      </TableCell>
+                                      <TableCell className="text-sm text-right font-medium">
+                                        {formatDuration(user.totalTime, timeDisplayMode)}
+                                      </TableCell>
+                                      <TableCell className="text-sm text-right">{user.tasksWorked}</TableCell>
+                                    </TableRow>
+                                  ))}
+                              </TableBody>
+                            </Table>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
 
           {/* Productivity Analysis */}

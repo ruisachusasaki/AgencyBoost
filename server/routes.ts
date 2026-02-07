@@ -1780,11 +1780,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate grand total
       const grandTotal = userSummaries.reduce((sum, user) => sum + user.totalTime, 0);
-      
+
+      // Calculate category breakdowns from real data
+      const categoryMap = new Map();
+      const categoryNameCache = new Map();
+
+      // Fetch all task categories for name lookups
+      const allTaskCategories = await db.select({ id: taskCategories.id, name: taskCategories.name, color: taskCategories.color }).from(taskCategories);
+      allTaskCategories.forEach(cat => categoryNameCache.set(cat.id, { name: cat.name, color: cat.color }));
+
+      tasksWithDetails.forEach(task => {
+        if (!task.timeEntries) return;
+        const catId = task.categoryId || 'uncategorized';
+        const catInfo = categoryNameCache.get(catId) || { name: 'Uncategorized', color: '#94a3b8' };
+
+        if (!categoryMap.has(catId)) {
+          categoryMap.set(catId, {
+            categoryId: catId,
+            categoryName: catInfo.name,
+            categoryColor: catInfo.color,
+            totalTime: 0,
+            tasksCount: new Set(),
+            userMap: new Map()
+          });
+        }
+
+        const category = categoryMap.get(catId);
+        category.tasksCount.add(task.id);
+
+        task.timeEntries.forEach(entry => {
+          if (!entry.startTime || !entry.userId) return;
+          const entryDate = formatLocalDate(entry.startTime);
+          if (entryDate < dateFrom || entryDate > dateTo) return;
+
+          let resolvedEntryUserId = entry.userId;
+          if (IS_DEVELOPMENT && entry.userId === 'current-user') {
+            resolvedEntryUserId = authenticatedUserId;
+          }
+          if (effectiveUserId && resolvedEntryUserId !== effectiveUserId) return;
+
+          category.totalTime += entry.duration || 0;
+
+          if (!category.userMap.has(resolvedEntryUserId)) {
+            category.userMap.set(resolvedEntryUserId, {
+              userId: resolvedEntryUserId,
+              userName: entry.userName || userLookupCache.get(resolvedEntryUserId) || 'Unknown User',
+              userRole: userRoleLookupCache.get(resolvedEntryUserId) || 'User',
+              totalTime: 0,
+              tasksWorked: new Set()
+            });
+          }
+
+          const user = category.userMap.get(resolvedEntryUserId);
+          user.totalTime += entry.duration || 0;
+          user.tasksWorked.add(task.id);
+        });
+      });
+
+      const categoryBreakdowns = Array.from(categoryMap.values())
+        .map(cat => ({
+          categoryId: cat.categoryId,
+          categoryName: cat.categoryName,
+          categoryColor: cat.categoryColor,
+          totalTime: cat.totalTime,
+          tasksCount: cat.tasksCount.size,
+          users: Array.from(cat.userMap.values()).map(user => ({
+            ...user,
+            tasksWorked: user.tasksWorked.size
+          }))
+        }))
+        .sort((a, b) => b.totalTime - a.totalTime);
+
       const reportData = {
         tasks: tasksWithDetails,
         userSummaries,
         clientBreakdowns,
+        categoryBreakdowns,
         grandTotal
       };
       
