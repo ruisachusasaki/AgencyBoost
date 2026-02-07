@@ -1851,7 +1851,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="never">No End Date</SelectItem>
-                          <SelectItem value="after_occurrences">After X Occurrences</SelectItem>
+                          <SelectItem value="after_occurrences">After No. of Occurrences</SelectItem>
                           <SelectItem value="on_date">On Date</SelectItem>
                         </SelectContent>
                       </Select>
