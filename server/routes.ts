@@ -1562,19 +1562,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create a cache for user lookups to avoid repeated database queries
       const userLookupCache = new Map();
+      const userRoleLookupCache = new Map();
       
-      // Helper function to get user name from database
+      // Helper function to get user name and role from database
       const getUserName = async (userId) => {
         if (userLookupCache.has(userId)) {
           return userLookupCache.get(userId);
         }
         
         try {
-          // Use direct database access through storage
-          const staffData = await appStorage.getStaffMember(userId);
-          if (staffData) {
-            const fullName = `${staffData.firstName} ${staffData.lastName}`;
+          const staffWithRole = await db.select({
+            firstName: staff.firstName,
+            lastName: staff.lastName,
+            roleName: roles.name
+          })
+          .from(staff)
+          .leftJoin(roles, eq(staff.roleId, roles.id))
+          .where(eq(staff.id, userId))
+          .limit(1);
+          
+          if (staffWithRole.length > 0) {
+            const fullName = `${staffWithRole[0].firstName} ${staffWithRole[0].lastName}`;
             userLookupCache.set(userId, fullName);
+            userRoleLookupCache.set(userId, staffWithRole[0].roleName || 'User');
             return fullName;
           }
         } catch (error) {
@@ -1582,6 +1592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         userLookupCache.set(userId, 'Development User');
+        userRoleLookupCache.set(userId, 'User');
         return 'Development User';
       };
 
@@ -1642,7 +1653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userMap.set(resolvedEntryUserId, {
               userId: resolvedEntryUserId,
               userName: entry.userName || userLookupCache.get(resolvedEntryUserId) || 'Development User',
-              userRole: entry.userRole || 'User',
+              userRole: userRoleLookupCache.get(resolvedEntryUserId) || 'User',
               totalTime: 0,
               tasksWorked: new Set(),
               dailyTotals: {}
@@ -1674,7 +1685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userMap.set(eventEntry.userId, {
             userId: eventEntry.userId,
             userName: staffData ? `${staffData.firstName} ${staffData.lastName}` : 'Unknown User',
-            userRole: 'User',
+            userRole: userRoleLookupCache.get(eventEntry.userId) || 'User',
             totalTime: 0,
             tasksWorked: new Set(),
             dailyTotals: {}
@@ -1742,7 +1753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             client.userMap.set(resolvedEntryUserId, {
               userId: resolvedEntryUserId,
               userName: entry.userName || userLookupCache.get(resolvedEntryUserId) || 'Development User',
-              userRole: entry.userRole || 'User',
+              userRole: userRoleLookupCache.get(resolvedEntryUserId) || 'User',
               totalTime: 0,
               tasksWorked: new Set(),
               dailyTotals: {}
