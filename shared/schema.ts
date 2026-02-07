@@ -4231,6 +4231,10 @@ export const oneOnOneMeetings = pgTable("one_on_one_meetings", {
   privateNotes: text("private_notes"), // Only visible to manager and admins
   recordingLink: text("recording_link"), // Link to Fathom, Google Meet, or other video recording
   
+  // Meeting time tracking fields
+  meetingStartedAt: timestamp("meeting_started_at"),
+  meetingEndedAt: timestamp("meeting_ended_at"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
