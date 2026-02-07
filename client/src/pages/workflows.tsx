@@ -236,7 +236,8 @@ export default function WorkflowsPage() {
 
   // Build a staff lookup map for "Created by" display
   const staffMap = (staffMembers as any[]).reduce((acc: Record<string, string>, s: any) => {
-    acc[s.id] = s.name || s.username || s.email || "Unknown";
+    const fullName = [s.firstName || s.first_name, s.lastName || s.last_name].filter(Boolean).join(" ");
+    acc[s.id] = fullName || s.email || "Unknown";
     return acc;
   }, {} as Record<string, string>);
 
