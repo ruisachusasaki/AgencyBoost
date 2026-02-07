@@ -26495,6 +26495,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new 1-on-1 meeting
+  // Helper: Generate next recurring 1-on-1 meeting when current one is finished
+  async function generateNextRecurringOneOnOneMeeting(currentMeeting: any, currentMeetingId: string) {
+    const freq = currentMeeting.recurringFrequency;
+    const endType = currentMeeting.recurringEndType || "never";
+    const parentId = currentMeeting.recurringParentId || currentMeetingId;
+
+    // Calculate next meeting date
+    const currentDate = new Date(currentMeeting.meetingDate);
+    if (freq === "weekly") {
+      currentDate.setDate(currentDate.getDate() + 7);
+    } else if (freq === "biweekly") {
+      currentDate.setDate(currentDate.getDate() + 14);
+    } else if (freq === "monthly") {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+
+    // Check end conditions
+    if (endType === "on_date" && currentMeeting.recurringEndDate) {
+      const endDate = new Date(currentMeeting.recurringEndDate);
+      if (currentDate > endDate) {
+        console.log("[1-on-1 Recurring] End date reached, not creating next meeting");
+        return null;
+      }
+    }
+
+    if (endType === "after_occurrences" && currentMeeting.recurringOccurrences) {
+      const existingCount = await db.select({ count: sql`count(*)` })
+        .from(oneOnOneMeetings)
+        .where(
+          or(
+            eq(oneOnOneMeetings.id, parentId),
+            eq(oneOnOneMeetings.recurringParentId, parentId)
+          )
+        );
+      const totalCount = Number(existingCount[0]?.count || 0);
+      if (totalCount >= currentMeeting.recurringOccurrences) {
+        console.log("[1-on-1 Recurring] Max occurrences reached, not creating next meeting");
+        return null;
+      }
+    }
+
+    // Validate frequency
+    if (!["weekly", "biweekly", "monthly"].includes(freq)) {
+      console.log("[1-on-1 Recurring] Invalid frequency:", freq);
+      return null;
+    }
+
+    // Check if next meeting already exists (prevent duplicates)
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const day = String(currentDate.getDate()).padStart(2, "0");
+    const formattedDate = `${year}-${month}-${day}`;
+
+    const existingNext = await db.select().from(oneOnOneMeetings)
+      .where(
+        and(
+          or(
+            eq(oneOnOneMeetings.recurringParentId, parentId),
+            eq(oneOnOneMeetings.id, parentId)
+          ),
+          eq(oneOnOneMeetings.meetingDate, formattedDate)
+        )
+      );
+    
+    if (existingNext.length > 0) {
+      console.log("[1-on-1 Recurring] Next meeting already exists for", formattedDate);
+      return existingNext[0];
+    }
+
+    // Compute weekOf (Monday of the week)
+    const tempDate = new Date(currentDate);
+    const dayOfWeek = tempDate.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    tempDate.setDate(tempDate.getDate() + mondayOffset);
+    const weekOfFormatted = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, "0")}-${String(tempDate.getDate()).padStart(2, "0")}`;
+
+    const [nextMeeting] = await db.insert(oneOnOneMeetings)
+      .values({
+        managerId: currentMeeting.managerId,
+        directReportId: currentMeeting.directReportId,
+        meetingDate: formattedDate,
+        meetingTime: currentMeeting.meetingTime,
+        meetingDuration: currentMeeting.meetingDuration,
+        weekOf: weekOfFormatted,
+        isRecurring: true,
+        recurringFrequency: freq,
+        recurringEndType: endType,
+        recurringEndDate: currentMeeting.recurringEndDate || null,
+        recurringOccurrences: currentMeeting.recurringOccurrences || null,
+        recurringParentId: parentId,
+      })
+      .returning();
+
+    // Auto-create KPI statuses for the new meeting
+    try {
+      const [directReport] = await db.select()
+        .from(staff)
+        .where(eq(staff.id, currentMeeting.directReportId));
+      
+      if (directReport?.positionId) {
+        const kpisForPosition = await db.select()
+          .from(positionKpis)
+          .where(eq(positionKpis.positionId, directReport.positionId));
+        
+        if (kpisForPosition.length > 0) {
+          await db.insert(oneOnOneMeetingKpiStatuses)
+            .values(
+              kpisForPosition.map((kpi: any) => ({
+                meetingId: nextMeeting.id,
+                positionKpiId: kpi.id,
+                status: 'on_track' as const,
+              }))
+            );
+        }
+      }
+    } catch (kpiErr) {
+      console.error("[1-on-1 Recurring] Error creating KPI statuses:", kpiErr);
+    }
+
+    // Create calendar events for the new meeting
+    if (currentMeeting.meetingTime && currentMeeting.meetingDuration) {
+      try {
+        await createOneOnOneMeetingCalendars({
+          meetingId: nextMeeting.id,
+          managerId: currentMeeting.managerId,
+          directReportId: currentMeeting.directReportId,
+          meetingDate: formattedDate,
+          meetingTime: currentMeeting.meetingTime,
+          meetingDuration: currentMeeting.meetingDuration,
+        });
+      } catch (calError) {
+        console.error("[1-on-1 Recurring] Calendar creation failed:", calError);
+      }
+    }
+
+    console.log("[1-on-1 Recurring] Created next meeting for", formattedDate);
+    return nextMeeting;
+  }
+
   app.post("/api/hr/one-on-one/meetings", requireAuth(), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
@@ -26548,97 +26687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // If recurring, generate future meeting instances
-      if (validatedData.isRecurring && validatedData.recurringFrequency) {
-        const freq = validatedData.recurringFrequency;
-        const endType = validatedData.recurringEndType || "never";
-        const validFrequencies = ["weekly", "biweekly", "monthly"];
-        
-        if (validFrequencies.includes(freq)) {
-          const startDate = new Date(validatedData.meetingDate);
-          let currentDate = new Date(startDate);
-          let occurrenceCount = 0;
-          const maxOccurrences = endType === "after_occurrences" ? (validatedData.recurringOccurrences || 10) : 520;
-          const endDate = endType === "on_date" && validatedData.recurringEndDate ? new Date(validatedData.recurringEndDate) : null;
-          
-          while (true) {
-            if (freq === "weekly") {
-              currentDate.setDate(currentDate.getDate() + 7);
-            } else if (freq === "biweekly") {
-              currentDate.setDate(currentDate.getDate() + 14);
-            } else if (freq === "monthly") {
-              currentDate.setMonth(currentDate.getMonth() + 1);
-            }
-            
-            occurrenceCount++;
-            
-            if (endType === "on_date" && endDate && currentDate > endDate) break;
-            if (endType === "after_occurrences" && occurrenceCount > maxOccurrences) break;
-            if (endType === "never" && occurrenceCount > maxOccurrences) break;
-            
-            const year = currentDate.getFullYear();
-            const month = String(currentDate.getMonth() + 1).padStart(2, "0");
-            const day = String(currentDate.getDate()).padStart(2, "0");
-            const formattedDate = `${year}-${month}-${day}`;
-            
-            // Compute weekOf (Monday of the week)
-            const tempDate = new Date(currentDate);
-            const dayOfWeek = tempDate.getDay();
-            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-            tempDate.setDate(tempDate.getDate() + mondayOffset);
-            const weekOfFormatted = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, "0")}-${String(tempDate.getDate()).padStart(2, "0")}`;
-            
-            const [recurringMeeting] = await db.insert(oneOnOneMeetings)
-              .values({
-                managerId: rawUserId,
-                directReportId: validatedData.directReportId,
-                meetingDate: formattedDate,
-                meetingTime: validatedData.meetingTime,
-                meetingDuration: validatedData.meetingDuration,
-                weekOf: weekOfFormatted,
-                isRecurring: true,
-                recurringFrequency: freq,
-                recurringEndType: endType,
-                recurringParentId: newMeeting.id,
-              })
-              .returning();
-            
-            // Auto-create KPI statuses for recurring instances
-            if (directReport?.positionId) {
-              const kpisForPosition = await db.select()
-                .from(positionKpis)
-                .where(eq(positionKpis.positionId, directReport.positionId));
-              
-              if (kpisForPosition.length > 0) {
-                await db.insert(oneOnOneMeetingKpiStatuses)
-                  .values(
-                    kpisForPosition.map((kpi) => ({
-                      meetingId: recurringMeeting.id,
-                      positionKpiId: kpi.id,
-                      status: 'on_track' as const,
-                    }))
-                  );
-              }
-            }
-            
-            // Create calendar events for recurring instances
-            if (validatedData.meetingTime && validatedData.meetingDuration) {
-              try {
-                await createOneOnOneMeetingCalendars({
-                  meetingId: recurringMeeting.id,
-                  managerId: rawUserId,
-                  directReportId: validatedData.directReportId,
-                  meetingDate: formattedDate,
-                  meetingTime: validatedData.meetingTime,
-                  meetingDuration: validatedData.meetingDuration,
-                });
-              } catch (calError) {
-                console.error(`[1-on-1 Recurring] Calendar creation failed for ${formattedDate}:`, calError);
-              }
-            }
-          }
-        }
-      }
+      // Create internal calendar appointment and optionally sync to Google Calendar      }
 
       // Create internal calendar appointment and optionally sync to Google Calendar
       let updatedMeeting = newMeeting;
@@ -26920,10 +26969,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(tasks.id, taskId));
       }
       
+      // Generate next recurring meeting instance if this is a recurring meeting
+      let nextMeeting = null;
+      if (meeting.isRecurring && meeting.recurringFrequency) {
+        try {
+          nextMeeting = await generateNextRecurringOneOnOneMeeting(meeting, meetingId);
+        } catch (recurErr) {
+          console.error("Error generating next recurring 1-on-1 meeting:", recurErr);
+        }
+      }
+
       res.json({
         ...updated,
         timeEntriesCreated: participantIds.length,
         durationSeconds,
+        nextMeeting,
       });
     } catch (error: any) {
       console.error("Error finishing 1-on-1 meeting:", error);
@@ -35759,6 +35819,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper: Generate next recurring PX meeting when current one is finished
+  async function generateNextRecurringPxMeeting(currentMeeting: any, currentMeetingId: string) {
+    const freq = currentMeeting.recurringFrequency;
+    const endType = currentMeeting.recurringEndType || "never";
+    const parentId = currentMeeting.recurringParentId || currentMeetingId;
+
+    // Calculate next meeting date
+    const currentDate = new Date(currentMeeting.meetingDate);
+    if (freq === "weekly") {
+      currentDate.setDate(currentDate.getDate() + 7);
+    } else if (freq === "biweekly") {
+      currentDate.setDate(currentDate.getDate() + 14);
+    } else if (freq === "monthly") {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+
+    // Check end conditions
+    if (endType === "on_date" && currentMeeting.recurringEndDate) {
+      const endDate = new Date(currentMeeting.recurringEndDate);
+      if (currentDate > endDate) {
+        console.log("[PX Recurring] End date reached, not creating next meeting");
+        return null;
+      }
+    }
+
+    if (endType === "after_occurrences" && currentMeeting.recurringOccurrences) {
+      const existingCount = await db.select({ count: sql`count(*)` })
+        .from(pxMeetings)
+        .where(
+          or(
+            eq(pxMeetings.id, parentId),
+            eq(pxMeetings.recurringParentId, parentId)
+          )
+        );
+      const totalCount = Number(existingCount[0]?.count || 0);
+      if (totalCount >= currentMeeting.recurringOccurrences) {
+        console.log("[PX Recurring] Max occurrences reached, not creating next meeting");
+        return null;
+      }
+    }
+
+    // Validate frequency
+    if (!["weekly", "biweekly", "monthly"].includes(freq)) {
+      console.log("[PX Recurring] Invalid frequency:", freq);
+      return null;
+    }
+
+    // Check if next meeting already exists (prevent duplicates)
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const day = String(currentDate.getDate()).padStart(2, "0");
+    const formattedDate = `${year}-${month}-${day}`;
+
+    const existingNext = await db.select().from(pxMeetings)
+      .where(
+        and(
+          or(
+            eq(pxMeetings.recurringParentId, parentId),
+            eq(pxMeetings.id, parentId)
+          ),
+          eq(pxMeetings.meetingDate, formattedDate)
+        )
+      );
+    
+    if (existingNext.length > 0) {
+      console.log("[PX Recurring] Next meeting already exists for", formattedDate);
+      return existingNext[0];
+    }
+
+    // Get attendees from current meeting
+    const currentAttendees = await db.select()
+      .from(pxMeetingAttendees)
+      .where(eq(pxMeetingAttendees.meetingId, currentMeetingId));
+    const attendeeIds = currentAttendees.map(a => a.userId);
+
+    const nextMeeting = await appStorage.createPxMeeting(
+      {
+        title: currentMeeting.title,
+        meetingDate: formattedDate,
+        meetingTime: currentMeeting.meetingTime,
+        meetingDuration: currentMeeting.meetingDuration,
+        recordingLink: null,
+        facilitatorId: currentMeeting.facilitatorId || null,
+        noteTakerId: currentMeeting.noteTakerId || null,
+        enabledElements: currentMeeting.enabledElements || null,
+        clientId: currentMeeting.clientId || null,
+        tags: currentMeeting.tags || null,
+        isRecurring: true,
+        recurringFrequency: freq,
+        recurringEndType: endType,
+        recurringEndDate: currentMeeting.recurringEndDate || null,
+        recurringOccurrences: currentMeeting.recurringOccurrences || null,
+        recurringParentId: parentId,
+        createdById: currentMeeting.createdById,
+      },
+      attendeeIds
+    );
+
+    console.log("[PX Recurring] Created next meeting for", formattedDate);
+    return nextMeeting;
+  }
+
   app.post("/api/px-meetings", requireAuth(), async (req, res) => {
     try {
       const { attendeeIds, ...meetingData } = req.body;
@@ -35785,61 +35947,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         attendeeIds || []
       );
-      
-      // If recurring, generate future meeting instances
-      if (meetingData.isRecurring && meetingData.recurringFrequency) {
-        const validFrequencies = ["weekly", "biweekly", "monthly"];
-        const freq = meetingData.recurringFrequency;
-        const endType = meetingData.recurringEndType || "never";
-        
-        if (validFrequencies.includes(freq)) {
-          const startDate = new Date(meetingData.meetingDate);
-          let currentDate = new Date(startDate);
-          let occurrenceCount = 0;
-          const maxOccurrences = endType === "after_occurrences" ? (meetingData.recurringOccurrences || 10) : 520;
-          const endDate = endType === "on_date" && meetingData.recurringEndDate ? new Date(meetingData.recurringEndDate) : null;
-          
-          while (true) {
-            if (freq === "weekly") {
-              currentDate.setDate(currentDate.getDate() + 7);
-            } else if (freq === "biweekly") {
-              currentDate.setDate(currentDate.getDate() + 14);
-            } else if (freq === "monthly") {
-              currentDate.setMonth(currentDate.getMonth() + 1);
-            }
-            
-            occurrenceCount++;
-            
-            if (endType === "on_date" && endDate && currentDate > endDate) break;
-            if (endType === "after_occurrences" && occurrenceCount > maxOccurrences) break;
-            if (endType === "never" && occurrenceCount > maxOccurrences) break;
-            
-            const year = currentDate.getFullYear();
-            const month = String(currentDate.getMonth() + 1).padStart(2, "0");
-            const day = String(currentDate.getDate()).padStart(2, "0");
-            const formattedDate = `${year}-${month}-${day}`;
-            
-            await appStorage.createPxMeeting(
-              {
-                title: meetingData.title,
-                meetingDate: formattedDate,
-                meetingTime: meetingData.meetingTime,
-                meetingDuration: meetingData.meetingDuration,
-                recordingLink: null,
-                facilitatorId: meetingData.facilitatorId || null,
-                noteTakerId: meetingData.noteTakerId || null,
-                enabledElements: meetingData.enabledElements || null,
-                isRecurring: true,
-                recurringFrequency: freq,
-                recurringEndType: endType,
-                recurringParentId: meeting.id,
-                createdById: user?.id,
-              },
-              attendeeIds || []
-            );
-          }
-        }
-      }
       
       res.status(201).json(meeting);
     } catch (error: any) {
@@ -36033,10 +36140,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(tasks.id, taskId));
       }
       
+      // Generate next recurring meeting instance if this is a recurring meeting
+      let nextMeeting = null;
+      if (meeting.isRecurring && meeting.recurringFrequency) {
+        try {
+          nextMeeting = await generateNextRecurringPxMeeting(meeting, meetingId);
+        } catch (recurErr) {
+          console.error("Error generating next recurring PX meeting:", recurErr);
+        }
+      }
+
       res.json({
         ...updated,
         timeEntriesCreated: attendeeIds.length,
         durationSeconds,
+        nextMeeting,
       });
     } catch (error: any) {
       console.error("Error finishing PX meeting:", error);
@@ -36109,11 +36227,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(asc(pxMeetings.meetingDate))
         .limit(1);
 
+      let nextMeeting;
       if (nextMeetings.length === 0) {
-        return res.status(404).json({ error: "No next meeting found in this recurring series" });
+        // No next meeting exists yet - generate one on demand
+        if (currentMeeting.isRecurring && currentMeeting.recurringFrequency) {
+          const generated = await generateNextRecurringPxMeeting(currentMeeting, meetingId);
+          if (!generated) {
+            return res.status(404).json({ error: "Recurring series has ended - no more meetings to create" });
+          }
+          nextMeeting = generated;
+        } else {
+          return res.status(404).json({ error: "No next meeting found in this recurring series" });
+        }
+      } else {
+        nextMeeting = nextMeetings[0];
       }
-
-      const nextMeeting = nextMeetings[0];
 
       // Parse current meeting's segment items safely
       let currentItems: any[];

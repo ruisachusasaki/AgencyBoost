@@ -1473,9 +1473,14 @@ function MeetingEditor({
       }
       const mins = Math.floor((data.durationSeconds || 0) / 60);
       const secs = (data.durationSeconds || 0) % 60;
+      let desc = `Duration: ${mins}m ${secs}s. Time entries created for ${data.timeEntriesCreated} participant(s).`;
+      if (data.nextMeeting) {
+        const nextDate = new Date(data.nextMeeting.meetingDate).toLocaleDateString();
+        desc += ` Next meeting scheduled for ${nextDate}.`;
+      }
       toast({
         title: "Meeting finished",
-        description: `Duration: ${mins}m ${secs}s. Time entries created for ${data.timeEntriesCreated} participant(s).`,
+        description: desc,
       });
     },
     onError: (error: any) => {
