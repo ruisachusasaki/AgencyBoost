@@ -4231,6 +4231,14 @@ export const oneOnOneMeetings = pgTable("one_on_one_meetings", {
   privateNotes: text("private_notes"), // Only visible to manager and admins
   recordingLink: text("recording_link"), // Link to Fathom, Google Meet, or other video recording
   
+  // Recurring meeting fields
+  isRecurring: boolean("is_recurring").default(false),
+  recurringFrequency: text("recurring_frequency"), // "weekly", "biweekly", "monthly"
+  recurringEndType: text("recurring_end_type"), // "never", "after_occurrences", "on_date"
+  recurringEndDate: date("recurring_end_date"),
+  recurringOccurrences: integer("recurring_occurrences"),
+  recurringParentId: varchar("recurring_parent_id"),
+  
   // Meeting time tracking fields
   meetingStartedAt: timestamp("meeting_started_at"),
   meetingEndedAt: timestamp("meeting_ended_at"),
