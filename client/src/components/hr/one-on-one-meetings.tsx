@@ -913,6 +913,8 @@ function MeetingEditor({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const liveMeeting = meetingDetails?.meeting ?? meeting;
+
   // Fetch current authenticated user (for "My 1v1 Meetings" view)
   const { data: authUser, isLoading: loadingAuthUser } = useQuery<{ id: string; firstName: string; lastName: string }>({
     queryKey: ['/api/auth/current-user'],
@@ -1285,14 +1287,14 @@ function MeetingEditor({
 
   const startMeetingMutation = useMutation({
     mutationFn: async () => {
-      if (!meeting) throw new Error("No meeting");
-      const res = await apiRequest("POST", `/api/hr/one-on-one/meetings/${meeting.id}/start`);
+      if (!liveMeeting) throw new Error("No meeting");
+      const res = await apiRequest("POST", `/api/hr/one-on-one/meetings/${liveMeeting.id}/start`);
       return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });
-      if (meeting) {
-        queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting.id, "details"] });
+      if (liveMeeting) {
+        queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", liveMeeting.id, "details"] });
       }
       toast({ title: "Meeting started", description: "Timer is now running for both participants." });
     },
@@ -1303,14 +1305,14 @@ function MeetingEditor({
 
   const finishMeetingMutation = useMutation({
     mutationFn: async () => {
-      if (!meeting) throw new Error("No meeting");
-      const res = await apiRequest("POST", `/api/hr/one-on-one/meetings/${meeting.id}/finish`);
+      if (!liveMeeting) throw new Error("No meeting");
+      const res = await apiRequest("POST", `/api/hr/one-on-one/meetings/${liveMeeting.id}/finish`);
       return await res.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });
-      if (meeting) {
-        queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting.id, "details"] });
+      if (liveMeeting) {
+        queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", liveMeeting.id, "details"] });
       }
       const mins = Math.floor((data.durationSeconds || 0) / 60);
       const secs = (data.durationSeconds || 0) % 60;
@@ -1326,14 +1328,14 @@ function MeetingEditor({
 
   const resetTimerMutation = useMutation({
     mutationFn: async () => {
-      if (!meeting) throw new Error("No meeting");
-      const res = await apiRequest("POST", `/api/hr/one-on-one/meetings/${meeting.id}/reset-timer`);
+      if (!liveMeeting) throw new Error("No meeting");
+      const res = await apiRequest("POST", `/api/hr/one-on-one/meetings/${liveMeeting.id}/reset-timer`);
       return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings"] });
-      if (meeting) {
-        queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", meeting.id, "details"] });
+      if (liveMeeting) {
+        queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/meetings", liveMeeting.id, "details"] });
       }
       toast({ title: "Timer reset" });
     },
@@ -1344,16 +1346,16 @@ function MeetingEditor({
 
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
-    if (!meeting?.meetingStartedAt || meeting?.meetingEndedAt) {
+    if (!liveMeeting?.meetingStartedAt || liveMeeting?.meetingEndedAt) {
       setElapsed(0);
       return;
     }
-    const startTime = new Date(meeting.meetingStartedAt).getTime();
+    const startTime = new Date(liveMeeting.meetingStartedAt).getTime();
     const tick = () => setElapsed(Math.floor((Date.now() - startTime) / 1000));
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [meeting?.meetingStartedAt, meeting?.meetingEndedAt]);
+  }, [liveMeeting?.meetingStartedAt, liveMeeting?.meetingEndedAt]);
 
   const formatElapsed = (totalSeconds: number) => {
     const h = Math.floor(totalSeconds / 3600);
@@ -1770,20 +1772,20 @@ function MeetingEditor({
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Meeting Timer Controls */}
-              {meeting && (
+              {liveMeeting && (
                 <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
                   <div className="flex items-center gap-3">
                     <Timer className="h-5 w-5 text-muted-foreground" />
-                    {meeting.meetingEndedAt ? (
+                    {liveMeeting.meetingEndedAt ? (
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50 dark:bg-green-950/30">
                           Completed
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          Duration: {formatElapsed(Math.floor((new Date(meeting.meetingEndedAt).getTime() - new Date(meeting.meetingStartedAt!).getTime()) / 1000))}
+                          Duration: {formatElapsed(Math.floor((new Date(liveMeeting.meetingEndedAt).getTime() - new Date(liveMeeting.meetingStartedAt!).getTime()) / 1000))}
                         </span>
                       </div>
-                    ) : meeting.meetingStartedAt ? (
+                    ) : liveMeeting.meetingStartedAt ? (
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-red-600 border-red-300 bg-red-50 dark:bg-red-950/30 animate-pulse">
                           In Progress
@@ -1799,7 +1801,7 @@ function MeetingEditor({
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {!meeting.meetingStartedAt && !meeting.meetingEndedAt && (
+                    {!liveMeeting.meetingStartedAt && !liveMeeting.meetingEndedAt && (
                       <Button
                         onClick={() => startMeetingMutation.mutate()}
                         disabled={startMeetingMutation.isPending}
@@ -1810,7 +1812,7 @@ function MeetingEditor({
                         {startMeetingMutation.isPending ? "Starting..." : "Start Meeting"}
                       </Button>
                     )}
-                    {meeting.meetingStartedAt && !meeting.meetingEndedAt && (
+                    {liveMeeting.meetingStartedAt && !liveMeeting.meetingEndedAt && (
                       <>
                         <Button
                           onClick={() => resetTimerMutation.mutate()}
