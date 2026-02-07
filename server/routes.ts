@@ -26539,6 +26539,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Validate recurring end date is after meeting date
+      if (validatedData.isRecurring && validatedData.recurringEndType === "on_date" && validatedData.recurringEndDate && validatedData.meetingDate) {
+        const endDateObj = new Date(validatedData.recurringEndDate);
+        const meetingDateObj = new Date(validatedData.meetingDate);
+        if (endDateObj <= meetingDateObj) {
+          return res.status(400).json({ error: "Recurring end date must be after the meeting date" });
+        }
+      }
+
+      // If recurring, generate future meeting instances
+      if (validatedData.isRecurring && validatedData.recurringFrequency) {
+        const freq = validatedData.recurringFrequency;
+        const endType = validatedData.recurringEndType || "never";
+        const validFrequencies = ["weekly", "biweekly", "monthly"];
+        
+        if (validFrequencies.includes(freq)) {
+          const startDate = new Date(validatedData.meetingDate);
+          let currentDate = new Date(startDate);
+          let occurrenceCount = 0;
+          const maxOccurrences = endType === "after_occurrences" ? (validatedData.recurringOccurrences || 10) : 520;
+          const endDate = endType === "on_date" && validatedData.recurringEndDate ? new Date(validatedData.recurringEndDate) : null;
+          
+          while (true) {
+            if (freq === "weekly") {
+              currentDate.setDate(currentDate.getDate() + 7);
+            } else if (freq === "biweekly") {
+              currentDate.setDate(currentDate.getDate() + 14);
+            } else if (freq === "monthly") {
+              currentDate.setMonth(currentDate.getMonth() + 1);
+            }
+            
+            occurrenceCount++;
+            
+            if (endType === "on_date" && endDate && currentDate > endDate) break;
+            if (endType === "after_occurrences" && occurrenceCount > maxOccurrences) break;
+            if (endType === "never" && occurrenceCount > maxOccurrences) break;
+            
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+            const day = String(currentDate.getDate()).padStart(2, "0");
+            const formattedDate = `${year}-${month}-${day}`;
+            
+            // Compute weekOf (Monday of the week)
+            const tempDate = new Date(currentDate);
+            const dayOfWeek = tempDate.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            tempDate.setDate(tempDate.getDate() + mondayOffset);
+            const weekOfFormatted = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, "0")}-${String(tempDate.getDate()).padStart(2, "0")}`;
+            
+            const [recurringMeeting] = await db.insert(oneOnOneMeetings)
+              .values({
+                managerId: rawUserId,
+                directReportId: validatedData.directReportId,
+                meetingDate: formattedDate,
+                meetingTime: validatedData.meetingTime,
+                meetingDuration: validatedData.meetingDuration,
+                weekOf: weekOfFormatted,
+                isRecurring: true,
+                recurringFrequency: freq,
+                recurringEndType: endType,
+                recurringParentId: newMeeting.id,
+              })
+              .returning();
+            
+            // Auto-create KPI statuses for recurring instances
+            if (directReport?.positionId) {
+              const kpisForPosition = await db.select()
+                .from(positionKpis)
+                .where(eq(positionKpis.positionId, directReport.positionId));
+              
+              if (kpisForPosition.length > 0) {
+                await db.insert(oneOnOneMeetingKpiStatuses)
+                  .values(
+                    kpisForPosition.map((kpi) => ({
+                      meetingId: recurringMeeting.id,
+                      positionKpiId: kpi.id,
+                      status: 'on_track' as const,
+                    }))
+                  );
+              }
+            }
+            
+            // Create calendar events for recurring instances
+            if (validatedData.meetingTime && validatedData.meetingDuration) {
+              try {
+                await createOneOnOneMeetingCalendars({
+                  meetingId: recurringMeeting.id,
+                  managerId: rawUserId,
+                  directReportId: validatedData.directReportId,
+                  meetingDate: formattedDate,
+                  meetingTime: validatedData.meetingTime,
+                  meetingDuration: validatedData.meetingDuration,
+                });
+              } catch (calError) {
+                console.error(`[1-on-1 Recurring] Calendar creation failed for ${formattedDate}:`, calError);
+              }
+            }
+          }
+        }
+      }
+
       // Create internal calendar appointment and optionally sync to Google Calendar
       let updatedMeeting = newMeeting;
       if (newMeeting.meetingTime && newMeeting.meetingDuration) {

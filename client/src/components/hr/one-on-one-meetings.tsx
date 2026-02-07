@@ -48,8 +48,10 @@ import {
   Timer,
   RotateCcw,
   Play,
-  Square
+  Square,
+  Repeat
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 interface DirectReport {
   id: string;
@@ -81,6 +83,12 @@ interface Meeting {
   privateNotes?: string;
   recordingLink?: string;
   calendarEventId?: string;
+  isRecurring?: boolean;
+  recurringFrequency?: string;
+  recurringEndType?: string;
+  recurringEndDate?: string;
+  recurringOccurrences?: number;
+  recurringParentId?: string;
   meetingStartedAt?: string;
   meetingEndedAt?: string;
   createdAt?: string;
@@ -178,6 +186,12 @@ export default function OneOnOneMeetings() {
   const [newMeetingDate, setNewMeetingDate] = useState<Date | undefined>(undefined);
   const [newMeetingTime, setNewMeetingTime] = useState("10:00");
   const [newMeetingDuration, setNewMeetingDuration] = useState(60);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState("weekly");
+  const [recurringEndType, setRecurringEndType] = useState("never");
+  const [recurringEndDate, setRecurringEndDate] = useState<Date | null>(null);
+  const [recurringOccurrences, setRecurringOccurrences] = useState(10);
+  const [isRecurringEndDateOpen, setIsRecurringEndDateOpen] = useState(false);
 
   // Fetch progression statuses
   const { data: progressionStatuses = [] } = useQuery<any[]>({
@@ -228,8 +242,8 @@ export default function OneOnOneMeetings() {
 
   // Mutation to create a new meeting with mandatory date/time
   const createMeetingMutation = useMutation({
-    mutationFn: async (data: { directReportId: string; meetingDate: Date; meetingTime: string; meetingDuration: number }) => {
-      const newMeetingData = {
+    mutationFn: async (data: { directReportId: string; meetingDate: Date; meetingTime: string; meetingDuration: number; isRecurring?: boolean; recurringFrequency?: string; recurringEndType?: string; recurringEndDate?: string | null; recurringOccurrences?: number }) => {
+      const newMeetingData: any = {
         directReportId: data.directReportId,
         meetingDate: format(data.meetingDate, "yyyy-MM-dd"),
         meetingTime: data.meetingTime,
@@ -237,19 +251,34 @@ export default function OneOnOneMeetings() {
         weekOf: format(startOfWeek(data.meetingDate, { weekStartsOn: 1 }), "yyyy-MM-dd"),
       };
       
+      if (data.isRecurring) {
+        newMeetingData.isRecurring = true;
+        newMeetingData.recurringFrequency = data.recurringFrequency;
+        newMeetingData.recurringEndType = data.recurringEndType;
+        if (data.recurringEndType === "on_date" && data.recurringEndDate) {
+          newMeetingData.recurringEndDate = data.recurringEndDate;
+        }
+        if (data.recurringEndType === "after_occurrences" && data.recurringOccurrences) {
+          newMeetingData.recurringOccurrences = data.recurringOccurrences;
+        }
+      }
+      
       const response = await apiRequest("POST", "/api/hr/one-on-one/meetings", newMeetingData);
       return await response.json();
     },
     onSuccess: async (createdMeeting: Meeting) => {
-      // Set the newly created meeting as selected so it opens in the editor
       setSelectedMeeting(createdMeeting);
       setIsCreatingMeeting(false);
       setShowNewMeetingDialog(false);
       
-      // Reset dialog form values
       setNewMeetingDate(undefined);
       setNewMeetingTime("10:00");
       setNewMeetingDuration(60);
+      setIsRecurring(false);
+      setRecurringFrequency("weekly");
+      setRecurringEndType("never");
+      setRecurringEndDate(null);
+      setRecurringOccurrences(10);
       
       // Invalidate and refetch queries to ensure fresh data
       await Promise.all([
@@ -329,12 +358,30 @@ export default function OneOnOneMeetings() {
       return;
     }
     
+    if (isRecurring && recurringEndType === "on_date" && !recurringEndDate) {
+      toast({ title: "Please select an end date for recurring meetings", variant: "destructive" });
+      return;
+    }
+    if (isRecurring && recurringEndType === "after_occurrences" && (!recurringOccurrences || recurringOccurrences < 1)) {
+      toast({ title: "Number of occurrences must be at least 1", variant: "destructive" });
+      return;
+    }
+    
     setIsCreatingMeeting(true);
     createMeetingMutation.mutate({
       directReportId: selectedReport.id,
       meetingDate: newMeetingDate,
       meetingTime: newMeetingTime,
       meetingDuration: newMeetingDuration,
+      isRecurring,
+      recurringFrequency: isRecurring ? recurringFrequency : undefined,
+      recurringEndType: isRecurring ? recurringEndType : undefined,
+      recurringEndDate: isRecurring && recurringEndType === "on_date" && recurringEndDate
+        ? format(recurringEndDate, "yyyy-MM-dd")
+        : null,
+      recurringOccurrences: isRecurring && recurringEndType === "after_occurrences"
+        ? recurringOccurrences
+        : undefined,
     });
   };
   
@@ -343,6 +390,11 @@ export default function OneOnOneMeetings() {
     setNewMeetingDate(undefined);
     setNewMeetingTime("10:00");
     setNewMeetingDuration(60);
+    setIsRecurring(false);
+    setRecurringFrequency("weekly");
+    setRecurringEndType("never");
+    setRecurringEndDate(null);
+    setRecurringOccurrences(10);
   };
 
   const handleSelectMeeting = (meeting: Meeting) => {
@@ -469,6 +521,12 @@ export default function OneOnOneMeetings() {
                                 Week of {format(parseISO(meeting.weekOf), "MMM d, yyyy")}
                               </p>
                             </div>
+                            {meeting.isRecurring && (
+                              <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                                <Repeat className="h-3 w-3" />
+                                {meeting.recurringFrequency === "weekly" ? "Weekly" : meeting.recurringFrequency === "biweekly" ? "Biweekly" : "Monthly"}
+                              </Badge>
+                            )}
                             {meeting.feeling && (
                               <Badge variant="outline" className="flex items-center gap-1">
                                 <span>{FEELING_OPTIONS.find(f => f.value === meeting.feeling)?.emoji}</span>
@@ -677,6 +735,12 @@ export default function OneOnOneMeetings() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
+                              {meeting.isRecurring && (
+                                <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                                  <Repeat className="h-3 w-3" />
+                                  {meeting.recurringFrequency === "weekly" ? "Weekly" : meeting.recurringFrequency === "biweekly" ? "Biweekly" : "Monthly"}
+                                </Badge>
+                              )}
                               {meeting.feeling && (
                                 <Badge variant="outline" className="text-lg">
                                   {FEELING_OPTIONS.find(f => f.value === meeting.feeling)?.emoji}
@@ -842,6 +906,99 @@ export default function OneOnOneMeetings() {
                     <SelectItem value="120">2 hours</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              
+              {/* Recurring Meeting Options */}
+              <div className="space-y-3 rounded-lg border p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-muted-foreground" />
+                    <Label htmlFor="recurring-toggle-1on1" className="cursor-pointer font-medium">Recurring Meeting</Label>
+                  </div>
+                  <Switch
+                    id="recurring-toggle-1on1"
+                    checked={isRecurring}
+                    onCheckedChange={setIsRecurring}
+                  />
+                </div>
+                {isRecurring && (
+                  <div className="space-y-3 pt-1">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Frequency</Label>
+                        <Select
+                          value={recurringFrequency}
+                          onValueChange={setRecurringFrequency}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Ends</Label>
+                        <Select
+                          value={recurringEndType}
+                          onValueChange={setRecurringEndType}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="never">No End Date</SelectItem>
+                            <SelectItem value="after_occurrences">After No. of Occurrences</SelectItem>
+                            <SelectItem value="on_date">On Date</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    {recurringEndType === "after_occurrences" && (
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Number of Occurrences</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={520}
+                          value={recurringOccurrences}
+                          onChange={(e) => setRecurringOccurrences(parseInt(e.target.value) || 1)}
+                          placeholder="e.g. 10"
+                        />
+                      </div>
+                    )}
+                    {recurringEndType === "on_date" && (
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">End Date</Label>
+                        <Popover open={isRecurringEndDateOpen} onOpenChange={setIsRecurringEndDateOpen}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start text-left font-normal text-sm">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {recurringEndDate ? format(recurringEndDate, "MMM d, yyyy") : "Select end date..."}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={recurringEndDate || undefined}
+                              onSelect={(date) => {
+                                if (date) {
+                                  setRecurringEndDate(date);
+                                  setIsRecurringEndDateOpen(false);
+                                }
+                              }}
+                              disabled={(date) => !newMeetingDate || date <= newMeetingDate}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
