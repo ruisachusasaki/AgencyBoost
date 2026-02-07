@@ -46,7 +46,8 @@ import {
   Briefcase,
   ExternalLink,
   User,
-  UserPlus
+  UserPlus,
+  Repeat
 } from "lucide-react";
 
 interface Staff {
@@ -82,6 +83,10 @@ interface PxMeeting {
   notes?: string;
   isPrivate?: boolean;
   enabledElements?: string[];
+  isRecurring?: boolean;
+  recurringFrequency?: string;
+  recurringEndDate?: string;
+  recurringParentId?: string;
   createdById?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -124,7 +129,11 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     facilitatorId: "",
     noteTakerId: "",
     enabledElements: ["whatsWorkingKpis", "salesOpportunities", "areasOfOpportunities", "actionPlan", "actionItems"] as string[],
+    isRecurring: false,
+    recurringFrequency: "weekly" as string,
+    recurringEndDate: null as Date | null,
   });
+  const [isRecurringEndDateOpen, setIsRecurringEndDateOpen] = useState(false);
   
   const [editFormData, setEditFormData] = useState({
     meetingDate: "",
@@ -392,6 +401,9 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       facilitatorId: "",
       noteTakerId: "",
       enabledElements: ["whatsWorkingKpis", "salesOpportunities", "areasOfOpportunities", "actionPlan", "actionItems"],
+      isRecurring: false,
+      recurringFrequency: "weekly",
+      recurringEndDate: null,
     });
   };
 
@@ -404,6 +416,10 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   };
 
   const handleCreate = () => {
+    if (formData.isRecurring && !formData.recurringEndDate) {
+      toast({ title: "Please select an end date for recurring meetings", variant: "destructive" });
+      return;
+    }
     createMutation.mutate({
       title: formData.title,
       meetingDate: format(formData.meetingDate, "yyyy-MM-dd"),
@@ -414,6 +430,11 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       facilitatorId: formData.facilitatorId || null,
       noteTakerId: formData.noteTakerId || null,
       enabledElements: formData.enabledElements,
+      isRecurring: formData.isRecurring,
+      recurringFrequency: formData.isRecurring ? formData.recurringFrequency : null,
+      recurringEndDate: formData.isRecurring && formData.recurringEndDate 
+        ? format(formData.recurringEndDate, "yyyy-MM-dd") 
+        : null,
     });
   };
 
@@ -430,18 +451,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     setIsCreateDialogOpen(open);
     if (!open) {
       setCreateDialogStep(1);
-      // Reset form data
-      setFormData({
-        title: "",
-        meetingDate: new Date(),
-        meetingTime: "10:00",
-        meetingDuration: 60,
-        recordingLink: "",
-        attendeeIds: [],
-        facilitatorId: "",
-        noteTakerId: "",
-        enabledElements: ["whatsWorkingKpis", "salesOpportunities", "areasOfOpportunities", "actionPlan", "actionItems"],
-      });
+      resetForm();
     }
   };
 
@@ -885,6 +895,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                     <SelectItem value="45">45 min</SelectItem>
                     <SelectItem value="60">1 hour</SelectItem>
                     <SelectItem value="90">1.5 hours</SelectItem>
+                    <SelectItem value="120">2 hours</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1601,6 +1612,12 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="font-medium">{meeting.title}</h4>
+                        {meeting.isRecurring && (
+                          <Badge variant="outline" className="text-xs flex items-center gap-1 text-primary border-primary/30">
+                            <Repeat className="h-3 w-3" />
+                            {meeting.recurringFrequency === "weekly" ? "Weekly" : meeting.recurringFrequency === "biweekly" ? "Biweekly" : "Monthly"}
+                          </Badge>
+                        )}
                         {meeting.isPrivate && (
                           <Badge variant="secondary" className="text-xs flex items-center gap-1">
                             <Lock className="h-3 w-3" />
@@ -1768,6 +1785,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="15">15 minutes</SelectItem>
                   <SelectItem value="30">30 minutes</SelectItem>
                   <SelectItem value="45">45 minutes</SelectItem>
                   <SelectItem value="60">1 hour</SelectItem>
@@ -1775,6 +1793,65 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   <SelectItem value="120">2 hours</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-3 rounded-lg border p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Repeat className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="recurring-toggle" className="cursor-pointer font-medium">Recurring Meeting</Label>
+                </div>
+                <Switch
+                  id="recurring-toggle"
+                  checked={formData.isRecurring}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isRecurring: checked }))}
+                />
+              </div>
+              {formData.isRecurring && (
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Frequency</Label>
+                    <Select
+                      value={formData.recurringFrequency}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, recurringFrequency: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">End Date</Label>
+                    <Popover open={isRecurringEndDateOpen} onOpenChange={setIsRecurringEndDateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal text-sm">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formData.recurringEndDate ? format(formData.recurringEndDate, "MMM d, yyyy") : "Select..."}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={formData.recurringEndDate || undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              setFormData(prev => ({ ...prev, recurringEndDate: date }));
+                              setIsRecurringEndDateOpen(false);
+                            }
+                          }}
+                          disabled={(date) => date <= formData.meetingDate}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

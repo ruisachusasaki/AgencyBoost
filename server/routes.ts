@@ -35519,6 +35519,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         attendeeIds || []
       );
       
+      // If recurring, generate future meeting instances
+      if (meetingData.isRecurring && meetingData.recurringFrequency && meetingData.recurringEndDate) {
+        const validFrequencies = ["weekly", "biweekly", "monthly"];
+        const freq = meetingData.recurringFrequency;
+        
+        if (validFrequencies.includes(freq)) {
+          const startDate = new Date(meetingData.meetingDate);
+          const endDate = new Date(meetingData.recurringEndDate);
+          
+          if (endDate > startDate) {
+            let currentDate = new Date(startDate);
+            
+            while (true) {
+              if (freq === "weekly") {
+                currentDate.setDate(currentDate.getDate() + 7);
+              } else if (freq === "biweekly") {
+                currentDate.setDate(currentDate.getDate() + 14);
+              } else if (freq === "monthly") {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+              }
+              
+              if (currentDate > endDate) break;
+              
+              const year = currentDate.getFullYear();
+              const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+              const day = String(currentDate.getDate()).padStart(2, "0");
+              const formattedDate = `${year}-${month}-${day}`;
+              
+              await appStorage.createPxMeeting(
+                {
+                  title: meetingData.title,
+                  meetingDate: formattedDate,
+                  meetingTime: meetingData.meetingTime,
+                  meetingDuration: meetingData.meetingDuration,
+                  recordingLink: null,
+                  facilitatorId: meetingData.facilitatorId || null,
+                  noteTakerId: meetingData.noteTakerId || null,
+                  enabledElements: meetingData.enabledElements || null,
+                  isRecurring: true,
+                  recurringFrequency: freq,
+                  recurringParentId: meeting.id,
+                  createdById: user?.id,
+                },
+                attendeeIds || []
+              );
+            }
+          }
+        }
+      }
+      
       res.status(201).json(meeting);
     } catch (error: any) {
       console.error("Error creating PX meeting:", error);

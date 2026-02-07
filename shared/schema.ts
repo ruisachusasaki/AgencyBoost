@@ -4811,6 +4811,12 @@ export const pxMeetings = pgTable("px_meetings", {
   // Default: all elements enabled - ["whatsWorkingKpis", "salesOpportunities", "areasOfOpportunities", "actionPlan", "actionItems"]
   enabledElements: text("enabled_elements").array(),
   
+  // Recurring meeting fields
+  isRecurring: boolean("is_recurring").default(false),
+  recurringFrequency: text("recurring_frequency"), // "weekly", "biweekly", "monthly"
+  recurringEndDate: date("recurring_end_date"),
+  recurringParentId: varchar("recurring_parent_id"),
+  
   // Metadata
   createdById: uuid("created_by_id").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),

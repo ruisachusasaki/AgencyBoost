@@ -833,6 +833,7 @@ export default function OneOnOneMeetings() {
                     <SelectItem value="45">45 minutes</SelectItem>
                     <SelectItem value="60">1 hour</SelectItem>
                     <SelectItem value="90">1.5 hours</SelectItem>
+                    <SelectItem value="120">2 hours</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1740,6 +1741,7 @@ function MeetingEditor({
                       <SelectItem value="45">45 min</SelectItem>
                       <SelectItem value="60">1 hour</SelectItem>
                       <SelectItem value="90">1.5 hours</SelectItem>
+                      <SelectItem value="120">2 hours</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

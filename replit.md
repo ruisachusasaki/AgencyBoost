@@ -60,7 +60,7 @@ Color Scheme Consistency: ALWAYS maintain the primary teal theme color (`hsl(179
     - **1-on-1 Meetings**: Includes meeting recording links, position-specific KPI tracking, two-tab navigation, URL-based routing, private notes, and null-safety. Integrates with the internal AgencyBoost calendar, and optionally Google Calendar for synced events.
     - **1v1 Performance Reports**: Aggregates KPI performance with tracking, filtering, search, sorting, and role-based access control.
     - **Organization Chart**: Interactive ReactFlow-based visualization with Dagre layout, department color-coding, search, and position-only structure builder.
-    - **PX Meetings**: Team meeting feature for managers/admins with 5 customizable segments (What's Working/KPIs, Sales Opportunities, Areas of Opportunities, Action Plan, Action Items), multi-attendee support, recording links, and full CRUD operations. Accessible via "PX Meetings" tab in HR section.
+    - **PX Meetings**: Team meeting feature for managers/admins with 5 customizable segments (What's Working/KPIs, Sales Opportunities, Areas of Opportunities, Action Plan, Action Items), multi-attendee support, recording links, recurring meetings (weekly/biweekly/monthly with end date), and full CRUD operations. Accessible via "PX Meetings" tab in HR section. Standardized duration options (15 min, 30 min, 45 min, 1 hour, 1.5 hours, 2 hours) across all meeting modals.
 - **Sales Reports**: Pipeline and Sales Rep Reports with date range filtering.
 - **Sales Settings**: Dynamic minimum margin threshold configuration for quotes.
 - **Quotes Management**: Modern table-based layout with sortable columns, inline status updates, action buttons, low margin highlighting, and pagination.
