@@ -1241,7 +1241,10 @@ export default function WorkflowBuilderPage() {
 
       {/* Action Configuration Side Panel */}
       <Sheet open={!!configuringAction} onOpenChange={() => setConfiguringAction(null)}>
-        <SheetContent side="right" className="w-[800px] sm:w-[800px] sm:max-w-none overflow-y-auto">
+        <SheetContent side="right" className="w-[800px] sm:w-[800px] sm:max-w-none overflow-y-auto p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Configure Action</SheetTitle>
+          </SheetHeader>
           {configuringAction && (
             <ActionConfigPanel
               action={configuringAction.action}
