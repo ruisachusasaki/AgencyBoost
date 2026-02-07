@@ -718,7 +718,7 @@ export default function WorkflowBuilderPage() {
             </div>
           </SheetHeader>
           
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 gap-6 mt-4">
             {/* Contact Management */}
             {(() => {
               const contactTriggers = (availableTriggers as any[])?.filter((t: any) => t.category === "contact_management") || [];
@@ -1167,7 +1167,7 @@ export default function WorkflowBuilderPage() {
             </div>
           </SheetHeader>
           
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 gap-6 mt-4">
             {Object.entries(filteredGroupedActions).map(([category, actions]: [string, any[]]) => {
               const CategoryIcon = getIconForCategory(category);
               const categoryColor = getCategoryColor(category);
