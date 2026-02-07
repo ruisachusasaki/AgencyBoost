@@ -70,6 +70,11 @@ export default function WorkflowsPage() {
     queryKey: ["/api/template-folders"],
   });
 
+  // Fetch staff members for "Created by" display
+  const { data: staffMembers = [] } = useQuery<any[]>({
+    queryKey: ["/api/staff"],
+  });
+
   // Fetch automation triggers and actions
   const { data: triggers = [] } = useQuery({
     queryKey: ["/api/automation-triggers"],
@@ -229,6 +234,12 @@ export default function WorkflowsPage() {
     }
   });
 
+  // Build a staff lookup map for "Created by" display
+  const staffMap = (staffMembers as any[]).reduce((acc: Record<string, string>, s: any) => {
+    acc[s.id] = s.name || s.username || s.email || "Unknown";
+    return acc;
+  }, {} as Record<string, string>);
+
   // Filter folders for workflow type
   const workflowFolders = templateFolders.filter(folder => folder.type === "workflow" || folder.type === "both");
 
@@ -253,7 +264,6 @@ export default function WorkflowsPage() {
     const items: any[] = [];
     
     if (selectedFolder) {
-      // If a folder is selected, show workflows from that folder
       filteredWorkflows.forEach((workflow: Workflow) => {
         items.push({
           type: 'workflow',
@@ -262,11 +272,11 @@ export default function WorkflowsPage() {
           description: workflow.description,
           status: workflow.status,
           lastUpdated: workflow.updatedAt || workflow.createdAt,
+          createdByName: staffMap[workflow.createdBy] || "Unknown",
           originalWorkflow: workflow
         });
       });
     } else {
-      // Show folders
       workflowFolders.forEach((folder: TemplateFolder) => {
         const folderWorkflows = (workflows as Workflow[]).filter(w => w.folderId === folder.id);
         items.push({
@@ -276,11 +286,10 @@ export default function WorkflowsPage() {
           description: folder.description,
           itemCount: folderWorkflows.length,
           lastUpdated: folder.updatedAt || folder.createdAt,
-          updatedBy: 'System'
+          createdByName: '',
         });
       });
       
-      // Show workflows without folders
       filteredWorkflows.forEach((workflow: Workflow) => {
         if (!workflow.folderId) {
           items.push({
@@ -290,6 +299,7 @@ export default function WorkflowsPage() {
             description: workflow.description,
             status: workflow.status,
             lastUpdated: workflow.updatedAt || workflow.createdAt,
+            createdByName: staffMap[workflow.createdBy] || "Unknown",
             originalWorkflow: workflow
           });
         }
@@ -559,7 +569,8 @@ export default function WorkflowsPage() {
                   <TableHeader>
                     <TableRow>
                       <SortableHeader field="name">Name</SortableHeader>
-                      <TableHead className="w-[25%]">Description</TableHead>
+                      <TableHead className="w-[20%]">Description</TableHead>
+                      <TableHead className="w-[12%]">Created By</TableHead>
                       <SortableHeader field="updatedAt">Last Updated</SortableHeader>
                       <TableHead className="w-[15%]">Actions</TableHead>
                     </TableRow>
@@ -607,6 +618,9 @@ export default function WorkflowsPage() {
                         </TableCell>
                         <TableCell className="text-sm text-gray-600">
                           {item.description || <span className="text-gray-400">No description</span>}
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {item.type === 'workflow' ? (item.createdByName || "Unknown") : "—"}
                         </TableCell>
                         <TableCell className="text-sm text-gray-600">
                           {new Date(item.lastUpdated).toLocaleDateString()}
@@ -785,6 +799,10 @@ export default function WorkflowsPage() {
                               : "N/A"
                             }
                           </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Created By:</span>
+                          <span className="font-medium">{staffMap[workflow.createdBy] || "Unknown"}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground">Last Run:</span>
