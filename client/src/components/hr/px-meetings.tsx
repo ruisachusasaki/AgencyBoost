@@ -1728,7 +1728,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       </Card>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={handleCloseCreateDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[650px]">
           <DialogHeader>
             <DialogTitle>
               {createDialogStep === 1 ? "Create New Meeting" : "Select Meeting Elements"}
