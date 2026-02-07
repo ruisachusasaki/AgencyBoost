@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle, FileText, Users, CheckSquare, HelpCircle, Brain, Phone } from "lucide-react";
+import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle, FileText, Users, CheckSquare, HelpCircle, Brain, Phone, ClipboardPlus } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -17,11 +17,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import TimerIndicator from "@/components/timer-indicator";
 import LoginAsDropdown from "@/components/admin/login-as-dropdown";
 import { ThemeToggleButton } from "@/components/theme-toggle";
 import { GlobalPhoneDialer } from "@/components/voip/global-phone-dialer";
+import { TaskIntakeDialog } from "@/components/task-intake-dialog";
 import type { Staff } from "@shared/schema";
 
 interface HeaderProps {
@@ -432,6 +433,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
           
           {/* Global Phone Dialer */}
           <GlobalPhoneDialer />
+          
+          {/* Quick Task Creation */}
+          <TaskIntakeDialog
+            trigger={
+              <Button variant="ghost" size="sm" className="p-2" title="Create Task" data-testid="button-header-create-task">
+                <ClipboardPlus className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+              </Button>
+            }
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+            }}
+          />
           
           <ThemeToggleButton />
           
