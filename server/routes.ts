@@ -75,7 +75,8 @@ import {
   aiAssistantSettings,
   slackWorkspaces,
   emailTemplates, smsTemplates,
-  toolDirectoryCategories, toolDirectoryTools
+  toolDirectoryCategories, toolDirectoryTools,
+  pxMeetings, pxMeetingAttendees
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
@@ -35660,6 +35661,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting PX meeting:", error);
       res.status(500).json({ error: "Failed to delete PX meeting" });
+    }
+  });
+
+
+  // Start PX Meeting - records meeting start time
+  app.post("/api/px-meetings/:id/start", requireAuth(), async (req, res) => {
+    try {
+      const meetingId = req.params.id;
+      const [meeting] = await db.select().from(pxMeetings).where(eq(pxMeetings.id, meetingId));
+      
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      
+      if (meeting.meetingStartedAt) {
+        return res.status(400).json({ error: "Meeting has already been started" });
+      }
+      
+      const now = new Date();
+      const [updated] = await db.update(pxMeetings)
+        .set({ meetingStartedAt: now, updatedAt: now })
+        .where(eq(pxMeetings.id, meetingId))
+        .returning();
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error starting PX meeting:", error);
+      res.status(500).json({ error: "Failed to start meeting" });
+    }
+  });
+
+  // Finish PX Meeting - records end time and creates time entries for all attendees
+  app.post("/api/px-meetings/:id/finish", requireAuth(), async (req, res) => {
+    try {
+      const meetingId = req.params.id;
+      const [meeting] = await db.select().from(pxMeetings).where(eq(pxMeetings.id, meetingId));
+      
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      
+      if (!meeting.meetingStartedAt) {
+        return res.status(400).json({ error: "Meeting has not been started yet" });
+      }
+      
+      if (meeting.meetingEndedAt) {
+        return res.status(400).json({ error: "Meeting has already been finished" });
+      }
+      
+      const now = new Date();
+      const startTime = new Date(meeting.meetingStartedAt);
+      const durationSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+      
+      const [updated] = await db.update(pxMeetings)
+        .set({ meetingEndedAt: now, updatedAt: now })
+        .where(eq(pxMeetings.id, meetingId))
+        .returning();
+      
+      const attendees = await db.select().from(pxMeetingAttendees)
+        .where(eq(pxMeetingAttendees.meetingId, meetingId));
+      
+      const attendeeIds = attendees.map(a => a.staffId);
+      
+      if (meeting.createdById && !attendeeIds.includes(meeting.createdById)) {
+        attendeeIds.push(meeting.createdById);
+      }
+      
+      const taskTitle = `PX Meeting: ${meeting.title}`;
+      
+      for (const staffId of attendeeIds) {
+        const existingTasks = await db.select().from(tasks)
+          .where(
+            and(
+              eq(tasks.title, taskTitle),
+              eq(tasks.assignedTo, staffId)
+            )
+          );
+        
+        let taskId: string;
+        let existingEntries: any[] = [];
+        
+        if (existingTasks.length > 0) {
+          taskId = existingTasks[0].id;
+          existingEntries = (existingTasks[0].timeEntries as any[]) || [];
+        } else {
+          const [newTask] = await db.insert(tasks).values({
+            title: taskTitle,
+            description: `Time tracked for PX Meeting: ${meeting.title}`,
+            status: "completed",
+            priority: "normal",
+            assignedTo: staffId,
+            clientId: meeting.clientId || undefined,
+            tags: meeting.tags || [],
+            timeEntries: sql`'[]'`,
+          }).returning();
+          taskId = newTask.id;
+        }
+        
+        const timeEntry = {
+          id: `px-${meetingId}-${staffId}-${Date.now()}`,
+          taskId: taskId,
+          taskTitle: taskTitle,
+          startTime: startTime.toISOString(),
+          endTime: now.toISOString(),
+          userId: staffId,
+          isRunning: false,
+          duration: durationSeconds,
+        };
+        
+        const updatedEntries = [...existingEntries, timeEntry];
+        const totalTracked = Math.floor(updatedEntries.reduce((sum, e) => sum + (e.duration || 0), 0) / 60);
+        
+        await db.update(tasks)
+          .set({ 
+            timeEntries: updatedEntries,
+            timeTracked: totalTracked,
+          })
+          .where(eq(tasks.id, taskId));
+      }
+      
+      res.json({
+        ...updated,
+        timeEntriesCreated: attendeeIds.length,
+        durationSeconds,
+      });
+    } catch (error: any) {
+      console.error("Error finishing PX meeting:", error);
+      res.status(500).json({ error: "Failed to finish meeting" });
+    }
+  });
+
+  // Reset PX Meeting timer (undo start, for corrections)
+  app.post("/api/px-meetings/:id/reset-timer", requireAuth(), async (req, res) => {
+    try {
+      const meetingId = req.params.id;
+      const [meeting] = await db.select().from(pxMeetings).where(eq(pxMeetings.id, meetingId));
+      
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      
+      if (meeting.meetingEndedAt) {
+        return res.status(400).json({ error: "Cannot reset timer after meeting has been finished" });
+      }
+      
+      const now = new Date();
+      const [updated] = await db.update(pxMeetings)
+        .set({ meetingStartedAt: null, updatedAt: now })
+        .where(eq(pxMeetings.id, meetingId))
+        .returning();
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error resetting PX meeting timer:", error);
+      res.status(500).json({ error: "Failed to reset meeting timer" });
     }
   });
 
