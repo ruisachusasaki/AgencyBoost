@@ -2646,31 +2646,27 @@ export default function Reports() {
         <div className="space-y-6">
           {/* Task Report Type Selection */}
           <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-slate-600" />
-                  <span className="text-sm font-medium text-slate-700">Report Type:</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-slate-600">Type:</label>
-                    <Select value={taskReportType} onValueChange={setTaskReportType}>
-                      <SelectTrigger className="w-48" data-testid="select-task-report-type">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="time-tracking">Time Tracking Report</SelectItem>
-                        <SelectItem value="timesheet">Timesheet View</SelectItem>
-                        <SelectItem value="by-user-client">By User & Client</SelectItem>
-                        <SelectItem value="by-category">By Category</SelectItem>
-                        {canExportAdminReports && <SelectItem value="admin-by-client">Total by Client (Admin)</SelectItem>}
-                        <SelectItem value="productivity">Productivity Analysis</SelectItem>
-                        <SelectItem value="workload">Workload Distribution</SelectItem>
-                        <SelectItem value="stage-analytics">Stage Analytics</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <CardHeader className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Clock className="h-4 w-4 text-slate-600" />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Report Type:</span>
+                <Select value={taskReportType} onValueChange={setTaskReportType}>
+                  <SelectTrigger className="w-52" data-testid="select-task-report-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="time-tracking">Time Tracking Report</SelectItem>
+                    <SelectItem value="timesheet">Timesheet View</SelectItem>
+                    <SelectItem value="by-user-client">By User & Client</SelectItem>
+                    <SelectItem value="by-category">By Category</SelectItem>
+                    {canExportAdminReports && <SelectItem value="admin-by-client">Total by Client (Admin)</SelectItem>}
+                    <SelectItem value="productivity">Productivity Analysis</SelectItem>
+                    <SelectItem value="workload">Workload Distribution</SelectItem>
+                    <SelectItem value="stage-analytics">Stage Analytics</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-wrap items-center gap-4">
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-slate-600">Time Period:</label>
                     <Select value={taskDateRange} onValueChange={setTaskDateRange}>
@@ -2906,7 +2902,6 @@ export default function Reports() {
                     </div>
                   )}
                 </div>
-              </div>
             </CardHeader>
           </Card>
 

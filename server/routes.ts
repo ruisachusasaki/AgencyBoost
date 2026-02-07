@@ -76,7 +76,8 @@ import {
   slackWorkspaces,
   emailTemplates, smsTemplates,
   toolDirectoryCategories, toolDirectoryTools,
-  pxMeetings, pxMeetingAttendees
+  pxMeetings, pxMeetingAttendees,
+  taskCategories
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
