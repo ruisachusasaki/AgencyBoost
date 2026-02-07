@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle, FileText, Users, CheckSquare, HelpCircle, Brain, Phone, ClipboardPlus } from "lucide-react";
+import { Menu, Search, Bell, X, MessageSquare, Check, LogOut, User, UserCircle, FileText, Users, CheckSquare, HelpCircle, Brain, Phone } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -438,7 +438,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <TaskIntakeDialog
             trigger={
               <Button variant="ghost" size="sm" className="p-2" title="Create Task" data-testid="button-header-create-task">
-                <ClipboardPlus className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+                <CheckSquare className="h-5 w-5 text-slate-600 dark:text-slate-300" />
               </Button>
             }
             onSuccess={() => {
