@@ -4814,7 +4814,9 @@ export const pxMeetings = pgTable("px_meetings", {
   // Recurring meeting fields
   isRecurring: boolean("is_recurring").default(false),
   recurringFrequency: text("recurring_frequency"), // "weekly", "biweekly", "monthly"
+  recurringEndType: text("recurring_end_type"), // "never", "after_occurrences", "on_date"
   recurringEndDate: date("recurring_end_date"),
+  recurringOccurrences: integer("recurring_occurrences"),
   recurringParentId: varchar("recurring_parent_id"),
   
   // Metadata
