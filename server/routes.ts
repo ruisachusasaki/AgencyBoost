@@ -24723,7 +24723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Step C: Extract key fields for task
       const getAnswerByLabel = (label: string): string | null => {
-        const q = questions.find(q => q.internalLabel?.toLowerCase() === label.toLowerCase());
+        const q = questions.find(q => { const cleanLabel = q.internalLabel?.toLowerCase().replace(/^trigger\s*-\s*/, ''); return cleanLabel === label.toLowerCase() || q.internalLabel?.toLowerCase() === label.toLowerCase(); });
         if (!q) return null;
         const val = answers[q.id];
         return val !== undefined ? (typeof val === 'object' ? JSON.stringify(val) : String(val)) : null;
