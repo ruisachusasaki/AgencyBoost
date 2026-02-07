@@ -91,7 +91,7 @@ import mailgun from "mailgun.js";
 import formData from "form-data";
 import { NotificationService, setNotificationServiceInstance } from "./notification-service";
 import { EncryptionService } from "./encryption";
-import { eq, like, ilike, or, and, asc, desc, sql, inArray, isNotNull, gte, lte, getTableColumns } from "drizzle-orm";
+import { eq, like, ilike, or, and, asc, desc, sql, inArray, isNotNull, gt, gte, lte, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
