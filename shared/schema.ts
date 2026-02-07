@@ -4819,6 +4819,10 @@ export const pxMeetings = pgTable("px_meetings", {
   recurringOccurrences: integer("recurring_occurrences"),
   recurringParentId: varchar("recurring_parent_id"),
   
+  // Meeting time tracking fields
+  meetingStartedAt: timestamp("meeting_started_at"),
+  meetingEndedAt: timestamp("meeting_ended_at"),
+  
   // Metadata
   createdById: uuid("created_by_id").notNull().references(() => staff.id),
   createdAt: timestamp("created_at").defaultNow(),
