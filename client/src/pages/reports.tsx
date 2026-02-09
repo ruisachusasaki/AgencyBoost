@@ -226,15 +226,14 @@ export default function Reports() {
   const [exportFormat, setExportFormat] = useState<"detailed" | "user-summary" | "client-breakdown" | "admin-summary">("detailed");
   const { toast } = useToast();
 
-  // Auto-filter timesheet to current user for non-admins
+  // Auto-filter timesheet to current user for users without view-all permission
   useEffect(() => {
-    if (currentUser && !isAdmin && taskReportType === "timesheet") {
-      // Only set if not already set to a specific user
+    if (currentUser && !canEditOthersTimesheets && taskReportType === "timesheet") {
       if (userIdFilter === "all") {
         setUserIdFilter(currentUser.id);
       }
     }
-  }, [currentUser, isAdmin, taskReportType, userIdFilter]);
+  }, [currentUser, canEditOthersTimesheets, taskReportType, userIdFilter]);
 
   // CSV Export Handler
   const handleCsvExport = async () => {

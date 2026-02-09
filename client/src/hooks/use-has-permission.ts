@@ -341,6 +341,14 @@ export function useCurrentUser() {
 export function useRolePermissions() {
   const { currentUser, isLoading, isAdmin, isManager, isAccounting } = useCurrentUser();
   
+  const hasGranularPermission = (permKey: string): boolean => {
+    if (isAdmin) return true;
+    if (!currentUser?.granularPermissions) return false;
+    return currentUser.granularPermissions.some(
+      (gp) => gp.enabled === true && permissionMatches(gp.permissionKey, permKey)
+    );
+  };
+
   // Semantic permission flags aligned with role templates
   // These replace hardcoded role checks throughout the frontend
   return {
@@ -350,8 +358,8 @@ export function useRolePermissions() {
     isManager,
     isAccounting,
     
-    // Time entry editing - Admin and Manager can edit all time entries
-    canEditAllTimeEntries: isAdmin || isManager,
+    // Time entry editing - based on granular permission reports.timesheet.edit_all
+    canEditAllTimeEntries: isAdmin || isManager || hasGranularPermission('reports.timesheet.edit_all'),
     
     // Manual time logging - Admin and Manager can add manual time
     canAddManualTime: isAdmin || isManager,
@@ -380,8 +388,8 @@ export function useRolePermissions() {
     // 1-on-1 meeting reports - Admin or Manager can view
     canView1on1Reports: isAdmin || isManager,
     
-    // Timesheet editing - Admin or Manager can edit others' timesheets
-    canEditOthersTimesheets: isAdmin || isManager,
+    // Timesheet viewing/editing - based on granular permission reports.timesheet.view_all
+    canEditOthersTimesheets: isAdmin || isManager || hasGranularPermission('reports.timesheet.view_all'),
     
     // Export admin reports
     canExportAdminReports: isAdmin,

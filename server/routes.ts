@@ -115,6 +115,7 @@ import {
   getAuditContext,
   isCurrentUserAdmin,
   hasPermission,
+  hasGranularPermission,
   IS_DEVELOPMENT,
   MOCK_ADMIN_USER_ID,
   normalizeUserIdForDb,
@@ -1453,16 +1454,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Check if user is admin - non-admins can only see their own data
+      // Check if user is admin or has view_all timesheets permission
       const userIsAdmin = await isCurrentUserAdmin(req);
+      const canViewAllTimesheets = userIsAdmin || await hasGranularPermission(authenticatedUserId, 'reports.timesheet.view_all');
       
-      // Enforce user-level filtering for non-admins
+      // Enforce user-level filtering for users without view-all permission
       let effectiveUserId = userId;
-      if (!userIsAdmin) {
-        // Non-admins can ONLY see their own data
+      if (!canViewAllTimesheets) {
+        // Users without permission can ONLY see their own data
         effectiveUserId = authenticatedUserId;
       } else if (!userId || userId === "all") {
-        // Admin selected "All Users" - show all data
+        // User with permission selected "All Users" - show all data
         effectiveUserId = undefined;
       }
       
@@ -15186,6 +15188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         hasPermission,
+  hasGranularPermission,
         permissions: aggregatedPermission,
         requestedAction: action,
         module,
