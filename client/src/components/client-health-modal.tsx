@@ -7,11 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, TrendingUp } from "lucide-react";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, TrendingUp } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentWeekRange } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
 import { inputClientHealthScoreSchema, type InputClientHealthScore } from "@shared/schema";
 
 interface ClientHealthModalProps {
@@ -118,6 +121,8 @@ export default function ClientHealthModal({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="modal-client-health">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <DialogHeader className="pb-4 border-b">
           <DialogTitle className="flex items-center gap-3 text-xl font-semibold">
             <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
@@ -125,17 +130,82 @@ export default function ClientHealthModal({
             </div>
             Client Health Scoring
           </DialogTitle>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-            <Calendar className="h-4 w-4" />
-            <span>Week Range: </span>
-            <Badge variant="outline" className="font-mono">
-              {displayRange}
-            </Badge>
+          <div className="flex items-center gap-2 mt-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <CalendarIcon className="h-4 w-4" />
+                Date Range:
+              </span>
+              <div className="flex items-center gap-2">
+                <FormField
+                  control={form.control}
+                  name="weekStartDate"
+                  render={({ field }) => (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "h-8 px-3 text-xs font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? format(parseISO(field.value), "MMM d, yyyy") : "Start date"}
+                          <CalendarIcon className="ml-2 h-3.5 w-3.5 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarPicker
+                          mode="single"
+                          selected={field.value ? parseISO(field.value) : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              field.onChange(format(date, "yyyy-MM-dd"));
+                            }
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                />
+                <span className="text-sm text-muted-foreground">to</span>
+                <FormField
+                  control={form.control}
+                  name="weekEndDate"
+                  render={({ field }) => (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "h-8 px-3 text-xs font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? format(parseISO(field.value), "MMM d, yyyy") : "End date"}
+                          <CalendarIcon className="ml-2 h-3.5 w-3.5 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarPicker
+                          mode="single"
+                          selected={field.value ? parseISO(field.value) : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              field.onChange(format(date, "yyyy-MM-dd"));
+                            }
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                />
+              </div>
+            </div>
           </div>
         </DialogHeader>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid gap-6">
               {/* Text Area Fields */}
               <div className="space-y-6">
