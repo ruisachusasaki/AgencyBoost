@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 interface Client {
   id: string;
@@ -426,7 +426,7 @@ function QuestionRenderer({
         );
 
       case "date":
-        const dateValue = value ? new Date(value as string) : undefined;
+        const dateValue = value ? parseISO(value as string) : undefined;
         return (
           <Popover>
             <PopoverTrigger asChild>
