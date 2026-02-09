@@ -6693,6 +6693,11 @@ export default function EnhancedClientDetail() {
                                 <span className="font-medium text-gray-900 capitalize" data-testid={`text-message-type-${log.id}`}>
                                   {log.action === 'call' ? 'Call' : log.entityType}
                                 </span>
+                                {log.userName && log.userName !== 'Unknown User' && (
+                                  <span className="text-sm text-gray-500" data-testid={`text-sent-by-${log.id}`}>
+                                    by {log.userName}
+                                  </span>
+                                )}
                                 {/* Provider Status Badge */}
                                 {log.newValues?.status && (
                                   <span 
