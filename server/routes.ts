@@ -24106,7 +24106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/task-intake-forms/:formId/questions", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const { formId } = req.params;
-      const { options: optionsList, ...questionData } = req.body;
+      const { options: optionsList, order: _ignoreOrder, ...questionData } = req.body;
       
       // Get max order
       const [maxOrderResult] = await db
@@ -24146,7 +24146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/task-intake-questions/:questionId", requireAuth(), requireAdmin(), async (req, res) => {
     try {
       const { questionId } = req.params;
-      const { options: optionsList, ...questionData } = req.body;
+      const { options: optionsList, order: _ignoreOrder, ...questionData } = req.body;
       
       const [updatedQuestion] = await db
         .update(taskIntakeQuestions)

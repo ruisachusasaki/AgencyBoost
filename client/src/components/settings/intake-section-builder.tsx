@@ -260,6 +260,16 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [`/api/task-intake-sections/${variables.sectionId}/questions`] });
       invalidateSections();
+      toast({ title: "Order saved", description: "Question order has been updated" });
+    },
+    onError: (error: any, variables) => {
+      toast({ 
+        title: "Failed to save order", 
+        description: error?.message || "Could not save the new question order. Please try again.", 
+        variant: "destructive" 
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/task-intake-sections/${variables.sectionId}/questions`] });
+      invalidateSections();
     },
   });
 
@@ -446,24 +456,26 @@ export function IntakeSectionBuilder({ formId, onOpenQuestionDialog }: IntakeSec
       }
       
       const sectionId = source.droppableId.replace('questions-', '');
+      const currentData = queryClient.getQueryData<TaskIntakeQuestion[]>([`/api/task-intake-sections/${sectionId}/questions`]);
+      
+      if (!currentData || currentData.length === 0) {
+        console.error("No question data found for section:", sectionId);
+        return;
+      }
+      
+      const items = Array.from(currentData);
+      const [reorderedItem] = items.splice(source.index, 1);
+      items.splice(destination.index, 0, reorderedItem);
+      
       queryClient.setQueryData<TaskIntakeQuestion[]>(
         [`/api/task-intake-sections/${sectionId}/questions`],
-        (oldData) => {
-          if (!oldData) return oldData;
-          const items = Array.from(oldData);
-          const [reorderedItem] = items.splice(source.index, 1);
-          items.splice(destination.index, 0, reorderedItem);
-          return items;
-        }
+        items
       );
       
-      const questionsData = queryClient.getQueryData<TaskIntakeQuestion[]>([`/api/task-intake-sections/${sectionId}/questions`]);
-      if (questionsData) {
-        reorderQuestionsMutation.mutate({ 
-          sectionId, 
-          questionIds: questionsData.map(q => q.id) 
-        });
-      }
+      reorderQuestionsMutation.mutate({ 
+        sectionId, 
+        questionIds: items.map(q => q.id) 
+      });
     }
   };
 

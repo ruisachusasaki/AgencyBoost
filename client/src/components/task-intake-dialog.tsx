@@ -731,7 +731,7 @@ export function TaskIntakeDialog({
     if (!currentSection) return [];
     return currentSection.questions
       .filter(q => evaluateQuestionVisibility(q, answers, currentSection.questions))
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id.localeCompare(b.id));
   }, [currentSection, answers]);
 
   const handleAnswerChange = useCallback((questionId: string, value: string | string[] | number | null) => {
