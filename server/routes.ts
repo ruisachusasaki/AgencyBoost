@@ -24578,7 +24578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const { formId, answers, visibleSectionIds, parentTaskId } = req.body;
+      const { formId, answers, visibleSectionIds, parentTaskId, isRecurring, recurringInterval, recurringUnit, recurringEndType, recurringEndDate, recurringEndOccurrences } = req.body;
 
       if (!formId || !answers || !visibleSectionIds) {
         return res.status(400).json({ error: "Missing required fields: formId, answers, visibleSectionIds" });
@@ -24771,6 +24771,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           parentTaskId: parentTaskId || null,
           level: parentTaskId ? subtaskLevel : 0,
           projectId: parentTaskId ? inheritedProjectId : null,
+          isRecurring: isRecurring || false,
+          recurringInterval: isRecurring ? (recurringInterval || 1) : undefined,
+          recurringUnit: isRecurring ? (recurringUnit || "days") : undefined,
+          recurringEndType: isRecurring ? (recurringEndType || "never") : undefined,
+          recurringEndDate: isRecurring && recurringEndType === "on_date" && recurringEndDate ? new Date(recurringEndDate) : undefined,
+          recurringEndOccurrences: isRecurring && recurringEndType === "after_occurrences" ? (recurringEndOccurrences || 10) : undefined,
         })
         .returning();
 

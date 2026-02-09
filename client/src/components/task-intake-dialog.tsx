@@ -22,12 +22,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Check, AlertCircle, Loader2, CalendarIcon, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, AlertCircle, Loader2, CalendarIcon, Info, Repeat } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -698,6 +699,13 @@ export function TaskIntakeDialog({
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [completedSections, setCompletedSections] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringInterval, setRecurringInterval] = useState(1);
+  const [recurringUnit, setRecurringUnit] = useState<"hours" | "days" | "weeks" | "months" | "years">("days");
+  const [recurringEndType, setRecurringEndType] = useState<"never" | "after_occurrences" | "on_date">("never");
+  const [recurringEndOccurrences, setRecurringEndOccurrences] = useState(10);
+  const [recurringEndDate, setRecurringEndDate] = useState<Date | null>(null);
+  const [recurringEndDateOpen, setRecurringEndDateOpen] = useState(false);
 
   const { data: formData, isLoading, error } = useQuery<IntakeFormData>({
     queryKey: ["/api/task-intake/form"],
@@ -723,6 +731,20 @@ export function TaskIntakeDialog({
   const visibleSections = useMemo(() => {
     if (!formData?.sections) return [];
     return getVisibleSections(formData.sections, answers);
+  }, [formData?.sections, answers]);
+
+  const isPersonalTask = useMemo(() => {
+    if (!formData?.sections) return false;
+    for (const section of formData.sections) {
+      const taskScopeQuestion = section.questions.find(
+        q => q.internalLabel?.toLowerCase().replace(/^trigger\s*-\s*/, '') === 'task_scope'
+      );
+      if (taskScopeQuestion) {
+        const answer = answers[taskScopeQuestion.id];
+        return String(answer || '').toLowerCase().includes('personal');
+      }
+    }
+    return false;
   }, [formData?.sections, answers]);
 
   const currentSection = visibleSections[currentSectionIndex];
@@ -829,11 +851,21 @@ export function TaskIntakeDialog({
     try {
       if (formData?.formId) {
         const visibleSectionIds = visibleSections.map(s => s.id);
+        const recurringData = isPersonalTask && isRecurring ? {
+          isRecurring: true,
+          recurringInterval,
+          recurringUnit,
+          recurringEndType,
+          recurringEndDate: recurringEndType === 'on_date' && recurringEndDate ? recurringEndDate.toISOString() : null,
+          recurringEndOccurrences: recurringEndType === 'after_occurrences' ? recurringEndOccurrences : null,
+        } : {};
+
         const response = await apiRequest("POST", "/api/task-intake/submit", {
           formId: formData.formId,
           answers,
           visibleSectionIds,
           parentTaskId: parentTaskId || null,
+          ...recurringData,
         });
         
         const result = await response.json();
@@ -886,6 +918,12 @@ export function TaskIntakeDialog({
     setCurrentSectionIndex(0);
     setValidationErrors({});
     setCompletedSections([]);
+    setIsRecurring(false);
+    setRecurringInterval(1);
+    setRecurringUnit("days");
+    setRecurringEndType("never");
+    setRecurringEndOccurrences(10);
+    setRecurringEndDate(null);
   }, []);
 
   const handleOpenChange = useCallback((newOpen: boolean) => {
@@ -963,6 +1001,118 @@ export function TaskIntakeDialog({
                       departments={departments}
                     />
                   ))}
+
+                  {isPersonalTask && isLastSection && (
+                    <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Repeat className="h-4 w-4 text-primary" />
+                          <Label className="text-sm font-medium">Recurring Task</Label>
+                        </div>
+                        <Switch
+                          checked={isRecurring}
+                          onCheckedChange={setIsRecurring}
+                          disabled={isSubmitting}
+                          data-testid="switch-recurring"
+                        />
+                      </div>
+
+                      {isRecurring && (
+                        <div className="space-y-4 pt-2">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                              <Label className="text-sm">Repeat Every</Label>
+                              <div className="flex gap-2 mt-1">
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={recurringInterval}
+                                  onChange={(e) => setRecurringInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                                  className="w-20"
+                                  disabled={isSubmitting}
+                                  data-testid="input-recurring-interval"
+                                />
+                                <Select value={recurringUnit} onValueChange={(val: any) => setRecurringUnit(val)}>
+                                  <SelectTrigger className="w-32" data-testid="select-recurring-unit">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="hours">Hours</SelectItem>
+                                    <SelectItem value="days">Days</SelectItem>
+                                    <SelectItem value="weeks">Weeks</SelectItem>
+                                    <SelectItem value="months">Months</SelectItem>
+                                    <SelectItem value="years">Years</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm">Frequency</Label>
+                            <Select value={recurringEndType} onValueChange={(val: any) => setRecurringEndType(val)}>
+                              <SelectTrigger className="mt-1" data-testid="select-recurring-end-type">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="never">No End Date</SelectItem>
+                                <SelectItem value="after_occurrences">After No. of Occurrences</SelectItem>
+                                <SelectItem value="on_date">Specific Date</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {recurringEndType === "after_occurrences" && (
+                            <div>
+                              <Label className="text-sm">Number of Occurrences</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                value={recurringEndOccurrences}
+                                onChange={(e) => setRecurringEndOccurrences(Math.max(1, parseInt(e.target.value) || 1))}
+                                className="mt-1 w-32"
+                                disabled={isSubmitting}
+                                data-testid="input-recurring-occurrences"
+                              />
+                            </div>
+                          )}
+
+                          {recurringEndType === "on_date" && (
+                            <div>
+                              <Label className="text-sm">End Date</Label>
+                              <Popover open={recurringEndDateOpen} onOpenChange={setRecurringEndDateOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "mt-1 w-full justify-start text-left font-normal",
+                                      !recurringEndDate && "text-muted-foreground"
+                                    )}
+                                    disabled={isSubmitting}
+                                    data-testid="button-recurring-end-date"
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {recurringEndDate ? format(recurringEndDate, "PPP") : "Pick an end date"}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={recurringEndDate || undefined}
+                                    onSelect={(date) => {
+                                      setRecurringEndDate(date || null);
+                                      setRecurringEndDateOpen(false);
+                                    }}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </>
             )}
