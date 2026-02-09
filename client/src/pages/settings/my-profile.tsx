@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Upload, Camera, Eye, EyeOff, ArrowLeft, Calendar, CalendarIcon, MapPin, Bell, Settings, UserCheck, Mail, Trash2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -1189,7 +1189,7 @@ export default function MyProfile() {
                                 </div>
                                 <div className="text-sm text-slate-600">
                                   {request.startDate && request.endDate && 
-                                    `${new Date(request.startDate).toLocaleDateString()} - ${new Date(request.endDate).toLocaleDateString()}`
+                                    `${format(parseISO(request.startDate), 'M/d/yyyy')} - ${format(parseISO(request.endDate), 'M/d/yyyy')}`
                                   } • {request.totalDays} days
                                 </div>
                                 {request.reason && (

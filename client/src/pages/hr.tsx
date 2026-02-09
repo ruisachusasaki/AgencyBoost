@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { format, parseISO } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -742,8 +743,8 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
 
     const approvedTimeOff = filteredTimeOffRequests.filter(request => {
       if (request.status !== 'approved') return false;
-      const startDate = new Date(request.startDate);
-      const endDate = new Date(request.endDate);
+      const startDate = parseISO(request.startDate);
+      const endDate = parseISO(request.endDate);
       return (startDate <= sixtyDaysFromNow && endDate >= today);
     });
 
@@ -751,10 +752,10 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
       const staff = staffData.find(s => s.id === request.staffId);
       if (!staff) return acc;
 
-      const startDate = new Date(request.startDate);
-      const endDate = new Date(request.endDate);
-      const startStr = startDate.toLocaleDateString();
-      const endStr = endDate.toLocaleDateString();
+      const startDate = parseISO(request.startDate);
+      const endDate = parseISO(request.endDate);
+      const startStr = format(startDate, 'M/d/yyyy');
+      const endStr = format(endDate, 'M/d/yyyy');
       const dateRangeKey = startStr === endStr ? startStr : `${startStr} - ${endStr}`;
       
       if (!acc[dateRangeKey]) {
@@ -1234,7 +1235,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                           <div className="text-right">
                             {getStatusBadge(request.status)}
                             <p className="text-xs text-slate-600 mt-1">
-                              {request.startDate && new Date(request.startDate).toLocaleDateString()}
+                              {request.startDate && format(parseISO(request.startDate), 'M/d/yyyy')}
                             </p>
                           </div>
                         </div>
@@ -1424,7 +1425,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                             </p>
                             <p className="text-sm text-slate-600">
                               {request.startDate && request.endDate && 
-                                `${new Date(request.startDate).toLocaleDateString()} - ${new Date(request.endDate).toLocaleDateString()}`
+                                `${format(parseISO(request.startDate), 'M/d/yyyy')} - ${format(parseISO(request.endDate), 'M/d/yyyy')}`
                               }
                             </p>
                             {isProcessed && (
@@ -2111,7 +2112,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {submission.startDate ? new Date(submission.startDate).toLocaleDateString() : 'N/A'}
+                        {submission.startDate ? format(parseISO(submission.startDate), 'M/d/yyyy') : 'N/A'}
                       </TableCell>
                       <TableCell>
                         {submission.phoneNumber || 'N/A'}
@@ -2184,7 +2185,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                   <div>
                                     <label className="text-sm font-medium text-slate-600">Start Date</label>
                                     <p className="text-sm text-slate-900">
-                                      {submission.startDate ? new Date(submission.startDate).toLocaleDateString() : 'N/A'}
+                                      {submission.startDate ? format(parseISO(submission.startDate), 'M/d/yyyy') : 'N/A'}
                                     </p>
                                   </div>
                                   <div>

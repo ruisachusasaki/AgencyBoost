@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -100,8 +100,8 @@ export default function ApprovalBoard() {
         bValue = b.type?.toLowerCase() || '';
         break;
       case 'dates':
-        aValue = new Date(a.startDate).getTime();
-        bValue = new Date(b.startDate).getTime();
+        aValue = parseISO(a.startDate).getTime();
+        bValue = parseISO(b.startDate).getTime();
         break;
       case 'duration':
         aValue = getTotalHours(a);
@@ -363,7 +363,7 @@ export default function ApprovalBoard() {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="text-sm">
-                        {format(new Date(request.startDate), 'MMM d')} - {format(new Date(request.endDate), 'MMM d, yyyy')}
+                        {format(parseISO(request.startDate), 'MMM d')} - {format(parseISO(request.endDate), 'MMM d, yyyy')}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {request.totalDays} day{request.totalDays !== 1 ? 's' : ''}
@@ -551,11 +551,11 @@ export default function ApprovalBoard() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Start Date</Label>
-                  <p className="text-sm">{format(new Date(selectedRequest.startDate), 'EEEE, MMMM d, yyyy')}</p>
+                  <p className="text-sm">{format(parseISO(selectedRequest.startDate), 'EEEE, MMMM d, yyyy')}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">End Date</Label>
-                  <p className="text-sm">{format(new Date(selectedRequest.endDate), 'EEEE, MMMM d, yyyy')}</p>
+                  <p className="text-sm">{format(parseISO(selectedRequest.endDate), 'EEEE, MMMM d, yyyy')}</p>
                 </div>
               </div>
 

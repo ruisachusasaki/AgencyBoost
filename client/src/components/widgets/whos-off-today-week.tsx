@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Trash2, GripVertical } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 interface WidgetProps {
   userWidget: any;
@@ -112,7 +112,7 @@ export default function WhosOffTodayWeekWidget({ userWidget, onRemove }: WidgetP
                       <p className="font-medium text-sm">{staff.staffName}</p>
                       <p className="text-xs text-muted-foreground">{staff.type}</p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(staff.startDate), 'MMM d')} - {format(new Date(staff.endDate), 'MMM d')}
+                        {format(parseISO(staff.startDate), 'MMM d')} - {format(parseISO(staff.endDate), 'MMM d')}
                       </p>
                     </div>
                   ))

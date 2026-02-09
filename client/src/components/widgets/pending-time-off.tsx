@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Trash2, GripVertical } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { Link } from "wouter";
 
 interface WidgetProps {
@@ -66,7 +66,7 @@ export default function PendingTimeOffWidget({ userWidget, onRemove }: WidgetPro
                         </p>
                         {request.startDate && request.endDate && (
                           <p className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(request.startDate), 'MMM d')} - {format(new Date(request.endDate), 'MMM d, yyyy')}
+                            {format(parseISO(request.startDate), 'MMM d')} - {format(parseISO(request.endDate), 'MMM d, yyyy')}
                           </p>
                         )}
                       </div>

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UserPlus, Trash2, GripVertical } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 interface WidgetProps {
   userWidget: any;
@@ -60,7 +60,7 @@ export default function OnboardingQueueWidget({ userWidget, onRemove }: WidgetPr
                       </p>
                       {submission.startDate && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Start: {format(new Date(submission.startDate), 'MMM d, yyyy')}
+                          Start: {format(parseISO(submission.startDate), 'MMM d, yyyy')}
                         </p>
                       )}
                       {!submission.startDate && submission.submittedAt && (
