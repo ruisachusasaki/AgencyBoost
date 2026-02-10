@@ -58,6 +58,13 @@ Customizable drag-and-drop widgets organized into categories:
 - 3-column layouts on desktop, collapsible on smaller screens
 - Intelligent tab overflow menus that adapt to screen size
 
+### What Users Can Do
+- Create multiple dashboards and switch between them using tabs
+- Add, remove, and rearrange widgets on any dashboard using drag-and-drop
+- Rename or delete dashboards (except the default one)
+- Switch between dark and light mode
+- Navigate the app using the sidebar, which collapses automatically on smaller screens
+
 ---
 
 ## 2. Client Management
@@ -100,6 +107,20 @@ Customizable drag-and-drop widgets organized into categories:
 - Sender/agent name displayed on each entry for accountability
 - Recent Activity tab showing chronological interactions
 
+### What Users Can Do
+- Create new clients with full company and contact details
+- Edit or delete existing client profiles
+- Assign team members to a client using drag-and-drop
+- Add, view, and manage health scores with custom date ranges
+- Upload assets for client approval and annotate them with feedback
+- Approve or reject client assets
+- Add billing information to client profiles
+- Create Smart Lists to filter and save custom views of clients
+- Use bulk actions to update status, add/remove tags, delete, or export multiple clients at once
+- Import clients from a CSV file or export client data to CSV
+- Add custom fields to track additional client data
+- View the full communication history (emails, SMS, calls) for each client
+
 ---
 
 ## 3. Sales & Quotes
@@ -128,6 +149,15 @@ Customizable drag-and-drop widgets organized into categories:
 - Configurable minimum margin threshold for quotes
 - Commission settings
 
+### What Users Can Do
+- Create, edit, and manage deals in the sales pipeline
+- Drag deals between pipeline stages
+- Create quotes with line items, pricing, and margin calculations
+- Update quote status (Draft, Sent, Accepted, Rejected) inline
+- View margin warnings when a quote falls below the minimum threshold
+- Set monthly sales targets and track progress
+- Sort and paginate through quote lists
+
 ---
 
 ## 4. Lead Management
@@ -146,6 +176,15 @@ Customizable drag-and-drop widgets organized into categories:
 - Click-to-call directly from lead profiles
 - Call logging with duration and notes
 - Multiple phone numbers supported
+
+### What Users Can Do
+- Create new leads with contact details and source information
+- Edit or delete existing leads
+- Move leads through customizable pipeline stages
+- Convert a lead into a client
+- Make browser-based phone calls directly from a lead profile (via Twilio)
+- Log call notes and duration after each call
+- Filter and search leads by status, source, or other criteria
 
 ---
 
@@ -203,6 +242,19 @@ Customizable drag-and-drop widgets organized into categories:
 - Admins and managers can edit time entries for any user in the "All Users" view
 - Clickable time cells with hover pencil icon for quick editing
 
+### What Users Can Do
+- Create tasks manually or through the intake form wizard
+- Edit task details: status, priority, due date, assignee, description
+- Create sub-tasks and set task dependencies
+- Use bulk actions to update status, reassign, delete, or tag multiple tasks
+- Customize which columns are visible in the task table and resize them
+- Add comments with @mentions and emoji reactions
+- Attach files to tasks
+- Start, stop, and pause the global timer on any task
+- Enter time manually for tasks
+- Set tasks to recur on a schedule (daily, weekly, monthly) with flexible end options
+- View and edit time entries in the Timesheet view (admins/managers can edit for all users)
+
 ---
 
 ## 6. Campaigns
@@ -211,6 +263,11 @@ Customizable drag-and-drop widgets organized into categories:
 - Create and manage marketing campaigns
 - Associate campaigns with clients
 - Track campaign status and progress
+
+### What Users Can Do
+- Create new marketing campaigns and link them to clients
+- Edit campaign details and track status
+- View campaign progress and associated activities
 
 ---
 
@@ -222,6 +279,13 @@ Customizable drag-and-drop widgets organized into categories:
 - Associate invoices with clients and projects
 - Line items with quantities, rates, and totals
 - Invoice history and payment tracking
+
+### What Users Can Do
+- Create new invoices with line items, quantities, and rates
+- Send invoices to clients
+- Update invoice status (Draft, Sent, Paid, Overdue)
+- View invoice history and track payments
+- Associate invoices with specific clients and projects
 
 ---
 
@@ -245,6 +309,13 @@ Customizable drag-and-drop widgets organized into categories:
 - Account-level timezone setting ensures all date calculations are consistent
 - Timezone-aware helper functions used across the app
 - Lightweight API endpoint and React hook for frontend access
+
+### What Users Can Do
+- Create, edit, and delete calendar events with title, date, time, and attendees
+- View auto-generated Anniversaries and Birthdays calendars
+- Connect your Google Calendar for two-way sync
+- Configure sync preferences and manage connected calendars
+- Set your business timezone for consistent scheduling across the team
 
 ---
 
@@ -280,6 +351,17 @@ Customizable drag-and-drop widgets organized into categories:
 ### Notes
 - Add internal notes to clients, leads, and tasks
 - Notes are visible to authorized team members
+
+### What Users Can Do
+- Send emails from client profiles using templates with merge tags
+- Send SMS messages from client or lead profiles
+- Make browser-based phone calls and log call details
+- Create and manage email/SMS templates with dynamic merge tags
+- Upload and attach documents to clients, tasks, and projects
+- View inline previews of images, PDFs, and other media
+- Record voice notes
+- Add internal notes to clients, leads, and tasks
+- Create Smart Lists for targeted bulk communication
 
 ---
 
@@ -319,6 +401,15 @@ Available actions include:
 - 4 trigger types: Message Received, Reaction Added, Bot Mentioned, Channel Created
 - Uses Slack Events API webhook with signature verification
 - Configured in Settings > Integrations
+
+### What Users Can Do
+- Create new automation workflows using a visual builder
+- Choose from 25+ trigger types to start workflows (e.g., client created, task completed, Slack message)
+- Add actions to workflows: send emails/SMS, create tasks, update records, Slack messages, and more
+- Set conditional logic and branching within workflows
+- Enable or disable workflows
+- Test workflow execution
+- Connect Slack for trigger-based automation (message received, bot mentioned, etc.)
 
 ---
 
@@ -409,6 +500,23 @@ The PX section provides comprehensive human resources management. Tabs appear in
 - Configurable alert thresholds
 - Proactive notifications when hiring may be needed
 
+### What Users Can Do
+- View the HR dashboard for quick metrics and pending actions
+- Browse the Staff Directory and filter by department or position
+- Explore the interactive Organization Chart and search for team members
+- Schedule and manage 1v1 meetings with direct reports, including KPI tracking and private notes
+- Delete a single meeting or an entire recurring series
+- Create and manage PX (team) meetings with customizable segments
+- Start and finish a meeting timer to track actual meeting duration
+- Convert meeting action items directly into tasks
+- Filter meetings by Current/Past, My Meetings, client, tags, or search
+- Submit time off requests and view the Who's Off calendar
+- Approve or reject time off requests (managers/admins)
+- Create job openings and review candidate applications
+- Submit and review expense reports
+- Manage onboarding and offboarding forms and submissions
+- View predictive hiring alerts based on team capacity
+
 ---
 
 ## 12. Training
@@ -432,6 +540,13 @@ The PX section provides comprehensive human resources management. Tabs appear in
 - Role-based access control for training content
 - Permission module: `training` with view and manage actions
 
+### What Users Can Do
+- Browse available training courses
+- View course details and lesson listings
+- Complete lessons and track personal progress
+- Create and manage courses and lessons (with appropriate permissions)
+- View training analytics and completion reports
+
 ---
 
 ## 13. Knowledge Base
@@ -453,6 +568,16 @@ The PX section provides comprehensive human resources management. Tabs appear in
 - Category-level and article-level permission modals
 - Restrict visibility by role or specific users
 
+### What Users Can Do
+- Browse articles organized by category
+- Search for articles by keyword
+- Read articles with auto-generated Table of Contents and breadcrumb navigation
+- Create new articles using a rich text editor
+- Save articles as drafts before publishing
+- View version history and restore previous versions
+- Set permissions on categories and individual articles to control who can see them
+- View related article suggestions
+
 ---
 
 ## 14. AI Assistant
@@ -465,6 +590,12 @@ The PX section provides comprehensive human resources management. Tabs appear in
 - Conversation history maintained during the session
 - Source citations linking back to the original Knowledge Base articles
 - Configured in Settings > AI Assistant
+
+### What Users Can Do
+- Open the AI Assistant chat from any page using the floating icon
+- Ask questions and get answers based on your organization's Knowledge Base content
+- View source citations linking back to the original articles
+- Review conversation history within the current session
 
 ---
 
@@ -491,6 +622,17 @@ The PX section provides comprehensive human resources management. Tabs appear in
 - Track performance trends over time
 - Filter by team member, department, or date range
 
+### What Users Can Do
+- View Pipeline Reports showing deals by stage, value, and probability
+- View Sales Rep Reports for individual performance metrics
+- Filter all sales reports by date range
+- View Timesheet Reports by user, client, or category
+- Switch between daily, weekly, and custom date range views for timesheets
+- Export timesheet data
+- View Team Workload Reports to see staff utilization
+- View 1v1 Performance Reports with aggregated KPI data
+- Filter performance reports by team member, department, or date range
+
 ---
 
 ## 16. Tool Directory
@@ -499,6 +641,11 @@ The PX section provides comprehensive human resources management. Tabs appear in
 - Directory of tools and resources used by the agency
 - Searchable catalog
 - Quick access links
+
+### What Users Can Do
+- Browse the directory of tools and resources used by the agency
+- Search for specific tools by name or keyword
+- Click through to access tool links
 
 ---
 
@@ -511,6 +658,13 @@ The PX section provides comprehensive human resources management. Tabs appear in
 - Notification settings panel to customize preferences
 - My Mentions dashboard widget
 
+### What Users Can Do
+- View notifications by clicking the bell icon in the header
+- See unread notification count at a glance
+- Receive notifications when @mentioned in comments or notes
+- Customize notification preferences in the settings panel
+- View all your mentions in the My Mentions dashboard widget
+
 ---
 
 ## 18. Global Search
@@ -521,6 +675,12 @@ The PX section provides comprehensive human resources management. Tabs appear in
 - Real-time results as you type
 - Type-specific icons to distinguish result types (client, lead, task)
 - Direct navigation to the selected result
+
+### What Users Can Do
+- Search across clients, leads, and tasks from the search bar at the top of any page
+- See real-time results as you type
+- Identify result types by their icons (client, lead, task)
+- Click any result to navigate directly to that record
 
 ---
 
@@ -639,6 +799,24 @@ Six configuration tabs:
 - Filterable by user, action type, and date range
 - Essential for accountability and compliance
 
+### What Users Can Do (varies by permission level)
+- Update the company's business profile, logo, and address
+- Edit your own profile, email signature, and personal preferences
+- Manage staff accounts: add, edit, deactivate, or remove team members (admin)
+- Configure time off types and policies
+- Manage client, sales, and lead settings
+- Create custom roles and assign granular permissions to each role
+- Review the Permission Audit log to see who changed what and when
+- Configure calendar availability and working hours
+- Connect and manage integrations (Google Calendar, Twilio, Slack, Mailgun)
+- Configure the AI Assistant's knowledge base and behavior
+- Create and manage custom fields for clients, leads, and other entities
+- Create and manage system-wide tags with color coding
+- Manage the product catalog and product bundles
+- Configure task statuses, priorities, categories, intake forms, and assignment rules
+- View and manage automation triggers
+- Review audit logs of all system activity
+
 ---
 
 ## 20. Integrations
@@ -680,6 +858,14 @@ AgencyBoost connects with the following external services:
 - Indexes Knowledge Base content for intelligent Q&A
 - Conversation history and source citations
 
+### What Users Can Do
+- Sign in securely using your Google account
+- Connect your Google Calendar for two-way event sync
+- Configure Twilio for SMS messaging and browser-based phone calls
+- Connect your Slack workspace for automation triggers and actions
+- Set up Mailgun for email delivery with custom sending domains
+- All integrations can be connected, configured, tested, and disconnected from Settings > Integrations
+
 ---
 
 ## 21. User Roles & Permissions
@@ -705,6 +891,14 @@ AgencyBoost connects with the following external services:
 - Each user can customize which columns they see in table views
 - Column widths are saved per user
 - Preferences persist across sessions
+
+### What Users Can Do
+- View your assigned role and its permissions
+- Customize your personal table view preferences (column visibility and widths)
+- Admins can create new custom roles with any combination of permissions
+- Admins can assign or change roles for any user
+- Admins can review the Permission Audit log for compliance tracking
+- Managers can access team-level reports and approvals based on their permissions
 
 ---
 
