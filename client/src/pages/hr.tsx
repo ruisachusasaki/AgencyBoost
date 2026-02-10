@@ -1071,6 +1071,8 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
               ...(isManager || isAdmin ? [{ id: "dashboard", name: "Dashboard", icon: BarChart3, count: 0, overflowOnly: false }] : []),
               ...(canViewStaffDirectory ? [{ id: "staff-directory", name: "Staff Directory", icon: Users, count: filteredStaffData.length, overflowOnly: false }] : []),
               ...(canViewStaffDirectory ? [{ id: "org-chart", name: "Org Chart", icon: Network, count: 0, overflowOnly: false }] : []),
+              ...(canViewOneOnOne ? [{ id: "one-on-one", name: "1v1 Meetings", icon: MessageCircle, count: 0, overflowOnly: false }] : []),
+              ...(canViewPxMeetings ? [{ id: "px-meetings", name: "Meetings", icon: Presentation, count: 0, overflowOnly: false }] : []),
               ...(canViewTimeOffRequests ? [{ id: "time-off", name: "Time Off", icon: CalendarDays, count: pendingTimeOffRequests.length, overflowOnly: false }] : []),
               ...(canViewTimeOffRequests ? [{ id: "time-off-calendar", name: "Who's Off", icon: Calendar, count: 0, overflowOnly: false }] : []),
               ...(canManageTimeOffRequests ? [{ id: "approvals", name: "Approvals", icon: CheckCircle, count: pendingTimeOffRequests.length, overflowOnly: false }] : []),
@@ -1081,8 +1083,6 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
               ...(canViewExpenseReports ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0, overflowOnly: true }] : []),
               ...(canViewOffboarding ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0, overflowOnly: true }] : []),
               ...(canViewOffboarding ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0, overflowOnly: true }] : []),
-              ...(canViewOneOnOne ? [{ id: "one-on-one", name: "1v1 Meetings", icon: MessageCircle, count: 0, overflowOnly: true }] : []),
-              ...(canViewPxMeetings ? [{ id: "px-meetings", name: "Meetings", icon: Presentation, count: 0, overflowOnly: true }] : []),
               ...(canManageStaff || isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0, overflowOnly: true }] : [])
             ];
             
