@@ -26921,6 +26921,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Only managers can delete meetings" });
       }
 
+      const deleteSeries = req.query.deleteSeries === 'true';
+
+      if (deleteSeries) {
+        const parentId = existingMeeting.recurringParentId || existingMeeting.id;
+        const seriesMeetings = await db.select().from(oneOnOneMeetings).where(
+          or(eq(oneOnOneMeetings.id, parentId), eq(oneOnOneMeetings.recurringParentId, parentId))
+        );
+
+        for (const m of seriesMeetings) {
+          const calResult = await deleteOneOnOneMeetingCalendars({
+            id: m.id,
+            calendarAppointmentId: m.calendarAppointmentId,
+            calendarEventId: m.calendarEventId,
+            directReportId: m.directReportId,
+          });
+          if (!calResult.success) {
+            console.warn('[1-on-1 Meeting] Calendar deletion had issues for meeting', m.id, ':', calResult.error);
+          }
+        }
+
+        await db.delete(oneOnOneMeetings).where(
+          or(eq(oneOnOneMeetings.id, parentId), eq(oneOnOneMeetings.recurringParentId, parentId))
+        );
+
+        return res.json({ message: "Meeting series deleted successfully", deletedCount: seriesMeetings.length });
+      }
+
       // Delete calendar events first (internal and Google)
       const calendarResult = await deleteOneOnOneMeetingCalendars({
         id: existingMeeting.id,
@@ -36102,6 +36129,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/px-meetings/:id", requireAuth(), async (req, res) => {
     try {
+      const deleteSeries = req.query.deleteSeries === 'true';
+
+      if (deleteSeries) {
+        const [meeting] = await db.select().from(pxMeetings).where(eq(pxMeetings.id, req.params.id));
+        if (!meeting) {
+          return res.status(404).json({ error: "Meeting not found" });
+        }
+        const parentId = meeting.recurringParentId || meeting.id;
+        await db.delete(pxMeetings).where(
+          or(eq(pxMeetings.id, parentId), eq(pxMeetings.recurringParentId, parentId))
+        );
+        return res.json({ success: true, deletedSeries: true });
+      }
+
       const deleted = await appStorage.deletePxMeeting(req.params.id);
       
       if (!deleted) {
