@@ -19,6 +19,14 @@ docs/
 
 ---
 
+## Complete Feature Reference
+
+| Document | Description |
+|----------|-------------|
+| [AgencyBoost Features](AGENCYBOOST-FEATURES.md) | Comprehensive documentation of ALL features, integrations, settings, and functionalities |
+
+---
+
 ## Modules
 
 Feature documentation for each major area of the application.
@@ -138,4 +146,4 @@ When adding new documentation:
 
 ---
 
-*Last updated: January 28, 2026*
+*Last updated: February 10, 2026*
