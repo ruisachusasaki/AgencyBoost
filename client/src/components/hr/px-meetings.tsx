@@ -117,6 +117,10 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [tagFilter, setTagFilter] = useState<string>("__all__");
   const [clientFilter, setClientFilter] = useState<string>("__all__");
+  const [timeFilter, setTimeFilter] = useState<string>("current");
+  const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  const [listPage, setListPage] = useState(1);
+  const MEETINGS_PER_PAGE = 10;
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   // Define available meeting elements
@@ -817,9 +821,28 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     const isAttendee = meeting.attendees.some(a => a.id === currentUserStaffId);
     const isCreator = meeting.createdById === currentUserStaffId;
     const canSeePrivate = !meeting.isPrivate || isAttendee || isCreator;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const meetingDate = meeting.meetingDate ? parseISO(meeting.meetingDate) : null;
+    let matchesTime = true;
+    if (timeFilter === "current" && meetingDate) {
+      matchesTime = meetingDate >= today;
+    } else if (timeFilter === "past" && meetingDate) {
+      matchesTime = meetingDate < today;
+    }
+
+    const matchesOwner = ownerFilter === "all" || isAttendee || isCreator;
     
-    return matchesSearch && matchesTag && matchesClient && canSeePrivate;
+    return matchesSearch && matchesTag && matchesClient && canSeePrivate && matchesTime && matchesOwner;
+  }).sort((a, b) => {
+    const dateA = a.meetingDate ? parseISO(a.meetingDate).getTime() : 0;
+    const dateB = b.meetingDate ? parseISO(b.meetingDate).getTime() : 0;
+    return timeFilter === "past" ? dateB - dateA : dateA - dateB;
   });
+
+  const totalListPages = Math.ceil(filteredMeetings.length / MEETINGS_PER_PAGE);
+  const paginatedMeetings = filteredMeetings.slice((listPage - 1) * MEETINGS_PER_PAGE, listPage * MEETINGS_PER_PAGE);
 
   if (isLoading || (meetingId && isLoadingMeeting)) {
     return (
@@ -1808,44 +1831,66 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search meetings..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          <div className="mb-4 flex flex-col gap-3">
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search meetings..."
+                  value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setListPage(1); }}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={timeFilter} onValueChange={(v) => { setTimeFilter(v); setListPage(1); }}>
+                <SelectTrigger className="w-[160px]">
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Time filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="current">Current</SelectItem>
+                  <SelectItem value="past">Past</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={ownerFilter} onValueChange={(v) => { setOwnerFilter(v); setListPage(1); }}>
+                <SelectTrigger className="w-[180px]">
+                  <User className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Meeting scope" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Meetings</SelectItem>
+                  <SelectItem value="mine">My Meetings</SelectItem>
+                </SelectContent>
+              </Select>
+              {clients.length > 0 && (
+                <Select value={clientFilter} onValueChange={(v) => { setClientFilter(v); setListPage(1); }}>
+                  <SelectTrigger className="w-[200px]">
+                    <Users className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Filter by client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All clients</SelectItem>
+                    {clients.filter(client => client.id).map(client => (
+                      <SelectItem key={client.id} value={client.id}>{client.company || client.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {allTags.length > 0 && (
+                <Select value={tagFilter} onValueChange={(v) => { setTagFilter(v); setListPage(1); }}>
+                  <SelectTrigger className="w-[200px]">
+                    <Tag className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Filter by tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All tags</SelectItem>
+                    {allTags.map(tag => (
+                      <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
-            {clients.length > 0 && (
-              <Select value={clientFilter} onValueChange={setClientFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <Users className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filter by client" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">All clients</SelectItem>
-                  {clients.filter(client => client.id).map(client => (
-                    <SelectItem key={client.id} value={client.id}>{client.company || client.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {allTags.length > 0 && (
-              <Select value={tagFilter} onValueChange={setTagFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <Tag className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filter by tag" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">All tags</SelectItem>
-                  {allTags.map(tag => (
-                    <SelectItem key={tag} value={tag}>{tag}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
           </div>
 
           {filteredMeetings.length === 0 ? (
@@ -1856,7 +1901,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredMeetings.map((meeting) => (
+              {paginatedMeetings.map((meeting) => (
                 <div
                   key={meeting.id}
                   onClick={() => navigateToMeeting(meeting)}
@@ -1965,6 +2010,37 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {filteredMeetings.length > 0 && totalListPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing {((listPage - 1) * MEETINGS_PER_PAGE) + 1}–{Math.min(listPage * MEETINGS_PER_PAGE, filteredMeetings.length)} of {filteredMeetings.length} meetings
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setListPage(p => Math.max(1, p - 1))}
+                  disabled={listPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground px-2">
+                  Page {listPage} of {totalListPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setListPage(p => Math.min(totalListPages, p + 1))}
+                  disabled={listPage === totalListPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
