@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 
@@ -232,6 +232,8 @@ export function TimerProvider({ children }: TimerProviderProps) {
       
       setCurrentTimer(null);
       setElapsedTime(0);
+
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
     } catch (error) {
       console.error('Error stopping timer:', error);
       toast({

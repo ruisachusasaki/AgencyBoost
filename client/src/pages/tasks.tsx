@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, CheckSquare, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2, FileText, Settings2, Clock, Eye, EyeOff } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, CheckSquare, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2, FileText, Settings2, Clock, Eye, EyeOff, Play, Square } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -25,6 +25,7 @@ import type { Task, Client, Campaign, Staff, TaskStatus, TaskPriority, TaskCateg
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TagDisplay } from "@/components/ui/tag-selector";
+import { useTimer } from "@/contexts/TimerContext";
 import { format, startOfDay, startOfWeek, endOfWeek, addDays, addWeeks, isSameDay, isWithinInterval } from "date-fns";
 
 
@@ -50,7 +51,7 @@ const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
   client: 150,
   project: 150,
   timeEstimate: 110,
-  timeTracked: 110,
+  timeTracked: 140,
   createdAt: 120,
 };
 
@@ -68,7 +69,7 @@ const ALL_AVAILABLE_COLUMNS: Column[] = [
   { id: "client", label: "Client/Lead", width: 150, minWidth: 100, visible: true },
   { id: "project", label: "Project", width: 150, minWidth: 100, visible: false },
   { id: "timeEstimate", label: "Time Estimate", width: 110, minWidth: 80, visible: false },
-  { id: "timeTracked", label: "Time Tracked", width: 110, minWidth: 80, visible: false },
+  { id: "timeTracked", label: "Time Tracked", width: 140, minWidth: 100, visible: false },
   { id: "createdAt", label: "Created", width: 120, minWidth: 100, visible: false },
 ];
 
@@ -121,6 +122,8 @@ export default function Tasks() {
   const [overdueFilter, setOverdueFilter] = useState<string>("all");
   const [workflowFilter, setWorkflowFilter] = useState<string>("all");
   const [timeFilter, setTimeFilter] = useState<string>("all");
+  
+  const { currentTimer, isTimerRunning, startTimer, stopTimer, elapsedTime } = useTimer();
   
   // Smart Lists state
   const [currentFilter, setCurrentFilter] = useState<TaskFilter>({
@@ -1495,17 +1498,53 @@ export default function Tasks() {
           </span>
         );
       
-      case "timeTracked":
-        if (!task.timeTracked) {
-          return <span className="text-slate-400 text-sm">0m</span>;
+      case "timeTracked": {
+        const isThisTaskTimerRunning = isTimerRunning && currentTimer?.taskId === task.id;
+        const formatElapsed = (seconds: number) => {
+          const h = Math.floor(seconds / 3600);
+          const m = Math.floor((seconds % 3600) / 60);
+          const s = seconds % 60;
+          if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+          return `${m}:${s.toString().padStart(2, '0')}`;
+        };
+        const trackHours = Math.floor((task.timeTracked || 0) / 60);
+        const trackMinutes = (task.timeTracked || 0) % 60;
+        const timeDisplay = task.timeTracked
+          ? `${trackHours > 0 ? `${trackHours}h ` : ''}${trackMinutes > 0 ? `${trackMinutes}m` : trackHours > 0 ? '' : '0m'}`
+          : null;
+
+        if (isThisTaskTimerRunning) {
+          return (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); stopTimer(); }}
+                className="flex items-center justify-center h-5 w-5 rounded-full bg-red-500 hover:bg-red-600 transition-colors"
+                title="Stop timer"
+              >
+                <Square className="h-2.5 w-2.5 text-white fill-white" />
+              </button>
+              <span className="text-sm font-mono text-red-600 animate-pulse">
+                {formatElapsed(elapsedTime)}
+              </span>
+            </div>
+          );
         }
-        const trackHours = Math.floor(task.timeTracked / 60);
-        const trackMinutes = task.timeTracked % 60;
+
         return (
-          <span className="text-sm text-slate-600">
-            {trackHours > 0 ? `${trackHours}h ` : ''}{trackMinutes > 0 ? `${trackMinutes}m` : trackHours > 0 ? '' : '0m'}
-          </span>
+          <div className="flex items-center gap-1.5 group/timer">
+            <button
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); startTimer(task.id, task.title); }}
+              className="flex items-center justify-center h-5 w-5 rounded-full border border-slate-300 dark:border-slate-600 text-slate-400 hover:border-primary hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover/timer:opacity-100"
+              title="Start timer"
+            >
+              <Play className="h-2.5 w-2.5 ml-0.5" />
+            </button>
+            <span className={`text-sm ${timeDisplay ? 'text-slate-600 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500'}`}>
+              {timeDisplay || 'Add time'}
+            </span>
+          </div>
         );
+      }
       
       case "createdAt":
         return task.createdAt ? (
