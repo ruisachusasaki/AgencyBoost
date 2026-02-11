@@ -762,10 +762,14 @@ export default function TasksSettingsPage() {
         createPriorityMutation.mutate(data as TaskPriorityFormData);
       }
     } else if (editType === 'category') {
+      const categoryData = { ...(data as TaskCategoryFormData) };
+      if ((categoryData as any).workflowId === 'none' || (categoryData as any).workflowId === '') {
+        (categoryData as any).workflowId = null;
+      }
       if (editingItem) {
-        updateCategoryMutation.mutate({ id: editingItem.id, data: data as TaskCategoryFormData });
+        updateCategoryMutation.mutate({ id: editingItem.id, data: categoryData });
       } else {
-        createCategoryMutation.mutate(data as TaskCategoryFormData);
+        createCategoryMutation.mutate(categoryData);
       }
     } else if (editType === 'workflow') {
       if (editingItem) {

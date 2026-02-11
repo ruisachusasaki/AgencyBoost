@@ -1,118 +1,100 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Search, X } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 
-// Get all available Lucide icons - comprehensive list including check variations
-const iconList = [
-  "Activity", "Airplay", "AlertCircle", "AlertOctagon", "AlertTriangle", "Align", "AlignCenter", "AlignJustify", "AlignLeft", "AlignRight",
-  "Anchor", "Aperture", "Archive", "ArrowDown", "ArrowDownCircle", "ArrowDownLeft", "ArrowDownRight", "ArrowLeft", "ArrowLeftCircle",
-  "ArrowRight", "ArrowRightCircle", "ArrowUp", "ArrowUpCircle", "ArrowUpLeft", "ArrowUpRight", "AtSign", "Award", "BarChart", "BarChart2",
-  "BarChart3", "Battery", "BatteryCharging", "Bell", "BellOff", "Bluetooth", "Bold", "Book", "BookOpen", "Bookmark", "Box", "Briefcase",
-  "Calendar", "Camera", "CameraOff", "Cast", "Check", "CheckCircle", "CheckCircle2", "CheckSquare", "ChevronDown", "ChevronLeft",
-  "ChevronRight", "ChevronUp", "ChevronsDown", "ChevronsLeft", "ChevronsRight", "ChevronsUp", "Chrome", "Circle", "Clipboard", "Clock",
-  "Cloud", "CloudDrizzle", "CloudLightning", "CloudRain", "CloudSnow", "Code", "Code2", "Codepen", "Codesandbox", "Coffee", "Columns",
-  "Command", "Compass", "Copy", "CornerDownLeft", "CornerDownRight", "CornerLeftDown", "CornerLeftUp", "CornerRightDown", "CornerRightUp",
-  "CornerUpLeft", "CornerUpRight", "Cpu", "CreditCard", "Crop", "Crosshair", "Database", "Delete", "Disc", "DollarSign", "Download",
-  "DownloadCloud", "Droplets", "Edit", "Edit2", "Edit3", "ExternalLink", "Eye", "EyeOff", "Facebook", "FastForward", "Feather", "File",
-  "FileText", "Film", "Filter", "Flag", "Folder", "FolderOpen", "FolderPlus", "Gift", "GitBranch", "GitCommit", "GitMerge", "GitPullRequest",
-  "Github", "Gitlab", "Globe", "Grid", "HardDrive", "Hash", "Headphones", "Heart", "HelpCircle", "Home", "Image", "Inbox", "Info",
-  "Instagram", "Italic", "Key", "Layers", "Layout", "LifeBuoy", "Link", "Link2", "Linkedin", "List", "Loader", "Lock", "LogIn", "LogOut",
-  "Mail", "Map", "MapPin", "Maximize", "Maximize2", "Menu", "MessageCircle", "MessageSquare", "Mic", "MicOff", "Minimize", "Minimize2",
-  "Minus", "MinusCircle", "MinusSquare", "Monitor", "Moon", "MoreHorizontal", "MoreVertical", "MousePointer", "Move", "Music", "Navigation",
-  "Navigation2", "Octagon", "Package", "Paperclip", "Pause", "PauseCircle", "PenTool", "Percent", "Phone", "PhoneCall", "PhoneIncoming",
-  "PhoneOff", "PhoneOutgoing", "PieChart", "Play", "PlayCircle", "Plus", "PlusCircle", "PlusSquare", "Pocket", "Power", "Printer",
-  "Radio", "RefreshCcw", "RefreshCw", "Repeat", "Repeat1", "Rewind", "RotateCcw", "RotateCw", "Rss", "Save", "Scissors", "Search",
-  "Send", "Server", "Settings", "Share", "Share2", "Shield", "ShieldOff", "ShoppingBag", "ShoppingCart", "Shuffle", "Sidebar", "SkipBack",
-  "SkipForward", "Slack", "Slash", "Sliders", "Smartphone", "Smile", "Speaker", "Square", "Star", "StopCircle", "Sun", "Sunrise",
-  "Sunset", "Tablet", "Tag", "Target", "Terminal", "Thermometer", "ThumbsDown", "ThumbsUp", "ToggleLeft", "ToggleRight", "Tool", "Trash",
-  "Trash2", "TrendingDown", "TrendingUp", "Triangle", "Truck", "Tv", "Twitter", "Type", "Umbrella", "Underline", "Unlock", "Upload",
-  "UploadCloud", "User", "UserCheck", "UserMinus", "UserPlus", "UserX", "Users", "Video", "VideoOff", "Volume", "Volume1", "Volume2",
-  "VolumeX", "Watch", "Wifi", "WifiOff", "Wind", "X", "XCircle", "XSquare", "Youtube", "Zap", "ZapOff", "ZoomIn", "ZoomOut",
-  "Sparkles", "Building", "Building2", "Banknote", "CreditCard", "Wallet", "ShoppingCart", "Package2", "Truck", "MapPin", "Navigation",
-  "Compass", "Globe2", "Wifi", "Signal", "Battery", "Zap", "Sun", "Moon", "Cloud", "Umbrella", "Snowflake"
-].sort();
+const EXCLUDED_EXPORTS = new Set([
+  "createLucideIcon", "default", "icons", "createElement",
+  "Icon", "LucideIcon", "default"
+]);
 
-// Common categories for better organization
-const iconCategories = {
-  "Most Used": ["Home", "User", "Settings", "Search", "Plus", "Edit", "Trash2", "Eye", "Heart", "Star", "Bell", "Mail"],
-  "Navigation": ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "ChevronLeft", "ChevronRight", "Menu", "X"],
-  "Actions": ["Plus", "Minus", "Edit", "Trash2", "Save", "Download", "Upload", "Copy", "Share", "Send"],
-  "Communication": ["Mail", "Phone", "MessageCircle", "MessageSquare", "Video", "Mic", "MicOff", "Volume2"],
-  "Files & Folders": ["File", "FileText", "Folder", "FolderOpen", "Image", "Video", "Music", "Download"],
-  "Business": ["Briefcase", "Calendar", "Clock", "DollarSign", "TrendingUp", "BarChart3", "PieChart", "Target"],
-  "Technology": ["Smartphone", "Laptop", "Monitor", "Wifi", "Database", "Server", "Code", "Terminal"],
-  "Social": ["Users", "UserPlus", "UserMinus", "UserCheck", "Globe", "Share2", "ThumbsUp", "Heart"],
-  "Interface": ["Layout", "Grid", "List", "Filter", "Sort", "Maximize", "Minimize", "MoreHorizontal"],
+const allIconNames = Object.keys(LucideIcons)
+  .filter(key => {
+    if (EXCLUDED_EXPORTS.has(key)) return false;
+    if (typeof (LucideIcons as any)[key] !== 'object' && typeof (LucideIcons as any)[key] !== 'function') return false;
+    if (key.startsWith('__')) return false;
+    if (key[0] !== key[0].toUpperCase()) return false;
+    const comp = (LucideIcons as any)[key];
+    if (!comp || (!comp.$$typeof && !comp.render && typeof comp !== 'function')) return false;
+    return true;
+  })
+  .sort();
+
+const iconCategories: Record<string, string[]> = {
+  "Most Used": ["Home", "User", "Settings", "Search", "Plus", "Edit", "Trash2", "Eye", "Heart", "Star", "Bell", "Mail", "Folder", "File", "Check", "X"],
+  "Actions": ["Plus", "Minus", "Edit", "Trash2", "Save", "Download", "Upload", "Copy", "Share", "Send", "Undo", "Redo", "RefreshCw"],
+  "Communication": ["Mail", "Phone", "MessageCircle", "MessageSquare", "Video", "Mic", "Volume2", "AtSign"],
+  "Business": ["Briefcase", "Calendar", "Clock", "DollarSign", "TrendingUp", "BarChart3", "PieChart", "Target", "Award"],
+  "Creative": ["Palette", "Paintbrush", "Pencil", "PenTool", "Brush", "Figma", "Image", "Camera", "Film", "Music"],
+  "Technology": ["Smartphone", "Monitor", "Wifi", "Database", "Server", "Code", "Terminal", "Globe", "Cloud"],
+  "People": ["Users", "UserPlus", "UserMinus", "UserCheck", "UserX", "User", "Contact"],
 };
 
 interface IconPickerProps {
   value?: string;
   onChange: (iconName: string) => void;
   label?: string;
+  placeholder?: string;
 }
 
-export function IconPicker({ value = "", onChange, label = "Icon" }: IconPickerProps) {
+export function IconPicker({ value = "", onChange, label = "Icon", placeholder }: IconPickerProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Most Used");
-
-  // Debug: Log icon list length
-  console.log("Available icons:", iconList.length);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const filteredIcons = useMemo(() => {
-    let icons = selectedCategory === "All" 
-      ? iconList 
-      : iconCategories[selectedCategory as keyof typeof iconCategories] || [];
-    
     if (searchTerm.trim()) {
-      // When searching, always search through ALL icons regardless of category
       const search = searchTerm.toLowerCase().trim();
-      icons = iconList.filter(icon => 
+      return allIconNames.filter(icon =>
         icon.toLowerCase().includes(search)
       );
-      console.log(`Searching for "${searchTerm}", found ${icons.length} icons:`, icons.slice(0, 10));
     }
-    
-    return icons;
+    if (selectedCategory === "All") {
+      return allIconNames;
+    }
+    const categoryIcons = iconCategories[selectedCategory];
+    if (!categoryIcons) return allIconNames;
+    return categoryIcons.filter(name => allIconNames.includes(name));
   }, [searchTerm, selectedCategory]);
 
-  const renderIcon = (iconName: string) => {
-    const IconComponent = (LucideIcons as any)[iconName];
+  const renderIcon = useCallback((iconName: string) => {
+    let IconComponent = (LucideIcons as any)[iconName];
+    if (!IconComponent && iconName) {
+      const pascalCase = iconName.charAt(0).toUpperCase() + iconName.slice(1);
+      IconComponent = (LucideIcons as any)[pascalCase];
+    }
     if (!IconComponent) {
-      console.warn(`Icon ${iconName} not found in Lucide React`);
       return <div className="w-5 h-5 border border-dashed border-gray-300 rounded flex items-center justify-center text-xs">?</div>;
     }
     return <IconComponent className="w-5 h-5" />;
-  };
+  }, []);
 
   const selectedIcon = value ? renderIcon(value) : <Search className="w-5 h-5" />;
 
   return (
     <div className="grid gap-2">
       <Label>{label}</Label>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full justify-between"
             data-testid="button-icon-picker"
           >
             <div className="flex items-center gap-2">
               {selectedIcon}
-              <span>{value || "Choose icon"}</span>
+              <span>{value || placeholder || "Choose icon"}</span>
             </div>
             <Search className="w-4 h-4 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-96 p-0" align="start">
-          <div className="flex flex-col h-96">
-            {/* Search */}
+        <PopoverContent className="w-96 p-0" align="start" style={{ zIndex: 9999 }}>
+          <div className="flex flex-col" style={{ maxHeight: '400px' }}>
             <div className="p-3 border-b">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -122,6 +104,7 @@ export function IconPicker({ value = "", onChange, label = "Icon" }: IconPickerP
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
                   data-testid="input-icon-search"
+                  autoFocus
                 />
                 {searchTerm && (
                   <Button
@@ -136,7 +119,6 @@ export function IconPicker({ value = "", onChange, label = "Icon" }: IconPickerP
               </div>
             </div>
 
-            {/* Categories */}
             {!searchTerm && (
               <div className="p-3 border-b">
                 <div className="flex flex-wrap gap-1">
@@ -163,45 +145,51 @@ export function IconPicker({ value = "", onChange, label = "Icon" }: IconPickerP
               </div>
             )}
 
-            {/* Icons Grid */}
-            <ScrollArea className="flex-1">
-              <div className="p-3">
-                {filteredIcons.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>No icons found</p>
-                    {searchTerm && (
-                      <p className="text-xs mt-2">
-                        Try searching for: "check", "arrow", "user", "home", "settings", "heart", "star"
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-6 gap-2">
-                    {filteredIcons.map((iconName) => (
-                      <Button
-                        key={iconName}
-                        variant={value === iconName ? "default" : "ghost"}
-                        size="sm"
-                        className="h-12 flex flex-col items-center justify-center p-2"
-                        onClick={() => {
-                          onChange(iconName);
-                          setOpen(false);
-                        }}
-                        data-testid={`button-select-icon-${iconName.toLowerCase()}`}
-                      >
-                        {renderIcon(iconName)}
-                        <span className="text-[10px] mt-1 truncate w-full">
-                          {iconName}
-                        </span>
-                      </Button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
+            <div
+              ref={scrollRef}
+              className="overflow-y-auto p-3"
+              style={{ maxHeight: '240px', overscrollBehavior: 'contain' }}
+              onWheel={(e) => e.stopPropagation()}
+            >
+              {filteredIcons.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>No icons found</p>
+                  {searchTerm && (
+                    <p className="text-xs mt-2">
+                      Try a different search term
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-6 gap-2">
+                  {filteredIcons.slice(0, 120).map((iconName) => (
+                    <Button
+                      key={iconName}
+                      variant={value === iconName ? "default" : "ghost"}
+                      size="sm"
+                      className="h-12 flex flex-col items-center justify-center p-2"
+                      onClick={() => {
+                        onChange(iconName);
+                        setOpen(false);
+                      }}
+                      data-testid={`button-select-icon-${iconName.toLowerCase()}`}
+                    >
+                      {renderIcon(iconName)}
+                      <span className="text-[10px] mt-1 truncate w-full text-center">
+                        {iconName}
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              )}
+              {filteredIcons.length > 120 && (
+                <p className="text-xs text-muted-foreground text-center mt-3">
+                  Showing 120 of {filteredIcons.length} icons. Use search to find more.
+                </p>
+              )}
+            </div>
 
-            {/* Selected Icon Info */}
             {value && (
               <div className="p-3 border-t bg-muted/50">
                 <div className="flex items-center justify-between">
