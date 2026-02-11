@@ -3016,7 +3016,7 @@ export class MemStorage implements IStorage {
       
       const matchingEntries = (task.timeEntries as any[]).filter((entry: any) => {
         if (!entry.startTime) return false;
-        const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+        const entryDate = new Date(entry.startTime).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
         return entryDate === date && entry.userId === userId;
       });
       
@@ -5523,7 +5523,7 @@ export class DbStorage implements IStorage {
           sql`EXISTS (
             SELECT 1 FROM jsonb_array_elements(${tasks.timeEntries}) AS entry
             WHERE entry->>'userId' = ${userId}
-            AND (entry->>'startTime')::date = ${date}::date
+            AND ((entry->>'startTime')::timestamptz AT TIME ZONE 'America/New_York')::date = ${date}::date
           )`
         );
       
@@ -5533,7 +5533,7 @@ export class DbStorage implements IStorage {
         entries: task.timeEntries && Array.isArray(task.timeEntries)
           ? (task.timeEntries as any[]).filter((entry: any) => {
               if (!entry.startTime) return false;
-              const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+              const entryDate = new Date(entry.startTime).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
               return entryDate === date && entry.userId === userId;
             }) as import("@shared/schema").TimeEntry[]
           : []
