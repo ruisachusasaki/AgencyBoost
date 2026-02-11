@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
@@ -208,18 +209,11 @@ export default function TaskDetail() {
   const selectedWorkflow = teamWorkflows.find(w => w.id === task?.workflowId);
   const workflowStatuses = selectedWorkflow?.statuses || [];
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const deleteTaskMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        if (response.status === 403) {
-          throw new Error('Access denied. Only administrators can delete tasks.');
-        }
-        throw new Error('Failed to delete task');
-      }
-      return response.json();
+      await apiRequest("DELETE", `/api/tasks/${taskId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
@@ -303,9 +297,7 @@ export default function TaskDetail() {
   };
 
   const handleDeleteTask = () => {
-    if (window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
-      deleteTaskMutation.mutate();
-    }
+    setShowDeleteConfirm(true);
   };
 
   const updateTaskMutation = useMutation({
@@ -1414,6 +1406,26 @@ export default function TaskDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this task? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTaskMutation.mutate()}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleteTaskMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
