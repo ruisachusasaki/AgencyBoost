@@ -6769,11 +6769,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const partialData = insertTaskSchema.partial().parse(req.body);
       
-      // For updates, only validate if client approval fields are being modified
+      // Validate client approval invariants when relevant fields are being modified
       if (partialData.requiresClientApproval !== undefined || partialData.visibleToClient !== undefined || partialData.clientId !== undefined) {
-        // Create complete data for validation by merging current task with updates
-        const completeData = { ...currentTask, ...partialData };
-        insertTaskSchemaValidated.parse(completeData);
+        const mergedRequiresApproval = partialData.requiresClientApproval ?? currentTask.requiresClientApproval;
+        const mergedVisibleToClient = partialData.visibleToClient ?? currentTask.visibleToClient;
+        const mergedClientId = partialData.clientId !== undefined ? partialData.clientId : currentTask.clientId;
+        
+        if (mergedRequiresApproval) {
+          if (!mergedVisibleToClient) {
+            return res.status(400).json({ 
+              message: 'Tasks requiring client approval must be visible to the client',
+              errors: [{ path: ['requiresClientApproval'], message: 'Tasks requiring client approval must be visible to the client' }]
+            });
+          }
+          if (!mergedClientId || mergedClientId === '' || mergedClientId === 'none') {
+            return res.status(400).json({ 
+              message: 'Tasks requiring client approval must have a client assigned',
+              errors: [{ path: ['requiresClientApproval'], message: 'Tasks requiring client approval must have a client assigned' }]
+            });
+          }
+        }
       }
       
       const validatedData = partialData;
