@@ -26610,7 +26610,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Calculate next meeting date
     const currentDate = new Date(currentMeeting.meetingDate);
-    if (freq === "weekly") {
+    if (freq === "daily") {
+      nextDate.setDate(nextDate.getDate() + 1);
+    } else if (freq === "weekly") {
       currentDate.setDate(currentDate.getDate() + 7);
     } else if (freq === "biweekly") {
       currentDate.setDate(currentDate.getDate() + 14);
@@ -26644,7 +26646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     // Validate frequency
-    if (!["weekly", "biweekly", "monthly"].includes(freq)) {
+    if (!["daily", "weekly", "biweekly", "monthly"].includes(freq)) {
       console.log("[1-on-1 Recurring] Invalid frequency:", freq);
       return null;
     }
@@ -35961,7 +35963,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Calculate next meeting date
     const currentDate = new Date(currentMeeting.meetingDate);
-    if (freq === "weekly") {
+    if (freq === "daily") {
+      nextDate.setDate(nextDate.getDate() + 1);
+    } else if (freq === "weekly") {
       currentDate.setDate(currentDate.getDate() + 7);
     } else if (freq === "biweekly") {
       currentDate.setDate(currentDate.getDate() + 14);
@@ -35995,7 +35999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     // Validate frequency
-    if (!["weekly", "biweekly", "monthly"].includes(freq)) {
+    if (!["daily", "weekly", "biweekly", "monthly"].includes(freq)) {
       console.log("[PX Recurring] Invalid frequency:", freq);
       return null;
     }

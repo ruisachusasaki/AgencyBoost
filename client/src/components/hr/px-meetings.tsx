@@ -1917,7 +1917,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                         {meeting.isRecurring && (
                           <Badge variant="outline" className="text-xs flex items-center gap-1 text-primary border-primary/30">
                             <Repeat className="h-3 w-3" />
-                            {meeting.recurringFrequency === "weekly" ? "Weekly" : meeting.recurringFrequency === "biweekly" ? "Biweekly" : "Monthly"}
+                            {meeting.recurringFrequency === "daily" ? "Daily" : meeting.recurringFrequency === "weekly" ? "Weekly" : meeting.recurringFrequency === "biweekly" ? "Biweekly" : "Monthly"}
                           </Badge>
                         )}
                         {meeting.isPrivate && (
@@ -2153,6 +2153,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
                           <SelectItem value="weekly">Weekly</SelectItem>
                           <SelectItem value="biweekly">Every 2 Weeks</SelectItem>
                           <SelectItem value="monthly">Monthly</SelectItem>
