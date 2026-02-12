@@ -351,6 +351,26 @@ function QuestionRenderer({
   departments = [],
 }: QuestionRendererProps) {
   const settings = question.settings || {};
+  const allowOther = settings.allowOther === true;
+
+  const getOtherText = (val: string | string[] | number | null): string => {
+    if (typeof val === "string" && val.startsWith("Other: ")) {
+      return val.substring(7);
+    }
+    if (Array.isArray(val)) {
+      const otherEntry = val.find((v) => v.startsWith("Other: "));
+      return otherEntry ? otherEntry.substring(7) : "";
+    }
+    return "";
+  };
+
+  const isOtherSelected = (val: string | string[] | number | null): boolean => {
+    if (typeof val === "string") return val === "Other" || val.startsWith("Other: ");
+    if (Array.isArray(val)) return val.some((v) => v === "Other" || v.startsWith("Other: "));
+    return false;
+  };
+
+  const [otherText, setOtherText] = useState(() => getOtherText(value));
 
   const renderInput = () => {
     // Special handling for client_select question (by internalLabel or questionType)
@@ -473,29 +493,61 @@ function QuestionRenderer({
 
         if (displayType === "dropdown" || singleOptions.length > 4) {
           return (
-            <Select
-              value={String(value || "")}
-              onValueChange={(val) => onChange(val)}
-              disabled={disabled}
-            >
-              <SelectTrigger className={cn("w-full max-w-md", error && "border-destructive")}>
-                <SelectValue placeholder="Select an option" />
-              </SelectTrigger>
-              <SelectContent>
-                {singleOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.optionText}>
-                    {option.optionText}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Select
+                value={isOtherSelected(value) ? "__other__" : String(value || "")}
+                onValueChange={(val) => {
+                  if (val === "__other__") {
+                    onChange(otherText ? `Other: ${otherText}` : "Other");
+                  } else {
+                    setOtherText("");
+                    onChange(val);
+                  }
+                }}
+                disabled={disabled}
+              >
+                <SelectTrigger className={cn("w-full max-w-md", error && "border-destructive")}>
+                  <SelectValue placeholder="Select an option" />
+                </SelectTrigger>
+                <SelectContent>
+                  {singleOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.optionText}>
+                      {option.optionText}
+                    </SelectItem>
+                  ))}
+                  {allowOther && (
+                    <SelectItem value="__other__">Other</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {allowOther && isOtherSelected(value) && (
+                <Input
+                  value={otherText}
+                  onChange={(e) => {
+                    const text = e.target.value;
+                    setOtherText(text);
+                    onChange(text ? `Other: ${text}` : "Other");
+                  }}
+                  placeholder="Please specify..."
+                  disabled={disabled}
+                  className="w-full max-w-md"
+                />
+              )}
+            </div>
           );
         }
 
         return (
           <RadioGroup
-            value={String(value || "")}
-            onValueChange={(val) => onChange(val)}
+            value={isOtherSelected(value) ? "__other__" : String(value || "")}
+            onValueChange={(val) => {
+              if (val === "__other__") {
+                onChange(otherText ? `Other: ${otherText}` : "Other");
+              } else {
+                setOtherText("");
+                onChange(val);
+              }
+            }}
             disabled={disabled}
             className="space-y-2"
           >
@@ -507,12 +559,36 @@ function QuestionRenderer({
                 </Label>
               </div>
             ))}
+            {allowOther && (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="__other__" id={`${question.id}-other`} />
+                  <Label htmlFor={`${question.id}-other`} className="font-normal cursor-pointer">
+                    Other
+                  </Label>
+                </div>
+                {isOtherSelected(value) && (
+                  <Input
+                    value={otherText}
+                    onChange={(e) => {
+                      const text = e.target.value;
+                      setOtherText(text);
+                      onChange(text ? `Other: ${text}` : "Other");
+                    }}
+                    placeholder="Please specify..."
+                    disabled={disabled}
+                    className="ml-6 w-[calc(100%-1.5rem)]"
+                  />
+                )}
+              </div>
+            )}
           </RadioGroup>
         );
 
       case "multi_choice":
         const multiOptions = question.options || [];
         const selectedValues = Array.isArray(value) ? value : [];
+        const otherChecked = isOtherSelected(value);
 
         return (
           <div className="space-y-2">
@@ -536,6 +612,43 @@ function QuestionRenderer({
                 </Label>
               </div>
             ))}
+            {allowOther && (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`${question.id}-other`}
+                    checked={otherChecked}
+                    onCheckedChange={(checked) => {
+                      const filtered = selectedValues.filter((v) => !v.startsWith("Other"));
+                      if (checked) {
+                        onChange([...filtered, otherText ? `Other: ${otherText}` : "Other"]);
+                      } else {
+                        setOtherText("");
+                        onChange(filtered);
+                      }
+                    }}
+                    disabled={disabled}
+                  />
+                  <Label htmlFor={`${question.id}-other`} className="font-normal cursor-pointer">
+                    Other
+                  </Label>
+                </div>
+                {otherChecked && (
+                  <Input
+                    value={otherText}
+                    onChange={(e) => {
+                      const text = e.target.value;
+                      setOtherText(text);
+                      const filtered = selectedValues.filter((v) => !v.startsWith("Other"));
+                      onChange([...filtered, text ? `Other: ${text}` : "Other"]);
+                    }}
+                    placeholder="Please specify..."
+                    disabled={disabled}
+                    className="ml-6 w-[calc(100%-1.5rem)]"
+                  />
+                )}
+              </div>
+            )}
           </div>
         );
 
