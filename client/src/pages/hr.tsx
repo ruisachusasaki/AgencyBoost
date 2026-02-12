@@ -46,7 +46,8 @@ import {
   Receipt,
   MessageCircle,
   Network,
-  Presentation
+  Presentation,
+  Plus
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -54,6 +55,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
 import { useHasPermissions } from "@/hooks/use-has-permission";
 import TimeOffRequestForm from "@/components/forms/time-off-request-form";
+import AdminTimeOffForm from "@/components/forms/admin-time-off-form";
 import ApprovalBoard from "@/components/hr/approval-board";
 import ExpenseReportForm from "@/components/hr/expense-report-form";
 import ExpenseSubmissionsView from "@/components/hr/expense-submissions-view";
@@ -183,6 +185,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   
   // Time off request form state
   const [isTimeOffRequestOpen, setIsTimeOffRequestOpen] = useState(false);
+  const [isAdminTimeOffOpen, setIsAdminTimeOffOpen] = useState(false);
   
   // Delete time off confirmation dialog state
   const [deleteTimeOffDialog, setDeleteTimeOffDialog] = useState<{
@@ -1285,10 +1288,18 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
               <h2 className="text-2xl font-bold">Time Off Management</h2>
               <p className="text-slate-600">Manage vacation, sick leave, and personal day requests</p>
             </div>
-            <Button onClick={() => setIsTimeOffRequestOpen(true)} data-testid="button-new-request">
-              <CalendarDays className="h-4 w-4 mr-2" />
-              New Request
-            </Button>
+            <div className="flex gap-2">
+              {(canManageTimeOffRequests || isManager) && (
+                <Button variant="outline" onClick={() => setIsAdminTimeOffOpen(true)} data-testid="button-admin-add-time-off">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Time Off
+                </Button>
+              )}
+              <Button onClick={() => setIsTimeOffRequestOpen(true)} data-testid="button-new-request">
+                <CalendarDays className="h-4 w-4 mr-2" />
+                New Request
+              </Button>
+            </div>
           </div>
 
           <Card>
@@ -3408,6 +3419,13 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
       <TimeOffRequestForm 
         open={isTimeOffRequestOpen} 
         onOpenChange={setIsTimeOffRequestOpen} 
+      />
+      
+      {/* Admin Add Time Off Dialog */}
+      <AdminTimeOffForm
+        open={isAdminTimeOffOpen}
+        onOpenChange={setIsAdminTimeOffOpen}
+        staffList={staffData}
       />
       
       {/* Delete Time Off Request Confirmation Dialog */}

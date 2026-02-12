@@ -25473,7 +25473,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get direct reports for managers - SECURED
+  // Admin/Manager: Add time off on behalf of a team member (pre-approved)
+  app.post("/api/hr/time-off-requests/admin", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
+    try {
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return;
+
+      const { staffId, dayHours, ...bodyWithoutDayHours } = req.body;
+
+      if (!staffId) {
+        return res.status(400).json({ error: 'Staff member is required' });
+      }
+
+      let legacyType = bodyWithoutDayHours.type || 'vacation';
+      if (bodyWithoutDayHours.timeOffTypeId) {
+        const [typeRecord] = await db
+          .select()
+          .from(timeOffTypes)
+          .where(eq(timeOffTypes.id, bodyWithoutDayHours.timeOffTypeId))
+          .limit(1);
+
+        if (!typeRecord) {
+          return res.status(400).json({ error: 'Invalid time off type' });
+        }
+
+        const typeName = typeRecord.name.toLowerCase();
+        if (typeName.includes('vacation') || typeName.includes('annual') || typeName.includes('pto')) {
+          legacyType = 'vacation';
+        } else if (typeName.includes('sick')) {
+          legacyType = 'sick';
+        } else if (typeName.includes('personal')) {
+          legacyType = 'personal';
+        } else {
+          legacyType = typeName.split(' ')[0].toLowerCase() || 'personal';
+        }
+      }
+
+      const cleanedBody = {
+        ...bodyWithoutDayHours,
+        staffId,
+        type: legacyType,
+        timeOffTypeId: bodyWithoutDayHours.timeOffTypeId || null,
+        totalHours: bodyWithoutDayHours.totalHours?.toString() || '0',
+        status: 'approved',
+        approvedBy: rawUserId,
+        approvedAt: new Date(),
+      };
+
+      const validatedData = insertTimeOffRequestSchema.parse(cleanedBody);
+      const [newRequest] = await db.insert(timeOffRequests).values(validatedData).returning();
+
+      if (dayHours && Array.isArray(dayHours) && dayHours.length > 0) {
+        try {
+          const dayRecords = dayHours.map((day: any) => ({
+            timeOffRequestId: newRequest.id,
+            date: day.date,
+            hours: day.hours?.toString() || '0'
+          }));
+          await db.insert(timeOffRequestDays).values(dayRecords);
+        } catch (dayError: any) {
+          console.warn('Could not save day hours:', dayError.message);
+        }
+      }
+
+      await createAuditLog(
+        'created',
+        'time_off_request',
+        newRequest.id,
+        `Admin/manager added time off for staff ${staffId}`,
+        rawUserId,
+        `Manually added ${legacyType} time off for ${validatedData.totalDays} days (pre-approved)`,
+        null,
+        newRequest,
+        req
+      );
+
+      res.json(newRequest);
+    } catch (error: any) {
+      console.error('Error creating admin time off request:', error);
+      res.status(500).json({
+        error: 'Failed to add time off record',
+        details: error.message || String(error),
+      });
+    }
+  });
+
+    // Get direct reports for managers - SECURED
   app.get("/api/hr/direct-reports", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
       const rawUserId = getAuthenticatedUserIdOrFail(req, res);
