@@ -12091,8 +12091,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Departments API - SECURED
-  app.get("/api/departments", requireAuth(), requirePermission('staff', 'canView'), async (req, res) => {
+  app.get("/api/departments", requireAuth(), async (req, res) => {
     try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      const hasStaff = await hasPermission(userId, 'staff', 'canView');
+      const hasDepts = await hasPermission(userId, 'departments', 'canView');
+      const hasHR = await hasPermission(userId, 'hr', 'canView');
+      if (!hasStaff && !hasDepts && !hasHR) {
+        return res.status(403).json({ error: 'Insufficient permissions', message: 'You need staff, departments, or HR view permission' });
+      }
       const departments = await appStorage.getDepartments();
       res.json(departments);
     } catch (error) {
@@ -12216,8 +12224,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Positions API
-  app.get("/api/positions", requireAuth(), requirePermission('departments', 'canView'), async (req, res) => {
+  app.get("/api/positions", requireAuth(), async (req, res) => {
     try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      const hasStaff = await hasPermission(userId, 'staff', 'canView');
+      const hasDepts = await hasPermission(userId, 'departments', 'canView');
+      const hasHR = await hasPermission(userId, 'hr', 'canView');
+      if (!hasStaff && !hasDepts && !hasHR) {
+        return res.status(403).json({ error: 'Insufficient permissions', message: 'You need staff, departments, or HR view permission' });
+      }
       const positions = await appStorage.getPositions();
       res.json(positions);
     } catch (error) {
@@ -28264,24 +28280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   // Get departments for dropdown
-  app.get("/api/departments", requireAuth(), requirePermission('departments', 'canView'), async (req, res) => {
-    try {
-      const departmentList = await db.select({
-        id: departments.id,
-        name: departments.name,
-        description: departments.description,
-        isActive: departments.isActive,
-      })
-      .from(departments)
-      .where(eq(departments.isActive, true))
-      .orderBy(asc(departments.name));
-      
-      res.json(departmentList);
-    } catch (error) {
-      console.error("Error fetching departments:", error);
-      res.status(500).json({ error: "Failed to fetch departments" });
-    }
-  });
+
 
   // Get positions for a department
   app.get("/api/departments/:departmentId/positions", requireAuth(), requirePermission('departments', 'canView'), async (req, res) => {
