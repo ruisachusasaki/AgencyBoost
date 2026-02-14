@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Upload, User, Mail, Phone, MapPin, Calendar, CalendarIcon, Building, Users, Bell, Smartphone, Trash2, Plus, Link2 } from "lucide-react";
+import { ArrowLeft, Upload, User, Mail, Phone, MapPin, Calendar, CalendarIcon, Building, Users, Bell, Smartphone, Trash2, Plus, Link2, DollarSign } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -137,6 +137,50 @@ export default function StaffDetail() {
       return Array.isArray(data) ? data : [];
     },
     enabled: !!id
+  });
+
+  const { data: adminStatus } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/auth/is-admin"],
+  });
+  const isAdmin = adminStatus?.isAdmin === true;
+
+  interface SalaryData {
+    staffId: string;
+    annualSalary: string | null;
+    hourlyRate: string | null;
+  }
+  const { data: salaryData, isLoading: isSalaryLoading } = useQuery<SalaryData | null>({
+    queryKey: ["/api/staff", id, "salary"],
+    queryFn: async () => {
+      const res = await fetch(`/api/staff/${id}/salary`, { credentials: 'include' });
+      if (res.status === 403 || res.status === 401) return null;
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!id && isAdmin,
+  });
+
+  const [salaryInput, setSalaryInput] = useState("");
+  const [isSalaryEditing, setIsSalaryEditing] = useState(false);
+
+  useEffect(() => {
+    if (salaryData?.annualSalary) {
+      setSalaryInput(salaryData.annualSalary);
+    }
+  }, [salaryData]);
+
+  const updateSalaryMutation = useMutation({
+    mutationFn: async (salary: string | null) => {
+      return apiRequest("PUT", `/api/staff/${id}/salary`, { annualSalary: salary });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", id, "salary"] });
+      toast({ title: "Success", variant: "success", description: "Salary updated successfully" });
+      setIsSalaryEditing(false);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update salary", variant: "destructive" });
+    },
   });
 
   // Delete linked email mutation
@@ -805,6 +849,88 @@ export default function StaffDetail() {
                   />
                 </CardContent>
               </Card>
+
+              {/* Compensation - Admin only, hierarchy-restricted */}
+              {isAdmin && salaryData && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <DollarSign className="h-5 w-5" />
+                      <span>Compensation</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium mb-1.5 block">Annual Salary</Label>
+                        {isSalaryEditing ? (
+                          <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={salaryInput}
+                                onChange={(e) => setSalaryInput(e.target.value)}
+                                placeholder="0.00"
+                                className="pl-7"
+                                data-testid="input-annual-salary"
+                              />
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => updateSalaryMutation.mutate(salaryInput || null)}
+                              disabled={updateSalaryMutation.isPending}
+                            >
+                              {updateSalaryMutation.isPending ? "Saving..." : "Save"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setIsSalaryEditing(false);
+                                setSalaryInput(salaryData?.annualSalary || "");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">
+                              {salaryData.annualSalary
+                                ? `$${parseFloat(salaryData.annualSalary).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                : "Not set"}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setIsSalaryEditing(true)}
+                              className="h-7 px-2 text-xs"
+                            >
+                              {salaryData.annualSalary ? "Edit" : "Add"}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium mb-1.5 block">Hourly Rate</Label>
+                        <span className="text-base text-muted-foreground">
+                          {salaryData.hourlyRate
+                            ? `$${parseFloat(salaryData.hourlyRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / hr`
+                            : "—"}
+                        </span>
+                        {salaryData.annualSalary && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Based on 2,080 working hours/year (52 weeks x 40 hrs)
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Address Information */}
               <Card>

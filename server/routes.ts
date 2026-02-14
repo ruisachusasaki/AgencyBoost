@@ -11205,7 +11205,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const query = db.select().from(staff).where(and(...whereConditions));
       const staffMembers = await query.orderBy(asc(staff.firstName));
-      res.json(staffMembers);
+      const sanitized = staffMembers.map(({ annualSalary, ...rest }) => rest);
+      res.json(sanitized);
     } catch (error) {
       console.error('Error fetching staff:', error);
       res.status(500).json({ message: "Failed to fetch staff" });
@@ -11220,7 +11221,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Staff member not found" });
       }
       
-      res.json(staffMember);
+      const { annualSalary: _salary, ...sanitizedStaff } = staffMember;
+      res.json(sanitizedStaff);
     } catch (error) {
       console.error('Error fetching staff member:', error);
       res.status(500).json({ message: "Failed to fetch staff member" });
@@ -11233,7 +11235,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       const insertData = insertStaffSchema.parse(req.body);
-      const [newStaff] = await db.insert(staff).values(insertData).returning();
+      const { annualSalary: _sal, ...safeInsertData } = insertData as any;
+      const [newStaff] = await db.insert(staff).values(safeInsertData).returning();
       
       // CRITICAL: Add entry to user_roles junction table for permissions to work
       if (insertData.roleId) {
@@ -11257,7 +11260,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req
       );
       
-      res.status(201).json(newStaff);
+      const { annualSalary: _sal2, ...sanitizedNew } = newStaff;
+      res.status(201).json(sanitizedNew);
     } catch (error: any) {
       console.error('Error creating staff:', error);
       if (error.code === '23505') {
@@ -11302,7 +11306,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Two-step approach to avoid Drizzle returning() bug
+      delete cleanedBody.annualSalary;
+
       const [result] = await db
         .update(staff)
         .set({
@@ -11350,17 +11355,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "staff",
         updatedStaff.id,
         `${updatedStaff.firstName} ${updatedStaff.lastName}`,
-        userId, // SECURE: Use authenticated user ID only
+        userId,
         changes.length > 0 ? `Staff updated: ${changes.join(", ")}` : "Staff member updated",
         { firstName: oldStaff.firstName, lastName: oldStaff.lastName, email: oldStaff.email, department: oldStaff.department },
         { firstName: updatedStaff.firstName, lastName: updatedStaff.lastName, email: updatedStaff.email, department: updatedStaff.department },
         req
       );
       
-      res.json(updatedStaff);
+      const { annualSalary: _sal, ...sanitizedUpdated } = updatedStaff;
+      res.json(sanitizedUpdated);
     } catch (error) {
       console.error('Error updating staff:', error);
       res.status(500).json({ message: "Failed to update staff member" });
+    }
+  });
+
+  app.get("/api/staff/:id/salary", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const isAdmin = await isCurrentUserAdmin(userId);
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Only admins can view salary information" });
+      }
+
+      const targetId = req.params.id;
+      const [targetStaff] = await db.select().from(staff).where(eq(staff.id, targetId));
+      if (!targetStaff) {
+        return res.status(404).json({ error: "Staff member not found" });
+      }
+
+      const isSuperAdmin = await (async () => {
+        const [currentStaff] = await db.select({ managerId: staff.managerId }).from(staff).where(eq(staff.id, userId));
+        return !currentStaff?.managerId;
+      })();
+
+      if (!isSuperAdmin) {
+        const canView = await (async function checkHierarchy(managerId: string, targetId: string, depth = 0): Promise<boolean> {
+          if (depth > 10) return false;
+          const reports = await db.select({ id: staff.id }).from(staff).where(eq(staff.managerId, managerId));
+          for (const report of reports) {
+            if (report.id === targetId) return true;
+            const found = await checkHierarchy(report.id, targetId, depth + 1);
+            if (found) return true;
+          }
+          return false;
+        })(userId, targetId);
+
+        if (!canView) {
+          return res.status(403).json({ error: "You can only view salary for employees in your reporting chain" });
+        }
+      }
+
+      res.json({
+        staffId: targetStaff.id,
+        annualSalary: targetStaff.annualSalary || null,
+        hourlyRate: targetStaff.annualSalary ? (parseFloat(targetStaff.annualSalary) / 2080).toFixed(2) : null,
+      });
+    } catch (error: any) {
+      console.error("Error fetching salary:", error);
+      res.status(500).json({ error: "Failed to fetch salary information" });
+    }
+  });
+
+  app.put("/api/staff/:id/salary", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const isAdmin = await isCurrentUserAdmin(userId);
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Only admins can update salary information" });
+      }
+
+      const targetId = req.params.id;
+      const [targetStaff] = await db.select().from(staff).where(eq(staff.id, targetId));
+      if (!targetStaff) {
+        return res.status(404).json({ error: "Staff member not found" });
+      }
+
+      const isSuperAdmin = await (async () => {
+        const [currentStaff] = await db.select({ managerId: staff.managerId }).from(staff).where(eq(staff.id, userId));
+        return !currentStaff?.managerId;
+      })();
+
+      if (!isSuperAdmin) {
+        const canView = await (async function checkHierarchy(managerId: string, targetId: string, depth = 0): Promise<boolean> {
+          if (depth > 10) return false;
+          const reports = await db.select({ id: staff.id }).from(staff).where(eq(staff.managerId, managerId));
+          for (const report of reports) {
+            if (report.id === targetId) return true;
+            const found = await checkHierarchy(report.id, targetId, depth + 1);
+            if (found) return true;
+          }
+          return false;
+        })(userId, targetId);
+
+        if (!canView) {
+          return res.status(403).json({ error: "You can only update salary for employees in your reporting chain" });
+        }
+      }
+
+      const { annualSalary: salaryValue } = req.body;
+      const sanitizedSalary = salaryValue === "" || salaryValue === null || salaryValue === undefined ? null : String(salaryValue);
+
+      const [updated] = await db.update(staff)
+        .set({ annualSalary: sanitizedSalary, updatedAt: new Date() })
+        .where(eq(staff.id, targetId))
+        .returning({ id: staff.id, annualSalary: staff.annualSalary });
+
+      await createAuditLog(
+        "updated",
+        "staff",
+        targetId,
+        `Salary updated for ${targetStaff.firstName} ${targetStaff.lastName}`,
+        userId,
+        `Annual salary ${sanitizedSalary ? 'set to $' + parseFloat(sanitizedSalary).toLocaleString() : 'removed'}`,
+        { annualSalary: targetStaff.annualSalary },
+        { annualSalary: sanitizedSalary },
+        req
+      );
+
+      res.json({
+        staffId: updated.id,
+        annualSalary: updated.annualSalary || null,
+        hourlyRate: updated.annualSalary ? (parseFloat(updated.annualSalary) / 2080).toFixed(2) : null,
+      });
+    } catch (error: any) {
+      console.error("Error updating salary:", error);
+      res.status(500).json({ error: "Failed to update salary information" });
     }
   });
 

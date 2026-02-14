@@ -2243,6 +2243,9 @@ export const staff = pgTable("staff", {
   sickDaysAnnually: integer("sick_days_annually").default(10), // Default 10 sick days per year
   personalDaysAnnually: integer("personal_days_annually").default(3), // Default 3 personal days per year
 
+  // Compensation
+  annualSalary: decimal("annual_salary", { precision: 12, scale: 2 }),
+
   // Fathom integration - API key for fetching meeting recordings
   fathomApiKey: text("fathom_api_key"),
 
