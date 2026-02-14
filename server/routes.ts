@@ -11386,28 +11386,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Staff member not found" });
       }
 
-      const isSuperAdmin = await (async () => {
-        const [currentStaff] = await db.select({ managerId: staff.managerId }).from(staff).where(eq(staff.id, userId));
-        return !currentStaff?.managerId;
-      })();
-
-      if (!isSuperAdmin) {
-        const canView = await (async function checkHierarchy(managerId: string, targetId: string, depth = 0): Promise<boolean> {
-          if (depth > 10) return false;
-          const reports = await db.select({ id: staff.id }).from(staff).where(eq(staff.managerId, managerId));
-          for (const report of reports) {
-            if (report.id === targetId) return true;
-            const found = await checkHierarchy(report.id, targetId, depth + 1);
-            if (found) return true;
-          }
-          return false;
-        })(userId, targetId);
-
-        if (!canView) {
-          return res.status(403).json({ error: "You can only view salary for employees in your reporting chain" });
-        }
-      }
-
       res.json({
         staffId: targetStaff.id,
         annualSalary: targetStaff.annualSalary || null,
@@ -11433,28 +11411,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [targetStaff] = await db.select().from(staff).where(eq(staff.id, targetId));
       if (!targetStaff) {
         return res.status(404).json({ error: "Staff member not found" });
-      }
-
-      const isSuperAdmin = await (async () => {
-        const [currentStaff] = await db.select({ managerId: staff.managerId }).from(staff).where(eq(staff.id, userId));
-        return !currentStaff?.managerId;
-      })();
-
-      if (!isSuperAdmin) {
-        const canView = await (async function checkHierarchy(managerId: string, targetId: string, depth = 0): Promise<boolean> {
-          if (depth > 10) return false;
-          const reports = await db.select({ id: staff.id }).from(staff).where(eq(staff.managerId, managerId));
-          for (const report of reports) {
-            if (report.id === targetId) return true;
-            const found = await checkHierarchy(report.id, targetId, depth + 1);
-            if (found) return true;
-          }
-          return false;
-        })(userId, targetId);
-
-        if (!canView) {
-          return res.status(403).json({ error: "You can only update salary for employees in your reporting chain" });
-        }
       }
 
       const { annualSalary: salaryValue } = req.body;

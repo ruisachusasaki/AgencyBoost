@@ -879,6 +879,7 @@ export default function StaffDetail() {
                               />
                             </div>
                             <Button
+                              type="button"
                               size="sm"
                               onClick={() => updateSalaryMutation.mutate(salaryInput || null)}
                               disabled={updateSalaryMutation.isPending}
@@ -886,6 +887,7 @@ export default function StaffDetail() {
                               {updateSalaryMutation.isPending ? "Saving..." : "Save"}
                             </Button>
                             <Button
+                              type="button"
                               size="sm"
                               variant="outline"
                               onClick={() => {
@@ -904,6 +906,7 @@ export default function StaffDetail() {
                                 : "Not set"}
                             </span>
                             <Button
+                              type="button"
                               size="sm"
                               variant="ghost"
                               onClick={() => setIsSalaryEditing(true)}
