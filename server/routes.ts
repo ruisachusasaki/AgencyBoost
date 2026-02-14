@@ -1894,6 +1894,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/reports/cost-per-client", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const isAdmin = await isCurrentUserAdmin(req);
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Only admins can view cost per client reports" });
+      }
+
+      const { dateFrom, dateTo } = req.body;
+      if (!dateFrom || !dateTo) {
+        return res.status(400).json({ error: "dateFrom and dateTo are required" });
+      }
+
+      const formatLocalDate = (dateInput: Date | string): string => {
+        const d = new Date(dateInput);
+        return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      };
+
+      const taskTimeEntries = await appStorage.getTimeEntriesByDateRange(dateFrom, dateTo);
+
+      const minutesMap: Record<string, Record<string, number>> = {};
+      const userNames: Record<string, string> = {};
+      const clientNames: Record<string, string> = {};
+
+      for (const task of taskTimeEntries) {
+        if (!task.timeEntries || task.timeEntries.length === 0) continue;
+        const taskClientId = task.clientId || "__no_client__";
+        if (task.clientId) {
+          clientNames[task.clientId] = (task as any).clientName || task.clientId;
+        }
+
+        for (const entry of task.timeEntries) {
+          if (!entry.startTime || !entry.userId || !entry.duration) continue;
+          const entryDate = formatLocalDate(entry.startTime);
+          if (entryDate < dateFrom || entryDate > dateTo) continue;
+
+          const uid = entry.userId;
+          if (!minutesMap[uid]) minutesMap[uid] = {};
+          minutesMap[uid][taskClientId] = (minutesMap[uid][taskClientId] || 0) + (entry.duration || 0);
+
+          if (!userNames[uid] && entry.userName) {
+            userNames[uid] = entry.userName;
+          }
+        }
+      }
+
+      const estFromDate = new Date(dateFrom + "T00:00:00-05:00");
+      const estToDate = new Date(dateTo + "T23:59:59-05:00");
+
+      const eventEntries = await db
+        .select()
+        .from(eventTimeEntries)
+        .where(
+          and(
+            gte(eventTimeEntries.startTime, estFromDate),
+            lte(eventTimeEntries.startTime, estToDate)
+          )
+        );
+
+      for (const entry of eventEntries) {
+        if (!entry.duration) continue;
+        const entryDate = formatLocalDate(entry.startTime!);
+        if (entryDate < dateFrom || entryDate > dateTo) continue;
+        const cid = entry.clientId || "__no_client__";
+        const uid = entry.userId;
+        if (!minutesMap[uid]) minutesMap[uid] = {};
+        minutesMap[uid][cid] = (minutesMap[uid][cid] || 0) + entry.duration;
+      }
+
+      const allUserIds = Object.keys(minutesMap);
+      if (allUserIds.length > 0) {
+        const staffRows = await db.select({
+          id: staff.id,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          annualSalary: staff.annualSalary,
+        }).from(staff).where(inArray(staff.id, allUserIds));
+
+        for (const s of staffRows) {
+          userNames[s.id] = `${s.firstName} ${s.lastName}`;
+          if (s.annualSalary) {
+            const hourlyRate = parseFloat(s.annualSalary) / 2080;
+            for (const clientId of Object.keys(minutesMap[s.id] || {})) {
+              const minutes = minutesMap[s.id][clientId];
+              minutesMap[s.id][clientId + "__cost"] = parseFloat(((minutes / 60) * hourlyRate).toFixed(2));
+            }
+          }
+        }
+      }
+
+      const allClientIds = new Set<string>();
+      for (const uid of allUserIds) {
+        for (const key of Object.keys(minutesMap[uid])) {
+          if (!key.endsWith("__cost")) {
+            allClientIds.add(key);
+          }
+        }
+      }
+
+      if (allClientIds.size > 0) {
+        const realClientIds = [...allClientIds].filter(id => id !== "__no_client__");
+        if (realClientIds.length > 0) {
+          const clientRows = await db.select({ id: clients.id, companyName: clients.companyName })
+            .from(clients)
+            .where(inArray(clients.id, realClientIds));
+          for (const c of clientRows) {
+            clientNames[c.id] = c.companyName;
+          }
+        }
+      }
+
+      const clientColumns = [...allClientIds].sort((a, b) => {
+        if (a === "__no_client__") return 1;
+        if (b === "__no_client__") return -1;
+        return (clientNames[a] || a).localeCompare(clientNames[b] || b);
+      });
+
+      const rows = allUserIds.map(uid => {
+        const cells: Record<string, { minutes: number; cost: number }> = {};
+        let totalMinutes = 0;
+        let totalCost = 0;
+
+        for (const cid of clientColumns) {
+          const minutes = minutesMap[uid]?.[cid] || 0;
+          const cost = minutesMap[uid]?.[cid + "__cost"] || 0;
+          cells[cid] = { minutes, cost };
+          totalMinutes += minutes;
+          totalCost += cost;
+        }
+
+        return {
+          userId: uid,
+          userName: userNames[uid] || "Unknown User",
+          cells,
+          totalMinutes,
+          totalCost: parseFloat(totalCost.toFixed(2)),
+        };
+      }).sort((a, b) => a.userName.localeCompare(b.userName));
+
+      const columnTotals: Record<string, { minutes: number; cost: number }> = {};
+      let grandTotalMinutes = 0;
+      let grandTotalCost = 0;
+
+      for (const cid of clientColumns) {
+        let colMinutes = 0;
+        let colCost = 0;
+        for (const row of rows) {
+          colMinutes += row.cells[cid]?.minutes || 0;
+          colCost += row.cells[cid]?.cost || 0;
+        }
+        columnTotals[cid] = { minutes: colMinutes, cost: parseFloat(colCost.toFixed(2)) };
+        grandTotalMinutes += colMinutes;
+        grandTotalCost += colCost;
+      }
+
+      res.json({
+        columns: clientColumns.map(cid => ({
+          clientId: cid,
+          clientName: cid === "__no_client__" ? "No Client" : (clientNames[cid] || cid),
+        })),
+        rows,
+        columnTotals,
+        grandTotalMinutes,
+        grandTotalCost: parseFloat(grandTotalCost.toFixed(2)),
+      });
+    } catch (error) {
+      console.error("Cost per client report error:", error);
+      res.status(500).json({ error: "Failed to generate cost per client report" });
+    }
+  });
+
   // Get time entries for a specific user on a specific date (for editing)
   app.get("/api/reports/time-entries/:userId/:date", requireAuth(), async (req, res) => {
     try {

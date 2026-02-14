@@ -177,6 +177,98 @@ export default function Reports() {
   const [mrrSortField, setMrrSortField] = useState("mrr");
   const [mrrSortOrder, setMrrSortOrder] = useState<"asc" | "desc">("desc");
   
+  // Cost Per Client state
+  const [cpcDateFrom, setCpcDateFrom] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return formatLocalDateStr(d);
+  });
+  const [cpcDateTo, setCpcDateTo] = useState(() => formatLocalDateStr(new Date()));
+  const [cpcFromOpen, setCpcFromOpen] = useState(false);
+  const [cpcToOpen, setCpcToOpen] = useState(false);
+
+  interface CpcCell { minutes: number; cost: number; }
+  interface CpcRow { userId: string; userName: string; cells: Record<string, CpcCell>; totalMinutes: number; totalCost: number; }
+  interface CpcColumn { clientId: string; clientName: string; }
+  interface CpcData {
+    columns: CpcColumn[];
+    rows: CpcRow[];
+    columnTotals: Record<string, CpcCell>;
+    grandTotalMinutes: number;
+    grandTotalCost: number;
+  }
+
+  const { data: cpcData, isLoading: cpcLoading, isError: cpcError, error: cpcErrorMsg } = useQuery<CpcData>({
+    queryKey: ["/api/reports/cost-per-client", cpcDateFrom, cpcDateTo],
+    queryFn: async () => {
+      const res = await fetch("/api/reports/cost-per-client", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ dateFrom: cpcDateFrom, dateTo: cpcDateTo }),
+      });
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => "Unknown error");
+        throw new Error(res.status === 403 ? "You don't have permission to view this report" : errorText);
+      }
+      return res.json();
+    },
+    enabled: activeTab === "cost-per-client" && isAdmin,
+  });
+
+  const exportCpcCsv = () => {
+    if (!cpcData || cpcData.rows.length === 0) return;
+    const headers = ["Staff Member", ...cpcData.columns.map(c => c.clientName), "Total"];
+    const csvRows = [headers.join(",")];
+
+    for (const row of cpcData.rows) {
+      const cells = [
+        `"${row.userName}"`,
+        ...cpcData.columns.map(c => {
+          const cell = row.cells[c.clientId];
+          return cell && cell.cost > 0 ? `$${cell.cost.toFixed(2)}` : "$0.00";
+        }),
+        `$${row.totalCost.toFixed(2)}`
+      ];
+      csvRows.push(cells.join(","));
+    }
+
+    const totalRow = [
+      '"Total"',
+      ...cpcData.columns.map(c => {
+        const t = cpcData.columnTotals[c.clientId];
+        return t ? `$${t.cost.toFixed(2)}` : "$0.00";
+      }),
+      `$${cpcData.grandTotalCost.toFixed(2)}`
+    ];
+    csvRows.push(totalRow.join(","));
+
+    const hoursHeaders = ["\nHours Breakdown"];
+    csvRows.push(hoursHeaders.join(","));
+    const hHeaders = ["Staff Member", ...cpcData.columns.map(c => c.clientName), "Total"];
+    csvRows.push(hHeaders.join(","));
+
+    for (const row of cpcData.rows) {
+      const cells = [
+        `"${row.userName}"`,
+        ...cpcData.columns.map(c => {
+          const cell = row.cells[c.clientId];
+          return cell ? (cell.minutes / 60).toFixed(2) : "0.00";
+        }),
+        (row.totalMinutes / 60).toFixed(2)
+      ];
+      csvRows.push(cells.join(","));
+    }
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cost-per-client_${cpcDateFrom}_to_${cpcDateTo}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // User authentication and role data
   const { data: currentUser } = useQuery<{ id: string; name: string; email: string; roles: string[] }>({
     queryKey: ["/api/auth/current-user"],
@@ -1632,7 +1724,8 @@ export default function Reports() {
               { id: "tasks", name: "Tasks", icon: Clock, count: null, description: "Time tracking reports showing hours logged by team members, clients, and projects with detailed breakdowns", permission: "reports.view_team_reports" },
               { id: "team", name: "Team Workload", icon: Users, count: null, description: "Staff assignment distribution showing how many clients each team member is managing", permission: "reports.view_team_reports" },
               { id: "mrr", name: "MRR Report", icon: DollarSign, count: null, description: "Monthly Recurring Revenue breakdown by client, showing retainer values and revenue distribution", permission: "reports.view_sales_reports" },
-              { id: "one-on-one", name: "1v1 Performance", icon: Target, count: null, description: "Individual performance metrics from 1-on-1 meetings, tracking KPIs and progress over time", permission: "reports.view_1on1_performance" }
+              { id: "one-on-one", name: "1v1 Performance", icon: Target, count: null, description: "Individual performance metrics from 1-on-1 meetings, tracking KPIs and progress over time", permission: "reports.view_1on1_performance" },
+              ...(isAdmin ? [{ id: "cost-per-client", name: "Cost Per Client", icon: FileSpreadsheet, count: null, description: "Staff labor cost breakdown by client based on tracked time and salary rates", permission: "reports.view_sales_reports" }] : [])
             ].filter(tab => !tab.permission || reportPermissions[tab.permission]).map((tab) => {
               const Icon = tab.icon;
               return (
@@ -5224,6 +5317,175 @@ export default function Reports() {
       {activeTab === "one-on-one" && (
         <div className="space-y-6">
           <OneOnOnePerformanceReport />
+        </div>
+      )}
+
+      {activeTab === "cost-per-client" && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileSpreadsheet className="h-5 w-5" />
+                    Cost Per Client Report
+                  </CardTitle>
+                  <CardDescription>Staff labor cost breakdown by client based on tracked time and hourly rates</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <Popover open={cpcFromOpen} onOpenChange={setCpcFromOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 gap-1">
+                          <CalendarIcon className="h-4 w-4" />
+                          {cpcDateFrom ? format(new Date(cpcDateFrom + "T12:00:00"), "MMM d, yyyy") : "From"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <CalendarComponent
+                          mode="single"
+                          selected={cpcDateFrom ? new Date(cpcDateFrom + "T12:00:00") : undefined}
+                          onSelect={(date) => {
+                            if (date) setCpcDateFrom(formatLocalDateStr(date));
+                            setCpcFromOpen(false);
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <span className="text-muted-foreground text-sm">to</span>
+                    <Popover open={cpcToOpen} onOpenChange={setCpcToOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 gap-1">
+                          <CalendarIcon className="h-4 w-4" />
+                          {cpcDateTo ? format(new Date(cpcDateTo + "T12:00:00"), "MMM d, yyyy") : "To"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <CalendarComponent
+                          mode="single"
+                          selected={cpcDateTo ? new Date(cpcDateTo + "T12:00:00") : undefined}
+                          onSelect={(date) => {
+                            if (date) setCpcDateTo(formatLocalDateStr(date));
+                            setCpcToOpen(false);
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportCpcCsv}
+                    disabled={!cpcData || cpcData.rows.length === 0}
+                    className="h-9 gap-1"
+                  >
+                    <Download className="h-4 w-4" />
+                    Export CSV
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {cpcLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="ml-2 text-muted-foreground">Generating report...</span>
+                </div>
+              ) : cpcError ? (
+                <div className="text-center py-12 text-destructive">
+                  <FileSpreadsheet className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="font-medium">Failed to load report</p>
+                  <p className="text-sm text-muted-foreground">{(cpcErrorMsg as Error)?.message || "An error occurred"}</p>
+                </div>
+              ) : !cpcData || cpcData.rows.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <FileSpreadsheet className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="font-medium">No time tracked in this date range</p>
+                  <p className="text-sm">Adjust the date range or ensure staff have tracked time against clients.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-background z-10 min-w-[180px] font-semibold">Staff Member</TableHead>
+                        {cpcData.columns.map(col => (
+                          <TableHead key={col.clientId} className="text-right min-w-[120px] font-semibold">
+                            {col.clientName}
+                          </TableHead>
+                        ))}
+                        <TableHead className="text-right min-w-[120px] font-bold bg-muted/50">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cpcData.rows.map(row => (
+                        <TableRow key={row.userId}>
+                          <TableCell className="sticky left-0 bg-background z-10 font-medium">{row.userName}</TableCell>
+                          {cpcData.columns.map(col => {
+                            const cell = row.cells[col.clientId];
+                            const hasCost = cell && cell.cost > 0;
+                            const hasTime = cell && cell.minutes > 0;
+                            return (
+                              <TableCell key={col.clientId} className="text-right">
+                                {hasTime ? (
+                                  <div>
+                                    <div className={hasCost ? "font-medium" : "text-muted-foreground"}>
+                                      {hasCost ? `$${cell.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "N/A"}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {(cell.minutes / 60).toFixed(1)}h
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-right font-bold bg-muted/50">
+                            <div>
+                              <div>${row.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                              <div className="text-xs text-muted-foreground font-normal">
+                                {(row.totalMinutes / 60).toFixed(1)}h
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="border-t-2 font-bold bg-muted/30">
+                        <TableCell className="sticky left-0 bg-muted/30 z-10 font-bold">Total</TableCell>
+                        {cpcData.columns.map(col => {
+                          const t = cpcData.columnTotals[col.clientId];
+                          return (
+                            <TableCell key={col.clientId} className="text-right font-bold">
+                              {t ? (
+                                <div>
+                                  <div>${t.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                  <div className="text-xs text-muted-foreground font-normal">
+                                    {(t.minutes / 60).toFixed(1)}h
+                                  </div>
+                                </div>
+                              ) : "—"}
+                            </TableCell>
+                          );
+                        })}
+                        <TableCell className="text-right font-bold bg-primary/10">
+                          <div>
+                            <div className="text-primary">${cpcData.grandTotalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                            <div className="text-xs text-muted-foreground font-normal">
+                              {(cpcData.grandTotalMinutes / 60).toFixed(1)}h
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 
