@@ -125,6 +125,7 @@ export default function Reports() {
     'reports.view_pipeline_reports',
     'reports.view_team_reports',
     'reports.view_1on1_performance',
+    'reports.view_cost_per_client',
     'reports.export_reports',
   ]);
   
@@ -213,7 +214,7 @@ export default function Reports() {
       }
       return res.json();
     },
-    enabled: activeTab === "cost-per-client" && isAdmin,
+    enabled: activeTab === "cost-per-client" && !!reportPermissions['reports.view_cost_per_client'],
   });
 
   const exportCpcCsv = () => {
@@ -1725,7 +1726,7 @@ export default function Reports() {
               { id: "team", name: "Team Workload", icon: Users, count: null, description: "Staff assignment distribution showing how many clients each team member is managing", permission: "reports.view_team_reports" },
               { id: "mrr", name: "MRR Report", icon: DollarSign, count: null, description: "Monthly Recurring Revenue breakdown by client, showing retainer values and revenue distribution", permission: "reports.view_sales_reports" },
               { id: "one-on-one", name: "1v1 Performance", icon: Target, count: null, description: "Individual performance metrics from 1-on-1 meetings, tracking KPIs and progress over time", permission: "reports.view_1on1_performance" },
-              ...(isAdmin ? [{ id: "cost-per-client", name: "Cost Per Client", icon: FileSpreadsheet, count: null, description: "Staff labor cost breakdown by client based on tracked time and salary rates", permission: "reports.view_sales_reports" }] : [])
+              { id: "cost-per-client", name: "Cost Per Client", icon: FileSpreadsheet, count: null, description: "Staff labor cost breakdown by client based on tracked time and salary rates", permission: "reports.view_cost_per_client" }
             ].filter(tab => !tab.permission || reportPermissions[tab.permission]).map((tab) => {
               const Icon = tab.icon;
               return (

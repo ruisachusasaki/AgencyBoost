@@ -277,6 +277,7 @@ export const ACCOUNTING_PERMISSIONS: string[] = [
   'reports.pipeline.view',
   'reports.timesheet.view_all',
   'reports.timesheet.export',
+  'reports.cost_per_client.view',
   
   // Settings - view only for financial relevant sections
   'settings.business_profile.view',

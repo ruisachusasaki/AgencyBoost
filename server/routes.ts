@@ -1899,9 +1899,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return;
 
-      const isAdmin = await isCurrentUserAdmin(req);
-      if (!isAdmin) {
-        return res.status(403).json({ error: "Only admins can view cost per client reports" });
+      const isAdminUser = await isCurrentUserAdmin(req);
+      let hasAccess = isAdminUser;
+
+      if (!hasAccess) {
+        const userRolesList = await db
+          .select({ roleId: userRoles.roleId })
+          .from(userRoles)
+          .where(eq(userRoles.userId, userId));
+        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+
+        if (roleIds.length > 0) {
+          const perms = await db
+            .select({ permissionKey: granularPermissions.permissionKey })
+            .from(granularPermissions)
+            .where(
+              and(
+                inArray(granularPermissions.roleId, roleIds),
+                eq(granularPermissions.permissionKey, 'reports.cost_per_client.view'),
+                eq(granularPermissions.enabled, true)
+              )
+            );
+          hasAccess = perms.length > 0;
+        }
+      }
+
+      if (!hasAccess) {
+        return res.status(403).json({ error: "You don't have permission to view cost per client reports" });
       }
 
       const { dateFrom, dateTo } = req.body;

@@ -122,6 +122,7 @@ const PERMISSION_KEY_MIGRATION_MAP: Record<string, string> = {
   'reports.view_pipeline_reports': 'reports.pipeline.view',
   'reports.view_team_reports': 'reports.team.view',
   'reports.view_1on1_performance': 'reports.one_on_one.view',
+  'reports.view_cost_per_client': 'reports.cost_per_client.view',
   'reports.export_reports': 'reports.sales.export',
   
   // Settings module
