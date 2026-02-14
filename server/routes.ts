@@ -11375,7 +11375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return;
 
-      const isAdmin = await isCurrentUserAdmin(userId);
+      const isAdmin = await isCurrentUserAdmin(req);
       if (!isAdmin) {
         return res.status(403).json({ error: "Only admins can view salary information" });
       }
@@ -11424,7 +11424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return;
 
-      const isAdmin = await isCurrentUserAdmin(userId);
+      const isAdmin = await isCurrentUserAdmin(req);
       if (!isAdmin) {
         return res.status(403).json({ error: "Only admins can update salary information" });
       }
