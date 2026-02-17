@@ -413,7 +413,7 @@ export default function TasksSettingsPage() {
 
   const updateWorkflowMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: TeamWorkflowFormData }) => 
-      apiRequest("PUT", `/api/team-workflows/${id}`, data),
+      apiRequest("PATCH", `/api/team-workflows/${id}`, data),
     onSuccess: async (_result: any, variables: any) => {
       // Save updated statuses
       if (newWorkflowStatuses.length >= 0) {
