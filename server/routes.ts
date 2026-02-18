@@ -27064,7 +27064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Calculate next meeting date
     const currentDate = new Date(currentMeeting.meetingDate);
     if (freq === "daily") {
-      nextDate.setDate(nextDate.getDate() + 1);
+      currentDate.setDate(currentDate.getDate() + 1);
     } else if (freq === "weekly") {
       currentDate.setDate(currentDate.getDate() + 7);
     } else if (freq === "biweekly") {
@@ -36401,7 +36401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Calculate next meeting date
     const currentDate = new Date(currentMeeting.meetingDate);
     if (freq === "daily") {
-      nextDate.setDate(nextDate.getDate() + 1);
+      currentDate.setDate(currentDate.getDate() + 1);
     } else if (freq === "weekly") {
       currentDate.setDate(currentDate.getDate() + 7);
     } else if (freq === "biweekly") {
