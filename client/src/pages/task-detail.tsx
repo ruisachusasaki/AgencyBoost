@@ -181,12 +181,12 @@ export default function TaskDetail() {
     queryKey: ["/api/task-priorities"],
   });
 
-  // Task categories for dynamic category dropdown
   type TaskCategory = {
     id: string;
     name: string;
     color: string;
     icon: string;
+    workflowId: string | null;
   };
 
   const { data: taskCategories = [] } = useQuery<TaskCategory[]>({
@@ -205,8 +205,9 @@ export default function TaskDetail() {
   // Use role-based permission hook for consistent permission checks
   const { canAddManualTime } = useRolePermissions();
 
-  // Get workflow-specific statuses for this task
-  const selectedWorkflow = teamWorkflows.find(w => w.id === task?.workflowId);
+  const selectedCategory = taskCategories.find(c => c.id === task?.categoryId);
+  const effectiveWorkflowId = task?.workflowId || selectedCategory?.workflowId || null;
+  const selectedWorkflow = teamWorkflows.find(w => w.id === effectiveWorkflowId);
   const workflowStatuses = selectedWorkflow?.statuses || [];
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -661,8 +662,7 @@ export default function TaskDetail() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {task.workflowId && task.workflowId !== "none" ? (
-                          // Show workflow-specific statuses
+                        {effectiveWorkflowId && effectiveWorkflowId !== "none" && workflowStatuses.length > 0 ? (
                           workflowStatuses
                             .sort((a: any, b: any) => a.order - b.order)
                             .map((workflowStatus: any) => (
@@ -857,7 +857,27 @@ export default function TaskDetail() {
                   </div>
                   <Select
                     value={task.categoryId || "none"}
-                    onValueChange={(value) => updateTaskMutation.mutate({ categoryId: value === "none" ? null : value })}
+                    onValueChange={(value) => {
+                      const newCategoryId = value === "none" ? null : value;
+                      const newCategory = taskCategories.find(c => c.id === newCategoryId);
+                      const newWorkflowId = newCategory?.workflowId || null;
+                      const updates: any = { categoryId: newCategoryId, workflowId: newWorkflowId };
+                      if (newWorkflowId) {
+                        const newWorkflow = teamWorkflows.find(w => w.id === newWorkflowId);
+                        const newStatuses = newWorkflow?.statuses || [];
+                        const currentStatusExists = newStatuses.some((ws: any) => ws.status.value === task.status);
+                        if (!currentStatusExists && newStatuses.length > 0) {
+                          const sorted = [...newStatuses].sort((a: any, b: any) => a.order - b.order);
+                          updates.status = sorted[0].status.value;
+                        }
+                      } else {
+                        const defaultStatuses = ['todo', 'in_progress', 'completed', 'cancelled'];
+                        if (!defaultStatuses.includes(task.status)) {
+                          updates.status = 'todo';
+                        }
+                      }
+                      updateTaskMutation.mutate(updates);
+                    }}
                   >
                     <SelectTrigger className="w-[180px] h-8">
                       <SelectValue placeholder="Select category" />
