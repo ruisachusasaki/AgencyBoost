@@ -24897,7 +24897,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let inheritedClientId: string | null = null;
       let inheritedProjectId: string | null = null;
       if (parentTaskId) {
-        const [parentTask] = await db.select({
+        console.log("[TaskIntake] Looking up parent task:", parentTaskId);
+        const parentResults = await db.select({
           level: tasks.level,
           clientId: tasks.clientId,
           projectId: tasks.projectId,
@@ -24905,10 +24906,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .from(tasks)
           .where(eq(tasks.id, parentTaskId));
         
+        console.log("[TaskIntake] Parent task query returned:", parentResults.length, "results");
+        const parentTask = parentResults[0];
         if (parentTask) {
           subtaskLevel = (parentTask.level || 0) + 1;
           inheritedClientId = parentTask.clientId;
           inheritedProjectId = parentTask.projectId;
+          console.log("[TaskIntake] Parent task found - level:", subtaskLevel, "clientId:", inheritedClientId, "projectId:", inheritedProjectId);
+        } else {
+          console.warn("[TaskIntake] Parent task not found:", parentTaskId);
         }
       }
       // Step A: Validate submission
