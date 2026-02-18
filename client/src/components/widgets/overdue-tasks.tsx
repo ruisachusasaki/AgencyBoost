@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Trash2, GripVertical } from "lucide-react";
+import { AlertCircle, Trash2, GripVertical, Users, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -12,8 +13,16 @@ interface WidgetProps {
 }
 
 export default function OverdueTasksWidget({ userWidget, onRemove }: WidgetProps) {
+  const [assigneeFilter, setAssigneeFilter] = useState<'all' | 'mine'>('all');
+
   const { data, isLoading } = useQuery({
-    queryKey: [`/api/dashboard-widgets/${userWidget.widgetType}/data`],
+    queryKey: [`/api/dashboard-widgets/${userWidget.widgetType}/data`, { assignee: assigneeFilter }],
+    queryFn: async () => {
+      const params = assigneeFilter === 'mine' ? '?assignee=mine' : '';
+      const res = await fetch(`/api/dashboard-widgets/${userWidget.widgetType}/data${params}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch');
+      return res.json();
+    },
   });
 
   const getPriorityColor = (priority: string) => {
@@ -52,6 +61,27 @@ export default function OverdueTasksWidget({ userWidget, onRemove }: WidgetProps
         </Button>
       </CardHeader>
       <CardContent>
+        <div className="flex items-center gap-1 mb-3">
+          <Button
+            variant={assigneeFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setAssigneeFilter('all')}
+            className="h-7 text-xs px-2.5"
+          >
+            <Users className="h-3 w-3 mr-1" />
+            Everyone
+          </Button>
+          <Button
+            variant={assigneeFilter === 'mine' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setAssigneeFilter('mine')}
+            className="h-7 text-xs px-2.5"
+          >
+            <User className="h-3 w-3 mr-1" />
+            Just Mine
+          </Button>
+        </div>
+
         {isLoading ? (
           <div className="flex items-center justify-center h-24">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
@@ -99,7 +129,9 @@ export default function OverdueTasksWidget({ userWidget, onRemove }: WidgetProps
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No overdue tasks</p>
+                <p className="text-sm">
+                  {assigneeFilter === 'mine' ? 'No overdue tasks assigned to you' : 'No overdue tasks'}
+                </p>
               </div>
             )}
           </div>

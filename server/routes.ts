@@ -36146,7 +36146,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { type } = req.params;
-      const data = await appStorage.getWidgetData(type, userId);
+      const filters = req.query as Record<string, string>;
+      const data = await appStorage.getWidgetData(type, userId, filters);
       
       // Disable caching to ensure fresh widget data
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');

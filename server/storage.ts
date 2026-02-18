@@ -8591,7 +8591,7 @@ export class DbStorage implements IStorage {
     }
   }
 
-  async getWidgetData(widgetType: string, userId: string): Promise<any> {
+  async getWidgetData(widgetType: string, userId: string, filters?: Record<string, string>): Promise<any> {
     try {
       // Get user's roles to check if they're Admin or Manager
       const userRolesList = await this.getUserRolesByUser(userId);
@@ -8665,7 +8665,7 @@ export class DbStorage implements IStorage {
           return await this.getMyTasksData(userId);
         
         case 'overdue_tasks':
-          return await this.getOverdueTasksData(userId);
+          return await this.getOverdueTasksData(userId, filters);
         
         case 'tasks_due_this_week':
           return await this.getTasksDueThisWeekData(userId);
@@ -9299,9 +9299,19 @@ export class DbStorage implements IStorage {
     }
   }
 
-  private async getOverdueTasksData(userId: string): Promise<any> {
+  private async getOverdueTasksData(userId: string, filters?: Record<string, string>): Promise<any> {
     try {
       const now = new Date();
+      const conditions = [
+        sql`${tasks.dueDate} < ${now.toISOString()}`,
+        ne(tasks.status, 'completed'),
+        ne(tasks.status, 'cancelled')
+      ];
+
+      if (filters?.assignee === 'mine') {
+        conditions.push(eq(tasks.assignedTo, userId));
+      }
+
       const overdueTasks = await db
         .select({
           id: tasks.id,
@@ -9316,15 +9326,9 @@ export class DbStorage implements IStorage {
         .from(tasks)
         .leftJoin(clients, eq(tasks.clientId, clients.id))
         .leftJoin(staff, eq(tasks.assignedTo, staff.id))
-        .where(
-          and(
-            sql`${tasks.dueDate} < ${now.toISOString()}`,
-            ne(tasks.status, 'completed'),
-            ne(tasks.status, 'cancelled')
-          )
-        )
+        .where(and(...conditions))
         .orderBy(asc(tasks.dueDate))
-        .limit(10);
+        .limit(20);
 
       return overdueTasks.map(task => ({
         ...task,
