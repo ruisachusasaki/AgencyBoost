@@ -439,23 +439,53 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
 
   const commonEmojis = ['👍', '❤️', '😊', '🎉', '👏', '🚀', '👌', '💯'];
 
-  const formatCommentContent = (content: string) => {
-    // Replace @mentions with styled badges
-    const mentionRegex = /@(\w+(?:\s+\w+)*)/g;
-    const parts = content.split(mentionRegex);
-    
+  const formatCommentContent = (content: string, mentionIds: string[] = []) => {
+    if (!mentionIds || mentionIds.length === 0) {
+      return <span>{content}</span>;
+    }
+
+    const mentionedNames: string[] = [];
+    for (const mId of mentionIds) {
+      const s = staffData.find((st: any) => st.id === mId);
+      if (s) {
+        const name = s.name || `${s.firstName} ${s.lastName}`.trim();
+        mentionedNames.push(name);
+      }
+    }
+
+    if (mentionedNames.length === 0) {
+      return <span>{content}</span>;
+    }
+
+    const sortedNames = [...mentionedNames].sort((a, b) => b.length - a.length);
+    const escapedNames = sortedNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const mentionRegex = new RegExp(`(@(?:${escapedNames.join('|')}))(?=\\s|[.,!?;:\\)\\]\\n]|$)`, 'gi');
+
+    const parts: { text: string; isMention: boolean }[] = [];
+    let lastIndex = 0;
+    let match;
+    while ((match = mentionRegex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ text: content.slice(lastIndex, match.index), isMention: false });
+      }
+      parts.push({ text: match[1], isMention: true });
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < content.length) {
+      parts.push({ text: content.slice(lastIndex), isMention: false });
+    }
+
     return (
       <span>
         {parts.map((part, index) => {
-          if (index % 2 === 1) {
-            // This is a mentioned name
+          if (part.isMention) {
             return (
               <Badge key={index} variant="secondary" className="mx-1 bg-teal-100 text-teal-800">
-                @{part}
+                {part.text}
               </Badge>
             );
           }
-          return <span key={index}>{part}</span>;
+          return <span key={index}>{part.text}</span>;
         })}
       </span>
     );
@@ -521,7 +551,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
                       </div>
                       
                       <div className="text-sm text-slate-700 whitespace-pre-wrap mb-2">
-                        {formatCommentContent(comment.content)}
+                        {formatCommentContent(comment.content, comment.mentions)}
                       </div>
                       
                       {/* Comment Files */}
@@ -807,7 +837,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
                             </div>
                             
                             <div className="text-sm text-slate-700 whitespace-pre-wrap mb-2">
-                              {formatCommentContent(reply.content)}
+                              {formatCommentContent(reply.content, reply.mentions)}
                             </div>
                             
                             {/* Reply Reactions */}
