@@ -868,7 +868,7 @@ export function TaskIntakeDialog({
           ...recurringData,
         });
         
-        const result = await response.json();
+        const result = await response.json().catch(() => ({ error: "Unexpected server error" }));
         
         if (result.success) {
           toast({

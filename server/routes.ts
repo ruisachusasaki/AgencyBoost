@@ -25064,21 +25064,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignmentResult.assignToUserId = staffId;
       }
 
-      // Step E: Create the task with description and assignments
+      // Step E: Validate references and create the task
+      const resolvedCategoryId = assignmentResult.categoryId || null;
+      const resolvedAssignedTo = assignmentResult.assignToUserId || null;
+      const resolvedClientId = parentTaskId ? inheritedClientId : (clientId && clientId !== 'no_client' ? clientId : null);
+      const resolvedProjectId = parentTaskId ? inheritedProjectId : null;
+      
+      console.log("[TaskIntake] Creating task:", { 
+        title: taskTitle, parentTaskId, level: parentTaskId ? subtaskLevel : 0,
+        clientId: resolvedClientId, projectId: resolvedProjectId,
+        categoryId: resolvedCategoryId, assignedTo: resolvedAssignedTo,
+      });
+      
       const [newTask] = await db.insert(tasks)
         .values({
           title: taskTitle,
           description: taskDescription,
           status: 'todo',
           priority,
-          clientId: parentTaskId ? inheritedClientId : (clientId && clientId !== 'no_client' ? clientId : null),
+          clientId: resolvedClientId,
           dueDate: dueDateStr ? new Date(dueDateStr) : null,
-          assignedTo: assignmentResult.assignToUserId || undefined,
-          categoryId: assignmentResult.categoryId || undefined,
+          assignedTo: resolvedAssignedTo,
+          categoryId: resolvedCategoryId,
           tags: assignmentResult.tags.length > 0 ? assignmentResult.tags : undefined,
           parentTaskId: parentTaskId || null,
           level: parentTaskId ? subtaskLevel : 0,
-          projectId: parentTaskId ? inheritedProjectId : null,
+          projectId: resolvedProjectId,
           isRecurring: isRecurring || false,
           recurringInterval: isRecurring ? (recurringInterval || 1) : undefined,
           recurringUnit: isRecurring ? (recurringUnit || "days") : undefined,
@@ -25105,9 +25116,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         taskUrl: `/tasks/${newTask.id}`,
       });
 
-    } catch (error) {
-      console.error("Error submitting task intake form:", error);
-      res.status(500).json({ error: "Failed to submit form" });
+    } catch (error: any) {
+      const errorMessage = error?.message || String(error);
+      const errorDetail = error?.detail || '';
+      const errorCode = error?.code || '';
+      console.error("[TaskIntake] Error submitting form:", {
+        message: errorMessage,
+        detail: errorDetail,
+        code: errorCode,
+        parentTaskId: req.body?.parentTaskId,
+        formId: req.body?.formId,
+        stack: error?.stack?.split('\n').slice(0, 5).join('\n'),
+      });
+      
+      let userMessage = "Failed to submit form";
+      if (errorCode === '23503') {
+        userMessage = "A referenced record (client, project, category, or assignee) no longer exists. Please refresh and try again.";
+      } else if (errorCode === '23505') {
+        userMessage = "A duplicate record was detected. Please try again.";
+      } else if (errorMessage.includes('null value in column')) {
+        userMessage = "A required field is missing. Please fill out all required fields.";
+      }
+      
+      res.status(500).json({ error: userMessage, message: userMessage, details: errorDetail || errorMessage });
     }
   });
 
