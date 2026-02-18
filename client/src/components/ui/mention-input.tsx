@@ -21,6 +21,11 @@ interface MentionMatch {
   userName?: string;
 }
 
+interface ConfirmedMention {
+  userId: string;
+  userName: string;
+}
+
 interface MentionInputProps {
   value: string;
   onChange: (value: string, mentions: MentionMatch[]) => void;
@@ -43,16 +48,15 @@ export function MentionInput({
   const [cursorPosition, setCursorPosition] = useState(0);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [displayValue, setDisplayValue] = useState(value); // Clean display value
+  const [displayValue, setDisplayValue] = useState(value);
+  const [confirmedMentions, setConfirmedMentions] = useState<ConfirmedMention[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch staff data for mentions
   const { data: staff = [] } = useQuery<Staff[]>({
     queryKey: ["/api/staff"],
   });
 
-  // Parse mentions from the text
   const parseMentions = useCallback((text: string): MentionMatch[] => {
     const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
     const mentions: MentionMatch[] = [];
@@ -71,126 +75,116 @@ export function MentionInput({
     return mentions;
   }, []);
 
-  // Convert storage format (@[Name](id)) to display format (@Name)
   const convertToDisplay = useCallback((text: string): string => {
     return text.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1');
   }, []);
 
-  // Convert display format (@Name) to storage format (@[Name](id)) using stored mentions
-  const convertToStorage = useCallback((displayText: string, mentions: MentionMatch[]): string => {
-    // Updated regex to handle punctuation boundaries and name characters
-    const mentionRegex = /@([A-Za-z][A-Za-z'-]*(?:\s+[A-Za-z][A-Za-z'-]*){0,2})(?=[\s.,!?;:)\]]|$)/g;
-    
-    const result = displayText.replace(mentionRegex, (fullMatch, name) => {
-      const normalizedName = name.trim();
-      
-      // First try to find in stored mentions (from previous selections)
-      const storedMention = mentions.find(m => 
-        (m.userName || '').trim().toLowerCase() === normalizedName.toLowerCase()
-      );
-      if (storedMention) {
-        return `@[${storedMention.userName}](${storedMention.userId})`;
+  const convertToStorage = useCallback((displayText: string, knownMentions: ConfirmedMention[]): string => {
+    let result = displayText;
+    const allKnown = [...knownMentions];
+
+    staff.forEach(s => {
+      const fullName = `${s.firstName} ${s.lastName}`.trim();
+      if (!allKnown.find(m => m.userId === s.id)) {
+        allKnown.push({ userId: s.id, userName: fullName });
       }
-      
-      // If not found in stored mentions, try to match against staff data
-      const matchedStaff = staff.find(s => {
-        const fullName = `${s.firstName} ${s.lastName}`.trim();
-        return fullName.toLowerCase() === normalizedName.toLowerCase();
-      });
-      
-      if (matchedStaff) {
-        const fullName = `${matchedStaff.firstName} ${matchedStaff.lastName}`;
-        return `@[${fullName}](${matchedStaff.id})`;
-      }
-      
-      // If no match found, return original text unchanged
-      return fullMatch;
     });
-    
+
+    allKnown.sort((a, b) => b.userName.length - a.userName.length);
+
+    for (const mention of allKnown) {
+      const escapedName = mention.userName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = new RegExp(`@${escapedName}(?![\\w])`, 'gi');
+      result = result.replace(pattern, `@[${mention.userName}](${mention.userId})`);
+    }
+
     return result;
   }, [staff]);
 
-  // Update displayValue when value prop changes
   useEffect(() => {
-    setDisplayValue(convertToDisplay(value));
-  }, [value, convertToDisplay]);
+    const display = convertToDisplay(value);
+    setDisplayValue(display);
 
-  // Re-run conversion when staff data loads to catch any unresolved mentions
+    const mentions = parseMentions(value);
+    if (mentions.length > 0) {
+      const existing = mentions.map(m => ({
+        userId: m.userId!,
+        userName: m.userName!,
+      }));
+      setConfirmedMentions(prev => {
+        const merged = [...prev];
+        for (const e of existing) {
+          if (!merged.find(m => m.userId === e.userId)) {
+            merged.push(e);
+          }
+        }
+        return merged;
+      });
+    }
+  }, [value, convertToDisplay, parseMentions]);
+
   useEffect(() => {
-    // Skip if value is empty (e.g., after clearing the form)
     if (!value || !displayValue) return;
-    
+
     if (staff.length > 0 && displayValue) {
-      const existingMentions = parseMentions(value);
-      const newStorageValue = convertToStorage(displayValue, existingMentions);
+      const newStorageValue = convertToStorage(displayValue, confirmedMentions);
       const newMentions = parseMentions(newStorageValue);
-      
-      // Only emit if the storage value actually changed
+
       if (newStorageValue !== value) {
         onChange(newStorageValue, newMentions);
       }
     }
-  }, [staff.length, displayValue, value, convertToStorage, parseMentions, onChange]);
+  }, [staff.length]);
 
-  // Filter staff based on mention query
   const filteredStaff = staff.filter((member) => {
     const fullName = `${member.firstName} ${member.lastName}`.toLowerCase();
     return fullName.includes(mentionQuery.toLowerCase());
-  }).slice(0, 5); // Limit to 5 suggestions
-  
+  }).slice(0, 5);
 
-  // Check for @ symbol and show dropdown
   const checkForMention = useCallback((text: string, position: number) => {
     const beforeCursor = text.slice(0, position);
     const lastAtSymbol = beforeCursor.lastIndexOf('@');
-    
+
     if (lastAtSymbol !== -1) {
       const afterAt = beforeCursor.slice(lastAtSymbol + 1);
-      // Check if there's no space after @ and we're not inside an existing mention
-      if (!afterAt.includes(' ') && !afterAt.includes('\n') && 
-          !/^[\w.-]*\[/.test(afterAt) && // Don't trigger if we're inside @[Name](id)
-          /^[\w.-]*$/.test(afterAt)) {    // Only alphanumeric, dots, dashes
+      if (afterAt.length <= 30 && !afterAt.includes('\n') &&
+          !/\[/.test(afterAt) &&
+          /^[\w\s.-]*$/.test(afterAt) &&
+          (afterAt.split(/\s+/).length <= 3)) {
         setMentionQuery(afterAt);
         setIsDropdownOpen(true);
         setSelectedIndex(0);
-        
-        // Calculate dropdown position relative to viewport - SIMPLIFIED
+
         const textarea = textareaRef.current;
         if (textarea) {
           const rect = textarea.getBoundingClientRect();
-          
           setDropdownPosition({
-            top: rect.bottom + 5, // Just below the textarea
+            top: rect.bottom + 5,
             left: rect.left,
           });
         }
         return;
       }
     }
-    
+
     setIsDropdownOpen(false);
     setMentionQuery("");
-  }, [staff]);
+  }, []);
 
-  // Handle text change
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newDisplayValue = e.target.value;
     const newPosition = e.target.selectionStart || 0;
-    
+
     setDisplayValue(newDisplayValue);
     setCursorPosition(newPosition);
     checkForMention(newDisplayValue, newPosition);
-    
-    // Convert to storage format and get mentions from the original value
-    const existingMentions = parseMentions(value);
-    const storageValue = convertToStorage(newDisplayValue, existingMentions);
+
+    const storageValue = convertToStorage(newDisplayValue, confirmedMentions);
     const updatedMentions = parseMentions(storageValue);
-    
+
     onChange(storageValue, updatedMentions);
   };
 
-
-  // Handle cursor position change
   const handleCursorChange = () => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -200,86 +194,52 @@ export function MentionInput({
     }
   };
 
-  // Handle blur - SIMPLE AND GUARANTEED conversion
   const handleBlur = () => {
-    if (staff.length === 0) {
-      setIsDropdownOpen(false);
-      return;
-    }
-
-    // Simple pattern: find @Name and convert to storage format
-    let converted = displayValue;
-    const newMentions: MentionMatch[] = [];
-    
-    // Find all @Name patterns (allowing for common punctuation)
-    const mentionMatches = displayValue.matchAll(/@([A-Za-z][A-Za-z\s'-]{1,30})(?=[\s.,!?;:)\]]|$)/g);
-    
-    for (const match of mentionMatches) {
-      const fullMatch = match[0]; // "@Dustin Mathews"
-      const nameCandidate = match[1].trim(); // "Dustin Mathews"
-      
-      // Skip if already converted to storage format  
-      if (converted.includes(`@[${nameCandidate}](`)) continue;
-      
-      // Find exact staff match
-      const staffMatch = staff.find(s => {
-        const fullName = `${s.firstName} ${s.lastName}`;
-        return fullName.toLowerCase() === nameCandidate.toLowerCase();
-      });
-      
-      if (staffMatch) {
-        const fullName = `${staffMatch.firstName} ${staffMatch.lastName}`;
-        const storageFormat = `@[${fullName}](${staffMatch.id})`;
-        converted = converted.replace(fullMatch, storageFormat);
-        
-        newMentions.push({
-          userId: staffMatch.id,
-          userName: fullName
-        });
-      }
-    }
-    
-    // Always emit the result
-    onChange(converted, newMentions);
-    setDisplayValue(convertToDisplay(converted));
+    const storageValue = convertToStorage(displayValue, confirmedMentions);
+    const mentions = parseMentions(storageValue);
+    onChange(storageValue, mentions);
+    setDisplayValue(convertToDisplay(storageValue));
     setIsDropdownOpen(false);
   };
 
-  // Insert mention
-  const insertMention = (staff: Staff) => {
+  const insertMention = (member: Staff) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
     const beforeCursor = displayValue.slice(0, cursorPosition);
     const afterCursor = displayValue.slice(cursorPosition);
     const lastAtSymbol = beforeCursor.lastIndexOf('@');
-    
+
     if (lastAtSymbol !== -1) {
       const beforeMention = displayValue.slice(0, lastAtSymbol);
-      const mentionDisplay = `@${staff.firstName} ${staff.lastName}`;
-      const newDisplayValue = beforeMention + mentionDisplay + afterCursor;
-      const newCursorPosition = lastAtSymbol + mentionDisplay.length;
-      
+      const fullName = `${member.firstName} ${member.lastName}`;
+      const mentionDisplay = `@${fullName}`;
+      const separator = afterCursor.length === 0 || afterCursor[0] === ' ' || afterCursor[0] === '\n' ? ' ' : ' ';
+      const newDisplayValue = beforeMention + mentionDisplay + separator + afterCursor;
+      const newCursorPosition = lastAtSymbol + mentionDisplay.length + separator.length;
+
       setDisplayValue(newDisplayValue);
-      
-      // Create storage format with the new mention
-      const mentionStorage = `@[${staff.firstName} ${staff.lastName}](${staff.id})`;
-      const newStorageValue = beforeMention + mentionStorage + afterCursor;
+
+      setConfirmedMentions(prev => {
+        if (prev.find(m => m.userId === member.id)) return prev;
+        return [...prev, { userId: member.id, userName: fullName }];
+      });
+
+      const mentionStorage = `@[${fullName}](${member.id})`;
+      const newStorageValue = beforeMention + mentionStorage + separator + afterCursor;
       const mentions = parseMentions(newStorageValue);
       onChange(newStorageValue, mentions);
-      
-      // Set cursor position after mention
+
       setTimeout(() => {
         textarea.focus();
         textarea.setSelectionRange(newCursorPosition, newCursorPosition);
       }, 0);
     }
-    
+
     setIsDropdownOpen(false);
     setMentionQuery("");
   };
 
-  // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isDropdownOpen) return;
 
@@ -306,11 +266,10 @@ export function MentionInput({
     }
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        dropdownRef.current && 
+        dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node) &&
         textareaRef.current &&
         !textareaRef.current.contains(event.target as Node)
@@ -326,7 +285,6 @@ export function MentionInput({
 
   return (
     <div className="relative">
-      {/* Simple textarea with clean @Name display */}
       <Textarea
         ref={textareaRef}
         value={displayValue}
@@ -340,11 +298,10 @@ export function MentionInput({
         disabled={disabled}
         data-testid={dataTestId}
       />
-      
-      {/* Mention suggestions dropdown - rendered via portal */}
+
       {isDropdownOpen && filteredStaff.length > 0 && (() => {
         return createPortal(
-          <Card 
+          <Card
             ref={dropdownRef}
             className="fixed z-[9999] w-64 max-h-48 overflow-y-auto shadow-lg border"
             style={{
@@ -361,8 +318,8 @@ export function MentionInput({
                   key={member.id}
                   className={cn(
                     "flex items-center gap-2 p-2 rounded cursor-pointer transition-colors",
-                    index === selectedIndex 
-                      ? "bg-primary text-primary-foreground" 
+                    index === selectedIndex
+                      ? "bg-primary text-primary-foreground"
                       : "hover:bg-muted"
                   )}
                   onClick={() => insertMention(member)}
