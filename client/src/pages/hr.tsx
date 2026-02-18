@@ -47,7 +47,9 @@ import {
   MessageCircle,
   Network,
   Presentation,
-  Plus
+  Plus,
+  List,
+  LayoutGrid
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -178,6 +180,11 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   // Pagination state for who's off calendar
   const [whosOffPage, setWhosOffPage] = useState(1);
   const [whosOffPageSize, setWhosOffPageSize] = useState(20);
+  const [whosOffViewMode, setWhosOffViewMode] = useState<"list" | "calendar">("list");
+  const [whosOffCalendarMonth, setWhosOffCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   
   // Filter states for applications
   const [applicationPositionFilter, setApplicationPositionFilter] = useState("all");
@@ -782,6 +789,71 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   const whosOffTotalPages = useMemo(() => {
     return Math.ceil(whosOffSortedTimeOff.length / whosOffPageSize);
   }, [whosOffSortedTimeOff.length, whosOffPageSize]);
+
+  const whosOffCalendarData = useMemo(() => {
+    const year = whosOffCalendarMonth.getFullYear();
+    const month = whosOffCalendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const approvedTimeOff = filteredTimeOffRequests.filter(request => {
+      if (request.status !== 'approved') return false;
+      const startDate = parseISO(request.startDate);
+      const endDate = parseISO(request.endDate);
+      return (startDate <= lastDay && endDate >= firstDay);
+    });
+
+    const dayMap: Record<number, Array<{ id: string; staffName: string; staffId: string; type: string; startDate: Date; endDate: Date; color: string }>> = {};
+    const colorPalette = [
+      'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
+      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+      'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200',
+      'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+      'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+      'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    ];
+    const getStaffColor = (staffId: string) => {
+      let hash = 0;
+      for (let i = 0; i < staffId.length; i++) {
+        hash = ((hash << 5) - hash) + staffId.charCodeAt(i);
+        hash |= 0;
+      }
+      return colorPalette[Math.abs(hash) % colorPalette.length];
+    };
+
+    approvedTimeOff.forEach(request => {
+      const staff = staffData.find(s => s.id === request.staffId);
+      if (!staff) return;
+      const staffName = `${staff.firstName} ${staff.lastName}`;
+      const startDate = parseISO(request.startDate);
+      const endDate = parseISO(request.endDate);
+      const loopStart = new Date(Math.max(startDate.getTime(), firstDay.getTime()));
+      const loopEnd = new Date(Math.min(endDate.getTime(), lastDay.getTime()));
+
+      for (let d = new Date(loopStart); d <= loopEnd; d.setDate(d.getDate() + 1)) {
+        const dayNum = d.getDate();
+        if (!dayMap[dayNum]) dayMap[dayNum] = [];
+        if (!dayMap[dayNum].find(e => e.id === request.id)) {
+          dayMap[dayNum].push({
+            id: request.id,
+            staffName,
+            staffId: request.staffId,
+            type: (request as any).type || 'Time Off',
+            startDate,
+            endDate,
+            color: getStaffColor(request.staffId),
+          });
+        }
+      }
+    });
+
+    const startDayOfWeek = firstDay.getDay();
+    const daysInMonth = lastDay.getDate();
+
+    return { dayMap, startDayOfWeek, daysInMonth, year, month };
+  }, [filteredTimeOffRequests, staffData, whosOffCalendarMonth]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -1894,13 +1966,42 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
 
       {activeTab === "time-off-calendar" && (
         <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold">Time Off Calendar</h2>
-            <p className="text-slate-600">See who's off and when to help plan workload and approval decisions</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">Time Off Calendar</h2>
+              <p className="text-slate-600 dark:text-slate-400">See who's off and when to help plan workload and approval decisions</p>
+            </div>
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              <button
+                onClick={() => setWhosOffViewMode("list")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  whosOffViewMode === "list"
+                    ? "text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                }`}
+                style={whosOffViewMode === "list" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
+                data-testid="whosoff-view-list"
+              >
+                <List className="h-4 w-4" />
+                List
+              </button>
+              <button
+                onClick={() => setWhosOffViewMode("calendar")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  whosOffViewMode === "calendar"
+                    ? "text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                }`}
+                style={whosOffViewMode === "calendar" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
+                data-testid="whosoff-view-calendar"
+              >
+                <LayoutGrid className="h-4 w-4" />
+                Calendar
+              </button>
+            </div>
           </div>
 
-          {(() => {
-            // Use pre-calculated sorted time off data
+          {whosOffViewMode === "list" && (() => {
             const sortedTimeOff = whosOffSortedTimeOff;
             const totalPages = whosOffTotalPages;
             const totalItems = sortedTimeOff.length;
@@ -1925,7 +2026,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
                             <CardTitle className="text-lg flex items-center gap-2">
-                              <Calendar className="h-5 w-5 text-blue-600" />
+                              <Calendar className="h-5 w-5" style={{ color: "hsl(179, 100%, 39%)" }} />
                               {dateRange}
                             </CardTitle>
                             <Badge variant="outline" className="text-xs">
@@ -1936,7 +2037,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                         <CardContent className="pt-0">
                           <div className="space-y-3">
                             {data.requests.map((request: any) => (
-                              <div key={request.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                              <div key={request.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                                 <div className="flex items-center gap-3">
                                   <Avatar className="h-10 w-10">
                                     <AvatarFallback className="text-sm font-medium">
@@ -1944,15 +2045,15 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <p className="font-medium text-slate-900">{request.staffName}</p>
-                                    <p className="text-sm text-slate-600">{request.department} • {request.position}</p>
+                                    <p className="font-medium text-slate-900 dark:text-slate-100">{request.staffName}</p>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400">{request.department} • {request.position}</p>
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <Badge variant="outline" className="bg-slate-50 text-slate-700">
+                                  <Badge variant="outline" className="bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                                     Time Off
                                   </Badge>
-                                  <p className="text-sm text-slate-600 mt-1">
+                                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                                     {request.totalDays} {request.totalDays === 1 ? 'day' : 'days'}
                                     {request.totalHours && ` (${request.totalHours}h)`}
                                   </p>
@@ -1964,11 +2065,10 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                       </Card>
                     ))}
                     
-                    {/* Pagination Controls */}
                     <div className="flex items-center justify-between pt-4 border-t">
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-600">Items per page:</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Items per page:</span>
                           <Select value={whosOffPageSize.toString()} onValueChange={(value) => {
                             setWhosOffPageSize(Number(value));
                             setWhosOffPage(1);
@@ -1984,7 +2084,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                             </SelectContent>
                           </Select>
                         </div>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
                           Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} date ranges
                         </span>
                       </div>
@@ -2045,12 +2145,174 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                 )}
                 
                 {sortedTimeOff.length > 0 && (
-                  <div className="text-center text-sm text-slate-500 pt-4 border-t">
+                  <div className="text-center text-sm text-slate-500 dark:text-slate-400 pt-4 border-t">
                     Showing approved time off for the next 60 days • 
                     {canViewAllData ? ' All staff' : isManager ? ' Your team' : ' Your requests only'}
                   </div>
                 )}
               </div>
+            );
+          })()}
+
+          {whosOffViewMode === "calendar" && (() => {
+            const { dayMap, startDayOfWeek, daysInMonth, year, month } = whosOffCalendarData;
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const today = new Date();
+            const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+            const totalCells = startDayOfWeek + daysInMonth;
+            const rows = Math.ceil(totalCells / 7);
+
+            return (
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWhosOffCalendarMonth(new Date(year, month - 1, 1))}
+                      data-testid="whosoff-cal-prev"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <CardTitle className="text-lg">
+                      {monthNames[month]} {year}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const now = new Date();
+                          setWhosOffCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+                        }}
+                        className="text-xs"
+                        data-testid="whosoff-cal-today"
+                      >
+                        Today
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setWhosOffCalendarMonth(new Date(year, month + 1, 1))}
+                        data-testid="whosoff-cal-next"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-7 border-b dark:border-gray-700">
+                    {dayNames.map(day => (
+                      <div key={day} className="py-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7">
+                    {Array.from({ length: rows * 7 }, (_, i) => {
+                      const dayNum = i - startDayOfWeek + 1;
+                      const isValidDay = dayNum >= 1 && dayNum <= daysInMonth;
+                      const isToday = isCurrentMonth && dayNum === today.getDate();
+                      const isWeekend = i % 7 === 0 || i % 7 === 6;
+                      const entries = isValidDay ? (dayMap[dayNum] || []) : [];
+
+                      return (
+                        <div
+                          key={i}
+                          className={`min-h-[100px] border-b border-r dark:border-gray-700 p-1 ${
+                            !isValidDay ? 'bg-slate-50 dark:bg-slate-900/50' : 
+                            isWeekend ? 'bg-slate-50/50 dark:bg-slate-900/30' : 
+                            'bg-white dark:bg-slate-950'
+                          } ${i % 7 === 0 ? 'border-l dark:border-gray-700' : ''}`}
+                          data-testid={isValidDay ? `whosoff-cal-day-${dayNum}` : undefined}
+                        >
+                          {isValidDay && (
+                            <>
+                              <div className={`text-right text-sm mb-1 ${
+                                isToday 
+                                  ? 'font-bold' 
+                                  : 'text-slate-600 dark:text-slate-400'
+                              }`}>
+                                {isToday ? (
+                                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full text-white" style={{ backgroundColor: "hsl(179, 100%, 39%)" }}>
+                                    {dayNum}
+                                  </span>
+                                ) : dayNum}
+                              </div>
+                              <div className="space-y-0.5">
+                                {entries.slice(0, 3).map(entry => (
+                                  <div
+                                    key={entry.id}
+                                    className={`text-[10px] leading-tight px-1 py-0.5 rounded truncate ${entry.color}`}
+                                    title={`${entry.staffName} - ${entry.type} (${format(entry.startDate, 'M/d')} - ${format(entry.endDate, 'M/d')})`}
+                                  >
+                                    {entry.staffName.split(' ')[0]}
+                                  </div>
+                                ))}
+                                {entries.length > 3 && (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button className="text-[10px] text-slate-500 dark:text-slate-400 px-1 font-medium hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer w-full text-left">
+                                        +{entries.length - 3} more
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-64 p-3" align="start">
+                                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                                        {monthNames[month]} {dayNum} — {entries.length} off
+                                      </p>
+                                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                                        {entries.map(entry => (
+                                          <div key={entry.id} className={`text-xs px-2 py-1 rounded ${entry.color}`}>
+                                            <span className="font-medium">{entry.staffName}</span>
+                                            <span className="opacity-75 ml-1">• {entry.type}</span>
+                                            <div className="text-[10px] opacity-75">
+                                              {format(entry.startDate, 'M/d')} - {format(entry.endDate, 'M/d')}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {Object.keys(dayMap).length > 0 && (
+                    <div className="mt-4 pt-4 border-t dark:border-gray-700">
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Legend</p>
+                      <div className="flex flex-wrap gap-2">
+                        {(() => {
+                          const uniqueStaff = new Map<string, string>();
+                          Object.values(dayMap).forEach(entries => {
+                            entries.forEach(e => {
+                              if (!uniqueStaff.has(e.staffName)) {
+                                uniqueStaff.set(e.staffName, e.color);
+                              }
+                            });
+                          });
+                          return Array.from(uniqueStaff.entries()).map(([name, color]) => (
+                            <span key={name} className={`text-xs px-2 py-1 rounded ${color}`}>
+                              {name}
+                            </span>
+                          ));
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-center text-sm text-slate-500 dark:text-slate-400 pt-4 mt-4 border-t dark:border-gray-700">
+                    {canViewAllData ? 'All staff' : isManager ? 'Your team' : 'Your requests only'}
+                  </div>
+                </CardContent>
+              </Card>
             );
           })()}
         </div>
