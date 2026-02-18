@@ -73,6 +73,7 @@ import ClientPortalLogin from "@/pages/client-portal/login";
 import ClientPortalDashboard from "@/pages/client-portal/dashboard";
 import ClientPortalAuthGuard from "@/components/ClientPortalAuthGuard";
 import HelpSupport from "@/pages/help-support";
+import NotificationsPage from "@/pages/notifications";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import PublicSurvey from "@/pages/public-survey";
@@ -119,6 +120,16 @@ function Router() {
           <AuthGate>
             <MainLayout>
               <Dashboard />
+            </MainLayout>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/notifications">
+        {() => (
+          <AuthGate>
+            <MainLayout>
+              <NotificationsPage />
             </MainLayout>
           </AuthGate>
         )}

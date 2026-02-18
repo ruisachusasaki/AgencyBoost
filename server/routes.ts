@@ -17549,6 +17549,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear all notifications (delete all for current user)
+  app.delete("/api/notifications/clear-all", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      
+      const deleted = await db.delete(notifications)
+        .where(eq(notifications.userId, userId))
+        .returning();
+      
+      res.json({ 
+        message: `${deleted.length} notifications cleared`,
+        cleared: deleted.length
+      });
+    } catch (error) {
+      console.error("Error clearing notifications:", error);
+      res.status(500).json({ error: "Failed to clear notifications" });
+    }
+  });
+
   // Test endpoint to view notifications for any staff member (dev only)
   app.get("/api/notifications/staff/:staffId", requireAuth(), requireAdmin(), async (req, res) => {
     try {

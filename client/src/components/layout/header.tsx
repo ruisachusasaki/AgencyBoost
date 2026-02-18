@@ -205,18 +205,16 @@ function NotificationButton() {
           )}
         </div>
         
-        {notifications.length > 0 && (
-          <div className="border-t border-gray-200 dark:border-gray-700 p-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full text-sm"
-              onClick={() => setIsOpen(false)}
-            >
-              Close
-            </Button>
-          </div>
-        )}
+        <div className="border-t border-gray-200 dark:border-gray-700 p-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-sm text-primary hover:text-primary"
+            onClick={() => { setIsOpen(false); setLocation('/notifications'); }}
+          >
+            View all notifications
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );
