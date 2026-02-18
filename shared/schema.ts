@@ -802,6 +802,7 @@ export const tasks = pgTable("tasks", {
   workflowId: varchar("workflow_id").references(() => teamWorkflows.id), // Direct workflow assignment
   assignedTo: uuid("assigned_to").references(() => staff.id),
   clientId: varchar("client_id").references(() => clients.id),
+  projectId: varchar("project_id"),
   leadId: varchar("lead_id").references(() => leads.id),
   campaignId: varchar("campaign_id").references(() => campaigns.id),
   dueDate: timestamp("due_date"),

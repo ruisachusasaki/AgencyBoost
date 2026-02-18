@@ -87,10 +87,14 @@ export function SubTaskList({ parentTaskId, level = 0, maxLevel = 5 }: SubTaskLi
 
   if (isLoading) {
     return (
-      <div className="ml-6 space-y-2">
-        <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-12 rounded"></div>
-        <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-12 rounded"></div>
-      </div>
+      <TableRow>
+        <TableCell colSpan={4} className="py-3">
+          <div className="ml-6 space-y-2">
+            <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-12 rounded"></div>
+            <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-12 rounded"></div>
+          </div>
+        </TableCell>
+      </TableRow>
     );
   }
 
