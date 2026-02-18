@@ -17169,15 +17169,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
         
+        // Get task name for better notification context
+        let taskName = '';
+        try {
+          const taskData = await db.select({ title: tasks.title }).from(tasks).where(eq(tasks.id, taskId)).limit(1);
+          if (taskData.length > 0) {
+            taskName = taskData[0].title || '';
+          }
+        } catch (e) {
+          // fallback - no task name in notification
+        }
+        
         // Only notify users whose IDs are both submitted AND validated as present in content
         for (const mentionedUserId of mentions) {
           if (validMentionIds.has(mentionedUserId) && mentionedUserId !== userId) {
-            void notificationService.notifyMentioned(
-              mentionedUserId,  // Who to notify
-              userId,           // Who mentioned them (author ID)
-              'task',           // Context type
-              taskId,           // Context ID
-              content.trim()    // Comment content
+            void notificationService.notifyMentionedInTask(
+              mentionedUserId,
+              userId,
+              taskId,
+              taskName,
+              content.trim()
             ).catch(err => console.error('[Notification] Failed to send mention notification:', err));
           }
         }

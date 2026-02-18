@@ -177,6 +177,33 @@ export class NotificationService {
   }
 
   /**
+   * Helper method for @mention notifications in task comments (includes task name context)
+   */
+  async notifyMentionedInTask(userId: string, mentionedBy: string, taskId: string, taskName: string, commentContent: string): Promise<void> {
+    const user = await this.storage.getStaffMember(mentionedBy);
+    const mentionerName = user ? `${user.firstName} ${user.lastName}` : 'Someone';
+    const preview = commentContent.substring(0, 100) + (commentContent.length > 100 ? '...' : '');
+    
+    const title = taskName ? `Mentioned in task: ${taskName}` : 'You were mentioned';
+    const message = taskName 
+      ? `${mentionerName} mentioned you in "${taskName}": ${preview}`
+      : `${mentionerName} mentioned you: ${preview}`;
+    
+    await this.notify({
+      userId,
+      type: 'mentioned',
+      title,
+      message,
+      entityType: 'task',
+      entityId: taskId,
+      actionUrl: `/tasks/${taskId}`,
+      actionText: 'View Task',
+      priority: 'normal',
+      metadata: { mentionedBy, contextType: 'task', contextId: taskId, taskName }
+    });
+  }
+
+  /**
    * Get notification preferences for a user
    */
   private async getUserPreferences(userId: string): Promise<NotificationSettings> {
