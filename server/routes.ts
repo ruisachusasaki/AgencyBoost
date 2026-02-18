@@ -25070,6 +25070,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignmentResult.assignToUserId = staffId;
       }
 
+      // Auto-assign sub-tasks to the person who created them
+      if (parentTaskId) {
+        console.log("[TaskIntake] Sub-task detected - auto-assigning to creator:", staffId);
+        assignmentResult.assignToUserId = staffId;
+      }
+
       // Step E: Validate references and create the task
       const resolvedCategoryId = assignmentResult.categoryId || null;
       const resolvedAssignedTo = assignmentResult.assignToUserId || null;
@@ -25089,6 +25095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: 'todo',
           priority,
           clientId: resolvedClientId,
+          startDate: (() => { const now = new Date(); const eastern = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' })); eastern.setHours(0, 0, 0, 0); return eastern; })(),
           dueDate: dueDateStr ? new Date(dueDateStr) : null,
           assignedTo: resolvedAssignedTo,
           categoryId: resolvedCategoryId,
