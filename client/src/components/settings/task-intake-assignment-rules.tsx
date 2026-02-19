@@ -57,6 +57,7 @@ export function TaskIntakeAssignmentRules() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<AssignmentRule | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -155,15 +156,19 @@ export function TaskIntakeAssignmentRules() {
       ? rule.conditions 
       : rule.conditions?.conditions || [];
     
+    const safeRole = rule.assignToRole && uniqueRoles.includes(rule.assignToRole) ? rule.assignToRole : "";
+    const safeStaffId = rule.assignToStaffId && staff.some(s => s.id === rule.assignToStaffId) ? rule.assignToStaffId : "";
+    const safeCategoryId = rule.setCategoryId && categories.some(c => c.id === rule.setCategoryId) ? rule.setCategoryId : "";
+
     setFormData({
       name: rule.name,
       priority: rule.priority,
       enabled: rule.enabled,
-      assignToRole: rule.assignToRole || "",
-      assignToStaffId: rule.assignToStaffId || "",
-      setCategoryId: rule.setCategoryId || "",
+      assignToRole: safeRole,
+      assignToStaffId: safeStaffId,
+      setCategoryId: safeCategoryId,
       setTags: rule.setTags || [],
-      conditions: conditions,
+      conditions: conditions.length > 0 ? conditions : [{ questionId: "", operator: "equals", value: "" }],
     });
     setIsDialogOpen(true);
   };
@@ -328,7 +333,7 @@ export function TaskIntakeAssignmentRules() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => deleteMutation.mutate(rule.id)}
+                        onClick={() => setDeleteConfirmId(rule.id)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -339,6 +344,34 @@ export function TaskIntakeAssignmentRules() {
             </TableBody>
           </Table>
         )}
+
+        <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete Assignment Rule</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this rule? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (deleteConfirmId) {
+                    deleteMutation.mutate(deleteConfirmId);
+                    setDeleteConfirmId(null);
+                  }
+                }}
+                disabled={deleteMutation.isPending}
+              >
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -469,14 +502,14 @@ export function TaskIntakeAssignmentRules() {
                       Assign To Role
                     </Label>
                     <Select
-                      value={formData.assignToRole}
-                      onValueChange={(val) => setFormData(prev => ({ ...prev, assignToRole: val }))}
+                      value={formData.assignToRole || "__none__"}
+                      onValueChange={(val) => setFormData(prev => ({ ...prev, assignToRole: val === "__none__" ? "" : val }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select role/position" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {uniqueRoles.map((role) => (
                           <SelectItem key={role} value={role}>
                             {role}
@@ -495,14 +528,14 @@ export function TaskIntakeAssignmentRules() {
                       Fallback User
                     </Label>
                     <Select
-                      value={formData.assignToStaffId}
-                      onValueChange={(val) => setFormData(prev => ({ ...prev, assignToStaffId: val }))}
+                      value={formData.assignToStaffId || "__none__"}
+                      onValueChange={(val) => setFormData(prev => ({ ...prev, assignToStaffId: val === "__none__" ? "" : val }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select user (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {staff.map((s) => (
                           <SelectItem key={s.id} value={s.id}>
                             {s.firstName} {s.lastName}
@@ -522,14 +555,14 @@ export function TaskIntakeAssignmentRules() {
                     Set Category
                   </Label>
                   <Select
-                    value={formData.setCategoryId}
-                    onValueChange={(val) => setFormData(prev => ({ ...prev, setCategoryId: val }))}
+                    value={formData.setCategoryId || "__none__"}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, setCategoryId: val === "__none__" ? "" : val }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="__none__">None</SelectItem>
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name}
