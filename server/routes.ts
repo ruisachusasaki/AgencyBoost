@@ -37157,7 +37157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const commentAuthor = alias(staff, "comment_author");
 
   // GET /api/tickets/reports/summary - Summary stats (MUST be before /:id)
-  app.get("/api/tickets/reports/summary", requireAuth(), requireAdmin(), async (req, res) => {
+  app.get("/api/tickets/reports/summary", requireAuth(), requireGranularPermission("tickets.reports.view"), async (req, res) => {
     try {
       const totalResult = await db.select({ count: sql<number>`count(*)::int` }).from(tickets);
       const statusCounts = await db.select({
@@ -37203,7 +37203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/tickets/reports/aging - Aging report (MUST be before /:id)
-  app.get("/api/tickets/reports/aging", requireAuth(), requireAdmin(), async (req, res) => {
+  app.get("/api/tickets/reports/aging", requireAuth(), requireGranularPermission("tickets.reports.view"), async (req, res) => {
     try {
       const agingResult = await db.select({
         bucket: sql<string>`
@@ -37244,7 +37244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/tickets/reports/response-time - Response time stats (MUST be before /:id)
-  app.get("/api/tickets/reports/response-time", requireAuth(), requireAdmin(), async (req, res) => {
+  app.get("/api/tickets/reports/response-time", requireAuth(), requireGranularPermission("tickets.reports.view"), async (req, res) => {
     try {
       const { startDate, endDate } = req.query;
       const conditions: any[] = [];
@@ -37290,7 +37290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/tickets - List tickets with filters and pagination
-  app.get("/api/tickets", requireAuth(), requireAdmin(), async (req, res) => {
+  app.get("/api/tickets", requireAuth(), requireGranularPermission("tickets.list.view"), async (req, res) => {
     try {
       const { status, type, priority, assignedTo, search, page = "1", limit = "20" } = req.query;
       const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
@@ -37363,7 +37363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/tickets/:id - Get single ticket with comments and attachments
-  app.get("/api/tickets/:id", requireAuth(), requireAdmin(), async (req, res) => {
+  app.get("/api/tickets/:id", requireAuth(), requireGranularPermission("tickets.list.view"), async (req, res) => {
     try {
       const { id } = req.params;
 
@@ -37441,7 +37441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/tickets - Create ticket
-  app.post("/api/tickets", requireAuth(), requireAdmin(), async (req, res) => {
+  app.post("/api/tickets", requireAuth(), requireGranularPermission("tickets.list.create"), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return;
@@ -37481,7 +37481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PUT /api/tickets/:id - Update ticket
-  app.put("/api/tickets/:id", requireAuth(), requireAdmin(), async (req, res) => {
+  app.put("/api/tickets/:id", requireAuth(), requireGranularPermission("tickets.list.edit"), async (req, res) => {
     try {
       const { id } = req.params;
       const { title, description, type, priority, status, assignedTo, tags: ticketTags } = req.body;
@@ -37525,7 +37525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // DELETE /api/tickets/:id - Delete ticket
-  app.delete("/api/tickets/:id", requireAuth(), requireAdmin(), async (req, res) => {
+  app.delete("/api/tickets/:id", requireAuth(), requireGranularPermission("tickets.list.delete"), async (req, res) => {
     try {
       const { id } = req.params;
       const [existing] = await db.select().from(tickets).where(eq(tickets.id, id)).limit(1);
@@ -37542,7 +37542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/tickets/:id/comments - Add comment to ticket
-  app.post("/api/tickets/:id/comments", requireAuth(), requireAdmin(), async (req, res) => {
+  app.post("/api/tickets/:id/comments", requireAuth(), requireGranularPermission("tickets.comments.create"), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return;
@@ -37576,7 +37576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // DELETE /api/tickets/:id/comments/:commentId - Delete comment
-  app.delete("/api/tickets/:id/comments/:commentId", requireAuth(), requireAdmin(), async (req, res) => {
+  app.delete("/api/tickets/:id/comments/:commentId", requireAuth(), requireGranularPermission("tickets.comments.delete"), async (req, res) => {
     try {
       const { commentId } = req.params;
       const [existing] = await db.select().from(ticketComments).where(eq(ticketComments.id, commentId)).limit(1);
