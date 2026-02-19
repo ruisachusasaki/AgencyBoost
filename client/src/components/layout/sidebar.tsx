@@ -23,7 +23,8 @@ import {
   UserCheck,
   BookOpen,
   GraduationCap,
-  Banknote
+  Banknote,
+  Ticket
 } from "lucide-react";
 
 interface SidebarProps {
@@ -46,6 +47,7 @@ const navigation = [
   { name: "Training", href: "/training", icon: GraduationCap },
   { name: "Resources", href: "/resources", icon: BookOpen },
   { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Tickets", href: "/tickets", icon: Ticket },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -119,6 +121,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       "/training": "training",
       "/resources": "knowledge_base",
       "/reports": "reports",
+      "/tickets": "tickets",
       "/settings": "settings",
     };
     

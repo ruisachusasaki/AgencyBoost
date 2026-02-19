@@ -77,7 +77,9 @@ import {
   emailTemplates, smsTemplates,
   toolDirectoryCategories, toolDirectoryTools,
   pxMeetings, pxMeetingAttendees,
-  taskCategories
+  taskCategories,
+  tickets, ticketComments, ticketAttachments,
+  insertTicketSchema, insertTicketCommentSchema
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
@@ -37147,5 +37149,448 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to delete tool" });
     }
   });
+
+  // ===== TICKET SYSTEM ROUTES =====
+
+  const submitter = alias(staff, "submitter");
+  const assignee = alias(staff, "assignee");
+  const commentAuthor = alias(staff, "comment_author");
+
+  // GET /api/tickets/reports/summary - Summary stats (MUST be before /:id)
+  app.get("/api/tickets/reports/summary", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const totalResult = await db.select({ count: sql<number>`count(*)::int` }).from(tickets);
+      const statusCounts = await db.select({
+        status: tickets.status,
+        count: sql<number>`count(*)::int`,
+      }).from(tickets).groupBy(tickets.status);
+      const typeCounts = await db.select({
+        type: tickets.type,
+        count: sql<number>`count(*)::int`,
+      }).from(tickets).groupBy(tickets.type);
+      const priorityCounts = await db.select({
+        priority: tickets.priority,
+        count: sql<number>`count(*)::int`,
+      }).from(tickets).groupBy(tickets.priority);
+
+      const statusMap: Record<string, number> = {};
+      for (const row of statusCounts) {
+        statusMap[row.status] = row.count;
+      }
+      const typeMap: Record<string, number> = {};
+      for (const row of typeCounts) {
+        typeMap[row.type] = row.count;
+      }
+      const priorityMap: Record<string, number> = {};
+      for (const row of priorityCounts) {
+        priorityMap[row.priority] = row.count;
+      }
+
+      res.json({
+        total: totalResult[0]?.count || 0,
+        open: statusMap["open"] || 0,
+        inProgress: statusMap["in_progress"] || 0,
+        resolved: statusMap["resolved"] || 0,
+        closed: statusMap["closed"] || 0,
+        onHold: statusMap["on_hold"] || 0,
+        byType: typeMap,
+        byPriority: priorityMap,
+      });
+    } catch (error) {
+      console.error("Error fetching ticket summary:", error);
+      res.status(500).json({ error: "Failed to fetch ticket summary" });
+    }
+  });
+
+  // GET /api/tickets/reports/aging - Aging report (MUST be before /:id)
+  app.get("/api/tickets/reports/aging", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const agingResult = await db.select({
+        bucket: sql<string>`
+          CASE
+            WHEN EXTRACT(EPOCH FROM (NOW() - ${tickets.createdAt})) / 86400 <= 1 THEN '0-1 days'
+            WHEN EXTRACT(EPOCH FROM (NOW() - ${tickets.createdAt})) / 86400 <= 3 THEN '1-3 days'
+            WHEN EXTRACT(EPOCH FROM (NOW() - ${tickets.createdAt})) / 86400 <= 7 THEN '3-7 days'
+            WHEN EXTRACT(EPOCH FROM (NOW() - ${tickets.createdAt})) / 86400 <= 14 THEN '7-14 days'
+            WHEN EXTRACT(EPOCH FROM (NOW() - ${tickets.createdAt})) / 86400 <= 30 THEN '14-30 days'
+            ELSE '30+ days'
+          END
+        `,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(tickets)
+      .where(or(eq(tickets.status, "open"), eq(tickets.status, "in_progress")))
+      .groupBy(sql`
+        CASE
+          WHEN EXTRACT(EPOCH FROM (NOW() - ${tickets.createdAt})) / 86400 <= 1 THEN '0-1 days'
+          WHEN EXTRACT(EPOCH FROM (NOW() - ${tickets.createdAt})) / 86400 <= 3 THEN '1-3 days'
+          WHEN EXTRACT(EPOCH FROM (NOW() - ${tickets.createdAt})) / 86400 <= 7 THEN '3-7 days'
+          WHEN EXTRACT(EPOCH FROM (NOW() - ${tickets.createdAt})) / 86400 <= 14 THEN '7-14 days'
+          WHEN EXTRACT(EPOCH FROM (NOW() - ${tickets.createdAt})) / 86400 <= 30 THEN '14-30 days'
+          ELSE '30+ days'
+        END
+      `);
+
+      const bucketOrder = ["0-1 days", "1-3 days", "3-7 days", "7-14 days", "14-30 days", "30+ days"];
+      const agingMap: Record<string, number> = {};
+      for (const b of bucketOrder) agingMap[b] = 0;
+      for (const row of agingResult) agingMap[row.bucket] = row.count;
+
+      res.json({ buckets: bucketOrder.map(b => ({ label: b, count: agingMap[b] })) });
+    } catch (error) {
+      console.error("Error fetching ticket aging:", error);
+      res.status(500).json({ error: "Failed to fetch ticket aging report" });
+    }
+  });
+
+  // GET /api/tickets/reports/response-time - Response time stats (MUST be before /:id)
+  app.get("/api/tickets/reports/response-time", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const conditions: any[] = [];
+      if (startDate) conditions.push(gte(tickets.createdAt, new Date(startDate as string)));
+      if (endDate) conditions.push(lte(tickets.createdAt, new Date(endDate as string)));
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const responseTimeResult = await db.select({
+        avgFirstResponse: sql<number>`AVG(EXTRACT(EPOCH FROM (${tickets.firstResponseAt} - ${tickets.createdAt})))`,
+        avgResolution: sql<number>`AVG(EXTRACT(EPOCH FROM (${tickets.resolvedAt} - ${tickets.createdAt})))`,
+      })
+      .from(tickets)
+      .where(whereClause ? and(whereClause, isNotNull(tickets.firstResponseAt)) : isNotNull(tickets.firstResponseAt));
+
+      const resolutionResult = await db.select({
+        avgResolution: sql<number>`AVG(EXTRACT(EPOCH FROM (${tickets.resolvedAt} - ${tickets.createdAt})))`,
+      })
+      .from(tickets)
+      .where(whereClause ? and(whereClause, isNotNull(tickets.resolvedAt)) : isNotNull(tickets.resolvedAt));
+
+      const totalWithResponseResult = await db.select({
+        count: sql<number>`count(*)::int`,
+      }).from(tickets).where(whereClause ? and(whereClause, isNotNull(tickets.firstResponseAt)) : isNotNull(tickets.firstResponseAt));
+
+      const totalResolvedResult = await db.select({
+        count: sql<number>`count(*)::int`,
+      }).from(tickets).where(whereClause ? and(whereClause, isNotNull(tickets.resolvedAt)) : isNotNull(tickets.resolvedAt));
+
+      const avgFirstResponseSec = responseTimeResult[0]?.avgFirstResponse || null;
+      const avgResolutionSec = resolutionResult[0]?.avgResolution || null;
+
+      res.json({
+        avgFirstResponseHours: avgFirstResponseSec ? avgFirstResponseSec / 3600 : null,
+        avgResolutionHours: avgResolutionSec ? avgResolutionSec / 3600 : null,
+        totalWithResponse: totalWithResponseResult[0]?.count || 0,
+        totalResolved: totalResolvedResult[0]?.count || 0,
+      });
+    } catch (error) {
+      console.error("Error fetching response time stats:", error);
+      res.status(500).json({ error: "Failed to fetch response time stats" });
+    }
+  });
+
+  // GET /api/tickets - List tickets with filters and pagination
+  app.get("/api/tickets", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { status, type, priority, assignedTo, search, page = "1", limit = "20" } = req.query;
+      const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
+      const offset = (pageNum - 1) * limitNum;
+
+      const conditions: any[] = [];
+      if (status) conditions.push(eq(tickets.status, status as string));
+      if (type) conditions.push(eq(tickets.type, type as string));
+      if (priority) conditions.push(eq(tickets.priority, priority as string));
+      if (assignedTo) conditions.push(eq(tickets.assignedTo, assignedTo as string));
+      if (search) conditions.push(ilike(tickets.title, `%${search}%`));
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const ticketList = await db
+        .select({
+          id: tickets.id,
+          ticketNumber: tickets.ticketNumber,
+          title: tickets.title,
+          description: tickets.description,
+          type: tickets.type,
+          priority: tickets.priority,
+          status: tickets.status,
+          tags: tickets.tags,
+          submittedBy: tickets.submittedBy,
+          assignedTo: tickets.assignedTo,
+          firstResponseAt: tickets.firstResponseAt,
+          resolvedAt: tickets.resolvedAt,
+          closedAt: tickets.closedAt,
+          createdAt: tickets.createdAt,
+          updatedAt: tickets.updatedAt,
+          submitterFirstName: submitter.firstName,
+          submitterLastName: submitter.lastName,
+          assigneeFirstName: assignee.firstName,
+          assigneeLastName: assignee.lastName,
+        })
+        .from(tickets)
+        .leftJoin(submitter, eq(tickets.submittedBy, submitter.id))
+        .leftJoin(assignee, eq(tickets.assignedTo, assignee.id))
+        .where(whereClause)
+        .orderBy(desc(tickets.createdAt))
+        .limit(limitNum)
+        .offset(offset);
+
+      const totalResult = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(tickets)
+        .where(whereClause);
+
+      const total = totalResult[0]?.count || 0;
+
+      res.json({
+        tickets: ticketList.map(t => ({
+          ...t,
+          submitterName: t.submitterFirstName ? `${t.submitterFirstName} ${t.submitterLastName}` : null,
+          assigneeName: t.assigneeFirstName ? `${t.assigneeFirstName} ${t.assigneeLastName}` : null,
+        })),
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching tickets:", error);
+      res.status(500).json({ error: "Failed to fetch tickets" });
+    }
+  });
+
+  // GET /api/tickets/:id - Get single ticket with comments and attachments
+  app.get("/api/tickets/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const ticketResult = await db
+        .select({
+          id: tickets.id,
+          ticketNumber: tickets.ticketNumber,
+          title: tickets.title,
+          description: tickets.description,
+          type: tickets.type,
+          priority: tickets.priority,
+          status: tickets.status,
+          tags: tickets.tags,
+          submittedBy: tickets.submittedBy,
+          assignedTo: tickets.assignedTo,
+          firstResponseAt: tickets.firstResponseAt,
+          resolvedAt: tickets.resolvedAt,
+          closedAt: tickets.closedAt,
+          createdAt: tickets.createdAt,
+          updatedAt: tickets.updatedAt,
+          submitterFirstName: submitter.firstName,
+          submitterLastName: submitter.lastName,
+          assigneeFirstName: assignee.firstName,
+          assigneeLastName: assignee.lastName,
+        })
+        .from(tickets)
+        .leftJoin(submitter, eq(tickets.submittedBy, submitter.id))
+        .leftJoin(assignee, eq(tickets.assignedTo, assignee.id))
+        .where(eq(tickets.id, id))
+        .limit(1);
+
+      if (!ticketResult.length) {
+        return res.status(404).json({ error: "Ticket not found" });
+      }
+
+      const ticket = ticketResult[0];
+
+      const comments = await db
+        .select({
+          id: ticketComments.id,
+          ticketId: ticketComments.ticketId,
+          authorId: ticketComments.authorId,
+          content: ticketComments.content,
+          isInternal: ticketComments.isInternal,
+          createdAt: ticketComments.createdAt,
+          updatedAt: ticketComments.updatedAt,
+          authorFirstName: commentAuthor.firstName,
+          authorLastName: commentAuthor.lastName,
+        })
+        .from(ticketComments)
+        .leftJoin(commentAuthor, eq(ticketComments.authorId, commentAuthor.id))
+        .where(eq(ticketComments.ticketId, id))
+        .orderBy(asc(ticketComments.createdAt));
+
+      const attachments = await db
+        .select()
+        .from(ticketAttachments)
+        .where(eq(ticketAttachments.ticketId, id))
+        .orderBy(asc(ticketAttachments.createdAt));
+
+      res.json({
+        ...ticket,
+        submitterName: ticket.submitterFirstName ? `${ticket.submitterFirstName} ${ticket.submitterLastName}` : null,
+        assigneeName: ticket.assigneeFirstName ? `${ticket.assigneeFirstName} ${ticket.assigneeLastName}` : null,
+        comments: comments.map(c => ({
+          ...c,
+          authorName: c.authorFirstName ? `${c.authorFirstName} ${c.authorLastName}` : null,
+        })),
+        attachments,
+      });
+    } catch (error) {
+      console.error("Error fetching ticket:", error);
+      res.status(500).json({ error: "Failed to fetch ticket" });
+    }
+  });
+
+  // POST /api/tickets - Create ticket
+  app.post("/api/tickets", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const validTypes = ['bug', 'feature_request', 'improvement', 'question'];
+      const validPriorities = ['low', 'medium', 'high', 'critical'];
+      const { title, description, type, priority, assignedTo, tags: ticketTags } = req.body;
+      if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        return res.status(400).json({ message: 'Title is required' });
+      }
+      if (type && !validTypes.includes(type)) {
+        return res.status(400).json({ message: 'Invalid type. Must be: ' + validTypes.join(', ') });
+      }
+      if (priority && !validPriorities.includes(priority)) {
+        return res.status(400).json({ message: 'Invalid priority. Must be: ' + validPriorities.join(', ') });
+      }
+
+      const [newTicket] = await db.insert(tickets).values({
+        title,
+        description: description || null,
+        type: type || "bug",
+        priority: priority || "medium",
+        status: "open",
+        submittedBy: userId,
+        assignedTo: assignedTo || null,
+        tags: ticketTags || null,
+      }).returning();
+
+      res.status(201).json(newTicket);
+    } catch (error) {
+      console.error("Error creating ticket:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create ticket" });
+    }
+  });
+
+  // PUT /api/tickets/:id - Update ticket
+  app.put("/api/tickets/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { title, description, type, priority, status, assignedTo, tags: ticketTags } = req.body;
+
+      const [existing] = await db.select().from(tickets).where(eq(tickets.id, id)).limit(1);
+      if (!existing) {
+        return res.status(404).json({ error: "Ticket not found" });
+      }
+
+      const updateData: any = { updatedAt: new Date() };
+      if (title !== undefined) updateData.title = title;
+      if (description !== undefined) updateData.description = description;
+      if (type !== undefined) updateData.type = type;
+      if (priority !== undefined) updateData.priority = priority;
+      if (assignedTo !== undefined) updateData.assignedTo = assignedTo || null;
+      if (ticketTags !== undefined) updateData.tags = ticketTags;
+
+      if (status !== undefined) {
+        updateData.status = status;
+        if (existing.status === "open" && status !== "open" && !existing.firstResponseAt) {
+          updateData.firstResponseAt = new Date();
+        }
+        if (status === "resolved" && !existing.resolvedAt) {
+          updateData.resolvedAt = new Date();
+        }
+        if (status === "closed" && !existing.closedAt) {
+          updateData.closedAt = new Date();
+        }
+      }
+
+      const [updated] = await db.update(tickets)
+        .set(updateData)
+        .where(eq(tickets.id, id))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating ticket:", error);
+      res.status(500).json({ error: "Failed to update ticket" });
+    }
+  });
+
+  // DELETE /api/tickets/:id - Delete ticket
+  app.delete("/api/tickets/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [existing] = await db.select().from(tickets).where(eq(tickets.id, id)).limit(1);
+      if (!existing) {
+        return res.status(404).json({ error: "Ticket not found" });
+      }
+
+      await db.delete(tickets).where(eq(tickets.id, id));
+      res.json({ message: "Ticket deleted" });
+    } catch (error) {
+      console.error("Error deleting ticket:", error);
+      res.status(500).json({ error: "Failed to delete ticket" });
+    }
+  });
+
+  // POST /api/tickets/:id/comments - Add comment to ticket
+  app.post("/api/tickets/:id/comments", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { id } = req.params;
+      const { content, isInternal } = req.body;
+
+      const [ticket] = await db.select().from(tickets).where(eq(tickets.id, id)).limit(1);
+      if (!ticket) {
+        return res.status(404).json({ error: "Ticket not found" });
+      }
+
+      const [newComment] = await db.insert(ticketComments).values({
+        ticketId: id,
+        authorId: userId,
+        content,
+        isInternal: isInternal || false,
+      }).returning();
+
+      if (!ticket.firstResponseAt && userId !== ticket.submittedBy) {
+        await db.update(tickets)
+          .set({ firstResponseAt: new Date(), updatedAt: new Date() })
+          .where(eq(tickets.id, id));
+      }
+
+      res.status(201).json(newComment);
+    } catch (error) {
+      console.error("Error creating ticket comment:", error);
+      res.status(500).json({ error: "Failed to create comment" });
+    }
+  });
+
+  // DELETE /api/tickets/:id/comments/:commentId - Delete comment
+  app.delete("/api/tickets/:id/comments/:commentId", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { commentId } = req.params;
+      const [existing] = await db.select().from(ticketComments).where(eq(ticketComments.id, commentId)).limit(1);
+      if (!existing) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
+
+      await db.delete(ticketComments).where(eq(ticketComments.id, commentId));
+      res.json({ message: "Comment deleted" });
+    } catch (error) {
+      console.error("Error deleting ticket comment:", error);
+      res.status(500).json({ error: "Failed to delete comment" });
+    }
+  });
+
   return httpServer;
 }

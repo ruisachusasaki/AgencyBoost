@@ -77,6 +77,8 @@ import NotificationsPage from "@/pages/notifications";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import PublicSurvey from "@/pages/public-survey";
+import TicketsPage from "@/pages/tickets";
+import TicketDetailPage from "@/pages/ticket-detail";
 import { AIAssistantWidget } from "@/components/ai-assistant-widget";
 import { VoipProvider } from "@/hooks/use-voip";
 import { ActiveCallPanel } from "@/components/voip";
@@ -255,6 +257,29 @@ function Router() {
         )}
       </Route>
       
+      <Route path="/tickets/:id">
+        {() => (
+          <AuthGate>
+            <RequirePermission module="tickets">
+              <MainLayout>
+                <TicketDetailPage />
+              </MainLayout>
+            </RequirePermission>
+          </AuthGate>
+        )}
+      </Route>
+      
+      <Route path="/tickets">
+        {() => (
+          <AuthGate>
+            <RequirePermission module="tickets">
+              <MainLayout>
+                <TicketsPage />
+              </MainLayout>
+            </RequirePermission>
+          </AuthGate>
+        )}
+      </Route>
       
       <Route path="/workflows">
         {() => (

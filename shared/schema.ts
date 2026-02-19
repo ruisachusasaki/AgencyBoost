@@ -5161,3 +5161,84 @@ export const insertToolDirectoryToolSchema = createInsertSchema(toolDirectoryToo
 });
 export type ToolDirectoryTool = typeof toolDirectoryTools.$inferSelect;
 export type InsertToolDirectoryTool = z.infer<typeof insertToolDirectoryToolSchema>;
+
+// ============================
+// Ticketing System
+// ============================
+
+export const tickets = pgTable("tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketNumber: serial("ticket_number"),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type").notNull().default("bug"),
+  priority: text("priority").notNull().default("medium"),
+  status: text("status").notNull().default("open"),
+  submittedBy: uuid("submitted_by").notNull().references(() => staff.id),
+  assignedTo: uuid("assigned_to").references(() => staff.id),
+  tags: text("tags").array(),
+  firstResponseAt: timestamp("first_response_at"),
+  resolvedAt: timestamp("resolved_at"),
+  closedAt: timestamp("closed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_tickets_status").on(table.status),
+  index("idx_tickets_type").on(table.type),
+  index("idx_tickets_priority").on(table.priority),
+  index("idx_tickets_submitted_by").on(table.submittedBy),
+  index("idx_tickets_assigned_to").on(table.assignedTo),
+]);
+
+export const ticketComments = pgTable("ticket_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: varchar("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").notNull().references(() => staff.id),
+  content: text("content").notNull(),
+  isInternal: boolean("is_internal").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_ticket_comments_ticket").on(table.ticketId),
+]);
+
+export const ticketAttachments = pgTable("ticket_attachments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: varchar("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+  commentId: varchar("comment_id").references(() => ticketComments.id, { onDelete: "set null" }),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type"),
+  fileSize: integer("file_size"),
+  fileUrl: text("file_url").notNull(),
+  uploadedBy: uuid("uploaded_by").notNull().references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_ticket_attachments_ticket").on(table.ticketId),
+]);
+
+export const insertTicketSchema = createInsertSchema(tickets).omit({
+  id: true,
+  ticketNumber: true,
+  firstResponseAt: true,
+  resolvedAt: true,
+  closedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type Ticket = typeof tickets.$inferSelect;
+export type InsertTicket = z.infer<typeof insertTicketSchema>;
+
+export const insertTicketCommentSchema = createInsertSchema(ticketComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type TicketComment = typeof ticketComments.$inferSelect;
+export type InsertTicketComment = z.infer<typeof insertTicketCommentSchema>;
+
+export const insertTicketAttachmentSchema = createInsertSchema(ticketAttachments).omit({
+  id: true,
+  createdAt: true,
+});
+export type TicketAttachment = typeof ticketAttachments.$inferSelect;
+export type InsertTicketAttachment = z.infer<typeof insertTicketAttachmentSchema>;

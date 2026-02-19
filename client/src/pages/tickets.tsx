@@ -1,0 +1,603 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, Search, Trash2, Eye, Pencil, ChevronLeft, ChevronRight, Ticket, AlertCircle, Clock, CheckCircle2, BarChart3 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+
+interface TicketData {
+  id: number;
+  ticketNumber: string;
+  title: string;
+  description?: string;
+  type: string;
+  priority: string;
+  status: string;
+  submittedBy?: string;
+  submittedByName?: string;
+  assignedTo?: string;
+  assignedToName?: string;
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface TicketsResponse {
+  tickets: TicketData[];
+  pagination: {
+    total: number;
+    page: number;
+    totalPages: number;
+    limit: number;
+  };
+}
+
+interface TicketSummary {
+  total: number;
+  open: number;
+  inProgress: number;
+  resolved: number;
+  closed: number;
+  onHold: number;
+  byType: Record<string, number>;
+  byPriority: Record<string, number>;
+}
+
+interface StaffMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+function getTypeBadge(type: string) {
+  const colors: Record<string, string> = {
+    bug: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    feature_request: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+    improvement: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    question: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  };
+  const labels: Record<string, string> = {
+    bug: "Bug",
+    feature_request: "Feature Request",
+    improvement: "Improvement",
+    question: "Question",
+  };
+  return (
+    <Badge variant="outline" className={colors[type] || "bg-gray-100 text-gray-800"}>
+      {labels[type] || type}
+    </Badge>
+  );
+}
+
+function getPriorityBadge(priority: string) {
+  const colors: Record<string, string> = {
+    critical: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    high: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
+    medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+    low: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  };
+  const labels: Record<string, string> = {
+    critical: "Critical",
+    high: "High",
+    medium: "Medium",
+    low: "Low",
+  };
+  return (
+    <Badge variant="outline" className={colors[priority] || "bg-gray-100 text-gray-800"}>
+      {labels[priority] || priority}
+    </Badge>
+  );
+}
+
+function getStatusBadge(status: string) {
+  const colors: Record<string, string> = {
+    open: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    in_progress: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+    on_hold: "bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-400",
+    resolved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+    closed: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400",
+  };
+  const labels: Record<string, string> = {
+    open: "Open",
+    in_progress: "In Progress",
+    on_hold: "On Hold",
+    resolved: "Resolved",
+    closed: "Closed",
+  };
+  return (
+    <Badge variant="outline" className={colors[status] || "bg-gray-100 text-gray-800"}>
+      {labels[status] || status}
+    </Badge>
+  );
+}
+
+const defaultFormData = {
+  title: "",
+  description: "",
+  type: "bug",
+  priority: "medium",
+  assignedTo: "",
+  tags: "",
+};
+
+export default function TicketsPage() {
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const [activeTab, setActiveTab] = useState<"tickets" | "reports">("tickets");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingTicket, setEditingTicket] = useState<TicketData | null>(null);
+  const [deletingTicket, setDeletingTicket] = useState<TicketData | null>(null);
+  const [formData, setFormData] = useState(defaultFormData);
+
+  const buildQueryString = () => {
+    const params = new URLSearchParams();
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (typeFilter !== "all") params.set("type", typeFilter);
+    if (priorityFilter !== "all") params.set("priority", priorityFilter);
+    if (searchTerm) params.set("search", searchTerm);
+    params.set("page", String(currentPage));
+    params.set("limit", String(pageSize));
+    return params.toString();
+  };
+
+  const { data: ticketsData, isLoading } = useQuery<TicketsResponse>({
+    queryKey: [`/api/tickets?${buildQueryString()}`],
+  });
+
+  const { data: summary } = useQuery<TicketSummary>({
+    queryKey: ["/api/tickets/reports/summary"],
+  });
+
+  const { data: staff = [] } = useQuery<StaffMember[]>({
+    queryKey: ["/api/staff"],
+  });
+
+  const tickets = ticketsData?.tickets || [];
+  const totalPages = ticketsData?.pagination?.totalPages || 1;
+
+  const createMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      return apiRequest("POST", "/api/tickets", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tickets/reports/summary"] });
+      toast({ title: "Ticket created", description: "The ticket has been created successfully.", variant: "success" as any });
+      closeDialog();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error?.message || "Failed to create ticket.", variant: "destructive" });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Record<string, unknown> }) => {
+      return apiRequest("PUT", `/api/tickets/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tickets/reports/summary"] });
+      toast({ title: "Ticket updated", description: "The ticket has been updated successfully.", variant: "success" as any });
+      closeDialog();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error?.message || "Failed to update ticket.", variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/tickets/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tickets/reports/summary"] });
+      toast({ title: "Ticket deleted", description: "The ticket has been deleted.", variant: "success" as any });
+      setDeletingTicket(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error?.message || "Failed to delete ticket.", variant: "destructive" });
+    },
+  });
+
+  const closeDialog = () => {
+    setIsCreateDialogOpen(false);
+    setEditingTicket(null);
+    setFormData(defaultFormData);
+  };
+
+  const openEditDialog = (ticket: TicketData) => {
+    setEditingTicket(ticket);
+    setFormData({
+      title: ticket.title,
+      description: ticket.description || "",
+      type: ticket.type,
+      priority: ticket.priority,
+      assignedTo: ticket.assignedTo || "",
+      tags: Array.isArray(ticket.tags) ? ticket.tags.join(", ") : "",
+    });
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleSubmit = () => {
+    if (!formData.title.trim()) {
+      toast({ title: "Validation Error", description: "Title is required.", variant: "destructive" });
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      type: formData.type,
+      priority: formData.priority,
+      assignedTo: formData.assignedTo && formData.assignedTo !== "unassigned" ? formData.assignedTo : undefined,
+      tags: formData.tags ? formData.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
+    };
+
+    if (editingTicket) {
+      updateMutation.mutate({ id: editingTicket.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  const getStaffName = (staffId?: string) => {
+    if (!staffId) return "-";
+    const member = staff.find((s) => s.id === staffId || String(s.id) === String(staffId));
+    return member ? `${member.firstName} ${member.lastName}` : "-";
+  };
+
+  const [LazyTicketReports, setLazyTicketReports] = useState<any>(null);
+
+  const loadReports = async () => {
+    try {
+      const mod = await import("./ticket-reports");
+      setLazyTicketReports(() => mod.default);
+    } catch {
+      setLazyTicketReports(null);
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tickets</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage bug reports and feature requests</p>
+        </div>
+        <Button className="bg-primary hover:bg-primary/90 text-white" onClick={() => { setEditingTicket(null); setFormData(defaultFormData); setIsCreateDialogOpen(true); }}>
+          <Plus className="w-4 h-4 mr-2" />
+          New Ticket
+        </Button>
+      </div>
+
+      <div className="flex space-x-1 border-b border-gray-200 dark:border-gray-700">
+        <button
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "tickets" ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}
+          onClick={() => setActiveTab("tickets")}
+        >
+          <Ticket className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
+          All Tickets
+        </button>
+        <button
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "reports" ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}
+          onClick={() => { setActiveTab("reports"); if (!LazyTicketReports) loadReports(); }}
+        >
+          <BarChart3 className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
+          Reports
+        </button>
+      </div>
+
+      {activeTab === "reports" ? (
+        LazyTicketReports ? <LazyTicketReports /> : <div className="py-12 text-center text-gray-500">Reports module loading...</div>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-3 items-center">
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="open">Open</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="on_hold">On Hold</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-[170px]">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="bug">Bug</SelectItem>
+                <SelectItem value="feature_request">Feature Request</SelectItem>
+                <SelectItem value="improvement">Improvement</SelectItem>
+                <SelectItem value="question">Question</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={priorityFilter} onValueChange={(v) => { setPriorityFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priority</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search tickets..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Ticket className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
+                  <p className="text-2xl font-bold">{summary?.total ?? "-"}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Open</p>
+                  <p className="text-2xl font-bold">{summary?.open ?? "-"}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                  <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">In Progress</p>
+                  <p className="text-2xl font-bold">{summary?.inProgress ?? "-"}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Resolved</p>
+                  <p className="text-2xl font-bold">{summary?.resolved ?? "-"}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="p-6 space-y-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : tickets.length === 0 ? (
+                <div className="p-12 text-center">
+                  <Ticket className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No tickets found</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Try adjusting your filters or create a new ticket.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[100px]">Ticket #</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Submitted By</TableHead>
+                        <TableHead>Assigned To</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tickets.map((ticket) => (
+                        <TableRow
+                          key={ticket.id}
+                          className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                          onClick={() => setLocation(`/tickets/${ticket.id}`)}
+                        >
+                          <TableCell className="font-mono text-sm">{ticket.ticketNumber}</TableCell>
+                          <TableCell className="font-medium max-w-[250px] truncate">{ticket.title}</TableCell>
+                          <TableCell>{getTypeBadge(ticket.type)}</TableCell>
+                          <TableCell>{getPriorityBadge(ticket.priority)}</TableCell>
+                          <TableCell>{getStatusBadge(ticket.status)}</TableCell>
+                          <TableCell className="text-sm">{ticket.submittedByName || getStaffName(ticket.submittedBy) || "-"}</TableCell>
+                          <TableCell className="text-sm">{ticket.assignedToName || getStaffName(ticket.assignedTo) || "-"}</TableCell>
+                          <TableCell className="text-sm text-gray-500">
+                            {ticket.createdAt ? format(new Date(ticket.createdAt), "MMM d, yyyy") : "-"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setLocation(`/tickets/${ticket.id}`)}>
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(ticket)}>
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={() => setDeletingTicket(ticket)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Page {currentPage} of {totalPages} ({ticketsData?.pagination?.total || 0} total tickets)
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => p - 1)}>
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+                <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); }}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>{editingTicket ? "Edit Ticket" : "Create New Ticket"}</DialogTitle>
+            <DialogDescription>
+              {editingTicket ? "Update the ticket details below." : "Fill in the details to create a new ticket."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title *</Label>
+              <Input id="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="Ticket title" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Describe the issue or request..." rows={4} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bug">Bug</SelectItem>
+                    <SelectItem value="feature_request">Feature Request</SelectItem>
+                    <SelectItem value="improvement">Improvement</SelectItem>
+                    <SelectItem value="question">Question</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Assigned To</Label>
+              <Select value={formData.assignedTo} onValueChange={(v) => setFormData({ ...formData, assignedTo: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {staff.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {s.firstName} {s.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tags">Tags</Label>
+              <Input id="tags" value={formData.tags} onChange={(e) => setFormData({ ...formData, tags: e.target.value })} placeholder="Comma-separated tags (e.g. ui, backend, urgent)" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Cancel</Button>
+            <Button className="bg-primary hover:bg-primary/90 text-white" onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending}>
+              {(createMutation.isPending || updateMutation.isPending) ? "Saving..." : editingTicket ? "Update Ticket" : "Create Ticket"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deletingTicket} onOpenChange={(open) => { if (!open) setDeletingTicket(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Ticket</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete ticket "{deletingTicket?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => { if (deletingTicket) deleteMutation.mutate(deletingTicket.id); }}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

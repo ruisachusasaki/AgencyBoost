@@ -966,6 +966,55 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
       },
     ],
   },
+  {
+    module: 'tickets',
+    label: 'Tickets',
+    icon: 'Ticket',
+    description: 'System admin ticketing for bugs and feature requests',
+    modulePermissions: [
+      { key: 'tickets.access', label: 'Access Tickets', description: 'Can access the Tickets section', action: 'view' },
+    ],
+    tabs: [
+      {
+        tab: 'list',
+        label: 'Ticket List',
+        description: 'View and manage tickets',
+        permissions: [
+          { key: 'tickets.list.view', label: 'View tickets', description: 'See all tickets', action: 'view' },
+          { key: 'tickets.list.create', label: 'Create tickets', description: 'Submit new tickets', action: 'create' },
+          { key: 'tickets.list.edit', label: 'Edit tickets', description: 'Modify ticket details', action: 'edit' },
+          { key: 'tickets.list.delete', label: 'Delete tickets', description: 'Remove tickets', action: 'delete' },
+        ],
+      },
+      {
+        tab: 'comments',
+        label: 'Comments',
+        description: 'Manage ticket comments',
+        permissions: [
+          { key: 'tickets.comments.view', label: 'View comments', description: 'See ticket comments', action: 'view' },
+          { key: 'tickets.comments.create', label: 'Add comments', description: 'Post comments on tickets', action: 'create' },
+          { key: 'tickets.comments.delete', label: 'Delete comments', description: 'Remove comments', action: 'delete' },
+        ],
+      },
+      {
+        tab: 'assign',
+        label: 'Assignment',
+        description: 'Assign tickets to staff',
+        permissions: [
+          { key: 'tickets.assign.manage', label: 'Assign tickets', description: 'Assign/reassign tickets to staff', action: 'manage' },
+        ],
+      },
+      {
+        tab: 'reports',
+        label: 'Reports',
+        description: 'View ticket reports and analytics',
+        permissions: [
+          { key: 'tickets.reports.view', label: 'View ticket reports', description: 'Access ticket analytics', action: 'view' },
+          { key: 'tickets.reports.export', label: 'Export ticket reports', description: 'Download report data', action: 'export' },
+        ],
+      },
+    ],
+  },
 ];
 
 /**

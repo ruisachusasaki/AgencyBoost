@@ -81,6 +81,7 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Multi-Dashboard System**: Users can create multiple named dashboards with tab-based navigation and management dialogs.
 - **Dashboard Widgets**: Customizable dashboard with drag-and-drop widget management, offering various categories of real-time data widgets.
 - **Global Search**: Intelligent search across clients, leads, and tasks with debouncing, real-time results, type-specific icons, and direct navigation.
+- **Ticketing System**: Admin-only bug report and feature request tracking. Tables: tickets, ticket_comments, ticket_attachments. Features include ticket CRUD, comments (with internal notes), status lifecycle (open/in_progress/on_hold/resolved/closed), priority levels, type classification, auto-tracked response and resolution times, aging reports, and response time analytics. Permission module: tickets (list/comments/assign/reports tabs). Routes under /tickets and /tickets/:id.
 
 ## External Dependencies
 
