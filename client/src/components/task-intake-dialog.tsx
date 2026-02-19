@@ -28,7 +28,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Check, AlertCircle, Loader2, CalendarIcon, Info, Repeat } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, AlertCircle, Loader2, CalendarIcon, Info, Repeat, Upload, FileText, Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -333,6 +333,9 @@ function validateQuestion(
         return "Please enter a valid URL (include https://)";
       }
       break;
+
+    case "upload":
+      break;
   }
 
   return null;
@@ -564,6 +567,99 @@ function QuestionRenderer({
             </SelectContent>
           </Select>
         );
+
+      case "upload": {
+        const uploadedFiles: Array<{url: string; name: string; size: number; type: string}> = (() => {
+          try {
+            if (typeof value === 'string' && value) return JSON.parse(value);
+          } catch {}
+          return [];
+        })();
+        const formatSize = (bytes: number) => {
+          if (bytes === 0) return '0 B';
+          const k = 1024;
+          const sizes = ['B', 'KB', 'MB', 'GB'];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        };
+        return (
+          <div className="space-y-3">
+            <div
+              className={cn(
+                "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors",
+                error ? "border-destructive" : "border-slate-300 dark:border-slate-600"
+              )}
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.multiple = true;
+                input.accept = settings.acceptedTypes || '*/*';
+                input.onchange = async (e) => {
+                  const files = (e.target as HTMLInputElement).files;
+                  if (!files || files.length === 0) return;
+                  const newFiles = [...uploadedFiles];
+                  for (const file of Array.from(files)) {
+                    try {
+                      const uploadRes = await fetch('/api/objects/upload', {
+                        method: 'POST',
+                        credentials: 'include',
+                      });
+                      const uploadData = await uploadRes.json();
+                      await fetch(uploadData.uploadURL, {
+                        method: 'PUT',
+                        body: file,
+                        headers: { 'Content-Type': file.type },
+                      });
+                      const permanentUrl = uploadData.uploadURL.split('?')[0];
+                      newFiles.push({
+                        url: permanentUrl,
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                      });
+                    } catch (err) {
+                      console.error('File upload failed:', err);
+                    }
+                  }
+                  onChange(JSON.stringify(newFiles));
+                };
+                input.click();
+              }}
+            >
+              <Upload className="h-8 w-8 mx-auto mb-2 text-slate-400" />
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                Click to upload files
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {settings.acceptedTypes ? `Accepted: ${settings.acceptedTypes}` : 'Any file type accepted'}
+              </p>
+            </div>
+            {uploadedFiles.length > 0 && (
+              <div className="space-y-2">
+                {uploadedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-md">
+                    <FileText className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                    <span className="text-sm flex-1 truncate">{file.name}</span>
+                    <span className="text-xs text-muted-foreground">{formatSize(file.size)}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const updated = uploadedFiles.filter((_, i) => i !== idx);
+                        onChange(updated.length > 0 ? JSON.stringify(updated) : null);
+                      }}
+                      className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+                      disabled={disabled}
+                    >
+                      <Trash2 className="h-3 w-3 text-red-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
 
       default:
         return (

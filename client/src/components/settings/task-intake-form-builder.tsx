@@ -5,7 +5,7 @@ import {
   Plus, Edit, Trash2, GripVertical, Save, X, ChevronDown, ChevronUp, 
   MessageSquare, Hash, Calendar, Type, ListChecks, ArrowRight, Copy,
   CheckCircle2, Circle, ToggleLeft, Building2, Users, Eye, ChevronLeft,
-  Check, RotateCcw, LayoutGrid, List, Link, AlignLeft, Info
+  Check, RotateCcw, LayoutGrid, List, Link, AlignLeft, Info, Paperclip
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { IntakeSectionBuilder } from "./intake-section-builder";
@@ -65,7 +65,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-type QuestionType = "single_choice" | "multi_choice" | "text" | "number" | "date" | "client" | "department" | "url" | "textarea";
+type QuestionType = "single_choice" | "multi_choice" | "text" | "number" | "date" | "client" | "department" | "url" | "textarea" | "upload";
 
 type TaskIntakeOption = {
   id: string;
@@ -117,6 +117,7 @@ const questionTypeIcons: Record<QuestionType, any> = {
   department: Users,
   url: Link,
   textarea: AlignLeft,
+  upload: Paperclip,
 };
 
 const questionTypeLabels: Record<QuestionType, string> = {
@@ -129,11 +130,12 @@ const questionTypeLabels: Record<QuestionType, string> = {
   department: "Department (from teams)",
   url: "URL",
   textarea: "Long Text",
+  upload: "File Upload",
 };
 
 const questionFormSchema = z.object({
   questionText: z.string().min(1, "Question text is required"),
-  questionType: z.enum(["single_choice", "multi_choice", "text", "number", "date", "client", "department", "url", "textarea"]),
+  questionType: z.enum(["single_choice", "multi_choice", "text", "number", "date", "client", "department", "url", "textarea", "upload"]),
   helpText: z.string().optional(),
   tooltip: z.string().optional(),
   internalLabel: z.string().optional(),

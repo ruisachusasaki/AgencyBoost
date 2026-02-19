@@ -25143,7 +25143,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .returning();
 
-      // Step F: Update submission with taskId
+      // Step F: Process upload-type answers and create task attachments
+      const uploadQuestions = questions.filter(q => q.questionType === 'upload');
+      for (const uploadQ of uploadQuestions) {
+        const uploadAnswer = answers[uploadQ.id];
+        if (uploadAnswer) {
+          try {
+            const uploadedFiles = typeof uploadAnswer === 'string' ? JSON.parse(uploadAnswer) : uploadAnswer;
+            if (Array.isArray(uploadedFiles)) {
+              const { ObjectStorageService } = await import("./objectStorage");
+              const objectStorageService = new ObjectStorageService();
+              for (const file of uploadedFiles) {
+                if (file.url && file.name) {
+                  const normalizedUrl = objectStorageService.normalizeObjectEntityPath(file.url);
+                  await db.insert(taskAttachments).values({
+                    taskId: newTask.id,
+                    fileName: file.name,
+                    fileType: file.type || 'application/octet-stream',
+                    fileSize: file.size || 0,
+                    fileUrl: normalizedUrl,
+                    uploadedBy: staffId,
+                  });
+                  console.log(`[TaskIntake] Created attachment for task ${newTask.id}: ${file.name}`);
+                }
+              }
+            }
+          } catch (uploadErr) {
+            console.error("[TaskIntake] Error processing upload attachments:", uploadErr);
+          }
+        }
+      }
+
+      // Step G: Update submission with taskId
       await db.update(taskIntakeSubmissions)
         .set({ 
           taskId: newTask.id,
@@ -25152,7 +25183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .where(eq(taskIntakeSubmissions.id, submission.id));
 
-      // Step G: Return response
+      // Step H: Return response
       res.json({
         success: true,
         submissionId: submission.id,
