@@ -1,11 +1,12 @@
 import { db } from './db';
-import { taskIntakeAssignmentRules, staff } from '@shared/schema';
-import { eq, and, asc } from 'drizzle-orm';
+import { taskIntakeAssignmentRules, staff, taskIntakeOptions } from '@shared/schema';
+import { eq, and, asc, inArray, sql } from 'drizzle-orm';
 
 interface RuleCondition {
   questionId: string;
-  operator: string;
-  value: string | string[];
+  operator?: string;
+  value?: string | string[];
+  optionIds?: string[];
 }
 
 interface ConditionGroup {
@@ -19,17 +20,65 @@ interface AssignmentResult {
   tags: string[];
 }
 
-function evaluateCondition(condition: RuleCondition, answers: Record<string, any>): boolean {
+async function resolveOptionIds(optionIds: string[]): Promise<string[]> {
+  if (!optionIds || optionIds.length === 0) return [];
+
+  const resolvedNames: string[] = [];
+
+  for (const optId of optionIds) {
+    if (optId.startsWith('dept-')) {
+      const deptId = optId.replace('dept-', '');
+      try {
+        const result = await db.execute(sql`SELECT name FROM departments WHERE id = ${deptId}`);
+        const rows = result.rows || result;
+        if (Array.isArray(rows) && rows.length > 0) {
+          resolvedNames.push(String((rows[0] as any).name).toLowerCase().trim());
+        }
+      } catch (e) {
+        console.log(`[AssignmentRules] Could not resolve dept option ${optId}:`, e);
+      }
+    } else {
+      try {
+        const options = await db.select({ optionText: taskIntakeOptions.optionText, optionValue: taskIntakeOptions.optionValue })
+          .from(taskIntakeOptions)
+          .where(eq(taskIntakeOptions.id, optId))
+          .limit(1);
+        if (options.length > 0) {
+          resolvedNames.push(String(options[0].optionValue || options[0].optionText).toLowerCase().trim());
+        }
+      } catch (e) {
+        console.log(`[AssignmentRules] Could not resolve option ${optId}:`, e);
+      }
+    }
+  }
+
+  return resolvedNames;
+}
+
+async function evaluateCondition(condition: RuleCondition, answers: Record<string, any>): Promise<boolean> {
   const answer = answers[condition.questionId];
   if (answer === undefined || answer === null) return false;
 
   const answerValues: string[] = Array.isArray(answer) 
-    ? answer.map(v => String(v).toLowerCase().trim())
+    ? answer.map((v: any) => String(v).toLowerCase().trim())
     : [String(answer).toLowerCase().trim()];
 
-  const compareValues: string[] = Array.isArray(condition.value) 
-    ? condition.value.map(v => String(v).toLowerCase().trim())
-    : [String(condition.value).toLowerCase().trim()];
+  let compareValues: string[];
+
+  if (condition.optionIds && condition.optionIds.length > 0) {
+    compareValues = await resolveOptionIds(condition.optionIds);
+    console.log(`[AssignmentRules] optionIds resolved: ${JSON.stringify(condition.optionIds)} -> ${JSON.stringify(compareValues)}, answer: ${JSON.stringify(answerValues)}`);
+    if (compareValues.length === 0) return false;
+    return answerValues.some(av => compareValues.includes(av));
+  }
+
+  if (condition.value !== undefined) {
+    compareValues = Array.isArray(condition.value) 
+      ? condition.value.map(v => String(v).toLowerCase().trim())
+      : [String(condition.value).toLowerCase().trim()];
+  } else {
+    return false;
+  }
 
   switch (condition.operator) {
     case 'equals':
@@ -47,21 +96,32 @@ function evaluateCondition(condition: RuleCondition, answers: Record<string, any
   }
 }
 
-function evaluateConditions(conditions: any, answers: Record<string, any>): boolean {
+async function evaluateConditions(conditions: any, answers: Record<string, any>): Promise<boolean> {
   if (!conditions || (Array.isArray(conditions) && conditions.length === 0)) {
     return true;
   }
 
   if (Array.isArray(conditions)) {
-    return conditions.every((condition: RuleCondition) => evaluateCondition(condition, answers));
+    for (const condition of conditions) {
+      if (!(await evaluateCondition(condition as RuleCondition, answers))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   if (conditions.operator && conditions.conditions) {
     const group = conditions as ConditionGroup;
     if (group.operator === 'OR') {
-      return group.conditions.some(c => evaluateCondition(c, answers));
+      for (const c of group.conditions) {
+        if (await evaluateCondition(c, answers)) return true;
+      }
+      return false;
     }
-    return group.conditions.every(c => evaluateCondition(c, answers));
+    for (const c of group.conditions) {
+      if (!(await evaluateCondition(c, answers))) return false;
+    }
+    return true;
   }
 
   if (conditions.questionId) {
@@ -95,10 +155,13 @@ export async function evaluateAssignmentRules(
     ))
     .orderBy(asc(taskIntakeAssignmentRules.priority));
 
+  console.log(`[AssignmentRules] Evaluating ${rules.length} rules for form ${formId}, answer keys: ${Object.keys(answers).join(', ')}`);
+
   for (const rule of rules) {
     const conditions = rule.conditions as any;
+    console.log(`[AssignmentRules] Checking rule "${rule.name}" (priority: ${rule.priority}), conditions:`, JSON.stringify(conditions));
     
-    if (evaluateConditions(conditions, answers)) {
+    if (await evaluateConditions(conditions, answers)) {
       let assignToUserId: string | null = null;
 
       if (rule.assignToRole) {
@@ -109,11 +172,15 @@ export async function evaluateAssignmentRules(
         assignToUserId = rule.assignToStaffId;
       }
 
+      console.log(`[AssignmentRules] Rule "${rule.name}" MATCHED -> assignToUserId: ${assignToUserId}`);
+
       return {
         assignToUserId,
         categoryId: rule.setCategoryId || null,
         tags: (rule.setTags as string[]) || [],
       };
+    } else {
+      console.log(`[AssignmentRules] Rule "${rule.name}" did NOT match`);
     }
   }
 
@@ -132,21 +199,30 @@ export function generateConditionSummary(conditions: any): string {
   }
 
   if (Array.isArray(conditions)) {
-    return conditions.map((c: RuleCondition) => 
-      `Q:${c.questionId.substring(0, 8)}... ${c.operator} "${c.value}"`
-    ).join(' AND ');
+    return conditions.map((c: any) => {
+      if (c.optionIds) {
+        return `Q:${c.questionId.substring(0, 8)}... matches optionIds [${c.optionIds.join(', ')}]`;
+      }
+      return `Q:${c.questionId.substring(0, 8)}... ${c.operator || 'equals'} "${c.value}"`;
+    }).join(' AND ');
   }
 
   if (conditions.operator && conditions.conditions) {
     const group = conditions as ConditionGroup;
-    return group.conditions.map((c: RuleCondition) => 
-      `Q:${c.questionId.substring(0, 8)}... ${c.operator} "${c.value}"`
-    ).join(` ${group.operator} `);
+    return group.conditions.map((c: any) => {
+      if ((c as any).optionIds) {
+        return `Q:${c.questionId.substring(0, 8)}... matches optionIds [${(c as any).optionIds.join(', ')}]`;
+      }
+      return `Q:${c.questionId.substring(0, 8)}... ${c.operator || 'equals'} "${c.value}"`;
+    }).join(` ${group.operator} `);
   }
 
   if (conditions.questionId) {
-    const c = conditions as RuleCondition;
-    return `Q:${c.questionId.substring(0, 8)}... ${c.operator} "${c.value}"`;
+    const c = conditions as any;
+    if (c.optionIds) {
+      return `Q:${c.questionId.substring(0, 8)}... matches optionIds [${c.optionIds.join(', ')}]`;
+    }
+    return `Q:${c.questionId.substring(0, 8)}... ${c.operator || 'equals'} "${c.value}"`;
   }
 
   return 'Complex conditions';
