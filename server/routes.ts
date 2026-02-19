@@ -2024,11 +2024,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (allClientIds.size > 0) {
         const realClientIds = [...allClientIds].filter(id => id !== "__no_client__");
         if (realClientIds.length > 0) {
-          const clientRows = await db.select({ id: clients.id, companyName: clients.companyName })
+          const clientRows = await db.select({ id: clients.id, company: clients.company, name: clients.name })
             .from(clients)
             .where(inArray(clients.id, realClientIds));
           for (const c of clientRows) {
-            clientNames[c.id] = c.companyName;
+            clientNames[c.id] = c.company || c.name || c.id;
           }
         }
       }
