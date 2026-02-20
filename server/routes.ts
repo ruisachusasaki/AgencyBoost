@@ -37419,19 +37419,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/tickets/reports/summary - Summary stats (MUST be before /:id)
   app.get("/api/tickets/reports/summary", requireAuth(), requireGranularPermission("tickets.reports.view"), async (req, res) => {
     try {
-      const totalResult = await db.select({ count: sql<number>`count(*)::int` }).from(tickets);
+      const { startDate, endDate } = req.query;
+      const conditions: any[] = [];
+      if (startDate) conditions.push(gte(tickets.createdAt, new Date(startDate as string + "T00:00:00")));
+      if (endDate) conditions.push(lte(tickets.createdAt, new Date(endDate as string + "T23:59:59.999")));
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const totalResult = await db.select({ count: sql<number>`count(*)::int` }).from(tickets).where(whereClause);
       const statusCounts = await db.select({
         status: tickets.status,
         count: sql<number>`count(*)::int`,
-      }).from(tickets).groupBy(tickets.status);
+      }).from(tickets).where(whereClause).groupBy(tickets.status);
       const typeCounts = await db.select({
         type: tickets.type,
         count: sql<number>`count(*)::int`,
-      }).from(tickets).groupBy(tickets.type);
+      }).from(tickets).where(whereClause).groupBy(tickets.type);
       const priorityCounts = await db.select({
         priority: tickets.priority,
         count: sql<number>`count(*)::int`,
-      }).from(tickets).groupBy(tickets.priority);
+      }).from(tickets).where(whereClause).groupBy(tickets.priority);
 
       const statusMap: Record<string, number> = {};
       for (const row of statusCounts) {
@@ -37508,8 +37514,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { startDate, endDate } = req.query;
       const conditions: any[] = [];
-      if (startDate) conditions.push(gte(tickets.createdAt, new Date(startDate as string)));
-      if (endDate) conditions.push(lte(tickets.createdAt, new Date(endDate as string)));
+      if (startDate) conditions.push(gte(tickets.createdAt, new Date(startDate as string + "T00:00:00")));
+      if (endDate) conditions.push(lte(tickets.createdAt, new Date(endDate as string + "T23:59:59.999")));
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -37546,6 +37552,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching response time stats:", error);
       res.status(500).json({ error: "Failed to fetch response time stats" });
+    }
+  });
+
+  // GET /api/tickets/reports/by-user - Per-user ticket stats (MUST be before /:id)
+  app.get("/api/tickets/reports/by-user", requireAuth(), requireGranularPermission("tickets.reports.view"), async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const conditions: any[] = [];
+      if (startDate) conditions.push(gte(tickets.createdAt, new Date(startDate as string + "T00:00:00")));
+      if (endDate) conditions.push(lte(tickets.createdAt, new Date(endDate as string + "T23:59:59.999")));
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const allTickets = await db.select({
+        id: tickets.id,
+        type: tickets.type,
+        priority: tickets.priority,
+        status: tickets.status,
+        assignedTo: tickets.assignedTo,
+        firstResponseAt: tickets.firstResponseAt,
+        resolvedAt: tickets.resolvedAt,
+        createdAt: tickets.createdAt,
+      }).from(tickets).where(whereClause);
+
+      const firstComments = await db.select({
+        ticketId: ticketComments.ticketId,
+        authorId: ticketComments.authorId,
+      }).from(ticketComments)
+        .where(
+          sql`${ticketComments.id} IN (
+            SELECT DISTINCT ON (ticket_id) id FROM ticket_comments
+            ORDER BY ticket_id, created_at ASC
+          )`
+        );
+
+      const firstCommentMap = new Map<string, string>();
+      for (const c of firstComments) {
+        firstCommentMap.set(c.ticketId, c.authorId);
+      }
+
+      const userStatsMap = new Map<string, {
+        totalHandled: number;
+        totalResolved: number;
+        firstResponseTimes: number[];
+        resolutionTimes: number[];
+        byType: Record<string, number>;
+        byPriority: Record<string, number>;
+      }>();
+
+      for (const t of allTickets) {
+        const handlerId = t.assignedTo || firstCommentMap.get(t.id);
+        if (!handlerId) continue;
+
+        if (!userStatsMap.has(handlerId)) {
+          userStatsMap.set(handlerId, {
+            totalHandled: 0, totalResolved: 0,
+            firstResponseTimes: [], resolutionTimes: [],
+            byType: {}, byPriority: {},
+          });
+        }
+        const stats = userStatsMap.get(handlerId)!;
+        stats.totalHandled++;
+        stats.byType[t.type] = (stats.byType[t.type] || 0) + 1;
+        stats.byPriority[t.priority] = (stats.byPriority[t.priority] || 0) + 1;
+
+        if (t.status === "resolved" || t.status === "closed") {
+          stats.totalResolved++;
+        }
+        if (t.firstResponseAt && t.createdAt) {
+          const diffSec = (new Date(t.firstResponseAt).getTime() - new Date(t.createdAt).getTime()) / 1000;
+          if (diffSec >= 0) stats.firstResponseTimes.push(diffSec);
+        }
+        if (t.resolvedAt && t.createdAt) {
+          const diffSec = (new Date(t.resolvedAt).getTime() - new Date(t.createdAt).getTime()) / 1000;
+          if (diffSec >= 0) stats.resolutionTimes.push(diffSec);
+        }
+      }
+
+      const userIds = Array.from(userStatsMap.keys());
+      const staffRows = userIds.length > 0
+        ? await db.select({ id: staff.id, name: staff.name }).from(staff).where(inArray(staff.id, userIds))
+        : [];
+      const staffNameMap = new Map<string, string>();
+      for (const s of staffRows) {
+        staffNameMap.set(s.id, s.name || "Unknown");
+      }
+
+      const users = Array.from(userStatsMap.entries()).map(([userId, stats]) => {
+        const avgFirst = stats.firstResponseTimes.length > 0
+          ? stats.firstResponseTimes.reduce((a, b) => a + b, 0) / stats.firstResponseTimes.length / 3600
+          : null;
+        const avgRes = stats.resolutionTimes.length > 0
+          ? stats.resolutionTimes.reduce((a, b) => a + b, 0) / stats.resolutionTimes.length / 3600
+          : null;
+        return {
+          userId,
+          userName: staffNameMap.get(userId) || "Unknown",
+          totalHandled: stats.totalHandled,
+          totalResolved: stats.totalResolved,
+          avgFirstResponseHours: avgFirst,
+          avgResolutionHours: avgRes,
+          byType: stats.byType,
+          byPriority: stats.byPriority,
+        };
+      }).sort((a, b) => b.totalHandled - a.totalHandled);
+
+      const topHandlers = users.slice(0, 10).map(u => ({
+        userId: u.userId,
+        userName: u.userName,
+        count: u.totalHandled,
+      }));
+
+      res.json({ users, topHandlers });
+    } catch (error) {
+      console.error("Error fetching ticket user breakdown:", error);
+      res.status(500).json({ error: "Failed to fetch ticket user breakdown" });
     }
   });
 

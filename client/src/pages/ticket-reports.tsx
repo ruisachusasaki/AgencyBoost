@@ -6,9 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Ticket, AlertCircle, Clock, Timer, CalendarDays, Bug, Lightbulb, Wrench, AlertTriangle, ArrowUp, ArrowDown, Minus, CalendarIcon } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Ticket, AlertCircle, Clock, Timer, CalendarDays, Bug, Lightbulb, Wrench, AlertTriangle, ArrowUp, ArrowDown, Minus, CalendarIcon, Users, Trophy, User } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
+
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
 
 interface TicketSummary {
   total: number;
@@ -36,6 +43,22 @@ interface ResponseTimeData {
   avgResolutionHours: number;
   totalResolved: number;
   totalWithResponse: number;
+}
+
+interface UserTicketStats {
+  userId: string;
+  userName: string;
+  totalHandled: number;
+  totalResolved: number;
+  avgFirstResponseHours: number | null;
+  avgResolutionHours: number | null;
+  byType: Record<string, number>;
+  byPriority: Record<string, number>;
+}
+
+interface UserBreakdownResponse {
+  users: UserTicketStats[];
+  topHandlers: { userId: string; userName: string; count: number }[];
 }
 
 function formatHours(hours: number | null | undefined): string {
@@ -87,24 +110,44 @@ const priorityIcons: Record<string, typeof AlertTriangle> = {
 export default function TicketReports() {
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [reportView, setReportView] = useState<"overview" | "by-user">("overview");
+  const [selectedUserId, setSelectedUserId] = useState<string>("all");
+
+  const dateParams = `startDate=${startDate}&endDate=${endDate}`;
 
   const { data: summary, isLoading: summaryLoading } = useQuery<TicketSummary>({
-    queryKey: ["/api/tickets/reports/summary"],
+    queryKey: ["/api/tickets/reports/summary", startDate, endDate],
+    queryFn: async () => {
+      const res = await fetch(`/api/tickets/reports/summary?${dateParams}`);
+      if (!res.ok) throw new Error("Failed to fetch summary");
+      return res.json();
+    },
   });
 
   const { data: aging, isLoading: agingLoading } = useQuery<AgingResponse>({
     queryKey: ["/api/tickets/reports/aging"],
   });
 
-  const responseTimeQueryString = `startDate=${startDate}&endDate=${endDate}`;
   const { data: responseTime, isLoading: responseTimeLoading } = useQuery<ResponseTimeData>({
     queryKey: ["/api/tickets/reports/response-time", startDate, endDate],
     queryFn: async () => {
-      const res = await fetch(`/api/tickets/reports/response-time?${responseTimeQueryString}`);
+      const res = await fetch(`/api/tickets/reports/response-time?${dateParams}`);
       if (!res.ok) throw new Error("Failed to fetch response time data");
       return res.json();
     },
   });
+
+  const { data: userBreakdown, isLoading: userBreakdownLoading } = useQuery<UserBreakdownResponse>({
+    queryKey: ["/api/tickets/reports/by-user", startDate, endDate],
+    queryFn: async () => {
+      const res = await fetch(`/api/tickets/reports/by-user?${dateParams}`);
+      if (!res.ok) throw new Error("Failed to fetch user breakdown");
+      return res.json();
+    },
+  });
+
+  const selectedUserStats = selectedUserId !== "all" && userBreakdown?.users
+    ? userBreakdown.users.find(u => u.userId === selectedUserId) : null;
 
   const maxAgingCount = aging?.buckets ? Math.max(...aging.buckets.map((b) => b.count), 1) : 1;
 
@@ -133,14 +176,14 @@ export default function TicketReports() {
                   !startDate && "text-muted-foreground"
                 )}
               >
-                {startDate ? format(new Date(startDate), "PPP") : <span>Pick a date</span>}
+                {startDate ? format(parseLocalDate(startDate), "PPP") : <span>Pick a date</span>}
                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={startDate ? new Date(startDate) : undefined}
+                selected={startDate ? parseLocalDate(startDate) : undefined}
                 onSelect={(date) => { if (date) setStartDate(format(date, "yyyy-MM-dd")); }}
                 initialFocus
               />
@@ -158,14 +201,14 @@ export default function TicketReports() {
                   !endDate && "text-muted-foreground"
                 )}
               >
-                {endDate ? format(new Date(endDate), "PPP") : <span>Pick a date</span>}
+                {endDate ? format(parseLocalDate(endDate), "PPP") : <span>Pick a date</span>}
                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={endDate ? new Date(endDate) : undefined}
+                selected={endDate ? parseLocalDate(endDate) : undefined}
                 onSelect={(date) => { if (date) setEndDate(format(date, "yyyy-MM-dd")); }}
                 initialFocus
               />
@@ -421,6 +464,215 @@ export default function TicketReports() {
                 </p>
               </div>
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Trophy className="w-5 h-5 text-primary" />
+            Top Ticket Handlers
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {userBreakdownLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : userBreakdown?.topHandlers && userBreakdown.topHandlers.length > 0 ? (
+            <div className="space-y-3">
+              {userBreakdown.topHandlers.map((handler, idx) => {
+                const maxHandled = userBreakdown.topHandlers[0]?.count || 1;
+                return (
+                  <div key={handler.userId} className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 w-8 shrink-0">
+                      <span className={cn(
+                        "text-sm font-bold w-6 h-6 rounded-full flex items-center justify-center",
+                        idx === 0 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" :
+                        idx === 1 ? "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" :
+                        idx === 2 ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400" :
+                        "bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                      )}>
+                        {idx + 1}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-700 dark:text-gray-300 w-40 shrink-0 truncate">
+                      {handler.userName}
+                    </span>
+                    <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-7 relative overflow-hidden">
+                      <div
+                        className="bg-primary h-full rounded-full transition-all duration-300 flex items-center justify-end pr-2"
+                        style={{ width: `${Math.max((handler.count / maxHandled) * 100, 8)}%` }}
+                      >
+                        <span className="text-xs font-medium text-white">{handler.count}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">No ticket handling data for this period.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Users className="w-5 h-5 text-primary" />
+            Individual Rep Breakdown
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {userBreakdownLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : userBreakdown?.users && userBreakdown.users.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Label className="text-sm text-gray-500 dark:text-gray-400">Select Rep:</Label>
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="Select a rep" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Reps</SelectItem>
+                    {userBreakdown.users.map(u => (
+                      <SelectItem key={u.userId} value={u.userId}>{u.userName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedUserId === "all" ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left py-3 px-2 font-medium text-gray-500 dark:text-gray-400">Rep</th>
+                        <th className="text-center py-3 px-2 font-medium text-gray-500 dark:text-gray-400">Handled</th>
+                        <th className="text-center py-3 px-2 font-medium text-gray-500 dark:text-gray-400">Resolved</th>
+                        <th className="text-center py-3 px-2 font-medium text-gray-500 dark:text-gray-400">Avg Response</th>
+                        <th className="text-center py-3 px-2 font-medium text-gray-500 dark:text-gray-400">Avg Resolution</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {userBreakdown.users.map(u => (
+                        <tr key={u.userId} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onClick={() => setSelectedUserId(u.userId)}>
+                          <td className="py-3 px-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                                <User className="w-3.5 h-3.5 text-primary" />
+                              </div>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">{u.userName}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-2 text-center text-gray-700 dark:text-gray-300">{u.totalHandled}</td>
+                          <td className="py-3 px-2 text-center text-gray-700 dark:text-gray-300">{u.totalResolved}</td>
+                          <td className="py-3 px-2 text-center text-gray-700 dark:text-gray-300">{formatHours(u.avgFirstResponseHours)}</td>
+                          <td className="py-3 px-2 text-center text-gray-700 dark:text-gray-300">{formatHours(u.avgResolutionHours)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : selectedUserStats ? (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3 pb-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{selectedUserStats.userName}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Individual Performance</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Tickets Handled</p>
+                      <p className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">{selectedUserStats.totalHandled}</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Tickets Resolved</p>
+                      <p className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">{selectedUserStats.totalResolved}</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Avg First Response</p>
+                      <p className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">{formatHours(selectedUserStats.avgFirstResponseHours)}</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Avg Resolution Time</p>
+                      <p className="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">{formatHours(selectedUserStats.avgResolutionHours)}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">By Type</h4>
+                      <div className="space-y-2">
+                        {["bug", "feature_request", "improvement"].map(key => {
+                          const count = selectedUserStats.byType[key] || 0;
+                          const maxC = Math.max(...Object.values(selectedUserStats.byType), 1);
+                          const IconComp = typeIcons[key] || Bug;
+                          return (
+                            <div key={key} className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 w-32 shrink-0">
+                                <IconComp className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                                <span className="text-xs text-gray-700 dark:text-gray-300">{typeLabels[key]}</span>
+                              </div>
+                              <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-5 relative overflow-hidden">
+                                <div
+                                  className={`${typeColors[key]} h-full rounded-full transition-all duration-300 flex items-center justify-end pr-1.5`}
+                                  style={{ width: `${Math.max((count / maxC) * 100, count > 0 ? 10 : 0)}%` }}
+                                >
+                                  {count > 0 && <span className="text-[10px] font-medium text-white">{count}</span>}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">By Priority</h4>
+                      <div className="space-y-2">
+                        {["critical", "high", "medium", "low"].map(key => {
+                          const count = selectedUserStats.byPriority[key] || 0;
+                          const maxC = Math.max(...Object.values(selectedUserStats.byPriority), 1);
+                          const IconComp = priorityIcons[key] || Minus;
+                          return (
+                            <div key={key} className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 w-24 shrink-0">
+                                <IconComp className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                                <span className="text-xs text-gray-700 dark:text-gray-300">{priorityLabels[key]}</span>
+                              </div>
+                              <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-5 relative overflow-hidden">
+                                <div
+                                  className={`${priorityColors[key]} h-full rounded-full transition-all duration-300 flex items-center justify-end pr-1.5`}
+                                  style={{ width: `${Math.max((count / maxC) * 100, count > 0 ? 10 : 0)}%` }}
+                                >
+                                  {count > 0 && <span className="text-[10px] font-medium text-white">{count}</span>}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">No ticket handling data for this period.</p>
           )}
         </CardContent>
       </Card>
