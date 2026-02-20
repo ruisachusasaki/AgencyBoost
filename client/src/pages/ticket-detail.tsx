@@ -120,8 +120,7 @@ export default function TicketDetailPage() {
       await apiRequest("PUT", `/api/tickets/${ticketId}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
+      queryClient.invalidateQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && query.queryKey[0].startsWith('/api/tickets') });
       toast({ title: "Ticket updated", variant: "success", description: "Ticket has been updated successfully." });
     },
     onError: (error: any) => {
@@ -134,7 +133,7 @@ export default function TicketDetailPage() {
       await apiRequest("DELETE", `/api/tickets/${ticketId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
+      queryClient.invalidateQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && query.queryKey[0].startsWith('/api/tickets') });
       toast({ title: "Ticket deleted", variant: "success", description: "Ticket has been deleted successfully." });
       setLocation("/tickets");
     },

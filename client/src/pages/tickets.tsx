@@ -209,8 +209,7 @@ export default function TicketsPage() {
       return apiRequest("POST", "/api/tickets", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets/reports/summary"] });
+      queryClient.invalidateQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && query.queryKey[0].startsWith('/api/tickets') });
       toast({ title: "Ticket created", description: "The ticket has been created successfully.", variant: "success" as any });
       closeDialog();
     },
@@ -224,8 +223,7 @@ export default function TicketsPage() {
       return apiRequest("PUT", `/api/tickets/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets/reports/summary"] });
+      queryClient.invalidateQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && query.queryKey[0].startsWith('/api/tickets') });
       toast({ title: "Ticket updated", description: "The ticket has been updated successfully.", variant: "success" as any });
       closeDialog();
     },
@@ -239,8 +237,7 @@ export default function TicketsPage() {
       return apiRequest("DELETE", `/api/tickets/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets/reports/summary"] });
+      queryClient.invalidateQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && query.queryKey[0].startsWith('/api/tickets') });
       toast({ title: "Ticket deleted", description: "The ticket has been deleted.", variant: "success" as any });
       setDeletingTicket(null);
     },
