@@ -106,7 +106,7 @@ export default function TicketDetailPage() {
   const [isInternal, setIsInternal] = useState(false);
 
   const { data: ticket, isLoading } = useQuery<Ticket>({
-    queryKey: ["/api/tickets", ticketId],
+    queryKey: [`/api/tickets/${ticketId}`],
     enabled: !!ticketId,
   });
 
@@ -119,7 +119,7 @@ export default function TicketDetailPage() {
       await apiRequest("PUT", `/api/tickets/${ticketId}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets", ticketId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
       toast({ title: "Ticket updated", variant: "success", description: "Ticket has been updated successfully." });
     },
@@ -147,7 +147,7 @@ export default function TicketDetailPage() {
       await apiRequest("POST", `/api/tickets/${ticketId}/comments`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets", ticketId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
       setCommentContent("");
       setIsInternal(false);
       toast({ title: "Comment added", variant: "success", description: "Comment has been added successfully." });
@@ -162,7 +162,7 @@ export default function TicketDetailPage() {
       await apiRequest("DELETE", `/api/tickets/${ticketId}/comments/${commentId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets", ticketId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
       toast({ title: "Comment deleted", variant: "success", description: "Comment has been deleted." });
     },
     onError: (error: any) => {
