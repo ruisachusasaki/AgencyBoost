@@ -37802,6 +37802,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Ticket not found" });
       }
 
+      const { mentions } = req.body;
+
       const [newComment] = await db.insert(ticketComments).values({
         ticketId: id,
         authorId: userId,
@@ -37813,6 +37815,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.update(tickets)
           .set({ firstResponseAt: new Date(), updatedAt: new Date() })
           .where(eq(tickets.id, id));
+      }
+
+      const commenter = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+      const commenterName = commenter.length > 0 ? `${commenter[0].firstName} ${commenter[0].lastName}` : 'Someone';
+      const commentPreview = content.substring(0, 150) + (content.length > 150 ? '...' : '');
+
+      if (!isInternal && ticket.submittedBy && userId !== ticket.submittedBy) {
+        void notificationService.notify({
+          userId: ticket.submittedBy,
+          type: 'ticket_comment',
+          title: `New comment on ticket #${ticket.ticketNumber}`,
+          message: `${commenterName} commented on \"${ticket.title}\": ${commentPreview}`,
+          entityType: 'ticket',
+          entityId: id,
+          actionUrl: `/tickets/${id}`,
+          actionText: 'View Ticket',
+          priority: 'normal',
+          metadata: { commentId: newComment.id, commentedBy: userId }
+        }).catch(err => console.error('[Notification] Failed to send ticket comment notification:', err));
+      }
+
+      if (ticket.assignedTo && ticket.assignedTo !== userId && ticket.assignedTo !== ticket.submittedBy && !isInternal) {
+        void notificationService.notify({
+          userId: ticket.assignedTo,
+          type: 'ticket_comment',
+          title: `New comment on ticket #${ticket.ticketNumber}`,
+          message: `${commenterName} commented on \"${ticket.title}\": ${commentPreview}`,
+          entityType: 'ticket',
+          entityId: id,
+          actionUrl: `/tickets/${id}`,
+          actionText: 'View Ticket',
+          priority: 'normal',
+          metadata: { commentId: newComment.id, commentedBy: userId }
+        }).catch(err => console.error('[Notification] Failed to send ticket comment notification:', err));
+      }
+
+      if (mentions && mentions.length > 0) {
+        const mentionRegex = /@([\p{L}\p{M}\p{N}\s'-]+)/gu;
+        const mentionMatches = Array.from(content.matchAll(mentionRegex));
+        const mentionNames = mentionMatches.map((match) => match[1].trim().toLowerCase());
+        const allStaff = await db.select().from(staff);
+        const validMentionIds = new Set();
+        mentionNames.forEach((mentionName) => {
+          const staffMember = allStaff.find((s) => {
+            const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
+            return fullName === mentionName || (s.name && s.name.toLowerCase() === mentionName);
+          });
+          if (staffMember) validMentionIds.add(staffMember.id);
+        });
+        const alreadyNotified = new Set([ticket.submittedBy, ticket.assignedTo, userId].filter(Boolean));
+        for (const mentionedUserId of mentions) {
+          if (validMentionIds.has(mentionedUserId) && !alreadyNotified.has(mentionedUserId)) {
+            void notificationService.notify({
+              userId: mentionedUserId,
+              type: 'mentioned',
+              title: `Mentioned in ticket #${ticket.ticketNumber}`,
+              message: `${commenterName} mentioned you in \"${ticket.title}\": ${commentPreview}`,
+              entityType: 'ticket',
+              entityId: id,
+              actionUrl: `/tickets/${id}`,
+              actionText: 'View Ticket',
+              priority: 'normal',
+              metadata: { mentionedBy: userId, ticketId: id }
+            }).catch(err => console.error('[Notification] Failed to send ticket mention notification:', err));
+          }
+        }
       }
 
       res.status(201).json(newComment);

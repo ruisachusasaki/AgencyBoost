@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Trash2, Edit, MessageSquare, Paperclip, Download, Clock, User, Tag as TagIcon, AlertCircle, Shield, Video, Image as ImageIcon, ExternalLink } from "lucide-react";
@@ -13,6 +12,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
+import { MentionInput } from "@/components/ui/mention-input";
 
 type TicketComment = {
   id: string;
@@ -104,6 +104,7 @@ export default function TicketDetailPage() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [commentContent, setCommentContent] = useState("");
+  const [commentMentions, setCommentMentions] = useState<any[]>([]);
   const [isInternal, setIsInternal] = useState(false);
 
   const { data: ticket, isLoading } = useQuery<Ticket>({
@@ -143,12 +144,13 @@ export default function TicketDetailPage() {
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: async (data: { content: string; isInternal: boolean }) => {
+    mutationFn: async (data: { content: string; isInternal: boolean; mentions?: string[] }) => {
       await apiRequest("POST", `/api/tickets/${ticketId}/comments`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
       setCommentContent("");
+      setCommentMentions([]);
       setIsInternal(false);
       toast({ title: "Comment added", variant: "success", description: "Comment has been added successfully." });
     },
@@ -172,7 +174,14 @@ export default function TicketDetailPage() {
 
   const handleAddComment = () => {
     if (!commentContent.trim()) return;
-    addCommentMutation.mutate({ content: commentContent.trim(), isInternal });
+    const mentionUserIds = commentMentions
+      .filter(m => m.userId)
+      .map(m => m.userId);
+    addCommentMutation.mutate({ 
+      content: commentContent.trim(), 
+      isInternal,
+      mentions: mentionUserIds.length > 0 ? mentionUserIds : undefined
+    });
   };
 
   const formatFileSize = (bytes: number) => {
@@ -414,11 +423,13 @@ export default function TicketDetailPage() {
 
               {/* Add Comment Form */}
               <div className="border-t pt-4 space-y-3">
-                <Textarea
-                  placeholder="Add a comment..."
+                <MentionInput
+                  placeholder="Add a comment... Type @ to mention someone"
                   value={commentContent}
-                  onChange={(e) => setCommentContent(e.target.value)}
-                  rows={3}
+                  onChange={(value, mentions) => {
+                    setCommentContent(value);
+                    setCommentMentions(mentions);
+                  }}
                 />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
