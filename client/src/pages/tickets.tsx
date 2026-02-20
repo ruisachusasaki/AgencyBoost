@@ -75,7 +75,6 @@ function getTypeBadge(type: string) {
     bug: "Bug",
     feature_request: "Feature Request",
     improvement: "Improvement",
-    question: "Question",
   };
   return (
     <Badge variant="outline" className={colors[type] || "bg-gray-100 text-gray-800"}>
@@ -457,7 +456,6 @@ export default function TicketsPage() {
                 <SelectItem value="bug">Bug</SelectItem>
                 <SelectItem value="feature_request">Feature Request</SelectItem>
                 <SelectItem value="improvement">Improvement</SelectItem>
-                <SelectItem value="question">Question</SelectItem>
               </SelectContent>
             </Select>
 
@@ -702,7 +700,6 @@ export default function TicketsPage() {
                     <SelectItem value="bug">Bug</SelectItem>
                     <SelectItem value="feature_request">Feature Request</SelectItem>
                     <SelectItem value="improvement">Improvement</SelectItem>
-                    <SelectItem value="question">Question</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

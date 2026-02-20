@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Ticket, AlertCircle, Clock, Timer, CalendarDays, Bug, Lightbulb, HelpCircle, Wrench, AlertTriangle, ArrowUp, ArrowDown, Minus, CalendarIcon } from "lucide-react";
+import { Ticket, AlertCircle, Clock, Timer, CalendarDays, Bug, Lightbulb, Wrench, AlertTriangle, ArrowUp, ArrowDown, Minus, CalendarIcon } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -49,21 +49,18 @@ const typeLabels: Record<string, string> = {
   bug: "Bug",
   feature_request: "Feature Request",
   improvement: "Improvement",
-  question: "Question",
 };
 
 const typeColors: Record<string, string> = {
   bug: "bg-red-500",
   feature_request: "bg-purple-500",
   improvement: "bg-blue-500",
-  question: "bg-yellow-500",
 };
 
 const typeIcons: Record<string, typeof Bug> = {
   bug: Bug,
   feature_request: Lightbulb,
   improvement: Wrench,
-  question: HelpCircle,
 };
 
 const priorityLabels: Record<string, string> = {
@@ -306,7 +303,7 @@ export default function TicketReports() {
               </div>
             ) : byTypeEntries.length > 0 ? (
               <div className="space-y-3">
-                {["bug", "feature_request", "improvement", "question"].map((key) => {
+                {["bug", "feature_request", "improvement"].map((key) => {
                   const count = summary?.byType?.[key] || 0;
                   const IconComponent = typeIcons[key] || Bug;
                   return (

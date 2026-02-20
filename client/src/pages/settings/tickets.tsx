@@ -297,7 +297,6 @@ export default function TicketsSettingsPage() {
                     <SelectItem value="bug">Bug</SelectItem>
                     <SelectItem value="feature_request">Feature Request</SelectItem>
                     <SelectItem value="improvement">Improvement</SelectItem>
-                    <SelectItem value="question">Question</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
