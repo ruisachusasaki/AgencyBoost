@@ -26961,7 +26961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           and(
             isNotNull(pxMeetings.meetingStartedAt),
             isNull(pxMeetings.meetingEndedAt),
-            eq(pxMeetingAttendees.staffId, userId)
+            sql`${pxMeetingAttendees.userId} = ${userId}`
           )
         )
         .orderBy(desc(pxMeetings.meetingStartedAt))
