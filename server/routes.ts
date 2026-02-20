@@ -1447,7 +1447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!authenticatedUserId) return; // getAuthenticatedUserIdOrFail already sent 401 response
       
       // Simple inline validation
-      const { dateFrom, dateTo, userId, clientId, taskStatus, reportType, tags } = req.body;
+      const { dateFrom, dateTo, userId, clientId, taskStatus, reportType, tags, departmentFilter } = req.body;
       
       if (!dateFrom || !dateTo) {
         return res.status(400).json({
@@ -1470,6 +1470,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         effectiveUserId = undefined;
       }
       
+      // If department filter is set, get staff IDs in that department
+      let departmentUserIds: Set<string> | undefined;
+      if (departmentFilter && departmentFilter !== "all") {
+        const departmentStaff = await db
+          .select({ id: staff.id })
+          .from(staff)
+          .where(eq(staff.department, departmentFilter));
+        departmentUserIds = new Set(departmentStaff.map(s => s.id));
+        
+        // If also filtering by specific user, ensure they're in the department
+        if (effectiveUserId && !departmentUserIds.has(effectiveUserId)) {
+          // User not in department - return empty result
+          return res.json({
+            data: { tasks: [], userSummaries: [], clientBreakdowns: [], categoryBreakdowns: [], grandTotal: 0 }
+          });
+        }
+      }
+
       // Get actual time entries from the database
       console.log("FETCHING REAL TIME ENTRIES FROM DATABASE...");
       const realTimeEntries = await appStorage.getTimeEntriesByDateRange(
@@ -1646,6 +1664,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return; // Skip this entry if it doesn't match the user filter
           }
           
+          // Filter by department if specified
+          if (departmentUserIds && !departmentUserIds.has(resolvedEntryUserId)) {
+            return;
+          }
+          
           console.log("⏱️ Processing time entry:", { 
             taskId: task.id, 
             userId: resolvedEntryUserId,
@@ -1680,6 +1703,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Also add event time entries to user summaries
       console.log("PROCESSING EVENT TIME ENTRIES FOR USER SUMMARIES...");
       for (const eventEntry of eventTimeEntriesResult) {
+        // Filter by department if specified
+        if (departmentUserIds && !departmentUserIds.has(eventEntry.userId)) {
+          continue;
+        }
+        
         const entryDate = formatLocalDate(eventEntry.startTime);
         
         // Lookup user name
@@ -1750,6 +1778,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Filter by effectiveUserId if specified
           if (effectiveUserId && resolvedEntryUserId !== effectiveUserId) {
             return; // Skip this entry if it doesn't match the user filter
+          }
+          
+          // Filter by department if specified
+          if (departmentUserIds && !departmentUserIds.has(resolvedEntryUserId)) {
+            return;
           }
           
           client.totalTime += entry.duration || 0;
@@ -1823,6 +1856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             resolvedEntryUserId = authenticatedUserId;
           }
           if (effectiveUserId && resolvedEntryUserId !== effectiveUserId) return;
+          if (departmentUserIds && !departmentUserIds.has(resolvedEntryUserId)) return;
 
           category.totalTime += entry.duration || 0;
 

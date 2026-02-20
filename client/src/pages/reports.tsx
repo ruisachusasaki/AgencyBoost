@@ -163,6 +163,7 @@ export default function Reports() {
   const [userIdFilter, setUserIdFilter] = useState("all");
   const [cachedUserList, setCachedUserList] = useState<Array<{ userId: string; userName: string }>>([]);
   const [tagFilter, setTagFilter] = useState<string[]>([]); // Multi-select tag filter
+  const [timesheetDepartmentFilter, setTimesheetDepartmentFilter] = useState("all");
   
   // Detailed Staff Workload specific state
   const [workloadSearchTerm, setWorkloadSearchTerm] = useState("");
@@ -502,9 +503,10 @@ export default function Reports() {
     userId: userIdFilter !== "all" ? userIdFilter : undefined,
     clientId: clientFilter !== "all" ? clientFilter : undefined,
     tags: tagFilter.length > 0 ? tagFilter : undefined,
+    departmentFilter: timesheetDepartmentFilter !== "all" ? timesheetDepartmentFilter : undefined,
     reportType: taskReportType
   };
-  }, [taskDateRange, customTaskDateFrom, customTaskDateTo, userIdFilter, clientFilter, tagFilter, taskReportType, businessTimezone]);
+  }, [taskDateRange, customTaskDateFrom, customTaskDateTo, userIdFilter, clientFilter, tagFilter, timesheetDepartmentFilter, taskReportType, businessTimezone]);
 
   // Overview-specific time tracking filters (uses dateRange from overview tab)
   const overviewTimeTrackingFilters = useMemo(() => {
@@ -2867,6 +2869,23 @@ export default function Reports() {
                             <SelectItem key={user.userId} value={user.userId}>
                               {user.userName || 'Unknown User'}
                             </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {/* Department Filter for Timesheet */}
+                  {taskReportType === "timesheet" && canEditOthersTimesheets && (
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-slate-600 dark:text-slate-400">Department:</label>
+                      <Select value={timesheetDepartmentFilter} onValueChange={setTimesheetDepartmentFilter}>
+                        <SelectTrigger className="w-48" data-testid="select-timesheet-department-filter">
+                          <SelectValue placeholder="All Departments" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Departments</SelectItem>
+                          {Array.from(new Set(staffData.map(s => s.department).filter(Boolean))).sort().map(dept => (
+                            <SelectItem key={dept} value={dept!}>{dept}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
