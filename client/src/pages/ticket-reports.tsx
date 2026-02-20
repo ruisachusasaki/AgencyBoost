@@ -15,7 +15,6 @@ interface TicketSummary {
   open: number;
   inProgress: number;
   resolved: number;
-  closed: number;
   onHold: number;
   byType: Record<string, number>;
   byPriority: Record<string, number>;

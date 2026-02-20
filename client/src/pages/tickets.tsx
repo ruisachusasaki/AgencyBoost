@@ -53,7 +53,6 @@ interface TicketSummary {
   open: number;
   inProgress: number;
   resolved: number;
-  closed: number;
   onHold: number;
   byType: Record<string, number>;
   byPriority: Record<string, number>;
@@ -111,14 +110,12 @@ function getStatusBadge(status: string) {
     in_progress: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
     on_hold: "bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-400",
     resolved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-    closed: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400",
   };
   const labels: Record<string, string> = {
     open: "Open",
     in_progress: "In Progress",
     on_hold: "On Hold",
     resolved: "Resolved",
-    closed: "Closed",
   };
   return (
     <Badge variant="outline" className={colors[status] || "bg-gray-100 text-gray-800"}>
@@ -142,7 +139,7 @@ export default function TicketsPage() {
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<"tickets" | "reports">("tickets");
-  const allStatuses = ["open", "in_progress", "on_hold", "resolved", "closed"];
+  const allStatuses = ["open", "in_progress", "on_hold", "resolved"];
   const defaultStatuses = ["open", "in_progress", "on_hold"];
   const [statusFilter, setStatusFilter] = useState<string[]>(defaultStatuses);
   const [typeFilter, setTypeFilter] = useState("all");
@@ -433,7 +430,6 @@ export default function TicketsPage() {
                     { value: "in_progress", label: "In Progress" },
                     { value: "on_hold", label: "On Hold" },
                     { value: "resolved", label: "Resolved" },
-                    { value: "closed", label: "Closed" },
                   ].map((s) => (
                     <button
                       key={s.value}

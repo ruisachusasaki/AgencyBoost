@@ -88,7 +88,6 @@ const getStatusColor = (status: string) => {
     case "in_progress": return "bg-amber-100 text-amber-800";
     case "on_hold": return "bg-gray-100 text-gray-800";
     case "resolved": return "bg-green-100 text-green-800";
-    case "closed": return "bg-slate-100 text-slate-800";
     default: return "bg-gray-100 text-gray-800";
   }
 };
@@ -469,7 +468,6 @@ export default function TicketDetailPage() {
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="on_hold">On Hold</SelectItem>
                     <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
