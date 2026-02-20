@@ -522,7 +522,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/help-support" className="flex items-center cursor-pointer" data-testid="menu-item-help-support">
+                <Link href="/tickets" className="flex items-center cursor-pointer" data-testid="menu-item-help-support">
                   <HelpCircle className="mr-2 h-4 w-4" />
                   <span>Help & Support</span>
                 </Link>
