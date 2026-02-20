@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -148,6 +148,140 @@ type Department = {
   workflowId?: string;
   isActive: boolean;
 };
+
+function LongRunningTimerSettings() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: settings, isLoading } = useQuery<Record<string, any>>({
+    queryKey: ['/api/task-settings'],
+  });
+
+  const alertsEnabled = settings?.long_running_timer_alerts_enabled?.value ?? true;
+  const thresholdHours = settings?.long_running_timer_threshold_hours?.value ?? 8;
+
+  const [localThreshold, setLocalThreshold] = useState<string>(String(thresholdHours));
+  const [localEnabled, setLocalEnabled] = useState<boolean>(alertsEnabled);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    setLocalThreshold(String(thresholdHours));
+    setLocalEnabled(alertsEnabled);
+    setHasChanges(false);
+  }, [thresholdHours, alertsEnabled]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: { settingKey: string; settingValue: any }) => {
+      const res = await apiRequest("POST", "/api/task-settings", {
+        settingKey: data.settingKey,
+        settingValue: data.settingValue,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/task-settings'] });
+    },
+  });
+
+  const handleSave = async () => {
+    try {
+      await saveMutation.mutateAsync({
+        settingKey: "long_running_timer_alerts_enabled",
+        settingValue: { value: localEnabled },
+      });
+      await saveMutation.mutateAsync({
+        settingKey: "long_running_timer_threshold_hours",
+        settingValue: { value: parseFloat(localThreshold) || 8 },
+      });
+      setHasChanges(false);
+      toast({
+        title: "Settings saved",
+        description: "Long-running timer alert settings have been updated.",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to save settings.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <div className="text-center text-muted-foreground">Loading settings...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Long-Running Timer Alerts</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Get notified when a time tracker has been running for too long. Alerts are sent to the team member and all admins.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="timer-alerts-enabled" className="font-medium">Enable Alerts</Label>
+            <p className="text-sm text-muted-foreground">
+              Send notifications when timers exceed the threshold
+            </p>
+          </div>
+          <Switch
+            id="timer-alerts-enabled"
+            checked={localEnabled}
+            onCheckedChange={(checked) => {
+              setLocalEnabled(checked);
+              setHasChanges(true);
+            }}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="timer-threshold" className="font-medium">Threshold (hours)</Label>
+          <p className="text-sm text-muted-foreground">
+            Timers running longer than this will trigger an alert. Each timer is only alerted once.
+          </p>
+          <div className="flex items-center gap-3">
+            <Input
+              id="timer-threshold"
+              type="number"
+              min="1"
+              max="48"
+              step="0.5"
+              value={localThreshold}
+              onChange={(e) => {
+                setLocalThreshold(e.target.value);
+                setHasChanges(true);
+              }}
+              className="w-32"
+              disabled={!localEnabled}
+            />
+            <span className="text-sm text-muted-foreground">hours</span>
+          </div>
+        </div>
+
+        {hasChanges && (
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSave}
+              disabled={saveMutation.isPending}
+              style={{ backgroundColor: 'hsl(179, 100%, 39%)', color: 'white' }}
+            >
+              {saveMutation.isPending ? "Saving..." : "Save Settings"}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function TasksSettingsPage() {
   const [activeTab, setActiveTab] = useState("statuses");
@@ -1408,13 +1542,7 @@ export default function TasksSettingsPage() {
             </div>
           </div>
 
-          <Card>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Global task settings coming soon. This will include default assignees, auto-due dates, time tracking requirements, etc.
-              </div>
-            </CardContent>
-          </Card>
+          <LongRunningTimerSettings />
         </TabsContent>
       </Tabs>
 

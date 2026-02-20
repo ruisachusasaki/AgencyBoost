@@ -2040,6 +2040,14 @@ async function runStartupMigrations() {
       }).catch(err => {
         log(`⚠️ Failed to start weekly hours check service: ${err.message}`);
       });
+
+      // Start long-running timer alert service
+      import('./longRunningTimerService').then(({ startLongRunningTimerCheck }) => {
+        startLongRunningTimerCheck();
+        log("✅ Long-running timer alert service started");
+      }).catch(err => {
+        log(`⚠️ Failed to start long-running timer alert service: ${err.message}`);
+      });
     });
   });
 })();

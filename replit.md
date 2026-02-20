@@ -1,17 +1,7 @@
 # AgencyBoost CRM System
 
 ## Overview
-AgencyBoost is a comprehensive CRM system designed for marketing agencies. Its primary purpose is to enhance operational efficiency and oversight through features like client asset approval workflows, robust automation, sales reporting, and a responsive user interface. It aims to streamline client, project, campaign, lead, task, and invoice management, providing a modern solution for agencies.
-
-## Documentation
-All project documentation is organized in the `docs/` folder. See [docs/README.md](docs/README.md) for the complete index.
-
-| Folder | Contents |
-|--------|----------|
-| `docs/modules/` | Feature documentation by module (Sales, etc.) |
-| `docs/guides/` | How-to guides for users (permissions, bulk actions) |
-| `docs/qa/` | QA checklists and test plans |
-| `docs/technical/` | Technical specs, setup guides, deployment plans |
+AgencyBoost is a comprehensive CRM system for marketing agencies, aiming to enhance operational efficiency and oversight. It streamlines client, project, campaign, lead, task, and invoice management through features like client asset approval workflows, robust automation, sales reporting, and a responsive user interface.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -32,56 +22,40 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Database**: PostgreSQL with Drizzle ORM.
 
 ### UI/UX Decisions
-- Responsive sidebar navigation and mobile-first design using Radix UI, shadcn/ui, and Tailwind CSS for 3-column layouts.
-- Enhanced visual design for pipeline views and an icon picker.
+- Responsive sidebar navigation and mobile-first design using Radix UI, shadcn/ui, and Tailwind CSS.
+- Dark/Light Mode with localStorage persistence and system preference detection.
 - Component-scoped CSS with design system variables.
-- Responsive tab navigation with intelligent overflow menus for sections like HR, adapting to screen size breakpoints.
-- Dark/Light Mode with localStorage persistence and system preference detection, using Tailwind's class-based dark mode with global CSS overrides.
 
 ### Technical Implementations
-- **Authentication & Authorization**: Direct Google OAuth 2.0 authentication (migrated from Replit Auth OIDC) with multi-user support, automatic migration logic, session management, and role-based access control (Admin, Manager, User, Accounting).
-    - **Hierarchical Permission System**: Comprehensive permission enforcement with module → tab → action structure:
-        - **Permission Format**: Keys follow hierarchical "module.tab.action" format (e.g., "clients.list.view", "tasks.templates.manage", "reports.sales.export")
-        - **13 Permission Modules**: clients, sales, tasks, leads, campaigns, workflows, calendar, hr, training, knowledge_base, reports, settings
-        - **Three-Level Enforcement**: (1) Module-level page access using RequirePermission route wrappers in App.tsx, (2) Tab/section visibility using useHasPermissions and useRolePermissions hooks, (3) Action-level controls using PermissionGate component
-        - **Role Templates**: Pre-configured permission sets for Admin (all permissions), Manager (team oversight), Accounting (financial access), User (basic operations) defined in shared/role-templates.ts
-        - **Permission Files**: Templates in shared/permission-templates.ts, role defaults in shared/role-templates.ts, migration mapping in server/migrations/migrate-permissions.ts
-        - **Hook Usage**: useRolePermissions() provides semantic permission flags (canEditAllTimeEntries, canManageArticles, canDeleteProducts, etc.) to replace hardcoded role === 'Admin' checks
-        - **Backward Compatibility**: Migration script maps old flat permission keys to new hierarchical format, supporting both formats during transition
-        - **Admin Bypass**: Admin role automatically has all permissions (bypasses all checks)
-- **Data Management**: Relational schema, CRUD operations, audit logs, sorting, pagination, CSV import/export, and custom fields.
-- **Google Calendar Integration**: Per-user OAuth 2.0 with Google Calendar API, featuring two-way sync, incremental sync, contact creation from attendees, availability blocking, workflow triggers, optimized storage, event caching, and sync preferences.
-- **Business Timezone**: Account-level timezone setting with a lightweight API endpoint, React hook, and timezone-aware helper functions for consistent date calculations.
-- **Task Management**: Hierarchical sub-tasks, scheduling, dependencies, recurring tasks, bulk actions, and dynamic project progress.
-    - **Task Intake Form**: Section-based hierarchical intake form with conditional visibility. 23 sections covering Task Basics, Department Selection (Creative/DevOps/Data), and department-specific sub-sections. 111 questions with 180 answer options. 5 TRIGGER questions drive visibility logic: department, creative_type, devops_type, data_type, priority_level. Visibility conditions use JSON structure with single rules ({triggerQuestionId, requiredValues}) or complex rules ({rules: [...], logic: "AND"}). Description Generation: Template engine auto-generates markdown task descriptions from intake answers using section-based templates with {{variable}}, {{#if}}, and {{#each}} syntax. Sanitized with DOMPurify before rendering. Assignment Rules: Automatic task routing based on form answers. Rules evaluate conditions against answers (supports array/multi-select, equals, contains, in operators). Role-based assignment maps positions to staff. Catch-all rules supported via empty conditions. Priority ordering (lower = first). Categories and tags auto-applied. UI in Settings > Tasks > Assignment Rules tab.
-- **Communication**: Smart Lists, Email/SMS, VoIP calling (Twilio-based browser calling for leads), document management, notes, calendar management with dynamic merge tags, and unified templating.
-- **Automation System**: GoHighLevel-style, API-driven, database-backed workflow engine with 25+ trigger definitions and 13+ action types, featuring conditional evaluation and variable interpolation.
-    - **Slack Workflow Integration**: Full Zapier-like Slack support with 6 action types (Send Message, Send DM, Add Reaction, Create Channel, Set Topic, Create Reminder) and 4 trigger types (Message Received, Reaction Added, Bot Mentioned, Channel Created). Uses Slack Events API webhook with signature verification.
-- **Client Management**: Client team assignment (drag-and-drop), health scoring, asset approval workflow with annotation, customizable column views, billing information, and comprehensive bulk actions.
-- **HR Features**: Time off requests (simplified global types with customizable settings), job application forms, watchers, expense reports, and a 1-on-1 meeting tracker.
-    - **1-on-1 Meetings**: Includes meeting recording links, position-specific KPI tracking, two-tab navigation, URL-based routing, private notes, and null-safety. Integrates with the internal AgencyBoost calendar, and optionally Google Calendar for synced events. **On-demand recurring**: Next meeting instance is only created when the current meeting is finished (not bulk-generated upfront).
-    - **1v1 Performance Reports**: Aggregates KPI performance with tracking, filtering, search, sorting, and role-based access control.
-    - **Organization Chart**: Interactive ReactFlow-based visualization with Dagre layout, department color-coding, search, and position-only structure builder.
-    - **PX Meetings**: Team meeting feature for managers/admins with 5 customizable segments (What's Working/KPIs, Sales Opportunities, Areas of Opportunities, Action Plan, Action Items), multi-attendee support, recording links, recurring meetings (weekly/biweekly/monthly with end date), and full CRUD operations. Accessible via "PX Meetings" tab in HR section. Standardized duration options (15 min, 30 min, 45 min, 1 hour, 1.5 hours, 2 hours) across all meeting modals. **On-demand recurring**: Next meeting instance is only created when the current meeting is finished (not bulk-generated upfront), similar to recurring tasks. Push-to-next also generates the next meeting on-demand if it doesn't exist yet. **Collaborative editing**: Multiple attendees can edit the same meeting simultaneously. Field-level auto-save (PATCH /api/px-meetings/:id/segments) with 1.5s debounce saves each segment independently. Polling every 5s with smart merge skips fields currently being edited. Presence tracking shows active editors via heartbeat system.
+- **Authentication & Authorization**: Direct Google OAuth 2.0 with multi-user support, session management, and role-based access control (Admin, Manager, User, Accounting). Features a comprehensive hierarchical permission system (module.tab.action format) with Admin bypass and backward compatibility for existing permissions.
+- **Data Management**: Relational schema, CRUD, audit logs, sorting, pagination, CSV import/export, and custom fields.
+- **Google Calendar Integration**: Per-user two-way sync with Google Calendar API, including incremental sync, contact creation, availability blocking, and workflow triggers.
+- **Business Timezone**: Account-level timezone setting for consistent date calculations.
+- **Task Management**: Hierarchical sub-tasks, scheduling, dependencies, recurring tasks, bulk actions. Features a section-based task intake form with conditional visibility, templated description generation, and automatic assignment rules based on form answers.
+- **Communication**: Smart Lists, Email/SMS, Twilio-based VoIP calling, document management, notes, calendar management, and unified templating.
+- **Automation System**: API-driven, database-backed workflow engine with triggers and action types, supporting conditional evaluation and variable interpolation. Includes full Zapier-like Slack integration for various actions and triggers.
+- **Client Management**: Client team assignment, health scoring, asset approval workflow with annotation, customizable column views, billing information, and bulk actions.
+- **HR Features**: Time off requests, job application forms, expense reports, 1-on-1 meeting tracker (on-demand recurring, integrates with internal/Google Calendar), 1v1 performance reports, and an interactive organization chart. Includes PX Meetings, a collaborative team meeting feature with customizable segments, recurring options, field-level auto-save, and presence tracking.
 - **Sales Reports**: Pipeline and Sales Rep Reports with date range filtering.
 - **Sales Settings**: Dynamic minimum margin threshold configuration for quotes.
-- **Quotes Management**: Modern table-based layout with sortable columns, inline status updates, action buttons, low margin highlighting, and pagination.
+- **Quotes Management**: Modern table-based layout with sortable columns, inline status updates, and low margin highlighting.
 - **Lead Management**: Customizable lead source options.
 - **Quote to Client Products Transfer**: Automatic transfer of accepted quote products/bundles.
 - **Predictive Hiring Alerts**: Staffing capacity prediction with configurable alerts.
 - **Team Workload Reports**: Comprehensive analytics for staff workload.
 - **Activity & Comments**: Global timer, activity logging, and a threaded comments system with @mentions and emoji picker.
-- **Time Entry Editing**: Admins and managers can edit time entries in the TimeSheet View when viewing "All Users". Clickable time cells show a pencil icon on hover, opening an edit modal to adjust durations. API endpoints enforce role-based access control.
+- **Time Entry Editing**: Admins and managers can edit time entries in the TimeSheet View.
+- **Long-Running Timer Alerts**: Background service notifies users and admins of timers exceeding a configurable threshold.
 - **File & Media**: Advanced uploads, inline media display, voice recording, secure object storage, and collaborative annotation.
-- **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, enhanced search, draft/published workflow with version history, auto-generated sticky Table of Contents, breadcrumb navigation, and related articles suggestions.
-- **AI Assistant**: OpenAI-powered chat widget that indexes Knowledge Base content (SOPs/Playbooks) to provide quick answers to team questions. Features a floating chat interface in the bottom-right corner, keyword-based article search, conversation history, and source citations.
-- **User Preferences**: Per-user view customization system storing column visibility and widths. Tasks Table View supports drag-to-resize columns with pixel-based width persistence.
-- **Notification System**: Database-backed system with bell icon, @mention detection, settings panel, and My Mentions widget.
-- **User Profile Settings**: Rich text editor (TipTap) for email signature with HTML formatting support.
-- **Multi-Dashboard System**: Users can create multiple named dashboards with tab-based navigation and management dialogs.
-- **Dashboard Widgets**: Customizable dashboard with drag-and-drop widget management, offering various categories of real-time data widgets.
-- **Global Search**: Intelligent search across clients, leads, and tasks with debouncing, real-time results, type-specific icons, and direct navigation.
-- **Ticketing System**: Admin-only bug report and feature request tracking. Tables: tickets, ticket_comments, ticket_attachments, ticket_routing_rules. Features include ticket CRUD, comments (with internal notes), status lifecycle (open/in_progress/on_hold/resolved/closed), priority levels, type classification, auto-tracked response and resolution times, aging reports, response time analytics, screenshot uploads (object storage), Loom video URL field, and automatic ticket routing rules. Permission module: tickets (list/comments/assign/reports tabs). Routes under /tickets and /tickets/:id. Settings page at /settings/tickets for managing routing rules (conditions: type, priority; actions: assign to user). Routing rules auto-assign tickets on creation based on type/priority matching.
+- **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, search, draft/published workflow, version history, auto-generated Table of Contents, and related articles suggestions.
+- **AI Assistant**: OpenAI-powered chat widget indexing Knowledge Base content for quick answers, featuring conversation history and source citations.
+- **User Preferences**: Per-user view customization for column visibility and widths, including drag-to-resize for task tables.
+- **Notification System**: Database-backed system with bell icon, @mention detection, and settings panel.
+- **User Profile Settings**: Rich text editor for email signatures.
+- **Multi-Dashboard System**: Users can create multiple named dashboards with tab-based navigation.
+- **Dashboard Widgets**: Customizable dashboards with drag-and-drop widget management and real-time data.
+- **Global Search**: Intelligent search across clients, leads, and tasks with real-time results and direct navigation.
+- **Ticketing System**: Admin-only bug report and feature request tracking with CRUD, comments, status lifecycle, priority levels, type classification, response time analytics, screenshot uploads, Loom video URL field, and automatic ticket routing rules.
 
 ## External Dependencies
 
