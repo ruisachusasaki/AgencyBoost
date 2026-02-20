@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { JobApplication, JobApplicationComment } from "@shared/schema";
+import { LinkifyText } from "@/components/ui/linkify-text";
 
 export default function ApplicantDetailPage() {
   const { id } = useParams();
@@ -734,7 +735,7 @@ export default function ApplicantDetailPage() {
                               {comment.createdAt && new Date(comment.createdAt).toLocaleDateString()}
                             </p>
                           </div>
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap"><LinkifyText text={comment.content} /></p>
                         </div>
                       </div>
                     ))

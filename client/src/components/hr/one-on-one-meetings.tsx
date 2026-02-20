@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { LinkifyText } from "@/components/ui/linkify-text";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfWeek, addWeeks, parseISO } from "date-fns";
@@ -2479,7 +2480,7 @@ function MeetingEditor({
                           {format(new Date(comment.createdAt), "MMM d, h:mm a")}
                         </span>
                       </div>
-                      <p className="text-sm">{comment.content}</p>
+                      <p className="text-sm"><LinkifyText text={comment.content} /></p>
                     </div>
                   ))}
                   <div className="flex gap-2">

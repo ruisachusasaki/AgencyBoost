@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Send, AtSign, Trash2, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { linkifyString } from "@/components/ui/linkify-text";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -243,7 +244,7 @@ export default function RoadmapComments({ clientId, roadmapEntryId }: RoadmapCom
           </span>
         );
       }
-      return part;
+      return <span key={index}>{linkifyString(part)}</span>;
     });
   };
 

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { linkifyString } from "@/components/ui/linkify-text";
 
 interface Staff {
   id: string;
@@ -55,19 +56,17 @@ export function MentionText({ text, className = "" }: MentionTextProps) {
   const renderTextWithMentions = () => {
     const mentions = parseMentions(text);
     if (mentions.length === 0) {
-      return <span className={className}>{text}</span>;
+      return <span className={className}>{linkifyString(text)}</span>;
     }
 
     let lastIndex = 0;
     const parts: (string | JSX.Element)[] = [];
 
     mentions.forEach((mention, index) => {
-      // Add text before mention
       if (mention.start > lastIndex) {
-        parts.push(text.slice(lastIndex, mention.start));
+        parts.push(...linkifyString(text.slice(lastIndex, mention.start)));
       }
       
-      // Add highlighted mention with actual name from database
       const actualName = mention.userId ? getStaffName(mention.userId) : mention.userName;
       parts.push(
         <span 
@@ -83,9 +82,8 @@ export function MentionText({ text, className = "" }: MentionTextProps) {
       lastIndex = mention.end;
     });
 
-    // Add remaining text
     if (lastIndex < text.length) {
-      parts.push(text.slice(lastIndex));
+      parts.push(...linkifyString(text.slice(lastIndex)));
     }
 
     return <span className={className}>{parts}</span>;

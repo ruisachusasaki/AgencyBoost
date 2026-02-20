@@ -10,6 +10,7 @@ import { Send, AtSign, User, Reply, Smile, Paperclip, Download, FileText, Image,
 import { useToast } from "@/hooks/use-toast";
 import { FileUploader } from "./FileUploader";
 import { ImageAnnotationModal } from "./ImageAnnotationModal";
+import { linkifyString } from "@/components/ui/linkify-text";
 
 interface TaskComment {
   id: string;
@@ -441,7 +442,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
 
   const formatCommentContent = (content: string, mentionIds: string[] = []) => {
     if (!mentionIds || mentionIds.length === 0) {
-      return <span>{content}</span>;
+      return <span>{linkifyString(content)}</span>;
     }
 
     const mentionedNames: string[] = [];
@@ -454,7 +455,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
     }
 
     if (mentionedNames.length === 0) {
-      return <span>{content}</span>;
+      return <span>{linkifyString(content)}</span>;
     }
 
     const sortedNames = [...mentionedNames].sort((a, b) => b.length - a.length);
@@ -485,7 +486,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
               </Badge>
             );
           }
-          return <span key={index}>{part.text}</span>;
+          return <span key={index}>{linkifyString(part.text)}</span>;
         })}
       </span>
     );
