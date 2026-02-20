@@ -21,7 +21,7 @@ export default function MeetingTimerIndicator() {
 
   const goToMeeting = () => {
     if (activeMeeting.type === 'px') {
-      setLocation(`/hr?tab=px-meetings&meetingId=${activeMeeting.id}`);
+      setLocation(`/hr/px-meetings/${activeMeeting.id}`);
     } else {
       setLocation(`/hr?tab=one-on-one&meetingId=${activeMeeting.id}`);
     }
