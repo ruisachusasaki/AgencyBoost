@@ -37498,7 +37498,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const offset = (pageNum - 1) * limitNum;
 
       const conditions: any[] = [];
-      if (status) conditions.push(eq(tickets.status, status as string));
+      if (status) {
+        const statusValues = (status as string).split(",").filter(Boolean);
+        if (statusValues.length === 1) {
+          conditions.push(eq(tickets.status, statusValues[0]));
+        } else if (statusValues.length > 1) {
+          conditions.push(inArray(tickets.status, statusValues));
+        }
+      }
       if (type) conditions.push(eq(tickets.type, type as string));
       if (priority) conditions.push(eq(tickets.priority, priority as string));
       if (assignedTo) conditions.push(eq(tickets.assignedTo, assignedTo as string));

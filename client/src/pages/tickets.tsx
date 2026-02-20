@@ -12,7 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Trash2, Eye, Pencil, ChevronLeft, ChevronRight, Ticket, AlertCircle, Clock, CheckCircle2, BarChart3, Upload, X, Video, Image as ImageIcon, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Search, Trash2, Eye, Pencil, ChevronLeft, ChevronRight, Ticket, AlertCircle, Clock, CheckCircle2, BarChart3, Upload, X, Video, Image as ImageIcon, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Check, ChevronsUpDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -140,7 +142,9 @@ export default function TicketsPage() {
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<"tickets" | "reports">("tickets");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const allStatuses = ["open", "in_progress", "on_hold", "resolved", "closed"];
+  const defaultStatuses = ["open", "in_progress", "on_hold"];
+  const [statusFilter, setStatusFilter] = useState<string[]>(defaultStatuses);
   const [typeFilter, setTypeFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -158,7 +162,9 @@ export default function TicketsPage() {
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
-    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (statusFilter.length > 0 && statusFilter.length < allStatuses.length) {
+      params.set("status", statusFilter.join(","));
+    }
     if (typeFilter !== "all") params.set("type", typeFilter);
     if (priorityFilter !== "all") params.set("priority", priorityFilter);
     if (searchTerm) params.set("search", searchTerm);
@@ -401,19 +407,53 @@ export default function TicketsPage() {
       ) : (
         <>
           <div className="flex flex-wrap gap-3 items-center">
-            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="on_hold">On Hold</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[180px] justify-between text-sm font-normal">
+                  {statusFilter.length === allStatuses.length
+                    ? "All Status"
+                    : statusFilter.length === 0
+                    ? "No Status"
+                    : `${statusFilter.length} Status Selected`}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-2" align="start">
+                <div className="flex flex-col gap-1">
+                  <button
+                    className="flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-accent text-left"
+                    onClick={() => { setStatusFilter(statusFilter.length === allStatuses.length ? [] : [...allStatuses]); setCurrentPage(1); }}
+                  >
+                    <Checkbox checked={statusFilter.length === allStatuses.length} className="h-4 w-4" />
+                    <span className="font-medium">All Status</span>
+                  </button>
+                  <div className="border-t my-1" />
+                  {[
+                    { value: "open", label: "Open" },
+                    { value: "in_progress", label: "In Progress" },
+                    { value: "on_hold", label: "On Hold" },
+                    { value: "resolved", label: "Resolved" },
+                    { value: "closed", label: "Closed" },
+                  ].map((s) => (
+                    <button
+                      key={s.value}
+                      className="flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-accent text-left"
+                      onClick={() => {
+                        setStatusFilter((prev) =>
+                          prev.includes(s.value)
+                            ? prev.filter((v) => v !== s.value)
+                            : [...prev, s.value]
+                        );
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <Checkbox checked={statusFilter.includes(s.value)} className="h-4 w-4" />
+                      <span>{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
 
             <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-[170px]">
