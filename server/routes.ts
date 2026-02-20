@@ -37596,8 +37596,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let match = true;
             if (conditions.type && conditions.type !== (type || "bug")) match = false;
             if (conditions.priority && conditions.priority !== (priority || "medium")) match = false;
-            if (match && Object.keys(conditions).length > 0) {
-              if (rule.assignToUserId) finalAssignedTo = rule.assignToUserId;
+            if (match && rule.assignToUserId) {
+              finalAssignedTo = rule.assignToUserId;
               break;
             }
           }

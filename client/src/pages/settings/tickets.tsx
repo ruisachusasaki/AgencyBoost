@@ -45,7 +45,7 @@ const defaultRuleForm = {
   priority: 0,
   conditionType: "all",
   conditionPriority: "all",
-  assignToUserId: "",
+  assignToUserId: "none",
   autoSetPriority: "",
 };
 
@@ -125,7 +125,7 @@ export default function TicketsSettingsPage() {
       priority: rule.priority,
       conditionType: conditions.type || "all",
       conditionPriority: conditions.priority || "all",
-      assignToUserId: rule.assignToUserId || "",
+      assignToUserId: rule.assignToUserId || "none",
       autoSetPriority: rule.autoSetPriority || "",
     });
     setShowAddDialog(true);
@@ -147,7 +147,7 @@ export default function TicketsSettingsPage() {
       isActive: formData.isActive,
       priority: formData.priority,
       conditions: JSON.stringify(conditions),
-      assignToUserId: formData.assignToUserId || null,
+      assignToUserId: formData.assignToUserId && formData.assignToUserId !== "none" ? formData.assignToUserId : null,
       autoSetPriority: formData.autoSetPriority || null,
     };
 
