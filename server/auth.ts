@@ -111,8 +111,13 @@ export async function hasPermission(
   permission: 'canView' | 'canCreate' | 'canEdit' | 'canDelete' | 'canManage'
 ): Promise<boolean> {
   
+  const moduleAliases: Record<string, string> = {
+    'calendars': 'calendar',
+  };
+  const normalizedModule = moduleAliases[module] || module;
+
   try {
-    console.log("🔍 hasPermission called for:", { userId, module, permission });
+    console.log("🔍 hasPermission called for:", { userId, module: normalizedModule, permission });
     
     // Check if user has admin role through proper database queries
     console.log("📝 Querying admin roles...");
@@ -158,7 +163,7 @@ export async function hasPermission(
         .where(
           and(
             eq(granularPermissions.roleId, userRole.roleId),
-            eq(granularPermissions.module, module),
+            eq(granularPermissions.module, normalizedModule),
             eq(granularPermissions.enabled, true)
           )
         );
@@ -185,7 +190,7 @@ export async function hasPermission(
         .where(
           and(
             eq(permissions.roleId, userRole.roleId),
-            eq(permissions.module, module)
+            eq(permissions.module, normalizedModule)
           )
         );
       

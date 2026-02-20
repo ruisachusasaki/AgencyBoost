@@ -11470,10 +11470,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/staff/:id", requireAuth(), requirePermission('staff', 'canEdit'), async (req, res) => {
+  app.put("/api/staff/:id", requireAuth(), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return; // getAuthenticatedUserIdOrFail already sent 401 response
+
+      const isSelfEdit = userId === req.params.id;
+      if (!isSelfEdit) {
+        const allowed = await hasPermission(userId, 'staff', 'canEdit');
+        if (!allowed) {
+          return res.status(403).json({
+            error: "Insufficient permissions",
+            message: "You don't have canEdit permission for staff"
+          });
+        }
+      }
       
       // Get the old staff data first for audit logging  
       const [oldStaff] = await db.select().from(staff).where(eq(staff.id, req.params.id));
@@ -11483,6 +11494,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clean up the request body to handle empty date fields properly
       const cleanedBody = { ...req.body };
+
+      // For self-edits, restrict to profile-safe fields only
+      if (isSelfEdit) {
+        const allowedSelfEditFields = [
+          'phone', 'extension', 'birthdate', 'shirtSize',
+          'emergencyContactName', 'emergencyContactPhone', 'emergencyContactRelationship',
+          'address', 'city', 'state', 'zip', 'country',
+          'profileImagePath', 'assignedCalendarId', 'emailSignature',
+        ];
+        for (const key of Object.keys(cleanedBody)) {
+          if (!allowedSelfEditFields.includes(key)) {
+            delete cleanedBody[key];
+          }
+        }
+      }
       
       // Convert empty strings to null for date fields and remove undefined values
       if (cleanedBody.hireDate === '' || cleanedBody.hireDate === undefined) {
