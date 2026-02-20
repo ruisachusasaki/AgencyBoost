@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TimerProvider } from "@/contexts/TimerContext";
+import { MeetingTimerProvider } from "@/contexts/MeetingTimerContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
@@ -891,13 +892,15 @@ function App() {
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <TimerProvider>
-          <TooltipProvider>
-            <VoipProvider>
-            <Toaster />
-              <ActiveCallPanel />
-            <Router />
-          </VoipProvider>
-          </TooltipProvider>
+          <MeetingTimerProvider>
+            <TooltipProvider>
+              <VoipProvider>
+              <Toaster />
+                <ActiveCallPanel />
+              <Router />
+            </VoipProvider>
+            </TooltipProvider>
+          </MeetingTimerProvider>
         </TimerProvider>
       </QueryClientProvider>
     </ThemeProvider>

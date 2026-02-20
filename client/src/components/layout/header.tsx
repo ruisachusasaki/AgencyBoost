@@ -19,6 +19,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import TimerIndicator from "@/components/timer-indicator";
+import MeetingTimerIndicator from "@/components/meeting-timer-indicator";
 import LoginAsDropdown from "@/components/admin/login-as-dropdown";
 import { ThemeToggleButton } from "@/components/theme-toggle";
 import { GlobalPhoneDialer } from "@/components/voip/global-phone-dialer";
@@ -434,8 +435,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
         
         <div className="flex items-center gap-4">
-          {/* Timer indicator */}
+          {/* Timer indicators */}
           <TimerIndicator />
+          <MeetingTimerIndicator />
           
           {/* Global search */}
           <GlobalSearch />

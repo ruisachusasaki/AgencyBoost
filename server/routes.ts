@@ -94,7 +94,7 @@ import mailgun from "mailgun.js";
 import formData from "form-data";
 import { NotificationService, setNotificationServiceInstance } from "./notification-service";
 import { EncryptionService } from "./encryption";
-import { eq, like, ilike, or, and, asc, desc, sql, inArray, isNotNull, gt, gte, lte, getTableColumns } from "drizzle-orm";
+import { eq, like, ilike, or, and, asc, desc, sql, inArray, isNotNull, isNull, gt, gte, lte, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
@@ -26909,6 +26909,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ error: "Failed to update submission" });
+    }
+  });
+
+  // ===========================================
+  // Active Meeting Timer Route
+  // ===========================================
+
+  app.get("/api/meetings/active-timer", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const managerStaff = alias(staff, "managerStaff");
+      const reportStaff = alias(staff, "reportStaff");
+
+      const activeOneOnOnes = await db
+        .select({
+          id: oneOnOneMeetings.id,
+          meetingStartedAt: oneOnOneMeetings.meetingStartedAt,
+          managerFirstName: managerStaff.firstName,
+          managerLastName: managerStaff.lastName,
+          reportFirstName: reportStaff.firstName,
+          reportLastName: reportStaff.lastName,
+        })
+        .from(oneOnOneMeetings)
+        .innerJoin(managerStaff, eq(oneOnOneMeetings.managerId, managerStaff.id))
+        .innerJoin(reportStaff, eq(oneOnOneMeetings.directReportId, reportStaff.id))
+        .where(
+          and(
+            isNotNull(oneOnOneMeetings.meetingStartedAt),
+            isNull(oneOnOneMeetings.meetingEndedAt),
+            or(
+              eq(oneOnOneMeetings.managerId, userId),
+              eq(oneOnOneMeetings.directReportId, userId)
+            )
+          )
+        )
+        .orderBy(desc(oneOnOneMeetings.meetingStartedAt))
+        .limit(1);
+
+      const activePxMeetings = await db
+        .select({
+          id: pxMeetings.id,
+          title: pxMeetings.title,
+          meetingStartedAt: pxMeetings.meetingStartedAt,
+        })
+        .from(pxMeetings)
+        .innerJoin(pxMeetingAttendees, eq(pxMeetings.id, pxMeetingAttendees.meetingId))
+        .where(
+          and(
+            isNotNull(pxMeetings.meetingStartedAt),
+            isNull(pxMeetings.meetingEndedAt),
+            eq(pxMeetingAttendees.staffId, userId)
+          )
+        )
+        .orderBy(desc(pxMeetings.meetingStartedAt))
+        .limit(1);
+
+      const candidates: Array<{ id: string; type: 'px' | '1on1'; title: string; meetingStartedAt: string }> = [];
+
+      if (activeOneOnOnes.length > 0) {
+        const m = activeOneOnOnes[0];
+        candidates.push({
+          id: m.id,
+          type: '1on1',
+          title: `1-on-1: ${m.managerFirstName} ${m.managerLastName} & ${m.reportFirstName} ${m.reportLastName}`,
+          meetingStartedAt: new Date(m.meetingStartedAt!).toISOString(),
+        });
+      }
+
+      if (activePxMeetings.length > 0) {
+        const m = activePxMeetings[0];
+        candidates.push({
+          id: m.id,
+          type: 'px',
+          title: m.title,
+          meetingStartedAt: new Date(m.meetingStartedAt!).toISOString(),
+        });
+      }
+
+      if (candidates.length === 0) {
+        return res.json(null);
+      }
+
+      candidates.sort((a, b) => new Date(b.meetingStartedAt).getTime() - new Date(a.meetingStartedAt).getTime());
+      res.json(candidates[0]);
+    } catch (error) {
+      console.error("Error fetching active meeting timer:", error);
+      res.status(500).json({ error: "Failed to fetch active meeting timer" });
     }
   });
 
