@@ -3,8 +3,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Trash2, Edit, MessageSquare, Paperclip, Download, Clock, User, Tag as TagIcon, AlertCircle, Shield, Video, Image as ImageIcon, ExternalLink } from "lucide-react";
@@ -103,6 +106,12 @@ export default function TicketDetailPage() {
   const ticketId = params?.id;
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editType, setEditType] = useState("");
+  const [editPriority, setEditPriority] = useState("");
+  const [editLoomVideoUrl, setEditLoomVideoUrl] = useState("");
   const [commentContent, setCommentContent] = useState("");
   const [commentMentions, setCommentMentions] = useState<any[]>([]);
   const [isInternal, setIsInternal] = useState(false);
@@ -277,7 +286,16 @@ export default function TicketDetailPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setLocation(`/tickets/${ticketId}/edit`)}
+            onClick={() => {
+              if (ticket) {
+                setEditTitle(ticket.title);
+                setEditDescription(ticket.description || "");
+                setEditType(ticket.type);
+                setEditPriority(ticket.priority);
+                setEditLoomVideoUrl(ticket.loomVideoUrl || "");
+                setShowEditDialog(true);
+              }
+            }}
           >
             <Edit className="h-4 w-4 mr-2" />
             Edit Ticket
@@ -633,6 +651,96 @@ export default function TicketDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Edit Ticket Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Ticket #{ticket.ticketNumber}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Ticket title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Ticket description"
+                rows={5}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select value={editType} onValueChange={setEditType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bug">Bug</SelectItem>
+                    <SelectItem value="feature_request">Feature Request</SelectItem>
+                    <SelectItem value="improvement">Improvement</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select value={editPriority} onValueChange={setEditPriority}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-loom">Loom Video URL</Label>
+              <Input
+                id="edit-loom"
+                value={editLoomVideoUrl}
+                onChange={(e) => setEditLoomVideoUrl(e.target.value)}
+                placeholder="https://www.loom.com/share/..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-primary hover:bg-primary/90"
+              disabled={!editTitle.trim() || updateTicketMutation.isPending}
+              onClick={() => {
+                updateTicketMutation.mutate({
+                  title: editTitle.trim(),
+                  description: editDescription.trim() || null,
+                  type: editType,
+                  priority: editPriority,
+                  loomVideoUrl: editLoomVideoUrl.trim() || null,
+                } as any, {
+                  onSuccess: () => setShowEditDialog(false),
+                });
+              }}
+            >
+              {updateTicketMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
