@@ -5177,6 +5177,8 @@ export const tickets = pgTable("tickets", {
   submittedBy: uuid("submitted_by").notNull().references(() => staff.id),
   assignedTo: uuid("assigned_to").references(() => staff.id),
   tags: text("tags").array(),
+  loomVideoUrl: text("loom_video_url"),
+  screenshots: text("screenshots").array(),
   firstResponseAt: timestamp("first_response_at"),
   resolvedAt: timestamp("resolved_at"),
   closedAt: timestamp("closed_at"),
@@ -5189,6 +5191,21 @@ export const tickets = pgTable("tickets", {
   index("idx_tickets_submitted_by").on(table.submittedBy),
   index("idx_tickets_assigned_to").on(table.assignedTo),
 ]);
+
+export const ticketRoutingRules = pgTable("ticket_routing_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(0),
+  conditions: text("conditions").notNull().default("{}"),
+  assignToUserId: uuid("assign_to_user_id").references(() => staff.id),
+  assignToTeam: text("assign_to_team"),
+  autoSetPriority: text("auto_set_priority"),
+  autoAddTags: text("auto_add_tags").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 export const ticketComments = pgTable("ticket_comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -5242,3 +5259,11 @@ export const insertTicketAttachmentSchema = createInsertSchema(ticketAttachments
 });
 export type TicketAttachment = typeof ticketAttachments.$inferSelect;
 export type InsertTicketAttachment = z.infer<typeof insertTicketAttachmentSchema>;
+
+export const insertTicketRoutingRuleSchema = createInsertSchema(ticketRoutingRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type TicketRoutingRule = typeof ticketRoutingRules.$inferSelect;
+export type InsertTicketRoutingRule = z.infer<typeof insertTicketRoutingRuleSchema>;

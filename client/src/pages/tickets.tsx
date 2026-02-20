@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Trash2, Eye, Pencil, ChevronLeft, ChevronRight, Ticket, AlertCircle, Clock, CheckCircle2, BarChart3 } from "lucide-react";
+import { Plus, Search, Trash2, Eye, Pencil, ChevronLeft, ChevronRight, Ticket, AlertCircle, Clock, CheckCircle2, BarChart3, Upload, X, Video, Image as ImageIcon, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -30,6 +30,8 @@ interface TicketData {
   assignedTo?: string;
   assignedToName?: string;
   tags?: string[];
+  loomVideoUrl?: string;
+  screenshots?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -128,8 +130,8 @@ const defaultFormData = {
   description: "",
   type: "bug",
   priority: "medium",
-  assignedTo: "",
   tags: "",
+  loomVideoUrl: "",
 };
 
 export default function TicketsPage() {
@@ -149,6 +151,8 @@ export default function TicketsPage() {
   const [editingTicket, setEditingTicket] = useState<TicketData | null>(null);
   const [deletingTicket, setDeletingTicket] = useState<TicketData | null>(null);
   const [formData, setFormData] = useState(defaultFormData);
+  const [screenshotUrls, setScreenshotUrls] = useState<string[]>([]);
+  const [isUploadingScreenshot, setIsUploadingScreenshot] = useState(false);
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
@@ -225,6 +229,7 @@ export default function TicketsPage() {
     setIsCreateDialogOpen(false);
     setEditingTicket(null);
     setFormData(defaultFormData);
+    setScreenshotUrls([]);
   };
 
   const openEditDialog = (ticket: TicketData) => {
@@ -234,10 +239,70 @@ export default function TicketsPage() {
       description: ticket.description || "",
       type: ticket.type,
       priority: ticket.priority,
-      assignedTo: ticket.assignedTo || "",
       tags: Array.isArray(ticket.tags) ? ticket.tags.join(", ") : "",
+      loomVideoUrl: ticket.loomVideoUrl || "",
     });
+    setScreenshotUrls(ticket.screenshots || []);
     setIsCreateDialogOpen(true);
+  };
+
+  const handleScreenshotUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setIsUploadingScreenshot(true);
+    try {
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) {
+          toast({ title: "Invalid file", description: "Only image files are allowed.", variant: "destructive" });
+          continue;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          toast({ title: "File too large", description: "Screenshots must be under 10MB.", variant: "destructive" });
+          continue;
+        }
+        const uploadRes = await fetch("/api/objects/upload", { method: "POST", credentials: "include" });
+        if (!uploadRes.ok) throw new Error("Failed to get upload URL");
+        const { uploadURL } = await uploadRes.json();
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.addEventListener("load", async () => {
+            if (xhr.status === 200) {
+              try {
+                const aclRes = await fetch("/api/ticket-screenshots/acl", {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ imageURL: uploadURL.split("?")[0] }),
+                });
+                if (aclRes.ok) {
+                  const { objectPath } = await aclRes.json();
+                  setScreenshotUrls((prev) => [...prev, `/objects${objectPath}`]);
+                } else {
+                  throw new Error("Failed to set permissions");
+                }
+              } catch (e) {
+                reject(e);
+              }
+              resolve();
+            } else {
+              reject(new Error("Upload failed"));
+            }
+          });
+          xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+          xhr.open("PUT", uploadURL);
+          xhr.setRequestHeader("Content-Type", file.type);
+          xhr.send(file);
+        });
+      }
+    } catch (error) {
+      console.error("Screenshot upload error:", error);
+      toast({ title: "Upload failed", description: "Failed to upload screenshot. Please try again.", variant: "destructive" });
+    } finally {
+      setIsUploadingScreenshot(false);
+    }
+  };
+
+  const removeScreenshot = (index: number) => {
+    setScreenshotUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = () => {
@@ -251,8 +316,9 @@ export default function TicketsPage() {
       description: formData.description.trim(),
       type: formData.type,
       priority: formData.priority,
-      assignedTo: formData.assignedTo && formData.assignedTo !== "unassigned" ? formData.assignedTo : undefined,
       tags: formData.tags ? formData.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
+      loomVideoUrl: formData.loomVideoUrl.trim() || null,
+      screenshots: screenshotUrls.length > 0 ? screenshotUrls : null,
     };
 
     if (editingTicket) {
@@ -502,7 +568,7 @@ export default function TicketsPage() {
       )}
 
       <Dialog open={isCreateDialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); }}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingTicket ? "Edit Ticket" : "Create New Ticket"}</DialogTitle>
             <DialogDescription>
@@ -549,20 +615,63 @@ export default function TicketsPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Assigned To</Label>
-              <Select value={formData.assignedTo} onValueChange={(v) => setFormData({ ...formData, assignedTo: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select staff member" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {staff.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>
-                      {s.firstName} {s.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="loomVideoUrl" className="flex items-center gap-1.5">
+                <Video className="w-4 h-4" />
+                Loom Video URL
+              </Label>
+              <Input
+                id="loomVideoUrl"
+                value={formData.loomVideoUrl}
+                onChange={(e) => setFormData({ ...formData, loomVideoUrl: e.target.value })}
+                placeholder="https://www.loom.com/share/..."
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400">Paste a Loom link to show the issue in video</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4" />
+                Screenshots
+              </Label>
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                {screenshotUrls.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {screenshotUrls.map((url, idx) => (
+                      <div key={idx} className="relative group">
+                        <img
+                          src={url}
+                          alt={`Screenshot ${idx + 1}`}
+                          className="w-full h-20 object-cover rounded border border-gray-200 dark:border-gray-700"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeScreenshot(idx)}
+                          className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <label className="flex flex-col items-center cursor-pointer py-2">
+                  {isUploadingScreenshot ? (
+                    <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+                  ) : (
+                    <Upload className="w-6 h-6 text-gray-400" />
+                  )}
+                  <span className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {isUploadingScreenshot ? "Uploading..." : "Click to upload screenshots"}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => handleScreenshotUpload(e.target.files)}
+                    disabled={isUploadingScreenshot}
+                  />
+                </label>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="tags">Tags</Label>

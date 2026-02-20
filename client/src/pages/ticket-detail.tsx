@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Trash2, Edit, MessageSquare, Paperclip, Download, Clock, User, Tag as TagIcon, AlertCircle, Shield } from "lucide-react";
+import { ArrowLeft, Trash2, Edit, MessageSquare, Paperclip, Download, Clock, User, Tag as TagIcon, AlertCircle, Shield, Video, Image as ImageIcon, ExternalLink } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -45,6 +45,8 @@ type Ticket = {
   submitterName: string;
   assigneeName: string | null;
   tags: string[];
+  loomVideoUrl: string | null;
+  screenshots: string[] | null;
   firstResponseAt: string | null;
   resolvedAt: string | null;
   closedAt: string | null;
@@ -302,6 +304,71 @@ export default function TicketDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Loom Video */}
+          {ticket.loomVideoUrl && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Video className="h-5 w-5" />
+                  Loom Video
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {ticket.loomVideoUrl.includes("loom.com/share/") ? (
+                  <div className="aspect-video rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                    <iframe
+                      src={ticket.loomVideoUrl.replace("/share/", "/embed/")}
+                      frameBorder="0"
+                      allowFullScreen
+                      className="w-full h-full"
+                    />
+                  </div>
+                ) : (
+                  <a
+                    href={ticket.loomVideoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-primary hover:underline"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    {ticket.loomVideoUrl}
+                  </a>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Screenshots */}
+          {ticket.screenshots && ticket.screenshots.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5" />
+                  Screenshots ({ticket.screenshots.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {ticket.screenshots.map((url, idx) => (
+                    <a
+                      key={idx}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary transition-all"
+                    >
+                      <img
+                        src={url}
+                        alt={`Screenshot ${idx + 1}`}
+                        className="w-full h-40 object-cover"
+                      />
+                    </a>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Comments */}
           <Card>

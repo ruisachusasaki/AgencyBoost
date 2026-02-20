@@ -20,7 +20,8 @@ import {
   Contact,
   Banknote,
   Target,
-  Bot
+  Bot,
+  Ticket
 } from "lucide-react";
 
 interface SettingsNavItem {
@@ -49,6 +50,7 @@ const allSettingsNavigation: SettingsNavItem[] = [
   { name: "Tasks", href: "/settings/tasks", icon: Layers, permission: "settings.tasks.view" },
   { name: "Workflows", href: "/settings/automation-triggers", icon: Zap, permission: "settings.workflows.view" },
   { name: "Audit Logs", href: "/settings/audit-logs", icon: ScrollText, permission: "settings.audit_logs.view" },
+  { name: "Tickets", href: "/settings/tickets", icon: Ticket, permission: "settings.view_general_settings" },
 ];
 
 export default function Settings() {
@@ -124,6 +126,7 @@ function getSettingDescription(name: string): string {
     "Tasks": "Configure task statuses, priorities, and settings",
     "Workflows": "Manage automation trigger definitions and workflows",
     "Audit Logs": "View system activity and audit trail",
+    "Tickets": "Configure ticket routing and management rules",
   };
   return descriptions[name] || "";
 }

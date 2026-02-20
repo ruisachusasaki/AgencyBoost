@@ -78,8 +78,8 @@ import {
   toolDirectoryCategories, toolDirectoryTools,
   pxMeetings, pxMeetingAttendees,
   taskCategories,
-  tickets, ticketComments, ticketAttachments,
-  insertTicketSchema, insertTicketCommentSchema
+  tickets, ticketComments, ticketAttachments, ticketRoutingRules,
+  insertTicketSchema, insertTicketCommentSchema, insertTicketRoutingRuleSchema
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
@@ -37427,6 +37427,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           priority: tickets.priority,
           status: tickets.status,
           tags: tickets.tags,
+          loomVideoUrl: tickets.loomVideoUrl,
+          screenshots: tickets.screenshots,
           submittedBy: tickets.submittedBy,
           assignedTo: tickets.assignedTo,
           firstResponseAt: tickets.firstResponseAt,
@@ -37488,6 +37490,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           priority: tickets.priority,
           status: tickets.status,
           tags: tickets.tags,
+          loomVideoUrl: tickets.loomVideoUrl,
+          screenshots: tickets.screenshots,
           submittedBy: tickets.submittedBy,
           assignedTo: tickets.assignedTo,
           firstResponseAt: tickets.firstResponseAt,
@@ -37559,7 +37563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validTypes = ['bug', 'feature_request', 'improvement', 'question'];
       const validPriorities = ['low', 'medium', 'high', 'critical'];
-      const { title, description, type, priority, assignedTo, tags: ticketTags } = req.body;
+      const { title, description, type, priority, assignedTo, tags: ticketTags, loomVideoUrl, screenshots: screenshotUrls } = req.body;
       if (!title || typeof title !== 'string' || title.trim().length === 0) {
         return res.status(400).json({ message: 'Title is required' });
       }
@@ -37570,6 +37574,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid priority. Must be: ' + validPriorities.join(', ') });
       }
 
+      let finalAssignedTo = assignedTo || null;
+      if (!finalAssignedTo) {
+        try {
+          const rules = await db.select().from(ticketRoutingRules)
+            .where(eq(ticketRoutingRules.isActive, true))
+            .orderBy(ticketRoutingRules.priority);
+          for (const rule of rules) {
+            const conditions = JSON.parse(rule.conditions || "{}");
+            let match = true;
+            if (conditions.type && conditions.type !== (type || "bug")) match = false;
+            if (conditions.priority && conditions.priority !== (priority || "medium")) match = false;
+            if (match && Object.keys(conditions).length > 0) {
+              if (rule.assignToUserId) finalAssignedTo = rule.assignToUserId;
+              break;
+            }
+          }
+        } catch (e) {
+          console.error("Error evaluating routing rules:", e);
+        }
+      }
+
       const [newTicket] = await db.insert(tickets).values({
         title,
         description: description || null,
@@ -37577,8 +37602,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         priority: priority || "medium",
         status: "open",
         submittedBy: userId,
-        assignedTo: assignedTo || null,
+        assignedTo: finalAssignedTo,
         tags: ticketTags || null,
+        loomVideoUrl: loomVideoUrl || null,
+        screenshots: screenshotUrls || null,
       }).returning();
 
       res.status(201).json(newTicket);
@@ -37595,7 +37622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/tickets/:id", requireAuth(), requireGranularPermission("tickets.list.edit"), async (req, res) => {
     try {
       const { id } = req.params;
-      const { title, description, type, priority, status, assignedTo, tags: ticketTags } = req.body;
+      const { title, description, type, priority, status, assignedTo, tags: ticketTags, loomVideoUrl, screenshots: screenshotUrls } = req.body;
 
       const [existing] = await db.select().from(tickets).where(eq(tickets.id, id)).limit(1);
       if (!existing) {
@@ -37609,6 +37636,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (priority !== undefined) updateData.priority = priority;
       if (assignedTo !== undefined) updateData.assignedTo = assignedTo || null;
       if (ticketTags !== undefined) updateData.tags = ticketTags;
+      if (loomVideoUrl !== undefined) updateData.loomVideoUrl = loomVideoUrl || null;
+      if (screenshotUrls !== undefined) updateData.screenshots = screenshotUrls || null;
 
       if (status !== undefined) {
         updateData.status = status;
@@ -37700,6 +37729,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting ticket comment:", error);
       res.status(500).json({ error: "Failed to delete comment" });
+    }
+  });
+
+  app.put("/api/ticket-screenshots/acl", requireAuth(), async (req, res) => {
+    if (!req.body.imageURL) {
+      return res.status(400).json({ error: "imageURL is required" });
+    }
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(req.body.imageURL);
+      res.status(200).json({ objectPath });
+    } catch (error) {
+      console.error("Error setting ticket screenshot ACL:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/ticket-routing-rules", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const rules = await db.select({
+        id: ticketRoutingRules.id,
+        name: ticketRoutingRules.name,
+        description: ticketRoutingRules.description,
+        isActive: ticketRoutingRules.isActive,
+        priority: ticketRoutingRules.priority,
+        conditions: ticketRoutingRules.conditions,
+        assignToUserId: ticketRoutingRules.assignToUserId,
+        assignToTeam: ticketRoutingRules.assignToTeam,
+        autoSetPriority: ticketRoutingRules.autoSetPriority,
+        autoAddTags: ticketRoutingRules.autoAddTags,
+        assigneeName: sql<string>`concat(${staff.firstName}, ' ', ${staff.lastName})`,
+        createdAt: ticketRoutingRules.createdAt,
+        updatedAt: ticketRoutingRules.updatedAt,
+      })
+        .from(ticketRoutingRules)
+        .leftJoin(staff, eq(ticketRoutingRules.assignToUserId, staff.id))
+        .orderBy(ticketRoutingRules.priority);
+      res.json(rules);
+    } catch (error) {
+      console.error("Error fetching routing rules:", error);
+      res.status(500).json({ error: "Failed to fetch routing rules" });
+    }
+  });
+
+  app.post("/api/ticket-routing-rules", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { name, description, isActive, priority, conditions, assignToUserId, assignToTeam, autoSetPriority, autoAddTags } = req.body;
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ error: "Name is required" });
+      }
+      const [rule] = await db.insert(ticketRoutingRules).values({
+        name: name.trim(),
+        description: description || null,
+        isActive: isActive !== false,
+        priority: priority || 0,
+        conditions: typeof conditions === "string" ? conditions : JSON.stringify(conditions || {}),
+        assignToUserId: assignToUserId || null,
+        assignToTeam: assignToTeam || null,
+        autoSetPriority: autoSetPriority || null,
+        autoAddTags: autoAddTags || null,
+      }).returning();
+      res.status(201).json(rule);
+    } catch (error) {
+      console.error("Error creating routing rule:", error);
+      res.status(500).json({ error: "Failed to create routing rule" });
+    }
+  });
+
+  app.put("/api/ticket-routing-rules/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, description, isActive, priority, conditions, assignToUserId, assignToTeam, autoSetPriority, autoAddTags } = req.body;
+      const updateData: any = { updatedAt: new Date() };
+      if (name !== undefined) updateData.name = name.trim();
+      if (description !== undefined) updateData.description = description || null;
+      if (isActive !== undefined) updateData.isActive = isActive;
+      if (priority !== undefined) updateData.priority = priority;
+      if (conditions !== undefined) updateData.conditions = typeof conditions === "string" ? conditions : JSON.stringify(conditions);
+      if (assignToUserId !== undefined) updateData.assignToUserId = assignToUserId || null;
+      if (assignToTeam !== undefined) updateData.assignToTeam = assignToTeam || null;
+      if (autoSetPriority !== undefined) updateData.autoSetPriority = autoSetPriority || null;
+      if (autoAddTags !== undefined) updateData.autoAddTags = autoAddTags || null;
+
+      const [updated] = await db.update(ticketRoutingRules).set(updateData).where(eq(ticketRoutingRules.id, id)).returning();
+      if (!updated) return res.status(404).json({ error: "Routing rule not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating routing rule:", error);
+      res.status(500).json({ error: "Failed to update routing rule" });
+    }
+  });
+
+  app.delete("/api/ticket-routing-rules/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [existing] = await db.select().from(ticketRoutingRules).where(eq(ticketRoutingRules.id, id)).limit(1);
+      if (!existing) return res.status(404).json({ error: "Routing rule not found" });
+      await db.delete(ticketRoutingRules).where(eq(ticketRoutingRules.id, id));
+      res.json({ message: "Routing rule deleted" });
+    } catch (error) {
+      console.error("Error deleting routing rule:", error);
+      res.status(500).json({ error: "Failed to delete routing rule" });
     }
   });
 

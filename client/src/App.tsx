@@ -48,6 +48,7 @@ import AutomationTriggers from "@/pages/settings/automation-triggers";
 import SalesSettings from "@/pages/settings/sales";
 import AiAssistantSettings from "@/pages/settings/ai-assistant";
 import LeadsSettings from "@/pages/settings/leads";
+import TicketsSettings from "@/pages/settings/tickets";
 import MainLayout from "@/components/layout/main-layout";
 import FormBuilder from "@/pages/form-builder";
 import SurveyBuilder from "@/pages/survey-builder";
@@ -812,6 +813,18 @@ function Router() {
             <RequirePermission module="settings" permission="settings.view_general_settings">
               <MainLayout>
                 <AuditLogs />
+              </MainLayout>
+            </RequirePermission>
+          </AuthGate>
+        )}
+      </Route>
+
+      <Route path="/settings/tickets">
+        {() => (
+          <AuthGate>
+            <RequirePermission module="settings" permission="settings.view_general_settings">
+              <MainLayout>
+                <TicketsSettings />
               </MainLayout>
             </RequirePermission>
           </AuthGate>
