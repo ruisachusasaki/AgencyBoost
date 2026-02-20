@@ -148,10 +148,12 @@ const generateSampleData = (field: Partial<FormField>): any => {
   }
 };
 
-export default function FormBuilder({ formId }: FormBuilderProps) {
+export default function FormBuilder({ formId: propFormId }: FormBuilderProps) {
   const [location, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [savedFormId, setSavedFormId] = useState<string | undefined>(propFormId);
+  const formId = savedFormId || propFormId;
   
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -303,6 +305,7 @@ export default function FormBuilder({ formId }: FormBuilderProps) {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/forms'] });
       if (!formId && savedForm?.id) {
+        setSavedFormId(savedForm.id);
         navigate(`/form-builder/${savedForm.id}`);
       }
     },
