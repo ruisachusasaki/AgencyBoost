@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -210,6 +210,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     queryKey: [`/api/px-meetings/${meetingId}`],
     enabled: !!meetingId,
     retry: 1,
+    refetchInterval: 5000,
+    staleTime: 0,
   });
 
   const { data: allStaff = [] } = useQuery<Staff[]>({
@@ -264,36 +266,62 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     return selectedMeeting.enabledElements.includes(elementId);
   };
 
+  const hasInitializedRef = useRef(false);
+
+  useEffect(() => {
+    hasInitializedRef.current = false;
+  }, [meetingId]);
+
   useEffect(() => {
     if (selectedMeeting) {
-      console.log('[PX Debug] Loading meeting - salesOpportunities raw:', selectedMeeting.salesOpportunities);
-      console.log('[PX Debug] Loading meeting - areasOfOpportunities raw:', selectedMeeting.areasOfOpportunities);
-      
       const meetingDateStr = typeof selectedMeeting.meetingDate === 'string' 
         ? selectedMeeting.meetingDate 
         : selectedMeeting.meetingDate?.toString?.() || '';
       
-      setEditFormData({
-        meetingDate: meetingDateStr,
-        meetingTime: selectedMeeting.meetingTime || "",
-        meetingDuration: selectedMeeting.meetingDuration || 60,
-        recordingLink: selectedMeeting.recordingLink || "",
-        clientId: selectedMeeting.clientId || "",
-        tags: selectedMeeting.tags || [],
-        whatsWorkingKpis: selectedMeeting.whatsWorkingKpis || "",
-        actionPlan: selectedMeeting.actionPlan || "",
-        notes: selectedMeeting.notes || "",
-        isPrivate: selectedMeeting.isPrivate || false,
-        attendeeIds: selectedMeeting.attendees?.map(a => a.id) || [],
-      });
-      const parsedSalesOpps = parseJsonArray(selectedMeeting.salesOpportunities);
-      const parsedAreasOpps = parseJsonArray(selectedMeeting.areasOfOpportunities);
-      console.log('[PX Debug] Parsed salesOpportunities:', parsedSalesOpps);
-      console.log('[PX Debug] Parsed areasOfOpportunities:', parsedAreasOpps);
-      setSalesOpportunities(parsedSalesOpps);
-      setAreasOfOpportunities(parsedAreasOpps);
-      setActionItems(parseJsonArray(selectedMeeting.actionItems));
-      setHasUnsavedChanges(false);
+      if (!hasInitializedRef.current) {
+        hasInitializedRef.current = true;
+        setEditFormData({
+          meetingDate: meetingDateStr,
+          meetingTime: selectedMeeting.meetingTime || "",
+          meetingDuration: selectedMeeting.meetingDuration || 60,
+          recordingLink: selectedMeeting.recordingLink || "",
+          clientId: selectedMeeting.clientId || "",
+          tags: selectedMeeting.tags || [],
+          whatsWorkingKpis: selectedMeeting.whatsWorkingKpis || "",
+          actionPlan: selectedMeeting.actionPlan || "",
+          notes: selectedMeeting.notes || "",
+          isPrivate: selectedMeeting.isPrivate || false,
+          attendeeIds: selectedMeeting.attendees?.map(a => a.id) || [],
+        });
+        setSalesOpportunities(parseJsonArray(selectedMeeting.salesOpportunities));
+        setAreasOfOpportunities(parseJsonArray(selectedMeeting.areasOfOpportunities));
+        setActionItems(parseJsonArray(selectedMeeting.actionItems));
+        setHasUnsavedChanges(false);
+      } else {
+        setEditFormData(prev => ({
+          ...prev,
+          meetingDate: meetingDateStr,
+          meetingTime: selectedMeeting.meetingTime || "",
+          meetingDuration: selectedMeeting.meetingDuration || 60,
+          recordingLink: selectedMeeting.recordingLink || "",
+          clientId: selectedMeeting.clientId || "",
+          tags: selectedMeeting.tags || [],
+          attendeeIds: selectedMeeting.attendees?.map(a => a.id) || [],
+          isPrivate: selectedMeeting.isPrivate || false,
+          ...(editingFieldsRef.current.has("whatsWorkingKpis") ? {} : { whatsWorkingKpis: selectedMeeting.whatsWorkingKpis || "" }),
+          ...(editingFieldsRef.current.has("actionPlan") ? {} : { actionPlan: selectedMeeting.actionPlan || "" }),
+          ...(editingFieldsRef.current.has("notes") ? {} : { notes: selectedMeeting.notes || "" }),
+        }));
+        if (!editingFieldsRef.current.has("salesOpportunities")) {
+          setSalesOpportunities(parseJsonArray(selectedMeeting.salesOpportunities));
+        }
+        if (!editingFieldsRef.current.has("areasOfOpportunities")) {
+          setAreasOfOpportunities(parseJsonArray(selectedMeeting.areasOfOpportunities));
+        }
+        if (!editingFieldsRef.current.has("actionItems")) {
+          setActionItems(parseJsonArray(selectedMeeting.actionItems));
+        }
+      }
     }
   }, [selectedMeeting]);
 
@@ -407,6 +435,76 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     },
   });
 
+  const segmentSaveMutation = useMutation({
+    mutationFn: async ({ field, value }: { field: string; value: string }) => {
+      return await apiRequest("PATCH", `/api/px-meetings/${meetingId}/segments`, { field, value });
+    },
+    onError: (error: any) => {
+      toast({ title: "Auto-save failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const editingFieldsRef = useRef<Set<string>>(new Set());
+  const debounceTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const lastSavedRef = useRef<Map<string, string>>(new Map());
+
+  const CHECKLIST_FIELDS = new Set(["salesOpportunities", "areasOfOpportunities", "actionItems"]);
+
+  const autoSaveSegment = useCallback((field: string, value: string) => {
+    if (!meetingId) return;
+    const existing = debounceTimersRef.current.get(field);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      if (lastSavedRef.current.get(field) !== value) {
+        lastSavedRef.current.set(field, value);
+        segmentSaveMutation.mutate({ field, value }, {
+          onSuccess: () => {
+            if (CHECKLIST_FIELDS.has(field)) {
+              setTimeout(() => {
+                editingFieldsRef.current.delete(field);
+              }, 2000);
+            }
+          },
+        });
+      } else if (CHECKLIST_FIELDS.has(field)) {
+        setTimeout(() => {
+          editingFieldsRef.current.delete(field);
+        }, 2000);
+      }
+      debounceTimersRef.current.delete(field);
+    }, 1500);
+    debounceTimersRef.current.set(field, timer);
+  }, [meetingId]);
+
+  const markFieldEditing = useCallback((field: string) => {
+    editingFieldsRef.current.add(field);
+  }, []);
+
+  const markFieldDone = useCallback((field: string) => {
+    setTimeout(() => {
+      editingFieldsRef.current.delete(field);
+    }, 2000);
+  }, []);
+
+  const { data: presenceData } = useQuery<{ activeUsers: Array<{ userId: string; name: string; avatar?: string }> }>({
+    queryKey: [`/api/px-meetings/${meetingId}/presence`],
+    enabled: !!meetingId,
+    refetchInterval: 10000,
+  });
+
+  useEffect(() => {
+    if (!meetingId) return;
+    const sendHeartbeat = () => {
+      apiRequest("POST", `/api/px-meetings/${meetingId}/presence`, {}).catch(() => {});
+    };
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 15000);
+    return () => {
+      clearInterval(interval);
+      apiRequest("DELETE", `/api/px-meetings/${meetingId}/presence`, {}).catch(() => {});
+    };
+  }, [meetingId]);
+
   const pushToNextMutation = useMutation({
     mutationFn: async ({ meetingId: mId, segment, itemId }: { meetingId: string; segment: string; itemId: string }) => {
       const res = await apiRequest("POST", `/api/px-meetings/${mId}/push-item`, { segment, itemId });
@@ -414,13 +512,23 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     },
     onSuccess: (data, variables) => {
       if (variables.segment === "salesOpportunities") {
-        setSalesOpportunities(prev => prev.map(item =>
-          item.id === variables.itemId ? { ...item, pushedToNextMeeting: true } : item
-        ));
+        setSalesOpportunities(prev => {
+          const newArr = prev.map(item =>
+            item.id === variables.itemId ? { ...item, pushedToNextMeeting: true } : item
+          );
+          markFieldEditing("salesOpportunities");
+          autoSaveSegment("salesOpportunities", JSON.stringify(newArr));
+          return newArr;
+        });
       } else {
-        setAreasOfOpportunities(prev => prev.map(item =>
-          item.id === variables.itemId ? { ...item, pushedToNextMeeting: true } : item
-        ));
+        setAreasOfOpportunities(prev => {
+          const newArr = prev.map(item =>
+            item.id === variables.itemId ? { ...item, pushedToNextMeeting: true } : item
+          );
+          markFieldEditing("areasOfOpportunities");
+          autoSaveSegment("areasOfOpportunities", JSON.stringify(newArr));
+          return newArr;
+        });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/px-meetings"] });
       if (meetingId) {
@@ -476,14 +584,16 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       return task;
     },
     onSuccess: (task) => {
-      // Update the action item with the task ID locally
-      setActionItems(prevItems => 
-        prevItems.map(item => 
+      setActionItems(prevItems => {
+        const newArr = prevItems.map(item => 
           item.id === actionItemToConvert?.id 
             ? { ...item, taskId: task.id }
             : item
-        )
-      );
+        );
+        markFieldEditing("actionItems");
+        autoSaveSegment("actionItems", JSON.stringify(newArr));
+        return newArr;
+      });
       setHasUnsavedChanges(true);
       
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -627,6 +737,12 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
   const handleFormChange = (updates: Partial<typeof editFormData>) => {
     setEditFormData(prev => ({ ...prev, ...updates }));
+    for (const [key, value] of Object.entries(updates)) {
+      if (["whatsWorkingKpis", "actionPlan", "notes"].includes(key)) {
+        markFieldEditing(key);
+        autoSaveSegment(key, value as string);
+      }
+    }
     setHasUnsavedChanges(true);
   };
 
@@ -645,14 +761,17 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     if (newSalesOpp.trim()) {
       const newId = `sales-${Date.now()}`;
       const currentUserId = currentUser?.staffId || currentUser?.id;
-      setSalesOpportunities([...salesOpportunities, { 
+      const newArr = [...salesOpportunities, { 
         id: newId, 
         content: newSalesOpp.trim(), 
         isCompleted: false,
         notes: newSalesOppNotes.trim() || undefined,
         createdById: currentUserId,
         createdAt: new Date().toISOString()
-      }]);
+      }];
+      setSalesOpportunities(newArr);
+      markFieldEditing("salesOpportunities");
+      autoSaveSegment("salesOpportunities", JSON.stringify(newArr));
       setHasUnsavedChanges(true);
       setNewSalesOpp("");
       setNewSalesOppNotes("");
@@ -660,7 +779,10 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   };
 
   const handleRemoveSalesOpp = (id: string) => {
-    setSalesOpportunities(salesOpportunities.filter(item => item.id !== id));
+    const newArr = salesOpportunities.filter(item => item.id !== id);
+    setSalesOpportunities(newArr);
+    markFieldEditing("salesOpportunities");
+    autoSaveSegment("salesOpportunities", JSON.stringify(newArr));
     if (expandedSalesOppId === id) {
       setExpandedSalesOppId(null);
     }
@@ -668,16 +790,22 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   };
 
   const handleToggleSalesOpp = (id: string) => {
-    setSalesOpportunities(salesOpportunities.map(item => 
+    const newArr = salesOpportunities.map(item => 
       item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
-    ));
+    );
+    setSalesOpportunities(newArr);
+    markFieldEditing("salesOpportunities");
+    autoSaveSegment("salesOpportunities", JSON.stringify(newArr));
     setHasUnsavedChanges(true);
   };
 
   const handleUpdateSalesOppNotes = (id: string, notes: string) => {
-    setSalesOpportunities(salesOpportunities.map(item => 
+    const newArr = salesOpportunities.map(item => 
       item.id === id ? { ...item, notes: notes || undefined } : item
-    ));
+    );
+    setSalesOpportunities(newArr);
+    markFieldEditing("salesOpportunities");
+    autoSaveSegment("salesOpportunities", JSON.stringify(newArr));
     setHasUnsavedChanges(true);
   };
 
@@ -685,14 +813,17 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     if (newAreaOpp.trim()) {
       const newId = `area-${Date.now()}`;
       const currentUserId = currentUser?.staffId || currentUser?.id;
-      setAreasOfOpportunities([...areasOfOpportunities, { 
+      const newArr = [...areasOfOpportunities, { 
         id: newId, 
         content: newAreaOpp.trim(), 
         isCompleted: false,
         notes: newAreaOppNotes.trim() || undefined,
         createdById: currentUserId,
         createdAt: new Date().toISOString()
-      }]);
+      }];
+      setAreasOfOpportunities(newArr);
+      markFieldEditing("areasOfOpportunities");
+      autoSaveSegment("areasOfOpportunities", JSON.stringify(newArr));
       setHasUnsavedChanges(true);
       setNewAreaOpp("");
       setNewAreaOppNotes("");
@@ -700,7 +831,10 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   };
 
   const handleRemoveAreaOpp = (id: string) => {
-    setAreasOfOpportunities(areasOfOpportunities.filter(item => item.id !== id));
+    const newArr = areasOfOpportunities.filter(item => item.id !== id);
+    setAreasOfOpportunities(newArr);
+    markFieldEditing("areasOfOpportunities");
+    autoSaveSegment("areasOfOpportunities", JSON.stringify(newArr));
     if (expandedAreaOppId === id) {
       setExpandedAreaOppId(null);
     }
@@ -708,43 +842,58 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   };
 
   const handleToggleAreaOpp = (id: string) => {
-    setAreasOfOpportunities(areasOfOpportunities.map(item => 
+    const newArr = areasOfOpportunities.map(item => 
       item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
-    ));
+    );
+    setAreasOfOpportunities(newArr);
+    markFieldEditing("areasOfOpportunities");
+    autoSaveSegment("areasOfOpportunities", JSON.stringify(newArr));
     setHasUnsavedChanges(true);
   };
 
   const handleUpdateAreaOppNotes = (id: string, notes: string) => {
-    setAreasOfOpportunities(areasOfOpportunities.map(item => 
+    const newArr = areasOfOpportunities.map(item => 
       item.id === id ? { ...item, notes: notes || undefined } : item
-    ));
+    );
+    setAreasOfOpportunities(newArr);
+    markFieldEditing("areasOfOpportunities");
+    autoSaveSegment("areasOfOpportunities", JSON.stringify(newArr));
     setHasUnsavedChanges(true);
   };
 
   const handleAddActionItem = () => {
     if (newActionItem.trim()) {
       const currentUserId = currentUser?.staffId || currentUser?.id;
-      setActionItems([...actionItems, { 
+      const newArr = [...actionItems, { 
         id: `action-${Date.now()}`, 
         content: newActionItem.trim(), 
         isCompleted: false,
         createdById: currentUserId,
         createdAt: new Date().toISOString()
-      }]);
+      }];
+      setActionItems(newArr);
+      markFieldEditing("actionItems");
+      autoSaveSegment("actionItems", JSON.stringify(newArr));
       setHasUnsavedChanges(true);
       setNewActionItem("");
     }
   };
 
   const handleRemoveActionItem = (id: string) => {
-    setActionItems(actionItems.filter(item => item.id !== id));
+    const newArr = actionItems.filter(item => item.id !== id);
+    setActionItems(newArr);
+    markFieldEditing("actionItems");
+    autoSaveSegment("actionItems", JSON.stringify(newArr));
     setHasUnsavedChanges(true);
   };
 
   const handleToggleActionItem = (id: string) => {
-    setActionItems(actionItems.map(item => 
+    const newArr = actionItems.map(item => 
       item.id === id ? { ...item, isCompleted: !item.isCompleted } : item
-    ));
+    );
+    setActionItems(newArr);
+    markFieldEditing("actionItems");
+    autoSaveSegment("actionItems", JSON.stringify(newArr));
     setHasUnsavedChanges(true);
   };
 
@@ -762,25 +911,34 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
   // Update assignment for sales opportunity
   const handleUpdateSalesOppAssignment = (id: string, assignedToId: string | undefined) => {
-    setSalesOpportunities(salesOpportunities.map(item => 
+    const newArr = salesOpportunities.map(item => 
       item.id === id ? { ...item, assignedToId } : item
-    ));
+    );
+    setSalesOpportunities(newArr);
+    markFieldEditing("salesOpportunities");
+    autoSaveSegment("salesOpportunities", JSON.stringify(newArr));
     setHasUnsavedChanges(true);
   };
 
   // Update assignment for area of opportunity
   const handleUpdateAreaOppAssignment = (id: string, assignedToId: string | undefined) => {
-    setAreasOfOpportunities(areasOfOpportunities.map(item => 
+    const newArr = areasOfOpportunities.map(item => 
       item.id === id ? { ...item, assignedToId } : item
-    ));
+    );
+    setAreasOfOpportunities(newArr);
+    markFieldEditing("areasOfOpportunities");
+    autoSaveSegment("areasOfOpportunities", JSON.stringify(newArr));
     setHasUnsavedChanges(true);
   };
 
   // Update assignment for action item
   const handleUpdateActionItemAssignment = (id: string, assignedToId: string | undefined) => {
-    setActionItems(actionItems.map(item => 
+    const newArr = actionItems.map(item => 
       item.id === id ? { ...item, assignedToId } : item
-    ));
+    );
+    setActionItems(newArr);
+    markFieldEditing("actionItems");
+    autoSaveSegment("actionItems", JSON.stringify(newArr));
     setHasUnsavedChanges(true);
   };
 
@@ -899,6 +1057,12 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             Back to Meetings
           </Button>
           <div className="flex items-center gap-2">
+            {segmentSaveMutation.isPending && (
+              <span className="text-xs text-slate-500 flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                Auto-saving...
+              </span>
+            )}
             {hasUnsavedChanges && (
               <Button onClick={handleUpdate} disabled={updateMutation.isPending} className="bg-primary hover:bg-primary/90">
                 {updateMutation.isPending ? "Saving..." : "Save Meeting"}
@@ -945,6 +1109,25 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                       <Lock className="h-3 w-3" />
                       Private
                     </Badge>
+                  )}
+                  {presenceData?.activeUsers && presenceData.activeUsers.length > 0 && (
+                    <div className="flex items-center gap-1 ml-3">
+                      <Users className="h-4 w-4 text-slate-400" />
+                      <div className="flex -space-x-2">
+                        {presenceData.activeUsers.slice(0, 8).map((user) => (
+                          <div
+                            key={user.userId}
+                            className="h-7 w-7 rounded-full bg-primary/20 border-2 border-white flex items-center justify-center text-xs font-medium text-primary"
+                            title={user.name}
+                          >
+                            {user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          </div>
+                        ))}
+                      </div>
+                      <span className="text-xs text-slate-500 ml-1">
+                        {presenceData.activeUsers.length} editing
+                      </span>
+                    </div>
                   )}
                 </div>
                 {selectedMeeting.attendees.length > 0 && (
@@ -1318,6 +1501,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   <Textarea
                     value={editFormData.whatsWorkingKpis}
                     onChange={(e) => handleFormChange({ whatsWorkingKpis: e.target.value })}
+                    onFocus={() => markFieldEditing("whatsWorkingKpis")}
+                    onBlur={() => markFieldDone("whatsWorkingKpis")}
                     placeholder="Enter what's working and KPI highlights..."
                     className="min-h-[100px]"
                   />
@@ -1624,6 +1809,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   <Textarea
                     value={editFormData.actionPlan}
                     onChange={(e) => handleFormChange({ actionPlan: e.target.value })}
+                    onFocus={() => markFieldEditing("actionPlan")}
+                    onBlur={() => markFieldDone("actionPlan")}
                     placeholder="Enter the action plan..."
                     className="min-h-[100px]"
                   />
@@ -1749,6 +1936,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
               <Textarea
                 value={editFormData.notes}
                 onChange={(e) => handleFormChange({ notes: e.target.value })}
+                onFocus={() => markFieldEditing("notes")}
+                onBlur={() => markFieldDone("notes")}
                 placeholder="Add meeting notes..."
                 className="min-h-[150px]"
               />

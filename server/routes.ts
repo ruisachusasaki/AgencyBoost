@@ -36616,6 +36616,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // --- PX Meeting Collaborative Editing: Field-level PATCH + Presence ---
+  const ALLOWED_SEGMENT_FIELDS = new Set([
+    "whatsWorkingKpis",
+    "salesOpportunities",
+    "areasOfOpportunities",
+    "actionPlan",
+    "actionItems",
+    "notes",
+  ]);
+
+  app.patch("/api/px-meetings/:id/segments", requireAuth(), async (req, res) => {
+    try {
+      const { field, value } = req.body;
+      if (!field || !ALLOWED_SEGMENT_FIELDS.has(field)) {
+        return res.status(400).json({ error: "Invalid segment field" });
+      }
+      if (typeof value !== "string") {
+        return res.status(400).json({ error: "Value must be a string" });
+      }
+      const JSON_FIELDS = new Set(["salesOpportunities", "areasOfOpportunities", "actionItems"]);
+      if (JSON_FIELDS.has(field)) {
+        try {
+          const parsed = JSON.parse(value);
+          if (!Array.isArray(parsed)) {
+            return res.status(400).json({ error: "Checklist field value must be a JSON array" });
+          }
+        } catch {
+          return res.status(400).json({ error: "Checklist field value must be valid JSON" });
+        }
+      }
+      const updateData: any = { [field]: value, updatedAt: new Date() };
+      const [updated] = await db
+        .update(pxMeetings)
+        .set(updateData)
+        .where(eq(pxMeetings.id, req.params.id))
+        .returning();
+      if (!updated) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      res.json({ field, value: (updated as any)[field], updatedAt: updated.updatedAt });
+    } catch (error: any) {
+      console.error("Error patching PX meeting segment:", error);
+      res.status(500).json({ error: "Failed to update meeting segment" });
+    }
+  });
+
+  const pxMeetingPresence = new Map<string, Map<string, { userId: string; name: string; avatar?: string; lastSeen: number }>>();
+
+  app.post("/api/px-meetings/:id/presence", requireAuth(), async (req, res) => {
+    try {
+      const meetingId = req.params.id;
+      const user = (req as any).user;
+      const userId = user?.staffId || user?.id;
+      const name = `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Unknown';
+      const avatar = user?.profileImagePath || undefined;
+
+      if (!pxMeetingPresence.has(meetingId)) {
+        pxMeetingPresence.set(meetingId, new Map());
+      }
+      const meetingMap = pxMeetingPresence.get(meetingId)!;
+      meetingMap.set(userId, { userId, name, avatar, lastSeen: Date.now() });
+
+      for (const [uid, data] of meetingMap.entries()) {
+        if (Date.now() - data.lastSeen > 60000) {
+          meetingMap.delete(uid);
+        }
+      }
+
+      const activeUsers = Array.from(meetingMap.values());
+      res.json({ activeUsers });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update presence" });
+    }
+  });
+
+  app.get("/api/px-meetings/:id/presence", requireAuth(), async (req, res) => {
+    try {
+      const meetingId = req.params.id;
+      const meetingMap = pxMeetingPresence.get(meetingId);
+      if (!meetingMap) {
+        return res.json({ activeUsers: [] });
+      }
+
+      for (const [uid, data] of meetingMap.entries()) {
+        if (Date.now() - data.lastSeen > 60000) {
+          meetingMap.delete(uid);
+        }
+      }
+
+      const activeUsers = Array.from(meetingMap.values());
+      res.json({ activeUsers });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to get presence" });
+    }
+  });
+
+  app.delete("/api/px-meetings/:id/presence", requireAuth(), async (req, res) => {
+    try {
+      const meetingId = req.params.id;
+      const user = (req as any).user;
+      const userId = user?.staffId || user?.id;
+      const meetingMap = pxMeetingPresence.get(meetingId);
+      if (meetingMap) {
+        meetingMap.delete(userId);
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to remove presence" });
+    }
+  });
+
   app.delete("/api/px-meetings/:id", requireAuth(), async (req, res) => {
     try {
       const deleteSeries = req.query.deleteSeries === 'true';
