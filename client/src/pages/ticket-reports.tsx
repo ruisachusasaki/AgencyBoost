@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Ticket, AlertCircle, Clock, Timer, CalendarDays, Bug, Lightbulb, HelpCircle, Wrench, AlertTriangle, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Ticket, AlertCircle, Clock, Timer, CalendarDays, Bug, Lightbulb, HelpCircle, Wrench, AlertTriangle, ArrowUp, ArrowDown, Minus, CalendarIcon } from "lucide-react";
 import { format, subDays } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface TicketSummary {
   total: number;
@@ -124,24 +127,54 @@ export default function TicketReports() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-4">
         <div className="space-y-1">
-          <Label htmlFor="startDate" className="text-sm text-gray-500 dark:text-gray-400">Start Date</Label>
-          <Input
-            id="startDate"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-[170px]"
-          />
+          <Label className="text-sm text-gray-500 dark:text-gray-400">Start Date</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-[200px] pl-3 text-left font-normal",
+                  !startDate && "text-muted-foreground"
+                )}
+              >
+                {startDate ? format(new Date(startDate), "PPP") : <span>Pick a date</span>}
+                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={startDate ? new Date(startDate) : undefined}
+                onSelect={(date) => { if (date) setStartDate(format(date, "yyyy-MM-dd")); }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="space-y-1">
-          <Label htmlFor="endDate" className="text-sm text-gray-500 dark:text-gray-400">End Date</Label>
-          <Input
-            id="endDate"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-[170px]"
-          />
+          <Label className="text-sm text-gray-500 dark:text-gray-400">End Date</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-[200px] pl-3 text-left font-normal",
+                  !endDate && "text-muted-foreground"
+                )}
+              >
+                {endDate ? format(new Date(endDate), "PPP") : <span>Pick a date</span>}
+                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={endDate ? new Date(endDate) : undefined}
+                onSelect={(date) => { if (date) setEndDate(format(date, "yyyy-MM-dd")); }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
