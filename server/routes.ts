@@ -1132,7 +1132,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/admin/impersonation/users - Get all users for impersonation dropdown (ADMIN ONLY)
   app.get("/api/admin/impersonation/users", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      // Get all staff users with basic info
       const users = await db
         .select({
           id: staff.id,
@@ -1143,6 +1142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: staff.position
         })
         .from(staff)
+        .where(eq(staff.isActive, true))
         .orderBy(staff.firstName, staff.lastName);
       
       res.json(users);
