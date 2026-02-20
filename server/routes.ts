@@ -37403,7 +37403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/tickets - List tickets with filters and pagination
   app.get("/api/tickets", requireAuth(), requireGranularPermission("tickets.list.view"), async (req, res) => {
     try {
-      const { status, type, priority, assignedTo, search, page = "1", limit = "20" } = req.query;
+      const { status, type, priority, assignedTo, search, page = "1", limit = "20", sortBy, sortDir } = req.query;
       const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
       const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
       const offset = (pageNum - 1) * limitNum;
@@ -37416,6 +37416,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (search) conditions.push(ilike(tickets.title, `%${search}%`));
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const sortColumnMap: Record<string, any> = {
+        ticketNumber: tickets.ticketNumber,
+        title: tickets.title,
+        type: tickets.type,
+        priority: tickets.priority,
+        status: tickets.status,
+        createdAt: tickets.createdAt,
+      };
+      const sortColumn = sortColumnMap[sortBy as string] || tickets.createdAt;
+      const sortOrder = sortDir === "asc" ? asc(sortColumn) : desc(sortColumn);
 
       const ticketList = await db
         .select({
@@ -37445,7 +37456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .leftJoin(submitter, eq(tickets.submittedBy, submitter.id))
         .leftJoin(assignee, eq(tickets.assignedTo, assignee.id))
         .where(whereClause)
-        .orderBy(desc(tickets.createdAt))
+        .orderBy(sortOrder)
         .limit(limitNum)
         .offset(offset);
 

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Trash2, Eye, Pencil, ChevronLeft, ChevronRight, Ticket, AlertCircle, Clock, CheckCircle2, BarChart3, Upload, X, Video, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Plus, Search, Trash2, Eye, Pencil, ChevronLeft, ChevronRight, Ticket, AlertCircle, Clock, CheckCircle2, BarChart3, Upload, X, Video, Image as ImageIcon, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -146,6 +146,8 @@ export default function TicketsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<string>("createdAt");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<TicketData | null>(null);
@@ -162,6 +164,8 @@ export default function TicketsPage() {
     if (searchTerm) params.set("search", searchTerm);
     params.set("page", String(currentPage));
     params.set("limit", String(pageSize));
+    if (sortBy) params.set("sortBy", sortBy);
+    if (sortDir) params.set("sortDir", sortDir);
     return params.toString();
   };
 
@@ -179,6 +183,23 @@ export default function TicketsPage() {
 
   const tickets = ticketsData?.tickets || [];
   const totalPages = ticketsData?.pagination?.totalPages || 1;
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(column);
+      setSortDir("asc");
+    }
+    setCurrentPage(1);
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortBy !== column) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 opacity-40" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="w-3.5 h-3.5 ml-1 text-[hsl(179,100%,39%)]" />
+      : <ArrowDown className="w-3.5 h-3.5 ml-1 text-[hsl(179,100%,39%)]" />;
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
@@ -497,14 +518,26 @@ export default function TicketsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[100px]">Ticket #</TableHead>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Priority</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead className="w-[100px] cursor-pointer select-none hover:text-[hsl(179,100%,39%)]" onClick={() => handleSort("ticketNumber")}>
+                          <div className="flex items-center">Ticket # <SortIcon column="ticketNumber" /></div>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none hover:text-[hsl(179,100%,39%)]" onClick={() => handleSort("title")}>
+                          <div className="flex items-center">Title <SortIcon column="title" /></div>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none hover:text-[hsl(179,100%,39%)]" onClick={() => handleSort("type")}>
+                          <div className="flex items-center">Type <SortIcon column="type" /></div>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none hover:text-[hsl(179,100%,39%)]" onClick={() => handleSort("priority")}>
+                          <div className="flex items-center">Priority <SortIcon column="priority" /></div>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none hover:text-[hsl(179,100%,39%)]" onClick={() => handleSort("status")}>
+                          <div className="flex items-center">Status <SortIcon column="status" /></div>
+                        </TableHead>
                         <TableHead>Submitted By</TableHead>
                         <TableHead>Assigned To</TableHead>
-                        <TableHead>Created</TableHead>
+                        <TableHead className="cursor-pointer select-none hover:text-[hsl(179,100%,39%)]" onClick={() => handleSort("createdAt")}>
+                          <div className="flex items-center">Created <SortIcon column="createdAt" /></div>
+                        </TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
