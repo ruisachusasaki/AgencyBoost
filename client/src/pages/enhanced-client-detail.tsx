@@ -7478,7 +7478,7 @@ export default function EnhancedClientDetail() {
                           return (
                             <a
                               key={meeting.id}
-                              href={`/hr?tab=px-meetings&meetingId=${meeting.id}`}
+                              href={`/hr/px-meetings/${meeting.id}`}
                               className="block p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700"
                             >
                               <div className="flex items-start justify-between">
