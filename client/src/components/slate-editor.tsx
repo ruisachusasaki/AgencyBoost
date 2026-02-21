@@ -335,13 +335,13 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
     try {
       const isEditorFocused = ReactEditor.isFocused(editor);
       if (!isEditorFocused && safeValue && JSON.stringify(editor.children) !== JSON.stringify(safeValue)) {
-        // Only update if the editor is not focused to avoid disrupting user typing
         Editor.withoutNormalizing(editor, () => {
-          // Clear all content
-          Transforms.select(editor, Editor.range(editor, []));
-          Transforms.delete(editor);
-          // Insert new content without aggressive filtering
-          Transforms.insertNodes(editor, safeValue);
+          // Remove all existing nodes safely
+          while (editor.children.length > 0) {
+            Transforms.removeNodes(editor, { at: [0] });
+          }
+          // Insert new content
+          Transforms.insertNodes(editor, safeValue, { at: [0] });
         });
       }
     } catch (error) {
