@@ -143,6 +143,7 @@ export default function TicketsPage() {
   const [statusFilter, setStatusFilter] = useState<string[]>(defaultStatuses);
   const [typeFilter, setTypeFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [assignedToFilter, setAssignedToFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -163,6 +164,7 @@ export default function TicketsPage() {
     }
     if (typeFilter !== "all") params.set("type", typeFilter);
     if (priorityFilter !== "all") params.set("priority", priorityFilter);
+    if (assignedToFilter !== "all") params.set("assignedTo", assignedToFilter);
     if (searchTerm) params.set("search", searchTerm);
     params.set("page", String(currentPage));
     params.set("limit", String(pageSize));
@@ -469,6 +471,24 @@ export default function TicketsPage() {
                 <SelectItem value="medium">Medium</SelectItem>
                 <SelectItem value="high">High</SelectItem>
                 <SelectItem value="critical">Critical</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={assignedToFilter} onValueChange={(v) => { setAssignedToFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Assigned To" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Assigned</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {staff
+                  .slice()
+                  .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
+                  .map((member) => (
+                    <SelectItem key={member.id} value={String(member.id)}>
+                      {member.firstName} {member.lastName}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
 

@@ -37753,7 +37753,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       if (type) conditions.push(eq(tickets.type, type as string));
       if (priority) conditions.push(eq(tickets.priority, priority as string));
-      if (assignedTo) conditions.push(eq(tickets.assignedTo, assignedTo as string));
+      if (assignedTo) {
+        if (assignedTo === "unassigned") {
+          conditions.push(isNull(tickets.assignedTo));
+        } else {
+          conditions.push(eq(tickets.assignedTo, assignedTo as string));
+        }
+      }
       if (search) conditions.push(ilike(tickets.title, `%${search}%`));
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
