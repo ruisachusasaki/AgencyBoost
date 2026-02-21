@@ -696,24 +696,26 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         setSlashQuery('');
         setSelectedIndex(0);
         
-        // Calculate position for slash menu relative to the editor container
+        // Use native browser selection for positioning (more reliable than Slate DOM resolution)
         try {
-          const domRange = ReactEditor.toDOMRange(editor, selection);
-          const rect = domRange.getBoundingClientRect();
-          const editorRect = editorRef.current?.getBoundingClientRect();
-          if (editorRect) {
-            setSlashMenuPosition({
-              top: rect.bottom - editorRect.top + 5,
-              left: rect.left - editorRect.left
-            });
-          } else {
-            setSlashMenuPosition({
-              top: rect.bottom + window.scrollY + 5,
-              left: rect.left + window.scrollX
-            });
+          const domSel = window.getSelection();
+          if (domSel && domSel.rangeCount > 0) {
+            const range = domSel.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            const editorRect = editorRef.current?.getBoundingClientRect();
+            if (editorRect && rect.top !== 0) {
+              setSlashMenuPosition({
+                top: rect.bottom - editorRect.top + 5,
+                left: rect.left - editorRect.left
+              });
+            } else if (editorRect) {
+              setSlashMenuPosition({ top: 30, left: 10 });
+            } else {
+              setSlashMenuPosition({ top: 100, left: 100 });
+            }
           }
         } catch (error) {
-          setSlashMenuPosition({ top: 100, left: 100 });
+          setSlashMenuPosition({ top: 30, left: 10 });
         }
       }
     }
