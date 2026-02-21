@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useRolePermissions } from "@/hooks/use-has-permission";
 import { Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown, Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, X, Check, Minus, CirclePlus, PlayCircle, Code, Sparkles, CheckSquare, Compass, ThumbsUp, Repeat1, Target, TrendingUp, Globe, Lock, Unlock, Clock, MessageCircle, UserCheck, DollarSign, Calculator, CreditCard, Banknote, HandCoins, PieChart, Receipt, Briefcase, Building, Building2, Store, ShoppingCart, Handshake, UserPlus, Phone as PhoneIcon, Megaphone, TrendingDown, Filter, SlidersHorizontal, GripVertical, Wrench } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -36,33 +37,17 @@ import { IconPicker } from "@/components/ui/icon-picker";
 import { CategoryPermissionsModal } from "@/components/category-permissions-modal";
 import { ToolDirectory } from "@/components/tool-directory";
 
-// Direct icon mapping with specific imports
-const iconMap: Record<string, any> = {
-  Search, Plus, BookOpen, Eye, Heart, Calendar, User, Tag, Folder, ChevronRight, ChevronDown,
-  Home, Settings, Users, FileText, BarChart3, Shield, Bell, Zap, Bookmark, Star, 
-  CheckCircle, AlertCircle, Info, HelpCircle, Mail, Phone, MessageSquare, Video, 
-  Image, Music, File, Download, Upload, Edit, Trash2, Copy, Share, ExternalLink, 
-  ArrowLeft, ArrowRight, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Menu, 
-  X, Check, Minus, CirclePlus, PlayCircle, Code, Sparkles, CheckSquare, Compass,
-  ThumbsUp, Repeat1, Target, TrendingUp, Globe, Lock, Unlock, Clock, MessageCircle, UserCheck,
-  DollarSign, Calculator, CreditCard, Banknote, HandCoins, PieChart, Receipt, 
-  Briefcase, Building, Building2, Store, ShoppingCart, Handshake, UserPlus, 
-  PhoneIcon, Megaphone, TrendingDown
-};
-
-// Helper function to render icons
+// Helper function to render icons dynamically from the full lucide-react library
 const renderIcon = (iconName: string, className = "w-4 h-4") => {
-  console.log("Rendering icon:", iconName);
-  
-  const IconComponent = iconMap[iconName];
-  
+  let IconComponent = (LucideIcons as any)[iconName];
+  if (!IconComponent && iconName) {
+    const pascalCase = iconName.charAt(0).toUpperCase() + iconName.slice(1);
+    IconComponent = (LucideIcons as any)[pascalCase];
+  }
   if (IconComponent) {
-    console.log("Successfully rendering icon:", iconName);
     return <IconComponent className={className} />;
   }
-  
-  console.log("Icon not found in mapping, using fallback for:", iconName);
-  return <Folder className={className} />; // fallback icon
+  return <Folder className={className} />;
 };
 
 // Helper function to get all descendant category IDs
