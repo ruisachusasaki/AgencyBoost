@@ -696,26 +696,23 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         setSlashQuery('');
         setSelectedIndex(0);
         
-        // Use native browser selection for positioning (more reliable than Slate DOM resolution)
+        // Use native browser selection for viewport-based positioning
         try {
           const domSel = window.getSelection();
           if (domSel && domSel.rangeCount > 0) {
             const range = domSel.getRangeAt(0);
             const rect = range.getBoundingClientRect();
-            const editorRect = editorRef.current?.getBoundingClientRect();
-            if (editorRect && rect.top !== 0) {
+            if (rect.top !== 0 || rect.left !== 0) {
               setSlashMenuPosition({
-                top: rect.bottom - editorRect.top + 5,
-                left: rect.left - editorRect.left
+                top: rect.bottom + 5,
+                left: rect.left
               });
-            } else if (editorRect) {
-              setSlashMenuPosition({ top: 30, left: 10 });
             } else {
-              setSlashMenuPosition({ top: 100, left: 100 });
+              setSlashMenuPosition({ top: 200, left: 200 });
             }
           }
         } catch (error) {
-          setSlashMenuPosition({ top: 30, left: 10 });
+          setSlashMenuPosition({ top: 200, left: 200 });
         }
       }
     }
@@ -1037,7 +1034,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         <div
           className="slash-menu bg-background border border-border"
           style={{
-            position: 'absolute',
+            position: 'fixed',
             top: slashMenuPosition.top,
             left: slashMenuPosition.left,
             zIndex: 1000,
