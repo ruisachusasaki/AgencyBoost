@@ -353,6 +353,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
   const [filteredCommands, setFilteredCommands] = useState(SLASH_COMMANDS);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [slashQuery, setSlashQuery] = useState('');
+  const slashSelectionRef = useRef<Range | null>(null);
   const [showSelectionToolbar, setShowSelectionToolbar] = useState(false);
   const [selectionToolbarPosition, setSelectionToolbarPosition] = useState({ top: 0, left: 0 });
   const editorRef = useRef<HTMLDivElement>(null);
@@ -496,6 +497,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
     if (showSlashMenu) {
       const { selection } = editor;
       if (selection && Range.isCollapsed(selection)) {
+        slashSelectionRef.current = selection;
         const [start] = Range.edges(selection);
         const line = Editor.string(editor, {
           anchor: { path: start.path, offset: 0 },
@@ -513,7 +515,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
             command.title.toLowerCase().includes(query)
           );
           setFilteredCommands(filtered);
-          setSelectedIndex(0); // Reset selection to first item
+          setSelectedIndex(0);
         }
       }
     }
@@ -694,16 +696,23 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
         setSlashQuery('');
         setSelectedIndex(0);
         
-        // Calculate position for slash menu
+        // Calculate position for slash menu relative to the editor container
         try {
           const domRange = ReactEditor.toDOMRange(editor, selection);
           const rect = domRange.getBoundingClientRect();
-          setSlashMenuPosition({
-            top: rect.bottom + window.scrollY + 5,
-            left: rect.left + window.scrollX
-          });
+          const editorRect = editorRef.current?.getBoundingClientRect();
+          if (editorRect) {
+            setSlashMenuPosition({
+              top: rect.bottom - editorRect.top + 5,
+              left: rect.left - editorRect.left
+            });
+          } else {
+            setSlashMenuPosition({
+              top: rect.bottom + window.scrollY + 5,
+              left: rect.left + window.scrollX
+            });
+          }
         } catch (error) {
-          // Fallback position
           setSlashMenuPosition({ top: 100, left: 100 });
         }
       }
@@ -781,15 +790,22 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
     setSlashQuery('');
     setSelectedIndex(0);
     
-    // Remove the "/" character and any typed query by selecting from slash to cursor
-    const { selection } = editor;
-    if (selection && Range.isCollapsed(selection)) {
-      const [start] = Range.edges(selection);
-      const totalToDelete = 1 + queryLen; // slash + query characters
+    // Restore editor focus and selection if lost (e.g. from clicking menu)
+    ReactEditor.focus(editor);
+    const sel = editor.selection || slashSelectionRef.current;
+    if (sel) {
+      Transforms.select(editor, sel);
+    }
+    slashSelectionRef.current = null;
+    
+    // Remove the "/" character and any typed query
+    const currentSel = editor.selection;
+    if (currentSel && Range.isCollapsed(currentSel)) {
+      const [start] = Range.edges(currentSel);
+      const totalToDelete = 1 + queryLen;
       const deleteFrom = { path: start.path, offset: Math.max(0, start.offset - totalToDelete) };
-      const deleteTo = start;
       Transforms.delete(editor, {
-        at: { anchor: deleteFrom, focus: deleteTo },
+        at: { anchor: deleteFrom, focus: start },
       });
     }
 
@@ -1038,7 +1054,10 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
                   ? 'bg-[#00C9C6]/10 text-[#00C9C6] border-l-2 border-[#00C9C6]' 
                   : 'hover:bg-muted/50'
               }`}
-              onClick={() => executeCommand(command)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                executeCommand(command);
+              }}
             >
               {command.icon}
               <span>{command.title}</span>
