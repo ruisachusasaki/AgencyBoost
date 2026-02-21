@@ -6945,6 +6945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               campaignId: task.campaignId,
               startDate: nextStartDate,
               dueDate: nextDueDate,
+              tags: task.tags || [],
               isRecurring: false,
             };
             
@@ -7284,6 +7285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dueDate: nextDueDate,
             timeEstimate: currentTask.timeEstimate,
             parentTaskId: currentTask.parentTaskId,
+            tags: currentTask.tags || [],
             // Keep the original recurring settings in the new instance
             isRecurring: true,
             recurringInterval: currentTask.recurringInterval,
