@@ -17,6 +17,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { MentionInput } from "@/components/ui/mention-input";
 import { LinkifyText } from "@/components/ui/linkify-text";
+import { MentionText } from "@/components/ui/mention-text";
 
 type TicketComment = {
   id: string;
@@ -431,7 +432,7 @@ export default function TicketDetailPage() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      <p className="text-slate-700 whitespace-pre-wrap"><LinkifyText text={comment.content} /></p>
+                      <p className="text-slate-700 whitespace-pre-wrap"><MentionText text={comment.content} /></p>
                     </div>
                   ))}
                 </div>
