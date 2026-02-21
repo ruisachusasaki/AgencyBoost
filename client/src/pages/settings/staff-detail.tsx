@@ -864,6 +864,10 @@ export default function StaffDetail() {
                                 setBirthdateOpen(false);
                               }}
                               disabled={(date) => date > new Date()}
+                              captionLayout="dropdown-buttons"
+                              fromYear={1940}
+                              toYear={new Date().getFullYear()}
+                              defaultMonth={field.value ? new Date(field.value) : new Date(2000, 0)}
                               initialFocus
                             />
                           </PopoverContent>
