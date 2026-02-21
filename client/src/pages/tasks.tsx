@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, CheckSquare, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2, FileText, Settings2, Clock, Eye, EyeOff, Play, Square } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, CheckSquare, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2, FileText, Settings2, Clock, Eye, EyeOff, Play, Square, Repeat } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1359,6 +1359,14 @@ export default function Tasks() {
                 {task.title}
               </span>
             </Link>
+            {task.isRecurring && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Repeat className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                </TooltipTrigger>
+                <TooltipContent>Recurring task</TooltipContent>
+              </Tooltip>
+            )}
             <TaskDependencyIcons taskId={task.id} />
           </div>
         );
@@ -2109,6 +2117,14 @@ export default function Tasks() {
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-0">
                 <h4 className="font-medium text-sm text-slate-900 line-clamp-2">{task.title}</h4>
+                {task.isRecurring && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Repeat className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent>Recurring task</TooltipContent>
+                  </Tooltip>
+                )}
                 <TaskDependencyIcons taskId={task.id} />
               </div>
               <div className="flex items-center gap-1 ml-2">

@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Calendar as CalendarIcon, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy, Video, ExternalLink, Plus, Tag as TagIcon } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, User, Building, FolderOpen, Target, Clock, MessageSquare, Edit, Trash2, Flag, Play, Pause, Timer, ChevronRight, Activity, Link2, Copy, Video, ExternalLink, Plus, Tag as TagIcon, Repeat } from "lucide-react";
 import { TagSelector, TagDisplay } from "@/components/ui/tag-selector";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
@@ -599,6 +599,12 @@ export default function TaskDetail() {
               <Badge variant="outline" className={getPriorityColor(task.priority)}>
                 {task.priority} priority
               </Badge>
+              {task.isRecurring && (
+                <Badge variant="outline" className="flex items-center gap-1 text-primary border-primary/30">
+                  <Repeat className="h-3 w-3" />
+                  Recurring
+                </Badge>
+              )}
             </div>
           </div>
         </div>
