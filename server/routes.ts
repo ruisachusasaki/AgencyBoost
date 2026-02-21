@@ -6226,6 +6226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Move lead to different stage
   app.put("/api/leads/:id/stage", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
     try {
+      const userId = getAuthenticatedUserId(req);
       const { stageId } = req.body;
       
       if (!stageId) {
@@ -6256,7 +6257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fromStageId: currentLead.stageId,
         toStageId: stageId,
         movedAt: new Date().toISOString(),
-        movedBy: "current-user" // In real app, get from session
+        movedBy: userId || "unknown"
       };
       
       const [updatedLead] = await db.update(leads)
@@ -7122,9 +7123,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(tasks.id, req.params.id))
         .returning();
 
-      // Log activities for changed fields
-      const currentUser = 'current-user'; // Replace with actual user from session
-      const currentUserName = 'Current User'; // Replace with actual user name
+      // Log activities for changed fields - get the actual user name
+      const currentUser = userId;
+      let currentUserName = 'Unknown User';
+      try {
+        const [activityStaff] = await db.select({
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+        }).from(staff).where(eq(staff.id, userId));
+        if (activityStaff) {
+          currentUserName = `${activityStaff.firstName} ${activityStaff.lastName}`;
+        }
+      } catch (e) {
+        // fallback to Unknown User
+      }
 
       // Check for status changes
       if (validatedData.status && validatedData.status !== currentTask.status) {
