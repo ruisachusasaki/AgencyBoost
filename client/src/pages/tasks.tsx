@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, CheckSquare, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2, FileText, Settings2, Clock, Eye, EyeOff, Play, Square, Repeat } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, CheckCircle, CheckSquare, GripVertical, Flag, User, ChevronDown, ChevronRight, ChevronUp, Table as TableIcon, Columns, Filter, Save, X, Share2, Globe, Lock, MoreHorizontal, Bookmark, Building2, FileText, Settings2, Clock, Eye, EyeOff, Play, Square, Repeat, Check } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1345,11 +1345,41 @@ export default function Tasks() {
             )}
             {!hasSubTasks && <div className="w-6" />}
             
-            <Checkbox 
-              checked={task.status === "completed"}
-              onCheckedChange={(checked) => handleTaskToggle(task.id, !!checked)}
-              className="flex-shrink-0"
-            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center cursor-pointer hover:scale-110 transition-transform"
+                  style={{
+                    borderColor: task.status === "completed" ? "#22c55e" : task.status === "in_progress" ? "#0891b2" : task.status === "cancelled" ? "#ef4444" : "#eab308",
+                    backgroundColor: task.status === "completed" ? "#22c55e" : "transparent",
+                  }}
+                  title="Change status"
+                >
+                  {task.status === "completed" && <Check className="h-3 w-3 text-white" />}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[140px]">
+                {(taskStatuses.length > 0 ? taskStatuses.map(s => s.name) : ["pending", "in_progress", "completed", "cancelled"]).map((status) => (
+                  <DropdownMenuItem
+                    key={status}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateTaskMutation.mutate({ id: task.id, status });
+                    }}
+                    className={task.status === status ? "bg-accent font-medium" : ""}
+                  >
+                    <span
+                      className="h-2.5 w-2.5 rounded-full mr-2 flex-shrink-0"
+                      style={{
+                        backgroundColor: status === "completed" ? "#22c55e" : status === "in_progress" ? "#0891b2" : status === "cancelled" ? "#ef4444" : "#eab308",
+                      }}
+                    />
+                    {status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Link href={`/tasks/${task.id}`}>
               <span className={`font-medium hover:text-blue-600 cursor-pointer ${
                 task.status === "completed" 
