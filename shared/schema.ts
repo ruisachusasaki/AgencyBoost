@@ -2255,6 +2255,21 @@ export const staff = pgTable("staff", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const salaryHistory = pgTable("salary_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  staffId: uuid("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  previousSalary: decimal("previous_salary", { precision: 12, scale: 2 }),
+  newSalary: decimal("new_salary", { precision: 12, scale: 2 }),
+  effectiveDate: timestamp("effective_date").defaultNow(),
+  notes: text("notes"),
+  changedBy: uuid("changed_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_salary_history_staff").on(table.staffId),
+]);
+
+export type SalaryHistory = typeof salaryHistory.$inferSelect;
+
 export const insertStaffSchema = createInsertSchema(staff).omit({
   id: true,
   createdAt: true,

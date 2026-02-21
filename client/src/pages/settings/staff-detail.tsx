@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Upload, User, Mail, Phone, MapPin, Calendar, CalendarIcon, Building, Users, Bell, Smartphone, Trash2, Plus, Link2, DollarSign } from "lucide-react";
+import { ArrowLeft, Upload, User, Mail, Phone, MapPin, Calendar, CalendarIcon, Building, Users, Bell, Smartphone, Trash2, Plus, Link2, DollarSign, History, TrendingUp, TrendingDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -149,6 +149,16 @@ export default function StaffDetail() {
     annualSalary: string | null;
     hourlyRate: string | null;
   }
+  interface SalaryHistoryEntry {
+    id: string;
+    previousSalary: string | null;
+    newSalary: string | null;
+    effectiveDate: string;
+    notes: string | null;
+    changedBy: string | null;
+    changedByName: string;
+    createdAt: string;
+  }
   const { data: salaryData, isLoading: isSalaryLoading } = useQuery<SalaryData | null>({
     queryKey: ["/api/staff", id, "salary"],
     queryFn: async () => {
@@ -160,8 +170,21 @@ export default function StaffDetail() {
     enabled: !!id && isAdmin,
   });
 
+  const { data: salaryHistoryData } = useQuery<SalaryHistoryEntry[]>({
+    queryKey: ["/api/staff", id, "salary-history"],
+    queryFn: async () => {
+      const res = await fetch(`/api/staff/${id}/salary-history`, { credentials: 'include' });
+      if (res.status === 403 || res.status === 401) return [];
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!id && isAdmin,
+  });
+
   const [salaryInput, setSalaryInput] = useState("");
+  const [salaryNotes, setSalaryNotes] = useState("");
   const [isSalaryEditing, setIsSalaryEditing] = useState(false);
+  const [showSalaryHistory, setShowSalaryHistory] = useState(false);
 
   useEffect(() => {
     if (salaryData?.annualSalary) {
@@ -170,13 +193,15 @@ export default function StaffDetail() {
   }, [salaryData]);
 
   const updateSalaryMutation = useMutation({
-    mutationFn: async (salary: string | null) => {
-      return apiRequest("PUT", `/api/staff/${id}/salary`, { annualSalary: salary });
+    mutationFn: async (data: { salary: string | null; notes: string }) => {
+      return apiRequest("PUT", `/api/staff/${id}/salary`, { annualSalary: data.salary, notes: data.notes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff", id, "salary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", id, "salary-history"] });
       toast({ title: "Success", variant: "success", description: "Salary updated successfully" });
       setIsSalaryEditing(false);
+      setSalaryNotes("");
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to update salary", variant: "destructive" });
@@ -859,44 +884,59 @@ export default function StaffDetail() {
                       <span>Compensation</span>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label className="text-sm font-medium mb-1.5 block">Annual Salary</Label>
                         {isSalaryEditing ? (
-                          <div className="flex items-center gap-2">
-                            <div className="relative flex-1">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <div className="relative flex-1">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={salaryInput}
+                                  onChange={(e) => setSalaryInput(e.target.value)}
+                                  placeholder="0.00"
+                                  className="pl-7"
+                                  data-testid="input-annual-salary"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground mb-1 block">Notes (optional)</Label>
                               <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={salaryInput}
-                                onChange={(e) => setSalaryInput(e.target.value)}
-                                placeholder="0.00"
-                                className="pl-7"
-                                data-testid="input-annual-salary"
+                                type="text"
+                                value={salaryNotes}
+                                onChange={(e) => setSalaryNotes(e.target.value)}
+                                placeholder="e.g., Annual review raise, promotion, etc."
+                                className="text-sm"
                               />
                             </div>
-                            <Button
-                              type="button"
-                              size="sm"
-                              onClick={() => updateSalaryMutation.mutate(salaryInput || null)}
-                              disabled={updateSalaryMutation.isPending}
-                            >
-                              {updateSalaryMutation.isPending ? "Saving..." : "Save"}
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setIsSalaryEditing(false);
-                                setSalaryInput(salaryData?.annualSalary || "");
-                              }}
-                            >
-                              Cancel
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => updateSalaryMutation.mutate({ salary: salaryInput || null, notes: salaryNotes })}
+                                disabled={updateSalaryMutation.isPending}
+                              >
+                                {updateSalaryMutation.isPending ? "Saving..." : "Save"}
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setIsSalaryEditing(false);
+                                  setSalaryInput(salaryData?.annualSalary || "");
+                                  setSalaryNotes("");
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -931,6 +971,80 @@ export default function StaffDetail() {
                         )}
                       </div>
                     </div>
+
+                    {salaryHistoryData && salaryHistoryData.length > 0 && (
+                      <div className="border-t pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <Label className="text-sm font-medium flex items-center gap-1.5">
+                            <History className="h-4 w-4" />
+                            Compensation History
+                          </Label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => setShowSalaryHistory(!showSalaryHistory)}
+                          >
+                            {showSalaryHistory ? "Hide" : `Show (${salaryHistoryData.length})`}
+                          </Button>
+                        </div>
+                        {showSalaryHistory && (
+                          <div className="space-y-2">
+                            {salaryHistoryData.map((entry) => {
+                              const prevAmt = entry.previousSalary ? parseFloat(entry.previousSalary) : null;
+                              const newAmt = entry.newSalary ? parseFloat(entry.newSalary) : null;
+                              const isIncrease = prevAmt !== null && newAmt !== null && newAmt > prevAmt;
+                              const isDecrease = prevAmt !== null && newAmt !== null && newAmt < prevAmt;
+                              const diff = prevAmt !== null && newAmt !== null ? newAmt - prevAmt : null;
+                              return (
+                                <div key={entry.id} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-sm">
+                                  <div className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                                    isIncrease ? 'bg-green-100 dark:bg-green-900/30' :
+                                    isDecrease ? 'bg-red-100 dark:bg-red-900/30' :
+                                    'bg-gray-100 dark:bg-gray-700'
+                                  }`}>
+                                    {isIncrease ? (
+                                      <TrendingUp className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                                    ) : isDecrease ? (
+                                      <TrendingDown className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+                                    ) : (
+                                      <DollarSign className="w-3.5 h-3.5 text-gray-500" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                      <span className="text-muted-foreground">
+                                        {prevAmt !== null ? `$${prevAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : 'Not set'}
+                                      </span>
+                                      <span className="text-muted-foreground">→</span>
+                                      <span className="font-medium">
+                                        {newAmt !== null ? `$${newAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : 'Removed'}
+                                      </span>
+                                      {diff !== null && diff !== 0 && (
+                                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                          isIncrease ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                          'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                        }`}>
+                                          {isIncrease ? '+' : ''}{diff.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">
+                                      <span>{new Date(entry.effectiveDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                      <span>by {entry.changedByName}</span>
+                                    </div>
+                                    {entry.notes && (
+                                      <p className="mt-1 text-xs text-muted-foreground italic">"{entry.notes}"</p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}

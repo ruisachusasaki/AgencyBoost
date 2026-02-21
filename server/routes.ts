@@ -79,7 +79,8 @@ import {
   pxMeetings, pxMeetingAttendees,
   taskCategories,
   tickets, ticketComments, ticketAttachments, ticketRoutingRules,
-  insertTicketSchema, insertTicketCommentSchema, insertTicketRoutingRuleSchema
+  insertTicketSchema, insertTicketCommentSchema, insertTicketRoutingRuleSchema,
+  salaryHistory
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
@@ -11672,13 +11673,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Staff member not found" });
       }
 
-      const { annualSalary: salaryValue } = req.body;
+      const { annualSalary: salaryValue, notes: salaryNotes } = req.body;
       const sanitizedSalary = salaryValue === "" || salaryValue === null || salaryValue === undefined ? null : String(salaryValue);
+
+      const previousSalary = targetStaff.annualSalary || null;
+      const salaryChanged = previousSalary !== sanitizedSalary;
 
       const [updated] = await db.update(staff)
         .set({ annualSalary: sanitizedSalary, updatedAt: new Date() })
         .where(eq(staff.id, targetId))
         .returning({ id: staff.id, annualSalary: staff.annualSalary });
+
+      if (salaryChanged) {
+        await db.insert(salaryHistory).values({
+          staffId: targetId,
+          previousSalary: previousSalary,
+          newSalary: sanitizedSalary,
+          effectiveDate: new Date(),
+          notes: salaryNotes || null,
+          changedBy: userId,
+        });
+      }
 
       await createAuditLog(
         "updated",
@@ -11700,6 +11715,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating salary:", error);
       res.status(500).json({ error: "Failed to update salary information" });
+    }
+  });
+
+  app.get("/api/staff/:id/salary-history", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const isAdmin = await isCurrentUserAdmin(req);
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Only admins can view salary history" });
+      }
+
+      const targetId = req.params.id;
+      const changedByStaff = alias(staff, "changed_by_staff");
+
+      const history = await db.select({
+        id: salaryHistory.id,
+        previousSalary: salaryHistory.previousSalary,
+        newSalary: salaryHistory.newSalary,
+        effectiveDate: salaryHistory.effectiveDate,
+        notes: salaryHistory.notes,
+        changedBy: salaryHistory.changedBy,
+        changedByName: sql<string>`COALESCE(${changedByStaff.firstName} || ' ' || ${changedByStaff.lastName}, 'System')`,
+        createdAt: salaryHistory.createdAt,
+      })
+      .from(salaryHistory)
+      .leftJoin(changedByStaff, eq(salaryHistory.changedBy, changedByStaff.id))
+      .where(eq(salaryHistory.staffId, targetId))
+      .orderBy(desc(salaryHistory.createdAt));
+
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching salary history:", error);
+      res.status(500).json({ error: "Failed to fetch salary history" });
     }
   });
 
