@@ -777,19 +777,20 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
 
   const executeCommand = (command: any) => {
     setShowSlashMenu(false);
+    const queryLen = slashQuery.length;
     setSlashQuery('');
     setSelectedIndex(0);
     
-    // Remove the "/" character and any typed query
+    // Remove the "/" character and any typed query by selecting from slash to cursor
     const { selection } = editor;
-    if (selection) {
+    if (selection && Range.isCollapsed(selection)) {
       const [start] = Range.edges(selection);
-      const before = Editor.before(editor, start);
-      if (before) {
-        // Delete the slash and any characters typed after it
-        const deleteDistance = 1 + slashQuery.length;
-        Transforms.delete(editor, { at: before, distance: deleteDistance, unit: 'character' });
-      }
+      const totalToDelete = 1 + queryLen; // slash + query characters
+      const deleteFrom = { path: start.path, offset: Math.max(0, start.offset - totalToDelete) };
+      const deleteTo = start;
+      Transforms.delete(editor, {
+        at: { anchor: deleteFrom, focus: deleteTo },
+      });
     }
 
     // Handle different command types
