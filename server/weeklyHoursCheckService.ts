@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { staff, enhancedTasks, eventTimeEntries, workflows } from "@shared/schema";
+import { staff, enhancedTasks, eventTimeEntries, workflows, taskSettings, notifications } from "@shared/schema";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 import { emitTrigger } from "./workflow-engine";
 
@@ -13,7 +13,7 @@ export function startWeeklyHoursCheck() {
     return;
   }
 
-  console.log("[WeeklyHoursCheck] Starting weekly hours check service");
+  console.log("[WeeklyHoursCheck] Starting weekly hours check service (system alert + workflow triggers)");
 
   setTimeout(() => {
     runWeeklyHoursCheck().catch((err) => {
@@ -35,6 +35,36 @@ export function stopWeeklyHoursCheck() {
     clearInterval(checkIntervalId);
     checkIntervalId = null;
     console.log("[WeeklyHoursCheck] Stopped weekly hours check service");
+  }
+}
+
+async function getSystemAlertSettings(): Promise<{
+  enabled: boolean;
+  threshold: number;
+  checkDay: string;
+  includeCalendarTime: boolean;
+}> {
+  try {
+    const settings = await db.select()
+      .from(taskSettings)
+      .where(
+        sql`${taskSettings.settingKey} IN ('weekly_hours_alert_enabled', 'weekly_hours_alert_threshold', 'weekly_hours_alert_check_day', 'weekly_hours_alert_include_calendar')`
+      );
+
+    const settingsMap: Record<string, any> = {};
+    for (const s of settings) {
+      settingsMap[s.settingKey] = typeof s.settingValue === 'object' ? (s.settingValue as any).value : s.settingValue;
+    }
+
+    return {
+      enabled: settingsMap['weekly_hours_alert_enabled'] !== false,
+      threshold: parseFloat(String(settingsMap['weekly_hours_alert_threshold'])) || 40,
+      checkDay: settingsMap['weekly_hours_alert_check_day'] || 'Monday',
+      includeCalendarTime: settingsMap['weekly_hours_alert_include_calendar'] !== false,
+    };
+  } catch (err) {
+    console.error("[WeeklyHoursCheck] Error fetching system alert settings:", err);
+    return { enabled: true, threshold: 40, checkDay: 'Monday', includeCalendarTime: true };
   }
 }
 
@@ -80,6 +110,7 @@ interface StaffMemberInfo {
   position: string | null;
   managerId: string | null;
   isActive: boolean | null;
+  role: string | null;
 }
 
 interface StaffHoursData {
@@ -93,6 +124,94 @@ interface StaffHoursData {
   totalHoursLogged: number;
 }
 
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getPreviousWeekRange(now: Date): { weekStartStr: string; weekEndStr: string } {
+  const dayOfWeek = now.getDay();
+  const weekEnd = new Date(now);
+  weekEnd.setDate(weekEnd.getDate() - ((dayOfWeek === 0 ? 7 : dayOfWeek) - 1));
+  weekEnd.setHours(0, 0, 0, 0);
+
+  const weekStart = new Date(weekEnd);
+  weekStart.setDate(weekStart.getDate() - 7);
+
+  return {
+    weekStartStr: toLocalDateStr(weekStart),
+    weekEndStr: toLocalDateStr(weekEnd),
+  };
+}
+
+async function getStaffHoursForWeek(
+  allStaff: StaffMemberInfo[],
+  weekStartStr: string,
+  weekEndStr: string,
+  includeCalendar: boolean
+): Promise<Map<string, { taskHours: number; calendarHours: number }>> {
+  const staffHours: Map<string, { taskHours: number; calendarHours: number }> = new Map();
+
+  const tasksWithTime = await db
+    .select({
+      id: enhancedTasks.id,
+      title: enhancedTasks.title,
+      timeEntries: enhancedTasks.timeEntries,
+    })
+    .from(enhancedTasks)
+    .where(
+      and(
+        sql`${enhancedTasks.timeEntries} IS NOT NULL`,
+        sql`${enhancedTasks.timeEntries}::text != 'null'`,
+        sql`${enhancedTasks.timeEntries}::text != '[]'`
+      )
+    );
+
+  for (const task of tasksWithTime) {
+    const entries = (task.timeEntries as any[]) || [];
+    for (const entry of entries) {
+      if (!entry.startTime || !entry.userId) continue;
+      const entryDate = new Date(entry.startTime).toISOString().split("T")[0];
+      if (entryDate >= weekStartStr && entryDate < weekEndStr) {
+        const existing = staffHours.get(entry.userId) || { taskHours: 0, calendarHours: 0 };
+        const durationMinutes =
+          entry.duration ||
+          (entry.endTime
+            ? (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / 60000
+            : 0);
+        existing.taskHours += durationMinutes / 60;
+        staffHours.set(entry.userId, existing);
+      }
+    }
+  }
+
+  if (includeCalendar) {
+    const calendarEntries = await db
+      .select({
+        userId: eventTimeEntries.userId,
+        duration: eventTimeEntries.duration,
+        startTime: eventTimeEntries.startTime,
+      })
+      .from(eventTimeEntries)
+      .where(
+        and(
+          gte(eventTimeEntries.startTime, new Date(weekStartStr + 'T00:00:00')),
+          sql`${eventTimeEntries.startTime} < ${new Date(weekEndStr + 'T00:00:00')}`
+        )
+      );
+
+    for (const entry of calendarEntries) {
+      const existing = staffHours.get(entry.userId) || { taskHours: 0, calendarHours: 0 };
+      existing.calendarHours += (entry.duration || 0) / 60;
+      staffHours.set(entry.userId, existing);
+    }
+  }
+
+  return staffHours;
+}
+
 async function runWeeklyHoursCheck() {
   if (isRunning) {
     console.log("[WeeklyHoursCheck] Already running a check, skipping");
@@ -102,45 +221,40 @@ async function runWeeklyHoursCheck() {
   isRunning = true;
 
   try {
-    const activeWorkflows = await db
-      .select()
-      .from(workflows)
-      .where(eq(workflows.status, "active"));
-
-    const configs = extractHoursConfigs(activeWorkflows);
-
-    if (configs.length === 0) {
-      return;
-    }
-
-    console.log(`[WeeklyHoursCheck] Found ${configs.length} active workflow trigger(s) for weekly hours`);
-
     const now = new Date();
     const dayOfWeek = now.getDay();
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const currentDay = dayNames[dayOfWeek];
     const currentHour = now.getHours();
 
-    const relevantConfigs = configs.filter((c) => c.checkDay === currentDay);
-    if (relevantConfigs.length === 0) {
-      console.log(`[WeeklyHoursCheck] No workflows configured to check on ${currentDay}, skipping`);
+    const systemSettings = await getSystemAlertSettings();
+
+    let activeWorkflows: any[] = [];
+    try {
+      activeWorkflows = await db
+        .select()
+        .from(workflows)
+        .where(eq(workflows.status, "active"));
+    } catch { }
+    const workflowConfigs = extractHoursConfigs(activeWorkflows);
+
+    const systemCheckNeeded = systemSettings.enabled && systemSettings.checkDay === currentDay;
+    const workflowCheckNeeded = workflowConfigs.some(c => c.checkDay === currentDay);
+
+    if (!systemCheckNeeded && !workflowCheckNeeded) {
       return;
     }
 
     if (currentHour < 6 || currentHour > 10) {
-      console.log(`[WeeklyHoursCheck] Outside check window (hour: ${currentHour}, need 6-10), skipping`);
       return;
     }
 
-    const weekEnd = new Date(now);
-    weekEnd.setDate(weekEnd.getDate() - ((dayOfWeek === 0 ? 7 : dayOfWeek) - 1));
-    weekEnd.setHours(0, 0, 0, 0);
+    const { weekStartStr, weekEndStr } = getPreviousWeekRange(now);
+    const systemAlreadyAlerted = await hasAlreadySentWeeklyAlert(weekStartStr);
 
-    const weekStart = new Date(weekEnd);
-    weekStart.setDate(weekStart.getDate() - 7);
-
-    const weekStartStr = weekStart.toISOString().split("T")[0];
-    const weekEndStr = weekEnd.toISOString().split("T")[0];
+    if (systemCheckNeeded && systemAlreadyAlerted && !workflowCheckNeeded) {
+      return;
+    }
 
     console.log(`[WeeklyHoursCheck] Checking hours for week: ${weekStartStr} to ${weekEndStr}`);
 
@@ -154,141 +268,260 @@ async function runWeeklyHoursCheck() {
         position: staff.position,
         managerId: staff.managerId,
         isActive: staff.isActive,
+        role: staff.role,
       })
       .from(staff)
       .where(eq(staff.isActive, true));
 
-    const staffHours: Map<string, { taskHours: number; calendarHours: number }> = new Map();
+    const includeCalendar = systemSettings.includeCalendarTime || workflowConfigs.some(c => c.includeCalendarTime);
+    const staffHours = await getStaffHoursForWeek(allStaff, weekStartStr, weekEndStr, includeCalendar);
 
-    const tasksWithTime = await db
-      .select({
-        id: enhancedTasks.id,
-        title: enhancedTasks.title,
-        timeEntries: enhancedTasks.timeEntries,
-      })
-      .from(enhancedTasks)
-      .where(
-        and(
-          sql`${enhancedTasks.timeEntries} IS NOT NULL`,
-          sql`${enhancedTasks.timeEntries}::text != 'null'`,
-          sql`${enhancedTasks.timeEntries}::text != '[]'`
-        )
-      );
-
-    for (const task of tasksWithTime) {
-      const entries = (task.timeEntries as any[]) || [];
-      for (const entry of entries) {
-        if (!entry.startTime || !entry.userId) continue;
-        const entryDate = new Date(entry.startTime).toISOString().split("T")[0];
-        if (entryDate >= weekStartStr && entryDate < weekEndStr) {
-          const existing = staffHours.get(entry.userId) || { taskHours: 0, calendarHours: 0 };
-          const durationMinutes =
-            entry.duration ||
-            (entry.endTime
-              ? (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / 60000
-              : 0);
-          existing.taskHours += durationMinutes / 60;
-          staffHours.set(entry.userId, existing);
-        }
-      }
+    if (systemCheckNeeded && !systemAlreadyAlerted) {
+      await runSystemAlert(allStaff, staffHours, systemSettings, weekStartStr, weekEndStr);
     }
 
-    const calendarEntries = await db
-      .select({
-        userId: eventTimeEntries.userId,
-        duration: eventTimeEntries.duration,
-        startTime: eventTimeEntries.startTime,
-      })
-      .from(eventTimeEntries)
-      .where(
-        and(
-          gte(eventTimeEntries.startTime, new Date(weekStartStr)),
-          lte(eventTimeEntries.startTime, new Date(weekEndStr))
-        )
-      );
-
-    for (const entry of calendarEntries) {
-      const existing = staffHours.get(entry.userId) || { taskHours: 0, calendarHours: 0 };
-      existing.calendarHours += (entry.duration || 0) / 60;
-      staffHours.set(entry.userId, existing);
+    if (workflowCheckNeeded) {
+      await runWorkflowTriggers(allStaff, staffHours, workflowConfigs, currentDay, weekStartStr, weekEndStr);
     }
-
-    const highestThreshold = Math.max(...relevantConfigs.map((c) => c.hoursThreshold));
-
-    const staffByManager: Map<string, {
-      manager: StaffMemberInfo | null;
-      subordinates: StaffHoursData[];
-    }> = new Map();
-
-    for (const staffMember of allStaff) {
-      if (!staffMember.managerId) {
-        continue;
-      }
-
-      const hours = staffHours.get(staffMember.id) || { taskHours: 0, calendarHours: 0 };
-      const totalWithCalendar = hours.taskHours + hours.calendarHours;
-
-      if (totalWithCalendar >= highestThreshold) {
-        continue;
-      }
-
-      const managerId = staffMember.managerId;
-      const managerInfo = allStaff.find((s) => s.id === managerId) || null;
-
-      if (!staffByManager.has(managerId)) {
-        staffByManager.set(managerId, {
-          manager: managerInfo,
-          subordinates: [],
-        });
-      }
-
-      staffByManager.get(managerId)!.subordinates.push({
-        staffId: staffMember.id,
-        staffName: `${staffMember.firstName} ${staffMember.lastName}`,
-        staffEmail: staffMember.email || "",
-        staffDepartment: staffMember.department || "Unassigned",
-        staffPosition: staffMember.position || "Unknown",
-        taskHoursLogged: Math.round(hours.taskHours * 100) / 100,
-        calendarHoursLogged: Math.round(hours.calendarHours * 100) / 100,
-        totalHoursLogged: Math.round(totalWithCalendar * 100) / 100,
-      });
-    }
-
-    let triggeredCount = 0;
-    for (const [managerId, groupData] of staffByManager) {
-      const { manager, subordinates } = groupData;
-
-      await emitTrigger({
-        type: "weekly_hours_below_threshold",
-        data: {
-          managerId,
-          managerName: manager
-            ? `${manager.firstName} ${manager.lastName}`
-            : "Unknown Manager",
-          managerEmail: manager?.email || "",
-          subordinatesBelowThreshold: subordinates,
-          subordinateCount: subordinates.length,
-          weekStartDate: weekStartStr,
-          weekEndDate: weekEndStr,
-          checkDay: currentDay,
-        },
-        context: {
-          timestamp: new Date(),
-          metadata: {
-            source: "weekly_hours_check_service",
-            weekRange: `${weekStartStr} to ${weekEndStr}`,
-          },
-        },
-      });
-      triggeredCount++;
-    }
-
-    console.log(
-      `[WeeklyHoursCheck] Completed check - ${triggeredCount} manager group(s) emitted`
-    );
   } catch (error) {
     console.error("[WeeklyHoursCheck] Error during check:", error);
   } finally {
     isRunning = false;
   }
+}
+
+async function runSystemAlert(
+  allStaff: StaffMemberInfo[],
+  staffHours: Map<string, { taskHours: number; calendarHours: number }>,
+  settings: { threshold: number; includeCalendarTime: boolean },
+  weekStartStr: string,
+  weekEndStr: string
+) {
+  const threshold = settings.threshold;
+
+  const staffBelowThreshold: Array<StaffHoursData & { managerId: string | null }> = [];
+
+  for (const member of allStaff) {
+    const hours = staffHours.get(member.id) || { taskHours: 0, calendarHours: 0 };
+    const total = settings.includeCalendarTime
+      ? hours.taskHours + hours.calendarHours
+      : hours.taskHours;
+
+    if (total < threshold) {
+      staffBelowThreshold.push({
+        staffId: member.id,
+        staffName: `${member.firstName} ${member.lastName}`,
+        staffEmail: member.email || "",
+        staffDepartment: member.department || "Unassigned",
+        staffPosition: member.position || "Unknown",
+        taskHoursLogged: Math.round(hours.taskHours * 100) / 100,
+        calendarHoursLogged: Math.round(hours.calendarHours * 100) / 100,
+        totalHoursLogged: Math.round(total * 100) / 100,
+        managerId: member.managerId,
+      });
+    }
+  }
+
+  if (staffBelowThreshold.length === 0) {
+    console.log("[WeeklyHoursCheck] System alert: No staff below threshold");
+    return;
+  }
+
+  const admins = allStaff.filter(s => s.role === "Admin");
+  const managers = allStaff.filter(s => s.role === "Manager");
+
+  const managerSubordinates = new Map<string, typeof staffBelowThreshold>();
+  for (const entry of staffBelowThreshold) {
+    if (entry.managerId) {
+      const existing = managerSubordinates.get(entry.managerId) || [];
+      existing.push(entry);
+      managerSubordinates.set(entry.managerId, existing);
+    }
+  }
+
+  const weekLabel = `${formatDate(weekStartStr)} - ${formatDate(weekEndStr)}`;
+
+  for (const [managerId, subordinates] of managerSubordinates) {
+    const isAdmin = admins.some(a => a.id === managerId);
+    const isManager = managers.some(m => m.id === managerId);
+    if (!isAdmin && !isManager) continue;
+
+    const lines = subordinates.map(s =>
+      `${s.staffName}: ${s.totalHoursLogged}h logged (${threshold}h expected)`
+    );
+
+    const message = subordinates.length === 1
+      ? `${subordinates[0].staffName} logged only ${subordinates[0].totalHoursLogged} hours last week (${weekLabel}). Expected: ${threshold}h.`
+      : `${subordinates.length} team members logged under ${threshold} hours last week (${weekLabel}):\n${lines.join('\n')}`;
+
+    try {
+      await db.insert(notifications).values({
+        userId: managerId,
+        type: 'system',
+        title: 'Weekly Hours Alert',
+        message,
+        entityType: 'report',
+        entityId: 'weekly-hours',
+        priority: 'high',
+        actionUrl: '/reports/tasks/timesheets',
+        actionText: 'View Timesheets',
+        metadata: {
+          alertType: 'weekly_hours_below_threshold',
+          weekStart: weekStartStr,
+          weekEnd: weekEndStr,
+          threshold,
+          subordinates: subordinates.map(s => ({
+            id: s.staffId,
+            name: s.staffName,
+            hours: s.totalHoursLogged,
+          })),
+        },
+      });
+    } catch (err) {
+      console.error(`[WeeklyHoursCheck] Failed to notify manager ${managerId}:`, err);
+    }
+  }
+
+  for (const admin of admins) {
+    const alreadyNotifiedAsManager = managerSubordinates.has(admin.id);
+    const otherStaffBelowThreshold = alreadyNotifiedAsManager
+      ? staffBelowThreshold.filter(s => s.managerId !== admin.id)
+      : staffBelowThreshold;
+
+    if (otherStaffBelowThreshold.length === 0) continue;
+
+    const lines = otherStaffBelowThreshold.map(s =>
+      `${s.staffName} (${s.staffDepartment}): ${s.totalHoursLogged}h`
+    );
+
+    const headerNote = alreadyNotifiedAsManager ? ' (outside your direct reports)' : '';
+    const message = `${otherStaffBelowThreshold.length} staff member(s)${headerNote} logged under ${threshold} hours last week (${weekLabel}):\n${lines.slice(0, 10).join('\n')}${otherStaffBelowThreshold.length > 10 ? `\n...and ${otherStaffBelowThreshold.length - 10} more` : ''}`;
+
+    try {
+      await db.insert(notifications).values({
+        userId: admin.id,
+        type: 'system',
+        title: 'Weekly Hours Alert',
+        message,
+        entityType: 'report',
+        entityId: 'weekly-hours',
+        priority: 'high',
+        actionUrl: '/reports/tasks/timesheets',
+        actionText: 'View Timesheets',
+        metadata: {
+          alertType: 'weekly_hours_below_threshold',
+          weekStart: weekStartStr,
+          weekEnd: weekEndStr,
+          threshold,
+          totalBelowThreshold: staffBelowThreshold.length,
+        },
+      });
+    } catch (err) {
+      console.error(`[WeeklyHoursCheck] Failed to notify admin ${admin.id}:`, err);
+    }
+  }
+
+  console.log(`[WeeklyHoursCheck] System alert: Notified managers/admins about ${staffBelowThreshold.length} staff below ${threshold}h`);
+}
+
+async function runWorkflowTriggers(
+  allStaff: StaffMemberInfo[],
+  staffHours: Map<string, { taskHours: number; calendarHours: number }>,
+  configs: WorkflowHoursConfig[],
+  currentDay: string,
+  weekStartStr: string,
+  weekEndStr: string
+) {
+  const relevantConfigs = configs.filter(c => c.checkDay === currentDay);
+  if (relevantConfigs.length === 0) return;
+
+  const highestThreshold = Math.max(...relevantConfigs.map(c => c.hoursThreshold));
+
+  const staffByManager = new Map<string, {
+    manager: StaffMemberInfo | null;
+    subordinates: StaffHoursData[];
+  }>();
+
+  for (const member of allStaff) {
+    if (!member.managerId) continue;
+
+    const hours = staffHours.get(member.id) || { taskHours: 0, calendarHours: 0 };
+    const totalWithCalendar = hours.taskHours + hours.calendarHours;
+
+    if (totalWithCalendar >= highestThreshold) continue;
+
+    const managerId = member.managerId;
+    const managerInfo = allStaff.find(s => s.id === managerId) || null;
+
+    if (!staffByManager.has(managerId)) {
+      staffByManager.set(managerId, { manager: managerInfo, subordinates: [] });
+    }
+
+    staffByManager.get(managerId)!.subordinates.push({
+      staffId: member.id,
+      staffName: `${member.firstName} ${member.lastName}`,
+      staffEmail: member.email || "",
+      staffDepartment: member.department || "Unassigned",
+      staffPosition: member.position || "Unknown",
+      taskHoursLogged: Math.round(hours.taskHours * 100) / 100,
+      calendarHoursLogged: Math.round(hours.calendarHours * 100) / 100,
+      totalHoursLogged: Math.round(totalWithCalendar * 100) / 100,
+    });
+  }
+
+  let triggeredCount = 0;
+  for (const [managerId, groupData] of staffByManager) {
+    const { manager, subordinates } = groupData;
+
+    await emitTrigger({
+      type: "weekly_hours_below_threshold",
+      data: {
+        managerId,
+        managerName: manager ? `${manager.firstName} ${manager.lastName}` : "Unknown Manager",
+        managerEmail: manager?.email || "",
+        subordinatesBelowThreshold: subordinates,
+        subordinateCount: subordinates.length,
+        weekStartDate: weekStartStr,
+        weekEndDate: weekEndStr,
+        checkDay: currentDay,
+      },
+      context: {
+        timestamp: new Date(),
+        metadata: {
+          source: "weekly_hours_check_service",
+          weekRange: `${weekStartStr} to ${weekEndStr}`,
+        },
+      },
+    });
+    triggeredCount++;
+  }
+
+  if (triggeredCount > 0) {
+    console.log(`[WeeklyHoursCheck] Workflow triggers: ${triggeredCount} manager group(s) emitted`);
+  }
+}
+
+async function hasAlreadySentWeeklyAlert(weekStartStr: string): Promise<boolean> {
+  try {
+    const existing = await db.select({ id: notifications.id })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.type, 'system'),
+          eq(notifications.title, 'Weekly Hours Alert'),
+          sql`${notifications.metadata}->>'weekStart' = ${weekStartStr}`
+        )
+      )
+      .limit(1);
+    return existing.length > 0;
+  } catch (err) {
+    console.error("[WeeklyHoursCheck] Error checking existing alerts:", err);
+    return false;
+  }
+}
+
+function formatDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[parseInt(month) - 1]} ${parseInt(day)}`;
 }

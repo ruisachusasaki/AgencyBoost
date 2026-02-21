@@ -46,6 +46,7 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Activity & Comments**: Global timer, activity logging, and a threaded comments system with @mentions and emoji picker.
 - **Time Entry Editing**: Admins and managers can edit time entries in the TimeSheet View.
 - **Long-Running Timer Alerts**: Background service notifies users and admins of timers exceeding a configurable threshold.
+- **Weekly Hours System Alerts**: Built-in background service that automatically notifies managers and admins when team members log fewer than a configurable threshold (default 40 hours) per week. Runs on a configurable check day, with persistent duplicate prevention, calendar time inclusion option, and settings UI in Settings > Tasks.
 - **File & Media**: Advanced uploads, inline media display, voice recording, secure object storage, and collaborative annotation.
 - **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, search, draft/published workflow, version history, auto-generated Table of Contents, and related articles suggestions.
 - **AI Assistant**: OpenAI-powered chat widget indexing Knowledge Base content for quick answers, featuring conversation history and source citations.

@@ -283,6 +283,198 @@ function LongRunningTimerSettings() {
   );
 }
 
+function WeeklyHoursAlertSettings() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: settings, isLoading } = useQuery<Record<string, any>>({
+    queryKey: ['/api/task-settings'],
+  });
+
+  const alertEnabled = settings?.weekly_hours_alert_enabled?.value ?? true;
+  const threshold = settings?.weekly_hours_alert_threshold?.value ?? 40;
+  const checkDay = settings?.weekly_hours_alert_check_day?.value ?? 'Monday';
+  const includeCalendar = settings?.weekly_hours_alert_include_calendar?.value ?? true;
+
+  const [localEnabled, setLocalEnabled] = useState<boolean>(alertEnabled);
+  const [localThreshold, setLocalThreshold] = useState<string>(String(threshold));
+  const [localCheckDay, setLocalCheckDay] = useState<string>(checkDay);
+  const [localIncludeCalendar, setLocalIncludeCalendar] = useState<boolean>(includeCalendar);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    setLocalEnabled(alertEnabled);
+    setLocalThreshold(String(threshold));
+    setLocalCheckDay(checkDay);
+    setLocalIncludeCalendar(includeCalendar);
+    setHasChanges(false);
+  }, [alertEnabled, threshold, checkDay, includeCalendar]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: { settingKey: string; settingValue: any }) => {
+      const res = await apiRequest("POST", "/api/task-settings", {
+        settingKey: data.settingKey,
+        settingValue: data.settingValue,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/task-settings'] });
+    },
+  });
+
+  const handleSave = async () => {
+    try {
+      await saveMutation.mutateAsync({
+        settingKey: "weekly_hours_alert_enabled",
+        settingValue: { value: localEnabled },
+      });
+      await saveMutation.mutateAsync({
+        settingKey: "weekly_hours_alert_threshold",
+        settingValue: { value: parseFloat(localThreshold) || 40 },
+      });
+      await saveMutation.mutateAsync({
+        settingKey: "weekly_hours_alert_check_day",
+        settingValue: { value: localCheckDay },
+      });
+      await saveMutation.mutateAsync({
+        settingKey: "weekly_hours_alert_include_calendar",
+        settingValue: { value: localIncludeCalendar },
+      });
+      setHasChanges(false);
+      toast({
+        title: "Settings saved",
+        description: "Weekly hours alert settings have been updated.",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to save settings.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <div className="text-center text-muted-foreground">Loading settings...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Weekly Hours Alert</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Automatically notify managers and admins when team members log fewer than the expected hours in a week.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="weekly-hours-enabled" className="font-medium">Enable Alerts</Label>
+            <p className="text-sm text-muted-foreground">
+              Send notifications to managers when their direct reports are under hours
+            </p>
+          </div>
+          <Switch
+            id="weekly-hours-enabled"
+            checked={localEnabled}
+            onCheckedChange={(checked) => {
+              setLocalEnabled(checked);
+              setHasChanges(true);
+            }}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="weekly-hours-threshold" className="font-medium">Minimum Hours Threshold</Label>
+          <p className="text-sm text-muted-foreground">
+            Staff logging fewer than this many hours will trigger an alert.
+          </p>
+          <div className="flex items-center gap-3">
+            <Input
+              id="weekly-hours-threshold"
+              type="number"
+              min="1"
+              max="80"
+              step="1"
+              value={localThreshold}
+              onChange={(e) => {
+                setLocalThreshold(e.target.value);
+                setHasChanges(true);
+              }}
+              className="w-32"
+              disabled={!localEnabled}
+            />
+            <span className="text-sm text-muted-foreground">hours per week</span>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="weekly-hours-check-day" className="font-medium">Check Day</Label>
+          <p className="text-sm text-muted-foreground">
+            Which day of the week to check the previous week's hours and send alerts.
+          </p>
+          <Select
+            value={localCheckDay}
+            onValueChange={(value) => {
+              setLocalCheckDay(value);
+              setHasChanges(true);
+            }}
+            disabled={!localEnabled}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Monday">Monday</SelectItem>
+              <SelectItem value="Tuesday">Tuesday</SelectItem>
+              <SelectItem value="Wednesday">Wednesday</SelectItem>
+              <SelectItem value="Thursday">Thursday</SelectItem>
+              <SelectItem value="Friday">Friday</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="weekly-hours-calendar" className="font-medium">Include Calendar Time</Label>
+            <p className="text-sm text-muted-foreground">
+              Count calendar/meeting time entries toward total hours
+            </p>
+          </div>
+          <Switch
+            id="weekly-hours-calendar"
+            checked={localIncludeCalendar}
+            onCheckedChange={(checked) => {
+              setLocalIncludeCalendar(checked);
+              setHasChanges(true);
+            }}
+            disabled={!localEnabled}
+          />
+        </div>
+
+        {hasChanges && (
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSave}
+              disabled={saveMutation.isPending}
+              style={{ backgroundColor: 'hsl(179, 100%, 39%)', color: 'white' }}
+            >
+              {saveMutation.isPending ? "Saving..." : "Save Settings"}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function TasksSettingsPage() {
   const [activeTab, setActiveTab] = useState("statuses");
   const [editingItem, setEditingItem] = useState<TaskStatus | TaskPriority | TaskCategory | TeamWorkflow | null>(null);
@@ -1543,6 +1735,7 @@ export default function TasksSettingsPage() {
           </div>
 
           <LongRunningTimerSettings />
+          <WeeklyHoursAlertSettings />
         </TabsContent>
       </Tabs>
 
