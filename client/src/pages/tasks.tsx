@@ -134,7 +134,7 @@ export default function Tasks() {
   const [smartListName, setSmartListName] = useState("");
   const [smartListDescription, setSmartListDescription] = useState("");
   const [isSaveSmartListOpen, setIsSaveSmartListOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("all-tasks");
+  const [activeTab, setActiveTab] = useState("my-tasks");
   const [isShareSmartListOpen, setIsShareSmartListOpen] = useState(false);
   const [shareListId, setShareListId] = useState<string | null>(null);
   const [shareWithUsers, setShareWithUsers] = useState<string[]>([]);
