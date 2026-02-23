@@ -172,7 +172,7 @@ export default function TicketReports() {
               <Button
                 variant="outline"
                 className={cn(
-                  "w-[200px] pl-3 text-left font-normal",
+                  "w-[220px] px-4 text-left font-normal",
                   !startDate && "text-muted-foreground"
                 )}
               >
@@ -197,7 +197,7 @@ export default function TicketReports() {
               <Button
                 variant="outline"
                 className={cn(
-                  "w-[200px] pl-3 text-left font-normal",
+                  "w-[220px] px-4 text-left font-normal",
                   !endDate && "text-muted-foreground"
                 )}
               >
