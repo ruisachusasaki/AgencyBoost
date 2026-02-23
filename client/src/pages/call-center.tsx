@@ -141,7 +141,7 @@ export default function CallCenter() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6">
+    <div className="w-full px-6 space-y-6">
       <div className="flex items-center gap-3 mb-2">
         <Headphones className="h-7 w-7 text-primary" />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Call Center</h1>
