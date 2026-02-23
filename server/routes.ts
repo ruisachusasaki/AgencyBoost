@@ -38271,9 +38271,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/call-center/clients", requireAuth(), async (req, res) => {
     try {
       const allClients = await db
-        .select({ id: clients.id, companyName: clients.name })
+        .select({ id: clients.id, companyName: clients.company })
         .from(clients)
-        .orderBy(clients.name);
+        .orderBy(clients.company);
       res.json({ clients: allClients });
     } catch (error: any) {
       console.error("Error getting call center clients:", error);
@@ -38299,7 +38299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let running = runningEntries[0] || null;
       if (running) {
-        const [client] = await db.select({ companyName: clients.name }).from(clients).where(eq(clients.id, running.clientId)).limit(1);
+        const [client] = await db.select({ companyName: clients.company }).from(clients).where(eq(clients.id, running.clientId)).limit(1);
         running = { ...running, clientName: client?.companyName || 'Unknown Client' };
       }
 
@@ -38449,7 +38449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const entryClientIds = [...new Set(rawEntries.map(e => e.clientId).filter(Boolean))];
       const clientNameMap: Record<string, string> = {};
       if (entryClientIds.length > 0) {
-        const cRows = await db.select({ id: clients.id, companyName: clients.name }).from(clients).where(inArray(clients.id, entryClientIds));
+        const cRows = await db.select({ id: clients.id, companyName: clients.company }).from(clients).where(inArray(clients.id, entryClientIds));
         for (const c of cRows) { clientNameMap[c.id] = c.companyName; }
       }
       const entries = rawEntries.map(e => ({ ...e, clientName: clientNameMap[e.clientId] || 'Unknown Client' }));
@@ -38524,7 +38524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clientLk: Record<string, string> = {};
       const userLk: Record<string, any> = {};
       if (allClientIds2.length > 0) {
-        const cRows = await db.select({ id: clients.id, companyName: clients.name }).from(clients).where(inArray(clients.id, allClientIds2));
+        const cRows = await db.select({ id: clients.id, companyName: clients.company }).from(clients).where(inArray(clients.id, allClientIds2));
         for (const c of cRows) { clientLk[c.id] = c.companyName; }
       }
       if (allUserIds2.length > 0) {
@@ -38602,7 +38602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const costCLk: Record<string, string> = {};
       const costULk: Record<string, any> = {};
       if (costCIds.length > 0) {
-        const cRows = await db.select({ id: clients.id, companyName: clients.name }).from(clients).where(inArray(clients.id, costCIds));
+        const cRows = await db.select({ id: clients.id, companyName: clients.company }).from(clients).where(inArray(clients.id, costCIds));
         for (const c of cRows) { costCLk[c.id] = c.companyName; }
       }
       if (costUIds.length > 0) {
