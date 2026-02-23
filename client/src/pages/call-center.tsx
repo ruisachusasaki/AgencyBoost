@@ -184,12 +184,12 @@ export default function CallCenter() {
                 Select Client
               </label>
               <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background text-foreground border-input">
                   <SelectValue placeholder="Choose a client..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover text-popover-foreground border shadow-md z-[200]">
                   {clients.map((client: any) => (
-                    <SelectItem key={client.id} value={client.id}>
+                    <SelectItem key={client.id} value={String(client.id)} className="text-popover-foreground hover:bg-accent cursor-pointer">
                       {client.companyName}
                     </SelectItem>
                   ))}
