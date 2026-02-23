@@ -74,6 +74,7 @@ import {
   aiIntegrations,
   aiAssistantSettings,
   slackWorkspaces,
+  callCenterTimeEntries,
   emailTemplates, smsTemplates,
   toolDirectoryCategories, toolDirectoryTools,
   pxMeetings, pxMeetingAttendees,
@@ -95,7 +96,7 @@ import mailgun from "mailgun.js";
 import formData from "form-data";
 import { NotificationService, setNotificationServiceInstance } from "./notification-service";
 import { EncryptionService } from "./encryption";
-import { eq, like, ilike, or, and, asc, desc, sql, inArray, isNotNull, isNull, gt, gte, lte, getTableColumns } from "drizzle-orm";
+import { eq, like, ilike, or, and, asc, desc, sql, inArray, isNotNull, isNull, gt, gte, lt, lte, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
@@ -38260,6 +38261,438 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to delete routing rule" });
     }
   });
+
+
+  // ================================
+  // CALL CENTER TIME TRACKING
+  // ================================
+
+  // Get current running timer status
+  app.get("/api/call-center/status", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const [running] = await db
+        .select({
+          id: callCenterTimeEntries.id,
+          userId: callCenterTimeEntries.userId,
+          clientId: callCenterTimeEntries.clientId,
+          startTime: callCenterTimeEntries.startTime,
+          isRunning: callCenterTimeEntries.isRunning,
+          clientName: clients.companyName,
+        })
+        .from(callCenterTimeEntries)
+        .leftJoin(clients, eq(callCenterTimeEntries.clientId, clients.id))
+        .where(
+          and(
+            eq(callCenterTimeEntries.userId, userId),
+            eq(callCenterTimeEntries.isRunning, true)
+          )
+        )
+        .limit(1);
+
+      res.json({ runningEntry: running || null });
+    } catch (error: any) {
+      console.error("Error getting call center status:", error);
+      res.status(500).json({ error: "Failed to get status" });
+    }
+  });
+
+  // Clock in - start a timer for a client
+  app.post("/api/call-center/clock-in", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { clientId } = req.body;
+      if (!clientId) {
+        return res.status(400).json({ error: "clientId is required" });
+      }
+
+      // Stop any running timer first
+      const [running] = await db
+        .select()
+        .from(callCenterTimeEntries)
+        .where(
+          and(
+            eq(callCenterTimeEntries.userId, userId),
+            eq(callCenterTimeEntries.isRunning, true)
+          )
+        )
+        .limit(1);
+
+      if (running) {
+        const now = new Date();
+        const durationMinutes = Math.round((now.getTime() - new Date(running.startTime).getTime()) / 60000);
+        await db
+          .update(callCenterTimeEntries)
+          .set({
+            endTime: now,
+            duration: durationMinutes,
+            isRunning: false,
+            updatedAt: now,
+          })
+          .where(eq(callCenterTimeEntries.id, running.id));
+      }
+
+      // Start new timer
+      const now = new Date();
+      const [newEntry] = await db
+        .insert(callCenterTimeEntries)
+        .values({
+          userId,
+          clientId,
+          startTime: now,
+          isRunning: true,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+
+      res.json({ entry: newEntry });
+    } catch (error: any) {
+      console.error("Error clocking in:", error);
+      res.status(500).json({ error: "Failed to clock in" });
+    }
+  });
+
+  // Clock out - stop the running timer
+  app.post("/api/call-center/clock-out", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const [running] = await db
+        .select()
+        .from(callCenterTimeEntries)
+        .where(
+          and(
+            eq(callCenterTimeEntries.userId, userId),
+            eq(callCenterTimeEntries.isRunning, true)
+          )
+        )
+        .limit(1);
+
+      if (!running) {
+        return res.status(400).json({ error: "No running timer to stop" });
+      }
+
+      const now = new Date();
+      const durationMinutes = Math.round((now.getTime() - new Date(running.startTime).getTime()) / 60000);
+
+      const [updated] = await db
+        .update(callCenterTimeEntries)
+        .set({
+          endTime: now,
+          duration: durationMinutes,
+          isRunning: false,
+          updatedAt: now,
+        })
+        .where(eq(callCenterTimeEntries.id, running.id))
+        .returning();
+
+      res.json({ entry: updated });
+    } catch (error: any) {
+      console.error("Error clocking out:", error);
+      res.status(500).json({ error: "Failed to clock out" });
+    }
+  });
+
+  // Get user's call center entries for a specific week
+  app.get("/api/call-center/entries", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { weekOf } = req.query;
+      
+      // Calculate week boundaries (Monday to Sunday)
+      let startOfWeek: Date;
+      if (weekOf && typeof weekOf === 'string') {
+        startOfWeek = new Date(weekOf + "T00:00:00");
+      } else {
+        startOfWeek = new Date();
+      }
+      // Adjust to Monday
+      const day = startOfWeek.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      startOfWeek.setDate(startOfWeek.getDate() + diff);
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+      const entries = await db
+        .select({
+          id: callCenterTimeEntries.id,
+          userId: callCenterTimeEntries.userId,
+          clientId: callCenterTimeEntries.clientId,
+          startTime: callCenterTimeEntries.startTime,
+          endTime: callCenterTimeEntries.endTime,
+          duration: callCenterTimeEntries.duration,
+          isRunning: callCenterTimeEntries.isRunning,
+          clientName: clients.companyName,
+        })
+        .from(callCenterTimeEntries)
+        .leftJoin(clients, eq(callCenterTimeEntries.clientId, clients.id))
+        .where(
+          and(
+            eq(callCenterTimeEntries.userId, userId),
+            gte(callCenterTimeEntries.startTime, startOfWeek),
+            lt(callCenterTimeEntries.startTime, endOfWeek)
+          )
+        )
+        .orderBy(desc(callCenterTimeEntries.startTime));
+
+      res.json({ entries, weekStart: startOfWeek.toISOString(), weekEnd: endOfWeek.toISOString() });
+    } catch (error: any) {
+      console.error("Error getting call center entries:", error);
+      res.status(500).json({ error: "Failed to get entries" });
+    }
+  });
+
+  // Get all call center entries for reports (admin/manager/accounting)
+  app.get("/api/call-center/all-entries", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const isAdmin = await isCurrentUserAdmin(req);
+      let hasAccess = isAdmin;
+
+      if (!hasAccess) {
+        const userRolesList = await db
+          .select({ roleId: userRoles.roleId })
+          .from(userRoles)
+          .where(eq(userRoles.userId, userId));
+        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+
+        if (roleIds.length > 0) {
+          const perms = await db
+            .select({ permissionKey: granularPermissions.permissionKey })
+            .from(granularPermissions)
+            .where(
+              and(
+                inArray(granularPermissions.roleId, roleIds),
+                or(
+                  eq(granularPermissions.permissionKey, 'call_center.time_tracking.view_all'),
+                  eq(granularPermissions.permissionKey, 'reports.call_center_cost.view')
+                ),
+                eq(granularPermissions.enabled, true)
+              )
+            );
+          hasAccess = perms.length > 0;
+        }
+      }
+
+      if (!hasAccess) {
+        return res.status(403).json({ error: "You don't have permission to view all call center entries" });
+      }
+
+      const { dateFrom, dateTo } = req.query;
+      if (!dateFrom || !dateTo || typeof dateFrom !== 'string' || typeof dateTo !== 'string') {
+        return res.status(400).json({ error: "dateFrom and dateTo query parameters are required" });
+      }
+
+      const fromDate = new Date(dateFrom + "T00:00:00");
+      const toDate = new Date(dateTo + "T23:59:59");
+
+      const entries = await db
+        .select({
+          id: callCenterTimeEntries.id,
+          userId: callCenterTimeEntries.userId,
+          clientId: callCenterTimeEntries.clientId,
+          startTime: callCenterTimeEntries.startTime,
+          endTime: callCenterTimeEntries.endTime,
+          duration: callCenterTimeEntries.duration,
+          isRunning: callCenterTimeEntries.isRunning,
+          clientName: clients.companyName,
+          userFirstName: staff.firstName,
+          userLastName: staff.lastName,
+          annualSalary: staff.annualSalary,
+        })
+        .from(callCenterTimeEntries)
+        .leftJoin(clients, eq(callCenterTimeEntries.clientId, clients.id))
+        .leftJoin(staff, eq(callCenterTimeEntries.userId, staff.id))
+        .where(
+          and(
+            gte(callCenterTimeEntries.startTime, fromDate),
+            lte(callCenterTimeEntries.startTime, toDate),
+            eq(callCenterTimeEntries.isRunning, false)
+          )
+        )
+        .orderBy(desc(callCenterTimeEntries.startTime));
+
+      res.json({ entries });
+    } catch (error: any) {
+      console.error("Error getting all call center entries:", error);
+      res.status(500).json({ error: "Failed to get entries" });
+    }
+  });
+
+  // Call Center Cost Per Client report
+  app.post("/api/reports/call-center-cost", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const isAdminUser = await isCurrentUserAdmin(req);
+      let hasAccess = isAdminUser;
+
+      if (!hasAccess) {
+        const userRolesList = await db
+          .select({ roleId: userRoles.roleId })
+          .from(userRoles)
+          .where(eq(userRoles.userId, userId));
+        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+
+        if (roleIds.length > 0) {
+          const perms = await db
+            .select({ permissionKey: granularPermissions.permissionKey })
+            .from(granularPermissions)
+            .where(
+              and(
+                inArray(granularPermissions.roleId, roleIds),
+                eq(granularPermissions.permissionKey, 'reports.call_center_cost.view'),
+                eq(granularPermissions.enabled, true)
+              )
+            );
+          hasAccess = perms.length > 0;
+        }
+      }
+
+      if (!hasAccess) {
+        return res.status(403).json({ error: "You don't have permission to view call center cost reports" });
+      }
+
+      const { dateFrom, dateTo } = req.body;
+      if (!dateFrom || !dateTo) {
+        return res.status(400).json({ error: "dateFrom and dateTo are required" });
+      }
+
+      const fromDate = new Date(dateFrom + "T00:00:00");
+      const toDate = new Date(dateTo + "T23:59:59");
+
+      const entries = await db
+        .select({
+          userId: callCenterTimeEntries.userId,
+          clientId: callCenterTimeEntries.clientId,
+          duration: callCenterTimeEntries.duration,
+          clientName: clients.companyName,
+          userFirstName: staff.firstName,
+          userLastName: staff.lastName,
+          annualSalary: staff.annualSalary,
+        })
+        .from(callCenterTimeEntries)
+        .leftJoin(clients, eq(callCenterTimeEntries.clientId, clients.id))
+        .leftJoin(staff, eq(callCenterTimeEntries.userId, staff.id))
+        .where(
+          and(
+            gte(callCenterTimeEntries.startTime, fromDate),
+            lte(callCenterTimeEntries.startTime, toDate),
+            eq(callCenterTimeEntries.isRunning, false)
+          )
+        );
+
+      // Aggregate by user and client
+      const costData: Record<string, {
+        userId: string;
+        userName: string;
+        annualSalary: number;
+        hourlyRate: number;
+        clients: Record<string, { clientId: string; clientName: string; totalMinutes: number; totalCost: number }>;
+        totalMinutes: number;
+        totalCost: number;
+      }> = {};
+
+      for (const entry of entries) {
+        if (!entry.duration || !entry.userId) continue;
+
+        const uid = entry.userId;
+        const salary = entry.annualSalary ? parseFloat(String(entry.annualSalary)) : 0;
+        const hourlyRate = salary > 0 ? salary / 2080 : 0; // 2080 = 40hrs * 52 weeks
+
+        if (!costData[uid]) {
+          costData[uid] = {
+            userId: uid,
+            userName: `${entry.userFirstName || ''} ${entry.userLastName || ''}`.trim() || 'Unknown',
+            annualSalary: salary,
+            hourlyRate,
+            clients: {},
+            totalMinutes: 0,
+            totalCost: 0,
+          };
+        }
+
+        const cid = entry.clientId || '__no_client__';
+        if (!costData[uid].clients[cid]) {
+          costData[uid].clients[cid] = {
+            clientId: cid,
+            clientName: entry.clientName || 'Unknown Client',
+            totalMinutes: 0,
+            totalCost: 0,
+          };
+        }
+
+        costData[uid].clients[cid].totalMinutes += entry.duration;
+        costData[uid].clients[cid].totalCost += (entry.duration / 60) * hourlyRate;
+        costData[uid].totalMinutes += entry.duration;
+        costData[uid].totalCost += (entry.duration / 60) * hourlyRate;
+      }
+
+      // Format response
+      const report = Object.values(costData).map(user => ({
+        ...user,
+        clients: Object.values(user.clients),
+        totalHours: Math.round((user.totalMinutes / 60) * 100) / 100,
+        totalCost: Math.round(user.totalCost * 100) / 100,
+        hourlyRate: Math.round(user.hourlyRate * 100) / 100,
+      }));
+
+      // Calculate grand totals
+      const grandTotalMinutes = report.reduce((sum, u) => sum + u.totalMinutes, 0);
+      const grandTotalCost = report.reduce((sum, u) => sum + u.totalCost, 0);
+
+      res.json({
+        report,
+        grandTotalHours: Math.round((grandTotalMinutes / 60) * 100) / 100,
+        grandTotalCost: Math.round(grandTotalCost * 100) / 100,
+        dateFrom,
+        dateTo,
+      });
+    } catch (error: any) {
+      console.error("Error generating call center cost report:", error);
+      res.status(500).json({ error: "Failed to generate report" });
+    }
+  });
+
+  // Delete a call center time entry (for admins or own entries)
+  app.delete("/api/call-center/entries/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const { id } = req.params;
+      const [entry] = await db.select().from(callCenterTimeEntries).where(eq(callCenterTimeEntries.id, id)).limit(1);
+
+      if (!entry) {
+        return res.status(404).json({ error: "Entry not found" });
+      }
+
+      const isAdmin = await isCurrentUserAdmin(req);
+      if (!isAdmin && entry.userId !== userId) {
+        return res.status(403).json({ error: "You can only delete your own entries" });
+      }
+
+      await db.delete(callCenterTimeEntries).where(eq(callCenterTimeEntries.id, id));
+      res.json({ message: "Entry deleted" });
+    } catch (error: any) {
+      console.error("Error deleting call center entry:", error);
+      res.status(500).json({ error: "Failed to delete entry" });
+    }
+  });
+
 
   return httpServer;
 }

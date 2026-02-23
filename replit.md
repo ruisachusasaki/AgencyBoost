@@ -57,6 +57,7 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Dashboard Widgets**: Customizable dashboards with drag-and-drop widget management and real-time data.
 - **Global Search**: Intelligent search across clients, leads, and tasks with real-time results and direct navigation.
 - **Ticketing System**: Admin-only bug report and feature request tracking with CRUD, comments, status lifecycle, priority levels, type classification, response time analytics, screenshot uploads, Loom video URL field, and automatic ticket routing rules.
+- **Call Center Time Tracking**: Simplified clock-in/clock-out interface for call center staff. Users select a client and start/stop timers. Features weekly summary with date/client/hours breakdown, client switching mid-shift, auto-redirect for call-center-only users, and a dedicated "Call Center Cost" report under Reports showing labor cost by client using staff hourly rates. Managed through normal Settings > Staff with call_center permission module. Table: `call_center_time_entries`.
 
 ## External Dependencies
 

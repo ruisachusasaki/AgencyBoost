@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -104,6 +105,27 @@ interface UserDashboardWidget {
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  const { data: currentUserData } = useQuery<any>({
+    queryKey: ["/api/auth/current-user"],
+  });
+
+  useEffect(() => {
+    if (!currentUserData) return;
+    if (currentUserData.role === 'Admin' || currentUserData.role === 'admin') return;
+    const hasCallCenterAccess = currentUserData.granularPermissions?.some(
+      (gp: any) => gp.module === 'call_center' && gp.enabled === true
+    );
+    const hasOtherModuleAccess = currentUserData.granularPermissions?.some(
+      (gp: any) => gp.module !== 'call_center' && gp.enabled === true && 
+      ['clients', 'tasks', 'sales', 'leads', 'campaigns', 'reports'].includes(gp.module)
+    );
+    if (hasCallCenterAccess && !hasOtherModuleAccess) {
+      setLocation("/call-center");
+    }
+  }, [currentUserData, setLocation]);
+
   const [addWidgetDialogOpen, setAddWidgetDialogOpen] = useState(false);
   const [widgetSearchTerm, setWidgetSearchTerm] = useState("");
   const [widgetCategoryFilter, setWidgetCategoryFilter] = useState<string>("all");

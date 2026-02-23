@@ -5282,3 +5282,32 @@ export const insertTicketRoutingRuleSchema = createInsertSchema(ticketRoutingRul
 });
 export type TicketRoutingRule = typeof ticketRoutingRules.$inferSelect;
 export type InsertTicketRoutingRule = z.infer<typeof insertTicketRoutingRuleSchema>;
+
+// ================================
+// CALL CENTER TIME TRACKING
+// ================================
+
+export const callCenterTimeEntries = pgTable("call_center_time_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  duration: integer("duration"),
+  isRunning: boolean("is_running").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_call_center_time_entries_user").on(table.userId),
+  index("idx_call_center_time_entries_client").on(table.clientId),
+  index("idx_call_center_time_entries_date").on(table.startTime),
+  index("idx_call_center_time_entries_running").on(table.userId, table.isRunning),
+]);
+
+export const insertCallCenterTimeEntrySchema = createInsertSchema(callCenterTimeEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCallCenterTimeEntry = z.infer<typeof insertCallCenterTimeEntrySchema>;
+export type CallCenterTimeEntry = typeof callCenterTimeEntries.$inferSelect;

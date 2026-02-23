@@ -81,6 +81,7 @@ import ResetPasswordPage from "@/pages/reset-password";
 import PublicSurvey from "@/pages/public-survey";
 import TicketsPage from "@/pages/tickets";
 import TicketDetailPage from "@/pages/ticket-detail";
+import CallCenter from "@/pages/call-center";
 import { AIAssistantWidget } from "@/components/ai-assistant-widget";
 import { VoipProvider } from "@/hooks/use-voip";
 import { ActiveCallPanel } from "@/components/voip";
@@ -283,6 +284,18 @@ function Router() {
         )}
       </Route>
       
+      <Route path="/call-center">
+        {() => (
+          <AuthGate>
+            <RequirePermission module="call_center">
+              <MainLayout>
+                <CallCenter />
+              </MainLayout>
+            </RequirePermission>
+          </AuthGate>
+        )}
+      </Route>
+
       <Route path="/workflows">
         {() => (
           <AuthGate>

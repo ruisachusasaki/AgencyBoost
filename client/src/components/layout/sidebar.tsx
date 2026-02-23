@@ -24,7 +24,8 @@ import {
   BookOpen,
   GraduationCap,
   Banknote,
-  Ticket
+  Ticket,
+  Headphones
 } from "lucide-react";
 
 interface SidebarProps {
@@ -46,6 +47,7 @@ const navigation = [
   { name: "PX", href: "/hr", icon: UserCheck },
   { name: "Training", href: "/training", icon: GraduationCap },
   { name: "Resources", href: "/resources", icon: BookOpen },
+  { name: "Call Center", href: "/call-center", icon: Headphones },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Tickets", href: "/tickets", icon: Ticket },
   { name: "Settings", href: "/settings", icon: Settings },
@@ -120,6 +122,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       "/hr": "hr",
       "/training": "training",
       "/resources": "knowledge_base",
+      "/call-center": "call_center",
       "/reports": "reports",
       "/tickets": "tickets",
       "/settings": "settings",

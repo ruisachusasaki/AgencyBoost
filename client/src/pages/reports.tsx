@@ -57,6 +57,7 @@ import {
   ArrowRight,
   StickyNote,
   Layers,
+  Headphones,
 } from "lucide-react";
 import { 
   exportTimeTrackingData,
@@ -126,6 +127,7 @@ export default function Reports() {
     'reports.view_team_reports',
     'reports.view_1on1_performance',
     'reports.view_cost_per_client',
+    'reports.view_call_center_cost',
     'reports.export_reports',
   ]);
   
@@ -270,6 +272,48 @@ export default function Reports() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  // Call Center Cost state and query
+  const [ccDateFrom, setCcDateFrom] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return formatLocalDateStr(d);
+  });
+  const [ccDateTo, setCcDateTo] = useState(() => formatLocalDateStr(new Date()));
+  const [ccFromOpen, setCcFromOpen] = useState(false);
+  const [ccToOpen, setCcToOpen] = useState(false);
+
+  interface CcReportUser {
+    userId: string;
+    userName: string;
+    hourlyRate: number;
+    totalMinutes: number;
+    totalHours: number;
+    totalCost: number;
+    clients: Array<{ clientId: string; clientName: string; totalMinutes: number; totalCost: number }>;
+  }
+  interface CcReportData {
+    report: CcReportUser[];
+    grandTotalHours: number;
+    grandTotalCost: number;
+    dateFrom: string;
+    dateTo: string;
+  }
+
+  const { data: ccData, isLoading: ccLoading } = useQuery<CcReportData>({
+    queryKey: ["/api/reports/call-center-cost", ccDateFrom, ccDateTo],
+    queryFn: async () => {
+      const res = await fetch("/api/reports/call-center-cost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ dateFrom: ccDateFrom, dateTo: ccDateTo }),
+      });
+      if (!res.ok) throw new Error("Failed to fetch call center cost report");
+      return res.json();
+    },
+    enabled: activeTab === "call-center-cost" && !!reportPermissions['reports.view_call_center_cost'],
+  });
 
   // User authentication and role data
   const { data: currentUser } = useQuery<{ id: string; name: string; email: string; roles: string[] }>({
@@ -1728,7 +1772,8 @@ export default function Reports() {
               { id: "team", name: "Team Workload", icon: Users, count: null, description: "Staff assignment distribution showing how many clients each team member is managing", permission: "reports.view_team_reports" },
               { id: "mrr", name: "MRR Report", icon: DollarSign, count: null, description: "Monthly Recurring Revenue breakdown by client, showing retainer values and revenue distribution", permission: "reports.view_sales_reports" },
               { id: "one-on-one", name: "1v1 Performance", icon: Target, count: null, description: "Individual performance metrics from 1-on-1 meetings, tracking KPIs and progress over time", permission: "reports.view_1on1_performance" },
-              { id: "cost-per-client", name: "Cost Per Client", icon: FileSpreadsheet, count: null, description: "Staff labor cost breakdown by client based on tracked time and salary rates", permission: "reports.view_cost_per_client" }
+              { id: "cost-per-client", name: "Cost Per Client", icon: FileSpreadsheet, count: null, description: "Staff labor cost breakdown by client based on tracked time and salary rates", permission: "reports.view_cost_per_client" },
+              { id: "call-center-cost", name: "Call Center Cost", icon: Headphones, count: null, description: "Call center labor cost breakdown by client based on clock-in time and salary rates", permission: "reports.view_call_center_cost" }
             ].filter(tab => !tab.permission || reportPermissions[tab.permission]).map((tab) => {
               const Icon = tab.icon;
               return (
@@ -5502,6 +5547,137 @@ export default function Reports() {
                       </TableRow>
                     </TableBody>
                   </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === "call-center-cost" && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Headphones className="h-5 w-5" />
+                    Call Center Cost Report
+                  </CardTitle>
+                  <CardDescription>Call center labor cost breakdown by client based on clock-in time and hourly rates</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Popover open={ccFromOpen} onOpenChange={setCcFromOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9 gap-1">
+                        <CalendarIcon className="h-4 w-4" />
+                        {ccDateFrom ? format(new Date(ccDateFrom + "T12:00:00"), "MMM d, yyyy") : "From"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <CalendarComponent
+                        mode="single"
+                        selected={ccDateFrom ? new Date(ccDateFrom + "T12:00:00") : undefined}
+                        onSelect={(date) => {
+                          if (date) setCcDateFrom(formatLocalDateStr(date));
+                          setCcFromOpen(false);
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <span className="text-muted-foreground text-sm">to</span>
+                  <Popover open={ccToOpen} onOpenChange={setCcToOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9 gap-1">
+                        <CalendarIcon className="h-4 w-4" />
+                        {ccDateTo ? format(new Date(ccDateTo + "T12:00:00"), "MMM d, yyyy") : "To"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <CalendarComponent
+                        mode="single"
+                        selected={ccDateTo ? new Date(ccDateTo + "T12:00:00") : undefined}
+                        onSelect={(date) => {
+                          if (date) setCcDateTo(formatLocalDateStr(date));
+                          setCcToOpen(false);
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {ccLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="ml-2 text-muted-foreground">Generating report...</span>
+                </div>
+              ) : !ccData || ccData.report.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Headphones className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="font-medium">No call center time tracked in this date range</p>
+                  <p className="text-sm">Adjust the date range or ensure call center staff have clocked in for clients.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="pt-4 pb-4">
+                        <div className="text-sm text-muted-foreground">Total Hours</div>
+                        <div className="text-2xl font-bold text-primary">{ccData.grandTotalHours}h</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-4 pb-4">
+                        <div className="text-sm text-muted-foreground">Total Cost</div>
+                        <div className="text-2xl font-bold">${ccData.grandTotalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-4 pb-4">
+                        <div className="text-sm text-muted-foreground">Staff Members</div>
+                        <div className="text-2xl font-bold">{ccData.report.length}</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {ccData.report.map((user) => (
+                    <Card key={user.userId}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-base">{user.userName}</CardTitle>
+                            <CardDescription>
+                              ${user.hourlyRate.toFixed(2)}/hr | {user.totalHours}h total | ${user.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total cost
+                            </CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Client</TableHead>
+                              <TableHead className="text-right">Hours</TableHead>
+                              <TableHead className="text-right">Cost</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {user.clients.map((client) => (
+                              <TableRow key={client.clientId}>
+                                <TableCell className="font-medium">{client.clientName}</TableCell>
+                                <TableCell className="text-right">{(client.totalMinutes / 60).toFixed(1)}h</TableCell>
+                                <TableCell className="text-right">${client.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               )}
             </CardContent>

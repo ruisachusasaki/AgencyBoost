@@ -800,6 +800,35 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
           { key: 'reports.cost_per_client.view', label: 'View cost per client', description: 'Access staff labor cost breakdown by client', action: 'view' },
         ],
       },
+      {
+        tab: 'call_center_cost',
+        label: 'Call Center Cost',
+        description: 'Call center labor cost by client',
+        permissions: [
+          { key: 'reports.call_center_cost.view', label: 'View call center cost', description: 'Access call center labor cost breakdown by client', action: 'view' },
+        ],
+      },
+    ],
+  },
+  {
+    module: 'call_center',
+    label: 'Call Center',
+    icon: 'Headphones',
+    description: 'Call center time tracking',
+    modulePermissions: [
+      { key: 'call_center.access', label: 'Access Call Center', description: 'Can access the Call Center clock-in page', action: 'view' },
+    ],
+    tabs: [
+      {
+        tab: 'time_tracking',
+        label: 'Time Tracking',
+        description: 'Clock in/out and track time by client',
+        permissions: [
+          { key: 'call_center.time_tracking.clock_in', label: 'Clock In/Out', description: 'Can clock in and out for clients', action: 'create' },
+          { key: 'call_center.time_tracking.view_own', label: 'View Own Report', description: 'Can view own weekly time report', action: 'view' },
+          { key: 'call_center.time_tracking.view_all', label: 'View All Reports', description: 'Can view all call center time entries', action: 'view' },
+        ],
+      },
     ],
   },
   {
@@ -1140,6 +1169,7 @@ export const PERMISSION_KEY_MIGRATION_MAP: Record<string, string> = {
   'reports.view_team_reports': 'reports.team.view',
   'reports.view_1on1_performance': 'reports.one_on_one.view',
   'reports.view_cost_per_client': 'reports.cost_per_client.view',
+  'reports.view_call_center_cost': 'reports.call_center_cost.view',
   'reports.export_reports': 'reports.sales.export',
   
   // Settings module - legacy key mappings
