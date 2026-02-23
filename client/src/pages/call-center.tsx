@@ -33,7 +33,7 @@ export default function CallCenter() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { data: clientsData } = useQuery<any>({
-    queryKey: ["/api/clients"],
+    queryKey: ["/api/call-center/clients"],
   });
 
   const { data: statusData, isLoading: statusLoading } = useQuery<{ runningEntry: any }>({

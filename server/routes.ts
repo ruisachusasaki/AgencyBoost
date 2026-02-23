@@ -38268,6 +38268,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ================================
 
   // Get current running timer status
+  app.get("/api/call-center/clients", requireAuth(), async (req, res) => {
+    try {
+      const allClients = await db
+        .select({ id: clients.id, companyName: clients.companyName })
+        .from(clients)
+        .orderBy(clients.companyName);
+      res.json({ clients: allClients });
+    } catch (error: any) {
+      console.error("Error getting call center clients:", error);
+      res.status(500).json({ error: "Failed to get clients" });
+    }
+  });
+
   app.get("/api/call-center/status", requireAuth(), async (req, res) => {
     try {
       const userId = getAuthenticatedUserIdOrFail(req, res);
