@@ -17286,29 +17286,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Validate and create notifications for mentioned users
-      if (mentions && mentions.length > 0) {
-        // Extract actual @mentions from the comment content (supports Unicode, apostrophes, hyphens)
+      // Also detect @mentions directly from content for replies that don't pass mention IDs
+      const hasAtMentions = content.includes('@');
+      if ((mentions && mentions.length > 0) || hasAtMentions) {
         const mentionRegex = /@([\p{L}\p{M}\p{N}\s'-]+)/gu;
         const mentionMatches = Array.from(content.matchAll(mentionRegex));
         const mentionNames = mentionMatches.map(match => match[1].trim().toLowerCase());
         
-        // Get all staff to validate mentions
         const allStaff = await db.select().from(staff);
         
-        // Build a set of valid user IDs that are actually mentioned in the content
         const validMentionIds = new Set<string>();
         mentionNames.forEach(mentionName => {
           const staffMember = allStaff.find((s: any) => {
             const fullName = `${s.firstName} ${s.lastName}`.toLowerCase();
             const name = s.name?.toLowerCase();
-            return fullName === mentionName || name === mentionName;
+            return fullName === mentionName || name === mentionName || 
+                   fullName.startsWith(mentionName) || mentionName.startsWith(fullName);
           });
           if (staffMember) {
             validMentionIds.add(staffMember.id);
           }
         });
+
+        if (mentions && mentions.length > 0) {
+          mentions.forEach((id: string) => validMentionIds.add(id));
+        }
         
-        // Get task name for better notification context
         let taskName = '';
         try {
           const taskData = await db.select({ title: tasks.title }).from(tasks).where(eq(tasks.id, taskId)).limit(1);
@@ -17319,9 +17322,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // fallback - no task name in notification
         }
         
-        // Only notify users whose IDs are both submitted AND validated as present in content
-        for (const mentionedUserId of mentions) {
-          if (validMentionIds.has(mentionedUserId) && mentionedUserId !== userId) {
+        for (const mentionedUserId of validMentionIds) {
+          if (mentionedUserId !== userId) {
             void notificationService.notifyMentionedInTask(
               mentionedUserId,
               userId,
@@ -17330,6 +17332,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               content.trim()
             ).catch(err => console.error('[Notification] Failed to send mention notification:', err));
           }
+        }
+
+        if (validMentionIds.size > 0 && newComment.id) {
+          await db.update(taskComments)
+            .set({ mentions: Array.from(validMentionIds) })
+            .where(eq(taskComments.id, newComment.id));
         }
       }
 
