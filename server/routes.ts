@@ -15033,7 +15033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             granularPermsToInsert.push({
               roleId: newRole.id,
               module,
-              permissionKey: '__module_enabled',
+              permissionKey: `__module_enabled.${module}`,
               enabled: Boolean((modulePerms as any).enabled),
             });
             const subPermissions = (modulePerms as any).subPermissions;
@@ -15154,7 +15154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             granularPermsToInsert.push({
               roleId: req.params.id,
               module,
-              permissionKey: '__module_enabled',
+              permissionKey: `__module_enabled.${module}`,
               enabled: Boolean((modulePerms as any).enabled),
             });
             const subPermissions = (modulePerms as any).subPermissions;
@@ -17145,7 +17145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             )
           );
         
-        enabledPermissions = [...new Set(grantedPerms.map(p => p.permissionKey).filter(k => k !== '__module_enabled'))];
+        enabledPermissions = [...new Set(grantedPerms.map(p => p.permissionKey).filter(k => !k.startsWith('__module_enabled')))];
       }
       
       res.json({

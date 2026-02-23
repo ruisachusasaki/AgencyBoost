@@ -994,12 +994,12 @@ export default function RolesPermissions() {
                             description: editingRole.description || "",
                             granularPermissions: (() => {
                               const perms = editingRole.granularPermissions || [];
-                              const hasModuleMarkers = perms.some(gp => gp.permissionKey === '__module_enabled');
+                              const hasModuleMarkers = perms.some(gp => gp.permissionKey.startsWith('__module_enabled.'));
                               return perms.reduce((acc, gp) => {
                                 if (!acc[gp.module]) {
                                   acc[gp.module] = { enabled: hasModuleMarkers ? false : true, subPermissions: {} };
                                 }
-                                if (gp.permissionKey === '__module_enabled') {
+                                if (gp.permissionKey.startsWith('__module_enabled.')) {
                                   acc[gp.module].enabled = gp.enabled;
                                 } else {
                                   acc[gp.module].subPermissions[gp.permissionKey] = gp.enabled;
