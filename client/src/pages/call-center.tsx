@@ -32,7 +32,7 @@ export default function CallCenter() {
   const [elapsed, setElapsed] = useState("00:00:00");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { data: clientsData } = useQuery<any[]>({
+  const { data: clientsData } = useQuery<any>({
     queryKey: ["/api/clients"],
   });
 
@@ -130,7 +130,7 @@ export default function CallCenter() {
   const entries = entriesData?.entries || [];
   const totalMinutes = entries.reduce((sum: number, e: any) => sum + (e.duration || 0), 0);
 
-  const clients = clientsData || [];
+  const clients = Array.isArray(clientsData) ? clientsData : (clientsData?.clients || []);
 
   // Group entries by date
   const entriesByDate: Record<string, any[]> = {};
