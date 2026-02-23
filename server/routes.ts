@@ -37695,11 +37695,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userIds = Array.from(userStatsMap.keys());
       const staffRows = userIds.length > 0
-        ? await db.select({ id: staff.id, name: staff.name }).from(staff).where(inArray(staff.id, userIds))
+        ? await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName }).from(staff).where(inArray(staff.id, userIds))
         : [];
       const staffNameMap = new Map<string, string>();
       for (const s of staffRows) {
-        staffNameMap.set(s.id, s.name || "Unknown");
+        staffNameMap.set(s.id, `${s.firstName || ""} ${s.lastName || ""}`.trim() || "Unknown");
       }
 
       const users = Array.from(userStatsMap.entries()).map(([userId, stats]) => {
