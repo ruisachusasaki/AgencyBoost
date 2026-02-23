@@ -15030,6 +15030,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const granularPermsToInsert = [];
         for (const [module, modulePerms] of Object.entries(roleGranularPermissions)) {
           if (modulePerms && typeof modulePerms === 'object' && 'subPermissions' in modulePerms) {
+            granularPermsToInsert.push({
+              roleId: newRole.id,
+              module,
+              permissionKey: '__module_enabled',
+              enabled: Boolean((modulePerms as any).enabled),
+            });
             const subPermissions = (modulePerms as any).subPermissions;
             for (const [permissionKey, enabled] of Object.entries(subPermissions)) {
               if (enabled) {
@@ -15145,6 +15151,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const granularPermsToInsert = [];
         for (const [module, modulePerms] of Object.entries(roleGranularPermissions)) {
           if (modulePerms && typeof modulePerms === 'object' && 'subPermissions' in modulePerms) {
+            granularPermsToInsert.push({
+              roleId: req.params.id,
+              module,
+              permissionKey: '__module_enabled',
+              enabled: Boolean((modulePerms as any).enabled),
+            });
             const subPermissions = (modulePerms as any).subPermissions;
             for (const [permissionKey, enabled] of Object.entries(subPermissions)) {
               if (enabled) {
@@ -17133,7 +17145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             )
           );
         
-        enabledPermissions = [...new Set(grantedPerms.map(p => p.permissionKey))];
+        enabledPermissions = [...new Set(grantedPerms.map(p => p.permissionKey).filter(k => k !== '__module_enabled'))];
       }
       
       res.json({
