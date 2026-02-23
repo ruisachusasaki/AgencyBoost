@@ -38273,17 +38273,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = getAuthenticatedUserIdOrFail(req, res);
       if (!userId) return;
 
-      const [running] = await db
-        .select({
-          id: callCenterTimeEntries.id,
-          userId: callCenterTimeEntries.userId,
-          clientId: callCenterTimeEntries.clientId,
-          startTime: callCenterTimeEntries.startTime,
-          isRunning: callCenterTimeEntries.isRunning,
-          clientName: clients.companyName,
-        })
+      const runningEntries = await db
+        .select()
         .from(callCenterTimeEntries)
-        .leftJoin(clients, eq(callCenterTimeEntries.clientId, clients.id))
         .where(
           and(
             eq(callCenterTimeEntries.userId, userId),
@@ -38292,7 +38284,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
         .limit(1);
 
-      res.json({ runningEntry: running || null });
+      let running = runningEntries[0] || null;
+      if (running) {
+        const [client] = await db.select({ companyName: clients.companyName }).from(clients).where(eq(clients.id, running.clientId)).limit(1);
+        running = { ...running, clientName: client?.companyName || 'Unknown Client' };
+      }
+
+      res.json({ runningEntry: running });
     } catch (error: any) {
       console.error("Error getting call center status:", error);
       res.status(500).json({ error: "Failed to get status" });
@@ -38423,19 +38421,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(endOfWeek.getDate() + 7);
 
-      const entries = await db
-        .select({
-          id: callCenterTimeEntries.id,
-          userId: callCenterTimeEntries.userId,
-          clientId: callCenterTimeEntries.clientId,
-          startTime: callCenterTimeEntries.startTime,
-          endTime: callCenterTimeEntries.endTime,
-          duration: callCenterTimeEntries.duration,
-          isRunning: callCenterTimeEntries.isRunning,
-          clientName: clients.companyName,
-        })
+      const rawEntries = await db
+        .select()
         .from(callCenterTimeEntries)
-        .leftJoin(clients, eq(callCenterTimeEntries.clientId, clients.id))
         .where(
           and(
             eq(callCenterTimeEntries.userId, userId),
@@ -38444,6 +38432,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         )
         .orderBy(desc(callCenterTimeEntries.startTime));
+
+      const entryClientIds = [...new Set(rawEntries.map(e => e.clientId).filter(Boolean))];
+      const clientNameMap: Record<string, string> = {};
+      if (entryClientIds.length > 0) {
+        const cRows = await db.select({ id: clients.id, companyName: clients.companyName }).from(clients).where(inArray(clients.id, entryClientIds));
+        for (const c of cRows) { clientNameMap[c.id] = c.companyName; }
+      }
+      const entries = rawEntries.map(e => ({ ...e, clientName: clientNameMap[e.clientId] || 'Unknown Client' }));
 
       res.json({ entries, weekStart: startOfWeek.toISOString(), weekEnd: endOfWeek.toISOString() });
     } catch (error: any) {
@@ -38498,23 +38494,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fromDate = new Date(dateFrom + "T00:00:00");
       const toDate = new Date(dateTo + "T23:59:59");
 
-      const entries = await db
-        .select({
-          id: callCenterTimeEntries.id,
-          userId: callCenterTimeEntries.userId,
-          clientId: callCenterTimeEntries.clientId,
-          startTime: callCenterTimeEntries.startTime,
-          endTime: callCenterTimeEntries.endTime,
-          duration: callCenterTimeEntries.duration,
-          isRunning: callCenterTimeEntries.isRunning,
-          clientName: clients.companyName,
-          userFirstName: staff.firstName,
-          userLastName: staff.lastName,
-          annualSalary: staff.annualSalary,
-        })
+      const allRawEntries = await db
+        .select()
         .from(callCenterTimeEntries)
-        .leftJoin(clients, eq(callCenterTimeEntries.clientId, clients.id))
-        .leftJoin(staff, eq(callCenterTimeEntries.userId, staff.id))
         .where(
           and(
             gte(callCenterTimeEntries.startTime, fromDate),
@@ -38523,6 +38505,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         )
         .orderBy(desc(callCenterTimeEntries.startTime));
+
+      const allClientIds2 = [...new Set(allRawEntries.map(e => e.clientId).filter(Boolean))];
+      const allUserIds2 = [...new Set(allRawEntries.map(e => e.userId).filter(Boolean))];
+      const clientLk: Record<string, string> = {};
+      const userLk: Record<string, any> = {};
+      if (allClientIds2.length > 0) {
+        const cRows = await db.select({ id: clients.id, companyName: clients.companyName }).from(clients).where(inArray(clients.id, allClientIds2));
+        for (const c of cRows) { clientLk[c.id] = c.companyName; }
+      }
+      if (allUserIds2.length > 0) {
+        const uRows = await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName, annualSalary: staff.annualSalary }).from(staff).where(inArray(staff.id, allUserIds2));
+        for (const u of uRows) { userLk[u.id] = u; }
+      }
+      const entries = allRawEntries.map(e => {
+        const u = userLk[e.userId] || {};
+        return { ...e, clientName: clientLk[e.clientId] || 'Unknown', userFirstName: u.firstName || '', userLastName: u.lastName || '', annualSalary: u.annualSalary || null };
+      });
 
       res.json({ entries });
     } catch (error: any) {
@@ -38574,19 +38573,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fromDate = new Date(dateFrom + "T00:00:00");
       const toDate = new Date(dateTo + "T23:59:59");
 
-      const entries = await db
-        .select({
-          userId: callCenterTimeEntries.userId,
-          clientId: callCenterTimeEntries.clientId,
-          duration: callCenterTimeEntries.duration,
-          clientName: clients.companyName,
-          userFirstName: staff.firstName,
-          userLastName: staff.lastName,
-          annualSalary: staff.annualSalary,
-        })
+      const costRawEntries = await db
+        .select()
         .from(callCenterTimeEntries)
-        .leftJoin(clients, eq(callCenterTimeEntries.clientId, clients.id))
-        .leftJoin(staff, eq(callCenterTimeEntries.userId, staff.id))
         .where(
           and(
             gte(callCenterTimeEntries.startTime, fromDate),
@@ -38594,6 +38583,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(callCenterTimeEntries.isRunning, false)
           )
         );
+
+      const costCIds = [...new Set(costRawEntries.map(e => e.clientId).filter(Boolean))];
+      const costUIds = [...new Set(costRawEntries.map(e => e.userId).filter(Boolean))];
+      const costCLk: Record<string, string> = {};
+      const costULk: Record<string, any> = {};
+      if (costCIds.length > 0) {
+        const cRows = await db.select({ id: clients.id, companyName: clients.companyName }).from(clients).where(inArray(clients.id, costCIds));
+        for (const c of cRows) { costCLk[c.id] = c.companyName; }
+      }
+      if (costUIds.length > 0) {
+        const uRows = await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName, annualSalary: staff.annualSalary }).from(staff).where(inArray(staff.id, costUIds));
+        for (const u of uRows) { costULk[u.id] = u; }
+      }
+      const entries = costRawEntries.map(e => {
+        const u = costULk[e.userId] || {};
+        return { userId: e.userId, clientId: e.clientId, duration: e.duration, clientName: costCLk[e.clientId] || 'Unknown', userFirstName: u.firstName || '', userLastName: u.lastName || '', annualSalary: u.annualSalary || null };
+      });
 
       // Aggregate by user and client
       const costData: Record<string, {
