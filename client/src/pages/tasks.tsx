@@ -413,6 +413,25 @@ export default function Tasks() {
     return category?.color || '#6b7280';
   };
 
+  const getTaskWorkflowStatuses = (task: Task) => {
+    const wfId = task.workflowId || taskCategories.find(c => c.id === task.categoryId)?.workflowId;
+    if (wfId) {
+      const wf = workflows.find((w: any) => w.id === wfId);
+      if (wf?.statuses?.length > 0) {
+        return wf.statuses.map((ws: any) => ({
+          value: ws.status.value,
+          name: ws.status.name,
+          color: ws.status.color,
+        }));
+      }
+    }
+    return taskStatuses.filter(s => s.isActive).map(s => ({
+      value: s.value,
+      name: s.name,
+      color: s.color,
+    }));
+  };
+
   const getCampaignName = (campaignId: string | null) => {
     if (!campaignId) return null;
     const campaign = campaigns.find(c => c.id === campaignId);
@@ -1351,31 +1370,37 @@ export default function Tasks() {
                   onClick={(e) => e.stopPropagation()}
                   className="flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center cursor-pointer hover:scale-110 transition-transform"
                   style={{
-                    borderColor: task.status === "completed" ? "#22c55e" : task.status === "in_progress" ? "#0891b2" : task.status === "cancelled" ? "#ef4444" : "#eab308",
-                    backgroundColor: task.status === "completed" ? "#22c55e" : "transparent",
+                    borderColor: (() => {
+                      const statuses = getTaskWorkflowStatuses(task);
+                      const match = statuses.find(s => s.value === task.status);
+                      return match?.color || "#eab308";
+                    })(),
+                    backgroundColor: task.status === "completed" || task.status === "done" ? (() => {
+                      const statuses = getTaskWorkflowStatuses(task);
+                      const match = statuses.find(s => s.value === task.status);
+                      return match?.color || "#22c55e";
+                    })() : "transparent",
                   }}
                   title="Change status"
                 >
-                  {task.status === "completed" && <Check className="h-3 w-3 text-white" />}
+                  {(task.status === "completed" || task.status === "done") && <Check className="h-3 w-3 text-white" />}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[140px]">
-                {(taskStatuses.length > 0 ? taskStatuses.map(s => s.name) : ["pending", "in_progress", "completed", "cancelled"]).map((status) => (
+                {getTaskWorkflowStatuses(task).map((statusObj) => (
                   <DropdownMenuItem
-                    key={status}
+                    key={statusObj.value}
                     onClick={(e) => {
                       e.stopPropagation();
-                      updateTaskMutation.mutate({ id: task.id, status });
+                      updateTaskMutation.mutate({ id: task.id, status: statusObj.value });
                     }}
-                    className={task.status === status ? "bg-accent font-medium" : ""}
+                    className={task.status === statusObj.value ? "bg-accent font-medium" : ""}
                   >
                     <span
                       className="h-2.5 w-2.5 rounded-full mr-2 flex-shrink-0"
-                      style={{
-                        backgroundColor: status === "completed" ? "#22c55e" : status === "in_progress" ? "#0891b2" : status === "cancelled" ? "#ef4444" : "#eab308",
-                      }}
+                      style={{ backgroundColor: statusObj.color || "#eab308" }}
                     />
-                    {status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                    {statusObj.name}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
