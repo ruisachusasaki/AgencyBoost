@@ -2039,26 +2039,26 @@ export default function Tasks() {
     });
   };
 
-  // Dynamic task stats based on selected workflow
   const selectedWorkflow = workflows.find(w => w.id === workflowFilter) || workflows[0];
   const workflowStatuses = selectedWorkflow?.statuses || [];
   
-  const taskStats = {
-    total: tasks.filter(t => t.workflowId === selectedWorkflow?.id).length,
-    byStatus: workflowStatuses.reduce((acc: any, workflowStatus: any) => {
-      acc[workflowStatus.status.value] = tasks.filter(t => 
-        t.status === workflowStatus.status.value && 
-        t.workflowId === selectedWorkflow?.id
-      ).length;
-      return acc;
-    }, {}),
-    overdue: tasks.filter(t => 
-      t.dueDate && 
-      new Date(t.dueDate) < new Date() && 
-      t.workflowId === selectedWorkflow?.id &&
-      !workflowStatuses.find((s: any) => s.status.value === t.status && (s.status.value === "completed" || s.status.value === "cancelled"))
-    ).length,
-  };
+  const taskStats = useMemo(() => {
+    const statsSource = filteredAndSortedTasks;
+    return {
+      total: statsSource.length,
+      byStatus: workflowStatuses.reduce((acc: any, workflowStatus: any) => {
+        acc[workflowStatus.status.value] = statsSource.filter(t => 
+          t.status === workflowStatus.status.value
+        ).length;
+        return acc;
+      }, {}),
+      overdue: statsSource.filter(t => 
+        t.dueDate && 
+        new Date(t.dueDate) < new Date() && 
+        !workflowStatuses.find((s: any) => s.status.value === t.status && (s.status.value === "completed" || s.status.value === "cancelled"))
+      ).length,
+    };
+  }, [filteredAndSortedTasks, workflowStatuses]);
 
   if (isLoading) {
     return (
