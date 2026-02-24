@@ -200,6 +200,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isFacilitatorOpen, setIsFacilitatorOpen] = useState(false);
   const [isNoteTakerOpen, setIsNoteTakerOpen] = useState(false);
+  const [isCreateClientOpen, setIsCreateClientOpen] = useState(false);
   
   // Convert to Task dialog state
   const [showConvertToTaskDialog, setShowConvertToTaskDialog] = useState(false);
@@ -677,6 +678,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
       meetingTime: formData.meetingTime,
       meetingDuration: formData.meetingDuration,
       recordingLink: formData.recordingLink || null,
+      clientId: formData.clientId || null,
       attendeeIds: formData.attendeeIds,
       facilitatorId: formData.facilitatorId || null,
       noteTakerId: formData.noteTakerId || null,
@@ -2533,6 +2535,53 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                   )}
                 </div>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Client</Label>
+              <Popover open={isCreateClientOpen} onOpenChange={setIsCreateClientOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between">
+                    {formData.clientId
+                      ? (clients.find(c => c.id === formData.clientId)?.company || clients.find(c => c.id === formData.clientId)?.name || "Select client...")
+                      : "Select client..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search clients..." />
+                    <CommandList>
+                      <CommandEmpty>No client found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value=""
+                          onSelect={() => {
+                            setFormData(prev => ({ ...prev, clientId: "" }));
+                            setIsCreateClientOpen(false);
+                          }}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", !formData.clientId ? "opacity-100" : "opacity-0")} />
+                          None
+                        </CommandItem>
+                        {clients.map((client) => (
+                          <CommandItem
+                            key={client.id}
+                            value={client.company || client.name}
+                            onSelect={() => {
+                              setFormData(prev => ({ ...prev, clientId: client.id }));
+                              setIsCreateClientOpen(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", formData.clientId === client.id ? "opacity-100" : "opacity-0")} />
+                            {client.company || client.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
