@@ -116,7 +116,7 @@ function PortalAccessManagement() {
     onSuccess: () => {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Portal user created successfully"
       });
       queryClient.invalidateQueries({ queryKey: ["/api/client-portal-users"] });
@@ -139,7 +139,7 @@ function PortalAccessManagement() {
     onSuccess: () => {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Portal user updated successfully"
       });
       queryClient.invalidateQueries({ queryKey: ["/api/client-portal-users"] });
@@ -162,7 +162,7 @@ function PortalAccessManagement() {
     onSuccess: () => {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Portal user deactivated successfully"
       });
       queryClient.invalidateQueries({ queryKey: ["/api/client-portal-users"] });
@@ -759,7 +759,7 @@ function TeamAssignmentsManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/team-positions'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Team position created successfully"
       });
       createForm.reset();
@@ -784,7 +784,7 @@ function TeamAssignmentsManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/team-positions'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Team position updated successfully"
       });
       setEditingPosition(null);
@@ -809,7 +809,7 @@ function TeamAssignmentsManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/team-positions'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Team position deleted successfully"
       });
     },
@@ -841,7 +841,7 @@ function TeamAssignmentsManagement() {
     onSuccess: () => {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Positions reordered successfully"
       });
       setIsSaving(false);

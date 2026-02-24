@@ -53,7 +53,7 @@ export default function ClientForm({ client, onSuccess }: ClientFormProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       toast({
         title: "Client created",
-        variant: "success",
+        variant: "default",
         description: "The client has been successfully created.",
       });
       onSuccess?.();
@@ -75,7 +75,7 @@ export default function ClientForm({ client, onSuccess }: ClientFormProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       toast({
         title: "Client updated",
-        variant: "success",
+        variant: "default",
         description: "The client has been successfully updated.",
       });
       onSuccess?.();

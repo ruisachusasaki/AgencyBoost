@@ -324,7 +324,7 @@ export default function Tasks() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({
         title: "Task deleted",
-        variant: "success",
+        variant: "default",
         description: "The task has been successfully deleted.",
       });
     },
@@ -614,7 +614,7 @@ export default function Tasks() {
     
     toast({
       title: "Filters Cleared",
-      variant: "success",
+      variant: "default",
       description: "All filters have been reset to default."
     });
   };
@@ -846,7 +846,7 @@ export default function Tasks() {
       queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Smart List saved successfully."
       });
       setSmartListName('');
@@ -872,7 +872,7 @@ export default function Tasks() {
       queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
       toast({
         title: "Smart List Deleted",
-        variant: "success",
+        variant: "default",
         description: "Smart List removed successfully."
       });
     },
@@ -896,7 +896,7 @@ export default function Tasks() {
       queryClient.invalidateQueries({ queryKey: ["/api/smart-lists"] });
       toast({
         title: "Sharing Updated",
-        variant: "success",
+        variant: "default",
         description: "Smart List sharing settings updated successfully."
       });
       setIsShareSmartListOpen(false);
@@ -1700,7 +1700,7 @@ export default function Tasks() {
       clearSelection();
       toast({
         title: "Tasks deleted",
-        variant: "success",
+        variant: "default",
         description: `${deletedCount} tasks have been successfully deleted.`,
       });
     },
@@ -1723,7 +1723,7 @@ export default function Tasks() {
       clearSelection();
       toast({
         title: "Tasks updated",
-        variant: "success",
+        variant: "default",
         description: `${updatedCount} tasks have been successfully updated.`,
       });
     },

@@ -150,7 +150,7 @@ export default function ActionConfigPanel({
       setNewTagName("");
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Tag created and added to action.",
       });
     },

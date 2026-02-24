@@ -39,7 +39,7 @@ export default function Leads() {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
         title: "Lead deleted",
-        variant: "success",
+        variant: "default",
         description: "The lead has been successfully deleted.",
       });
     },
@@ -59,7 +59,7 @@ export default function Leads() {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
         title: "Lead moved",
-        variant: "success",
+        variant: "default",
         description: "Lead has been moved to the new stage.",
       });
     },

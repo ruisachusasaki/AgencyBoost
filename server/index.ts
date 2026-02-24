@@ -1983,15 +1983,29 @@ async function runStartupMigrations() {
 }
 
 (async () => {
-  // Setup Replit Auth FIRST (essential for routes)
+  const port = parseInt(process.env.PORT || '5000', 10);
+
+  // Create HTTP server from the Express app with health check already registered
+  // This lets Cloud Run health checks pass immediately while we set up routes
+  const { createServer } = await import("http");
+  const server = createServer(app);
+
+  // Start listening IMMEDIATELY so health checks pass during route setup
+  await new Promise<void>((resolve) => {
+    server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
+      log(`serving on port ${port} (health check ready)`);
+      resolve();
+    });
+  });
+
+  // Now set up auth, routes, and static serving
   await setupAuth(app);
   log("✅ Replit Auth initialized");
   
-  // Setup Google Calendar OAuth routes (lightweight, no async work)
   setupGoogleCalendar(app);
   log("✅ Google Calendar OAuth routes initialized");
   
-  const server = await registerRoutes(app);
+  await registerRoutes(app, server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -2001,53 +2015,35 @@ async function runStartupMigrations() {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-    
-    // Run migrations AFTER server is listening (non-blocking for Cloud Run health checks)
-    // This ensures Cloud Run sees the app as healthy before migrations complete
-    runStartupMigrations().then(() => {
-      // Start background calendar sync service AFTER migrations complete
-      import('./googleCalendarBackgroundSync').then(({ startBackgroundSync }) => {
-        startBackgroundSync();
-        log("✅ Google Calendar background sync started");
-      }).catch(err => {
-        log(`⚠️ Failed to start background calendar sync: ${err.message}`);
-      });
+  log("✅ All routes and middleware configured");
 
-      // Start weekly hours check service for automation triggers
-      import('./weeklyHoursCheckService').then(({ startWeeklyHoursCheck }) => {
-        startWeeklyHoursCheck();
-        log("✅ Weekly hours check service started");
-      }).catch(err => {
-        log(`⚠️ Failed to start weekly hours check service: ${err.message}`);
-      });
+  // Run migrations in the background (non-blocking)
+  runStartupMigrations().then(() => {
+    import('./googleCalendarBackgroundSync').then(({ startBackgroundSync }) => {
+      startBackgroundSync();
+      log("✅ Google Calendar background sync started");
+    }).catch(err => {
+      log(`⚠️ Failed to start background calendar sync: ${err.message}`);
+    });
 
-      // Start long-running timer alert service
-      import('./longRunningTimerService').then(({ startLongRunningTimerCheck }) => {
-        startLongRunningTimerCheck();
-        log("✅ Long-running timer alert service started");
-      }).catch(err => {
-        log(`⚠️ Failed to start long-running timer alert service: ${err.message}`);
-      });
+    import('./weeklyHoursCheckService').then(({ startWeeklyHoursCheck }) => {
+      startWeeklyHoursCheck();
+      log("✅ Weekly hours check service started");
+    }).catch(err => {
+      log(`⚠️ Failed to start weekly hours check service: ${err.message}`);
+    });
+
+    import('./longRunningTimerService').then(({ startLongRunningTimerCheck }) => {
+      startLongRunningTimerCheck();
+      log("✅ Long-running timer alert service started");
+    }).catch(err => {
+      log(`⚠️ Failed to start long-running timer alert service: ${err.message}`);
     });
   });
 })();

@@ -568,7 +568,7 @@ export default function KnowledgeBase() {
       setNewCategory({ name: "", description: "", parentId: "none", icon: "", color: "" });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Category created successfully",
       });
     },
@@ -593,7 +593,7 @@ export default function KnowledgeBase() {
       setNewArticle({ title: "", content: "", excerpt: "", categoryId: "", tags: "", parentId: null });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Article created successfully",
       });
     },
@@ -625,7 +625,7 @@ export default function KnowledgeBase() {
       });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Category updated successfully",
       });
     },
@@ -649,7 +649,7 @@ export default function KnowledgeBase() {
       setDeletingCategory(null);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Category deleted successfully",
       });
     },
@@ -673,7 +673,7 @@ export default function KnowledgeBase() {
       queryClient.invalidateQueries({ queryKey: ["/api/knowledge-base/categories"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Category order updated",
       });
     },
@@ -697,7 +697,7 @@ export default function KnowledgeBase() {
       queryClient.invalidateQueries({ queryKey: ["/api/knowledge-base/articles"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Article order updated",
       });
     },

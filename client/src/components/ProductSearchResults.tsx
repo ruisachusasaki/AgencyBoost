@@ -30,7 +30,7 @@ export function ProductSearchResults({ searchTerm, clientId, onProductAdded }: P
     onSuccess: () => {
       toast({
         title: "Product added",
-        variant: "success",
+        variant: "default",
         description: "Product has been successfully added to client",
       });
       onProductAdded();

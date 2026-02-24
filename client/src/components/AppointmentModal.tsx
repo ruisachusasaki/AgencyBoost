@@ -234,7 +234,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
     onSuccess: () => {
       toast({
         title: "Appointment Created",
-        variant: "success",
+        variant: "default",
         description: "The appointment has been scheduled successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
@@ -271,7 +271,7 @@ export function AppointmentModal({ open, onOpenChange, clientId, clientName, cli
     onSuccess: () => {
       toast({
         title: "Appointment Updated",
-        variant: "success",
+        variant: "default",
         description: "The appointment has been updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });

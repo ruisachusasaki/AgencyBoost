@@ -37,7 +37,7 @@ export default function SalesSettings() {
       queryClient.invalidateQueries({ queryKey: ['/api/sales-settings'] });
       toast({
         title: "Settings Updated",
-        variant: "success",
+        variant: "default",
         description: "Sales settings have been successfully updated.",
       });
     },

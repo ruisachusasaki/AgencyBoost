@@ -87,7 +87,7 @@ export default function JobApplicationFormSimple({ onSuccess, preSelectedPositio
     onSuccess: () => {
       toast({
         title: "Application Submitted!",
-        variant: "success",
+        variant: "default",
         description: "Your job application has been submitted successfully. We'll be in touch soon!",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/job-applications"] });

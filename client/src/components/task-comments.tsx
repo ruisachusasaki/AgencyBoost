@@ -187,7 +187,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
       setShowToolbar(false);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Comment added successfully",
       });
     },
@@ -371,7 +371,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
           
           toast({
             title: "Voice recording saved",
-            variant: "success", 
+            variant: "default", 
             description: "Audio will be attached to your comment" 
           });
         }
@@ -937,7 +937,7 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
                     }]);
                     toast({
                       title: "File uploaded successfully",
-                      variant: "success", 
+                      variant: "default", 
                       description: "File will be attached to your comment"
                     });
                   }

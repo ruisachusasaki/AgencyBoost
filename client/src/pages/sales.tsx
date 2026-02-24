@@ -700,7 +700,7 @@ export default function Sales() {
       } else {
         toast({
           title: "Success",
-          variant: "success",
+          variant: "default",
           description: "Quote saved successfully",
         });
       }
@@ -723,7 +723,7 @@ export default function Sales() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       toast({
         title: "Quote Approved",
-        variant: "success",
+        variant: "default",
         description: "The quote has been successfully approved.",
       });
     },
@@ -745,7 +745,7 @@ export default function Sales() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       toast({
         title: "Quote Rejected",
-        variant: "success",
+        variant: "default",
         description: "The quote has been rejected.",
       });
     },
@@ -767,7 +767,7 @@ export default function Sales() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       toast({
         title: "Status Updated",
-        variant: "success",
+        variant: "default",
         description: "Quote status has been updated successfully.",
       });
     },
@@ -790,7 +790,7 @@ export default function Sales() {
       setDeleteConfirmQuoteId(null);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Quote deleted successfully",
       });
     },

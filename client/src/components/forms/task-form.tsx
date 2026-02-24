@@ -217,7 +217,7 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({
         title: "Task created",
-        variant: "success",
+        variant: "default",
         description: "The task has been successfully created.",
       });
       onSuccess?.();
@@ -240,7 +240,7 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({
         title: "Task updated",
-        variant: "success",
+        variant: "default",
         description: "The task has been successfully updated.",
       });
       onSuccess?.();
@@ -286,7 +286,7 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
       const taskCount = response?.tasks?.length || response?.createdTasks?.length || 1;
       toast({
         title: "Tasks created from template",
-        variant: "success",
+        variant: "default",
         description: `Successfully created ${taskCount} task${taskCount > 1 ? 's' : ''} from the template.`,
       });
       

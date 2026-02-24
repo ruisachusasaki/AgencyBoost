@@ -166,7 +166,7 @@ export default function NewHireOnboardingFormEditor() {
     onSuccess: () => {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Onboarding form configuration saved successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/new-hire-onboarding-form-config'] });
@@ -260,7 +260,7 @@ export default function NewHireOnboardingFormEditor() {
     setFields(defaultFields);
     toast({
       title: "Success",
-      variant: "success",
+      variant: "default",
       description: "Form has been reset to default fields",
     });
   };
@@ -293,7 +293,7 @@ export default function NewHireOnboardingFormEditor() {
     navigator.clipboard.writeText(onboardingUrl);
     toast({
       title: "Success",
-      variant: "success",
+      variant: "default",
       description: "Onboarding URL copied to clipboard",
     });
   };

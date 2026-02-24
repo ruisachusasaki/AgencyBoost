@@ -166,7 +166,7 @@ export default function ExpenseReportFormEditor() {
     onSuccess: () => {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Expense report form configuration saved successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/expense-report-form-config'] });

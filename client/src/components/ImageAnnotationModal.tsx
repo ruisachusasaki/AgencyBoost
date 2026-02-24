@@ -180,7 +180,7 @@ export function ImageAnnotationModal({
       queryClient.invalidateQueries({ queryKey: [`/api/files/${fileId}/annotations`] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Annotation created successfully",
       });
     },
@@ -202,7 +202,7 @@ export function ImageAnnotationModal({
       queryClient.invalidateQueries({ queryKey: [`/api/files/${fileId}/annotations`] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Annotation updated successfully",
       });
     },
@@ -224,7 +224,7 @@ export function ImageAnnotationModal({
       queryClient.invalidateQueries({ queryKey: [`/api/files/${fileId}/annotations`] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Annotation deleted successfully",
       });
     },

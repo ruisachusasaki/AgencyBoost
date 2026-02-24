@@ -500,7 +500,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
       queryClient.invalidateQueries({ queryKey: ["/api/job-openings"] });
       toast({
         title: "Job Opening Deleted",
-        variant: "success",
+        variant: "default",
         description: "The job opening has been deleted successfully.",
       });
     },
@@ -532,7 +532,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
       queryClient.invalidateQueries({ queryKey: ["/api/job-openings"] });
       toast({
         title: "Job Opening Updated",
-        variant: "success",
+        variant: "default",
         description: "The job opening has been marked as filled.",
       });
     },
@@ -874,7 +874,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
     navigator.clipboard.writeText(careersUrl);
     toast({
       title: "Success",
-      variant: "success",
+      variant: "default",
       description: "Careers URL copied to clipboard",
     });
   };
@@ -2511,7 +2511,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                             queryClient.invalidateQueries({ queryKey: ["/api/new-hire-onboarding-submissions"] });
                                             toast({
                                               title: "Success",
-                                              variant: "success",
+                                              variant: "default",
                                               description: "Submission marked as reviewed",
                                             });
                                           }).catch((error) => {
@@ -2562,7 +2562,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                         queryClient.invalidateQueries({ queryKey: ["/api/new-hire-onboarding-submissions"] });
                                         toast({
                                           title: "Success",
-                                          variant: "success",
+                                          variant: "default",
                                           description: "Onboarding submission deleted successfully",
                                         });
                                       }).catch((error) => {

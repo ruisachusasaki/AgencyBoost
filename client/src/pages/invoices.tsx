@@ -36,7 +36,7 @@ export default function Invoices() {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       toast({
         title: "Invoice deleted",
-        variant: "success",
+        variant: "default",
         description: "The invoice has been successfully deleted.",
       });
     },

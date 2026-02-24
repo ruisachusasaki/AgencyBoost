@@ -28,7 +28,7 @@ export default function FormsTest() {
     onSuccess: () => {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Form deleted successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/forms"] });
@@ -156,7 +156,7 @@ export default function FormsTest() {
                           navigator.clipboard.writeText(`${window.location.origin}/forms/${form.id}`);
                           toast({
                             title: "Success",
-                            variant: "success",
+                            variant: "default",
                             description: "Form URL copied to clipboard",
                           });
                         }}>

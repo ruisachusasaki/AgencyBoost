@@ -311,7 +311,7 @@ export default function OneOnOneMeetings() {
       
       toast({
         title: "Meeting Created",
-        variant: "success",
+        variant: "default",
         description: toastDescription,
       });
     },
@@ -1386,7 +1386,7 @@ function MeetingEditor({
       } else {
         toast({
           title: "Success",
-          variant: "success",
+          variant: "default",
           description: meeting ? "Meeting updated successfully" : "Meeting created successfully",
         });
       }
@@ -1428,7 +1428,7 @@ function MeetingEditor({
       } else {
         toast({
           title: "Success",
-          variant: "success",
+          variant: "default",
           description: "Meeting and calendar events deleted successfully.",
         });
       }

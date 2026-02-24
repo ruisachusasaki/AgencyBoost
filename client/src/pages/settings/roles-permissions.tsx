@@ -399,7 +399,7 @@ export default function RolesPermissions() {
       queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Role created successfully.",
       });
       setIsAddRoleDialogOpen(false);
@@ -424,7 +424,7 @@ export default function RolesPermissions() {
       queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Role updated successfully.",
       });
       setEditingRole(null);
@@ -448,7 +448,7 @@ export default function RolesPermissions() {
       queryClient.invalidateQueries({ queryKey: ["/api/roles"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Role deleted successfully.",
       });
     },
@@ -515,7 +515,7 @@ export default function RolesPermissions() {
       
       toast({
         title: "Export Successful",
-        variant: "success",
+        variant: "default",
         description: "Roles and permissions exported to CSV file.",
       });
     } catch (error: any) {
@@ -597,7 +597,7 @@ export default function RolesPermissions() {
       if (result.success) {
         toast({
           title: "Import Successful",
-          variant: "success",
+          variant: "default",
           description: `Created ${result.results.created.length} new roles, updated ${result.results.updated.length} existing roles.`,
         });
         queryClient.invalidateQueries({ queryKey: ["/api/roles"] });

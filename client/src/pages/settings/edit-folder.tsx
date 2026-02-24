@@ -100,7 +100,7 @@ export default function EditFolder() {
       queryClient.invalidateQueries({ queryKey: ["/api/custom-fields"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Field order updated successfully",
       });
     },

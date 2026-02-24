@@ -121,7 +121,7 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
       queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Time off request submitted successfully",
       });
       onOpenChange(false);

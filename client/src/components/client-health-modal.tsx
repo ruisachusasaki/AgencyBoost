@@ -61,7 +61,7 @@ export default function ClientHealthModal({
       queryClient.invalidateQueries({ queryKey: ["/api/clients", clientId, "health-scores"] });
       toast({
         title: "Health Score Saved",
-        variant: "success",
+        variant: "default",
         description: "Client health score has been successfully recorded.",
       });
       form.reset();

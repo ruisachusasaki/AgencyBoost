@@ -112,7 +112,7 @@ export default function AdminTimeOffForm({ open, onOpenChange, staffList }: Admi
       queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-requests"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Time off record added successfully",
       });
       onOpenChange(false);

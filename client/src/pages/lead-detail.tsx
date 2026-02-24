@@ -163,7 +163,7 @@ export default function LeadDetail() {
       
       toast({
         title: "Lead converted to client",
-        variant: "success",
+        variant: "default",
         description: "The lead has been successfully converted to a client.",
       });
       // Redirect to the client detail page
@@ -186,7 +186,7 @@ export default function LeadDetail() {
     onSuccess: () => {
       toast({
         title: "Lead deleted",
-        variant: "success",
+        variant: "default",
         description: "The lead has been successfully deleted.",
       });
       setLocation("/leads");
@@ -214,7 +214,7 @@ export default function LeadDetail() {
       setEditingCustomField(null);
       toast({
         title: "Custom field updated",
-        variant: "success",
+        variant: "default",
         description: "The custom field has been successfully updated.",
       });
     },
@@ -240,7 +240,7 @@ export default function LeadDetail() {
       setEditingLeadField(null);
       toast({
         title: "Lead updated",
-        variant: "success",
+        variant: "default",
         description: "The lead has been successfully updated.",
       });
     },
@@ -266,7 +266,7 @@ export default function LeadDetail() {
       setEditingTags(false);
       toast({
         title: "Tags updated",
-        variant: "success",
+        variant: "default",
         description: "The tags have been successfully updated.",
       });
     },

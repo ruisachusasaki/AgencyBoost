@@ -70,7 +70,7 @@ export default function TicketsSettingsPage() {
     mutationFn: async (data: Record<string, unknown>) => apiRequest("POST", "/api/ticket-routing-rules", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ticket-routing-rules"] });
-      toast({ title: "Rule created", description: "Routing rule created successfully.", variant: "success" as any });
+      toast({ title: "Rule created", description: "Routing rule created successfully.", variant: "default" as any });
       closeDialog();
     },
     onError: (error: any) => {
@@ -82,7 +82,7 @@ export default function TicketsSettingsPage() {
     mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => apiRequest("PUT", `/api/ticket-routing-rules/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ticket-routing-rules"] });
-      toast({ title: "Rule updated", description: "Routing rule updated successfully.", variant: "success" as any });
+      toast({ title: "Rule updated", description: "Routing rule updated successfully.", variant: "default" as any });
       closeDialog();
     },
     onError: (error: any) => {
@@ -94,7 +94,7 @@ export default function TicketsSettingsPage() {
     mutationFn: async (id: string) => apiRequest("DELETE", `/api/ticket-routing-rules/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ticket-routing-rules"] });
-      toast({ title: "Rule deleted", description: "Routing rule deleted.", variant: "success" as any });
+      toast({ title: "Rule deleted", description: "Routing rule deleted.", variant: "default" as any });
       setDeletingRule(null);
     },
     onError: (error: any) => {

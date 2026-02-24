@@ -164,7 +164,7 @@ export default function OffboardingForm() {
       queryClient.invalidateQueries({ queryKey: ['/api/offboarding-submissions'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Offboarding form has been submitted successfully!",
       });
     },

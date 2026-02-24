@@ -205,7 +205,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
       queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Team assignment created successfully",
       });
     },
@@ -228,7 +228,7 @@ function TeamAssignmentSection({ clientId }: { clientId: string }) {
       queryClient.invalidateQueries({ queryKey: ["/api/team-positions"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Team assignment removed successfully",
       });
     },
@@ -640,7 +640,7 @@ function WorkflowSelectionModal({
       
       toast({
         title: "Workflow Started",
-        variant: "success",
+        variant: "default",
         description: `${workflowName} has been triggered for this client.`,
       });
 
@@ -1355,7 +1355,7 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
     setIsHealthModalOpen(false);
     toast({
       title: "Health Score Recorded",
-      variant: "success",
+      variant: "default",
       description: `Weekly health score for ${weekRange.displayRange} has been saved successfully.`,
     });
   }, [queryClient, clientId, weekRange, toast]);
@@ -2292,7 +2292,7 @@ export default function EnhancedClientDetail() {
       });
       toast({
         title: "SMS Sent",
-        variant: "success",
+        variant: "default",
         description: "Your message has been sent successfully.",
       });
       setShowSmsSendModal(false);
@@ -2371,7 +2371,7 @@ export default function EnhancedClientDetail() {
       if (successCount > 0) {
         toast({
           title: "SMS Sent",
-          variant: "success",
+          variant: "default",
           description: successCount === 1 
             ? "Your message has been sent successfully."
             : `Your message has been sent to ${successCount} contacts.`,
@@ -2597,7 +2597,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/brief`] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Client brief section updated successfully",
       });
       setEditingSections(prev => {
@@ -3223,7 +3223,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Product removed successfully",
       });
     },
@@ -3250,7 +3250,7 @@ export default function EnhancedClientDetail() {
     onSuccess: () => {
       toast({
         title: "Document deleted",
-        variant: "success",
+        variant: "default",
         description: "The document has been successfully removed.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'documents'] });
@@ -3280,7 +3280,7 @@ export default function EnhancedClientDetail() {
       setNewNote("");
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Note created successfully",
       });
     },
@@ -3308,7 +3308,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'notes'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Note updated successfully",
       });
     },
@@ -3334,7 +3334,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'notes'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Note deleted successfully",
       });
     },
@@ -3396,7 +3396,7 @@ export default function EnhancedClientDetail() {
       setIsTaskDialogOpen(false);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Task created successfully",
       });
     },
@@ -3424,7 +3424,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'tasks'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Task updated successfully",
       });
     },
@@ -3474,7 +3474,7 @@ export default function EnhancedClientDetail() {
       setEditFilteredAssignees([]);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Task updated successfully",
       });
     },
@@ -3506,7 +3506,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] }); // Also invalidate global tasks
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Task deleted successfully",
       });
     },
@@ -3534,7 +3534,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Appointment deleted successfully",
       });
     },
@@ -3563,7 +3563,7 @@ export default function EnhancedClientDetail() {
       setNewComment("");
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Comment added successfully",
       });
     },
@@ -3593,7 +3593,7 @@ export default function EnhancedClientDetail() {
       setEditCommentContent("");
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Comment updated successfully",
       });
     },
@@ -3619,7 +3619,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks', variables.taskId, 'comments'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Comment deleted successfully",
       });
     },
@@ -3677,7 +3677,7 @@ export default function EnhancedClientDetail() {
       setTempQuantities({});
       toast({
         title: "Bundle customized",
-        variant: "success",
+        variant: "default",
         description: canViewCosts 
           ? `Bundle quantities updated. New cost: $${data.newCost?.toFixed(2)}` 
           : "Bundle quantities updated successfully",
@@ -3725,7 +3725,7 @@ export default function EnhancedClientDetail() {
       setOwnerSearchTerm("");
       toast({
         title: "Owner assigned",
-        variant: "success",
+        variant: "default",
         description: "Contact owner has been updated successfully",
       });
     },
@@ -3764,7 +3764,7 @@ export default function EnhancedClientDetail() {
       setFollowerSearchTerm("");
       toast({
         title: "Followers updated",
-        variant: "success",
+        variant: "default",
         description: "Client followers have been updated successfully",
       });
     },
@@ -3903,7 +3903,7 @@ export default function EnhancedClientDetail() {
       setLogActivityType('general');
       toast({
         title: "Activity logged",
-        variant: "success",
+        variant: "default",
         description: "Manual activity has been logged successfully",
       });
     },
@@ -3940,7 +3940,7 @@ export default function EnhancedClientDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/audit-logs/entity/contact', clientId] });
       toast({
         title: "Communication preferences updated",
-        variant: "success",
+        variant: "default",
         description: "DND settings have been updated successfully",
       });
     },
@@ -4122,7 +4122,7 @@ export default function EnhancedClientDetail() {
     setShowTemplateModal(false);
     toast({
       title: "Template Applied",
-      variant: "success",
+      variant: "default",
       description: `"${templateName}" template has been loaded into your email.`,
     });
   };
@@ -4194,7 +4194,7 @@ export default function EnhancedClientDetail() {
       if (successCount > 0) {
         toast({
           title: "Email Sent Successfully",
-          variant: "success",
+          variant: "default",
           description: successCount === 1 
             ? `Email sent to ${recipients[0]?.name} (${recipients[0]?.email})`
             : `Email sent to ${successCount} contacts.`,
@@ -4296,7 +4296,7 @@ export default function EnhancedClientDetail() {
       
       toast({
         title: "Email Scheduled Successfully",
-        variant: "success",
+        variant: "default",
         description: `Email scheduled for ${recipientName} on ${scheduledDate} at ${scheduledTime} (${scheduledTimezone})`,
       });
       
@@ -4385,7 +4385,7 @@ export default function EnhancedClientDetail() {
     
     toast({
       title: "SMS Sent",
-      variant: "success",
+      variant: "default",
       description: `Message sent to ${client?.name}`,
     });
     setSmsMessage("");
@@ -4406,7 +4406,7 @@ export default function EnhancedClientDetail() {
     
     toast({
       title: "Email Sent",
-      variant: "success",
+      variant: "default",
       description: `Email sent to ${client?.company || client?.name}`,
     });
     setEmailMessage("");
@@ -4434,7 +4434,7 @@ export default function EnhancedClientDetail() {
 
       toast({
         title: "Tag added",
-        variant: "success",
+        variant: "default",
         description: `"${tagName}" has been added to ${client.company || client.name}`,
       });
 
@@ -4472,7 +4472,7 @@ export default function EnhancedClientDetail() {
 
       toast({
         title: "Tag created",
-        variant: "success",
+        variant: "default",
         description: `"${newTagName}" has been created and added to ${client?.name}`,
       });
     } catch (error) {
@@ -4530,7 +4530,7 @@ export default function EnhancedClientDetail() {
 
       toast({
         title: "Product added",
-        variant: "success",
+        variant: "default",
         description: `"${productName}" has been added to ${client.company || client.name}`,
       });
 
@@ -4570,7 +4570,7 @@ export default function EnhancedClientDetail() {
 
       toast({
         title: "Product created",
-        variant: "success",
+        variant: "default",
         description: `"${newServiceName}" has been created and added to ${client?.name}`,
       });
     } catch (error) {
@@ -4646,7 +4646,7 @@ export default function EnhancedClientDetail() {
       
       toast({
         title: "Field Updated",
-        variant: "success",
+        variant: "default",
         description: "Field value has been saved successfully.",
       });
       setEditingField(null);
@@ -4906,7 +4906,7 @@ export default function EnhancedClientDetail() {
                       toast({
                         title: "Status updated",
                         description: `Client status changed to ${newStatus}`,
-                        variant: "success"
+                        variant: "default"
                       });
                     } catch (error) {
                       toast({
@@ -5721,7 +5721,7 @@ export default function EnhancedClientDetail() {
                                       // Show success message
                                       toast({
                                         title: "Success",
-                                        variant: "success",
+                                        variant: "default",
                                         description: "Bundle quantities updated successfully."
                                       });
                                     } catch (error) {
@@ -7711,7 +7711,7 @@ export default function EnhancedClientDetail() {
                             setShowAddProductModal(false);
                             toast({
                               title: "Success",
-                              variant: "success",
+                              variant: "default",
                               description: `${product.name} added successfully!`
                             });
                           } catch (error) {
@@ -7769,7 +7769,7 @@ export default function EnhancedClientDetail() {
                             setShowAddProductModal(false);
                             toast({
                               title: "Success",
-                              variant: "success",
+                              variant: "default",
                               description: `${bundle.name} bundle added successfully!`
                             });
                           } catch (error) {

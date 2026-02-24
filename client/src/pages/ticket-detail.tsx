@@ -132,7 +132,7 @@ export default function TicketDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && query.queryKey[0].startsWith('/api/tickets') });
-      toast({ title: "Ticket updated", variant: "success", description: "Ticket has been updated successfully." });
+      toast({ title: "Ticket updated", variant: "default", description: "Ticket has been updated successfully." });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error?.message || "Failed to update ticket.", variant: "destructive" });
@@ -145,7 +145,7 @@ export default function TicketDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && query.queryKey[0].startsWith('/api/tickets') });
-      toast({ title: "Ticket deleted", variant: "success", description: "Ticket has been deleted successfully." });
+      toast({ title: "Ticket deleted", variant: "default", description: "Ticket has been deleted successfully." });
       setLocation("/tickets");
     },
     onError: (error: any) => {
@@ -162,7 +162,7 @@ export default function TicketDetailPage() {
       setCommentContent("");
       setCommentMentions([]);
       setIsInternal(false);
-      toast({ title: "Comment added", variant: "success", description: "Comment has been added successfully." });
+      toast({ title: "Comment added", variant: "default", description: "Comment has been added successfully." });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error?.message || "Failed to add comment.", variant: "destructive" });
@@ -175,7 +175,7 @@ export default function TicketDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tickets/${ticketId}`] });
-      toast({ title: "Comment deleted", variant: "success", description: "Comment has been deleted." });
+      toast({ title: "Comment deleted", variant: "default", description: "Comment has been deleted." });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error?.message || "Failed to delete comment.", variant: "destructive" });

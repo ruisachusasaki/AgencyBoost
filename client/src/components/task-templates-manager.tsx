@@ -48,7 +48,7 @@ export function TaskTemplatesManager({ onClose }: TaskTemplatesManagerProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
-      toast({ title: "Template created", description: "Task template created successfully", variant: "success" });
+      toast({ title: "Template created", description: "Task template created successfully", variant: "default" });
       resetForm();
       setIsCreateOpen(false);
     },
@@ -63,7 +63,7 @@ export function TaskTemplatesManager({ onClose }: TaskTemplatesManagerProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
-      toast({ title: "Template updated", description: "Task template updated successfully", variant: "success" });
+      toast({ title: "Template updated", description: "Task template updated successfully", variant: "default" });
       resetForm();
       setEditingTemplate(null);
     },
@@ -78,7 +78,7 @@ export function TaskTemplatesManager({ onClose }: TaskTemplatesManagerProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
-      toast({ title: "Template deleted", description: "Task template deleted successfully", variant: "success" });
+      toast({ title: "Template deleted", description: "Task template deleted successfully", variant: "default" });
       setDeleteConfirmId(null);
     },
     onError: () => {

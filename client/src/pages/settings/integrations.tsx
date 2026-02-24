@@ -142,7 +142,7 @@ export default function Integrations() {
     if (params.get('connected') === 'google-calendar') {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Google Calendar connected successfully!",
       });
       // Update the integration status
@@ -317,7 +317,7 @@ export default function Integrations() {
       
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "GoHighLevel integration connected successfully!",
       });
     } catch (error) {
@@ -344,7 +344,7 @@ export default function Integrations() {
       if (response.ok) {
         toast({
           title: "Success",
-          variant: "success",
+          variant: "default",
           description: "OpenAI connected successfully!",
         });
         setShowOpenAIDialog(false);
@@ -375,7 +375,7 @@ export default function Integrations() {
       await apiRequest('POST', '/api/integrations/openai/disconnect');
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "OpenAI disconnected successfully",
       });
       checkOpenAIStatus();
@@ -402,7 +402,7 @@ export default function Integrations() {
         setOpenaiTestResult(result.response || "Connection successful!");
         toast({
           title: "Success",
-          variant: "success",
+          variant: "default",
           description: "OpenAI test successful!",
         });
       } else {
@@ -443,7 +443,7 @@ export default function Integrations() {
       
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "GoHighLevel integration disconnected",
       });
     } catch (error) {
@@ -470,7 +470,7 @@ export default function Integrations() {
       
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Webhook URL regenerated. Update this in GoHighLevel.",
       });
     } catch (error) {
@@ -490,7 +490,7 @@ export default function Integrations() {
       navigator.clipboard.writeText(ghlIntegration.webhookUrl);
       toast({
         title: "Copied!",
-        variant: "success",
+        variant: "default",
         description: "Webhook URL copied to clipboard",
       });
     }
@@ -536,7 +536,7 @@ export default function Integrations() {
       await apiRequest('DELETE', `/api/integrations/twilio/numbers/${id}`);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: `Phone number "${name}" deleted successfully`,
       });
       
@@ -559,7 +559,7 @@ export default function Integrations() {
     if (integrationId !== "google-calendar") {
       toast({
         title: "Coming Soon",
-        variant: "success",
+        variant: "default",
         description: "This integration is not yet available.",
       });
       return;
@@ -579,7 +579,7 @@ export default function Integrations() {
       
       toast({
         title: "Sync Complete",
-        variant: "success",
+        variant: "default",
         description: `Synced ${result.syncedEvents} new events from Google Calendar`,
       });
     } catch (error) {
@@ -627,7 +627,7 @@ export default function Integrations() {
       // Slack is already connected via environment variables
       toast({
         title: "Already Connected",
-        variant: "success",
+        variant: "default",
         description: "Slack integration is configured via environment variables and ready to use!",
       });
       return;
@@ -656,7 +656,7 @@ export default function Integrations() {
 
     toast({
       title: "Coming Soon",
-      variant: "success",
+      variant: "default",
       description: "This integration is not yet available.",
     });
   };
@@ -678,7 +678,7 @@ export default function Integrations() {
         
         toast({
           title: "Success",
-          variant: "success",
+          variant: "default",
           description: `Disconnected from ${integrationName}`,
         });
       } catch (error) {
@@ -706,7 +706,7 @@ export default function Integrations() {
         
         toast({
           title: "Success",
-          variant: "success",
+          variant: "default",
           description: `Disconnected from ${integrationName}`,
         });
       } catch (error) {
@@ -734,7 +734,7 @@ export default function Integrations() {
         
         toast({
           title: "Success",
-          variant: "success",
+          variant: "default",
           description: `Disconnected from ${integrationName}`,
         });
       } catch (error) {
@@ -752,7 +752,7 @@ export default function Integrations() {
 
     toast({
       title: "Coming Soon",
-      variant: "success",
+      variant: "default",
       description: "This integration is not yet available.",
     });
   };
@@ -767,7 +767,7 @@ export default function Integrations() {
         if (status.connected) {
           toast({
             title: "Success",
-            variant: "success",
+            variant: "default",
             description: "Google Calendar connection is working correctly!",
           });
         } else {
@@ -797,7 +797,7 @@ export default function Integrations() {
         if (status.connected) {
           toast({
             title: "Success",
-            variant: "success",
+            variant: "default",
             description: "Twilio SMS connection is working correctly!",
           });
         } else {
@@ -826,7 +826,7 @@ export default function Integrations() {
         
         toast({
           title: "Success",
-          variant: "success",
+          variant: "default",
           description: "Test message sent to Slack successfully!",
         });
       } catch (error) {
@@ -848,7 +848,7 @@ export default function Integrations() {
         
         toast({
           title: "Success",
-          variant: "success",
+          variant: "default",
           description: "Test email sent successfully via MailGun!",
         });
       } catch (error) {
@@ -866,7 +866,7 @@ export default function Integrations() {
 
     toast({
       title: "Coming Soon",
-      variant: "success",
+      variant: "default",
       description: "This integration is not yet available.",
     });
   };
@@ -952,7 +952,7 @@ export default function Integrations() {
       setShowAddWorkspaceDialog(false);
       toast({
         title: "Workspace Added",
-        variant: "success",
+        variant: "default",
         description: `Successfully connected to ${workspace.teamName || workspace.name}!`,
       });
     } catch (error: any) {
@@ -977,7 +977,7 @@ export default function Integrations() {
       setSlackWorkspaces(prev => prev.filter(w => w.id !== id));
       toast({
         title: "Workspace Deleted",
-        variant: "success",
+        variant: "default",
         description: "Workspace removed successfully.",
       });
     } catch (error: any) {
@@ -998,7 +998,7 @@ export default function Integrations() {
       if (result.success) {
         toast({
           title: "Connection Successful",
-          variant: "success",
+          variant: "default",
           description: `Connected to ${result.team} as ${result.user}`,
         });
         loadSlackWorkspaces();
@@ -1029,7 +1029,7 @@ export default function Integrations() {
       loadSlackWorkspaces();
       toast({
         title: "Default Set",
-        variant: "success",
+        variant: "default",
         description: "Default workspace updated.",
       });
     } catch (error: any) {
@@ -1087,7 +1087,7 @@ export default function Integrations() {
       
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: result.message || "Twilio SMS phone number added successfully!",
       });
       
@@ -1136,7 +1136,7 @@ export default function Integrations() {
       
       toast({
         title: "Test SMS Sent",
-        variant: "success",
+        variant: "default",
         description: `Test message sent successfully to ${twilioSettings.testPhoneNumber}`,
       });
     } catch (error) {
@@ -1199,7 +1199,7 @@ export default function Integrations() {
       
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: result.message || "Mailgun connected successfully!",
       });
       
@@ -1249,7 +1249,7 @@ export default function Integrations() {
       
       toast({
         title: "Test Email Sent",
-        variant: "success",
+        variant: "default",
         description: `Test message sent successfully to ${mailgunSettings.testEmail}`,
       });
     } catch (error) {

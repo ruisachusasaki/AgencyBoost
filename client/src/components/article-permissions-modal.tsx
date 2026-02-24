@@ -78,7 +78,7 @@ export function ArticlePermissionsModal({
     onSuccess: () => {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Article permissions updated successfully",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${articleId}`] });

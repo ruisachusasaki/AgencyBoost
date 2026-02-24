@@ -168,7 +168,7 @@ export function EventCreateModal({
     onSuccess: (data: any) => {
       toast({
         title: "Event created",
-        variant: "success",
+        variant: "default",
         description: data.syncedToGoogle 
           ? "Your event has been created and synced to Google Calendar."
           : "Your event has been created.",

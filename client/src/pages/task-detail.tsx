@@ -109,7 +109,7 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
       toast({
         title: "Template Created",
-        variant: "success",
+        variant: "default",
         description: "Task template has been created successfully.",
       });
       templateForm.reset();
@@ -220,7 +220,7 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Task deleted successfully",
       });
       setLocation("/tasks");
@@ -311,7 +311,7 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] }); // Invalidate tasks list
       toast({
         title: "Task updated",
-        variant: "success",
+        variant: "default",
         description: "Task has been updated successfully",
       });
     },
@@ -413,7 +413,7 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/activities`] });
       toast({
         title: "Time Added",
-        variant: "success",
+        variant: "default",
         description: "Manual time entry has been added successfully.",
       });
       // Reset form

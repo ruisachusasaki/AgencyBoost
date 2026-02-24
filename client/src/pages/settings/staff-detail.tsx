@@ -68,7 +68,7 @@ export default function StaffDetail() {
     if (message === 'email_linked_successfully') {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Gmail account linked successfully! You can now login with this email.",
       });
       // Clean up URL
@@ -199,7 +199,7 @@ export default function StaffDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff", id, "salary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/staff", id, "salary-history"] });
-      toast({ title: "Success", variant: "success", description: "Salary updated successfully" });
+      toast({ title: "Success", variant: "default", description: "Salary updated successfully" });
       setIsSalaryEditing(false);
       setSalaryNotes("");
     },
@@ -218,7 +218,7 @@ export default function StaffDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/staff", id, "linked-emails"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Email unlinked successfully",
       });
     },
@@ -242,7 +242,7 @@ export default function StaffDetail() {
       queryClient.invalidateQueries({ queryKey: [`/api/staff/${id}`] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Primary email updated successfully",
       });
     },
@@ -335,7 +335,7 @@ export default function StaffDetail() {
       setIsEditing(false);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Staff member updated successfully",
       });
     },
@@ -358,7 +358,7 @@ export default function StaffDetail() {
     onSuccess: (data: any) => {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: data.message || "Password reset email sent successfully",
       });
     },
@@ -414,7 +414,7 @@ export default function StaffDetail() {
         
         toast({
           title: "Success",
-          variant: "success", 
+          variant: "default", 
           description: "Profile image updated successfully",
         });
       } catch (error) {

@@ -75,7 +75,7 @@ export default function ClientContacts({ clientId }: ClientContactsProps) {
       setFormData(defaultFormData);
       toast({
         title: "Contact Added",
-        variant: "success",
+        variant: "default",
         description: "The contact has been added successfully.",
       });
     },
@@ -108,7 +108,7 @@ export default function ClientContacts({ clientId }: ClientContactsProps) {
       setFormData(defaultFormData);
       toast({
         title: "Contact Updated",
-        variant: "success",
+        variant: "default",
         description: "The contact has been updated successfully.",
       });
     },
@@ -137,7 +137,7 @@ export default function ClientContacts({ clientId }: ClientContactsProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/clients", clientId, "contacts"] });
       toast({
         title: "Contact Deleted",
-        variant: "success",
+        variant: "default",
         description: "The contact has been deleted successfully.",
       });
     },
@@ -166,7 +166,7 @@ export default function ClientContacts({ clientId }: ClientContactsProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/clients", clientId, "contacts"] });
       toast({
         title: "Primary Contact Updated",
-        variant: "success",
+        variant: "default",
         description: "The primary contact has been updated.",
       });
     },

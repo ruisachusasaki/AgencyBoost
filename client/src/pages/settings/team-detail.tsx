@@ -177,7 +177,7 @@ export default function TeamDetail() {
       positionForm.reset();
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Position created successfully",
       });
     },
@@ -202,7 +202,7 @@ export default function TeamDetail() {
     onSuccess: () => {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Team deleted successfully",
       });
       // Redirect to teams list after successful deletion
@@ -226,7 +226,7 @@ export default function TeamDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/departments", teamId, "positions"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Position deleted successfully",
       });
     },
@@ -254,7 +254,7 @@ export default function TeamDetail() {
       setIsEditTeamDialogOpen(false);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Team updated successfully",
       });
     },
@@ -280,7 +280,7 @@ export default function TeamDetail() {
       editPositionForm.reset();
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Position updated successfully",
       });
     },
@@ -311,7 +311,7 @@ export default function TeamDetail() {
       kpiForm.reset();
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "KPI added successfully",
       });
     },
@@ -337,7 +337,7 @@ export default function TeamDetail() {
       kpiForm.reset();
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "KPI updated successfully",
       });
     },
@@ -359,7 +359,7 @@ export default function TeamDetail() {
       queryClient.invalidateQueries({ queryKey: [`/api/positions/${editingPosition?.id}/kpis`] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "KPI deleted successfully",
       });
     },

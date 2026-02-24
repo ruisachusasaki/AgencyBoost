@@ -136,7 +136,7 @@ export default function CustomFieldFileUpload({
 
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "File uploaded successfully",
       });
 
@@ -163,7 +163,7 @@ export default function CustomFieldFileUpload({
 
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "File removed successfully",
       });
     } catch (error) {

@@ -51,7 +51,7 @@ export default function InvoiceForm({ invoice, onSuccess }: InvoiceFormProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       toast({
         title: "Invoice created",
-        variant: "success",
+        variant: "default",
         description: "The invoice has been successfully created.",
       });
       onSuccess?.();
@@ -73,7 +73,7 @@ export default function InvoiceForm({ invoice, onSuccess }: InvoiceFormProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       toast({
         title: "Invoice updated",
-        variant: "success",
+        variant: "default",
         description: "The invoice has been successfully updated.",
       });
       onSuccess?.();

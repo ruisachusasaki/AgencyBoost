@@ -162,7 +162,7 @@ export default function MyProfile() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/current-user"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Profile updated successfully.",
       });
     },
@@ -190,7 +190,7 @@ export default function MyProfile() {
       }));
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Password changed successfully.",
       });
     },
@@ -213,7 +213,7 @@ export default function MyProfile() {
       queryClient.invalidateQueries({ queryKey: ["/api/staff", currentUserId, "linked-emails"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Email account unlinked successfully.",
       });
     },
@@ -238,7 +238,7 @@ export default function MyProfile() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/current-user"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Primary email updated successfully.",
       });
     },

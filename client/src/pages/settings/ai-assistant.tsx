@@ -44,7 +44,7 @@ export default function AiAssistantSettings() {
       queryClient.invalidateQueries({ queryKey: ['/api/ai-assistant/settings'] });
       toast({
         title: "Settings Updated",
-        variant: "success",
+        variant: "default",
         description: "AI Assistant settings have been successfully saved.",
       });
     },

@@ -103,7 +103,7 @@ export default function NotificationSettingsPanel({
       queryClient.invalidateQueries({ queryKey: [`/api/notification-settings/${userId}`] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Notification settings updated successfully",
       });
       // Notify parent component of successful save

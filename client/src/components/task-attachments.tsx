@@ -89,7 +89,7 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/activities`] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Attachment deleted successfully",
       });
     },
@@ -153,7 +153,7 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
       // Show success message
       toast({
         title: "Files uploaded successfully",
-        variant: "success",
+        variant: "default",
         description: `${files.length} file(s) uploaded to the task.`,
       });
     } catch (error) {

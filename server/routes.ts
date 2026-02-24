@@ -171,7 +171,7 @@ async function createAuditLog(
 }
 
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, httpServer?: Server): Promise<Server> {
 
   // Initialize NotificationService for multi-channel notifications
   const notificationService = new NotificationService(appStorage);
@@ -29510,7 +29510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
+  if (!httpServer) { httpServer = createServer(app); }
 
   // Get single job application by ID
   app.get('/api/hr/job-applications/:id', async (req, res) => {

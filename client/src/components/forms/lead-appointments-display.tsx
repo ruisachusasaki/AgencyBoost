@@ -51,7 +51,7 @@ export default function LeadAppointmentsDisplay({ leadId }: LeadAppointmentsDisp
       queryClient.invalidateQueries({ queryKey: ["/api/calendar-appointments-with-leads"] });
       toast({
         title: "Appointment deleted",
-        variant: "success",
+        variant: "default",
         description: "Appointment has been deleted successfully",
       });
     },

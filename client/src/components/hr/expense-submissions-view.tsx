@@ -52,7 +52,7 @@ export default function ExpenseSubmissionsView() {
       setSelectedSubmissionId(null); // Close the dialog
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Status updated successfully",
       });
     },

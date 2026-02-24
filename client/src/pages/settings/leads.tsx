@@ -75,7 +75,7 @@ export default function LeadsSettingsPage() {
       setShowAddDialog(false);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Lead source created successfully.",
       });
     },
@@ -104,7 +104,7 @@ export default function LeadsSettingsPage() {
       setEditingSource(null);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Lead source updated successfully.",
       });
     },
@@ -131,7 +131,7 @@ export default function LeadsSettingsPage() {
       setDeletingSource(null);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Lead source deleted successfully.",
       });
     },
@@ -159,7 +159,7 @@ export default function LeadsSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/lead-sources'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Lead sources reordered successfully.",
       });
     },

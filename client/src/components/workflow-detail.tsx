@@ -112,7 +112,7 @@ export default function WorkflowDetail({ workflow, isOpen, onClose, onEdit }: Wo
       queryClient.invalidateQueries({ queryKey: ["/api/workflow-templates"] });
       toast({
         title: "Success",
-        variant: "success", 
+        variant: "default", 
         description: `"${workflow.name}" has been saved as a template` 
       });
     },

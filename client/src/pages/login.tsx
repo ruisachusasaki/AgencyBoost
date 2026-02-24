@@ -48,9 +48,7 @@ export default function LoginPage() {
     },
     onError: (error: any) => {
       toast({
-        title: "Login Failed",
-        variant: "success",
-        description: error.message || "Invalid email or password",
+        title: "Login Failed",        description: error.message || "Invalid email or password",
         variant: "destructive",
       });
     },

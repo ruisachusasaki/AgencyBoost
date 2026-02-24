@@ -430,7 +430,7 @@ export default function ArticleView() {
       setIsBookmarked(data.bookmarked);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: data.bookmarked ? "Article bookmarked" : "Bookmark removed",
       });
     },
@@ -459,7 +459,7 @@ export default function ArticleView() {
       setIsEditing(false);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Article updated successfully",
       });
     },
@@ -487,7 +487,7 @@ export default function ArticleView() {
       queryClient.invalidateQueries({ queryKey: [`/api/knowledge-base/articles/${id}/comments`] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Comment added successfully",
       });
     },
@@ -541,7 +541,7 @@ export default function ArticleView() {
     onSuccess: () => {
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Article deleted successfully",
       });
       // Navigate back to knowledge base
@@ -568,7 +568,7 @@ export default function ArticleView() {
       queryClient.invalidateQueries({ queryKey: ['/api/knowledge-base/articles'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Article status updated",
       });
     },
@@ -592,7 +592,7 @@ export default function ArticleView() {
       queryClient.invalidateQueries({ queryKey: ['/api/knowledge-base/articles'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Article moved successfully",
       });
     },
@@ -616,7 +616,7 @@ export default function ArticleView() {
       queryClient.invalidateQueries({ queryKey: ['/api/knowledge-base/articles'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Article moved to new folder successfully",
       });
     },
@@ -676,7 +676,7 @@ export default function ArticleView() {
       queryClient.invalidateQueries({ queryKey: ['/api/knowledge-base/articles'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Sub-page order updated",
       });
     },

@@ -265,7 +265,7 @@ export default function WorkflowBuilderPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
       toast({
         title: "Success",
-        variant: "success", 
+        variant: "default", 
         description: editingWorkflowId ? "Workflow updated successfully" : "Workflow created successfully" 
       });
       
@@ -318,7 +318,7 @@ export default function WorkflowBuilderPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/workflows"] });
       toast({
         title: "Success",
-        variant: "success", 
+        variant: "default", 
         description: "Workflow deleted successfully" 
       });
       navigate("/workflows");
@@ -342,7 +342,7 @@ export default function WorkflowBuilderPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/workflow-templates"] });
       toast({
         title: "Success",
-        variant: "success", 
+        variant: "default", 
         description: `"${workflowData.name}" has been saved as a template` 
       });
     },
@@ -382,7 +382,7 @@ export default function WorkflowBuilderPage() {
     setShowTriggerPane(false);
     toast({
       title: "Trigger Added",
-      variant: "success", 
+      variant: "default", 
       description: `${trigger.name} trigger has been added to your workflow` 
     });
   };
@@ -428,13 +428,13 @@ export default function WorkflowBuilderPage() {
       
       toast({
         title: "Action Added",
-        variant: "success", 
+        variant: "default", 
         description: `${action.name} has been added. Please configure its settings.` 
       });
     } else {
       toast({
         title: "Action Added",
-        variant: "success", 
+        variant: "default", 
         description: `${action.name} has been added to your workflow` 
       });
     }
@@ -485,7 +485,7 @@ export default function WorkflowBuilderPage() {
     setConfiguringTrigger(null);
     toast({
       title: "Configuration Saved",
-      variant: "success",
+      variant: "default",
       description: "Trigger conditions have been updated"
     });
   };
@@ -524,7 +524,7 @@ export default function WorkflowBuilderPage() {
     setConfiguringAction(null);
     toast({
       title: "Configuration Saved",
-      variant: "success",
+      variant: "default",
       description: "Action settings have been updated"
     });
   };
@@ -566,7 +566,7 @@ export default function WorkflowBuilderPage() {
       
       toast({
         title: "Trigger Deleted",
-        variant: "success",
+        variant: "default",
         description: `"${deleteConfirmation.name}" has been removed from the workflow`
       });
     } else {
@@ -578,7 +578,7 @@ export default function WorkflowBuilderPage() {
       
       toast({
         title: "Action Deleted",
-        variant: "success", 
+        variant: "default", 
         description: `"${deleteConfirmation.name}" has been removed from the workflow`
       });
     }

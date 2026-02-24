@@ -228,7 +228,7 @@ export default function Dashboard() {
       localStorage.setItem("selectedDashboardId", newDashboard.id);
       toast({
         title: "Dashboard created",
-        variant: "success",
+        variant: "default",
         description: `Dashboard "${newDashboard.name}" has been created`,
       });
     },
@@ -251,7 +251,7 @@ export default function Dashboard() {
       setEditDashboardName("");
       toast({
         title: "Dashboard renamed",
-        variant: "success",
+        variant: "default",
         description: `Dashboard renamed to "${updatedDashboard.name}"`,
       });
     },
@@ -279,7 +279,7 @@ export default function Dashboard() {
       }
       toast({
         title: "Dashboard deleted",
-        variant: "success",
+        variant: "default",
         description: "Dashboard has been deleted",
       });
     },
@@ -300,7 +300,7 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboards"] });
       toast({
         title: "Default dashboard set",
-        variant: "success",
+        variant: "default",
         description: "This dashboard is now your default",
       });
     },
@@ -354,7 +354,7 @@ export default function Dashboard() {
       setAddWidgetDialogOpen(false);
       toast({
         title: "Widget added",
-        variant: "success",
+        variant: "default",
         description: "Widget has been added to your dashboard",
       });
     },
@@ -375,7 +375,7 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/user-dashboard-widgets", selectedDashboardId] });
       toast({
         title: "Widget removed",
-        variant: "success",
+        variant: "default",
         description: "Widget has been removed from your dashboard",
       });
     },
@@ -608,9 +608,7 @@ export default function Dashboard() {
     // Prevent moving the default dashboard
     if (dashboard.isDefault) {
       toast({
-        title: "Cannot move default dashboard",
-        variant: "success",
-        description: "The default dashboard must remain in the first position",
+        title: "Cannot move default dashboard",        description: "The default dashboard must remain in the first position",
         variant: "destructive",
       });
       return;
@@ -622,9 +620,7 @@ export default function Dashboard() {
     // Prevent moving before the default dashboard (position 0)
     if (newIndex === 0) {
       toast({
-        title: "Cannot move before default dashboard",
-        variant: "success",
-        description: "The default dashboard must remain in the first position",
+        title: "Cannot move before default dashboard",        description: "The default dashboard must remain in the first position",
         variant: "destructive",
       });
       return;

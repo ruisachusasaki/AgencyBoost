@@ -46,7 +46,7 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
         title: "Lead created",
-        variant: "success",
+        variant: "default",
         description: "The lead has been successfully created.",
       });
       onSuccess?.();
@@ -68,7 +68,7 @@ export default function LeadForm({ lead, onSuccess }: LeadFormProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
         title: "Lead updated",
-        variant: "success",
+        variant: "default",
         description: "The lead has been successfully updated.",
       });
       onSuccess?.();

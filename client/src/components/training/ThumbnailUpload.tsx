@@ -84,7 +84,7 @@ export function ThumbnailUpload({ value, onChange, onRemove }: ThumbnailUploadPr
               
               toast({
                 title: "Upload successful",
-                variant: "success",
+                variant: "default",
                 description: "Course thumbnail uploaded successfully",
               });
             } else {

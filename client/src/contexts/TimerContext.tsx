@@ -173,7 +173,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
       toast({
         title: "Timer Started",
-        variant: "success",
+        variant: "default",
         description: `Started tracking time for "${taskTitle}"`,
       });
     } catch (error) {
@@ -221,7 +221,7 @@ export function TimerProvider({ children }: TimerProviderProps) {
 
       toast({
         title: "Timer Stopped",
-        variant: "success",
+        variant: "default",
         description: `Logged ${duration} minutes for "${currentTimer.taskTitle}"`,
       });
 

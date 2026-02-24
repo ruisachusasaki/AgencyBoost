@@ -97,7 +97,7 @@ export default function Leads() {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
         title: "Lead deleted",
-        variant: "success",
+        variant: "default",
         description: "The lead has been successfully deleted.",
       });
     },
@@ -117,7 +117,7 @@ export default function Leads() {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
         title: "Lead moved",
-        variant: "success",
+        variant: "default",
         description: "Lead has been moved to the new stage.",
       });
     },
@@ -140,7 +140,7 @@ export default function Leads() {
       setSelectedLeads(new Set());
       toast({
         title: "Leads deleted",
-        variant: "success",
+        variant: "default",
         description: `Successfully deleted ${data.deleted} lead(s).`,
       });
     },
@@ -162,7 +162,7 @@ export default function Leads() {
       setSelectedLeads(new Set());
       toast({
         title: "Leads updated",
-        variant: "success",
+        variant: "default",
         description: `Successfully updated ${data.updated} lead(s).`,
       });
     },
@@ -184,7 +184,7 @@ export default function Leads() {
       setSelectedLeads(new Set());
       toast({
         title: "Tag added",
-        variant: "success",
+        variant: "default",
         description: `Successfully added tag to ${data.updated} lead(s).`,
       });
     },
@@ -206,7 +206,7 @@ export default function Leads() {
       setSelectedLeads(new Set());
       toast({
         title: "Tag removed",
-        variant: "success",
+        variant: "default",
         description: `Successfully removed tag from ${data.updated} lead(s).`,
       });
     },

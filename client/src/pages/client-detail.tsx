@@ -60,7 +60,7 @@ export default function ClientDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/clients", clientId] });
       toast({
         title: "Saved",
-        variant: "success",
+        variant: "default",
         description: "Custom field values have been saved.",
       });
       setIsSavingFields(false);
@@ -84,7 +84,7 @@ export default function ClientDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       toast({
         title: "Client deleted",
-        variant: "success",
+        variant: "default",
         description: "The client has been successfully deleted.",
       });
       setLocation("/clients");
@@ -615,7 +615,7 @@ export default function ClientDetail() {
                   setIsEditDialogOpen(false);
                   toast({
                     title: "Client updated",
-                    variant: "success",
+                    variant: "default",
                     description: "The client has been successfully updated.",
                   });
                 }}

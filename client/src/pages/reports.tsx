@@ -6952,7 +6952,7 @@ function HiringPredictionsSection() {
     onSuccess: (data) => {
       toast({
         title: "Alerts Sent",
-        variant: "success",
+        variant: "default",
         description: data.message || `Successfully notified managers about ${data.alertsCreated} capacity alerts.`,
       });
     },

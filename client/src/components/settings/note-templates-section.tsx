@@ -71,7 +71,7 @@ export default function NoteTemplatesSection() {
       addForm.reset();
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Note template created successfully.",
       });
     },
@@ -99,7 +99,7 @@ export default function NoteTemplatesSection() {
       setEditingTemplate(null);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Note template updated successfully.",
       });
     },
@@ -125,7 +125,7 @@ export default function NoteTemplatesSection() {
       setDeletingTemplate(null);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Note template deleted successfully.",
       });
     },
@@ -152,7 +152,7 @@ export default function NoteTemplatesSection() {
       queryClient.invalidateQueries({ queryKey: ['/api/lead-note-templates'] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Note templates reordered successfully.",
       });
     },

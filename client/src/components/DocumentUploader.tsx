@@ -148,7 +148,7 @@ export function DocumentUploader({
 
           toast({
             title: "File uploaded successfully",
-            variant: "success",
+            variant: "default",
             description: `${file.name} has been uploaded and attached to the client.`,
           });
         } catch (error: any) {

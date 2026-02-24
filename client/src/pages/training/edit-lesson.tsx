@@ -149,7 +149,7 @@ export default function EditLesson() {
     onSuccess: () => {
       toast({
         title: "Success!",
-        variant: "success",
+        variant: "default",
         description: "Lesson updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}`] });
@@ -244,7 +244,7 @@ export default function EditLesson() {
 
       toast({
         title: "PDF uploaded",
-        variant: "success",
+        variant: "default",
         description: "PDF file has been uploaded successfully"
       });
 
@@ -297,7 +297,7 @@ export default function EditLesson() {
 
       toast({
         title: "Success!",
-        variant: "success",
+        variant: "default",
         description: "Lesson and quiz updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/training/lessons/${lessonId}`] });
@@ -352,7 +352,7 @@ export default function EditLesson() {
       });
       toast({
         title: "Success!",
-        variant: "success",
+        variant: "default",
         description: "Resource added successfully.",
       });
     },
@@ -381,7 +381,7 @@ export default function EditLesson() {
       });
       toast({
         title: "Success!",
-        variant: "success",
+        variant: "default",
         description: "Resource updated successfully.",
       });
     },
@@ -399,7 +399,7 @@ export default function EditLesson() {
       refetchResources();
       toast({
         title: "Success!",
-        variant: "success",
+        variant: "default",
         description: "Resource deleted successfully.",
       });
     },
@@ -486,7 +486,7 @@ export default function EditLesson() {
       
       toast({
         title: "File uploaded successfully!",
-        variant: "success",
+        variant: "default",
         description: "You can edit the title and click 'Save Resource' to save."
       });
       
@@ -970,7 +970,7 @@ export default function EditLesson() {
 
                               toast({
                                 title: "Success!",
-                                variant: "success",
+                                variant: "default",
                                 description: "Assignment updated successfully.",
                               });
                               

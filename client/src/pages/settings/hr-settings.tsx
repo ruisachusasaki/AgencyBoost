@@ -72,7 +72,7 @@ function ProgressionStatusManager() {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/progression-statuses"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Progression status created successfully",
       });
       setIsDialogOpen(false);
@@ -96,7 +96,7 @@ function ProgressionStatusManager() {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/progression-statuses"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Progression status updated successfully",
       });
       setIsDialogOpen(false);
@@ -121,7 +121,7 @@ function ProgressionStatusManager() {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/progression-statuses"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Progression status deleted successfully",
       });
     },
@@ -147,7 +147,7 @@ function ProgressionStatusManager() {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/one-on-one/progression-statuses"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Progression statuses reordered successfully",
       });
     },
@@ -585,7 +585,7 @@ export default function HRSettingsPage() {
       );
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Time off category updated successfully",
       });
     } else {
@@ -598,7 +598,7 @@ export default function HRSettingsPage() {
       setCategories(prev => [...prev, newCategory]);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Time off category created successfully",
       });
     }
@@ -610,7 +610,7 @@ export default function HRSettingsPage() {
       setCategories(prev => prev.filter(cat => cat.id !== id));
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Time off category deleted successfully",
       });
     }
@@ -896,7 +896,7 @@ function GlobalTimeOffTypesManager() {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-types"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Time off type created successfully",
       });
       setIsDialogOpen(false);
@@ -920,7 +920,7 @@ function GlobalTimeOffTypesManager() {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-types"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Time off type updated successfully",
       });
       setIsDialogOpen(false);
@@ -945,7 +945,7 @@ function GlobalTimeOffTypesManager() {
       queryClient.invalidateQueries({ queryKey: ["/api/hr/time-off-types"] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Time off type deleted successfully",
       });
     },
@@ -1288,7 +1288,7 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
       queryClient.invalidateQueries({ queryKey: [`/api/hr/time-off-policies/${policyId}/types`] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Time off type created successfully",
       });
       setIsDialogOpen(false);
@@ -1312,7 +1312,7 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
       queryClient.invalidateQueries({ queryKey: [`/api/hr/time-off-policies/${policyId}/types`] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Time off type updated successfully",
       });
       setIsDialogOpen(false);
@@ -1337,7 +1337,7 @@ function TimeOffTypesManager({ policyId }: { policyId: string }) {
       queryClient.invalidateQueries({ queryKey: [`/api/hr/time-off-policies/${policyId}/types`] });
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Time off type deleted successfully",
       });
     },
@@ -1731,7 +1731,7 @@ function TimeOffPolicyManager() {
       setIsDialogOpen(false);
       toast({
         title: "Success",
-        variant: "success",
+        variant: "default",
         description: "Time off policy saved successfully",
       });
     },
