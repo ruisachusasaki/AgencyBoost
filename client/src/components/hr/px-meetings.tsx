@@ -2345,9 +2345,32 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                                 </div>
                               ))}
                               {dayMeetings.length > 3 && (
-                                <div className="text-[10px] text-muted-foreground px-1.5 font-medium">
-                                  +{dayMeetings.length - 3} more
-                                </div>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <button className="text-[10px] text-primary px-1.5 font-medium hover:underline cursor-pointer w-full text-left">
+                                      +{dayMeetings.length - 3} more
+                                    </button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-64 p-2" align="start">
+                                    <div className="text-xs font-semibold mb-2">{format(day, "EEEE, MMM d")}</div>
+                                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                                      {dayMeetings.map(meeting => (
+                                        <div
+                                          key={meeting.id}
+                                          onClick={() => navigateToMeeting(meeting)}
+                                          className={cn(
+                                            "text-xs px-2 py-1.5 rounded cursor-pointer",
+                                            "bg-primary/10 text-primary hover:bg-primary/20 transition-colors",
+                                            meeting.isPrivate && "bg-muted text-muted-foreground hover:bg-muted/80"
+                                          )}
+                                        >
+                                          <span className="font-medium">{meeting.meetingTime}</span>{" "}
+                                          {meeting.title}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
                               )}
                             </div>
                           </div>
