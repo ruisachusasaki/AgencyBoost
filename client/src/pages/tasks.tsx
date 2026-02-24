@@ -1357,25 +1357,26 @@ export default function Tasks() {
         const indentLevel = (task.level || 0) * 24; // 24px per level
         
         return (
-          <div className="flex items-center gap-2" style={{ paddingLeft: `${indentLevel}px` }}>
-            {hasSubTasks && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleTaskExpansion(task.id);
-                }}
-                className="p-1 h-6 w-6"
-              >
-                {expandedTasks.has(task.id) ? (
-                  <ChevronDown className="h-3 w-3" />
-                ) : (
-                  <ChevronRight className="h-3 w-3" />
-                )}
-              </Button>
-            )}
-            {!hasSubTasks && <div className="w-6" />}
+          <div className="flex items-center gap-1.5" style={{ paddingLeft: `${indentLevel}px` }}>
+            <div className="flex-shrink-0 w-5 flex items-center justify-center">
+              {hasSubTasks && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleTaskExpansion(task.id);
+                  }}
+                  className="p-0 h-5 w-5"
+                >
+                  {expandedTasks.has(task.id) ? (
+                    <ChevronDown className="h-3 w-3" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3" />
+                  )}
+                </Button>
+              )}
+            </div>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
