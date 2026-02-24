@@ -231,6 +231,19 @@ export default function Tasks() {
   const resizeStartWidthRef = React.useRef(0);
   const columnsRef = React.useRef(columns);
   
+  useEffect(() => {
+    if (currentUser && activeTab === "my-tasks") {
+      setCurrentFilter({
+        conditions: [{
+          field: 'assignedTo',
+          operator: 'equals',
+          value: currentUser.id
+        }],
+        logic: 'AND'
+      });
+    }
+  }, [currentUser]);
+
   // Keep columnsRef in sync with columns state
   React.useEffect(() => {
     columnsRef.current = columns;
