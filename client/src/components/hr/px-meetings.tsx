@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, addMonths, subMonths, isToday } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
   Users,
@@ -52,7 +52,9 @@ import {
   Square,
   Timer,
   RotateCcw,
-  ArrowRightToLine
+  ArrowRightToLine,
+  LayoutList,
+  CalendarDays
 } from "lucide-react";
 
 interface Staff {
@@ -122,6 +124,8 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const [listPage, setListPage] = useState(1);
   const MEETINGS_PER_PAGE = 10;
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
   
   // Define available meeting elements
   const meetingElements = [
@@ -2014,10 +2018,32 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             <Presentation className="h-5 w-5" />
             Meetings
           </CardTitle>
-          <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" />
-            New Meeting
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center border rounded-lg p-0.5">
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className={cn("h-8 px-3", viewMode === "list" && "bg-primary hover:bg-primary/90")}
+              >
+                <LayoutList className="h-4 w-4 mr-1.5" />
+                List
+              </Button>
+              <Button
+                variant={viewMode === "calendar" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("calendar")}
+                className={cn("h-8 px-3", viewMode === "calendar" && "bg-primary hover:bg-primary/90")}
+              >
+                <CalendarDays className="h-4 w-4 mr-1.5" />
+                Calendar
+              </Button>
+            </div>
+            <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-2" />
+              New Meeting
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex flex-col gap-3">
@@ -2082,154 +2108,253 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             </div>
           </div>
 
-          {filteredMeetings.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Presentation className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">No meetings yet</p>
-              <p className="text-sm">Create your first meeting to get started</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {paginatedMeetings.map((meeting) => (
-                <div
-                  key={meeting.id}
-                  onClick={() => navigateToMeeting(meeting)}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Presentation className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{meeting.title}</h4>
-                        {meeting.isRecurring && (
-                          <Badge variant="outline" className="text-xs flex items-center gap-1 text-primary border-primary/30">
-                            <Repeat className="h-3 w-3" />
-                            {meeting.recurringFrequency === "daily" ? "Daily" : meeting.recurringFrequency === "weekly" ? "Weekly" : meeting.recurringFrequency === "biweekly" ? "Biweekly" : "Monthly"}
-                          </Badge>
-                        )}
-                        {meeting.isPrivate && (
-                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                            <Lock className="h-3 w-3" />
-                            Private
-                          </Badge>
-                        )}
-                        {meeting.tags && meeting.tags.length > 0 && (
-                          <div className="flex gap-1">
-                            {meeting.tags.slice(0, 2).map(tag => (
-                              <Badge key={tag} variant="secondary" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                            {meeting.tags.length > 2 && (
-                              <Badge variant="secondary" className="text-xs">
-                                +{meeting.tags.length - 2}
+          {viewMode === "list" ? (
+            <>
+              {filteredMeetings.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Presentation className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">No meetings yet</p>
+                  <p className="text-sm">Create your first meeting to get started</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {paginatedMeetings.map((meeting) => (
+                    <div
+                      key={meeting.id}
+                      onClick={() => navigateToMeeting(meeting)}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Presentation className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{meeting.title}</h4>
+                            {meeting.isRecurring && (
+                              <Badge variant="outline" className="text-xs flex items-center gap-1 text-primary border-primary/30">
+                                <Repeat className="h-3 w-3" />
+                                {meeting.recurringFrequency === "daily" ? "Daily" : meeting.recurringFrequency === "weekly" ? "Weekly" : meeting.recurringFrequency === "biweekly" ? "Biweekly" : "Monthly"}
                               </Badge>
                             )}
+                            {meeting.isPrivate && (
+                              <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                                <Lock className="h-3 w-3" />
+                                Private
+                              </Badge>
+                            )}
+                            {meeting.tags && meeting.tags.length > 0 && (
+                              <div className="flex gap-1">
+                                {meeting.tags.slice(0, 2).map(tag => (
+                                  <Badge key={tag} variant="secondary" className="text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {meeting.tags.length > 2 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{meeting.tags.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <CalendarIcon className="h-3.5 w-3.5" />
-                          {format(parseISO(meeting.meetingDate), "MMM d, yyyy")}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5" />
-                          {meeting.meetingTime}
-                        </span>
-                        {meeting.attendees.length > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3.5 w-3.5" />
-                            {meeting.attendees.length} attendee{meeting.attendees.length !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex -space-x-2">
-                      {meeting.attendees.slice(0, 3).map((attendee, idx) => (
-                        <Avatar key={attendee.id} className="h-8 w-8 border-2 border-background">
-                          <AvatarFallback className="text-xs">
-                            {attendee.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                      ))}
-                      {meeting.attendees.length > 3 && (
-                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center border-2 border-background text-xs font-medium">
-                          +{meeting.attendees.length - 3}
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <CalendarIcon className="h-3.5 w-3.5" />
+                              {format(parseISO(meeting.meetingDate), "MMM d, yyyy")}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" />
+                              {meeting.meetingTime}
+                            </span>
+                            {meeting.attendees.length > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Users className="h-3.5 w-3.5" />
+                                {meeting.attendees.length} attendee{meeting.attendees.length !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex -space-x-2">
+                          {meeting.attendees.slice(0, 3).map((attendee, idx) => (
+                            <Avatar key={attendee.id} className="h-8 w-8 border-2 border-background">
+                              <AvatarFallback className="text-xs">
+                                {attendee.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))}
+                          {meeting.attendees.length > 3 && (
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center border-2 border-background text-xs font-medium">
+                              +{meeting.attendees.length - 3}
+                            </div>
+                          )}
+                        </div>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Meeting</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{meeting.title}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteMutation.mutate(meeting.id);
+                                }}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                      </div>
                     </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Meeting</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete "{meeting.title}"? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteMutation.mutate(meeting.id);
-                            }}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  ))}
+                </div>
+              )}
+
+              {filteredMeetings.length > 0 && totalListPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {((listPage - 1) * MEETINGS_PER_PAGE) + 1}–{Math.min(listPage * MEETINGS_PER_PAGE, filteredMeetings.length)} of {filteredMeetings.length} meetings
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setListPage(p => Math.max(1, p - 1))}
+                      disabled={listPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Previous
+                    </Button>
+                    <span className="text-sm text-muted-foreground px-2">
+                      Page {listPage} of {totalListPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setListPage(p => Math.min(totalListPages, p + 1))}
+                      disabled={listPage === totalListPages}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {filteredMeetings.length > 0 && totalListPages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t">
-              <p className="text-sm text-muted-foreground">
-                Showing {((listPage - 1) * MEETINGS_PER_PAGE) + 1}–{Math.min(listPage * MEETINGS_PER_PAGE, filteredMeetings.length)} of {filteredMeetings.length} meetings
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setListPage(p => Math.max(1, p - 1))}
-                  disabled={listPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Previous
+              )}
+            </>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <Button variant="outline" size="sm" onClick={() => setCalendarMonth(prev => subMonths(prev, 1))}>
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-sm text-muted-foreground px-2">
-                  Page {listPage} of {totalListPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setListPage(p => Math.min(totalListPages, p + 1))}
-                  disabled={listPage === totalListPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
+                <h3 className="text-lg font-semibold">{format(calendarMonth, "MMMM yyyy")}</h3>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setCalendarMonth(new Date())}>
+                    Today
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setCalendarMonth(prev => addMonths(prev, 1))}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
+
+              {(() => {
+                const monthStart = startOfMonth(calendarMonth);
+                const monthEnd = endOfMonth(calendarMonth);
+                const calStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+                const calEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+                const days = eachDayOfInterval({ start: calStart, end: calEnd });
+
+                const meetingsByDate = new Map<string, PxMeeting[]>();
+                filteredMeetings.forEach(meeting => {
+                  if (meeting.meetingDate) {
+                    const dateKey = meeting.meetingDate.split('T')[0];
+                    if (!meetingsByDate.has(dateKey)) meetingsByDate.set(dateKey, []);
+                    meetingsByDate.get(dateKey)!.push(meeting);
+                  }
+                });
+
+                return (
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="grid grid-cols-7 bg-muted/50">
+                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                        <div key={day} className="text-center text-xs font-medium text-muted-foreground py-2 border-b">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7">
+                      {days.map((day, idx) => {
+                        const dateKey = format(day, "yyyy-MM-dd");
+                        const dayMeetings = meetingsByDate.get(dateKey) || [];
+                        const inMonth = isSameMonth(day, calendarMonth);
+                        const today = isToday(day);
+
+                        return (
+                          <div
+                            key={idx}
+                            className={cn(
+                              "min-h-[100px] border-b border-r p-1 transition-colors",
+                              !inMonth && "bg-muted/30",
+                              today && "bg-primary/5"
+                            )}
+                          >
+                            <div className={cn(
+                              "text-xs font-medium mb-1 flex items-center justify-center w-6 h-6 rounded-full",
+                              !inMonth && "text-muted-foreground/50",
+                              today && "bg-primary text-primary-foreground"
+                            )}>
+                              {format(day, "d")}
+                            </div>
+                            <div className="space-y-0.5">
+                              {dayMeetings.slice(0, 3).map(meeting => (
+                                <div
+                                  key={meeting.id}
+                                  onClick={() => navigateToMeeting(meeting)}
+                                  className={cn(
+                                    "text-[11px] leading-tight px-1.5 py-0.5 rounded cursor-pointer truncate",
+                                    "bg-primary/10 text-primary hover:bg-primary/20 transition-colors",
+                                    meeting.isPrivate && "bg-muted text-muted-foreground hover:bg-muted/80"
+                                  )}
+                                  title={`${meeting.title} - ${meeting.meetingTime}`}
+                                >
+                                  <span className="font-medium">{meeting.meetingTime}</span>{" "}
+                                  {meeting.title}
+                                </div>
+                              ))}
+                              {dayMeetings.length > 3 && (
+                                <div className="text-[10px] text-muted-foreground px-1.5 font-medium">
+                                  +{dayMeetings.length - 3} more
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </CardContent>
