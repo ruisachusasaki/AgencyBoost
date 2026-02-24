@@ -22923,6 +22923,43 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.get("/api/task-workflow-status-map", requireAuth(), async (req, res) => {
+    try {
+      const allWorkflows = await db.select({ id: teamWorkflows.id, name: teamWorkflows.name })
+        .from(teamWorkflows)
+        .orderBy(asc(teamWorkflows.name));
+
+      const result = [];
+      for (const wf of allWorkflows) {
+        const wfStatuses = await db
+          .select({
+            id: teamWorkflowStatuses.id,
+            order: teamWorkflowStatuses.order,
+            status: {
+              id: taskStatuses.id,
+              name: taskStatuses.name,
+              value: taskStatuses.value,
+              color: taskStatuses.color,
+            }
+          })
+          .from(teamWorkflowStatuses)
+          .innerJoin(taskStatuses, eq(teamWorkflowStatuses.statusId, taskStatuses.id))
+          .where(eq(teamWorkflowStatuses.workflowId, wf.id))
+          .orderBy(asc(teamWorkflowStatuses.order));
+        result.push({ id: wf.id, name: wf.name, statuses: wfStatuses });
+      }
+
+      const catWorkflows = await db.select({ id: taskCategories.id, workflowId: taskCategories.workflowId })
+        .from(taskCategories)
+        .where(isNotNull(taskCategories.workflowId));
+
+      res.json({ workflows: result, categoryWorkflowMap: catWorkflows });
+    } catch (error) {
+      console.error("Error fetching task workflow status map:", error);
+      res.status(500).json({ message: "Failed to fetch task workflow status map" });
+    }
+  });
+
   app.post("/api/task-statuses", requireAuth(), requirePermission('tasks', 'canCreate'), async (req, res) => {
     try {
       const validatedData = insertTaskStatusSchema.parse(req.body);

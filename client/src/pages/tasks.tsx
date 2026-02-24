@@ -205,6 +205,10 @@ export default function Tasks() {
     queryKey: ["/api/team-workflows"],
   });
 
+  const { data: workflowStatusMap } = useQuery<{ workflows: any[]; categoryWorkflowMap: { id: string; workflowId: string }[] }>({
+    queryKey: ["/api/task-workflow-status-map"],
+  });
+
   // Fetch current user for Smart Lists authentication
   const { data: currentUser } = useQuery<{ id: string; role: string; firstName: string; lastName: string }>({
     queryKey: ['/api/auth/current-user'],
@@ -427,8 +431,25 @@ export default function Tasks() {
   };
 
   const getTaskWorkflowStatuses = (task: Task) => {
-    const wfId = task.workflowId || taskCategories.find(c => c.id === task.categoryId)?.workflowId;
+    let wfId = task.workflowId;
+    if (!wfId && task.categoryId) {
+      const catMapping = workflowStatusMap?.categoryWorkflowMap?.find(c => c.id === task.categoryId);
+      if (catMapping?.workflowId) {
+        wfId = catMapping.workflowId;
+      } else {
+        const cat = taskCategories.find(c => c.id === task.categoryId);
+        if (cat?.workflowId) wfId = cat.workflowId;
+      }
+    }
     if (wfId) {
+      const mapWf = workflowStatusMap?.workflows?.find((w: any) => w.id === wfId);
+      if (mapWf?.statuses?.length > 0) {
+        return mapWf.statuses.map((ws: any) => ({
+          value: ws.status.value,
+          name: ws.status.name,
+          color: ws.status.color,
+        }));
+      }
       const wf = workflows.find((w: any) => w.id === wfId);
       if (wf?.statuses?.length > 0) {
         return wf.statuses.map((ws: any) => ({
