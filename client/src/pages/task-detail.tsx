@@ -46,6 +46,152 @@ const templateFormSchema = z.object({
 
 type TemplateFormData = z.infer<typeof templateFormSchema>;
 
+function RecurringSettingsCard({ task, onUpdate }: { task: Task; onUpdate: (data: Partial<Task>) => void }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(task.isRecurring || false);
+  const [recurringInterval, setRecurringInterval] = useState(task.recurringInterval || 1);
+  const [recurringUnit, setRecurringUnit] = useState(task.recurringUnit || "days");
+  const [recurringEndType, setRecurringEndType] = useState(task.recurringEndType || "never");
+  const [recurringEndOccurrences, setRecurringEndOccurrences] = useState(task.recurringEndOccurrences || 10);
+  const [recurringEndDate, setRecurringEndDate] = useState<Date | null>(task.recurringEndDate ? new Date(task.recurringEndDate) : null);
+  const [endDateOpen, setEndDateOpen] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const changed =
+      isRecurring !== (task.isRecurring || false) ||
+      recurringInterval !== (task.recurringInterval || 1) ||
+      recurringUnit !== (task.recurringUnit || "days") ||
+      recurringEndType !== (task.recurringEndType || "never") ||
+      recurringEndOccurrences !== (task.recurringEndOccurrences || 10) ||
+      (recurringEndDate?.toISOString() || null) !== (task.recurringEndDate ? new Date(task.recurringEndDate).toISOString() : null);
+    setHasChanges(changed);
+  }, [isRecurring, recurringInterval, recurringUnit, recurringEndType, recurringEndOccurrences, recurringEndDate, task]);
+
+  const saveRecurringSettings = () => {
+    onUpdate({
+      isRecurring,
+      recurringInterval: isRecurring ? recurringInterval : null,
+      recurringUnit: isRecurring ? recurringUnit : null,
+      recurringEndType: isRecurring ? recurringEndType : null,
+      recurringEndDate: isRecurring && recurringEndType === "on_date" && recurringEndDate ? recurringEndDate.toISOString() : null,
+      recurringEndOccurrences: isRecurring && recurringEndType === "after_occurrences" ? recurringEndOccurrences : null,
+    } as any);
+    toast({ title: isRecurring ? "Recurring settings updated" : "Recurring schedule removed" });
+  };
+
+  return (
+    <Card>
+      <CardHeader className="cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Repeat className="h-5 w-5" />
+            Recurring Settings
+            {task.isRecurring && (
+              <Badge variant="outline" className="text-primary border-primary/30 text-xs">
+                Every {task.recurringInterval} {task.recurringUnit}
+              </Badge>
+            )}
+          </div>
+          <ChevronRight className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-90")} />
+        </CardTitle>
+      </CardHeader>
+      {isExpanded && (
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">Make this task recurring</Label>
+            <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
+          </div>
+
+          {isRecurring && (
+            <div className="space-y-4 pt-2 border-t">
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <Label className="text-xs text-muted-foreground mb-1 block">Repeat every</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={recurringInterval}
+                      onChange={(e) => setRecurringInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-20"
+                    />
+                    <Select value={recurringUnit} onValueChange={setRecurringUnit}>
+                      <SelectTrigger className="w-28">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hours">Hours</SelectItem>
+                        <SelectItem value="days">Days</SelectItem>
+                        <SelectItem value="weeks">Weeks</SelectItem>
+                        <SelectItem value="months">Months</SelectItem>
+                        <SelectItem value="years">Years</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">End condition</Label>
+                <Select value={recurringEndType} onValueChange={setRecurringEndType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="never">Never</SelectItem>
+                    <SelectItem value="on_date">On specific date</SelectItem>
+                    <SelectItem value="after_occurrences">After number of occurrences</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {recurringEndType === "on_date" && (
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">End date</Label>
+                  <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !recurringEndDate && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {recurringEndDate ? format(recurringEndDate, "PPP") : "Pick an end date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={recurringEndDate || undefined} onSelect={(date) => { setRecurringEndDate(date || null); setEndDateOpen(false); }} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+
+              {recurringEndType === "after_occurrences" && (
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Number of occurrences</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={recurringEndOccurrences}
+                    onChange={(e) => setRecurringEndOccurrences(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-32"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {hasChanges && (
+            <div className="flex justify-end pt-2 border-t">
+              <Button onClick={saveRecurringSettings} size="sm" className="bg-primary hover:bg-primary/90">
+                Save Recurring Settings
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
 export default function TaskDetail() {
   const { taskId } = useParams();
   const [location, setLocation] = useLocation();
@@ -1151,6 +1297,9 @@ export default function TaskDetail() {
             task={task} 
             onUpdate={updateTask}
           />
+
+          {/* Recurring Task Settings */}
+          <RecurringSettingsCard task={task} onUpdate={updateTask} />
 
           {/* Intake Form Submission - shows if task was created via intake form */}
           <TaskIntakeSubmissionViewer taskId={taskId!} />

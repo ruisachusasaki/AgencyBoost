@@ -947,7 +947,7 @@ export function TaskIntakeDialog({
     try {
       if (formData?.formId) {
         const visibleSectionIds = visibleSections.map(s => s.id);
-        const recurringData = isPersonalTask && isRecurring ? {
+        const recurringData = isRecurring ? {
           isRecurring: true,
           recurringInterval,
           recurringUnit,
@@ -1098,7 +1098,7 @@ export function TaskIntakeDialog({
                     />
                   ))}
 
-                  {isPersonalTask && isLastSection && (
+                  {isLastSection && (
                     <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
