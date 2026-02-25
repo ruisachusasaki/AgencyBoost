@@ -5869,7 +5869,9 @@ export default function EnhancedClientDetail() {
                         </div>
                         <p className="text-sm text-gray-600 mt-1" data-testid={`activity-description-${log.id}`}>
                           {log.entityType === 'sms' 
-                            ? `SMS message sent to ${log.newValues?.to || 'client'}`
+                            ? (log.newValues?.direction === 'inbound' 
+                              ? `SMS received from ${log.newValues?.from || 'unknown'}` 
+                              : `SMS message sent to ${log.newValues?.to || 'client'}`)
                             : (log.details || log.description)
                           }
                         </p>
@@ -6685,19 +6687,25 @@ export default function EnhancedClientDetail() {
                               <div className="flex items-center gap-2">
                                 {log.action === 'call' ? (
                                   <Phone className="h-4 w-4 text-green-600" />
+                                ) : log.entityType === 'sms' && log.newValues?.direction === 'inbound' ? (
+                                  <MessageSquare className="h-4 w-4 text-green-600" />
                                 ) : log.entityType === 'sms' ? (
                                   <MessageSquare className="h-4 w-4 text-primary" />
                                 ) : (
                                   <Mail className="h-4 w-4 text-blue-600" />
                                 )}
                                 <span className="font-medium text-gray-900 capitalize" data-testid={`text-message-type-${log.id}`}>
-                                  {log.action === 'call' ? 'Call' : log.entityType}
+                                  {log.action === 'call' ? 'Call' : log.entityType === 'sms' && log.newValues?.direction === 'inbound' ? 'SMS Received' : log.entityType}
                                 </span>
-                                {log.userName && log.userName !== 'Unknown User' && (
+                                {log.entityType === 'sms' && log.newValues?.direction === 'inbound' ? (
+                                  <span className="text-sm text-green-600 font-medium" data-testid={`text-sent-by-${log.id}`}>
+                                    from {log.newValues?.from || 'unknown'}
+                                  </span>
+                                ) : log.userName && log.userName !== 'Unknown User' ? (
                                   <span className="text-sm text-gray-500" data-testid={`text-sent-by-${log.id}`}>
                                     by {log.userName}
                                   </span>
-                                )}
+                                ) : null}
                                 {/* Provider Status Badge */}
                                 {log.newValues?.status && (
                                   <span 

@@ -20573,7 +20573,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           userId,
           `Sent SMS message to ${to}: ${processedMessage.substring(0, 100)}${processedMessage.length > 100 ? '...' : ''}`,
           null,
-          { to, from: integration.phoneNumber, message: processedMessage, clientId, status: smsMessage.status, provider: 'twilio' },
+          { to, from: integration.phoneNumber, message: processedMessage, clientId, status: smsMessage.status, provider: 'twilio', direction: 'outbound' },
           req
         );
         console.log('SMS audit log - Successfully created audit log for SMS:', smsMessage.sid);
@@ -20721,6 +20721,114 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       
       res.type('text/xml');
       res.send(twiml.toString());
+    }
+  });
+
+  // Incoming SMS webhook - Twilio POSTs here when someone replies to an SMS
+  app.post("/api/webhooks/twilio/sms", async (req, res) => {
+    try {
+      const { From, To, Body, MessageSid, NumMedia } = req.body;
+      
+      console.log('[SMS Webhook] Incoming SMS:', { From, To, Body: Body?.substring(0, 50), MessageSid, NumMedia });
+      
+      if (!From || !Body) {
+        console.warn('[SMS Webhook] Missing From or Body in webhook payload');
+        const MessagingResponse = twilio.twiml.MessagingResponse;
+        const twiml = new MessagingResponse();
+        res.type('text/xml');
+        return res.send(twiml.toString());
+      }
+      
+      // Normalize the sender phone number for matching (strip formatting)
+      const normalizedFrom = From.replace(/[^\d+]/g, '');
+      
+      // Try to match the sender to a client by phone number
+      const allClients = await db.select({ id: clients.id, name: clients.name, phone: clients.phone, company: clients.company }).from(clients);
+      
+      let matchedClient = null;
+      for (const c of allClients) {
+        if (c.phone) {
+          const normalizedClientPhone = c.phone.replace(/[^\d+]/g, '');
+          // Match if either ends with the other (handles +1 prefix differences)
+          if (normalizedFrom === normalizedClientPhone ||
+              normalizedFrom.endsWith(normalizedClientPhone.replace(/^\+?1/, '')) ||
+              normalizedClientPhone.endsWith(normalizedFrom.replace(/^\+?1/, ''))) {
+            matchedClient = c;
+            break;
+          }
+        }
+      }
+      
+      console.log('[SMS Webhook] Matched client:', matchedClient ? { id: matchedClient.id, name: matchedClient.name } : 'No match');
+      
+      // Find a system user to attribute the log to (use the first admin)
+      let systemUserId: string | null = null;
+      try {
+        const [adminUser] = await db
+          .select({ id: staff.id })
+          .from(staff)
+          .limit(1);
+        systemUserId = adminUser?.id || null;
+      } catch (e) {
+        console.error('[SMS Webhook] Error finding system user:', e);
+      }
+      
+      // Create audit log for the incoming SMS
+      const entityName = matchedClient 
+        ? `SMS from ${matchedClient.name || matchedClient.company || From}` 
+        : `SMS from ${From}`;
+      
+      try {
+        await createAuditLog(
+          "created",
+          "sms",
+          MessageSid || `incoming-${Date.now()}`,
+          entityName,
+          systemUserId || "system",
+          `Received SMS from ${From}: ${Body.substring(0, 100)}${Body.length > 100 ? '...' : ''}`,
+          null,
+          { 
+            to: To, 
+            from: From, 
+            message: Body, 
+            clientId: matchedClient?.id || null, 
+            status: 'received', 
+            provider: 'twilio',
+            direction: 'inbound',
+            messageSid: MessageSid,
+            numMedia: NumMedia ? parseInt(NumMedia) : 0
+          },
+          null
+        );
+        console.log('[SMS Webhook] Successfully logged incoming SMS from:', From);
+      } catch (auditError) {
+        console.error('[SMS Webhook] Failed to create audit log:', auditError);
+      }
+      
+      // Respond with empty TwiML (acknowledge receipt, no auto-reply)
+      const MessagingResponse = twilio.twiml.MessagingResponse;
+      const twiml = new MessagingResponse();
+      res.type('text/xml');
+      res.send(twiml.toString());
+    } catch (error) {
+      console.error('[SMS Webhook] Error processing incoming SMS:', error);
+      // Always respond with valid TwiML even on error
+      const MessagingResponse = twilio.twiml.MessagingResponse;
+      const twiml = new MessagingResponse();
+      res.type('text/xml');
+      res.send(twiml.toString());
+    }
+  });
+
+  // Endpoint to get the webhook URL for configuring Twilio
+  app.get("/api/integrations/twilio/webhook-url", requireAuth(), async (req, res) => {
+    try {
+      const host = req.headers.host || req.hostname;
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const webhookUrl = `${protocol}://${host}/api/webhooks/twilio/sms`;
+      res.json({ webhookUrl });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate webhook URL" });
     }
   });
 
