@@ -82,6 +82,29 @@ export function TimerProvider({ children }: TimerProviderProps) {
     }
   }, [currentTimer, currentUser?.id]);
 
+  useEffect(() => {
+    if (!currentTimer || !currentUser?.id) return;
+
+    const syncWithServer = async () => {
+      try {
+        const taskResponse = await fetch(`/api/tasks/${currentTimer.taskId}`);
+        if (!taskResponse.ok) return;
+        const task = await taskResponse.json();
+        const entries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+        const serverEntry = entries.find((e: any) => e.id === currentTimer.id);
+        if (!serverEntry || !serverEntry.isRunning) {
+          localStorage.removeItem(`activeTimer_${currentUser.id}`);
+          setCurrentTimer(null);
+          setElapsedTime(0);
+        }
+      } catch {
+      }
+    };
+
+    const interval = setInterval(syncWithServer, 15000);
+    return () => clearInterval(interval);
+  }, [currentTimer?.id, currentUser?.id]);
+
   // Clear old non-user-specific timer on first load (migration cleanup)
   useEffect(() => {
     localStorage.removeItem('activeTimer');
