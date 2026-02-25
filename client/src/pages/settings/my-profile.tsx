@@ -881,7 +881,7 @@ export default function MyProfile() {
                                     )}
                                   >
                                     {field.value ? (
-                                      format(new Date(field.value), "PPP")
+                                      format(new Date(field.value + "T00:00:00"), "PPP")
                                     ) : (
                                       <span>Pick a date</span>
                                     )}
@@ -892,7 +892,7 @@ export default function MyProfile() {
                               <PopoverContent className="w-auto p-0" align="start">
                                 <CalendarComponent
                                   mode="single"
-                                  selected={field.value ? new Date(field.value) : undefined}
+                                  selected={field.value ? new Date(field.value + "T00:00:00") : undefined}
                                   onSelect={(date) => {
                                     field.onChange(date ? format(date, "yyyy-MM-dd") : "");
                                     setBirthdateOpen(false);
@@ -901,7 +901,8 @@ export default function MyProfile() {
                                   captionLayout="dropdown-buttons"
                                   fromYear={1940}
                                   toYear={new Date().getFullYear()}
-                                  defaultMonth={field.value ? new Date(field.value) : new Date(2000, 0)}
+                                  defaultMonth={field.value ? new Date(field.value + "T00:00:00") : new Date(2000, 0)}
+                                  classNames={{ caption_label: "hidden" }}
                                   initialFocus
                                 />
                               </PopoverContent>
