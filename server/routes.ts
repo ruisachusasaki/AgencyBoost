@@ -8772,6 +8772,21 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.patch("/api/template-folders/:id", requireAuth(), requirePermission('campaigns', 'canCreate'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, description } = req.body;
+      const folder = await appStorage.updateTemplateFolder(id, { name, description });
+      if (!folder) {
+        return res.status(404).json({ message: "Template folder not found" });
+      }
+      res.json(folder);
+    } catch (error) {
+      console.error("Failed to update template folder:", error);
+      res.status(500).json({ message: "Failed to update template folder" });
+    }
+  });
+
   app.delete("/api/template-folders/:id", requireAuth(), requirePermission('campaigns', 'canDelete'), async (req, res) => {
     try {
       const { id } = req.params;
@@ -8868,6 +8883,23 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     try {
       // Don't include createdBy in updates, it should remain unchanged
       const { createdBy, ...updateData } = req.body;
+      const validatedData = insertEmailTemplateSchema.partial().parse(updateData);
+      const template = await appStorage.updateEmailTemplate(req.params.id, validatedData);
+      if (!template) {
+        return res.status(404).json({ message: "Email template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update email template" });
+    }
+  });
+
+  app.put("/api/email-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { createdBy, id, createdAt, updatedAt, createdByName, ...updateData } = req.body;
       const validatedData = insertEmailTemplateSchema.partial().parse(updateData);
       const template = await appStorage.updateEmailTemplate(req.params.id, validatedData);
       if (!template) {
@@ -9090,6 +9122,23 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     try {
       // Don't include createdBy in updates, it should remain unchanged
       const { createdBy, ...updateData } = req.body;
+      const validatedData = insertSmsTemplateSchema.partial().parse(updateData);
+      const template = await appStorage.updateSmsTemplate(req.params.id, validatedData);
+      if (!template) {
+        return res.status(404).json({ message: "SMS template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update SMS template" });
+    }
+  });
+
+  app.put("/api/sms-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { createdBy, id, createdAt, updatedAt, createdByName, ...updateData } = req.body;
       const validatedData = insertSmsTemplateSchema.partial().parse(updateData);
       const template = await appStorage.updateSmsTemplate(req.params.id, validatedData);
       if (!template) {
