@@ -88,6 +88,12 @@ export function TimerProvider({ children }: TimerProviderProps) {
     const syncWithServer = async () => {
       try {
         const taskResponse = await fetch(`/api/tasks/${currentTimer.taskId}`);
+        if (taskResponse.status === 404) {
+          localStorage.removeItem(`activeTimer_${currentUser.id}`);
+          setCurrentTimer(null);
+          setElapsedTime(0);
+          return;
+        }
         if (!taskResponse.ok) return;
         const task = await taskResponse.json();
         const entries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
@@ -224,31 +230,36 @@ export function TimerProvider({ children }: TimerProviderProps) {
     };
 
     try {
-      // Get current task to update time entries
       const taskResponse = await fetch(`/api/tasks/${currentTimer.taskId}`);
-      const task = await taskResponse.json();
-      
-      const currentEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
-      const updatedEntries = currentEntries.map((entry: any) => 
-        entry.id === currentTimer.id ? updatedEntry : entry
-      );
-      
-      const totalTracked = updatedEntries.reduce((total: number, entry: any) => 
-        total + (entry.duration || 0), 0
-      );
 
-      await apiRequest("PUT", `/api/tasks/${currentTimer.taskId}`, {
-        timeEntries: updatedEntries,
-        timeTracked: totalTracked
-      });
+      if (taskResponse.ok) {
+        const task = await taskResponse.json();
+        const currentEntries = Array.isArray(task.timeEntries) ? task.timeEntries : [];
+        const updatedEntries = currentEntries.map((entry: any) => 
+          entry.id === currentTimer.id ? updatedEntry : entry
+        );
+        const totalTracked = updatedEntries.reduce((total: number, entry: any) => 
+          total + (entry.duration || 0), 0
+        );
 
-      toast({
-        title: "Timer Stopped",
-        variant: "default",
-        description: `Logged ${duration} minutes for "${currentTimer.taskTitle}"`,
-      });
+        await apiRequest("PUT", `/api/tasks/${currentTimer.taskId}`, {
+          timeEntries: updatedEntries,
+          timeTracked: totalTracked
+        });
 
-      // Clear user-specific localStorage when stopping timer
+        toast({
+          title: "Timer Stopped",
+          variant: "default",
+          description: `Logged ${duration} minutes for "${currentTimer.taskTitle}"`,
+        });
+      } else {
+        toast({
+          title: "Timer Stopped",
+          variant: "default",
+          description: `Timer cleared — the task "${currentTimer.taskTitle}" was deleted. ${duration} minutes were not saved.`,
+        });
+      }
+
       if (currentUser?.id) {
         localStorage.removeItem(`activeTimer_${currentUser.id}`);
       }
@@ -259,10 +270,15 @@ export function TimerProvider({ children }: TimerProviderProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
     } catch (error) {
       console.error('Error stopping timer:', error);
+      if (currentUser?.id) {
+        localStorage.removeItem(`activeTimer_${currentUser.id}`);
+      }
+      setCurrentTimer(null);
+      setElapsedTime(0);
       toast({
-        title: "Error",
-        description: "Failed to stop timer",
-        variant: "destructive",
+        title: "Timer Stopped",
+        variant: "default",
+        description: `Timer cleared. Time entry for "${currentTimer.taskTitle}" may not have been saved.`,
       });
     }
   };
