@@ -795,6 +795,7 @@ export function TaskIntakeDialog({
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [completedSections, setCompletedSections] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringInterval, setRecurringInterval] = useState(1);
   const [recurringUnit, setRecurringUnit] = useState<"hours" | "days" | "weeks" | "months" | "years">("days");
@@ -821,6 +822,11 @@ export function TaskIntakeDialog({
 
   const { data: departments = [] } = useQuery<Department[]>({
     queryKey: ["/api/task-intake/departments"],
+    enabled: open,
+  });
+
+  const { data: taskCategories = [] } = useQuery<{ id: string; name: string; color: string | null }[]>({
+    queryKey: ["/api/task-categories"],
     enabled: open,
   });
 
@@ -961,6 +967,7 @@ export function TaskIntakeDialog({
           answers,
           visibleSectionIds,
           parentTaskId: parentTaskId || null,
+          categoryId: selectedCategoryId || null,
           ...recurringData,
         });
         
@@ -1014,6 +1021,7 @@ export function TaskIntakeDialog({
     setCurrentSectionIndex(0);
     setValidationErrors({});
     setCompletedSections([]);
+    setSelectedCategoryId("");
     setIsRecurring(false);
     setRecurringInterval(1);
     setRecurringUnit("days");
@@ -1097,6 +1105,30 @@ export function TaskIntakeDialog({
                       departments={departments}
                     />
                   ))}
+
+                  {isLastSection && taskCategories.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Category</Label>
+                      <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                        <SelectTrigger data-testid="select-task-category">
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">No Category</SelectItem>
+                          {taskCategories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              <div className="flex items-center gap-2">
+                                {cat.color && (
+                                  <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: cat.color }} />
+                                )}
+                                <span>{cat.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {isLastSection && (
                     <div className="border rounded-lg p-4 space-y-4 bg-muted/30">

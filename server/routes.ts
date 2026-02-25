@@ -25314,7 +25314,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const { formId, answers, visibleSectionIds, parentTaskId, isRecurring, recurringInterval, recurringUnit, recurringEndType, recurringEndDate, recurringEndOccurrences } = req.body;
+      const { formId, answers, visibleSectionIds, parentTaskId, categoryId: userSelectedCategoryId, isRecurring, recurringInterval, recurringUnit, recurringEndType, recurringEndDate, recurringEndOccurrences } = req.body;
 
       if (!formId || !answers || !visibleSectionIds) {
         return res.status(400).json({ error: "Missing required fields: formId, answers, visibleSectionIds" });
@@ -25505,7 +25505,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       }
 
       // Step E: Validate references and create the task
-      const resolvedCategoryId = assignmentResult.categoryId || null;
+      const resolvedCategoryId = assignmentResult.categoryId || (userSelectedCategoryId && userSelectedCategoryId !== '__none__' ? userSelectedCategoryId : null);
       const resolvedAssignedTo = assignmentResult.assignToUserId || null;
       const resolvedClientId = parentTaskId ? inheritedClientId : (clientId && clientId !== 'no_client' ? clientId : null);
       const resolvedProjectId = parentTaskId ? inheritedProjectId : null;
