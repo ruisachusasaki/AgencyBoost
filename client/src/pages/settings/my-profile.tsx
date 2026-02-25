@@ -868,7 +868,7 @@ export default function MyProfile() {
                         control={personalForm.control}
                         name="birthdate"
                         render={({ field }) => (
-                          <FormItem className="flex flex-col">
+                          <FormItem>
                             <FormLabel>Birthdate</FormLabel>
                             <Popover open={birthdateOpen} onOpenChange={setBirthdateOpen}>
                               <PopoverTrigger asChild>
