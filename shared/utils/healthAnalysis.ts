@@ -1,9 +1,9 @@
 import type { ClientHealthScore } from "../schema";
 
 /**
- * Field scoring values based on business rules
+ * Default field scoring values based on business rules
  */
-const FIELD_SCORING = {
+const DEFAULT_FIELD_SCORING = {
   goals: {
     Above: 3,
     "On Track": 3,
@@ -27,12 +27,51 @@ const FIELD_SCORING = {
 } as const;
 
 /**
- * Health indicator thresholds
+ * Default health indicator thresholds
  */
-const HEALTH_THRESHOLDS = {
+const DEFAULT_HEALTH_THRESHOLDS = {
   GREEN: 3,
   YELLOW: 2
 } as const;
+
+/**
+ * Default highlighting rules
+ */
+const DEFAULT_HIGHLIGHT_RULES = {
+  weeksToEvaluate: 4,
+  minRedWeeksForRedHighlight: 2,
+  considerImprovementTrend: true,
+} as const;
+
+export interface HealthSettings {
+  greenThreshold: number;
+  yellowThreshold: number;
+  fieldScoring: {
+    goals: Record<string, number>;
+    fulfillment: Record<string, number>;
+    relationship: Record<string, number>;
+    clientActions: Record<string, number>;
+  };
+  highlightRules: {
+    weeksToEvaluate: number;
+    minRedWeeksForRedHighlight: number;
+    considerImprovementTrend: boolean;
+  };
+}
+
+export function getDefaultHealthSettings(): HealthSettings {
+  return {
+    greenThreshold: DEFAULT_HEALTH_THRESHOLDS.GREEN,
+    yellowThreshold: DEFAULT_HEALTH_THRESHOLDS.YELLOW,
+    fieldScoring: {
+      goals: { ...DEFAULT_FIELD_SCORING.goals },
+      fulfillment: { ...DEFAULT_FIELD_SCORING.fulfillment },
+      relationship: { ...DEFAULT_FIELD_SCORING.relationship },
+      clientActions: { ...DEFAULT_FIELD_SCORING.clientActions },
+    },
+    highlightRules: { ...DEFAULT_HIGHLIGHT_RULES },
+  };
+}
 
 /**
  * Health analysis result interface
@@ -51,13 +90,14 @@ export interface HealthStatusResult {
 /**
  * Calculate score for a specific field and value
  */
-export function calculateFieldScore(field: string, value: string): number {
-  const fieldScoring = FIELD_SCORING[field as keyof typeof FIELD_SCORING];
+export function calculateFieldScore(field: string, value: string, settings?: HealthSettings): number {
+  const scoring = settings?.fieldScoring || DEFAULT_FIELD_SCORING;
+  const fieldScoring = scoring[field as keyof typeof scoring];
   if (!fieldScoring) {
     return 0;
   }
   
-  return fieldScoring[value as keyof typeof fieldScoring] || 0;
+  return (fieldScoring as Record<string, number>)[value] || 0;
 }
 
 /**
@@ -68,24 +108,26 @@ export function calculateHealthMetrics(data: {
   fulfillment: string;
   relationship: string;
   clientActions: string;
-}): {
+}, settings?: HealthSettings): {
   totalScore: number;
   averageScore: number;
   healthIndicator: string;
 } {
-  const goalsScore = calculateFieldScore('goals', data.goals);
-  const fulfillmentScore = calculateFieldScore('fulfillment', data.fulfillment);
-  const relationshipScore = calculateFieldScore('relationship', data.relationship);
-  const clientActionsScore = calculateFieldScore('clientActions', data.clientActions);
+  const goalsScore = calculateFieldScore('goals', data.goals, settings);
+  const fulfillmentScore = calculateFieldScore('fulfillment', data.fulfillment, settings);
+  const relationshipScore = calculateFieldScore('relationship', data.relationship, settings);
+  const clientActionsScore = calculateFieldScore('clientActions', data.clientActions, settings);
   
   const totalScore = goalsScore + fulfillmentScore + relationshipScore + clientActionsScore;
   const averageScore = parseFloat((totalScore / 4).toFixed(2));
   
-  // Determine health indicator based on average score
+  const greenThreshold = settings?.greenThreshold ?? DEFAULT_HEALTH_THRESHOLDS.GREEN;
+  const yellowThreshold = settings?.yellowThreshold ?? DEFAULT_HEALTH_THRESHOLDS.YELLOW;
+
   let healthIndicator: string;
-  if (averageScore >= HEALTH_THRESHOLDS.GREEN) {
+  if (averageScore >= greenThreshold) {
     healthIndicator = 'Green';
-  } else if (averageScore >= HEALTH_THRESHOLDS.YELLOW) {
+  } else if (averageScore >= yellowThreshold) {
     healthIndicator = 'Yellow';
   } else {
     healthIndicator = 'Red';
@@ -99,29 +141,25 @@ export function calculateHealthMetrics(data: {
 }
 
 /**
- * Analyzes the last 4 weeks of client health scores to determine highlighting
- * 
- * Rules:
- * - Red background: 4 consecutive non-green weeks with 2+ red weeks AND not showing improvement
- * - Yellow background: 4 consecutive non-green weeks with mostly yellow OR showing improvement from red to yellow
- * - Remove highlights when 1+ green weeks appear in last 4 weeks
+ * Analyzes the last N weeks of client health scores to determine highlighting
  */
-export function analyzeHealthStatus(healthScores: ClientHealthScore[]): HealthStatusResult {
-  // Sort scores by week start date (most recent first)
+export function analyzeHealthStatus(healthScores: ClientHealthScore[], settings?: HealthSettings): HealthStatusResult {
+  const weeksToEvaluate = settings?.highlightRules?.weeksToEvaluate ?? DEFAULT_HIGHLIGHT_RULES.weeksToEvaluate;
+  const minRedWeeks = settings?.highlightRules?.minRedWeeksForRedHighlight ?? DEFAULT_HIGHLIGHT_RULES.minRedWeeksForRedHighlight;
+  const considerImprovement = settings?.highlightRules?.considerImprovementTrend ?? DEFAULT_HIGHLIGHT_RULES.considerImprovementTrend;
+
   const sortedScores = [...healthScores].sort((a, b) => 
     new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime()
   );
 
-  // Get the last 4 weeks
-  const lastFourWeeks = sortedScores.slice(0, 4);
+  const recentWeeks = sortedScores.slice(0, weeksToEvaluate);
   
-  // If we don't have 4 weeks of data, no highlighting
-  if (lastFourWeeks.length < 4) {
+  if (recentWeeks.length < weeksToEvaluate) {
     return {
       shouldHighlight: false,
       highlightType: null,
-      reason: 'Insufficient data (less than 4 weeks)',
-      weeks: lastFourWeeks.map(score => ({
+      reason: `Insufficient data (less than ${weeksToEvaluate} weeks)`,
+      weeks: recentWeeks.map(score => ({
         weekStart: score.weekStartDate,
         healthIndicator: score.healthIndicator,
         isGreen: score.healthIndicator === 'Green'
@@ -129,15 +167,14 @@ export function analyzeHealthStatus(healthScores: ClientHealthScore[]): HealthSt
     };
   }
 
-  // Check if any of the last 4 weeks are green
-  const hasGreenWeek = lastFourWeeks.some(score => score.healthIndicator === 'Green');
+  const hasGreenWeek = recentWeeks.some(score => score.healthIndicator === 'Green');
   
   if (hasGreenWeek) {
     return {
       shouldHighlight: false,
       highlightType: null,
-      reason: 'Has green week(s) in last 4 weeks',
-      weeks: lastFourWeeks.map(score => ({
+      reason: `Has green week(s) in last ${weeksToEvaluate} weeks`,
+      weeks: recentWeeks.map(score => ({
         weekStart: score.weekStartDate,
         healthIndicator: score.healthIndicator,
         isGreen: score.healthIndicator === 'Green'
@@ -145,34 +182,29 @@ export function analyzeHealthStatus(healthScores: ClientHealthScore[]): HealthSt
     };
   }
 
-  // All 4 weeks are non-green (Yellow or Red)
-  const redWeeks = lastFourWeeks.filter(score => score.healthIndicator === 'Red');
-  const yellowWeeks = lastFourWeeks.filter(score => score.healthIndicator === 'Yellow');
+  const redWeeks = recentWeeks.filter(score => score.healthIndicator === 'Red');
+  const yellowWeeks = recentWeeks.filter(score => score.healthIndicator === 'Yellow');
   
-  // Check for improvement pattern (Red to Yellow trend)
-  const isShowingImprovement = checkImprovementPattern(lastFourWeeks);
+  const isShowingImprovement = considerImprovement ? checkImprovementPattern(recentWeeks) : false;
   
-  // Determine highlighting type
   let highlightType: 'red' | 'yellow' | null = null;
   let reason = '';
 
-  if (redWeeks.length >= 2 && !isShowingImprovement) {
-    // Red background: 4 consecutive non-green weeks with 2+ red weeks AND not showing improvement
+  if (redWeeks.length >= minRedWeeks && !isShowingImprovement) {
     highlightType = 'red';
-    reason = `${redWeeks.length} red weeks in last 4 weeks, no improvement trend`;
+    reason = `${redWeeks.length} red weeks in last ${weeksToEvaluate} weeks, no improvement trend`;
   } else if (yellowWeeks.length >= 2 || isShowingImprovement) {
-    // Yellow background: 4 consecutive non-green weeks with mostly yellow OR showing improvement
     highlightType = 'yellow';
     reason = isShowingImprovement 
       ? 'Showing improvement from red to yellow'
-      : `${yellowWeeks.length} yellow weeks in last 4 weeks`;
+      : `${yellowWeeks.length} yellow weeks in last ${weeksToEvaluate} weeks`;
   }
 
   return {
     shouldHighlight: highlightType !== null,
     highlightType,
     reason,
-    weeks: lastFourWeeks.map(score => ({
+    weeks: recentWeeks.map(score => ({
       weekStart: score.weekStartDate,
       healthIndicator: score.healthIndicator,
       isGreen: score.healthIndicator === 'Green'
@@ -184,19 +216,15 @@ export function analyzeHealthStatus(healthScores: ClientHealthScore[]): HealthSt
  * Checks if there's an improvement pattern (Red scores becoming Yellow scores over time)
  */
 function checkImprovementPattern(weeklyScores: ClientHealthScore[]): boolean {
-  // Look for pattern where more recent weeks are better than older weeks
-  // weeklyScores is already sorted by most recent first
-  
   if (weeklyScores.length < 2) return false;
   
-  // Simple improvement check: recent weeks have fewer red scores than older weeks
-  const recentTwoWeeks = weeklyScores.slice(0, 2);
-  const olderTwoWeeks = weeklyScores.slice(2, 4);
+  const halfPoint = Math.floor(weeklyScores.length / 2);
+  const recentHalf = weeklyScores.slice(0, halfPoint);
+  const olderHalf = weeklyScores.slice(halfPoint);
   
-  const recentRedCount = recentTwoWeeks.filter(score => score.healthIndicator === 'Red').length;
-  const olderRedCount = olderTwoWeeks.filter(score => score.healthIndicator === 'Red').length;
+  const recentRedCount = recentHalf.filter(score => score.healthIndicator === 'Red').length;
+  const olderRedCount = olderHalf.filter(score => score.healthIndicator === 'Red').length;
   
-  // Improvement if recent weeks have fewer red scores than older weeks
   return recentRedCount < olderRedCount && olderRedCount > 0;
 }
 
@@ -214,7 +242,7 @@ export function formatHealthStatusTooltip(healthStatus: HealthStatusResult): str
     return `Week ${weekOfYear}: ${week.healthIndicator}`;
   }).join('\n');
 
-  return `Health Alert: ${healthStatus.reason}\n\nLast 4 weeks:\n${weekSummary}`;
+  return `Health Alert: ${healthStatus.reason}\n\nLast ${healthStatus.weeks.length} weeks:\n${weekSummary}`;
 }
 
 /**

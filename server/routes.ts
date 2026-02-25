@@ -100,7 +100,7 @@ import { eq, like, ilike, or, and, asc, desc, sql, inArray, isNotNull, isNull, g
 import { alias } from "drizzle-orm/pg-core";
 import { permissionAuditService } from "./permissionAuditService";
 import { nanoid } from "nanoid";
-import { calculateHealthMetrics, analyzeHealthStatus } from "@shared/utils/healthAnalysis";
+import { calculateHealthMetrics, analyzeHealthStatus, getDefaultHealthSettings, type HealthSettings } from "@shared/utils/healthAnalysis";
 import { emitTrigger } from "./workflow-engine";
 import { generateDescription, mapPriority } from "./description-template-engine";
 import { evaluateAssignmentRules, generateConditionSummary } from "./assignment-rule-engine";
@@ -4807,13 +4807,15 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const validatedInputData = inputClientHealthScoreSchema.parse(inputData);
       console.log('DEBUG - Validated input data:', JSON.stringify(validatedInputData, null, 2));
       
-      // Calculate health metrics using shared logic
+      // Load health settings and calculate metrics
+      const healthSettingsRow = await db.select().from(taskSettings).where(eq(taskSettings.settingKey, "client_health_config"));
+      const healthSettings = healthSettingsRow.length > 0 ? healthSettingsRow[0].settingValue as HealthSettings : undefined;
       const { totalScore, averageScore, healthIndicator } = calculateHealthMetrics({
         goals: validatedInputData.goals,
         fulfillment: validatedInputData.fulfillment,
         relationship: validatedInputData.relationship,
         clientActions: validatedInputData.clientActions
-      });
+      }, healthSettings);
       
       // Create complete data with calculated values for storage
       const completeData = {
@@ -5118,13 +5120,15 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         const relationship = validatedData.relationship || oldHealthScore.relationship;
         const clientActions = validatedData.clientActions || oldHealthScore.clientActions;
         
-        // Calculate health metrics using shared logic
+        // Load health settings and calculate metrics
+        const healthSettingsRow2 = await db.select().from(taskSettings).where(eq(taskSettings.settingKey, "client_health_config"));
+        const healthSettings2 = healthSettingsRow2.length > 0 ? healthSettingsRow2[0].settingValue as HealthSettings : undefined;
         const { totalScore, averageScore, healthIndicator } = calculateHealthMetrics({
           goals,
           fulfillment,
           relationship,
           clientActions
-        });
+        }, healthSettings2);
         
         updatedData = {
           ...updatedData,
@@ -5304,7 +5308,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const healthScores = await appStorage.getClientHealthScores(clientId);
       
       // Use shared health analysis logic
-      const healthStatus = analyzeHealthStatus(healthScores);
+      const hsRow = await db.select().from(taskSettings).where(eq(taskSettings.settingKey, "client_health_config"));
+      const hsConfig = hsRow.length > 0 ? hsRow[0].settingValue as HealthSettings : undefined;
+      const healthStatus = analyzeHealthStatus(healthScores, hsConfig);
       
       res.json(healthStatus);
     } catch (error) {
@@ -5313,6 +5319,56 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+
+  // GET /api/client-health-settings - Get client health configuration
+  app.get("/api/client-health-settings", requireAuth(), async (req, res) => {
+    try {
+      const settings = await db.select().from(taskSettings).where(eq(taskSettings.settingKey, "client_health_config"));
+      if (settings.length > 0) {
+        res.json(settings[0].settingValue);
+      } else {
+        res.json(getDefaultHealthSettings());
+      }
+    } catch (error) {
+      console.error("Error fetching client health settings:", error);
+      res.status(500).json({ error: "Failed to fetch client health settings" });
+    }
+  });
+
+  // PUT /api/client-health-settings - Update client health configuration
+  app.put("/api/client-health-settings", requireAuth(), requireRole(["admin"]), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+
+      const healthConfig = req.body as HealthSettings;
+      
+      if (typeof healthConfig.greenThreshold !== 'number' || typeof healthConfig.yellowThreshold !== 'number') {
+        return res.status(400).json({ error: "greenThreshold and yellowThreshold must be numbers" });
+      }
+      if (healthConfig.yellowThreshold >= healthConfig.greenThreshold) {
+        return res.status(400).json({ error: "yellowThreshold must be less than greenThreshold" });
+      }
+
+      const existing = await db.select().from(taskSettings).where(eq(taskSettings.settingKey, "client_health_config"));
+
+      if (existing.length > 0) {
+        const [updated] = await db.update(taskSettings)
+          .set({ settingValue: healthConfig, updatedBy: userId, updatedAt: new Date() })
+          .where(eq(taskSettings.settingKey, "client_health_config"))
+          .returning();
+        res.json(updated.settingValue);
+      } else {
+        const [created] = await db.insert(taskSettings)
+          .values({ settingKey: "client_health_config", settingValue: healthConfig, updatedBy: userId, description: "Client health score thresholds and scoring configuration" })
+          .returning();
+        res.json(created.settingValue);
+      }
+    } catch (error) {
+      console.error("Error updating client health settings:", error);
+      res.status(500).json({ error: "Failed to update client health settings" });
+    }
+  });
   // Health Scores Bulk API - SECURED
   app.get("/api/health-scores", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
     try {
@@ -32939,12 +32995,15 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           continue; // Need at least 4 weeks of data
         }
 
-        // Use existing health analysis logic (already imported at top of file)
+        // Load health settings for analysis
+        const autoHealthSettingsRow = await db.select().from(taskSettings).where(eq(taskSettings.settingKey, "client_health_config"));
+        const autoHealthSettings = autoHealthSettingsRow.length > 0 ? autoHealthSettingsRow[0].settingValue as HealthSettings : undefined;
         const healthAnalysis = analyzeHealthStatus(
           healthScores.map(score => ({
             weekStart: score.weekStartDate,
             healthIndicator: score.healthIndicator
-          }))
+          })),
+          autoHealthSettings
         );
 
         // Only send notifications if client needs highlighting (poor health)

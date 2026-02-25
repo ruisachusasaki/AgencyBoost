@@ -1303,8 +1303,258 @@ function TeamAssignmentsManagement() {
   );
 }
 
+interface HealthSettingsData {
+  greenThreshold: number;
+  yellowThreshold: number;
+  fieldScoring: {
+    goals: Record<string, number>;
+    fulfillment: Record<string, number>;
+    relationship: Record<string, number>;
+    clientActions: Record<string, number>;
+  };
+  highlightRules: {
+    weeksToEvaluate: number;
+    minRedWeeksForRedHighlight: number;
+    considerImprovementTrend: boolean;
+  };
+}
+
+function ClientHealthSettings() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: settings, isLoading } = useQuery<HealthSettingsData>({
+    queryKey: ['/api/client-health-settings'],
+  });
+
+  const [localSettings, setLocalSettings] = useState<HealthSettingsData | null>(null);
+
+  useEffect(() => {
+    if (settings && !localSettings) {
+      setLocalSettings(settings);
+    }
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: (data: HealthSettingsData) =>
+      apiRequest('PUT', '/api/client-health-settings', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/client-health-settings'] });
+      toast({ title: "Client health settings saved" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to save settings", description: error.message, variant: "destructive" });
+    }
+  });
+
+  if (isLoading || !localSettings) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-gray-500">Loading health settings...</div>
+      </div>
+    );
+  }
+
+  const updateScoring = (field: string, option: string, value: number) => {
+    setLocalSettings(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        fieldScoring: {
+          ...prev.fieldScoring,
+          [field]: {
+            ...prev.fieldScoring[field as keyof typeof prev.fieldScoring],
+            [option]: value
+          }
+        }
+      };
+    });
+  };
+
+  const scoringFields = [
+    { key: 'goals', label: 'Goals', options: ['Above', 'On Track', 'Below'] },
+    { key: 'fulfillment', label: 'Fulfillment', options: ['Early', 'On Time', 'Behind'] },
+    { key: 'relationship', label: 'Relationship', options: ['Engaged', 'Passive', 'Disengaged'] },
+    { key: 'clientActions', label: 'Client Actions', options: ['Early', 'Up to Date', 'Late'] },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Heart className="h-5 w-5 text-primary" />
+            Health Score Thresholds
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Set the average score boundaries that determine when a client's health is Green, Yellow, or Red.
+            Each metric scores 0–3, and the average of all four metrics is compared to these thresholds.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
+                Green Threshold (≥)
+              </Label>
+              <Input
+                type="number"
+                step="0.1"
+                min="0"
+                max="3"
+                value={localSettings.greenThreshold}
+                onChange={(e) => setLocalSettings(prev => prev ? { ...prev, greenThreshold: parseFloat(e.target.value) || 0 } : prev)}
+              />
+              <p className="text-xs text-muted-foreground">Average score at or above this = Green (healthy). Default: 3</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" />
+                Yellow Threshold (≥)
+              </Label>
+              <Input
+                type="number"
+                step="0.1"
+                min="0"
+                max="3"
+                value={localSettings.yellowThreshold}
+                onChange={(e) => setLocalSettings(prev => prev ? { ...prev, yellowThreshold: parseFloat(e.target.value) || 0 } : prev)}
+              />
+              <p className="text-xs text-muted-foreground">Average score at or above this (but below Green) = Yellow. Below this = Red. Default: 2</p>
+            </div>
+          </div>
+          <div className="mt-4 p-3 rounded-lg bg-muted/50 text-sm">
+            <strong>Current logic:</strong>{" "}
+            <span className="text-green-600">Green</span> ≥ {localSettings.greenThreshold} {">"}{" "}
+            <span className="text-yellow-600">Yellow</span> ≥ {localSettings.yellowThreshold} {">"}{" "}
+            <span className="text-red-600">Red</span> {"<"} {localSettings.yellowThreshold}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            Field Scoring Values
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Configure how many points each option is worth for each metric (0–3 scale).
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {scoringFields.map(field => (
+              <div key={field.key} className="border rounded-lg p-4">
+                <h4 className="font-medium mb-3">{field.label}</h4>
+                <div className="space-y-2">
+                  {field.options.map(option => (
+                    <div key={option} className="flex items-center justify-between gap-3">
+                      <Label className="text-sm min-w-[90px]">{option}</Label>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="0"
+                        max="3"
+                        className="w-20"
+                        value={localSettings.fieldScoring[field.key as keyof typeof localSettings.fieldScoring]?.[option] ?? 0}
+                        onChange={(e) => updateScoring(field.key, option, parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-primary" />
+            Client Name Highlighting Rules
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Configure when a client's name gets highlighted in red or yellow on the client list.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label>Weeks to Evaluate</Label>
+                <Input
+                  type="number"
+                  step="1"
+                  min="2"
+                  max="12"
+                  value={localSettings.highlightRules.weeksToEvaluate}
+                  onChange={(e) => setLocalSettings(prev => prev ? {
+                    ...prev,
+                    highlightRules: { ...prev.highlightRules, weeksToEvaluate: parseInt(e.target.value) || 4 }
+                  } : prev)}
+                />
+                <p className="text-xs text-muted-foreground">How many recent weeks to look at when deciding highlighting. Default: 4</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Minimum Red Weeks for Red Highlight</Label>
+                <Input
+                  type="number"
+                  step="1"
+                  min="1"
+                  max="12"
+                  value={localSettings.highlightRules.minRedWeeksForRedHighlight}
+                  onChange={(e) => setLocalSettings(prev => prev ? {
+                    ...prev,
+                    highlightRules: { ...prev.highlightRules, minRedWeeksForRedHighlight: parseInt(e.target.value) || 2 }
+                  } : prev)}
+                />
+                <p className="text-xs text-muted-foreground">Within the evaluation period, how many red weeks trigger a red name highlight. Default: 2</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between border rounded-lg p-4">
+              <div>
+                <Label>Consider Improvement Trend</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  If enabled, a client trending from Red toward Yellow will show Yellow highlighting instead of Red,
+                  even if they have enough red weeks.
+                </p>
+              </div>
+              <Switch
+                checked={localSettings.highlightRules.considerImprovementTrend}
+                onCheckedChange={(checked) => setLocalSettings(prev => prev ? {
+                  ...prev,
+                  highlightRules: { ...prev.highlightRules, considerImprovementTrend: checked }
+                } : prev)}
+              />
+            </div>
+          </div>
+          <div className="mt-4 p-3 rounded-lg bg-muted/50 text-sm space-y-1">
+            <p><strong>How highlighting works:</strong></p>
+            <p>• If any of the last <strong>{localSettings.highlightRules.weeksToEvaluate}</strong> weeks is Green → <strong>no highlighting</strong></p>
+            <p>• If all {localSettings.highlightRules.weeksToEvaluate} weeks are non-Green and <strong>{localSettings.highlightRules.minRedWeeksForRedHighlight}+</strong> are Red → <span className="text-red-600 font-medium">Red name</span></p>
+            <p>• Otherwise (mostly Yellow or improving) → <span className="text-yellow-600 font-medium">Yellow name</span></p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button
+          onClick={() => saveMutation.mutate(localSettings)}
+          disabled={saveMutation.isPending}
+          className="bg-primary hover:bg-primary/90"
+        >
+          {saveMutation.isPending ? "Saving..." : "Save Health Settings"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function ClientsSettings() {
-  const [activeTab, setActiveTab] = useState<"clientBrief" | "portalAccess" | "teamAssignments">("clientBrief");
+  const [activeTab, setActiveTab] = useState<"clientBrief" | "portalAccess" | "teamAssignments" | "clientHealth">("clientBrief");
   const [editingSection, setEditingSection] = useState<ClientBriefSection | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -1579,6 +1829,18 @@ export default function ClientsSettings() {
               <ShieldCheck className="h-4 w-4" />
               Team Assignments
             </button>
+            <button
+              onClick={() => setActiveTab("clientHealth")}
+              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                activeTab === "clientHealth"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              data-testid="tab-client-health"
+            >
+              <Heart className="h-4 w-4" />
+              Client Health
+            </button>
           </nav>
         </div>
 
@@ -1710,6 +1972,10 @@ export default function ClientsSettings() {
         {/* Team Assignments Tab */}
         {activeTab === "teamAssignments" && (
           <TeamAssignmentsManagement />
+        )}
+
+        {activeTab === "clientHealth" && (
+          <ClientHealthSettings />
         )}
 
         {/* Create Section Dialog */}
