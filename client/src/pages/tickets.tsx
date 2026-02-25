@@ -177,8 +177,21 @@ export default function TicketsPage() {
     queryKey: [`/api/tickets?${buildQueryString()}`],
   });
 
+  const buildSummaryQueryString = () => {
+    const params = new URLSearchParams();
+    if (statusFilter.length > 0 && statusFilter.length < allStatuses.length) {
+      params.set("status", statusFilter.join(","));
+    }
+    if (typeFilter !== "all") params.set("type", typeFilter);
+    if (priorityFilter !== "all") params.set("priority", priorityFilter);
+    if (assignedToFilter !== "all") params.set("assignedTo", assignedToFilter);
+    if (searchTerm) params.set("search", searchTerm);
+    const qs = params.toString();
+    return qs ? `?${qs}` : "";
+  };
+
   const { data: summary } = useQuery<TicketSummary>({
-    queryKey: ["/api/tickets/reports/summary"],
+    queryKey: [`/api/tickets/reports/summary${buildSummaryQueryString()}`],
   });
 
   const { data: staff = [] } = useQuery<StaffMember[]>({

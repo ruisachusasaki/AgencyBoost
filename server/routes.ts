@@ -37541,10 +37541,28 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   // GET /api/tickets/reports/summary - Summary stats (MUST be before /:id)
   app.get("/api/tickets/reports/summary", requireAuth(), requireGranularPermission("tickets.reports.view"), async (req, res) => {
     try {
-      const { startDate, endDate } = req.query;
+      const { startDate, endDate, status, type, priority, assignedTo, search } = req.query;
       const conditions: any[] = [];
       if (startDate) conditions.push(gte(tickets.createdAt, new Date(startDate as string + "T00:00:00")));
       if (endDate) conditions.push(lte(tickets.createdAt, new Date(endDate as string + "T23:59:59.999")));
+      if (status) {
+        const statusValues = (status as string).split(",").filter(Boolean);
+        if (statusValues.length === 1) {
+          conditions.push(eq(tickets.status, statusValues[0]));
+        } else if (statusValues.length > 1) {
+          conditions.push(inArray(tickets.status, statusValues));
+        }
+      }
+      if (type && type !== "all") conditions.push(eq(tickets.type, type as string));
+      if (priority && priority !== "all") conditions.push(eq(tickets.priority, priority as string));
+      if (assignedTo && assignedTo !== "all") {
+        if (assignedTo === "unassigned") {
+          conditions.push(isNull(tickets.assignedTo));
+        } else {
+          conditions.push(eq(tickets.assignedTo, assignedTo as string));
+        }
+      }
+      if (search) conditions.push(ilike(tickets.title, `%${search}%`));
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
       const totalResult = await db.select({ count: sql<number>`count(*)::int` }).from(tickets).where(whereClause);
