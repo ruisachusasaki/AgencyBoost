@@ -132,11 +132,12 @@ export default function Sales() {
     margin: "",
     description: "",
   });
-  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: string, type: 'product' | 'bundle', quantity: number, customQuantities?: Record<string, number>}>>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: string, type: 'product' | 'bundle' | 'package', quantity: number, customQuantities?: Record<string, number>}>>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
   const [bundleProductsData, setBundleProductsData] = useState<Record<string, any[]>>({});
+  const [packageItemsData, setPackageItemsData] = useState<Record<string, any>>({});
   const [viewingQuoteId, setViewingQuoteId] = useState<string | null>(null);
   const [deleteConfirmQuoteId, setDeleteConfirmQuoteId] = useState<string | null>(null);
 
@@ -177,6 +178,11 @@ export default function Sales() {
 
   const { data: bundles = [] } = useQuery({
     queryKey: ["/api/product-bundles"],
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: packages = [] } = useQuery({
+    queryKey: ["/api/product-packages"],
     refetchOnWindowFocus: false,
   });
 
@@ -528,6 +534,32 @@ export default function Sales() {
     }, 0);
   };
 
+  const fetchPackageDetails = async (packageId: string) => {
+    if (packageItemsData[packageId]) {
+      return packageItemsData[packageId];
+    }
+    
+    try {
+      const response = await fetch(`/api/product-packages/${packageId}`);
+      const packageDetail = await response.json();
+      setPackageItemsData(prev => ({ ...prev, [packageId]: packageDetail }));
+      return packageDetail;
+    } catch (error) {
+      console.error('Error fetching package details:', error);
+      return null;
+    }
+  };
+
+  const calculatePackageCost = (packageId: string) => {
+    const packageDetail = packageItemsData[packageId];
+    if (!packageDetail || !packageDetail.items) return 0;
+    return packageDetail.items.reduce((sum: number, item: any) => {
+      const cost = parseFloat(item.cost || item.productCost || '0');
+      const qty = item.quantity || 1;
+      return sum + (cost * qty);
+    }, 0);
+  };
+
   // Quote Builder helper functions
   const calculateQuoteTotals = () => {
     const budget = parseFloat(quoteData.budget) || 0;
@@ -543,9 +575,11 @@ export default function Sales() {
           totalCost += parseFloat(product.cost) * quantity;
         }
       } else if (item.type === 'bundle') {
-        // Calculate bundle cost from constituent products
         const bundleCost = calculateBundleCost(item.productId, item.customQuantities);
         totalCost += bundleCost * quantity;
+      } else if (item.type === 'package') {
+        const packageCost = calculatePackageCost(item.productId);
+        totalCost += packageCost * quantity;
       }
     });
 
@@ -572,7 +606,7 @@ export default function Sales() {
     };
   };
 
-  const addProductToQuote = (type: 'product' | 'bundle') => {
+  const addProductToQuote = (type: 'product' | 'bundle' | 'package') => {
     setSelectedProducts([...selectedProducts, { productId: "", type, quantity: 1 }]);
   };
 
@@ -584,9 +618,12 @@ export default function Sales() {
     const updated = [...selectedProducts];
     updated[index] = { ...updated[index], productId };
     
-    // If it's a bundle, fetch bundle products
     if (updated[index].type === 'bundle' && productId) {
       await fetchBundleProducts(productId);
+    }
+    
+    if (updated[index].type === 'package' && productId) {
+      await fetchPackageDetails(productId);
     }
     
     setSelectedProducts(updated);
@@ -640,14 +677,16 @@ export default function Sales() {
         description: quote.notes || "",
       });
       
-      // Load quote items
       const items = quote.items || [];
       const loadedProducts = await Promise.all(items.map(async (item: any) => {
-        const productId = item.productId || item.bundleId;
+        const productId = item.productId || item.bundleId || item.packageId;
         
-        // If it's a bundle, fetch bundle products
         if (item.itemType === 'bundle' && productId) {
           await fetchBundleProducts(productId);
+        }
+        
+        if (item.itemType === 'package' && productId) {
+          await fetchPackageDetails(productId);
         }
         
         return {
@@ -825,8 +864,9 @@ export default function Sales() {
         if (item.type === 'product') {
           unitCost = parseFloat(products.find(p => p.id === item.productId)?.cost || '0');
         } else if (item.type === 'bundle') {
-          // Calculate bundle cost from constituent products with custom quantities
           unitCost = calculateBundleCost(item.productId, item.customQuantities);
+        } else if (item.type === 'package') {
+          unitCost = calculatePackageCost(item.productId);
         }
         
         const itemTotalCost = unitCost * quantity;
@@ -834,10 +874,11 @@ export default function Sales() {
         return {
           productId: item.type === 'product' ? item.productId : null,
           bundleId: item.type === 'bundle' ? item.productId : null,
+          packageId: item.type === 'package' ? item.productId : null,
           itemType: item.type,
           quantity: quantity,
-          unitCost: unitCost.toString(), // Convert to string for decimal schema
-          totalCost: itemTotalCost.toString(), // Convert to string for decimal schema
+          unitCost: unitCost.toString(),
+          totalCost: itemTotalCost.toString(),
           customQuantities: item.type === 'bundle' && item.customQuantities ? item.customQuantities : undefined,
         };
       }),
@@ -855,6 +896,11 @@ export default function Sales() {
   const filteredBundles = bundles.filter((bundle: any) =>
     bundle.name.toLowerCase().includes(productSearch.toLowerCase()) ||
     (bundle.description && bundle.description.toLowerCase().includes(productSearch.toLowerCase()))
+  );
+
+  const filteredPackages = packages.filter((pkg: any) =>
+    pkg.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+    (pkg.description && pkg.description.toLowerCase().includes(productSearch.toLowerCase()))
   );
 
   // Helper function for quote status badge styling
@@ -1845,7 +1891,7 @@ export default function Sales() {
                       {/* Product/Bundle Selection */}
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                          <Label>Products & Bundles</Label>
+                          <Label>Products, Bundles & Packages</Label>
                           <div className="flex gap-2">
                             <Button type="button" variant="outline" size="sm" onClick={() => addProductToQuote('product')} data-testid="button-add-product">
                               <Package className="w-4 h-4 mr-2" />
@@ -1855,18 +1901,22 @@ export default function Sales() {
                               <Package className="w-4 h-4 mr-2" />
                               Add Bundle
                             </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => addProductToQuote('package')} data-testid="button-add-package">
+                              <Package className="w-4 h-4 mr-2" />
+                              Add Package
+                            </Button>
                           </div>
                         </div>
                         
                         {/* Product Search */}
                         {selectedProducts.length > 0 && (
                           <div className="space-y-2">
-                            <Label htmlFor="product-search">Search Products & Bundles</Label>
+                            <Label htmlFor="product-search">Search Products, Bundles & Packages</Label>
                             <div className="relative">
                               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                               <Input
                                 id="product-search"
-                                placeholder="Search products and bundles..."
+                                placeholder="Search products, bundles, and packages..."
                                 value={productSearch}
                                 onChange={(e) => setProductSearch(e.target.value)}
                                 className="pl-10"
@@ -1882,7 +1932,7 @@ export default function Sales() {
                             <div key={index} className="border rounded-lg" data-testid={`product-item-${index}`}>
                               <div className="flex gap-2 items-end p-3">
                                 <div className="flex-1">
-                                  <Label>{item.type === 'product' ? 'Product' : 'Bundle'}</Label>
+                                  <Label>{item.type === 'product' ? 'Product' : item.type === 'bundle' ? 'Bundle' : 'Package'}</Label>
                                   <Select
                                     value={item.productId}
                                     onValueChange={(value) => updateQuoteProduct(index, value)}
@@ -1897,12 +1947,21 @@ export default function Sales() {
                                             {product.name} - ${product.cost || '0.00'} cost
                                           </SelectItem>
                                         ))
-                                      ) : (
+                                      ) : item.type === 'bundle' ? (
                                         filteredBundles.map((bundle: any) => {
                                           const bundleCost = calculateBundleCost(bundle.id, item.customQuantities);
                                           return (
                                             <SelectItem key={bundle.id} value={bundle.id}>
                                               {bundle.name} - ${bundleCost.toFixed(2)} cost
+                                            </SelectItem>
+                                          );
+                                        })
+                                      ) : (
+                                        filteredPackages.map((pkg: any) => {
+                                          const pkgCost = calculatePackageCost(pkg.id);
+                                          return (
+                                            <SelectItem key={pkg.id} value={pkg.id}>
+                                              {pkg.name} - ${pkgCost.toFixed(2)} cost
                                             </SelectItem>
                                           );
                                         })
@@ -1960,6 +2019,28 @@ export default function Sales() {
                                         </div>
                                       );
                                     })}
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              )}
+                              
+                              {/* Package Items - Collapsible Section */}
+                              {item.type === 'package' && item.productId && packageItemsData[item.productId] && packageItemsData[item.productId].items && (
+                                <Collapsible className="border-t">
+                                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-sm hover:bg-muted/50 transition-colors" data-testid={`button-toggle-package-items-${index}`}>
+                                    <span className="font-medium">Package Items ({packageItemsData[item.productId].items.length} items)</span>
+                                    <ChevronDown className="h-4 w-4 transition-transform ui-open:rotate-180" />
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent className="p-3 space-y-2 bg-muted/20">
+                                    {packageItemsData[item.productId].items.map((pkgItem: any, pkgIdx: number) => (
+                                      <div key={pkgIdx} className="flex items-center gap-2 p-2 bg-background rounded border">
+                                        <div className="flex-1">
+                                          <p className="text-sm font-medium">{pkgItem.productName || pkgItem.bundleName || pkgItem.name}</p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {pkgItem.itemType === 'bundle' ? 'Bundle' : 'Product'} - ${pkgItem.cost || pkgItem.productCost || '0.00'} × {pkgItem.quantity || 1}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ))}
                                   </CollapsibleContent>
                                 </Collapsible>
                               )}

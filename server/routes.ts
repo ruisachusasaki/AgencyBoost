@@ -52,7 +52,7 @@ import {
   insertOneOnOneMeetingSchema, insertOneOnOneTalkingPointSchema, insertOneOnOneWinSchema, insertOneOnOneActionItemSchema, insertOneOnOneGoalSchema, insertOneOnOneCommentSchema, insertOneOnOneProgressionStatusSchema,
   oneOnOneProgressionStatuses,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
-  roles, permissions, userRoles, granularPermissions, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts,
+  roles, permissions, userRoles, granularPermissions, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts, productPackages, packageItems, clientPackages, insertProductPackageSchema,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, documents, clientTransactions, clientHealthScores, clients,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, eventTimeEntries, smsIntegrations, emailIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments,
@@ -14153,8 +14153,44 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         clientBundlesList = [];
       }
 
+      // Get client packages with calculated total cost
+      let clientPackagesList: any[] = [];
+      try {
+        const pkgResult = await db.execute(sql`
+          SELECT 
+            cp.id,
+            cp.package_id as "productId",
+            cp.price,
+            cp.status,
+            cp.created_at as "createdAt",
+            pp.name as "productName",
+            pp.description as "productDescription",
+            COALESCE(
+              (SELECT SUM(
+                CASE 
+                  WHEN pi.item_type = 'product' THEN
+                    COALESCE((SELECT p.cost FROM products p WHERE p.id = pi.product_id), 0) * pi.quantity
+                  WHEN pi.item_type = 'bundle' THEN
+                    COALESCE((SELECT SUM(p.cost * bp.quantity) FROM bundle_products bp LEFT JOIN products p ON bp.product_id = p.id WHERE bp.bundle_id = pi.bundle_id), 0) * pi.quantity
+                  ELSE 0
+                END
+              ) FROM package_items pi WHERE pi.package_id = cp.package_id),
+              0
+            ) as "productCost",
+            'package' as "productType",
+            'package' as "itemType"
+          FROM client_packages cp
+          LEFT JOIN product_packages pp ON cp.package_id = pp.id
+          WHERE cp.client_id = ${clientId}
+        `);
+        clientPackagesList = pkgResult.rows;
+      } catch (error) {
+        console.log('Error fetching client packages:', error);
+        clientPackagesList = [];
+      }
+
       // Combine and sort the results
-      const allItems = [...clientProductsList, ...clientBundlesList].sort((a, b) => 
+      const allItems = [...clientProductsList, ...clientBundlesList, ...clientPackagesList].sort((a, b) => 
         a.productName?.localeCompare(b.productName || '') || 0
       );
       
@@ -14165,7 +14201,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  // Add product or bundle to client
+  // Add product, bundle, or package to client
   app.post("/api/clients/:clientId/products", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
     try {
       const { clientId } = req.params;
@@ -14287,7 +14323,64 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
         res.status(201).json(newClientBundle);
       } else {
-        return res.status(404).json({ message: "Product or bundle not found" });
+        const isPackage = await db
+          .select()
+          .from(productPackages)
+          .where(eq(productPackages.id, productId))
+          .limit(1);
+
+        if (isPackage.length > 0) {
+          const existing = await db
+            .select()
+            .from(clientPackages)
+            .where(
+              and(
+                eq(clientPackages.clientId, clientId),
+                eq(clientPackages.packageId, productId)
+              )
+            )
+            .limit(1);
+
+          if (existing.length > 0) {
+            return res.status(400).json({ message: "Package already assigned to client" });
+          }
+
+          const [newClientPackage] = await db
+            .insert(clientPackages)
+            .values({
+              clientId,
+              packageId: productId,
+              price: price || null,
+              status: "active"
+            })
+            .returning();
+
+          try {
+            const userId = getAuthenticatedUserIdOrFail(req, res);
+            await emitTrigger({
+              type: "client_product_added",
+              data: {
+                id: clientId,
+                clientId,
+                productId,
+                productType: "package",
+                price: price || null,
+                productName: isPackage[0].name,
+              },
+              context: {
+                userId,
+                timestamp: new Date(),
+                metadata: { type: "package" },
+              },
+            });
+          } catch (triggerError) {
+            console.error("Automation trigger failed but package add was successful:", triggerError);
+          }
+
+          res.status(201).json(newClientPackage);
+        } else {
+          return res.status(404).json({ message: "Product, bundle, or package not found" });
+        }
       }
     } catch (error) {
       console.error('Error adding product to client:', error);
@@ -14295,7 +14388,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  // Remove product or bundle from client
+  // Remove product, bundle, or package from client
   app.delete("/api/clients/:clientId/products/:productId", requireAuth(), requirePermission('products', 'canDelete'), async (req, res) => {
     try {
       const { clientId, productId } = req.params;
@@ -14330,7 +14423,22 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(204).send();
       }
 
-      return res.status(404).json({ message: "Client product/bundle relationship not found" });
+      // If not found in bundles, try packages
+      const [deletedPackage] = await db
+        .delete(clientPackages)
+        .where(
+          and(
+            eq(clientPackages.clientId, clientId),
+            eq(clientPackages.packageId, productId)
+          )
+        )
+        .returning();
+
+      if (deletedPackage) {
+        return res.status(204).send();
+      }
+
+      return res.status(404).json({ message: "Client product/bundle/package relationship not found" });
     } catch (error) {
       console.error('Error removing product from client:', error);
       res.status(500).json({ message: "Failed to remove product from client" });
@@ -14845,6 +14953,216 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error) {
       console.error('Error deleting bundle:', error);
       res.status(500).json({ message: "Failed to delete bundle" });
+    }
+  });
+
+  // ===== Product Packages Routes =====
+  app.get("/api/product-packages", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
+    try {
+      const { search, status } = req.query;
+      const conditions = [];
+      if (search && typeof search === 'string') {
+        conditions.push(
+          or(
+            like(productPackages.name, `%${search}%`),
+            like(productPackages.description, `%${search}%`)
+          )
+        );
+      }
+      if (status && typeof status === 'string') {
+        conditions.push(eq(productPackages.status, status));
+      }
+
+      let baseQuery = db.select().from(productPackages);
+      const packages = conditions.length > 0
+        ? await baseQuery.where(and(...conditions)).orderBy(asc(productPackages.name))
+        : await baseQuery.orderBy(asc(productPackages.name));
+
+      const packagesWithDetails = await Promise.all(
+        packages.map(async (pkg) => {
+          const items = await db
+            .select()
+            .from(packageItems)
+            .where(eq(packageItems.packageId, pkg.id));
+
+          let totalCost = 0;
+          for (const item of items) {
+            if (item.itemType === 'product' && item.productId) {
+              const [product] = await db.select({ cost: products.cost }).from(products).where(eq(products.id, item.productId));
+              if (product) totalCost += Number(product.cost || 0) * item.quantity;
+            } else if (item.itemType === 'bundle' && item.bundleId) {
+              const bundleProds = await db
+                .select({ cost: products.cost, quantity: bundleProducts.quantity })
+                .from(bundleProducts)
+                .leftJoin(products, eq(bundleProducts.productId, products.id))
+                .where(eq(bundleProducts.bundleId, item.bundleId));
+              const bundleCost = bundleProds.reduce((sum, bp) => sum + Number(bp.cost || 0) * (bp.quantity || 1), 0);
+              totalCost += bundleCost * item.quantity;
+            }
+          }
+
+          const usageCountResult = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(clientPackages)
+            .where(and(eq(clientPackages.packageId, pkg.id), eq(clientPackages.status, 'active')));
+
+          return {
+            ...pkg,
+            itemCount: items.length,
+            totalCost: totalCost.toFixed(2),
+            usageCount: Number(usageCountResult[0]?.count || 0)
+          };
+        })
+      );
+
+      res.json(packagesWithDetails);
+    } catch (error) {
+      console.error('Error fetching product packages:', error);
+      res.status(500).json({ message: "Failed to fetch product packages" });
+    }
+  });
+
+  app.get("/api/product-packages/:id", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [pkg] = await db.select().from(productPackages).where(eq(productPackages.id, id));
+      if (!pkg) return res.status(404).json({ message: "Package not found" });
+
+      const items = await db
+        .select()
+        .from(packageItems)
+        .where(eq(packageItems.packageId, id));
+
+      const itemsWithDetails = await Promise.all(
+        items.map(async (item) => {
+          if (item.itemType === 'product' && item.productId) {
+            const [product] = await db.select().from(products).where(eq(products.id, item.productId));
+            return { ...item, product: product || null, bundle: null };
+          } else if (item.itemType === 'bundle' && item.bundleId) {
+            const [bundle] = await db.select().from(productBundles).where(eq(productBundles.id, item.bundleId));
+            const bundleProds = await db
+              .select({
+                id: bundleProducts.id,
+                productId: bundleProducts.productId,
+                quantity: bundleProducts.quantity,
+                productName: products.name,
+                productCost: products.cost,
+                productType: products.type,
+              })
+              .from(bundleProducts)
+              .leftJoin(products, eq(bundleProducts.productId, products.id))
+              .where(eq(bundleProducts.bundleId, item.bundleId));
+            return { ...item, product: null, bundle: bundle ? { ...bundle, products: bundleProds } : null };
+          }
+          return { ...item, product: null, bundle: null };
+        })
+      );
+
+      res.json({ ...pkg, items: itemsWithDetails });
+    } catch (error) {
+      console.error('Error fetching package:', error);
+      res.status(500).json({ message: "Failed to fetch package" });
+    }
+  });
+
+  app.post("/api/product-packages", requireAuth(), requirePermission('products', 'canCreate'), async (req, res) => {
+    try {
+      const { items: itemsData, ...packageData } = req.body;
+      const validatedData = insertProductPackageSchema.parse(packageData);
+      const [newPackage] = await db.insert(productPackages).values(validatedData).returning();
+
+      if (itemsData && itemsData.length > 0) {
+        for (const item of itemsData) {
+          if (!['product', 'bundle'].includes(item.itemType)) {
+            return res.status(400).json({ message: "Invalid item type. Must be 'product' or 'bundle'" });
+          }
+          if (item.itemType === 'product' && !item.productId) {
+            return res.status(400).json({ message: "productId is required for product items" });
+          }
+          if (item.itemType === 'bundle' && !item.bundleId) {
+            return res.status(400).json({ message: "bundleId is required for bundle items" });
+          }
+        }
+        const itemInserts = itemsData.map((item: any) => ({
+          packageId: newPackage.id,
+          productId: item.itemType === 'product' ? item.productId : null,
+          bundleId: item.itemType === 'bundle' ? item.bundleId : null,
+          itemType: item.itemType,
+          quantity: item.quantity || 1,
+        }));
+        await db.insert(packageItems).values(itemInserts);
+      }
+
+      res.status(201).json(newPackage);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error creating package:', error);
+      res.status(500).json({ message: "Failed to create package" });
+    }
+  });
+
+  app.put("/api/product-packages/:id", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { items: itemsData, ...packageData } = req.body;
+      const validatedData = insertProductPackageSchema.partial().parse(packageData);
+
+      const [updatedPackage] = await db
+        .update(productPackages)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(productPackages.id, id))
+        .returning();
+
+      if (!updatedPackage) return res.status(404).json({ message: "Package not found" });
+
+      if (itemsData) {
+        for (const item of itemsData) {
+          if (!['product', 'bundle'].includes(item.itemType)) {
+            return res.status(400).json({ message: "Invalid item type. Must be 'product' or 'bundle'" });
+          }
+          if (item.itemType === 'product' && !item.productId) {
+            return res.status(400).json({ message: "productId is required for product items" });
+          }
+          if (item.itemType === 'bundle' && !item.bundleId) {
+            return res.status(400).json({ message: "bundleId is required for bundle items" });
+          }
+        }
+        await db.delete(packageItems).where(eq(packageItems.packageId, id));
+        if (itemsData.length > 0) {
+          const itemInserts = itemsData.map((item: any) => ({
+            packageId: id,
+            productId: item.itemType === 'product' ? item.productId : null,
+            bundleId: item.itemType === 'bundle' ? item.bundleId : null,
+            itemType: item.itemType,
+            quantity: item.quantity || 1,
+          }));
+          await db.insert(packageItems).values(itemInserts);
+        }
+      }
+
+      res.json(updatedPackage);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error('Error updating package:', error);
+      res.status(500).json({ message: "Failed to update package" });
+    }
+  });
+
+  app.delete("/api/product-packages/:id", requireAuth(), requirePermission('products', 'canDelete'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(clientPackages).where(eq(clientPackages.packageId, id));
+      await db.delete(packageItems).where(eq(packageItems.packageId, id));
+      const [deletedPackage] = await db.delete(productPackages).where(eq(productPackages.id, id)).returning();
+      if (!deletedPackage) return res.status(404).json({ message: "Package not found" });
+      res.json({ message: "Package deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting package:', error);
+      res.status(500).json({ message: "Failed to delete package" });
     }
   });
 
@@ -34866,9 +35184,29 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
               }, 0);
               
               unitCost = bundleCost;
+            } else if (item.itemType === 'package' && item.packageId) {
+              const [pkg] = await tx
+                .select({ id: productPackages.id, name: productPackages.name })
+                .from(productPackages)
+                .where(eq(productPackages.id, item.packageId))
+                .limit(1);
+              if (!pkg) throw new Error(`Package with ID ${item.packageId} not found`);
+
+              const pkgItems = await tx.select().from(packageItems).where(eq(packageItems.packageId, item.packageId));
+              let packageCost = 0;
+              for (const pi of pkgItems) {
+                if (pi.itemType === 'product' && pi.productId) {
+                  const [p] = await tx.select({ cost: products.cost }).from(products).where(eq(products.id, pi.productId));
+                  if (p) packageCost += parseFloat(p.cost || '0') * pi.quantity;
+                } else if (pi.itemType === 'bundle' && pi.bundleId) {
+                  const bps = await tx.select({ productCost: products.cost, quantity: bundleProducts.quantity }).from(bundleProducts).leftJoin(products, eq(bundleProducts.productId, products.id)).where(eq(bundleProducts.bundleId, pi.bundleId));
+                  const bCost = bps.reduce((s, bp) => s + parseFloat(bp.productCost || '0') * (bp.quantity || 1), 0);
+                  packageCost += bCost * pi.quantity;
+                }
+              }
+              unitCost = packageCost;
             } else {
-              // Reject unknown item types
-              throw new Error(`Invalid item type: ${item.itemType}. Must be 'product' or 'bundle'`);
+              throw new Error(`Invalid item type: ${item.itemType}. Must be 'product', 'bundle', or 'package'`);
             }
             
             const itemTotalCost = unitCost * quantity;
@@ -34877,6 +35215,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             processedItems.push({
               productId: item.productId || null,
               bundleId: item.bundleId || null,
+              packageId: item.packageId || null,
               itemType: item.itemType,
               quantity,
               unitCost: unitCost.toString(),
@@ -35257,6 +35596,27 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             }, 0);
             
             unitCost = bundleCost;
+          } else if (item.itemType === 'package' && item.packageId) {
+            const [pkg] = await tx
+              .select({ id: productPackages.id })
+              .from(productPackages)
+              .where(eq(productPackages.id, item.packageId))
+              .limit(1);
+            if (!pkg) throw new Error(`Package with ID ${item.packageId} not found`);
+
+            const pkgItems = await tx.select().from(packageItems).where(eq(packageItems.packageId, item.packageId));
+            let packageCost = 0;
+            for (const pi of pkgItems) {
+              if (pi.itemType === 'product' && pi.productId) {
+                const [p] = await tx.select({ cost: products.cost }).from(products).where(eq(products.id, pi.productId));
+                if (p) packageCost += parseFloat(p.cost || '0') * pi.quantity;
+              } else if (pi.itemType === 'bundle' && pi.bundleId) {
+                const bps = await tx.select({ productCost: products.cost, quantity: bundleProducts.quantity }).from(bundleProducts).leftJoin(products, eq(bundleProducts.productId, products.id)).where(eq(bundleProducts.bundleId, pi.bundleId));
+                const bCost = bps.reduce((s, bp) => s + parseFloat(bp.productCost || '0') * (bp.quantity || 1), 0);
+                packageCost += bCost * pi.quantity;
+              }
+            }
+            unitCost = packageCost;
           }
 
           const itemTotalCost = unitCost * quantity;
@@ -35266,6 +35626,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             quoteId: id,
             productId: item.productId || null,
             bundleId: item.bundleId || null,
+            packageId: item.packageId || null,
             itemType: item.itemType,
             quantity,
             unitCost: unitCost.toString(),

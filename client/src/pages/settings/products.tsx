@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +26,8 @@ import {
   ArrowLeft,
   ChevronUp,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Layers
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -74,6 +75,30 @@ interface ProductCategory {
   createdAt: string;
 }
 
+interface ProductPackage {
+  id: string;
+  name: string;
+  description?: string;
+  status: string;
+  itemCount?: number;
+  totalCost?: number;
+  usageCount?: number;
+  createdAt: string;
+  updatedAt: string;
+  items?: PackageItem[];
+}
+
+interface PackageItem {
+  id: string;
+  packageId: string;
+  itemType: string;
+  productId?: string;
+  bundleId?: string;
+  quantity: number;
+  product?: Product;
+  bundle?: ProductBundle;
+}
+
 export default function ProductsSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -91,6 +116,15 @@ export default function ProductsSettings() {
   const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
+  const [isCreatePackageOpen, setIsCreatePackageOpen] = useState(false);
+  const [isEditPackageOpen, setIsEditPackageOpen] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<ProductPackage | null>(null);
+  const [packageItems, setPackageItems] = useState<Array<{itemType: string, productId?: string, bundleId?: string, quantity: number}>>([]);
+  const [packageSearchTerm, setPackageSearchTerm] = useState("");
+  const [packageItemSearch, setPackageItemSearch] = useState("");
+  const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
+  const [packageCurrentPage, setPackageCurrentPage] = useState(1);
+  const [packagesPerPage, setPackagesPerPage] = useState(10);
   
   // Form state for controlled Select components
   const [createFormType, setCreateFormType] = useState("one_time");
@@ -157,6 +191,12 @@ export default function ProductsSettings() {
   // Fetch categories
   const { data: categories = [] } = useQuery<ProductCategory[]>({
     queryKey: ["/api/product-categories"],
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch product packages
+  const { data: packages = [], isLoading: isLoadingPackages } = useQuery<ProductPackage[]>({
+    queryKey: ["/api/product-packages"],
     refetchOnWindowFocus: false,
   });
 
@@ -399,6 +439,94 @@ export default function ProductsSettings() {
     },
   });
 
+  // Create package mutation
+  const createPackageMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/product-packages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Failed to create package');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-packages"] });
+      setIsCreatePackageOpen(false);
+      setPackageItems([]);
+      setPackageItemSearch("");
+      toast({
+        title: "Success",
+        variant: "default",
+        description: "Package created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create package",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update package mutation
+  const updatePackageMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await fetch(`/api/product-packages/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Failed to update package');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-packages"] });
+      setIsEditPackageOpen(false);
+      setEditingPackage(null);
+      setPackageItems([]);
+      toast({
+        title: "Success",
+        variant: "default",
+        description: "Package updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update package",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete package mutation
+  const deletePackageMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/product-packages/${id}`, {
+        method: "DELETE"
+      });
+      if (!response.ok) throw new Error('Failed to delete package');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-packages"] });
+      toast({
+        title: "Success",
+        variant: "default",
+        description: "Package deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete package",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateProduct = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -569,6 +697,74 @@ export default function ProductsSettings() {
       console.error('Error loading bundle details:', error);
       toast({ variant: "destructive", title: "Error", description: "Failed to load bundle details" });
     }
+  };
+
+  // Package handlers
+  const handleCreatePackage = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+      status: formData.get("status") as string,
+      items: packageItems,
+    };
+    createPackageMutation.mutate(data);
+  };
+
+  const handleEditPackage = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingPackage) return;
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+      status: formData.get("status") as string,
+      items: packageItems,
+    };
+    updatePackageMutation.mutate({ id: editingPackage.id, data });
+  };
+
+  const openEditPackage = async (pkg: ProductPackage) => {
+    try {
+      const response = await fetch(`/api/product-packages/${pkg.id}`);
+      if (!response.ok) throw new Error('Failed to fetch package details');
+      const detailedPackage = await response.json();
+      setEditingPackage(detailedPackage);
+      if (detailedPackage.items && detailedPackage.items.length > 0) {
+        const items = detailedPackage.items.map((item: any) => ({
+          itemType: item.itemType,
+          productId: item.productId || undefined,
+          bundleId: item.bundleId || undefined,
+          quantity: item.quantity || 1,
+        }));
+        setPackageItems(items);
+      } else {
+        setPackageItems([]);
+      }
+      setIsEditPackageOpen(true);
+    } catch (error) {
+      console.error('Error loading package details:', error);
+      toast({ variant: "destructive", title: "Error", description: "Failed to load package details" });
+    }
+  };
+
+  const addItemToPackage = () => {
+    setPackageItems([...packageItems, { itemType: "product", productId: "", quantity: 1 }]);
+  };
+
+  const removeItemFromPackage = (index: number) => {
+    setPackageItems(packageItems.filter((_, i) => i !== index));
+  };
+
+  const updatePackageItem = (index: number, field: string, value: any) => {
+    const updated = [...packageItems];
+    if (field === "itemType") {
+      updated[index] = { itemType: value, productId: undefined, bundleId: undefined, quantity: updated[index].quantity };
+    } else {
+      updated[index] = { ...updated[index], [field]: value };
+    }
+    setPackageItems(updated);
   };
 
   const addProductToBundle = () => {
@@ -762,6 +958,73 @@ export default function ProductsSettings() {
     (category.description && category.description.toLowerCase().includes(categorySearchTerm.toLowerCase()))
   );
 
+  // Filter and paginate packages
+  const filteredPackages = packages.filter((pkg) =>
+    pkg.name.toLowerCase().includes(packageSearchTerm.toLowerCase()) ||
+    (pkg.description && pkg.description.toLowerCase().includes(packageSearchTerm.toLowerCase()))
+  );
+  const totalPackagePages = Math.ceil(filteredPackages.length / packagesPerPage);
+  const packageStartIndex = (packageCurrentPage - 1) * packagesPerPage;
+  const packageEndIndex = packageStartIndex + packagesPerPage;
+  const paginatedPackages = filteredPackages.slice(packageStartIndex, packageEndIndex);
+
+  const PackageItemsExpanded = ({ packageId }: { packageId: string }) => {
+    const { data: packageDetail, isLoading } = useQuery<ProductPackage>({
+      queryKey: ["/api/product-packages", packageId],
+      queryFn: async () => {
+        const response = await fetch(`/api/product-packages/${packageId}`);
+        if (!response.ok) throw new Error('Failed to fetch package details');
+        return response.json();
+      },
+    });
+
+    if (isLoading) return <div className="text-sm text-gray-500">Loading items...</div>;
+    if (!packageDetail?.items || packageDetail.items.length === 0) {
+      return <div className="text-sm text-gray-500">No items in this package</div>;
+    }
+
+    return (
+      <div className="space-y-2">
+        <h4 className="font-medium text-gray-900 text-sm mb-2">Included Items ({packageDetail.items.length})</h4>
+        {packageDetail.items.map((item: PackageItem) => {
+          const itemName = item.itemType === 'product' 
+            ? (item.product?.name || 'Unknown Product')
+            : (item.bundle?.name || 'Unknown Bundle');
+          const itemCost = item.itemType === 'product' 
+            ? parseFloat(item.product?.cost || item.product?.price || '0')
+            : 0;
+          const qty = item.quantity || 1;
+          return (
+            <div key={item.id} className="flex items-center justify-between p-2 bg-white rounded border">
+              <div className="flex items-center gap-3">
+                {item.itemType === 'product' ? (
+                  <Package className="w-4 h-4 text-gray-500" />
+                ) : (
+                  <Package2 className="w-4 h-4 text-gray-500" />
+                )}
+                <div>
+                  <span className="font-medium">{itemName}</span>
+                  <Badge variant="outline" className="ml-2 text-xs">
+                    {item.itemType}
+                  </Badge>
+                  <span className="text-sm text-gray-500 ml-2">
+                    {qty} unit{qty !== 1 ? 's' : ''}
+                    {item.itemType === 'product' && itemCost > 0 && ` @ $${itemCost.toFixed(2)} each`}
+                  </span>
+                </div>
+              </div>
+              {item.itemType === 'product' && itemCost > 0 && (
+                <div className="text-sm font-medium text-blue-600">
+                  ${(itemCost * qty).toFixed(2)}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Back to Settings Button */}
@@ -790,7 +1053,8 @@ export default function ProductsSettings() {
           {[
             { id: "products", name: "Products", icon: Package, count: products.length },
             { id: "bundles", name: "Bundles", icon: Package2, count: bundles.length },
-            { id: "categories", name: "Categories", icon: ShoppingCart, count: categories.length }
+            { id: "categories", name: "Categories", icon: ShoppingCart, count: categories.length },
+            { id: "packages", name: "Packages", icon: Layers, count: packages.length }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -816,10 +1080,12 @@ export default function ProductsSettings() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder={`Search ${activeTab}...`}
-              value={activeTab === "categories" ? categorySearchTerm : searchTerm}
+              value={activeTab === "categories" ? categorySearchTerm : activeTab === "packages" ? packageSearchTerm : searchTerm}
               onChange={(e) => {
                 if (activeTab === "categories") {
                   setCategorySearchTerm(e.target.value);
+                } else if (activeTab === "packages") {
+                  setPackageSearchTerm(e.target.value);
                 } else {
                   setSearchTerm(e.target.value);
                 }
@@ -1180,6 +1446,166 @@ export default function ProductsSettings() {
                     </Button>
                     <Button type="submit" disabled={createBundleMutation.isPending}>
                       {createBundleMutation.isPending ? "Creating..." : "Create Bundle"}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {activeTab === "packages" && (
+            <Dialog open={isCreatePackageOpen} onOpenChange={(open) => {
+              setIsCreatePackageOpen(open);
+              if (!open) {
+                setPackageItems([]);
+                setPackageItemSearch("");
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90 h-10">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Package
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New Package</DialogTitle>
+                  <DialogDescription>
+                    Create a package with products and bundles
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCreatePackage} className="space-y-4">
+                  <div>
+                    <Label htmlFor="package-name">Package Name</Label>
+                    <Input id="package-name" name="name" required />
+                  </div>
+                  <div>
+                    <Label htmlFor="package-description">Description</Label>
+                    <Textarea id="package-description" name="description" />
+                  </div>
+                  <div>
+                    <Label htmlFor="package-status">Status</Label>
+                    <Select name="status" defaultValue="active">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <Label>Package Items</Label>
+                      <Button type="button" variant="outline" size="sm" onClick={addItemToPackage}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Item
+                      </Button>
+                    </div>
+                    
+                    {packageItems.map((item, index) => (
+                      <div key={index} className="flex gap-2 items-end">
+                        <div className="w-28">
+                          <Label>Type</Label>
+                          <Select
+                            value={item.itemType}
+                            onValueChange={(value) => updatePackageItem(index, "itemType", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="product">Product</SelectItem>
+                              <SelectItem value="bundle">Bundle</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex-1">
+                          <Label>{item.itemType === "product" ? "Product" : "Bundle"}</Label>
+                          {item.itemType === "product" ? (
+                            <Select
+                              value={item.productId || ""}
+                              onValueChange={(value) => updatePackageItem(index, "productId", value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select product" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-60 overflow-hidden">
+                                <div className="p-2 sticky top-0 z-10 bg-background border-b shadow-sm">
+                                  <Input
+                                    placeholder="Search products..."
+                                    value={packageItemSearch}
+                                    onChange={(e) => setPackageItemSearch(e.target.value)}
+                                    className="h-8"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onKeyDown={(e) => e.stopPropagation()}
+                                    onFocus={(e) => e.stopPropagation()}
+                                  />
+                                </div>
+                                <div className="max-h-48 overflow-y-auto">
+                                  {products
+                                    .filter(p => !packageItemSearch || p.name.toLowerCase().includes(packageItemSearch.toLowerCase()))
+                                    .map((product) => (
+                                      <SelectItem key={product.id} value={product.id}>
+                                        {product.name} - ${product.cost || '0.00'} cost
+                                      </SelectItem>
+                                    ))}
+                                </div>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Select
+                              value={item.bundleId || ""}
+                              onValueChange={(value) => updatePackageItem(index, "bundleId", value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select bundle" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {bundles.map((bundle) => (
+                                  <SelectItem key={bundle.id} value={bundle.id}>
+                                    {bundle.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                        <div className="w-20">
+                          <Label>Qty</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updatePackageItem(index, "quantity", parseInt(e.target.value) || 1)}
+                            className="h-10"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeItemFromPackage(index)}
+                          className="mb-0.5"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => {
+                      setIsCreatePackageOpen(false);
+                      setPackageItems([]);
+                      setPackageItemSearch("");
+                    }}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={createPackageMutation.isPending}>
+                      {createPackageMutation.isPending ? "Creating..." : "Create Package"}
                     </Button>
                   </div>
                 </form>
@@ -1746,6 +2172,353 @@ export default function ProductsSettings() {
             </CardContent>
           </Card>
         )}
+
+        {/* Packages Tab */}
+        {activeTab === "packages" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="w-5 h-5" />
+                Product Packages
+              </CardTitle>
+              <CardDescription>
+                Manage packages of products and bundles
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingPackages ? (
+                <div className="text-center py-8">Loading packages...</div>
+              ) : filteredPackages.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {packageSearchTerm ? "No packages found matching your search" : "No packages created yet"}
+                </div>
+              ) : (
+                <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-8"></TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Items</TableHead>
+                      <TableHead>Total Cost</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedPackages.map((pkg: ProductPackage) => (
+                      <Fragment key={pkg.id}>
+                        <TableRow>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => {
+                                const newExpanded = new Set(expandedPackages);
+                                if (newExpanded.has(pkg.id)) {
+                                  newExpanded.delete(pkg.id);
+                                } else {
+                                  newExpanded.add(pkg.id);
+                                }
+                                setExpandedPackages(newExpanded);
+                              }}
+                            >
+                              {expandedPackages.has(pkg.id) ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">{pkg.name}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-500 truncate max-w-xs">
+                              {pkg.description || "-"}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {pkg.itemCount || 0} items
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <DollarSign className="w-4 h-4 text-gray-400 mr-1" />
+                              {typeof pkg.totalCost === 'number' ? pkg.totalCost.toFixed(2) : parseFloat(pkg.totalCost || '0').toFixed(2)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={pkg.status === "active" ? "default" : "secondary"}>
+                              {pkg.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => openEditPackage(pkg)}>
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Package</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{pkg.name}"? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deletePackageMutation.mutate(pkg.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {expandedPackages.has(pkg.id) && (
+                          <TableRow>
+                            <TableCell colSpan={7} className="bg-gray-50 p-4">
+                              <PackageItemsExpanded packageId={pkg.id} />
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    ))}
+                  </TableBody>
+                </Table>
+                
+                <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">
+                      Showing {packageStartIndex + 1}-{Math.min(packageEndIndex, filteredPackages.length)} of {filteredPackages.length} packages
+                    </span>
+                    <Select value={packagesPerPage.toString()} onValueChange={(value) => {
+                      setPackagesPerPage(parseInt(value));
+                      setPackageCurrentPage(1);
+                    }}>
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className="text-sm text-gray-600">per page</span>
+                  </div>
+                  {totalPackagePages > 1 && (
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setPackageCurrentPage(Math.max(1, packageCurrentPage - 1))}
+                        disabled={packageCurrentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      {Array.from({ length: totalPackagePages }, (_, i) => i + 1)
+                        .filter(page => page === 1 || page === totalPackagePages || (page >= packageCurrentPage - 1 && page <= packageCurrentPage + 1))
+                        .map((page, index, array) => (
+                          <span key={page}>
+                            {index > 0 && array[index - 1] !== page - 1 && <span className="px-1">...</span>}
+                            <Button
+                              variant={packageCurrentPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setPackageCurrentPage(page)}
+                            >
+                              {page}
+                            </Button>
+                          </span>
+                        ))}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setPackageCurrentPage(Math.min(totalPackagePages, packageCurrentPage + 1))}
+                        disabled={packageCurrentPage === totalPackagePages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+      {/* Edit Package Dialog */}
+      <Dialog open={isEditPackageOpen} onOpenChange={setIsEditPackageOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Package</DialogTitle>
+            <DialogDescription>
+              Update package details and items
+            </DialogDescription>
+          </DialogHeader>
+          {editingPackage && (
+            <form onSubmit={handleEditPackage} className="space-y-4">
+              <div>
+                <Label htmlFor="edit-package-name">Package Name</Label>
+                <Input 
+                  id="edit-package-name" 
+                  name="name" 
+                  defaultValue={editingPackage.name}
+                  required 
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-package-description">Description</Label>
+                <Textarea 
+                  id="edit-package-description" 
+                  name="description" 
+                  defaultValue={editingPackage.description || ""}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-package-status">Status</Label>
+                <Select name="status" defaultValue={editingPackage.status}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label>Package Items</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addItemToPackage}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Item
+                  </Button>
+                </div>
+                
+                {packageItems.map((item, index) => (
+                  <div key={index} className="flex gap-2 items-end">
+                    <div className="w-28">
+                      <Label>Type</Label>
+                      <Select
+                        value={item.itemType}
+                        onValueChange={(value) => updatePackageItem(index, "itemType", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="product">Product</SelectItem>
+                          <SelectItem value="bundle">Bundle</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex-1">
+                      <Label>{item.itemType === "product" ? "Product" : "Bundle"}</Label>
+                      {item.itemType === "product" ? (
+                        <Select
+                          value={item.productId || ""}
+                          onValueChange={(value) => updatePackageItem(index, "productId", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select product" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60 overflow-hidden">
+                            <div className="p-2 sticky top-0 z-10 bg-background border-b shadow-sm">
+                              <Input
+                                placeholder="Search products..."
+                                value={packageItemSearch}
+                                onChange={(e) => setPackageItemSearch(e.target.value)}
+                                className="h-8"
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => e.stopPropagation()}
+                                onFocus={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                            <div className="max-h-48 overflow-y-auto">
+                              {products
+                                .filter(p => !packageItemSearch || p.name.toLowerCase().includes(packageItemSearch.toLowerCase()))
+                                .map((product) => (
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.name} - ${product.cost || '0.00'} cost
+                                  </SelectItem>
+                                ))}
+                            </div>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Select
+                          value={item.bundleId || ""}
+                          onValueChange={(value) => updatePackageItem(index, "bundleId", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select bundle" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bundles.map((bundle) => (
+                              <SelectItem key={bundle.id} value={bundle.id}>
+                                {bundle.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                    <div className="w-20">
+                      <Label>Qty</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => updatePackageItem(index, "quantity", parseInt(e.target.value) || 1)}
+                        className="h-10"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeItemFromPackage(index)}
+                      className="mb-0.5"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => {
+                  setIsEditPackageOpen(false);
+                  setEditingPackage(null);
+                  setPackageItems([]);
+                }}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updatePackageMutation.isPending}>
+                  {updatePackageMutation.isPending ? "Updating..." : "Update Package"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Bundle Dialog */}
       <Dialog open={isEditBundleOpen} onOpenChange={setIsEditBundleOpen}>

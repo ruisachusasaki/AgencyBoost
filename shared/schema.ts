@@ -238,6 +238,27 @@ export const bundleProducts = pgTable("bundle_products", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Product Packages - groups of products AND bundles
+export const productPackages = pgTable("product_packages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Package Items relationship - defines which products and/or bundles belong to a package
+export const packageItems = pgTable("package_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  packageId: varchar("package_id").notNull().references(() => productPackages.id),
+  productId: varchar("product_id").references(() => products.id),
+  bundleId: varchar("bundle_id").references(() => productBundles.id),
+  itemType: text("item_type").notNull(), // 'product' or 'bundle'
+  quantity: integer("quantity").default(1).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Client products/services assignments
 export const clientProducts = pgTable("client_products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -256,6 +277,17 @@ export const clientBundles = pgTable("client_bundles", {
   price: decimal("price", { precision: 10, scale: 2 }),
   status: text("status").default("active"),
   customQuantities: jsonb("custom_quantities"), // Client-specific quantities: { "product_id": quantity }
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Client package assignments
+export const clientPackages = pgTable("client_packages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  packageId: varchar("package_id").notNull().references(() => productPackages.id),
+  price: decimal("price", { precision: 10, scale: 2 }),
+  status: text("status").default("active"),
+  customQuantities: jsonb("custom_quantities"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -284,7 +316,8 @@ export const quoteItems = pgTable("quote_items", {
   quoteId: varchar("quote_id").notNull().references(() => quotes.id),
   productId: varchar("product_id").references(() => products.id),
   bundleId: varchar("bundle_id").references(() => productBundles.id),
-  itemType: text("item_type").notNull(), // 'product' or 'bundle'
+  packageId: varchar("package_id").references(() => productPackages.id),
+  itemType: text("item_type").notNull(), // 'product', 'bundle', or 'package'
   quantity: integer("quantity").notNull().default(1),
   unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).notNull(),
   totalCost: decimal("total_cost", { precision: 10, scale: 2 }).notNull(),
@@ -2424,6 +2457,29 @@ export type ProductBundle = typeof productBundles.$inferSelect;
 export type InsertProductBundle = z.infer<typeof insertProductBundleSchema>;
 export type BundleProduct = typeof bundleProducts.$inferSelect;
 export type InsertBundleProduct = z.infer<typeof insertBundleProductSchema>;
+
+export const insertProductPackageSchema = createInsertSchema(productPackages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPackageItemSchema = createInsertSchema(packageItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertClientPackageSchema = createInsertSchema(clientPackages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ProductPackage = typeof productPackages.$inferSelect;
+export type InsertProductPackage = z.infer<typeof insertProductPackageSchema>;
+export type PackageItem = typeof packageItems.$inferSelect;
+export type InsertPackageItem = z.infer<typeof insertPackageItemSchema>;
+export type ClientPackage = typeof clientPackages.$inferSelect;
+export type InsertClientPackage = z.infer<typeof insertClientPackageSchema>;
 
 // Audit Logs Table - Track all system actions for admin oversight
 export const auditLogs = pgTable("audit_logs", {

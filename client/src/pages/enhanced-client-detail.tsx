@@ -2772,6 +2772,10 @@ export default function EnhancedClientDetail() {
     },
   });
 
+  const { data: packagesData = [] } = useQuery<any[]>({
+    queryKey: ['/api/product-packages'],
+  });
+
   // Fetch staff data
   const { data: staffData = [], isLoading: staffLoading } = useQuery({
     queryKey: ['/api/staff'],
@@ -7663,7 +7667,7 @@ export default function EnhancedClientDetail() {
           <DialogHeader>
             <DialogTitle>Add Products & Services</DialogTitle>
             <DialogDescription>
-              Select products and bundles to add to this client.
+              Select products, bundles, or packages to add to this client.
             </DialogDescription>
           </DialogHeader>
           
@@ -7673,7 +7677,7 @@ export default function EnhancedClientDetail() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <input
                 type="text"
-                placeholder="Search products and bundles..."
+                placeholder="Search products, bundles, and packages..."
                 value={productSearchTerm}
                 onChange={(e) => setProductSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -7682,7 +7686,7 @@ export default function EnhancedClientDetail() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Products Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Products</h3>
@@ -7790,6 +7794,65 @@ export default function EnhancedClientDetail() {
                         }}
                         className="bg-primary hover:bg-primary/90 text-primary-foreground"
                         data-testid={`button-add-bundle-${bundle.id}`}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Packages Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Packages</h3>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {packagesData && packagesData
+                  .filter((pkg: any) =>
+                    pkg.name?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+                    pkg.description?.toLowerCase().includes(productSearchTerm.toLowerCase())
+                  )
+                  .map((pkg: any) => (
+                    <div
+                      key={pkg.id}
+                      className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 dark:text-gray-100">{pkg.name}</h4>
+                        {pkg.description && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{pkg.description}</p>
+                        )}
+                        <p className="text-xs text-gray-500">{pkg.itemCount || 0} items</p>
+                        {canViewCosts && (
+                          <p className="text-sm font-medium text-primary">
+                            ${Number(pkg.totalCost || 0).toFixed(2)}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await apiRequest('POST', `/api/clients/${clientId}/products`, {
+                              productId: pkg.id
+                            });
+                            queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
+                            setShowAddProductModal(false);
+                            toast({
+                              title: "Success",
+                              variant: "default",
+                              description: `${pkg.name} package added successfully!`
+                            });
+                          } catch (error) {
+                            toast({
+                              title: "Error",
+                              description: "Failed to add package. Please try again.",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                        data-testid={`button-add-package-${pkg.id}`}
                       >
                         <Plus className="h-4 w-4 mr-1" />
                         Add

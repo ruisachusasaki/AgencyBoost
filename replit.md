@@ -40,7 +40,8 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Sales Settings**: Dynamic minimum margin threshold configuration for quotes.
 - **Quotes Management**: Modern table-based layout with sortable columns, inline status updates, and low margin highlighting.
 - **Lead Management**: Customizable lead source options.
-- **Quote to Client Products Transfer**: Automatic transfer of accepted quote products/bundles.
+- **Product Packages**: Packages system under Settings > Products that allows creating packages containing both bundles and individual products with configurable quantities. Packages can be assigned to clients and added to quotes. Tables: `product_packages`, `package_items`, `client_packages`. Quote items support `itemType: 'package'` with `packageId`.
+- **Quote to Client Products Transfer**: Automatic transfer of accepted quote products/bundles/packages.
 - **Predictive Hiring Alerts**: Staffing capacity prediction with configurable alerts.
 - **Team Workload Reports**: Comprehensive analytics for staff workload.
 - **Activity & Comments**: Global timer, activity logging, and a threaded comments system with @mentions and emoji picker.
