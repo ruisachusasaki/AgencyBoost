@@ -2206,10 +2206,34 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       
       const isAdminOrManager = userRoleName && (userRoleName.toLowerCase() === 'admin' || userRoleName.toLowerCase() === 'manager');
       
-      console.log("[TIME_ENTRY_PATCH] isAdminOrManager:", isAdminOrManager, "userRoleName:", userRoleName);
+      let hasTimesheetEditPermission = isAdminOrManager;
       
-      if (!isAdminOrManager) {
-        console.log("[TIME_ENTRY_PATCH] REJECTED: not admin or manager");
+      if (!hasTimesheetEditPermission && userId) {
+        const userRolesList = await db
+          .select({ roleId: userRoles.roleId })
+          .from(userRoles)
+          .where(eq(userRoles.userId, userId));
+        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+        
+        if (roleIds.length > 0) {
+          const perms = await db
+            .select({ permissionKey: granularPermissions.permissionKey })
+            .from(granularPermissions)
+            .where(
+              and(
+                inArray(granularPermissions.roleId, roleIds),
+                eq(granularPermissions.permissionKey, 'reports.timesheet.edit_all'),
+                eq(granularPermissions.enabled, true)
+              )
+            );
+          hasTimesheetEditPermission = perms.length > 0;
+        }
+      }
+      
+      console.log("[TIME_ENTRY_PATCH] isAdminOrManager:", isAdminOrManager, "hasTimesheetEditPermission:", hasTimesheetEditPermission, "userRoleName:", userRoleName);
+      
+      if (!hasTimesheetEditPermission) {
+        console.log("[TIME_ENTRY_PATCH] REJECTED: no edit permission");
         return res.status(403).json({ error: "Only admins and managers can edit time entries" });
       }
       
