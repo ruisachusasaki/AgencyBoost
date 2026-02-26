@@ -1992,12 +1992,28 @@ async function runStartupMigrations() {
 (async () => {
   const port = parseInt(process.env.PORT || '5000', 10);
 
-  // Create HTTP server from the Express app with health check already registered
-  // This lets Cloud Run health checks pass immediately while we set up routes
   const { createServer } = await import("http");
-  const server = createServer(app);
 
-  // Start listening IMMEDIATELY so health checks pass during route setup
+  // Phase 1: Start a MINIMAL HTTP server that passes health checks immediately
+  // This raw handler bypasses Express entirely so it responds even during heavy init
+  let expressReady = false;
+  const server = createServer((req, res) => {
+    if (!expressReady) {
+      // During startup, handle health checks and root directly
+      if (req.url === '/health' || req.url === '/api/health' || req.url === '/_health' || req.url === '/') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
+        return;
+      }
+      // Any other request during startup
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'starting', message: 'Application is initializing' }));
+      return;
+    }
+    // Once ready, delegate everything to Express
+    app(req, res);
+  });
+
   await new Promise<void>((resolve) => {
     server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
       log(`serving on port ${port} (health check ready)`);
@@ -2005,7 +2021,7 @@ async function runStartupMigrations() {
     });
   });
 
-  // Now set up auth, routes, and static serving
+  // Phase 2: Initialize Express app (auth, routes, static files)
   await setupAuth(app);
   log("✅ Replit Auth initialized");
   
@@ -2028,10 +2044,12 @@ async function runStartupMigrations() {
     serveStatic(app);
   }
 
+  // Phase 3: Switch server to Express - all requests now handled by Express
+  expressReady = true;
   appFullyLoaded = true;
   log("✅ All routes and middleware configured");
 
-  // Run migrations in the background (non-blocking)
+  // Phase 4: Run migrations in the background (non-blocking)
   runStartupMigrations().then(() => {
     import('./googleCalendarBackgroundSync').then(({ startBackgroundSync }) => {
       startBackgroundSync();
