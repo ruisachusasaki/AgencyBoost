@@ -883,11 +883,10 @@ export default function ProductsSettings() {
           bValue = bCategoryName.toLowerCase();
           break;
         case 'cost':
-          // Sort by cost numerically, with products without cost at the end
-          const aCost = a.cost ? parseFloat(a.cost) : -1;
-          const bCost = b.cost ? parseFloat(b.cost) : -1;
-          aValue = aCost;
-          bValue = bCost;
+          const aPrice = a.price ? parseFloat(a.price) : -1;
+          const bPrice = b.price ? parseFloat(b.price) : -1;
+          aValue = aPrice;
+          bValue = bPrice;
           break;
         case 'createdAt':
           aValue = new Date(a.createdAt).getTime();
@@ -1676,7 +1675,8 @@ export default function ProductsSettings() {
                     <TableRow>
                       <SortableTableHead field="name">Name</SortableTableHead>
                       <SortableTableHead field="category">Category</SortableTableHead>
-                      <SortableTableHead field="cost">Cost</SortableTableHead>
+                      <SortableTableHead field="cost">Price</SortableTableHead>
+                      <TableHead>Cost</TableHead>
                       <SortableTableHead field="type">Type</SortableTableHead>
                       <SortableTableHead field="status">Status</SortableTableHead>
                       <TableHead>Actions</TableHead>
@@ -1705,13 +1705,23 @@ export default function ProductsSettings() {
                           )}
                         </TableCell>
                         <TableCell>
+                          {product.price ? (
+                            <div className="flex items-center">
+                              <DollarSign className="w-4 h-4 text-gray-400 mr-1" />
+                              {product.price}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">No price set</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           {product.cost ? (
                             <div className="flex items-center">
                               <DollarSign className="w-4 h-4 text-gray-400 mr-1" />
                               {product.cost}
                             </div>
                           ) : (
-                            <span className="text-gray-400">No cost set</span>
+                            <span className="text-gray-400">—</span>
                           )}
                         </TableCell>
                         <TableCell>
