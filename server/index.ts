@@ -1678,15 +1678,25 @@ async function initializeDefaultTimeOffTypes() {
 
 const app = express();
 
-// CRITICAL: Early health check endpoint for Cloud Run - responds IMMEDIATELY
-// This must be defined BEFORE any middleware that could slow down the response
-// Cloud Run health checks need this to pass within 10 seconds of startup
+// CRITICAL: Early health check endpoints - respond IMMEDIATELY before any other middleware
+// Deployment health checks need these to pass within seconds of startup
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 app.get('/api/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Early root endpoint for deployment health checks hitting '/'
+// This responds immediately while routes and static files are still loading
+// Once serveStatic() registers its wildcard handler, that takes over for '/'
+let appFullyLoaded = false;
+app.get('/', (req, res, next) => {
+  if (appFullyLoaded) {
+    return next();
+  }
+  res.status(200).send('<!DOCTYPE html><html><head><title>Loading...</title><meta http-equiv="refresh" content="3"></head><body><p>Application is starting up...</p></body></html>');
 });
 
 // Slack webhook status endpoint - helps verify configuration
@@ -1860,9 +1870,6 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 app.get("/_health", (_req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
-app.get("/health", (_req, res) => {
-  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
-});
 
 // Note: Session debugging middleware removed for production
 
@@ -2021,6 +2028,7 @@ async function runStartupMigrations() {
     serveStatic(app);
   }
 
+  appFullyLoaded = true;
   log("✅ All routes and middleware configured");
 
   // Run migrations in the background (non-blocking)
