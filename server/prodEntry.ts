@@ -22,14 +22,16 @@ server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
   const ts = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true });
   console.log(`${ts} [express] serving on port ${port} (health check ready)`);
 
-  import("./index.js").then((mod) => {
-    if (mod && mod.initializeApp) {
-      mod.initializeApp(server).then(() => {
-        appHandler = mod.getApp();
-        console.log(`${new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true })} [express] ✅ Application fully initialized`);
-      });
-    }
-  }).catch(err => {
-    console.error("Failed to load application:", err);
-  });
+  setTimeout(() => {
+    import("./index.js").then((mod) => {
+      if (mod && mod.initializeApp) {
+        mod.initializeApp(server).then(() => {
+          appHandler = mod.getApp();
+          console.log(`${new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true })} [express] ✅ Application fully initialized`);
+        });
+      }
+    }).catch(err => {
+      console.error("Failed to load application:", err);
+    });
+  }, 0);
 });
