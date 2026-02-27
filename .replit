@@ -8,8 +8,8 @@ packages = ["jq"]
 
 [deployment]
 deploymentTarget = "vm"
-build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
+build = ["bash", "-c", "vite build && esbuild server/prodEntry.ts server/index.ts --platform=node --packages=external --bundle --splitting --format=esm --outdir=dist"]
+run = ["bash", "-c", "NODE_ENV=production node dist/prodEntry.js"]
 
 [env]
 PORT = "5000"

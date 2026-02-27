@@ -1989,39 +1989,24 @@ async function runStartupMigrations() {
   }
 }
 
-(async () => {
-  const port = parseInt(process.env.PORT || '5000', 10);
+export function getApp() {
+  return app;
+}
 
-  const { createServer } = await import("http");
-
-  // Phase 1: Start a MINIMAL HTTP server that passes health checks immediately
-  // This raw handler bypasses Express entirely so it responds even during heavy init
-  let expressReady = false;
-  const server = createServer((req, res) => {
-    if (!expressReady) {
-      // During startup, handle health checks and root directly
-      if (req.url === '/health' || req.url === '/api/health' || req.url === '/_health' || req.url === '/') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
-        return;
-      }
-      // Any other request during startup
-      res.writeHead(503, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ status: 'starting', message: 'Application is initializing' }));
-      return;
-    }
-    // Once ready, delegate everything to Express
-    app(req, res);
-  });
-
-  await new Promise<void>((resolve) => {
-    server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
-      log(`serving on port ${port} (health check ready)`);
-      resolve();
+export async function initializeApp(existingServer?: any) {
+  const server = existingServer || (await (async () => {
+    const port = parseInt(process.env.PORT || '5000', 10);
+    const { createServer } = await import("http");
+    const s = createServer(app);
+    await new Promise<void>((resolve) => {
+      s.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
+        log(`serving on port ${port} (health check ready)`);
+        resolve();
+      });
     });
-  });
+    return s;
+  })());
 
-  // Phase 2: Initialize Express app (auth, routes, static files)
   await setupAuth(app);
   log("✅ Replit Auth initialized");
   
@@ -2044,12 +2029,9 @@ async function runStartupMigrations() {
     serveStatic(app);
   }
 
-  // Phase 3: Switch server to Express - all requests now handled by Express
-  expressReady = true;
   appFullyLoaded = true;
   log("✅ All routes and middleware configured");
 
-  // Phase 4: Run migrations in the background (non-blocking)
   runStartupMigrations().then(() => {
     import('./googleCalendarBackgroundSync').then(({ startBackgroundSync }) => {
       startBackgroundSync();
@@ -2072,7 +2054,13 @@ async function runStartupMigrations() {
       log(`⚠️ Failed to start long-running timer alert service: ${err.message}`);
     });
   });
-})();
+}
+
+// In development mode, auto-start (tsx runs this file directly)
+// In production, prodEntry.ts imports and calls initializeApp()
+if (process.env.NODE_ENV !== 'production') {
+  initializeApp();
+}
 
 // Seed description templates for task intake sections
 async function seedIntakeDescriptionTemplates() {
