@@ -74,5 +74,17 @@ externalPort = 5000
 localPort = 5562
 externalPort = 6000
 
+[[ports]]
+localPort = 5563
+externalPort = 8000
+
+[[ports]]
+localPort = 5564
+externalPort = 6800
+
+[[ports]]
+localPort = 5565
+externalPort = 8008
+
 [agent]
 integrations = ["javascript_object_storage:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_slack:1.0.0", "google-calendar:1.0.0"]

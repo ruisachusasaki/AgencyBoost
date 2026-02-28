@@ -1679,7 +1679,6 @@ async function initializeDefaultTimeOffTypes() {
 const app = express();
 
 // CRITICAL: Early health check endpoints - respond IMMEDIATELY before any other middleware
-// Deployment health checks need these to pass within seconds of startup
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -1688,16 +1687,15 @@ app.get('/api/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Early root endpoint for deployment health checks hitting '/'
-// This responds immediately while routes and static files are still loading
-// Once serveStatic() registers its wildcard handler, that takes over for '/'
 let appFullyLoaded = false;
 app.get('/', (req, res, next) => {
   if (appFullyLoaded) {
     return next();
   }
-  res.status(200).send('<!DOCTYPE html><html><head><title>Loading...</title><meta http-equiv="refresh" content="3"></head><body><p>Application is starting up...</p></body></html>');
+  res.status(200).send('<!DOCTYPE html><html><head><title>AgencyBoost</title><meta http-equiv="refresh" content="3"></head><body><p>Starting up...</p></body></html>');
 });
+
+import { createServer as createHttpServer } from "http";
 
 // Slack webhook status endpoint - helps verify configuration
 app.get('/api/integrations/slack/events', (_req, res) => {
@@ -2067,9 +2065,9 @@ export async function initializeApp(existingServer?: any) {
   await setupFullApp(server);
 }
 
-// Auto-start only when this file is the entry point
-// When prodEntry.ts imports this module, it calls initializeApp(server) explicitly
-// We detect this by checking if PROD_ENTRY env var is set by prodEntry.ts
+// Startup logic:
+// - PROD_ENTRY set: prodEntry.ts is the entry point, it will call initializeApp(server)
+// - Otherwise: this file is the entry point (dev or direct production), auto-start
 if (!process.env.PROD_ENTRY) {
   initializeApp();
 }
