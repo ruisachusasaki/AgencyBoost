@@ -95,6 +95,7 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Target**: VM (always-running for background services)
 - **Build**: Pre-built `dist/` folder committed to repo. Build command is `echo "pre-built"`. To rebuild: `vite build && esbuild server/prodEntry.ts server/appWorker.ts server/index.ts --platform=node --packages=external --bundle --splitting --format=esm --outdir=dist`
 - **Entry Point**: `dist/prodEntry.js` — tiny HTTP server that responds to health checks instantly with 200 status
-- **Key Design**: `prodEntry.ts` starts listening on the port immediately (within milliseconds), returns 200 for ALL requests during startup. Then uses `setImmediate()` to defer loading the full Express app. Once loaded, Express takes over request handling. Single process, no child process fork.
+- **Key Design**: `prodEntry.ts` starts listening on the port immediately (within milliseconds), returns 200 for ALL requests during startup. Then spawns `appWorker.js` as a child process (on PORT+1) that loads the full Express app. Once the worker sends "ready" via IPC, prodEntry proxies all requests to it. If proxy fails, falls back to 200 HTML response.
+- **Important**: The heavy 1.4MB Express bundle MUST load in a child process because `import()` blocks the event loop during JS parsing. Single-process approaches fail health checks on slow deployment machines.
 - **Important**: `server/index.ts` auto-starts unless `PROD_ENTRY` env var is set (which `prodEntry.ts` sets before importing). This prevents duplicate server.listen() conflicts.
 - **Important**: `dist/` is NOT in `.gitignore` — pre-built files are included in deployment to avoid build timeouts.
