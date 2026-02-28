@@ -94,7 +94,7 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 ## Production Deployment Architecture
 - **Target**: VM (always-running for background services)
 - **Build**: Pre-built `dist/` folder committed to repo. Build command is `echo "pre-built"`. To rebuild: `vite build && esbuild server/prodEntry.ts server/appWorker.ts server/index.ts --platform=node --packages=external --bundle --splitting --format=esm --outdir=dist`
-- **Entry Point**: `dist/prodEntry.js` — tiny HTTP server (2.4KB) that responds to health checks instantly in under 7ms
-- **Key Design**: `prodEntry.ts` starts listening on the port immediately, then forks `appWorker.js` as a child process on port+1. The heavy Express app loads in the child process without blocking the main event loop. Once the child signals "ready", prodEntry proxies all requests to it.
+- **Entry Point**: `dist/prodEntry.js` — tiny HTTP server that responds to health checks instantly with 200 status
+- **Key Design**: `prodEntry.ts` starts listening on the port immediately (within milliseconds), returns 200 for ALL requests during startup. Then uses `setImmediate()` to defer loading the full Express app. Once loaded, Express takes over request handling. Single process, no child process fork.
 - **Important**: `server/index.ts` auto-starts unless `PROD_ENTRY` env var is set (which `prodEntry.ts` sets before importing). This prevents duplicate server.listen() conflicts.
 - **Important**: `dist/` is NOT in `.gitignore` — pre-built files are included in deployment to avoid build timeouts.

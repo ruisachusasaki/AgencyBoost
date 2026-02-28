@@ -1,114 +1,49 @@
-import { createServer, request as httpRequest } from "http";
+import { createServer } from "http";
 import type { IncomingMessage, ServerResponse } from "http";
-import { fork } from "child_process";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import { readFileSync, existsSync } from "fs";
 
 process.env.PROD_ENTRY = "1";
 
 const port = parseInt(process.env.PORT || "5000", 10);
-const appPort = port + 1;
 
-let appReady = false;
+const STARTUP_HTML = `<!DOCTYPE html><html><head><title>AgencyBoost</title><meta http-equiv="refresh" content="3"></head><body><p>Loading...</p></body></html>`;
 
-const dir = dirname(fileURLToPath(import.meta.url));
-let indexHtml = "<!DOCTYPE html><html><body>OK</body></html>";
-const htmlPath = join(dir, "public", "index.html");
-if (existsSync(htmlPath)) {
-  indexHtml = readFileSync(htmlPath, "utf-8");
+let expressApp: any = null;
+
+function handler(req: IncomingMessage, res: ServerResponse) {
+  if (expressApp) {
+    return expressApp(req, res);
+  }
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+  res.end(STARTUP_HTML);
 }
 
-function proxyRequest(req: IncomingMessage, res: ServerResponse) {
-  const proxyReq = httpRequest(
-    {
-      hostname: "127.0.0.1",
-      port: appPort,
-      path: req.url,
-      method: req.method,
-      headers: req.headers,
-    },
-    (proxyRes) => {
-      res.writeHead(proxyRes.statusCode || 500, proxyRes.headers);
-      proxyRes.pipe(res, { end: true });
-    }
-  );
+const server = createServer(handler);
 
-  proxyReq.on("error", () => {
-    if (req.url === "/" || req.url === "/health" || req.url === "/api/health" || req.url === "/_health") {
-      res.writeHead(200, { "Content-Type": "text/html" });
-      res.end(indexHtml);
-    } else {
-      res.writeHead(503, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ status: "starting" }));
-    }
-  });
-
-  req.pipe(proxyReq, { end: true });
-}
-
-const server = createServer((req, res) => {
-  if (appReady) {
-    proxyRequest(req, res);
-    return;
-  }
-
-  const url = req.url?.split("?")[0];
-  if (
-    url === "/" ||
-    url === "/health" ||
-    url === "/api/health" ||
-    url === "/_health"
-  ) {
-    res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(indexHtml);
-    return;
-  }
-
-  res.writeHead(503, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ status: "starting" }));
-});
-
-server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
+server.listen({ port, host: "0.0.0.0" }, () => {
   const ts = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     second: "2-digit",
     hour12: true,
   });
-  console.log(
-    `${ts} [express] serving on port ${port} (health check ready)`
-  );
+  console.log(`${ts} [express] serving on port ${port} (health check ready)`);
 
-  const child = fork(join(dir, "appWorker.js"), [], {
-    env: {
-      ...process.env,
-      PORT: String(appPort),
-      NODE_ENV: "production",
-      PROD_ENTRY: "1",
-    },
-    stdio: ["pipe", "inherit", "inherit", "ipc"],
-  });
-
-  child.on("message", (msg: any) => {
-    if (msg === "ready") {
-      appReady = true;
-      const readyTs = new Date().toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      });
+  setImmediate(async () => {
+    try {
+      const mod = await import("./index.js");
+      expressApp = mod.getApp();
+      await mod.initializeApp(server);
       console.log(
-        `${readyTs} [express] ✅ Application fully initialized, proxying requests`
+        `${new Date().toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        })} [express] ✅ Application fully initialized`
       );
+    } catch (err) {
+      console.error("Failed to initialize application:", err);
+      process.exit(1);
     }
-  });
-
-  child.on("exit", (code) => {
-    console.error(
-      `Application worker exited with code ${code}, restarting...`
-    );
-    process.exit(1);
   });
 });
