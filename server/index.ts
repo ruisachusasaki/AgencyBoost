@@ -1989,6 +1989,61 @@ async function runStartupMigrations() {
   }
 }
 
+async function setupFullApp(server: any) {
+  try {
+    await setupAuth(app);
+    log("✅ Replit Auth initialized");
+    
+    setupGoogleCalendar(app);
+    log("✅ Google Calendar OAuth routes initialized");
+    
+    await registerRoutes(app, server);
+
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+
+      res.status(status).json({ message });
+      throw err;
+    });
+
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+
+    appFullyLoaded = true;
+    log("✅ All routes and middleware configured");
+
+    runStartupMigrations().then(() => {
+      import('./googleCalendarBackgroundSync').then(({ startBackgroundSync }) => {
+        startBackgroundSync();
+        log("✅ Google Calendar background sync started");
+      }).catch(err => {
+        log(`⚠️ Failed to start background calendar sync: ${err.message}`);
+      });
+
+      import('./weeklyHoursCheckService').then(({ startWeeklyHoursCheck }) => {
+        startWeeklyHoursCheck();
+        log("✅ Weekly hours check service started");
+      }).catch(err => {
+        log(`⚠️ Failed to start weekly hours check service: ${err.message}`);
+      });
+
+      import('./longRunningTimerService').then(({ startLongRunningTimerCheck }) => {
+        startLongRunningTimerCheck();
+        log("✅ Long-running timer alert service started");
+      }).catch(err => {
+        log(`⚠️ Failed to start long-running timer alert service: ${err.message}`);
+      });
+    });
+  } catch (err: any) {
+    log(`❌ Error during app initialization: ${err.message}`);
+    console.error(err);
+  }
+}
+
 export function getApp() {
   return app;
 }
@@ -2000,64 +2055,20 @@ export async function initializeApp(existingServer?: any) {
     const s = createServer(app);
     await new Promise<void>((resolve) => {
       s.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
-        log(`serving on port ${port} (health check ready)`);
+        log(`serving on port ${port}`);
         resolve();
       });
     });
     return s;
   })());
-
-  await setupAuth(app);
-  log("✅ Replit Auth initialized");
   
-  setupGoogleCalendar(app);
-  log("✅ Google Calendar OAuth routes initialized");
+  log("✅ Server listening - health checks active");
   
-  await registerRoutes(app, server);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
-  appFullyLoaded = true;
-  log("✅ All routes and middleware configured");
-
-  runStartupMigrations().then(() => {
-    import('./googleCalendarBackgroundSync').then(({ startBackgroundSync }) => {
-      startBackgroundSync();
-      log("✅ Google Calendar background sync started");
-    }).catch(err => {
-      log(`⚠️ Failed to start background calendar sync: ${err.message}`);
-    });
-
-    import('./weeklyHoursCheckService').then(({ startWeeklyHoursCheck }) => {
-      startWeeklyHoursCheck();
-      log("✅ Weekly hours check service started");
-    }).catch(err => {
-      log(`⚠️ Failed to start weekly hours check service: ${err.message}`);
-    });
-
-    import('./longRunningTimerService').then(({ startLongRunningTimerCheck }) => {
-      startLongRunningTimerCheck();
-      log("✅ Long-running timer alert service started");
-    }).catch(err => {
-      log(`⚠️ Failed to start long-running timer alert service: ${err.message}`);
-    });
-  });
+  await setupFullApp(server);
 }
 
 // In development mode, auto-start (tsx runs this file directly)
-// In production, prodEntry.ts imports and calls initializeApp()
+// In production, prodEntry.ts imports and calls initializeApp(server) with its existing server
 if (process.env.NODE_ENV !== 'production') {
   initializeApp();
 }

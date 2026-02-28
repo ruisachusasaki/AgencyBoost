@@ -90,3 +90,10 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 ### Session Management
 - **Connect PG Simple**: PostgreSQL session store for Express.
 - **Express Session**: Session middleware.
+
+## Production Deployment Architecture
+- **Target**: VM (always-running for background services)
+- **Build**: `vite build` (frontend) + `esbuild` with `--splitting` (backend → `dist/`)
+- **Entry Point**: `dist/prodEntry.js` — tiny HTTP server that responds to health checks instantly, then asynchronously loads `dist/index.js` with the full Express app
+- **Key Design**: `prodEntry.ts` starts listening on the port immediately (sub-200ms), passes the server to `initializeApp(server)` so the Express app attaches to the same server without creating a duplicate listener
+- **Important**: `server/index.ts` only auto-starts in development mode (`NODE_ENV !== 'production'`). In production, `prodEntry.ts` controls the lifecycle.
