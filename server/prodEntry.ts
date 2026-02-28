@@ -3,13 +3,21 @@ import type { IncomingMessage, ServerResponse } from "http";
 import { fork } from "child_process";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { readFileSync, existsSync } from "fs";
 
 process.env.PROD_ENTRY = "1";
 
-const port = parseInt(process.env.PORT || '5000', 10);
+const port = parseInt(process.env.PORT || "5000", 10);
 const appPort = port + 1;
 
 let appReady = false;
+
+const dir = dirname(fileURLToPath(import.meta.url));
+let indexHtml = "<!DOCTYPE html><html><body>OK</body></html>";
+const htmlPath = join(dir, "public", "index.html");
+if (existsSync(htmlPath)) {
+  indexHtml = readFileSync(htmlPath, "utf-8");
+}
 
 function proxyRequest(req: IncomingMessage, res: ServerResponse) {
   const proxyReq = httpRequest(
@@ -27,8 +35,13 @@ function proxyRequest(req: IncomingMessage, res: ServerResponse) {
   );
 
   proxyReq.on("error", () => {
-    res.writeHead(503, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ status: "starting" }));
+    if (req.url === "/" || req.url === "/health" || req.url === "/api/health" || req.url === "/_health") {
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end(indexHtml);
+    } else {
+      res.writeHead(503, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ status: "starting" }));
+    }
   });
 
   req.pipe(proxyReq, { end: true });
@@ -41,9 +54,14 @@ const server = createServer((req, res) => {
   }
 
   const url = req.url?.split("?")[0];
-  if (url === "/" || url === "/health" || url === "/api/health" || url === "/_health") {
+  if (
+    url === "/" ||
+    url === "/health" ||
+    url === "/api/health" ||
+    url === "/_health"
+  ) {
     res.writeHead(200, { "Content-Type": "text/html" });
-    res.end("<!DOCTYPE html><html><body>OK</body></html>");
+    res.end(indexHtml);
     return;
   }
 
@@ -58,11 +76,17 @@ server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
     second: "2-digit",
     hour12: true,
   });
-  console.log(`${ts} [express] serving on port ${port} (health check ready)`);
+  console.log(
+    `${ts} [express] serving on port ${port} (health check ready)`
+  );
 
-  const dir = dirname(fileURLToPath(import.meta.url));
   const child = fork(join(dir, "appWorker.js"), [], {
-    env: { ...process.env, PORT: String(appPort), NODE_ENV: "production", PROD_ENTRY: "1" },
+    env: {
+      ...process.env,
+      PORT: String(appPort),
+      NODE_ENV: "production",
+      PROD_ENTRY: "1",
+    },
     stdio: ["pipe", "inherit", "inherit", "ipc"],
   });
 
@@ -75,12 +99,16 @@ server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
         second: "2-digit",
         hour12: true,
       });
-      console.log(`${readyTs} [express] ✅ Application fully initialized, proxying requests`);
+      console.log(
+        `${readyTs} [express] ✅ Application fully initialized, proxying requests`
+      );
     }
   });
 
   child.on("exit", (code) => {
-    console.error(`Application worker exited with code ${code}, restarting...`);
+    console.error(
+      `Application worker exited with code ${code}, restarting...`
+    );
     process.exit(1);
   });
 });
