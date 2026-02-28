@@ -1,5 +1,4 @@
 import {
-  getApp,
   initializeApp
 } from "./chunk-FDOVRIRM.js";
 import "./chunk-DE7YTT24.js";
@@ -14,7 +13,16 @@ import "./chunk-BKVCZ54N.js";
 import "./chunk-5WD7MEUZ.js";
 import "./chunk-J6ODQMC3.js";
 import "./chunk-MLKGABMK.js";
-export {
-  getApp,
-  initializeApp
-};
+
+// server/appWorker.ts
+var port = parseInt(process.env.PORT || "5001", 10);
+async function start() {
+  await initializeApp();
+  if (process.send) {
+    process.send("ready");
+  }
+}
+start().catch((err) => {
+  console.error("Worker failed to start:", err);
+  process.exit(1);
+});
