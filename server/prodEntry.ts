@@ -1,5 +1,7 @@
 import { createServer } from "http";
 
+process.env.PROD_ENTRY = "1";
+
 const port = parseInt(process.env.PORT || '5000', 10);
 
 let appHandler: any = null;

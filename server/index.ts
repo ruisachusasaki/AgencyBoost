@@ -2067,9 +2067,10 @@ export async function initializeApp(existingServer?: any) {
   await setupFullApp(server);
 }
 
-// In development mode, auto-start (tsx runs this file directly)
-// In production, prodEntry.ts imports and calls initializeApp(server) with its existing server
-if (process.env.NODE_ENV !== 'production') {
+// Auto-start only when this file is the entry point
+// When prodEntry.ts imports this module, it calls initializeApp(server) explicitly
+// We detect this by checking if PROD_ENTRY env var is set by prodEntry.ts
+if (!process.env.PROD_ENTRY) {
   initializeApp();
 }
 
