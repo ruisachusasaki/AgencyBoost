@@ -110,6 +110,7 @@ export default function ProductsSettings() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("products");
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState("all");
   const [isCreateProductOpen, setIsCreateProductOpen] = useState(false);
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -892,10 +893,13 @@ export default function ProductsSettings() {
 
   // Filter and sort products
   const filteredProducts = products
-    .filter((product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
+    .filter((product) => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesCategory = filterCategory === "all" || 
+        (filterCategory === "uncategorized" ? !product.categoryId : product.categoryId === filterCategory);
+      return matchesSearch && matchesCategory;
+    })
     .sort((a, b) => {
       let aValue: string | number = '';
       let bValue: string | number = '';
@@ -1215,22 +1219,40 @@ export default function ProductsSettings() {
       </div>
 
         <div className="flex justify-between items-center mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder={`Search ${activeTab}...`}
-              value={activeTab === "categories" ? categorySearchTerm : activeTab === "packages" ? packageSearchTerm : searchTerm}
-              onChange={(e) => {
-                if (activeTab === "categories") {
-                  setCategorySearchTerm(e.target.value);
-                } else if (activeTab === "packages") {
-                  setPackageSearchTerm(e.target.value);
-                } else {
-                  setSearchTerm(e.target.value);
-                }
-              }}
-              className="pl-9 w-80"
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder={`Search ${activeTab}...`}
+                value={activeTab === "categories" ? categorySearchTerm : activeTab === "packages" ? packageSearchTerm : searchTerm}
+                onChange={(e) => {
+                  if (activeTab === "categories") {
+                    setCategorySearchTerm(e.target.value);
+                  } else if (activeTab === "packages") {
+                    setPackageSearchTerm(e.target.value);
+                  } else {
+                    setSearchTerm(e.target.value);
+                  }
+                }}
+                className="pl-9 w-80"
+              />
+            </div>
+            {activeTab === "products" && categories.length > 0 && (
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="uncategorized">Uncategorized</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           
           {activeTab === "products" && (
