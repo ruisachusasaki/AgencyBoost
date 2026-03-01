@@ -132,7 +132,7 @@ export default function Sales() {
     margin: "",
     description: "",
   });
-  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: string, type: 'product' | 'bundle' | 'package', quantity: number, customQuantities?: Record<string, number>}>>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Array<{productId: string, type: 'product' | 'bundle' | 'package', quantity: number, customQuantities?: Record<string, number>, customBuildFee?: string}>>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
@@ -560,11 +560,12 @@ export default function Sales() {
     }
   };
 
-  const calculatePackageCost = (packageId: string) => {
+  const calculatePackageCost = (packageId: string, customQuantities?: Record<string, number>, customBuildFee?: string) => {
     const packageDetail = packageItemsData[packageId];
     if (!packageDetail || !packageDetail.items) return 0;
-    return packageDetail.items.reduce((sum: number, item: any) => {
-      const qty = item.quantity || 1;
+    const itemsCost = packageDetail.items.reduce((sum: number, item: any) => {
+      const itemKey = item.id || `${item.itemType}-${item.productId || item.bundleId}`;
+      const qty = customQuantities?.[itemKey] ?? (item.quantity || 1);
       if (item.itemType === 'product' && item.product) {
         return sum + parseFloat(item.product.cost || '0') * qty;
       } else if (item.itemType === 'bundle' && item.bundle) {
@@ -576,6 +577,8 @@ export default function Sales() {
       }
       return sum;
     }, 0);
+    const buildFee = customBuildFee !== undefined ? parseFloat(customBuildFee || '0') : parseFloat(packageDetail.buildFee || '0');
+    return itemsCost + buildFee;
   };
 
   // Quote Builder helper functions
@@ -596,7 +599,7 @@ export default function Sales() {
         const bundleCost = calculateBundleCost(item.productId, item.customQuantities);
         totalCost += bundleCost * quantity;
       } else if (item.type === 'package') {
-        const packageCost = calculatePackageCost(item.productId);
+        const packageCost = calculatePackageCost(item.productId, item.customQuantities, item.customBuildFee);
         totalCost += packageCost * quantity;
       }
     });
@@ -666,6 +669,25 @@ export default function Sales() {
     setSelectedProducts(updated);
   };
 
+  const updatePackageItemQuantity = (packageIndex: number, itemKey: string, quantity: number) => {
+    const updated = [...selectedProducts];
+    const currentCustomQuantities = updated[packageIndex].customQuantities || {};
+    updated[packageIndex] = {
+      ...updated[packageIndex],
+      customQuantities: {
+        ...currentCustomQuantities,
+        [itemKey]: Math.max(1, quantity)
+      }
+    };
+    setSelectedProducts(updated);
+  };
+
+  const updatePackageBuildFee = (packageIndex: number, buildFee: string) => {
+    const updated = [...selectedProducts];
+    updated[packageIndex] = { ...updated[packageIndex], customBuildFee: buildFee };
+    setSelectedProducts(updated);
+  };
+
   const resetQuoteBuilder = () => {
     setQuoteData({
       name: "",
@@ -707,11 +729,24 @@ export default function Sales() {
           await fetchPackageDetails(productId);
         }
         
+        const rawCustom = item.customQuantities as Record<string, any> | null;
+        let customQuantities: Record<string, number> | undefined;
+        let customBuildFee: string | undefined;
+        if (rawCustom && typeof rawCustom === 'object') {
+          if ('__buildFee' in rawCustom) {
+            customBuildFee = String(rawCustom.__buildFee);
+            const { __buildFee, ...rest } = rawCustom;
+            customQuantities = Object.keys(rest).length > 0 ? rest as Record<string, number> : undefined;
+          } else {
+            customQuantities = rawCustom as Record<string, number>;
+          }
+        }
         return {
           productId,
           type: item.itemType,
           quantity: item.quantity || 1,
-          customQuantities: item.customQuantities || undefined,
+          customQuantities,
+          customBuildFee: item.itemType === 'package' ? customBuildFee : undefined,
         };
       }));
       
@@ -884,7 +919,7 @@ export default function Sales() {
         } else if (item.type === 'bundle') {
           unitCost = calculateBundleCost(item.productId, item.customQuantities);
         } else if (item.type === 'package') {
-          unitCost = calculatePackageCost(item.productId);
+          unitCost = calculatePackageCost(item.productId, item.customQuantities, item.customBuildFee);
         }
         
         const itemTotalCost = unitCost * quantity;
@@ -897,7 +932,15 @@ export default function Sales() {
           quantity: quantity,
           unitCost: unitCost.toString(),
           totalCost: itemTotalCost.toString(),
-          customQuantities: item.type === 'bundle' && item.customQuantities ? item.customQuantities : undefined,
+          customQuantities: (() => {
+            if (item.type === 'bundle' && item.customQuantities) return item.customQuantities;
+            if (item.type === 'package') {
+              const pkgCustom: Record<string, any> = { ...(item.customQuantities || {}) };
+              if (item.customBuildFee !== undefined) pkgCustom.__buildFee = item.customBuildFee;
+              return Object.keys(pkgCustom).length > 0 ? pkgCustom : undefined;
+            }
+            return undefined;
+          })(),
         };
       }),
     };
@@ -2045,15 +2088,33 @@ export default function Sales() {
                               {item.type === 'package' && item.productId && packageItemsData[item.productId] && packageItemsData[item.productId].items && (
                                 <Collapsible className="border-t">
                                   <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-sm hover:bg-muted/50 transition-colors" data-testid={`button-toggle-package-items-${index}`}>
-                                    <span className="font-medium">Package Items ({packageItemsData[item.productId].items.length} items)</span>
+                                    <span className="font-medium">Edit Package Items ({packageItemsData[item.productId].items.length} items)</span>
                                     <ChevronDown className="h-4 w-4 transition-transform ui-open:rotate-180" />
                                   </CollapsibleTrigger>
                                   <CollapsibleContent className="p-3 space-y-3 bg-muted/20">
+                                    <div className="flex items-center gap-2 p-2 bg-background rounded border">
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium">Build Fee</p>
+                                        <p className="text-xs text-muted-foreground">One-time setup cost</p>
+                                      </div>
+                                      <div className="w-28">
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          value={item.customBuildFee !== undefined ? item.customBuildFee : (packageItemsData[item.productId].buildFee || '0')}
+                                          onChange={(e) => updatePackageBuildFee(index, e.target.value)}
+                                          className="text-sm"
+                                          data-testid={`input-package-build-fee-${index}`}
+                                        />
+                                      </div>
+                                    </div>
                                     {packageItemsData[item.productId].items.map((pkgItem: any, pkgIdx: number) => {
                                       const itemName = pkgItem.itemType === 'product' 
                                         ? (pkgItem.product?.name || 'Unknown Product')
                                         : (pkgItem.bundle?.name || 'Unknown Bundle');
-                                      const itemQty = pkgItem.quantity || 1;
+                                      const itemKey = pkgItem.id || `${pkgItem.itemType}-${pkgItem.productId || pkgItem.bundleId}`;
+                                      const itemQty = item.customQuantities?.[itemKey] ?? (pkgItem.quantity || 1);
                                       
                                       if (pkgItem.itemType === 'bundle' && pkgItem.bundle) {
                                         const bundleProds = pkgItem.bundle.products || [];
@@ -2062,11 +2123,21 @@ export default function Sales() {
                                         return (
                                           <div key={pkgIdx} className="p-2 bg-background rounded border">
                                             <div className="flex items-center justify-between mb-2">
-                                              <div>
+                                              <div className="flex-1">
                                                 <p className="text-sm font-medium">{itemName}</p>
-                                                <p className="text-xs text-muted-foreground">Bundle × {itemQty}</p>
+                                                <p className="text-xs text-muted-foreground">Bundle</p>
                                               </div>
-                                              <p className="text-sm font-medium text-primary">${(bundleCost * itemQty).toFixed(2)} cost</p>
+                                              <div className="w-20 mr-2">
+                                                <Input
+                                                  type="number"
+                                                  min="1"
+                                                  value={itemQty}
+                                                  onChange={(e) => updatePackageItemQuantity(index, itemKey, parseInt(e.target.value) || 1)}
+                                                  className="text-sm"
+                                                  data-testid={`input-package-item-qty-${index}-${pkgIdx}`}
+                                                />
+                                              </div>
+                                              <p className="text-sm font-medium text-primary w-24 text-right">${(bundleCost * itemQty).toFixed(2)}</p>
                                             </div>
                                             {bundleProds.length > 0 && (
                                               <div className="ml-4 space-y-1 border-l-2 border-muted pl-3">
@@ -2085,13 +2156,23 @@ export default function Sales() {
                                       const productCost = parseFloat(pkgItem.product?.cost || '0');
                                       return (
                                         <div key={pkgIdx} className="flex items-center justify-between p-2 bg-background rounded border">
-                                          <div>
+                                          <div className="flex-1">
                                             <p className="text-sm font-medium">{itemName}</p>
                                             <p className="text-xs text-muted-foreground">
-                                              Product × {itemQty} {pkgItem.product?.type === 'recurring' ? '(recurring)' : ''}
+                                              Product {pkgItem.product?.type === 'recurring' ? '(recurring)' : ''}
                                             </p>
                                           </div>
-                                          <p className="text-sm font-medium text-primary">${(productCost * itemQty).toFixed(2)} cost</p>
+                                          <div className="w-20 mr-2">
+                                            <Input
+                                              type="number"
+                                              min="1"
+                                              value={itemQty}
+                                              onChange={(e) => updatePackageItemQuantity(index, itemKey, parseInt(e.target.value) || 1)}
+                                              className="text-sm"
+                                              data-testid={`input-package-item-qty-${index}-${pkgIdx}`}
+                                            />
+                                          </div>
+                                          <p className="text-sm font-medium text-primary w-24 text-right">${(productCost * itemQty).toFixed(2)}</p>
                                         </div>
                                       );
                                     })}
