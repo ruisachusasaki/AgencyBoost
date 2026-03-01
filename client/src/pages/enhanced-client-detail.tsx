@@ -2221,7 +2221,7 @@ function ImportFromQuoteContent({ clientId, selectedQuoteId, setSelectedQuoteId,
   const { toast } = useToast();
 
   const { data: availableQuotes = [], isLoading: loadingQuotes } = useQuery<any[]>({
-    queryKey: ['/api/clients', clientId, 'available-quotes'],
+    queryKey: [`/api/clients/${clientId}/available-quotes`],
   });
 
   const handleImport = async () => {
