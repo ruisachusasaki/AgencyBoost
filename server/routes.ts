@@ -35275,6 +35275,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
               quantity,
               unitCost: unitCost.toString(),
               totalCost: itemTotalCost.toString(),
+              customQuantities: item.customQuantities || null,
               notes: item.notes || null,
             });
           }
@@ -35442,6 +35443,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           quantity: quoteItems.quantity,
           unitCost: quoteItems.unitCost,
           totalCost: quoteItems.totalCost,
+          customQuantities: quoteItems.customQuantities,
           notes: quoteItems.notes,
           // Join product data
           productName: products.name,
@@ -35599,8 +35601,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
         for (const item of rawItems) {
           // Validate item structure
-          if (!item.itemType || !['product', 'bundle'].includes(item.itemType)) {
-            throw new Error("Invalid item type. Must be 'product' or 'bundle'");
+          if (!item.itemType || !['product', 'bundle', 'package'].includes(item.itemType)) {
+            throw new Error("Invalid item type. Must be 'product', 'bundle', or 'package'");
           }
 
           if (item.itemType === 'product' && !item.productId) {
@@ -35609,6 +35611,10 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           
           if (item.itemType === 'bundle' && !item.bundleId) {
             throw new Error("Bundle ID is required for bundle items");
+          }
+
+          if (item.itemType === 'package' && !item.packageId) {
+            throw new Error("Package ID is required for package items");
           }
 
           const quantity = Math.max(1, parseInt(item.quantity || '1'));
@@ -35691,6 +35697,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             quantity,
             unitCost: unitCost.toString(),
             totalCost: itemTotalCost.toString(),
+            customQuantities: item.customQuantities || null,
             notes: item.notes || null,
           });
         }
