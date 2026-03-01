@@ -615,12 +615,26 @@ export const clientBriefValues = pgTable("client_brief_values", {
   }
 }));
 
+export const projects = pgTable("projects", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  status: text("status").notNull().default("planning"),
+  priority: text("priority").notNull().default("medium"),
+  budget: decimal("budget", { precision: 10, scale: 2 }),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  progress: integer("progress").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const campaigns = pgTable("campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
   clientId: varchar("client_id").notNull().references(() => clients.id),
-  projectId: varchar("project_id"),
+  projectId: varchar("project_id").references(() => projects.id),
   status: text("status").notNull().default("draft"), // draft, active, paused, completed, cancelled
   type: text("type").notNull(), // social_media, ppc, seo, email, content
   budget: decimal("budget", { precision: 10, scale: 2 }),
@@ -839,7 +853,7 @@ export const tasks = pgTable("tasks", {
   workflowId: varchar("workflow_id").references(() => teamWorkflows.id), // Direct workflow assignment
   assignedTo: uuid("assigned_to").references(() => staff.id),
   clientId: varchar("client_id").references(() => clients.id),
-  projectId: varchar("project_id"),
+  projectId: varchar("project_id").references(() => projects.id),
   leadId: varchar("lead_id").references(() => leads.id),
   campaignId: varchar("campaign_id").references(() => campaigns.id),
   dueDate: timestamp("due_date"),
@@ -1097,6 +1111,7 @@ export const invoices = pgTable("invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   invoiceNumber: text("invoice_number").notNull().unique(),
   clientId: varchar("client_id").notNull().references(() => clients.id),
+  projectId: varchar("project_id").references(() => projects.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
