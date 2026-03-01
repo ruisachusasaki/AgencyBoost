@@ -575,21 +575,19 @@ export default function Sales() {
           oneTimeCost += cost;
         }
       } else if (item.itemType === 'bundle' && item.bundle) {
+        const bundleType = item.bundle.type || 'recurring';
         const bundleProds = item.bundle.products || [];
-        let bundleOneTime = 0;
-        let bundleRecurring = 0;
+        let bundleTotalCost = 0;
         bundleProds.forEach((bp: any) => {
           const bpKey = `${itemKey}_bp_${bp.productId}`;
           const bpQty = customQuantities?.[bpKey] ?? (bp.quantity || 1);
-          const bpCost = parseFloat(bp.productCost || '0') * bpQty;
-          if (bp.productType === 'recurring') {
-            bundleRecurring += bpCost;
-          } else {
-            bundleOneTime += bpCost;
-          }
+          bundleTotalCost += parseFloat(bp.productCost || '0') * bpQty;
         });
-        oneTimeCost += bundleOneTime * qty;
-        recurringCost += bundleRecurring * qty;
+        if (bundleType === 'one_time') {
+          oneTimeCost += bundleTotalCost * qty;
+        } else {
+          recurringCost += bundleTotalCost * qty;
+        }
       }
     });
     const buildFee = customBuildFee !== undefined ? parseFloat(customBuildFee || '0') : parseFloat(packageDetail.buildFee || '0');
