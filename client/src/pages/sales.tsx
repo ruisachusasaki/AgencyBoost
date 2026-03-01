@@ -563,24 +563,38 @@ export default function Sales() {
   const calculatePackageCost = (packageId: string, customQuantities?: Record<string, number>, customBuildFee?: string) => {
     const packageDetail = packageItemsData[packageId];
     if (!packageDetail || !packageDetail.items) return 0;
-    const itemsCost = packageDetail.items.reduce((sum: number, item: any) => {
+    let oneTimeCost = 0;
+    let recurringCost = 0;
+    packageDetail.items.forEach((item: any) => {
       const itemKey = item.id || `${item.itemType}-${item.productId || item.bundleId}`;
       const qty = customQuantities?.[itemKey] ?? (item.quantity || 1);
       if (item.itemType === 'product' && item.product) {
-        return sum + parseFloat(item.product.cost || '0') * qty;
+        const cost = parseFloat(item.product.cost || '0') * qty;
+        if (item.product.type === 'recurring') {
+          recurringCost += cost;
+        } else {
+          oneTimeCost += cost;
+        }
       } else if (item.itemType === 'bundle' && item.bundle) {
         const bundleProds = item.bundle.products || [];
-        const bundleCost = bundleProds.reduce((bSum: number, bp: any) => {
+        let bundleOneTime = 0;
+        let bundleRecurring = 0;
+        bundleProds.forEach((bp: any) => {
           const bpKey = `${itemKey}_bp_${bp.productId}`;
           const bpQty = customQuantities?.[bpKey] ?? (bp.quantity || 1);
-          return bSum + parseFloat(bp.productCost || '0') * bpQty;
-        }, 0);
-        return sum + bundleCost * qty;
+          const bpCost = parseFloat(bp.productCost || '0') * bpQty;
+          if (bp.productType === 'recurring') {
+            bundleRecurring += bpCost;
+          } else {
+            bundleOneTime += bpCost;
+          }
+        });
+        oneTimeCost += bundleOneTime * qty;
+        recurringCost += bundleRecurring * qty;
       }
-      return sum;
-    }, 0);
+    });
     const buildFee = customBuildFee !== undefined ? parseFloat(customBuildFee || '0') : parseFloat(packageDetail.buildFee || '0');
-    return itemsCost + buildFee;
+    return { oneTimeCost: oneTimeCost + buildFee, recurringCost, totalCost: oneTimeCost + buildFee + recurringCost };
   };
 
   // Quote Builder helper functions
@@ -589,38 +603,54 @@ export default function Sales() {
     const desiredMargin = parseFloat(quoteData.margin) || 0;
     
     // Calculate total cost of selected products/bundles with quantities
-    let totalCost = 0;
+    let monthlyCost = 0;
+    let oneTimeCost = 0;
     selectedProducts.forEach(item => {
       const quantity = item.quantity || 1;
       if (item.type === 'product') {
         const product = products.find(p => p.id === item.productId);
         if (product && product.cost) {
-          totalCost += parseFloat(product.cost) * quantity;
+          const cost = parseFloat(product.cost) * quantity;
+          if (product.type === 'recurring') {
+            monthlyCost += cost;
+          } else {
+            oneTimeCost += cost;
+          }
         }
       } else if (item.type === 'bundle') {
         const bundleCost = calculateBundleCost(item.productId, item.customQuantities);
-        totalCost += bundleCost * quantity;
+        monthlyCost += bundleCost * quantity;
       } else if (item.type === 'package') {
-        const packageCost = calculatePackageCost(item.productId, item.customQuantities, item.customBuildFee);
-        totalCost += packageCost * quantity;
+        const pkgCosts = calculatePackageCost(item.productId, item.customQuantities, item.customBuildFee);
+        if (typeof pkgCosts === 'number') {
+          monthlyCost += pkgCosts * quantity;
+        } else {
+          monthlyCost += pkgCosts.recurringCost * quantity;
+          oneTimeCost += pkgCosts.oneTimeCost * quantity;
+        }
       }
     });
 
+    const totalCost = monthlyCost;
+
     // Correct calculation logic:
-    // revenue = budget (what client pays)
-    // profit = revenue - totalCost
+    // revenue = budget (what client pays monthly)
+    // profit = revenue - monthlyCost (recurring monthly costs only)
     // actualMargin = (profit / revenue) * 100
+    // One-time costs (build fees, setup) are tracked separately
     const revenue = budget;
-    const profit = revenue - totalCost;
+    const profit = revenue - monthlyCost;
     const actualMargin = revenue > 0 ? ((profit / revenue) * 100) : 0;
     
     // Target revenue based on desired margin
-    const targetRevenue = totalCost > 0 ? (totalCost / (1 - desiredMargin / 100)) : budget;
+    const targetRevenue = monthlyCost > 0 ? (monthlyCost / (1 - desiredMargin / 100)) : budget;
 
     return {
       budget: revenue,
       desiredMargin,
       totalCost,
+      oneTimeCost,
+      monthlyCost,
       profit,
       actualMargin,
       targetRevenue,
@@ -921,7 +951,8 @@ export default function Sales() {
         } else if (item.type === 'bundle') {
           unitCost = calculateBundleCost(item.productId, item.customQuantities);
         } else if (item.type === 'package') {
-          unitCost = calculatePackageCost(item.productId, item.customQuantities, item.customBuildFee);
+          const pkgCosts = calculatePackageCost(item.productId, item.customQuantities, item.customBuildFee);
+          unitCost = typeof pkgCosts === 'number' ? pkgCosts : pkgCosts.totalCost;
         }
         
         const itemTotalCost = unitCost * quantity;
@@ -1886,25 +1917,30 @@ export default function Sales() {
                               <>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                   <div>
-                                    <span className="text-muted-foreground">Client Budget:</span>
+                                    <span className="text-muted-foreground">Client Budget (Monthly):</span>
                                     <p className="font-medium" data-testid="quote-summary-budget">
                                       ${totals.budget.toLocaleString()}
                                     </p>
                                   </div>
                                   <div>
-                                    <span className="text-muted-foreground">Total Cost:</span>
+                                    <span className="text-muted-foreground">Monthly Cost:</span>
                                     <p className="font-medium" data-testid="quote-summary-cost">
-                                      ${totals.totalCost.toLocaleString()}
+                                      ${totals.monthlyCost.toLocaleString()}
                                     </p>
+                                    {totals.oneTimeCost > 0 && (
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        + ${totals.oneTimeCost.toLocaleString()} one-time
+                                      </p>
+                                    )}
                                   </div>
                                   <div>
-                                    <span className="text-muted-foreground">Profit:</span>
+                                    <span className="text-muted-foreground">Monthly Profit:</span>
                                     <p className={`font-medium ${totals.profit < 0 ? 'text-red-600' : 'text-green-600'}`} data-testid="quote-summary-profit">
                                       ${totals.profit.toLocaleString()}
                                     </p>
                                   </div>
                                   <div>
-                                    <span className="text-muted-foreground">Actual Margin:</span>
+                                    <span className="text-muted-foreground">Monthly Margin:</span>
                                     <p className={`font-medium ${totals.actualMargin < minimumMarginThreshold ? 'text-red-600' : 'text-green-600'}`} data-testid="quote-summary-margin">
                                       {totals.actualMargin.toFixed(1)}%
                                     </p>
@@ -2021,10 +2057,11 @@ export default function Sales() {
                                         })
                                       ) : (
                                         filteredPackages.map((pkg: any) => {
-                                          const pkgCost = calculatePackageCost(pkg.id);
+                                          const pkgCosts = calculatePackageCost(pkg.id);
+                                          const displayCost = typeof pkgCosts === 'number' ? pkgCosts : pkgCosts.totalCost;
                                           return (
                                             <SelectItem key={pkg.id} value={pkg.id}>
-                                              {pkg.name} - ${pkgCost.toFixed(2)} cost
+                                              {pkg.name} - ${displayCost.toFixed(2)} cost
                                             </SelectItem>
                                           );
                                         })
