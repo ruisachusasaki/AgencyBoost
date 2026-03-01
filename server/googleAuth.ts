@@ -15,7 +15,7 @@ if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
 
 function getRedirectUri(req: Request): string {
   const protocol = "https";
-  const host = req.get("host") || req.hostname;
+  const host = req.get("x-forwarded-host") || req.get("host") || req.hostname;
   return `${protocol}://${host}/api/callback`;
 }
 

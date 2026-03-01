@@ -26,7 +26,11 @@ function proxyToWorker(req: IncomingMessage, res: ServerResponse) {
       port: workerPort,
       path: req.url || "/",
       method: req.method || "GET",
-      headers: { ...req.headers, host: `127.0.0.1:${workerPort}` },
+      headers: {
+        ...req.headers,
+        "x-forwarded-host": req.headers.host || "",
+        "x-forwarded-proto": "https",
+      },
     },
     (proxyRes) => {
       res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);

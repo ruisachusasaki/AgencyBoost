@@ -1,7 +1,7 @@
 import {
   getApp,
   initializeApp
-} from "./chunk-D5O4LJ6S.js";
+} from "./chunk-A2PY56CK.js";
 import "./chunk-DE7YTT24.js";
 import "./chunk-XGULHHIG.js";
 import "./chunk-BGP47S4B.js";
