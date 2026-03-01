@@ -1,6 +1,7 @@
 import { createServer, request as httpRequest } from "http";
 import type { IncomingMessage, ServerResponse } from "http";
 import { spawn } from "child_process";
+import type { ChildProcess } from "child_process";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
@@ -9,6 +10,7 @@ process.env.PROD_ENTRY = "1";
 const port = parseInt(process.env.PORT || "5000", 10);
 const workerPort = port + 1;
 let workerReady = false;
+let child: ChildProcess | null = null;
 
 const OK_HTML = `<!DOCTYPE html><html><head><title>AgencyBoost</title><meta http-equiv="refresh" content="3"></head><body><p>Loading...</p></body></html>`;
 
@@ -18,24 +20,25 @@ function sendOk(res: ServerResponse) {
 }
 
 function proxyToWorker(req: IncomingMessage, res: ServerResponse) {
-  const opts = {
-    hostname: "127.0.0.1",
-    port: workerPort,
-    path: req.url || "/",
-    method: req.method || "GET",
-    headers: { ...req.headers, host: `127.0.0.1:${workerPort}` },
-  };
-
-  const proxyReq = httpRequest(opts, (proxyRes) => {
-    res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
-    proxyRes.pipe(res, { end: true });
-  });
+  const proxyReq = httpRequest(
+    {
+      hostname: "127.0.0.1",
+      port: workerPort,
+      path: req.url || "/",
+      method: req.method || "GET",
+      headers: { ...req.headers, host: `127.0.0.1:${workerPort}` },
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+      proxyRes.pipe(res, { end: true });
+    }
+  );
 
   proxyReq.on("error", () => {
     sendOk(res);
   });
 
-  proxyReq.setTimeout(5000, () => {
+  proxyReq.setTimeout(10000, () => {
     proxyReq.destroy();
     sendOk(res);
   });
@@ -51,15 +54,13 @@ const server = createServer((req, res) => {
   }
 });
 
-server.listen(port, "0.0.0.0", () => {
-  console.log(
-    `${new Date().toISOString()} [prodEntry] Listening on port ${port} - health checks active`
-  );
+const dir = dirname(fileURLToPath(import.meta.url));
+const workerScript = join(dir, "appWorker.js");
 
-  const dir = dirname(fileURLToPath(import.meta.url));
-  const workerScript = join(dir, "appWorker.js");
+function startWorker() {
+  workerReady = false;
 
-  const child = spawn(process.execPath, [workerScript], {
+  child = spawn(process.execPath, [workerScript], {
     env: {
       ...process.env,
       PORT: String(workerPort),
@@ -78,7 +79,18 @@ server.listen(port, "0.0.0.0", () => {
   });
 
   child.on("exit", (code) => {
-    console.error(`[prodEntry] Worker exited with code ${code}, shutting down`);
-    process.exit(1);
+    console.error(
+      `${new Date().toISOString()} [prodEntry] Worker exited with code ${code}, restarting in 2s...`
+    );
+    workerReady = false;
+    child = null;
+    setTimeout(startWorker, 2000);
   });
+}
+
+server.listen(port, "0.0.0.0", () => {
+  console.log(
+    `${new Date().toISOString()} [prodEntry] Listening on port ${port} - health checks active`
+  );
+  startWorker();
 });

@@ -7,27 +7,30 @@ process.env.PROD_ENTRY = "1";
 var port = parseInt(process.env.PORT || "5000", 10);
 var workerPort = port + 1;
 var workerReady = false;
+var child = null;
 var OK_HTML = `<!DOCTYPE html><html><head><title>AgencyBoost</title><meta http-equiv="refresh" content="3"></head><body><p>Loading...</p></body></html>`;
 function sendOk(res) {
   res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
   res.end(OK_HTML);
 }
 function proxyToWorker(req, res) {
-  const opts = {
-    hostname: "127.0.0.1",
-    port: workerPort,
-    path: req.url || "/",
-    method: req.method || "GET",
-    headers: { ...req.headers, host: `127.0.0.1:${workerPort}` }
-  };
-  const proxyReq = httpRequest(opts, (proxyRes) => {
-    res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
-    proxyRes.pipe(res, { end: true });
-  });
+  const proxyReq = httpRequest(
+    {
+      hostname: "127.0.0.1",
+      port: workerPort,
+      path: req.url || "/",
+      method: req.method || "GET",
+      headers: { ...req.headers, host: `127.0.0.1:${workerPort}` }
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+      proxyRes.pipe(res, { end: true });
+    }
+  );
   proxyReq.on("error", () => {
     sendOk(res);
   });
-  proxyReq.setTimeout(5e3, () => {
+  proxyReq.setTimeout(1e4, () => {
     proxyReq.destroy();
     sendOk(res);
   });
@@ -40,13 +43,11 @@ var server = createServer((req, res) => {
     sendOk(res);
   }
 });
-server.listen(port, "0.0.0.0", () => {
-  console.log(
-    `${(/* @__PURE__ */ new Date()).toISOString()} [prodEntry] Listening on port ${port} - health checks active`
-  );
-  const dir = dirname(fileURLToPath(import.meta.url));
-  const workerScript = join(dir, "appWorker.js");
-  const child = spawn(process.execPath, [workerScript], {
+var dir = dirname(fileURLToPath(import.meta.url));
+var workerScript = join(dir, "appWorker.js");
+function startWorker() {
+  workerReady = false;
+  child = spawn(process.execPath, [workerScript], {
     env: {
       ...process.env,
       PORT: String(workerPort),
@@ -63,7 +64,17 @@ server.listen(port, "0.0.0.0", () => {
     }
   });
   child.on("exit", (code) => {
-    console.error(`[prodEntry] Worker exited with code ${code}, shutting down`);
-    process.exit(1);
+    console.error(
+      `${(/* @__PURE__ */ new Date()).toISOString()} [prodEntry] Worker exited with code ${code}, restarting in 2s...`
+    );
+    workerReady = false;
+    child = null;
+    setTimeout(startWorker, 2e3);
   });
+}
+server.listen(port, "0.0.0.0", () => {
+  console.log(
+    `${(/* @__PURE__ */ new Date()).toISOString()} [prodEntry] Listening on port ${port} - health checks active`
+  );
+  startWorker();
 });
