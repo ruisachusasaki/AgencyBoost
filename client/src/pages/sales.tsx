@@ -571,7 +571,9 @@ export default function Sales() {
       } else if (item.itemType === 'bundle' && item.bundle) {
         const bundleProds = item.bundle.products || [];
         const bundleCost = bundleProds.reduce((bSum: number, bp: any) => {
-          return bSum + parseFloat(bp.productCost || '0') * (bp.quantity || 1);
+          const bpKey = `${itemKey}_bp_${bp.productId}`;
+          const bpQty = customQuantities?.[bpKey] ?? (bp.quantity || 1);
+          return bSum + parseFloat(bp.productCost || '0') * bpQty;
         }, 0);
         return sum + bundleCost * qty;
       }
@@ -2118,8 +2120,11 @@ export default function Sales() {
                                       
                                       if (pkgItem.itemType === 'bundle' && pkgItem.bundle) {
                                         const bundleProds = pkgItem.bundle.products || [];
-                                        const bundleCost = bundleProds.reduce((sum: number, bp: any) => 
-                                          sum + parseFloat(bp.productCost || '0') * (bp.quantity || 1), 0);
+                                        const bundleCost = bundleProds.reduce((sum: number, bp: any) => {
+                                          const bpKey = `${itemKey}_bp_${bp.productId}`;
+                                          const bpQty = item.customQuantities?.[bpKey] ?? (bp.quantity || 1);
+                                          return sum + parseFloat(bp.productCost || '0') * bpQty;
+                                        }, 0);
                                         return (
                                           <div key={pkgIdx} className="p-2 bg-background rounded border">
                                             <div className="flex items-center justify-between mb-2">
@@ -2140,13 +2145,28 @@ export default function Sales() {
                                               <p className="text-sm font-medium text-primary w-24 text-right">${(bundleCost * itemQty).toFixed(2)}</p>
                                             </div>
                                             {bundleProds.length > 0 && (
-                                              <div className="ml-4 space-y-1 border-l-2 border-muted pl-3">
-                                                {bundleProds.map((bp: any) => (
-                                                  <div key={bp.id || bp.productId} className="flex justify-between text-xs text-muted-foreground">
-                                                    <span>{bp.productName} × {bp.quantity || 1} {bp.productType === 'recurring' ? '(recurring)' : ''}</span>
-                                                    <span>${(parseFloat(bp.productCost || '0') * (bp.quantity || 1)).toFixed(2)}</span>
-                                                  </div>
-                                                ))}
+                                              <div className="ml-4 space-y-1.5 border-l-2 border-muted pl-3">
+                                                {bundleProds.map((bp: any, bpIdx: number) => {
+                                                  const bpKey = `${itemKey}_bp_${bp.productId}`;
+                                                  const bpQty = item.customQuantities?.[bpKey] ?? (bp.quantity || 1);
+                                                  const bpCost = parseFloat(bp.productCost || '0') * bpQty;
+                                                  return (
+                                                    <div key={bp.id || bp.productId} className="flex items-center justify-between text-xs text-muted-foreground">
+                                                      <span className="flex-1">{bp.productName} {bp.productType === 'recurring' ? '(recurring)' : ''}</span>
+                                                      <div className="w-16 mx-2">
+                                                        <Input
+                                                          type="number"
+                                                          min="1"
+                                                          value={bpQty}
+                                                          onChange={(e) => updatePackageItemQuantity(index, bpKey, parseInt(e.target.value) || 1)}
+                                                          className="h-6 text-xs px-1"
+                                                          data-testid={`input-package-bp-qty-${index}-${pkgIdx}-${bpIdx}`}
+                                                        />
+                                                      </div>
+                                                      <span className="w-16 text-right">${bpCost.toFixed(2)}</span>
+                                                    </div>
+                                                  );
+                                                })}
                                               </div>
                                             )}
                                           </div>
