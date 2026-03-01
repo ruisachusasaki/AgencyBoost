@@ -594,7 +594,7 @@ export default function Sales() {
       }
     });
     const buildFee = customBuildFee !== undefined ? parseFloat(customBuildFee || '0') : parseFloat(packageDetail.buildFee || '0');
-    return { oneTimeCost: oneTimeCost + buildFee, recurringCost, totalCost: oneTimeCost + buildFee + recurringCost };
+    return { oneTimeCost, buildFee, recurringCost, totalCost: oneTimeCost + recurringCost };
   };
 
   // Quote Builder helper functions
@@ -605,6 +605,7 @@ export default function Sales() {
     // Calculate total cost of selected products/bundles with quantities
     let monthlyCost = 0;
     let oneTimeCost = 0;
+    let buildFeeCost = 0;
     selectedProducts.forEach(item => {
       const quantity = item.quantity || 1;
       if (item.type === 'product') {
@@ -627,6 +628,7 @@ export default function Sales() {
         } else {
           monthlyCost += pkgCosts.recurringCost * quantity;
           oneTimeCost += pkgCosts.oneTimeCost * quantity;
+          buildFeeCost += pkgCosts.buildFee * quantity; // Build fee is revenue, not cost
         }
       }
     });
@@ -650,6 +652,7 @@ export default function Sales() {
       desiredMargin,
       totalCost,
       oneTimeCost,
+      buildFeeCost,
       monthlyCost,
       profit,
       actualMargin,
@@ -1921,6 +1924,11 @@ export default function Sales() {
                                     <p className="font-medium" data-testid="quote-summary-budget">
                                       ${totals.budget.toLocaleString()}
                                     </p>
+                                    {totals.buildFeeCost > 0 && (
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        + ${totals.buildFeeCost.toLocaleString()} build fee
+                                      </p>
+                                    )}
                                   </div>
                                   <div>
                                     <span className="text-muted-foreground">Monthly Cost:</span>
@@ -1929,7 +1937,7 @@ export default function Sales() {
                                     </p>
                                     {totals.oneTimeCost > 0 && (
                                       <p className="text-xs text-muted-foreground mt-1">
-                                        + ${totals.oneTimeCost.toLocaleString()} one-time
+                                        + ${totals.oneTimeCost.toLocaleString()} one-time cost
                                       </p>
                                     )}
                                   </div>
