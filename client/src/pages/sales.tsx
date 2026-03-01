@@ -635,9 +635,16 @@ export default function Sales() {
           }
         }
       } else if (item.type === 'bundle') {
-        const bundleCostSplit = calculateBundleCostSplit(item.productId, item.customQuantities);
-        monthlyCost += bundleCostSplit.recurringCost * quantity;
-        oneTimeCost += bundleCostSplit.oneTimeCost * quantity;
+        const bundleCost = calculateBundleCost(item.productId, item.customQuantities);
+        const bundleCostWithQty = bundleCost * quantity;
+        console.log(`[QUOTE DEBUG] Bundle "${item.productId}" cost=${bundleCost} qty=${quantity} total=${bundleCostWithQty}`);
+        const bpData = bundleProductsData[item.productId] || [];
+        bpData.forEach((bp: any) => {
+          const bpCost = parseFloat(bp.productCost || '0');
+          const bpQty = item.customQuantities?.[bp.productId] || 1;
+          console.log(`  - "${bp.productName}" cost=${bpCost} qty=${bpQty} type=${bp.productType} subtotal=${bpCost * bpQty}`);
+        });
+        monthlyCost += bundleCostWithQty;
       } else if (item.type === 'package') {
         const pkgCosts = calculatePackageCost(item.productId, item.customQuantities, item.customBuildFee);
         if (typeof pkgCosts === 'number') {
@@ -650,6 +657,7 @@ export default function Sales() {
       }
     });
 
+    console.log(`[QUOTE DEBUG] TOTAL monthlyCost=${monthlyCost} oneTimeCost=${oneTimeCost} buildFee=${buildFeeCost} items=${selectedProducts.length}`);
     const totalCost = monthlyCost;
 
     // Correct calculation logic:
