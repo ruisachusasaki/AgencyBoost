@@ -2790,6 +2790,103 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                       transferredCount++;
                       console.log(`✅ Transferred bundle ${item.bundleId} to client ${client.id}`);
                     }
+                  } else if (item.itemType === 'package' && item.packageId) {
+                    // Transfer package to client
+                    const existingPkg = await db
+                      .select()
+                      .from(clientPackages)
+                      .where(
+                        and(
+                          eq(clientPackages.clientId, client.id),
+                          eq(clientPackages.packageId, item.packageId)
+                        )
+                      )
+                      .limit(1);
+
+                    if (existingPkg.length === 0) {
+                      await db.insert(clientPackages).values({
+                        clientId: client.id,
+                        packageId: item.packageId,
+                        price: item.unitCost?.toString() || '0',
+                        status: 'active',
+                        customQuantities: item.customQuantities,
+                      });
+                      transferredCount++;
+                      console.log(`✅ Transferred package ${item.packageId} to client ${client.id}`);
+                    }
+
+                    // Also transfer individual bundles from within the package
+                    const pkgItems = await db
+                      .select()
+                      .from(packageItems)
+                      .where(eq(packageItems.packageId, item.packageId));
+
+                    for (const pkgItem of pkgItems) {
+                      if (pkgItem.itemType === 'bundle' && pkgItem.bundleId) {
+                        // Check bundle type - only transfer recurring bundles as ongoing client bundles
+                        const [bundleInfo] = await db.select().from(productBundles).where(eq(productBundles.id, pkgItem.bundleId));
+                        const bundleType = bundleInfo?.type || 'recurring';
+                        if (bundleType === 'recurring') {
+                          const existingBundle = await db
+                            .select()
+                            .from(clientBundles)
+                            .where(
+                              and(
+                                eq(clientBundles.clientId, client.id),
+                                eq(clientBundles.bundleId, pkgItem.bundleId)
+                              )
+                            )
+                            .limit(1);
+
+                          if (existingBundle.length === 0) {
+                            // Build custom quantities from the package item's custom quantities
+                            const bundleCustomQtys: Record<string, number> = {};
+                            if (item.customQuantities) {
+                              const cq = item.customQuantities as Record<string, number>;
+                              // Find bundle product quantities from the quote's custom quantities
+                              const itemKey = pkgItem.id || `bundle-${pkgItem.bundleId}`;
+                              for (const [key, val] of Object.entries(cq)) {
+                                if (key.includes(`_bp_`)) {
+                                  bundleCustomQtys[key] = val;
+                                }
+                              }
+                            }
+
+                            await db.insert(clientBundles).values({
+                              clientId: client.id,
+                              bundleId: pkgItem.bundleId,
+                              customQuantities: Object.keys(bundleCustomQtys).length > 0 ? bundleCustomQtys : null,
+                            });
+                            transferredCount++;
+                            console.log(`✅ Transferred bundle ${pkgItem.bundleId} from package ${item.packageId} to client ${client.id}`);
+                          }
+                        }
+                      } else if (pkgItem.itemType === 'product' && pkgItem.productId) {
+                        // Transfer individual products from package
+                        const [productInfo] = await db.select().from(products).where(eq(products.id, pkgItem.productId));
+                        if (productInfo?.type === 'recurring') {
+                          const existingProd = await db
+                            .select()
+                            .from(clientProducts)
+                            .where(
+                              and(
+                                eq(clientProducts.clientId, client.id),
+                                eq(clientProducts.productId, pkgItem.productId)
+                              )
+                            )
+                            .limit(1);
+
+                          if (existingProd.length === 0) {
+                            await db.insert(clientProducts).values({
+                              clientId: client.id,
+                              productId: pkgItem.productId,
+                            });
+                            transferredCount++;
+                            console.log(`✅ Transferred product ${pkgItem.productId} from package ${item.packageId} to client ${client.id}`);
+                          }
+                        }
+                      }
+                    }
                   }
                 }
 
@@ -35997,6 +36094,89 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                     customQuantities: item.customQuantities
                   });
                 transferredCount++;
+              }
+            } else if (item.itemType === 'package' && item.packageId) {
+              // Transfer package to client
+              const existingPkg = await db
+                .select()
+                .from(clientPackages)
+                .where(
+                  and(
+                    eq(clientPackages.clientId, quote.clientId),
+                    eq(clientPackages.packageId, item.packageId)
+                  )
+                )
+                .limit(1);
+
+              if (existingPkg.length === 0) {
+                await db.insert(clientPackages).values({
+                  clientId: quote.clientId,
+                  packageId: item.packageId,
+                  price: item.unitCost?.toString() || '0',
+                  status: 'active',
+                  customQuantities: item.customQuantities,
+                });
+                transferredCount++;
+              }
+
+              // Also transfer individual recurring bundles and products from within the package
+              const pkgItems = await db
+                .select()
+                .from(packageItems)
+                .where(eq(packageItems.packageId, item.packageId));
+
+              for (const pkgItem of pkgItems) {
+                if (pkgItem.itemType === 'bundle' && pkgItem.bundleId) {
+                  const [bundleInfo] = await db.select().from(productBundles).where(eq(productBundles.id, pkgItem.bundleId));
+                  const bundleType = bundleInfo?.type || 'recurring';
+                  if (bundleType === 'recurring') {
+                    const existingBundle = await db
+                      .select()
+                      .from(clientBundles)
+                      .where(
+                        and(
+                          eq(clientBundles.clientId, quote.clientId),
+                          eq(clientBundles.bundleId, pkgItem.bundleId)
+                        )
+                      )
+                      .limit(1);
+
+                    if (existingBundle.length === 0) {
+                      await db.insert(clientBundles).values({
+                        clientId: quote.clientId,
+                        bundleId: pkgItem.bundleId,
+                        status: 'active',
+                      });
+                      transferredCount++;
+                      console.log(`✅ Transferred recurring bundle ${pkgItem.bundleId} from package ${item.packageId} to client ${quote.clientId}`);
+                    }
+                  }
+                } else if (pkgItem.itemType === 'product' && pkgItem.productId) {
+                  const [productInfo] = await db.select().from(products).where(eq(products.id, pkgItem.productId));
+                  if (productInfo?.type === 'recurring') {
+                    const existingProd = await db
+                      .select()
+                      .from(clientProducts)
+                      .where(
+                        and(
+                          eq(clientProducts.clientId, quote.clientId),
+                          eq(clientProducts.productId, pkgItem.productId)
+                        )
+                      )
+                      .limit(1);
+
+                    if (existingProd.length === 0) {
+                      await db.insert(clientProducts).values({
+                        clientId: quote.clientId,
+                        productId: pkgItem.productId,
+                        price: productInfo.cost?.toString() || '0',
+                        status: 'active',
+                      });
+                      transferredCount++;
+                      console.log(`✅ Transferred recurring product ${pkgItem.productId} from package ${item.packageId} to client ${quote.clientId}`);
+                    }
+                  }
+                }
               }
             }
           }
