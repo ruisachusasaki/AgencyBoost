@@ -10,6 +10,7 @@ packages = ["jq"]
 deploymentTarget = "vm"
 build = ["echo", "pre-built"]
 run = ["bash", "-c", "NODE_ENV=production node dist/prodEntry.js"]
+publicDir = "dist/public"
 
 [env]
 PORT = "5000"
