@@ -35437,6 +35437,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           id: quoteItems.id,
           productId: quoteItems.productId,
           bundleId: quoteItems.bundleId,
+          packageId: quoteItems.packageId,
           itemType: quoteItems.itemType,
           quantity: quoteItems.quantity,
           unitCost: quoteItems.unitCost,
@@ -35448,10 +35449,14 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           // Join bundle data
           bundleName: productBundles.name,
           bundleDescription: productBundles.description,
+          // Join package data
+          packageName: productPackages.name,
+          packageDescription: productPackages.description,
         })
         .from(quoteItems)
         .leftJoin(products, eq(quoteItems.productId, products.id))
         .leftJoin(productBundles, eq(quoteItems.bundleId, productBundles.id))
+        .leftJoin(productPackages, eq(quoteItems.packageId, productPackages.id))
         .where(eq(quoteItems.quoteId, id));
 
       res.json({ ...quote, items });

@@ -186,6 +186,16 @@ export default function Sales() {
     refetchOnWindowFocus: false,
   });
 
+  useEffect(() => {
+    if (packages && packages.length > 0) {
+      packages.forEach((pkg: any) => {
+        if (!packageItemsData[pkg.id]) {
+          fetchPackageDetails(pkg.id);
+        }
+      });
+    }
+  }, [packages]);
+
   // Fetch quotes for the quotes tab
   const { data: quotesData = [] } = useQuery({
     queryKey: ["/api/quotes"],
@@ -554,9 +564,17 @@ export default function Sales() {
     const packageDetail = packageItemsData[packageId];
     if (!packageDetail || !packageDetail.items) return 0;
     return packageDetail.items.reduce((sum: number, item: any) => {
-      const cost = parseFloat(item.cost || item.productCost || '0');
       const qty = item.quantity || 1;
-      return sum + (cost * qty);
+      if (item.itemType === 'product' && item.product) {
+        return sum + parseFloat(item.product.cost || '0') * qty;
+      } else if (item.itemType === 'bundle' && item.bundle) {
+        const bundleProds = item.bundle.products || [];
+        const bundleCost = bundleProds.reduce((bSum: number, bp: any) => {
+          return bSum + parseFloat(bp.productCost || '0') * (bp.quantity || 1);
+        }, 0);
+        return sum + bundleCost * qty;
+      }
+      return sum;
     }, 0);
   };
 
@@ -2030,17 +2048,53 @@ export default function Sales() {
                                     <span className="font-medium">Package Items ({packageItemsData[item.productId].items.length} items)</span>
                                     <ChevronDown className="h-4 w-4 transition-transform ui-open:rotate-180" />
                                   </CollapsibleTrigger>
-                                  <CollapsibleContent className="p-3 space-y-2 bg-muted/20">
-                                    {packageItemsData[item.productId].items.map((pkgItem: any, pkgIdx: number) => (
-                                      <div key={pkgIdx} className="flex items-center gap-2 p-2 bg-background rounded border">
-                                        <div className="flex-1">
-                                          <p className="text-sm font-medium">{pkgItem.productName || pkgItem.bundleName || pkgItem.name}</p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {pkgItem.itemType === 'bundle' ? 'Bundle' : 'Product'} - ${pkgItem.cost || pkgItem.productCost || '0.00'} × {pkgItem.quantity || 1}
-                                          </p>
+                                  <CollapsibleContent className="p-3 space-y-3 bg-muted/20">
+                                    {packageItemsData[item.productId].items.map((pkgItem: any, pkgIdx: number) => {
+                                      const itemName = pkgItem.itemType === 'product' 
+                                        ? (pkgItem.product?.name || 'Unknown Product')
+                                        : (pkgItem.bundle?.name || 'Unknown Bundle');
+                                      const itemQty = pkgItem.quantity || 1;
+                                      
+                                      if (pkgItem.itemType === 'bundle' && pkgItem.bundle) {
+                                        const bundleProds = pkgItem.bundle.products || [];
+                                        const bundleCost = bundleProds.reduce((sum: number, bp: any) => 
+                                          sum + parseFloat(bp.productCost || '0') * (bp.quantity || 1), 0);
+                                        return (
+                                          <div key={pkgIdx} className="p-2 bg-background rounded border">
+                                            <div className="flex items-center justify-between mb-2">
+                                              <div>
+                                                <p className="text-sm font-medium">{itemName}</p>
+                                                <p className="text-xs text-muted-foreground">Bundle × {itemQty}</p>
+                                              </div>
+                                              <p className="text-sm font-medium text-primary">${(bundleCost * itemQty).toFixed(2)} cost</p>
+                                            </div>
+                                            {bundleProds.length > 0 && (
+                                              <div className="ml-4 space-y-1 border-l-2 border-muted pl-3">
+                                                {bundleProds.map((bp: any) => (
+                                                  <div key={bp.id || bp.productId} className="flex justify-between text-xs text-muted-foreground">
+                                                    <span>{bp.productName} × {bp.quantity || 1} {bp.productType === 'recurring' ? '(recurring)' : ''}</span>
+                                                    <span>${(parseFloat(bp.productCost || '0') * (bp.quantity || 1)).toFixed(2)}</span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      }
+                                      
+                                      const productCost = parseFloat(pkgItem.product?.cost || '0');
+                                      return (
+                                        <div key={pkgIdx} className="flex items-center justify-between p-2 bg-background rounded border">
+                                          <div>
+                                            <p className="text-sm font-medium">{itemName}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                              Product × {itemQty} {pkgItem.product?.type === 'recurring' ? '(recurring)' : ''}
+                                            </p>
+                                          </div>
+                                          <p className="text-sm font-medium text-primary">${(productCost * itemQty).toFixed(2)} cost</p>
                                         </div>
-                                      </div>
-                                    ))}
+                                      );
+                                    })}
                                   </CollapsibleContent>
                                 </Collapsible>
                               )}
@@ -2716,9 +2770,9 @@ export default function Sales() {
                       quote.items.map((item: any, index: number) => (
                         <div key={index} className="p-3 flex justify-between items-center" data-testid={`div-quote-item-${index}`}>
                           <div>
-                            <p className="font-medium">{item.productName || item.bundleName}</p>
+                            <p className="font-medium">{item.productName || item.bundleName || item.packageName || 'Unknown'}</p>
                             <p className="text-sm text-muted-foreground">
-                              {item.itemType === 'product' ? 'Product' : 'Bundle'}
+                              {item.itemType === 'product' ? 'Product' : item.itemType === 'bundle' ? 'Bundle' : 'Package'}
                             </p>
                           </div>
                           <div className="text-right">
