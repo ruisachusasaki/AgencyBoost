@@ -14651,6 +14651,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             .from(packageItems)
             .where(eq(packageItems.packageId, item.packageId));
 
+          const quoteCustomQtys = (item.customQuantities || {}) as Record<string, number>;
+
           for (const pkgItem of pkgItems) {
             if (pkgItem.itemType === 'bundle' && pkgItem.bundleId) {
               const existingBundle = await db
@@ -14660,13 +14662,42 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                 .limit(1);
 
               if (existingBundle.length === 0) {
+                // Extract sub-product custom quantities for this bundle from the quote
+                const itemKey = pkgItem.id || `bundle-${pkgItem.bundleId}`;
+                const bundleCustomQtys: Record<string, number> = {};
+                for (const [key, val] of Object.entries(quoteCustomQtys)) {
+                  if (key.startsWith(`${itemKey}_bp_`)) {
+                    const productId = key.replace(`${itemKey}_bp_`, '');
+                    bundleCustomQtys[productId] = val;
+                  }
+                }
+
+                // Calculate bundle cost with quantities
+                const bundleProds = await db
+                  .select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity, productCost: products.cost })
+                  .from(bundleProducts)
+                  .leftJoin(products, eq(bundleProducts.productId, products.id))
+                  .where(eq(bundleProducts.bundleId, pkgItem.bundleId));
+
+                let bundleCost = 0;
+                bundleProds.forEach(bp => {
+                  const qty = bundleCustomQtys[bp.productId] ?? (bp.quantity || 1);
+                  bundleCost += parseFloat(bp.productCost || '0') * qty;
+                });
+
+                // Multiply by bundle-level quantity from the quote (e.g., qty 2)
+                const bundleLevelQty = quoteCustomQtys[itemKey] ?? (pkgItem.quantity || 1);
+                const totalBundleCost = bundleCost * bundleLevelQty;
+
                 await db.insert(clientBundles).values({
                   clientId,
                   bundleId: pkgItem.bundleId,
+                  price: totalBundleCost.toFixed(2),
                   status: 'active',
+                  customQuantities: Object.keys(bundleCustomQtys).length > 0 ? bundleCustomQtys : null,
                 });
                 transferredCount++;
-                console.log(`✅ Imported bundle ${pkgItem.bundleId} from package to client ${clientId}`);
+                console.log(`✅ Imported bundle ${pkgItem.bundleId} (qty ${bundleLevelQty}, cost $${totalBundleCost.toFixed(2)}) from package to client ${clientId}`);
               }
             } else if (pkgItem.itemType === 'product' && pkgItem.productId) {
               const existingProd = await db
