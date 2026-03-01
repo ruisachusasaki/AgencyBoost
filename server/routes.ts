@@ -14703,11 +14703,23 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   app.put("/api/products/:id", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
     try {
       const { id } = req.params;
-      const validatedData = insertProductSchema.partial().parse(req.body);
+      const body = req.body;
+      console.log('[DEBUG] PUT /api/products/:id - raw body:', JSON.stringify(body));
+      
+      const updateData: Record<string, any> = { updatedAt: new Date() };
+      if (body.name !== undefined) updateData.name = body.name;
+      if (body.description !== undefined) updateData.description = body.description;
+      if (body.price !== undefined) updateData.price = body.price === null ? null : String(body.price);
+      if (body.cost !== undefined) updateData.cost = body.cost === null ? null : String(body.cost);
+      if (body.type !== undefined) updateData.type = body.type;
+      if (body.categoryId !== undefined) updateData.categoryId = body.categoryId || null;
+      if (body.status !== undefined) updateData.status = body.status;
+      
+      console.log('[DEBUG] PUT /api/products/:id - updateData:', JSON.stringify(updateData));
       
       const [updatedProduct] = await db
         .update(products)
-        .set({ ...validatedData, updatedAt: new Date() })
+        .set(updateData)
         .where(eq(products.id, id))
         .returning();
 
@@ -14715,11 +14727,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(404).json({ message: "Product not found" });
       }
 
+      console.log('[DEBUG] PUT /api/products/:id - saved price:', updatedProduct.price);
       res.json(updatedProduct);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
       console.error('Error updating product:', error);
       res.status(500).json({ message: "Failed to update product" });
     }
