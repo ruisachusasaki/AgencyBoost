@@ -711,7 +711,7 @@ export default function Sales() {
       ...updated[packageIndex],
       customQuantities: {
         ...currentCustomQuantities,
-        [itemKey]: Math.max(1, quantity)
+        [itemKey]: Math.max(0, quantity)
       }
     };
     setSelectedProducts(updated);
@@ -2201,9 +2201,9 @@ export default function Sales() {
                                                       <div className="w-16 mx-2">
                                                         <Input
                                                           type="number"
-                                                          min="1"
+                                                          min="0"
                                                           value={bpQty}
-                                                          onChange={(e) => updatePackageItemQuantity(index, bpKey, parseInt(e.target.value) || 1)}
+                                                          onChange={(e) => { const v = parseInt(e.target.value); updatePackageItemQuantity(index, bpKey, isNaN(v) ? 0 : v); }}
                                                           className="h-6 text-xs px-1"
                                                           data-testid={`input-package-bp-qty-${index}-${pkgIdx}-${bpIdx}`}
                                                         />
@@ -2230,9 +2230,9 @@ export default function Sales() {
                                           <div className="w-20 mr-2">
                                             <Input
                                               type="number"
-                                              min="1"
+                                              min="0"
                                               value={itemQty}
-                                              onChange={(e) => updatePackageItemQuantity(index, itemKey, parseInt(e.target.value) || 1)}
+                                              onChange={(e) => { const v = parseInt(e.target.value); updatePackageItemQuantity(index, itemKey, isNaN(v) ? 0 : v); }}
                                               className="text-sm"
                                               data-testid={`input-package-item-qty-${index}-${pkgIdx}`}
                                             />
