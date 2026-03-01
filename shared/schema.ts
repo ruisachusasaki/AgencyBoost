@@ -484,6 +484,7 @@ export const clients = pgTable("clients", {
   // Followers (users who follow this client)
   followers: varchar("followers").array(),
   
+  clientBrief: text("client_brief"),
   lastActivity: timestamp("last_activity"),
   isArchived: boolean("is_archived").default(false),
   createdAt: timestamp("created_at").defaultNow(),
@@ -994,6 +995,7 @@ export const timeOffRequests = pgTable("time_off_requests", {
   approvedBy: uuid("approved_by").references(() => staff.id),
   approvedAt: timestamp("approved_at"),
   rejectionReason: text("rejection_reason"),
+  managerNotes: text("manager_notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2198,6 +2200,7 @@ export const departments = pgTable("departments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 100 }).notNull().unique(),
   description: text("description"),
+  managerId: varchar("manager_id"),
   workflowId: varchar("workflow_id").references(() => teamWorkflows.id), // team's custom workflow
   parentDepartmentId: varchar("parent_department_id"), // self-referencing for hierarchy
   orderIndex: integer("order_index").default(0), // for ordering within parent
@@ -2209,11 +2212,12 @@ export const departments = pgTable("departments", {
 export const positions = pgTable("positions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 100 }).notNull(),
-  departmentId: varchar("department_id").references(() => departments.id, { onDelete: "cascade" }), // Optional - positions can exist independently
+  departmentId: varchar("department_id").references(() => departments.id, { onDelete: "cascade" }),
   description: text("description"),
-  parentPositionId: varchar("parent_position_id"), // self-referencing for hierarchy
-  orderIndex: integer("order_index").default(0), // for ordering within parent
-  inOrgChart: boolean("in_org_chart").default(false), // Track if position is in the org chart structure
+  level: text("level"),
+  parentPositionId: varchar("parent_position_id"),
+  orderIndex: integer("order_index").default(0),
+  inOrgChart: boolean("in_org_chart").default(false),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
