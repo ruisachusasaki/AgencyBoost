@@ -619,6 +619,7 @@ export const campaigns = pgTable("campaigns", {
   name: text("name").notNull(),
   description: text("description"),
   clientId: varchar("client_id").notNull().references(() => clients.id),
+  projectId: varchar("project_id"),
   status: text("status").notNull().default("draft"), // draft, active, paused, completed, cancelled
   type: text("type").notNull(), // social_media, ppc, seo, email, content
   budget: decimal("budget", { precision: 10, scale: 2 }),
