@@ -623,10 +623,10 @@ export default function ProductsSettings() {
       return;
     }
     
-    if (!editFormPrice || parseFloat(editFormPrice) < 0) {
+    if (editFormPrice !== "" && editFormPrice !== null && parseFloat(editFormPrice) < 0) {
       toast({
         title: "Validation Error",
-        description: "Please enter a valid price (0 or greater)",
+        description: "Price cannot be negative",
         variant: "destructive",
       });
       return;
@@ -644,7 +644,7 @@ export default function ProductsSettings() {
     const data = {
       name,
       description: (formData.get("description") as string)?.trim() || "",
-      price: editFormPrice,
+      price: editFormPrice || "0",
       cost: editFormCost || null,
       type: editFormType,
       categoryId: editFormCategoryId || undefined,
@@ -1376,10 +1376,10 @@ export default function ProductsSettings() {
                         name="price" 
                         type="number" 
                         step="0.01" 
+                        min="0"
                         value={editFormPrice}
                         onChange={(e) => setEditFormPrice(e.target.value)}
                         placeholder="0.00"
-                        required
                         data-testid="input-edit-product-price"
                       />
                     </div>
