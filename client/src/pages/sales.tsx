@@ -534,14 +534,30 @@ export default function Sales() {
     }
   };
 
-  // Calculate bundle cost based on constituent products and custom quantities
   const calculateBundleCost = (bundleId: string, customQuantities?: Record<string, number>) => {
     const bundleProducts = bundleProductsData[bundleId] || [];
     return bundleProducts.reduce((sum, bp) => {
       const cost = parseFloat(bp.productCost || '0');
-      const qty = customQuantities?.[bp.productId] || 1; // Default to 1 if no custom quantity
+      const qty = customQuantities?.[bp.productId] || 1;
       return sum + (cost * qty);
     }, 0);
+  };
+
+  const calculateBundleCostSplit = (bundleId: string, customQuantities?: Record<string, number>) => {
+    const bundleProducts = bundleProductsData[bundleId] || [];
+    let recurringCost = 0;
+    let oneTimeCost = 0;
+    bundleProducts.forEach((bp: any) => {
+      const cost = parseFloat(bp.productCost || '0');
+      const qty = customQuantities?.[bp.productId] || 1;
+      const total = cost * qty;
+      if (bp.productType === 'recurring') {
+        recurringCost += total;
+      } else {
+        oneTimeCost += total;
+      }
+    });
+    return { recurringCost, oneTimeCost };
   };
 
   const fetchPackageDetails = async (packageId: string) => {
@@ -619,8 +635,9 @@ export default function Sales() {
           }
         }
       } else if (item.type === 'bundle') {
-        const bundleCost = calculateBundleCost(item.productId, item.customQuantities);
-        monthlyCost += bundleCost * quantity;
+        const bundleCostSplit = calculateBundleCostSplit(item.productId, item.customQuantities);
+        monthlyCost += bundleCostSplit.recurringCost * quantity;
+        oneTimeCost += bundleCostSplit.oneTimeCost * quantity;
       } else if (item.type === 'package') {
         const pkgCosts = calculatePackageCost(item.productId, item.customQuantities, item.customBuildFee);
         if (typeof pkgCosts === 'number') {
