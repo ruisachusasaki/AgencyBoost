@@ -2823,67 +2823,45 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
                     for (const pkgItem of pkgItems) {
                       if (pkgItem.itemType === 'bundle' && pkgItem.bundleId) {
-                        // Check bundle type - only transfer recurring bundles as ongoing client bundles
-                        const [bundleInfo] = await db.select().from(productBundles).where(eq(productBundles.id, pkgItem.bundleId));
-                        const bundleType = bundleInfo?.type || 'recurring';
-                        if (bundleType === 'recurring') {
-                          const existingBundle = await db
-                            .select()
-                            .from(clientBundles)
-                            .where(
-                              and(
-                                eq(clientBundles.clientId, client.id),
-                                eq(clientBundles.bundleId, pkgItem.bundleId)
-                              )
+                        const existingBundle = await db
+                          .select()
+                          .from(clientBundles)
+                          .where(
+                            and(
+                              eq(clientBundles.clientId, client.id),
+                              eq(clientBundles.bundleId, pkgItem.bundleId)
                             )
-                            .limit(1);
+                          )
+                          .limit(1);
 
-                          if (existingBundle.length === 0) {
-                            // Build custom quantities from the package item's custom quantities
-                            const bundleCustomQtys: Record<string, number> = {};
-                            if (item.customQuantities) {
-                              const cq = item.customQuantities as Record<string, number>;
-                              // Find bundle product quantities from the quote's custom quantities
-                              const itemKey = pkgItem.id || `bundle-${pkgItem.bundleId}`;
-                              for (const [key, val] of Object.entries(cq)) {
-                                if (key.includes(`_bp_`)) {
-                                  bundleCustomQtys[key] = val;
-                                }
-                              }
-                            }
-
-                            await db.insert(clientBundles).values({
-                              clientId: client.id,
-                              bundleId: pkgItem.bundleId,
-                              customQuantities: Object.keys(bundleCustomQtys).length > 0 ? bundleCustomQtys : null,
-                            });
-                            transferredCount++;
-                            console.log(`✅ Transferred bundle ${pkgItem.bundleId} from package ${item.packageId} to client ${client.id}`);
-                          }
+                        if (existingBundle.length === 0) {
+                          await db.insert(clientBundles).values({
+                            clientId: client.id,
+                            bundleId: pkgItem.bundleId,
+                            customQuantities: item.customQuantities || null,
+                          });
+                          transferredCount++;
+                          console.log(`✅ Transferred bundle ${pkgItem.bundleId} from package ${item.packageId} to client ${client.id}`);
                         }
                       } else if (pkgItem.itemType === 'product' && pkgItem.productId) {
-                        // Transfer individual products from package
-                        const [productInfo] = await db.select().from(products).where(eq(products.id, pkgItem.productId));
-                        if (productInfo?.type === 'recurring') {
-                          const existingProd = await db
-                            .select()
-                            .from(clientProducts)
-                            .where(
-                              and(
-                                eq(clientProducts.clientId, client.id),
-                                eq(clientProducts.productId, pkgItem.productId)
-                              )
+                        const existingProd = await db
+                          .select()
+                          .from(clientProducts)
+                          .where(
+                            and(
+                              eq(clientProducts.clientId, client.id),
+                              eq(clientProducts.productId, pkgItem.productId)
                             )
-                            .limit(1);
+                          )
+                          .limit(1);
 
-                          if (existingProd.length === 0) {
-                            await db.insert(clientProducts).values({
-                              clientId: client.id,
-                              productId: pkgItem.productId,
-                            });
-                            transferredCount++;
-                            console.log(`✅ Transferred product ${pkgItem.productId} from package ${item.packageId} to client ${client.id}`);
-                          }
+                        if (existingProd.length === 0) {
+                          await db.insert(clientProducts).values({
+                            clientId: client.id,
+                            productId: pkgItem.productId,
+                          });
+                          transferredCount++;
+                          console.log(`✅ Transferred product ${pkgItem.productId} from package ${item.packageId} to client ${client.id}`);
                         }
                       }
                     }
@@ -14667,7 +14645,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             transferredCount++;
           }
 
-          // Transfer recurring bundles and products from within the package
+          // Transfer all bundles and products from within the package
           const pkgItems = await db
             .select()
             .from(packageItems)
@@ -14675,43 +14653,37 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
           for (const pkgItem of pkgItems) {
             if (pkgItem.itemType === 'bundle' && pkgItem.bundleId) {
-              const [bundleInfo] = await db.select().from(productBundles).where(eq(productBundles.id, pkgItem.bundleId));
-              const bundleType = bundleInfo?.type || 'recurring';
-              if (bundleType === 'recurring') {
-                const existingBundle = await db
-                  .select()
-                  .from(clientBundles)
-                  .where(and(eq(clientBundles.clientId, clientId), eq(clientBundles.bundleId, pkgItem.bundleId)))
-                  .limit(1);
+              const existingBundle = await db
+                .select()
+                .from(clientBundles)
+                .where(and(eq(clientBundles.clientId, clientId), eq(clientBundles.bundleId, pkgItem.bundleId)))
+                .limit(1);
 
-                if (existingBundle.length === 0) {
-                  await db.insert(clientBundles).values({
-                    clientId,
-                    bundleId: pkgItem.bundleId,
-                    status: 'active',
-                  });
-                  transferredCount++;
-                  console.log(`✅ Imported recurring bundle ${pkgItem.bundleId} from package to client ${clientId}`);
-                }
+              if (existingBundle.length === 0) {
+                await db.insert(clientBundles).values({
+                  clientId,
+                  bundleId: pkgItem.bundleId,
+                  status: 'active',
+                });
+                transferredCount++;
+                console.log(`✅ Imported bundle ${pkgItem.bundleId} from package to client ${clientId}`);
               }
             } else if (pkgItem.itemType === 'product' && pkgItem.productId) {
-              const [productInfo] = await db.select().from(products).where(eq(products.id, pkgItem.productId));
-              if (productInfo?.type === 'recurring') {
-                const existingProd = await db
-                  .select()
-                  .from(clientProducts)
-                  .where(and(eq(clientProducts.clientId, clientId), eq(clientProducts.productId, pkgItem.productId)))
-                  .limit(1);
+              const existingProd = await db
+                .select()
+                .from(clientProducts)
+                .where(and(eq(clientProducts.clientId, clientId), eq(clientProducts.productId, pkgItem.productId)))
+                .limit(1);
 
-                if (existingProd.length === 0) {
-                  await db.insert(clientProducts).values({
-                    clientId,
-                    productId: pkgItem.productId,
-                    price: productInfo.cost?.toString() || '0',
-                    status: 'active',
-                  });
-                  transferredCount++;
-                }
+              if (existingProd.length === 0) {
+                const [productInfo] = await db.select().from(products).where(eq(products.id, pkgItem.productId));
+                await db.insert(clientProducts).values({
+                  clientId,
+                  productId: pkgItem.productId,
+                  price: productInfo?.cost?.toString() || '0',
+                  status: 'active',
+                });
+                transferredCount++;
               }
             }
           }
@@ -36315,54 +36287,48 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
               for (const pkgItem of pkgItems) {
                 if (pkgItem.itemType === 'bundle' && pkgItem.bundleId) {
-                  const [bundleInfo] = await db.select().from(productBundles).where(eq(productBundles.id, pkgItem.bundleId));
-                  const bundleType = bundleInfo?.type || 'recurring';
-                  if (bundleType === 'recurring') {
-                    const existingBundle = await db
-                      .select()
-                      .from(clientBundles)
-                      .where(
-                        and(
-                          eq(clientBundles.clientId, quote.clientId),
-                          eq(clientBundles.bundleId, pkgItem.bundleId)
-                        )
+                  const existingBundle = await db
+                    .select()
+                    .from(clientBundles)
+                    .where(
+                      and(
+                        eq(clientBundles.clientId, quote.clientId),
+                        eq(clientBundles.bundleId, pkgItem.bundleId)
                       )
-                      .limit(1);
+                    )
+                    .limit(1);
 
-                    if (existingBundle.length === 0) {
-                      await db.insert(clientBundles).values({
-                        clientId: quote.clientId,
-                        bundleId: pkgItem.bundleId,
-                        status: 'active',
-                      });
-                      transferredCount++;
-                      console.log(`✅ Transferred recurring bundle ${pkgItem.bundleId} from package ${item.packageId} to client ${quote.clientId}`);
-                    }
+                  if (existingBundle.length === 0) {
+                    await db.insert(clientBundles).values({
+                      clientId: quote.clientId,
+                      bundleId: pkgItem.bundleId,
+                      status: 'active',
+                    });
+                    transferredCount++;
+                    console.log(`✅ Transferred bundle ${pkgItem.bundleId} from package ${item.packageId} to client ${quote.clientId}`);
                   }
                 } else if (pkgItem.itemType === 'product' && pkgItem.productId) {
-                  const [productInfo] = await db.select().from(products).where(eq(products.id, pkgItem.productId));
-                  if (productInfo?.type === 'recurring') {
-                    const existingProd = await db
-                      .select()
-                      .from(clientProducts)
-                      .where(
-                        and(
-                          eq(clientProducts.clientId, quote.clientId),
-                          eq(clientProducts.productId, pkgItem.productId)
-                        )
+                  const existingProd = await db
+                    .select()
+                    .from(clientProducts)
+                    .where(
+                      and(
+                        eq(clientProducts.clientId, quote.clientId),
+                        eq(clientProducts.productId, pkgItem.productId)
                       )
-                      .limit(1);
+                    )
+                    .limit(1);
 
-                    if (existingProd.length === 0) {
-                      await db.insert(clientProducts).values({
-                        clientId: quote.clientId,
-                        productId: pkgItem.productId,
-                        price: productInfo.cost?.toString() || '0',
-                        status: 'active',
-                      });
-                      transferredCount++;
-                      console.log(`✅ Transferred recurring product ${pkgItem.productId} from package ${item.packageId} to client ${quote.clientId}`);
-                    }
+                  if (existingProd.length === 0) {
+                    const [productInfo] = await db.select().from(products).where(eq(products.id, pkgItem.productId));
+                    await db.insert(clientProducts).values({
+                      clientId: quote.clientId,
+                      productId: pkgItem.productId,
+                      price: productInfo?.cost?.toString() || '0',
+                      status: 'active',
+                    });
+                    transferredCount++;
+                    console.log(`✅ Transferred product ${pkgItem.productId} from package ${item.packageId} to client ${quote.clientId}`);
                   }
                 }
               }
