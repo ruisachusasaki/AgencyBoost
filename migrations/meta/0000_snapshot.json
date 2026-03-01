@@ -1,5 +1,5 @@
 {
-  "id": "e4b47116-59a6-4e2d-b143-c40eb7fb51e0",
+  "id": "666e9a25-8d49-4434-978c-e8c06626410b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2700,6 +2700,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "project_id": {
+          "name": "project_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "status": {
           "name": "status",
           "type": "text",
@@ -4845,6 +4851,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "client_brief": {
+          "name": "client_brief",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "last_activity": {
           "name": "last_activity",
           "type": "timestamp",
@@ -5712,6 +5724,12 @@
         "description": {
           "name": "description",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "manager_id": {
+          "name": "manager_id",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
@@ -12171,6 +12189,12 @@
         },
         "description": {
           "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "level": {
+          "name": "level",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -19974,6 +19998,12 @@
         },
         "rejection_reason": {
           "name": "rejection_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "manager_notes": {
+          "name": "manager_notes",
           "type": "text",
           "primaryKey": false,
           "notNull": false
