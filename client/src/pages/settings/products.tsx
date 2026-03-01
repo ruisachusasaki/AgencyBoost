@@ -50,6 +50,7 @@ interface ProductBundle {
   id: string;
   name: string;
   description?: string;
+  type: string;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -128,6 +129,7 @@ export default function ProductsSettings() {
   const [editingPackage, setEditingPackage] = useState<ProductPackage | null>(null);
   const [packageItems, setPackageItems] = useState<Array<{itemType: string, productId?: string, bundleId?: string, quantity: number}>>([]);
   const [packageSearchTerm, setPackageSearchTerm] = useState("");
+  const [bundleFormType, setBundleFormType] = useState("recurring");
   const [packageItemSearch, setPackageItemSearch] = useState("");
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
   const [packageCurrentPage, setPackageCurrentPage] = useState(1);
@@ -684,6 +686,7 @@ export default function ProductsSettings() {
     const data = {
       name: formData.get("name") as string,
       description: formData.get("description") as string,
+      type: bundleFormType,
       status: formData.get("status") as string,
       products: bundleProducts,
     };
@@ -698,6 +701,7 @@ export default function ProductsSettings() {
     const data = {
       name: formData.get("name") as string,
       description: formData.get("description") as string,
+      type: bundleFormType,
       status: formData.get("status") as string,
       products: bundleProducts,
     };
@@ -712,6 +716,7 @@ export default function ProductsSettings() {
       const detailedBundle = await response.json();
       
       setEditingBundle(detailedBundle);
+      setBundleFormType(detailedBundle.type || "recurring");
       
       // Load existing products into the form with their quantities
       if (detailedBundle.products && detailedBundle.products.length > 0) {
@@ -1490,6 +1495,7 @@ export default function ProductsSettings() {
               if (!open) {
                 setBundleProducts([]);
                 setBundleProductSearch("");
+                setBundleFormType("recurring");
               }
             }}>
               <DialogTrigger asChild>
@@ -1514,17 +1520,31 @@ export default function ProductsSettings() {
                     <Label htmlFor="bundle-description">Description</Label>
                     <Textarea id="bundle-description" name="description" />
                   </div>
-                  <div>
-                    <Label htmlFor="bundle-status">Status</Label>
-                    <Select name="status" defaultValue="active">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Cost Type</Label>
+                      <Select value={bundleFormType} onValueChange={setBundleFormType}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="recurring">Monthly (Recurring)</SelectItem>
+                          <SelectItem value="one_time">One-Time</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="bundle-status">Status</Label>
+                      <Select name="status" defaultValue="active">
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   
                   <div className="space-y-4">
@@ -2055,6 +2075,9 @@ export default function ProductsSettings() {
                               )}
                             </div>
                             <div className="flex items-center gap-2">
+                              <Badge variant="outline" className={bundle.type === 'one_time' ? 'border-orange-500 text-orange-600' : 'border-primary text-primary'}>
+                                {bundle.type === 'one_time' ? 'One-Time' : 'Monthly'}
+                              </Badge>
                               <Badge variant={bundle.status === "active" ? "default" : "secondary"}>
                                 {bundle.status}
                               </Badge>
@@ -2787,17 +2810,31 @@ export default function ProductsSettings() {
                   defaultValue={editingBundle.description || ""}
                 />
               </div>
-              <div>
-                <Label htmlFor="edit-bundle-status">Status</Label>
-                <Select name="status" defaultValue={editingBundle.status}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Cost Type</Label>
+                  <Select value={bundleFormType} onValueChange={setBundleFormType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="recurring">Monthly (Recurring)</SelectItem>
+                      <SelectItem value="one_time">One-Time</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-bundle-status">Status</Label>
+                  <Select name="status" defaultValue={editingBundle.status}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               
               <div className="space-y-4">

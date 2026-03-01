@@ -224,6 +224,7 @@ export const productBundles = pgTable("product_bundles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
+  type: text("type").notNull().default("recurring"),
   status: text("status").notNull().default("active"), // active, inactive
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

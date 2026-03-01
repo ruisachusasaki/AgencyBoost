@@ -543,23 +543,6 @@ export default function Sales() {
     }, 0);
   };
 
-  const calculateBundleCostSplit = (bundleId: string, customQuantities?: Record<string, number>) => {
-    const bundleProducts = bundleProductsData[bundleId] || [];
-    let recurringCost = 0;
-    let oneTimeCost = 0;
-    bundleProducts.forEach((bp: any) => {
-      const cost = parseFloat(bp.productCost || '0');
-      const qty = customQuantities?.[bp.productId] || 1;
-      const total = cost * qty;
-      if (bp.productType === 'recurring') {
-        recurringCost += total;
-      } else {
-        oneTimeCost += total;
-      }
-    });
-    return { recurringCost, oneTimeCost };
-  };
-
   const fetchPackageDetails = async (packageId: string) => {
     if (packageItemsData[packageId]) {
       return packageItemsData[packageId];
@@ -635,16 +618,15 @@ export default function Sales() {
           }
         }
       } else if (item.type === 'bundle') {
+        const bundle = bundles.find((b: any) => b.id === item.productId);
+        const bundleType = bundle?.type || 'recurring';
         const bundleCost = calculateBundleCost(item.productId, item.customQuantities);
         const bundleCostWithQty = bundleCost * quantity;
-        console.log(`[QUOTE DEBUG] Bundle "${item.productId}" cost=${bundleCost} qty=${quantity} total=${bundleCostWithQty}`);
-        const bpData = bundleProductsData[item.productId] || [];
-        bpData.forEach((bp: any) => {
-          const bpCost = parseFloat(bp.productCost || '0');
-          const bpQty = item.customQuantities?.[bp.productId] || 1;
-          console.log(`  - "${bp.productName}" cost=${bpCost} qty=${bpQty} type=${bp.productType} subtotal=${bpCost * bpQty}`);
-        });
-        monthlyCost += bundleCostWithQty;
+        if (bundleType === 'recurring') {
+          monthlyCost += bundleCostWithQty;
+        } else {
+          oneTimeCost += bundleCostWithQty;
+        }
       } else if (item.type === 'package') {
         const pkgCosts = calculatePackageCost(item.productId, item.customQuantities, item.customBuildFee);
         if (typeof pkgCosts === 'number') {
@@ -657,7 +639,6 @@ export default function Sales() {
       }
     });
 
-    console.log(`[QUOTE DEBUG] TOTAL monthlyCost=${monthlyCost} oneTimeCost=${oneTimeCost} buildFee=${buildFeeCost} items=${selectedProducts.length}`);
     const totalCost = monthlyCost;
 
     // Correct calculation logic:
