@@ -2210,6 +2210,110 @@ const EditableField = ({
   );
 };
 
+function ImportFromQuoteContent({ clientId, selectedQuoteId, setSelectedQuoteId, isImporting, setIsImporting, onSuccess }: {
+  clientId: string;
+  selectedQuoteId: string;
+  setSelectedQuoteId: (id: string) => void;
+  isImporting: boolean;
+  setIsImporting: (v: boolean) => void;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+
+  const { data: availableQuotes = [], isLoading: loadingQuotes } = useQuery<any[]>({
+    queryKey: ['/api/clients', clientId, 'available-quotes'],
+  });
+
+  const handleImport = async () => {
+    if (!selectedQuoteId) return;
+    setIsImporting(true);
+    try {
+      const res = await apiRequest('POST', `/api/clients/${clientId}/import-from-quote`, {
+        quoteId: selectedQuoteId,
+      });
+      const data = await res.json();
+      toast({
+        title: "Import Successful",
+        description: data.message || `Imported ${data.transferredCount} items from quote.`,
+        variant: "default",
+      });
+      onSuccess();
+    } catch (error: any) {
+      toast({
+        title: "Import Failed",
+        description: error.message || "Failed to import quote items.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  if (loadingQuotes) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <span className="ml-2 text-gray-600">Loading quotes...</span>
+      </div>
+    );
+  }
+
+  if (availableQuotes.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No quotes found for this client.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Select Quote</label>
+        <select
+          value={selectedQuoteId}
+          onChange={(e) => setSelectedQuoteId(e.target.value)}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
+        >
+          <option value="">Choose a quote...</option>
+          {availableQuotes.map((quote: any) => (
+            <option key={quote.id} value={quote.id}>
+              {quote.name} — ${Number(quote.clientBudget || 0).toLocaleString()}/mo — {quote.status}
+              {quote.createdAt ? ` (${new Date(quote.createdAt).toLocaleDateString()})` : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {selectedQuoteId && (
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm text-gray-600">
+          This will import all products, bundles, and packages from the selected quote. Recurring bundles from packages will be added individually. Items already assigned to this client will be skipped.
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2">
+        <Button
+          onClick={handleImport}
+          disabled={!selectedQuoteId || isImporting}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
+        >
+          {isImporting ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Importing...
+            </>
+          ) : (
+            <>
+              <FileText className="h-4 w-4 mr-2" />
+              Import Items
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function EnhancedClientDetail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -2547,6 +2651,9 @@ export default function EnhancedClientDetail() {
   const [tempQuantities, setTempQuantities] = useState<Record<string, number>>({});
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [showImportQuoteModal, setShowImportQuoteModal] = useState(false);
+  const [selectedImportQuoteId, setSelectedImportQuoteId] = useState<string>('');
+  const [isImporting, setIsImporting] = useState(false);
 
   // Owner and followers state
   const [isAssigningOwner, setIsAssigningOwner] = useState(false);
@@ -5513,15 +5620,29 @@ export default function EnhancedClientDetail() {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg font-semibold">Products & Services</CardTitle>
-                  <Button
-                    onClick={() => setShowAddProductModal(true)}
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    data-testid="button-add-product"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Product
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => {
+                        setShowImportQuoteModal(true);
+                        setSelectedImportQuoteId('');
+                      }}
+                      size="sm"
+                      variant="outline"
+                      className="border-primary text-primary hover:bg-primary/10"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Import from Quote
+                    </Button>
+                    <Button
+                      onClick={() => setShowAddProductModal(true)}
+                      size="sm"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                      data-testid="button-add-product"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Product
+                    </Button>
+                  </div>
                 </div>
                 {/* Total Cost Display - Only visible to Managers and Admins */}
                 {clientProductsData && clientProductsData.length > 0 && canViewCosts && (
@@ -7872,6 +7993,29 @@ export default function EnhancedClientDetail() {
               Close
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import from Quote Modal */}
+      <Dialog open={showImportQuoteModal} onOpenChange={setShowImportQuoteModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Import from Quote</DialogTitle>
+            <DialogDescription>
+              Select a quote to import its products, bundles, and packages to this client.
+            </DialogDescription>
+          </DialogHeader>
+          <ImportFromQuoteContent
+            clientId={clientId as string}
+            selectedQuoteId={selectedImportQuoteId}
+            setSelectedQuoteId={setSelectedImportQuoteId}
+            isImporting={isImporting}
+            setIsImporting={setIsImporting}
+            onSuccess={() => {
+              setShowImportQuoteModal(false);
+              queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'products'] });
+            }}
+          />
         </DialogContent>
       </Dialog>
 

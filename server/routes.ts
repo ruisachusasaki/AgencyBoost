@@ -14542,6 +14542,194 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  // Get quotes available for import to a client
+  app.get("/api/clients/:clientId/available-quotes", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+
+      // Find quotes directly linked to this client
+      const directQuotes = await db
+        .select()
+        .from(quotes)
+        .where(eq(quotes.clientId, clientId));
+
+      // Find quotes linked via leads that were converted to this client (through deals)
+      const clientDeals = await db
+        .select({ leadId: deals.leadId })
+        .from(deals)
+        .where(eq(deals.clientId, clientId));
+
+      const leadIds = clientDeals.map(d => d.leadId).filter(Boolean);
+      let leadQuotes: any[] = [];
+      if (leadIds.length > 0) {
+        leadQuotes = await db
+          .select()
+          .from(quotes)
+          .where(inArray(quotes.leadId, leadIds));
+      }
+
+      // Merge and deduplicate
+      const allQuotes = [...directQuotes];
+      for (const lq of leadQuotes) {
+        if (!allQuotes.find(q => q.id === lq.id)) {
+          allQuotes.push(lq);
+        }
+      }
+
+      // Sort by most recent first
+      allQuotes.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+
+      res.json(allQuotes);
+    } catch (error) {
+      console.error('Error fetching available quotes:', error);
+      res.status(500).json({ message: "Failed to fetch available quotes" });
+    }
+  });
+
+  // Import items from a quote to a client
+  app.post("/api/clients/:clientId/import-from-quote", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { quoteId } = req.body;
+
+      if (!quoteId) {
+        return res.status(400).json({ message: "quoteId is required" });
+      }
+
+      // Verify client exists
+      const [client] = await db.select().from(clients).where(eq(clients.id, clientId));
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      // Fetch all quote items
+      const items = await db
+        .select()
+        .from(quoteItems)
+        .where(eq(quoteItems.quoteId, quoteId));
+
+      if (items.length === 0) {
+        return res.status(400).json({ message: "No items found in this quote" });
+      }
+
+      let transferredCount = 0;
+
+      for (const item of items) {
+        if (item.itemType === 'product' && item.productId) {
+          const existing = await db
+            .select()
+            .from(clientProducts)
+            .where(and(eq(clientProducts.clientId, clientId), eq(clientProducts.productId, item.productId)))
+            .limit(1);
+
+          if (existing.length === 0) {
+            await db.insert(clientProducts).values({
+              clientId,
+              productId: item.productId,
+              price: item.unitCost?.toString() || '0',
+              status: 'active',
+            });
+            transferredCount++;
+          }
+        } else if (item.itemType === 'bundle' && item.bundleId) {
+          const existing = await db
+            .select()
+            .from(clientBundles)
+            .where(and(eq(clientBundles.clientId, clientId), eq(clientBundles.bundleId, item.bundleId)))
+            .limit(1);
+
+          if (existing.length === 0) {
+            await db.insert(clientBundles).values({
+              clientId,
+              bundleId: item.bundleId,
+              price: item.unitCost?.toString() || '0',
+              status: 'active',
+              customQuantities: item.customQuantities,
+            });
+            transferredCount++;
+          }
+        } else if (item.itemType === 'package' && item.packageId) {
+          // Add the package itself
+          const existingPkg = await db
+            .select()
+            .from(clientPackages)
+            .where(and(eq(clientPackages.clientId, clientId), eq(clientPackages.packageId, item.packageId)))
+            .limit(1);
+
+          if (existingPkg.length === 0) {
+            await db.insert(clientPackages).values({
+              clientId,
+              packageId: item.packageId,
+              price: item.unitCost?.toString() || '0',
+              status: 'active',
+              customQuantities: item.customQuantities,
+            });
+            transferredCount++;
+          }
+
+          // Transfer recurring bundles and products from within the package
+          const pkgItems = await db
+            .select()
+            .from(packageItems)
+            .where(eq(packageItems.packageId, item.packageId));
+
+          for (const pkgItem of pkgItems) {
+            if (pkgItem.itemType === 'bundle' && pkgItem.bundleId) {
+              const [bundleInfo] = await db.select().from(productBundles).where(eq(productBundles.id, pkgItem.bundleId));
+              const bundleType = bundleInfo?.type || 'recurring';
+              if (bundleType === 'recurring') {
+                const existingBundle = await db
+                  .select()
+                  .from(clientBundles)
+                  .where(and(eq(clientBundles.clientId, clientId), eq(clientBundles.bundleId, pkgItem.bundleId)))
+                  .limit(1);
+
+                if (existingBundle.length === 0) {
+                  await db.insert(clientBundles).values({
+                    clientId,
+                    bundleId: pkgItem.bundleId,
+                    status: 'active',
+                  });
+                  transferredCount++;
+                  console.log(`✅ Imported recurring bundle ${pkgItem.bundleId} from package to client ${clientId}`);
+                }
+              }
+            } else if (pkgItem.itemType === 'product' && pkgItem.productId) {
+              const [productInfo] = await db.select().from(products).where(eq(products.id, pkgItem.productId));
+              if (productInfo?.type === 'recurring') {
+                const existingProd = await db
+                  .select()
+                  .from(clientProducts)
+                  .where(and(eq(clientProducts.clientId, clientId), eq(clientProducts.productId, pkgItem.productId)))
+                  .limit(1);
+
+                if (existingProd.length === 0) {
+                  await db.insert(clientProducts).values({
+                    clientId,
+                    productId: pkgItem.productId,
+                    price: productInfo.cost?.toString() || '0',
+                    status: 'active',
+                  });
+                  transferredCount++;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      console.log(`✅ Imported ${transferredCount} items from quote ${quoteId} to client ${clientId}`);
+
+      res.json({
+        message: `Successfully imported ${transferredCount} items from quote`,
+        transferredCount,
+      });
+    } catch (error) {
+      console.error('Error importing quote items to client:', error);
+      res.status(500).json({ message: "Failed to import quote items" });
+    }
+  });
+
   // Get bundle products details with client-specific overrides
   // Allow users who can view clients to see bundle details (needed for displaying client bundles)
   app.get("/api/product-bundles/:bundleId/products", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
