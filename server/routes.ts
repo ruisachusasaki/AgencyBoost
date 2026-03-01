@@ -14986,18 +14986,35 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             .where(eq(packageItems.packageId, pkg.id));
 
           let totalCost = 0;
+          let totalOneTimeCost = 0;
+          let totalRecurringCost = 0;
           for (const item of items) {
             if (item.itemType === 'product' && item.productId) {
-              const [product] = await db.select({ cost: products.cost }).from(products).where(eq(products.id, item.productId));
-              if (product) totalCost += Number(product.cost || 0) * item.quantity;
+              const [product] = await db.select({ cost: products.cost, type: products.type }).from(products).where(eq(products.id, item.productId));
+              if (product) {
+                const itemCost = Number(product.cost || 0) * item.quantity;
+                totalCost += itemCost;
+                if (product.type === 'recurring') {
+                  totalRecurringCost += itemCost;
+                } else {
+                  totalOneTimeCost += itemCost;
+                }
+              }
             } else if (item.itemType === 'bundle' && item.bundleId) {
               const bundleProds = await db
-                .select({ cost: products.cost, quantity: bundleProducts.quantity })
+                .select({ cost: products.cost, quantity: bundleProducts.quantity, type: products.type })
                 .from(bundleProducts)
                 .leftJoin(products, eq(bundleProducts.productId, products.id))
                 .where(eq(bundleProducts.bundleId, item.bundleId));
-              const bundleCost = bundleProds.reduce((sum, bp) => sum + Number(bp.cost || 0) * (bp.quantity || 1), 0);
-              totalCost += bundleCost * item.quantity;
+              for (const bp of bundleProds) {
+                const bpCost = Number(bp.cost || 0) * (bp.quantity || 1) * item.quantity;
+                totalCost += bpCost;
+                if (bp.type === 'recurring') {
+                  totalRecurringCost += bpCost;
+                } else {
+                  totalOneTimeCost += bpCost;
+                }
+              }
             }
           }
 
@@ -15010,6 +15027,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             ...pkg,
             itemCount: items.length,
             totalCost: totalCost.toFixed(2),
+            totalOneTimeCost: totalOneTimeCost.toFixed(2),
+            totalRecurringCost: totalRecurringCost.toFixed(2),
             usageCount: Number(usageCountResult[0]?.count || 0)
           };
         })
@@ -15046,6 +15065,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                 productId: bundleProducts.productId,
                 quantity: bundleProducts.quantity,
                 productName: products.name,
+                productPrice: products.price,
                 productCost: products.cost,
                 productType: products.type,
               })
@@ -15163,6 +15183,41 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error) {
       console.error('Error deleting package:', error);
       res.status(500).json({ message: "Failed to delete package" });
+    }
+  });
+
+  app.post("/api/product-packages/:id/duplicate", requireAuth(), requirePermission('products', 'canCreate'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [originalPkg] = await db.select().from(productPackages).where(eq(productPackages.id, id));
+      if (!originalPkg) return res.status(404).json({ message: "Package not found" });
+
+      const originalItems = await db.select().from(packageItems).where(eq(packageItems.packageId, id));
+
+      const [newPkg] = await db.insert(productPackages).values({
+        name: `${originalPkg.name} (Copy)`,
+        description: originalPkg.description,
+        buildFee: originalPkg.buildFee,
+        monthlyRetailPrice: originalPkg.monthlyRetailPrice,
+        status: originalPkg.status,
+      }).returning();
+
+      if (originalItems.length > 0) {
+        await db.insert(packageItems).values(
+          originalItems.map(item => ({
+            packageId: newPkg.id,
+            productId: item.productId,
+            bundleId: item.bundleId,
+            itemType: item.itemType,
+            quantity: item.quantity,
+          }))
+        );
+      }
+
+      res.status(201).json(newPkg);
+    } catch (error) {
+      console.error('Error duplicating package:', error);
+      res.status(500).json({ message: "Failed to duplicate package" });
     }
   });
 

@@ -243,6 +243,8 @@ export const productPackages = pgTable("product_packages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
+  buildFee: decimal("build_fee", { precision: 10, scale: 2 }),
+  monthlyRetailPrice: decimal("monthly_retail_price", { precision: 10, scale: 2 }),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

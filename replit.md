@@ -40,7 +40,7 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Sales Settings**: Dynamic minimum margin threshold configuration for quotes.
 - **Quotes Management**: Modern table-based layout with sortable columns, inline status updates, and low margin highlighting.
 - **Lead Management**: Customizable lead source options.
-- **Product Packages**: Packages system under Settings > Products that allows creating packages containing both bundles and individual products with configurable quantities. Packages can be assigned to clients and added to quotes. Tables: `product_packages`, `package_items`, `client_packages`. Quote items support `itemType: 'package'` with `packageId`.
+- **Product Packages**: Packages system under Settings > Products that allows creating packages containing both bundles and individual products with configurable quantities. Features include Build Fee and Monthly Retail Price fields, per-item cost/price breakdown in expanded view (one-time vs recurring split), profit margin calculations, and Duplicate Package functionality. Packages can be assigned to clients and added to quotes. Tables: `product_packages` (with `build_fee`, `monthly_retail_price` columns), `package_items`, `client_packages`. Quote items support `itemType: 'package'` with `packageId`.
 - **Quote to Client Products Transfer**: Automatic transfer of accepted quote products/bundles/packages.
 - **Predictive Hiring Alerts**: Staffing capacity prediction with configurable alerts.
 - **Team Workload Reports**: Comprehensive analytics for staff workload.

@@ -27,7 +27,9 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronRight,
-  Layers
+  Layers,
+  Copy,
+  TrendingUp
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -79,9 +81,13 @@ interface ProductPackage {
   id: string;
   name: string;
   description?: string;
+  buildFee?: string;
+  monthlyRetailPrice?: string;
   status: string;
   itemCount?: number;
-  totalCost?: number;
+  totalCost?: number | string;
+  totalOneTimeCost?: string;
+  totalRecurringCost?: string;
   usageCount?: number;
   createdAt: string;
   updatedAt: string;
@@ -527,6 +533,31 @@ export default function ProductsSettings() {
     },
   });
 
+  const duplicatePackageMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/product-packages/${id}/duplicate`, {
+        method: "POST"
+      });
+      if (!response.ok) throw new Error('Failed to duplicate package');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-packages"] });
+      toast({
+        title: "Success",
+        variant: "default",
+        description: "Package duplicated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to duplicate package",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateProduct = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -703,9 +734,13 @@ export default function ProductsSettings() {
   const handleCreatePackage = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const buildFeeVal = formData.get("buildFee") as string;
+    const monthlyRetailVal = formData.get("monthlyRetailPrice") as string;
     const data = {
       name: formData.get("name") as string,
       description: formData.get("description") as string,
+      buildFee: buildFeeVal ? buildFeeVal : null,
+      monthlyRetailPrice: monthlyRetailVal ? monthlyRetailVal : null,
       status: formData.get("status") as string,
       items: packageItems,
     };
@@ -716,9 +751,13 @@ export default function ProductsSettings() {
     e.preventDefault();
     if (!editingPackage) return;
     const formData = new FormData(e.currentTarget);
+    const buildFeeVal = formData.get("buildFee") as string;
+    const monthlyRetailVal = formData.get("monthlyRetailPrice") as string;
     const data = {
       name: formData.get("name") as string,
       description: formData.get("description") as string,
+      buildFee: buildFeeVal ? buildFeeVal : null,
+      monthlyRetailPrice: monthlyRetailVal ? monthlyRetailVal : null,
       status: formData.get("status") as string,
       items: packageItems,
     };
@@ -982,44 +1021,149 @@ export default function ProductsSettings() {
       return <div className="text-sm text-gray-500">No items in this package</div>;
     }
 
+    let totalOneTimeCost = 0;
+    let totalRecurringCost = 0;
+    let totalOneTimePrice = 0;
+    let totalRecurringPrice = 0;
+
+    const itemDetails = packageDetail.items.map((item: PackageItem) => {
+      const qty = item.quantity || 1;
+      if (item.itemType === 'product' && item.product) {
+        const cost = parseFloat(item.product.cost || '0');
+        const price = parseFloat(item.product.price || '0');
+        const isRecurring = item.product.type === 'recurring';
+        if (isRecurring) {
+          totalRecurringCost += cost * qty;
+          totalRecurringPrice += price * qty;
+        } else {
+          totalOneTimeCost += cost * qty;
+          totalOneTimePrice += price * qty;
+        }
+        return { item, cost, price, qty, isRecurring, name: item.product.name, type: 'product' as const };
+      } else if (item.itemType === 'bundle' && item.bundle) {
+        let bundleCost = 0;
+        let bundlePrice = 0;
+        const bundleProds = (item.bundle as any).products || [];
+        for (const bp of bundleProds) {
+          const bpCost = parseFloat(bp.productCost || '0') * (bp.quantity || 1);
+          const bpPrice = parseFloat(bp.productPrice || '0') * (bp.quantity || 1);
+          bundleCost += bpCost;
+          bundlePrice += bpPrice;
+          if (bp.productType === 'recurring') {
+            totalRecurringCost += bpCost * qty;
+            totalRecurringPrice += bpPrice * qty;
+          } else {
+            totalOneTimeCost += bpCost * qty;
+            totalOneTimePrice += bpPrice * qty;
+          }
+        }
+        return { item, cost: bundleCost, price: bundlePrice, qty, isRecurring: false, name: item.bundle.name, type: 'bundle' as const, bundleProds };
+      }
+      return { item, cost: 0, price: 0, qty, isRecurring: false, name: 'Unknown', type: 'product' as const };
+    });
+
+    const buildFee = parseFloat(packageDetail.buildFee || '0');
+    const monthlyRetail = parseFloat(packageDetail.monthlyRetailPrice || '0');
+    const totalOnboardingCost = totalOneTimeCost + buildFee;
+    const monthlyMargin = monthlyRetail > 0 ? ((monthlyRetail - totalRecurringCost) / monthlyRetail * 100) : 0;
+
     return (
-      <div className="space-y-2">
-        <h4 className="font-medium text-gray-900 text-sm mb-2">Included Items ({packageDetail.items.length})</h4>
-        {packageDetail.items.map((item: PackageItem) => {
-          const itemName = item.itemType === 'product' 
-            ? (item.product?.name || 'Unknown Product')
-            : (item.bundle?.name || 'Unknown Bundle');
-          const itemCost = item.itemType === 'product' 
-            ? parseFloat(item.product?.cost || item.product?.price || '0')
-            : 0;
-          const qty = item.quantity || 1;
-          return (
-            <div key={item.id} className="flex items-center justify-between p-2 bg-white rounded border">
-              <div className="flex items-center gap-3">
-                {item.itemType === 'product' ? (
-                  <Package className="w-4 h-4 text-gray-500" />
-                ) : (
-                  <Package2 className="w-4 h-4 text-gray-500" />
-                )}
-                <div>
-                  <span className="font-medium">{itemName}</span>
-                  <Badge variant="outline" className="ml-2 text-xs">
-                    {item.itemType}
-                  </Badge>
-                  <span className="text-sm text-gray-500 ml-2">
-                    {qty} unit{qty !== 1 ? 's' : ''}
-                    {item.itemType === 'product' && itemCost > 0 && ` @ $${itemCost.toFixed(2)} each`}
-                  </span>
+      <div className="space-y-4">
+        <div>
+          <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm mb-2">Included Items ({packageDetail.items.length})</h4>
+          <div className="space-y-2">
+            {itemDetails.map(({ item, cost, price, qty, isRecurring, name, type, bundleProds }: any) => (
+              <div key={item.id} className="p-2 bg-white dark:bg-gray-800 rounded border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {type === 'product' ? (
+                      <Package className="w-4 h-4 text-gray-500" />
+                    ) : (
+                      <Package2 className="w-4 h-4 text-gray-500" />
+                    )}
+                    <div>
+                      <span className="font-medium">{name}</span>
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {type}
+                      </Badge>
+                      {isRecurring && (
+                        <Badge variant="outline" className="ml-1 text-xs border-primary text-primary">
+                          recurring
+                        </Badge>
+                      )}
+                      <span className="text-sm text-gray-500 ml-2">
+                        {qty} unit{qty !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right text-sm">
+                    <div className="font-medium text-primary">${(price * qty).toFixed(2)} retail</div>
+                    <div className="text-gray-500">${(cost * qty).toFixed(2)} cost</div>
+                  </div>
                 </div>
+                {type === 'bundle' && bundleProds && bundleProds.length > 0 && (
+                  <div className="mt-2 ml-7 space-y-1">
+                    {bundleProds.map((bp: any) => (
+                      <div key={bp.id} className="flex justify-between text-xs text-gray-500">
+                        <span>{bp.productName} x{bp.quantity || 1} {bp.productType === 'recurring' ? '(recurring)' : ''}</span>
+                        <span>${(parseFloat(bp.productCost || '0') * (bp.quantity || 1)).toFixed(2)} cost</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              {item.itemType === 'product' && itemCost > 0 && (
-                <div className="text-sm font-medium text-blue-600">
-                  ${(itemCost * qty).toFixed(2)}
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-3 bg-white dark:bg-gray-800 rounded border">
+            <h5 className="text-xs font-semibold text-gray-500 uppercase mb-2">One-Time / Onboarding</h5>
+            <div className="space-y-1 text-sm">
+              {buildFee > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Build Fee</span>
+                  <span className="font-medium">${buildFee.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">One-Time Product Costs</span>
+                <span className="font-medium">${totalOneTimeCost.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">One-Time Retail</span>
+                <span className="font-medium">${totalOneTimePrice.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-1 mt-1">
+                <span className="font-medium text-gray-700 dark:text-gray-300">Total Onboarding Cost</span>
+                <span className="font-semibold">${totalOnboardingCost.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+          <div className="p-3 bg-white dark:bg-gray-800 rounded border">
+            <h5 className="text-xs font-semibold text-gray-500 uppercase mb-2">Monthly / Recurring</h5>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Monthly Costs</span>
+                <span className="font-medium">${totalRecurringCost.toFixed(2)}</span>
+              </div>
+              {monthlyRetail > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Monthly Retail Price</span>
+                  <span className="font-medium">${monthlyRetail.toFixed(2)}</span>
+                </div>
+              )}
+              {monthlyRetail > 0 && (
+                <div className="flex justify-between border-t pt-1 mt-1">
+                  <span className="font-medium text-gray-700 dark:text-gray-300">Monthly Margin</span>
+                  <span className={`font-semibold ${monthlyMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ${(monthlyRetail - totalRecurringCost).toFixed(2)} ({monthlyMargin.toFixed(1)}%)
+                  </span>
                 </div>
               )}
             </div>
-          );
-        })}
+          </div>
+        </div>
       </div>
     );
   };
@@ -1481,6 +1625,16 @@ export default function ProductsSettings() {
                   <div>
                     <Label htmlFor="package-description">Description</Label>
                     <Textarea id="package-description" name="description" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="package-buildFee">Build Fee ($)</Label>
+                      <Input id="package-buildFee" name="buildFee" type="number" step="0.01" min="0" placeholder="0.00" />
+                    </div>
+                    <div>
+                      <Label htmlFor="package-monthlyRetail">Monthly Retail Price ($)</Label>
+                      <Input id="package-monthlyRetail" name="monthlyRetailPrice" type="number" step="0.01" min="0" placeholder="0.00" />
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="package-status">Status</Label>
@@ -2211,6 +2365,8 @@ export default function ProductsSettings() {
                       <TableHead>Name</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Items</TableHead>
+                      <TableHead>Build Fee</TableHead>
+                      <TableHead>Monthly Retail</TableHead>
                       <TableHead>Total Cost</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
@@ -2256,9 +2412,29 @@ export default function ProductsSettings() {
                             </Badge>
                           </TableCell>
                           <TableCell>
+                            {pkg.buildFee && parseFloat(pkg.buildFee) > 0 ? (
+                              <div className="flex items-center">
+                                <DollarSign className="w-4 h-4 text-gray-400 mr-1" />
+                                {parseFloat(pkg.buildFee).toFixed(2)}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {pkg.monthlyRetailPrice && parseFloat(pkg.monthlyRetailPrice) > 0 ? (
+                              <div className="flex items-center">
+                                <DollarSign className="w-4 h-4 text-gray-400 mr-1" />
+                                {parseFloat(pkg.monthlyRetailPrice).toFixed(2)}/mo
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             <div className="flex items-center">
                               <DollarSign className="w-4 h-4 text-gray-400 mr-1" />
-                              {typeof pkg.totalCost === 'number' ? pkg.totalCost.toFixed(2) : parseFloat(pkg.totalCost || '0').toFixed(2)}
+                              {typeof pkg.totalCost === 'number' ? pkg.totalCost.toFixed(2) : parseFloat(String(pkg.totalCost || '0')).toFixed(2)}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -2267,13 +2443,22 @@ export default function ProductsSettings() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm" onClick={() => openEditPackage(pkg)}>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => openEditPackage(pkg)} title="Edit">
                                 <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => duplicatePackageMutation.mutate(pkg.id)}
+                                disabled={duplicatePackageMutation.isPending}
+                                title="Duplicate"
+                              >
+                                <Copy className="w-4 h-4" />
                               </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="sm">
+                                  <Button variant="ghost" size="sm" title="Delete">
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
                                 </AlertDialogTrigger>
@@ -2300,7 +2485,7 @@ export default function ProductsSettings() {
                         </TableRow>
                         {expandedPackages.has(pkg.id) && (
                           <TableRow>
-                            <TableCell colSpan={7} className="bg-gray-50 p-4">
+                            <TableCell colSpan={9} className="bg-gray-50 dark:bg-gray-900 p-4">
                               <PackageItemsExpanded packageId={pkg.id} />
                             </TableCell>
                           </TableRow>
@@ -2399,6 +2584,32 @@ export default function ProductsSettings() {
                   name="description" 
                   defaultValue={editingPackage.description || ""}
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-package-buildFee">Build Fee ($)</Label>
+                  <Input 
+                    id="edit-package-buildFee" 
+                    name="buildFee" 
+                    type="number" 
+                    step="0.01" 
+                    min="0" 
+                    defaultValue={editingPackage.buildFee || ""} 
+                    placeholder="0.00" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-package-monthlyRetail">Monthly Retail Price ($)</Label>
+                  <Input 
+                    id="edit-package-monthlyRetail" 
+                    name="monthlyRetailPrice" 
+                    type="number" 
+                    step="0.01" 
+                    min="0" 
+                    defaultValue={editingPackage.monthlyRetailPrice || ""} 
+                    placeholder="0.00" 
+                  />
+                </div>
               </div>
               <div>
                 <Label htmlFor="edit-package-status">Status</Label>
