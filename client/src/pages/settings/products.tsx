@@ -1130,10 +1130,6 @@ export default function ProductsSettings() {
                 <span className="text-gray-600 dark:text-gray-400">One-Time Product Costs</span>
                 <span className="font-medium">${totalOneTimeCost.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">One-Time Retail</span>
-                <span className="font-medium">${totalOneTimePrice.toFixed(2)}</span>
-              </div>
               <div className="flex justify-between border-t pt-1 mt-1">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Total Onboarding Cost</span>
                 <span className="font-semibold">${totalOnboardingCost.toFixed(2)}</span>
