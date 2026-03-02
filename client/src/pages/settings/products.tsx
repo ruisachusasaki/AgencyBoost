@@ -3544,11 +3544,15 @@ export default function ProductsSettings() {
                 <Input id="template-dueDateOffset" name="dueDateOffset" type="number" defaultValue="7" min="0" />
               </div>
               <div>
-                <Label htmlFor="template-estimatedHours">Est. Hours</Label>
+                <div className="h-6 flex items-center">
+                  <Label htmlFor="template-estimatedHours">Est. Hours</Label>
+                </div>
                 <Input id="template-estimatedHours" name="estimatedHours" type="number" step="0.25" placeholder="0" />
               </div>
               <div>
-                <Label htmlFor="template-priority">Priority</Label>
+                <div className="h-6 flex items-center">
+                  <Label htmlFor="template-priority">Priority</Label>
+                </div>
                 <select name="priority" id="template-priority" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="medium">
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -3705,11 +3709,15 @@ export default function ProductsSettings() {
                   <Input id="edit-template-dueDateOffset" name="dueDateOffset" type="number" defaultValue={editingTemplate.dueDateOffset} min="0" />
                 </div>
                 <div>
-                  <Label htmlFor="edit-template-estimatedHours">Est. Hours</Label>
+                  <div className="h-6 flex items-center">
+                    <Label htmlFor="edit-template-estimatedHours">Est. Hours</Label>
+                  </div>
                   <Input id="edit-template-estimatedHours" name="estimatedHours" type="number" step="0.25" defaultValue={editingTemplate.estimatedHours || ""} />
                 </div>
                 <div>
-                  <Label htmlFor="edit-template-priority">Priority</Label>
+                  <div className="h-6 flex items-center">
+                    <Label htmlFor="edit-template-priority">Priority</Label>
+                  </div>
                   <select name="priority" id="edit-template-priority" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue={editingTemplate.priority}>
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
