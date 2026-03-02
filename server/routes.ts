@@ -14699,6 +14699,10 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     try {
       const { clientId } = req.params;
 
+      const [clientRow] = await db.select({ name: clients.name, company: clients.company, website: clients.website })
+        .from(clients).where(eq(clients.id, clientId));
+      const clientDisplayName = clientRow ? (clientRow.company || clientRow.name) : 'Unknown Client';
+
       const generations = await db
         .select({
           id: clientTaskGenerations.id,
@@ -14724,6 +14728,17 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         .where(eq(clientTaskGenerations.clientId, clientId))
         .orderBy(sql`${clientTaskGenerations.generatedAt} DESC`);
 
+      const resolveVars = (text: string, itemName: string, cycleNum?: number | null): string => {
+        if (!text) return text;
+        const vars: Record<string, string> = {
+          'client.name': clientDisplayName,
+          'client.domain': clientRow?.website || '',
+          'product.name': itemName,
+          'cycle.number': String(cycleNum || 1),
+        };
+        return text.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (match, key) => vars[key] !== undefined ? vars[key] : match);
+      };
+
       const grouped: Record<string, any> = {};
       for (const gen of generations) {
         const genTime = gen.generatedAt ? Math.floor(gen.generatedAt.getTime() / 60000) : 0;
@@ -14739,10 +14754,12 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         }
         const taskIdArray = Array.isArray(gen.taskIds) ? gen.taskIds : [];
         const sourceType = gen.productId ? 'product' : gen.bundleId ? 'bundle' : gen.packageId ? 'package' : 'unknown';
+        const itemName = gen.productName || gen.bundleName || gen.packageName || 'Unknown';
+        const rawTemplateName = gen.templateName || 'Unknown Template';
         grouped[key].items.push({
           id: gen.id,
-          templateName: gen.templateName || 'Unknown Template',
-          sourceName: gen.productName || gen.bundleName || gen.packageName || 'Unknown',
+          templateName: resolveVars(rawTemplateName, itemName, gen.cycleNumber),
+          sourceName: itemName,
           sourceType,
           taskCount: taskIdArray.length,
           taskIds: taskIdArray,
