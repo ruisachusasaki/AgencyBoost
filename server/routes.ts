@@ -14678,6 +14678,72 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.get("/api/clients/:clientId/task-generations", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+
+      const generations = await db
+        .select({
+          id: clientTaskGenerations.id,
+          clientId: clientTaskGenerations.clientId,
+          productId: clientTaskGenerations.productId,
+          bundleId: clientTaskGenerations.bundleId,
+          packageId: clientTaskGenerations.packageId,
+          templateId: clientTaskGenerations.templateId,
+          generationType: clientTaskGenerations.generationType,
+          cycleNumber: clientTaskGenerations.cycleNumber,
+          generatedAt: clientTaskGenerations.generatedAt,
+          taskIds: clientTaskGenerations.taskIds,
+          templateName: productTaskTemplates.name,
+          productName: products.name,
+          bundleName: productBundles.name,
+          packageName: productPackages.name,
+        })
+        .from(clientTaskGenerations)
+        .leftJoin(productTaskTemplates, eq(clientTaskGenerations.templateId, productTaskTemplates.id))
+        .leftJoin(products, eq(clientTaskGenerations.productId, products.id))
+        .leftJoin(productBundles, eq(clientTaskGenerations.bundleId, productBundles.id))
+        .leftJoin(productPackages, eq(clientTaskGenerations.packageId, productPackages.id))
+        .where(eq(clientTaskGenerations.clientId, clientId))
+        .orderBy(sql`${clientTaskGenerations.generatedAt} DESC`);
+
+      const grouped: Record<string, any> = {};
+      for (const gen of generations) {
+        const genTime = gen.generatedAt ? Math.floor(gen.generatedAt.getTime() / 60000) : 0;
+        const key = `${gen.generationType}-${gen.cycleNumber ?? 'none'}-${genTime}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            key,
+            generatedAt: gen.generatedAt,
+            generationType: gen.generationType,
+            cycleNumber: gen.cycleNumber,
+            items: [],
+          };
+        }
+        const taskIdArray = Array.isArray(gen.taskIds) ? gen.taskIds : [];
+        const sourceType = gen.productId ? 'product' : gen.bundleId ? 'bundle' : gen.packageId ? 'package' : 'unknown';
+        grouped[key].items.push({
+          id: gen.id,
+          templateName: gen.templateName || 'Unknown Template',
+          sourceName: gen.productName || gen.bundleName || gen.packageName || 'Unknown',
+          sourceType,
+          taskCount: taskIdArray.length,
+          taskIds: taskIdArray,
+        });
+      }
+
+      const result = Object.values(grouped).map((g: any) => ({
+        ...g,
+        totalTasks: g.items.reduce((sum: number, i: any) => sum + i.taskCount, 0),
+      }));
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching task generations:", error);
+      res.status(500).json({ message: "Failed to fetch task generation history" });
+    }
+  });
+
   app.get("/api/clients/:clientId/generate-tasks-preview", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     try {
       const { clientId } = req.params;

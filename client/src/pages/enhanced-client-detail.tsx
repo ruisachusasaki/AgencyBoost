@@ -2393,6 +2393,118 @@ function GenerateTasksDialog({ clientId, open, onOpenChange }: { clientId: strin
   );
 }
 
+function TaskGenerationHistory({ clientId }: { clientId: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  const { data: history, isLoading } = useQuery<any[]>({
+    queryKey: [`/api/clients/${clientId}/task-generations`],
+    enabled: expanded,
+  });
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  return (
+    <Card className="mt-6">
+      <CardHeader className="cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg font-semibold">Task Generation History</CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            {history && <Badge variant="outline" className="text-xs">{history.length} generation{history.length !== 1 ? 's' : ''}</Badge>}
+            {expanded ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+          </div>
+        </div>
+      </CardHeader>
+      {expanded && (
+        <CardContent>
+          {isLoading ? (
+            <div className="py-6 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" /></div>
+          ) : !history || history.length === 0 ? (
+            <div className="text-center py-6 text-gray-500">
+              <p className="text-sm">No task generations recorded for this client.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {history.map((group: any) => {
+                const groupKey = group.key || `${group.generationType}-${group.cycleNumber}-${group.generatedAt}`;
+                const isGroupExpanded = expandedGroups.has(groupKey);
+                return (
+                  <div key={groupKey} className="border rounded-lg overflow-hidden">
+                    <div
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      onClick={() => toggleGroup(groupKey)}
+                    >
+                      <div className="flex items-center gap-3">
+                        {isGroupExpanded ? <ChevronDown className="h-4 w-4 text-gray-500" /> : <ChevronRight className="h-4 w-4 text-gray-500" />}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">
+                              {group.generatedAt ? format(new Date(group.generatedAt), "MMM d, yyyy h:mm a") : 'Unknown date'}
+                            </span>
+                            <Badge className={group.generationType === 'onboarding' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'}>
+                              {group.generationType === 'onboarding' ? 'Onboarding' : 'Recurring'}
+                            </Badge>
+                            {group.cycleNumber && (
+                              <Badge variant="outline" className="text-xs">Cycle #{group.cycleNumber}</Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-500">{group.items?.length || 0} template{group.items?.length !== 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-primary/10 text-primary border-primary/20">{group.totalTasks} task{group.totalTasks !== 1 ? 's' : ''}</Badge>
+                      </div>
+                    </div>
+                    {isGroupExpanded && group.items && (
+                      <div className="border-t">
+                        {group.items.map((item: any, itemIdx: number) => (
+                          <div key={itemIdx} className="p-3 border-b last:border-b-0">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                {item.sourceType === 'product' ? <Package className="h-3.5 w-3.5 text-primary" /> :
+                                 item.sourceType === 'bundle' ? <Layers className="h-3.5 w-3.5 text-blue-500" /> :
+                                 <Archive className="h-3.5 w-3.5 text-purple-500" />}
+                                <span className="text-sm">{item.sourceName}</span>
+                                <span className="text-xs text-gray-400">→</span>
+                                <span className="text-sm text-gray-600 dark:text-gray-400">{item.templateName}</span>
+                              </div>
+                              <span className="text-xs text-gray-500">{item.taskCount} task{item.taskCount !== 1 ? 's' : ''}</span>
+                            </div>
+                            {item.taskIds && item.taskIds.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {item.taskIds.map((taskId: string, tIdx: number) => (
+                                  <Link key={tIdx} href={`/tasks?taskId=${taskId}`}>
+                                    <Badge variant="outline" className="text-xs cursor-pointer hover:bg-primary/10 transition-colors">
+                                      Task #{tIdx + 1}
+                                    </Badge>
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
 function RecurringTasksSection({ clientId }: { clientId: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -6341,6 +6453,7 @@ export default function EnhancedClientDetail() {
             </Card>
 
             {isAdminOrManager && <RecurringTasksSection clientId={clientId} />}
+            {isAdminOrManager && <TaskGenerationHistory clientId={clientId} />}
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-6 mt-6">
