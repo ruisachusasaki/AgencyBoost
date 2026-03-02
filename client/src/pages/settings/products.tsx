@@ -1571,7 +1571,7 @@ export default function ProductsSettings() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder={activeTab === "taskMapping" ? "Search products, bundles, templates..." : `Search ${activeTab}...`}
+                placeholder={activeTab === "taskMapping" ? "Search products or templates..." : `Search ${activeTab}...`}
                 value={activeTab === "categories" ? categorySearchTerm : activeTab === "packages" ? packageSearchTerm : activeTab === "taskMapping" ? taskMappingSearchTerm : searchTerm}
                 onChange={(e) => {
                   if (activeTab === "categories") {
@@ -2971,9 +2971,9 @@ export default function ProductsSettings() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Package className="w-5 h-5" />
-                      Product Task Templates
+                      Task Templates
                     </CardTitle>
-                    <CardDescription>Task templates that generate when a product is assigned to a client</CardDescription>
+                    <CardDescription>Task templates that auto-generate when a product is assigned to a client</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {products.length === 0 ? (
@@ -3165,276 +3165,6 @@ export default function ProductsSettings() {
                     )}
                   </CardContent>
                 </Card>
-
-                {/* Bundle-Level Templates */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Package2 className="w-5 h-5" />
-                      Bundle Task Templates
-                    </CardTitle>
-                    <CardDescription>Task templates mapped to bundles</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {bundles.length === 0 ? (
-                      <div className="text-center py-6 text-gray-500">No bundles available</div>
-                    ) : (
-                      <div className="space-y-2">
-                        {bundles.filter((b: ProductBundle) => !taskMappingSearchTerm || b.name.toLowerCase().includes(taskMappingSearchTerm.toLowerCase()) || getTemplatesForItem('bundle', b.id).some((t: TaskTemplate) => t.name.toLowerCase().includes(taskMappingSearchTerm.toLowerCase()))).map((bundle: ProductBundle) => {
-                          const templates = getTemplatesForItem('bundle', bundle.id);
-                          const onboardingCount = templates.filter((t: TaskTemplate) => t.taskType === 'onboarding').length;
-                          const recurringCount = templates.filter((t: TaskTemplate) => t.taskType === 'recurring').length;
-                          const isExpanded = expandedTaskMappingItems.has(`bundle-${bundle.id}`);
-                          return (
-                            <div key={bundle.id} className="border rounded-lg">
-                              <div
-                                className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
-                                onClick={() => toggleTaskMappingItem(`bundle-${bundle.id}`)}
-                              >
-                                <div className="flex items-center gap-3">
-                                  {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
-                                  <span className="font-medium">{bundle.name}</span>
-                                  <Badge variant="outline" className={bundle.type === 'one_time' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-teal-50 text-teal-700 border-teal-200'}>
-                                    {bundle.type === 'one_time' ? 'One-Time' : 'Monthly'}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  {onboardingCount > 0 && <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">{onboardingCount} Onboarding</Badge>}
-                                  {recurringCount > 0 && <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">{recurringCount} Recurring</Badge>}
-                                  {templates.length === 0 && <span className="text-xs text-gray-400">No templates</span>}
-                                  {templates.length > 0 && (
-                                    <Button size="sm" variant="outline" title="Copy All Templates" onClick={(e) => { e.stopPropagation(); setCopyTemplatesSource({ type: 'bundle', id: bundle.id, name: bundle.name }); setCopyTargetType('product'); setCopyTargetId(''); setIsCopyTemplatesOpen(true); }}>
-                                      <Copy className="h-3 w-3 mr-1" /> Copy All
-                                    </Button>
-                                  )}
-                                  <Button size="sm" variant="outline" className="text-primary border-primary hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); setTemplateParentType('bundle'); setTemplateParentId(bundle.id); setIsCreateTemplateOpen(true); }}>
-                                    <Plus className="h-3 w-3 mr-1" /> Add
-                                  </Button>
-                                </div>
-                              </div>
-                              {isExpanded && (
-                                <div className="border-t px-3 pb-3">
-                                  {templates.length === 0 ? (
-                                    <div className="text-center py-4 text-gray-400 text-sm flex items-center justify-center gap-2">
-                                      <AlertCircle className="h-4 w-4" />
-                                      No task templates mapped. Click "Add" to create one.
-                                    </div>
-                                  ) : (
-                                    <div className="overflow-x-auto">
-                                      <Table>
-                                        <TableHeader>
-                                          <TableRow>
-                                            <TableHead className="w-8"></TableHead>
-                                            <TableHead>Template Name</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead className="hidden md:table-cell">Qty Mode</TableHead>
-                                            <TableHead className="hidden lg:table-cell">Department</TableHead>
-                                            <TableHead className="hidden lg:table-cell">Assigned Staff</TableHead>
-                                            <TableHead className="hidden md:table-cell">Due Offset</TableHead>
-                                            <TableHead className="hidden md:table-cell">Priority</TableHead>
-                                            <TableHead className="w-20">Actions</TableHead>
-                                          </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                          {templates.sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder).map((tmpl: TaskTemplate) => (
-                                            <TableRow
-                                              key={tmpl.id}
-                                              draggable
-                                              onDragStart={(e) => handleTemplateDragStart(e, tmpl.id, `bundle-${bundle.id}`)}
-                                              onDragEnd={handleTemplateDragEnd}
-                                              onDragOver={handleTemplateDragOver}
-                                              onDrop={(e) => handleTemplateDrop(e, tmpl.id, 'bundle', bundle.id)}
-                                              className={dragState?.templateId === tmpl.id ? 'opacity-50' : ''}
-                                            >
-                                              <TableCell className="w-8 cursor-grab active:cursor-grabbing">
-                                                <GripVertical className="h-4 w-4 text-gray-400" />
-                                              </TableCell>
-                                              <TableCell className="font-medium">{tmpl.name}</TableCell>
-                                              <TableCell>
-                                                <Badge className={tmpl.taskType === 'onboarding' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : 'bg-teal-100 text-teal-800 hover:bg-teal-100'}>
-                                                  {tmpl.taskType === 'onboarding' ? 'Onboarding' : 'Recurring'}
-                                                </Badge>
-                                              </TableCell>
-                                              <TableCell className="hidden md:table-cell capitalize">{tmpl.quantityMode.replace('_', ' ')}</TableCell>
-                                              <TableCell className="hidden lg:table-cell">{tmpl.departmentId ? departmentsList.find((d: Department) => d.id === tmpl.departmentId)?.name || '-' : '-'}</TableCell>
-                                              <TableCell className="hidden lg:table-cell">{tmpl.assignedStaffFirstName ? `${tmpl.assignedStaffFirstName} ${tmpl.assignedStaffLastName || ''}`.trim() : '-'}</TableCell>
-                                              <TableCell className="hidden md:table-cell">{tmpl.dueDateOffset} days</TableCell>
-                                              <TableCell className="hidden md:table-cell">
-                                                <Badge variant="outline" className={
-                                                  tmpl.priority === 'urgent' ? 'border-red-300 text-red-700' :
-                                                  tmpl.priority === 'high' ? 'border-orange-300 text-orange-700' :
-                                                  tmpl.priority === 'low' ? 'border-gray-300 text-gray-500' :
-                                                  'border-gray-300 text-gray-700'
-                                                }>{tmpl.priority}</Badge>
-                                              </TableCell>
-                                              <TableCell>
-                                                <div className="flex gap-1">
-                                                  <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setEditTemplateDescription(tmpl.description || ""); setIsEditTemplateOpen(true); }}>
-                                                    <Edit2 className="h-3.5 w-3.5" />
-                                                  </Button>
-                                                  <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700"><Trash2 className="h-3.5 w-3.5" /></Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                      <AlertDialogHeader>
-                                                        <AlertDialogTitle>Deactivate Template</AlertDialogTitle>
-                                                        <AlertDialogDescription>This will deactivate "{tmpl.name}".</AlertDialogDescription>
-                                                      </AlertDialogHeader>
-                                                      <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => deleteTemplateMutation.mutate(tmpl.id)}>Deactivate</AlertDialogAction>
-                                                      </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                  </AlertDialog>
-                                                </div>
-                                              </TableCell>
-                                            </TableRow>
-                                          ))}
-                                        </TableBody>
-                                      </Table>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Package-Level Templates */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Layers className="w-5 h-5" />
-                      Package Task Templates
-                    </CardTitle>
-                    <CardDescription>Task templates mapped to packages</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {packages.length === 0 ? (
-                      <div className="text-center py-6 text-gray-500">No packages available</div>
-                    ) : (
-                      <div className="space-y-2">
-                        {packages.filter((p: ProductPackage) => !taskMappingSearchTerm || p.name.toLowerCase().includes(taskMappingSearchTerm.toLowerCase()) || getTemplatesForItem('package', p.id).some((t: TaskTemplate) => t.name.toLowerCase().includes(taskMappingSearchTerm.toLowerCase()))).map((pkg: ProductPackage) => {
-                          const templates = getTemplatesForItem('package', pkg.id);
-                          const onboardingCount = templates.filter((t: TaskTemplate) => t.taskType === 'onboarding').length;
-                          const recurringCount = templates.filter((t: TaskTemplate) => t.taskType === 'recurring').length;
-                          const isExpanded = expandedTaskMappingItems.has(`package-${pkg.id}`);
-                          return (
-                            <div key={pkg.id} className="border rounded-lg">
-                              <div
-                                className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
-                                onClick={() => toggleTaskMappingItem(`package-${pkg.id}`)}
-                              >
-                                <div className="flex items-center gap-3">
-                                  {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
-                                  <span className="font-medium">{pkg.name}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  {onboardingCount > 0 && <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">{onboardingCount} Onboarding</Badge>}
-                                  {recurringCount > 0 && <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">{recurringCount} Recurring</Badge>}
-                                  {templates.length === 0 && <span className="text-xs text-gray-400">No templates</span>}
-                                  <Button size="sm" variant="outline" className="text-primary border-primary hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); setTemplateParentType('package'); setTemplateParentId(pkg.id); setIsCreateTemplateOpen(true); }}>
-                                    <Plus className="h-3 w-3 mr-1" /> Add
-                                  </Button>
-                                </div>
-                              </div>
-                              {isExpanded && (
-                                <div className="border-t px-3 pb-3">
-                                  {templates.length === 0 ? (
-                                    <div className="text-center py-4 text-gray-400 text-sm flex items-center justify-center gap-2">
-                                      <AlertCircle className="h-4 w-4" />
-                                      No task templates mapped. Click "Add" to create one.
-                                    </div>
-                                  ) : (
-                                    <div className="overflow-x-auto">
-                                      <Table>
-                                        <TableHeader>
-                                          <TableRow>
-                                            <TableHead className="w-8"></TableHead>
-                                            <TableHead>Template Name</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead className="hidden md:table-cell">Qty Mode</TableHead>
-                                            <TableHead className="hidden lg:table-cell">Department</TableHead>
-                                            <TableHead className="hidden lg:table-cell">Assigned Staff</TableHead>
-                                            <TableHead className="hidden md:table-cell">Due Offset</TableHead>
-                                            <TableHead className="hidden md:table-cell">Priority</TableHead>
-                                            <TableHead className="w-20">Actions</TableHead>
-                                          </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                          {templates.sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder).map((tmpl: TaskTemplate) => (
-                                            <TableRow
-                                              key={tmpl.id}
-                                              draggable
-                                              onDragStart={(e) => handleTemplateDragStart(e, tmpl.id, `package-${pkg.id}`)}
-                                              onDragEnd={handleTemplateDragEnd}
-                                              onDragOver={handleTemplateDragOver}
-                                              onDrop={(e) => handleTemplateDrop(e, tmpl.id, 'package', pkg.id)}
-                                              className={dragState?.templateId === tmpl.id ? 'opacity-50' : ''}
-                                            >
-                                              <TableCell className="w-8 cursor-grab active:cursor-grabbing">
-                                                <GripVertical className="h-4 w-4 text-gray-400" />
-                                              </TableCell>
-                                              <TableCell className="font-medium">{tmpl.name}</TableCell>
-                                              <TableCell>
-                                                <Badge className={tmpl.taskType === 'onboarding' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : 'bg-teal-100 text-teal-800 hover:bg-teal-100'}>
-                                                  {tmpl.taskType === 'onboarding' ? 'Onboarding' : 'Recurring'}
-                                                </Badge>
-                                              </TableCell>
-                                              <TableCell className="hidden md:table-cell capitalize">{tmpl.quantityMode.replace('_', ' ')}</TableCell>
-                                              <TableCell className="hidden lg:table-cell">{tmpl.departmentId ? departmentsList.find((d: Department) => d.id === tmpl.departmentId)?.name || '-' : '-'}</TableCell>
-                                              <TableCell className="hidden lg:table-cell">{tmpl.assignedStaffFirstName ? `${tmpl.assignedStaffFirstName} ${tmpl.assignedStaffLastName || ''}`.trim() : '-'}</TableCell>
-                                              <TableCell className="hidden md:table-cell">{tmpl.dueDateOffset} days</TableCell>
-                                              <TableCell className="hidden md:table-cell">
-                                                <Badge variant="outline" className={
-                                                  tmpl.priority === 'urgent' ? 'border-red-300 text-red-700' :
-                                                  tmpl.priority === 'high' ? 'border-orange-300 text-orange-700' :
-                                                  tmpl.priority === 'low' ? 'border-gray-300 text-gray-500' :
-                                                  'border-gray-300 text-gray-700'
-                                                }>{tmpl.priority}</Badge>
-                                              </TableCell>
-                                              <TableCell>
-                                                <div className="flex gap-1">
-                                                  <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setEditTemplateDescription(tmpl.description || ""); setIsEditTemplateOpen(true); }}>
-                                                    <Edit2 className="h-3.5 w-3.5" />
-                                                  </Button>
-                                                  <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700"><Trash2 className="h-3.5 w-3.5" /></Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                      <AlertDialogHeader>
-                                                        <AlertDialogTitle>Deactivate Template</AlertDialogTitle>
-                                                        <AlertDialogDescription>This will deactivate "{tmpl.name}".</AlertDialogDescription>
-                                                      </AlertDialogHeader>
-                                                      <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => deleteTemplateMutation.mutate(tmpl.id)}>Deactivate</AlertDialogAction>
-                                                      </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                  </AlertDialog>
-                                                </div>
-                                              </TableCell>
-                                            </TableRow>
-                                          ))}
-                                        </TableBody>
-                                      </Table>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
               </>
             )}
           </div>
@@ -3446,7 +3176,7 @@ export default function ProductsSettings() {
           <DialogHeader>
             <DialogTitle>Create Task Template</DialogTitle>
             <DialogDescription>
-              Map a task template to {templateParentType === 'product' ? 'this product' : templateParentType === 'bundle' ? 'this bundle' : 'this package'}
+              Map a task template to this product
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateTemplate} className="space-y-4">
