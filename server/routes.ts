@@ -16083,6 +16083,113 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.post("/api/product-task-templates/:id/duplicate", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [original] = await db.select().from(productTaskTemplates).where(eq(productTaskTemplates.id, id));
+      if (!original) return res.status(404).json({ message: "Template not found" });
+
+      const maxSortResult = await db
+        .select({ maxSort: sql<number>`COALESCE(MAX(${productTaskTemplates.sortOrder}), 0)` })
+        .from(productTaskTemplates)
+        .where(
+          original.productId ? eq(productTaskTemplates.productId, original.productId) :
+          original.bundleId ? eq(productTaskTemplates.bundleId, original.bundleId) :
+          eq(productTaskTemplates.packageId, original.packageId!)
+        );
+      const newSortOrder = (maxSortResult[0]?.maxSort || 0) + 1;
+
+      const [duplicate] = await db.insert(productTaskTemplates).values({
+        productId: original.productId,
+        bundleId: original.bundleId,
+        packageId: original.packageId,
+        name: `Copy of ${original.name}`,
+        description: original.description,
+        taskType: original.taskType,
+        quantityMode: original.quantityMode,
+        departmentId: original.departmentId,
+        assignedStaffId: original.assignedStaffId,
+        dueDateOffset: original.dueDateOffset,
+        estimatedHours: original.estimatedHours,
+        priority: original.priority,
+        sortOrder: newSortOrder,
+        dependsOnTemplateId: original.dependsOnTemplateId,
+        status: 'active',
+      }).returning();
+
+      res.status(201).json(duplicate);
+    } catch (error) {
+      console.error('Error duplicating product task template:', error);
+      res.status(500).json({ message: "Failed to duplicate template" });
+    }
+  });
+
+  app.post("/api/product-task-templates/copy-to-item", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
+    try {
+      const { sourceType, sourceId, targetType, targetId } = req.body;
+
+      if (!sourceType || !sourceId || !targetType || !targetId) {
+        return res.status(400).json({ message: "sourceType, sourceId, targetType, and targetId are required" });
+      }
+      if (!['product', 'bundle', 'package'].includes(sourceType) || !['product', 'bundle', 'package'].includes(targetType)) {
+        return res.status(400).json({ message: "Type must be 'product', 'bundle', or 'package'" });
+      }
+      if (sourceType === targetType && sourceId === targetId) {
+        return res.status(400).json({ message: "Source and target cannot be the same" });
+      }
+
+      const sourceCondition =
+        sourceType === 'product' ? eq(productTaskTemplates.productId, sourceId) :
+        sourceType === 'bundle' ? eq(productTaskTemplates.bundleId, sourceId) :
+        eq(productTaskTemplates.packageId, sourceId);
+
+      const sourceTemplates = await db.select().from(productTaskTemplates)
+        .where(and(sourceCondition, eq(productTaskTemplates.status, 'active')))
+        .orderBy(asc(productTaskTemplates.sortOrder));
+
+      if (sourceTemplates.length === 0) {
+        return res.status(400).json({ message: "No active templates found to copy" });
+      }
+
+      const targetCondition =
+        targetType === 'product' ? eq(productTaskTemplates.productId, targetId) :
+        targetType === 'bundle' ? eq(productTaskTemplates.bundleId, targetId) :
+        eq(productTaskTemplates.packageId, targetId);
+
+      const existingMax = await db
+        .select({ maxSort: sql<number>`COALESCE(MAX(${productTaskTemplates.sortOrder}), 0)` })
+        .from(productTaskTemplates)
+        .where(targetCondition);
+      let nextSort = (existingMax[0]?.maxSort || 0) + 1;
+
+      const copiedTemplates = [];
+      for (const tmpl of sourceTemplates) {
+        const [copied] = await db.insert(productTaskTemplates).values({
+          productId: targetType === 'product' ? targetId : null,
+          bundleId: targetType === 'bundle' ? targetId : null,
+          packageId: targetType === 'package' ? targetId : null,
+          name: tmpl.name,
+          description: tmpl.description,
+          taskType: tmpl.taskType,
+          quantityMode: tmpl.quantityMode,
+          departmentId: tmpl.departmentId,
+          assignedStaffId: tmpl.assignedStaffId,
+          dueDateOffset: tmpl.dueDateOffset,
+          estimatedHours: tmpl.estimatedHours,
+          priority: tmpl.priority,
+          sortOrder: nextSort++,
+          status: 'active',
+        }).returning();
+        copiedTemplates.push(copied);
+      }
+
+      res.status(201).json({ message: `${copiedTemplates.length} templates copied successfully`, count: copiedTemplates.length });
+    } catch (error) {
+      console.error('Error copying templates:', error);
+      res.status(500).json({ message: "Failed to copy templates" });
+    }
+  });
+
   app.delete("/api/product-task-templates/:id", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
     try {
       const { id } = req.params;

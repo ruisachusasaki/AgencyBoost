@@ -199,6 +199,10 @@ export default function ProductsSettings() {
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
   const [templateParentType, setTemplateParentType] = useState<'product' | 'bundle' | 'package'>('product');
   const [templateParentId, setTemplateParentId] = useState<string>("");
+  const [isCopyTemplatesOpen, setIsCopyTemplatesOpen] = useState(false);
+  const [copyTemplatesSource, setCopyTemplatesSource] = useState<{ type: 'product' | 'bundle' | 'package'; id: string; name: string } | null>(null);
+  const [copyTargetType, setCopyTargetType] = useState<'product' | 'bundle' | 'package'>('product');
+  const [copyTargetId, setCopyTargetId] = useState("");
   const [packageCurrentPage, setPackageCurrentPage] = useState(1);
   const [packagesPerPage, setPackagesPerPage] = useState(10);
   
@@ -672,6 +676,38 @@ export default function ProductsSettings() {
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to update template", variant: "destructive" });
+    },
+  });
+
+  const duplicateTemplateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("POST", `/api/product-task-templates/${id}/duplicate`);
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-task-templates"] });
+      setEditingTemplate(data);
+      setIsEditTemplateOpen(true);
+      toast({ title: "Success", description: "Template duplicated — edit the copy below" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to duplicate template", variant: "destructive" });
+    },
+  });
+
+  const copyTemplatesToItemMutation = useMutation({
+    mutationFn: async (data: { sourceType: string; sourceId: string; targetType: string; targetId: string }) => {
+      const res = await apiRequest("POST", "/api/product-task-templates/copy-to-item", data);
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-task-templates"] });
+      setIsCopyTemplatesOpen(false);
+      setCopyTemplatesSource(null);
+      toast({ title: "Success", description: data.message || "Templates copied successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to copy templates", variant: "destructive" });
     },
   });
 
@@ -2908,6 +2944,22 @@ export default function ProductsSettings() {
                                         {templates.length === 0 && (
                                           <span className="text-xs text-gray-400">No templates</span>
                                         )}
+                                        {templates.length > 0 && (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            title="Copy All Templates"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setCopyTemplatesSource({ type: 'product', id: product.id, name: product.name });
+                                              setCopyTargetType('product');
+                                              setCopyTargetId('');
+                                              setIsCopyTemplatesOpen(true);
+                                            }}
+                                          >
+                                            <Copy className="h-3 w-3 mr-1" /> Copy All
+                                          </Button>
+                                        )}
                                         <Button
                                           size="sm"
                                           variant="outline"
@@ -2986,12 +3038,15 @@ export default function ProductsSettings() {
                                                     </TableCell>
                                                     <TableCell>
                                                       <div className="flex gap-1">
-                                                        <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setIsEditTemplateOpen(true); }}>
+                                                        <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setIsEditTemplateOpen(true); }} title="Edit">
                                                           <Edit2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" onClick={() => duplicateTemplateMutation.mutate(tmpl.id)} disabled={duplicateTemplateMutation.isPending} title="Duplicate">
+                                                          <Copy className="h-3.5 w-3.5" />
                                                         </Button>
                                                         <AlertDialog>
                                                           <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                                                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" title="Deactivate">
                                                               <Trash2 className="h-3.5 w-3.5" />
                                                             </Button>
                                                           </AlertDialogTrigger>
@@ -3063,6 +3118,11 @@ export default function ProductsSettings() {
                                   {onboardingCount > 0 && <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">{onboardingCount} Onboarding</Badge>}
                                   {recurringCount > 0 && <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">{recurringCount} Recurring</Badge>}
                                   {templates.length === 0 && <span className="text-xs text-gray-400">No templates</span>}
+                                  {templates.length > 0 && (
+                                    <Button size="sm" variant="outline" title="Copy All Templates" onClick={(e) => { e.stopPropagation(); setCopyTemplatesSource({ type: 'bundle', id: bundle.id, name: bundle.name }); setCopyTargetType('product'); setCopyTargetId(''); setIsCopyTemplatesOpen(true); }}>
+                                      <Copy className="h-3 w-3 mr-1" /> Copy All
+                                    </Button>
+                                  )}
                                   <Button size="sm" variant="outline" className="text-primary border-primary hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); setTemplateParentType('bundle'); setTemplateParentId(bundle.id); setIsCreateTemplateOpen(true); }}>
                                     <Plus className="h-3 w-3 mr-1" /> Add
                                   </Button>
