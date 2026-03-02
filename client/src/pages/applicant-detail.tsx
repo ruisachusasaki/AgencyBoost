@@ -621,11 +621,16 @@ export default function ApplicantDetailPage() {
                             .map((member: any) => (
                               <CommandItem
                                 key={member.id}
-                                value={`${member.firstName} ${member.lastName}`}
+                                value={`${member.firstName} ${member.lastName} ${member.email}`}
                                 onSelect={() => addWatcherMutation.mutate(member.id)}
+                                onPointerDown={(e) => {
+                                  e.preventDefault();
+                                  addWatcherMutation.mutate(member.id);
+                                }}
+                                className="cursor-pointer"
                                 data-testid={`option-add-watcher-${member.id}`}
                               >
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 pointer-events-none">
                                   <Avatar className="h-6 w-6">
                                     <AvatarImage src={member.profileImagePath ? `/objects${member.profileImagePath}` : undefined} />
                                     <AvatarFallback className="text-xs">
