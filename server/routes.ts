@@ -14653,6 +14653,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             .where(eq(packageItems.packageId, item.packageId));
 
           const quoteCustomQtys = (item.customQuantities || {}) as Record<string, number>;
+          console.log(`📦 Package ${item.packageId} customQuantities keys:`, Object.keys(quoteCustomQtys));
+          console.log(`📦 Package ${item.packageId} customQuantities full:`, JSON.stringify(quoteCustomQtys));
+          console.log(`📦 Package items IDs:`, pkgItems.map(p => ({ id: p.id, bundleId: p.bundleId, productId: p.productId, itemType: p.itemType })));
 
           for (const pkgItem of pkgItems) {
             if (pkgItem.itemType === 'bundle' && pkgItem.bundleId) {
@@ -14662,9 +14665,20 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                 .where(and(eq(clientBundles.clientId, clientId), eq(clientBundles.bundleId, pkgItem.bundleId)))
                 .limit(1);
 
-              if (existingBundle.length === 0) {
+              {
                 // Extract sub-product custom quantities for this bundle from the quote
-                const itemKey = pkgItem.id || `bundle-${pkgItem.bundleId}`;
+                // Try multiple key formats: pkgItem.id, bundle-{bundleId}, and direct bundleId
+                const possibleKeys = [
+                  pkgItem.id,
+                  `bundle-${pkgItem.bundleId}`,
+                  pkgItem.bundleId,
+                ].filter(Boolean);
+                
+                let itemKey = possibleKeys.find(k => k && (quoteCustomQtys[k!] !== undefined || Object.keys(quoteCustomQtys).some(qk => qk.startsWith(`${k}_bp_`))));
+                if (!itemKey) itemKey = pkgItem.id || `bundle-${pkgItem.bundleId}`;
+                
+                console.log(`🔍 Bundle ${pkgItem.bundleId}: trying itemKey="${itemKey}", possibleKeys=${JSON.stringify(possibleKeys)}`);
+                
                 const bundleCustomQtys: Record<string, number> = {};
                 for (const [key, val] of Object.entries(quoteCustomQtys)) {
                   if (key.startsWith(`${itemKey}_bp_`)) {
@@ -14672,6 +14686,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                     bundleCustomQtys[productId] = val;
                   }
                 }
+                console.log(`🔍 Bundle ${pkgItem.bundleId}: extracted ${Object.keys(bundleCustomQtys).length} custom quantities, bundleLevelQty=${quoteCustomQtys[itemKey!] ?? 'not found'}`);
 
                 // Calculate bundle cost with quantities
                 const bundleProds = await db
@@ -14690,14 +14705,26 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                 const bundleLevelQty = quoteCustomQtys[itemKey] ?? (pkgItem.quantity || 1);
                 const totalBundleCost = bundleCost * bundleLevelQty;
 
-                await db.insert(clientBundles).values({
-                  clientId,
-                  bundleId: pkgItem.bundleId,
+                const bundleValues = {
                   price: totalBundleCost.toFixed(2),
-                  status: 'active',
+                  status: 'active' as const,
                   customQuantities: Object.keys(bundleCustomQtys).length > 0 ? bundleCustomQtys : null,
-                });
-                transferredCount++;
+                };
+
+                if (existingBundle.length === 0) {
+                  await db.insert(clientBundles).values({
+                    clientId,
+                    bundleId: pkgItem.bundleId,
+                    ...bundleValues,
+                  });
+                  transferredCount++;
+                } else {
+                  await db.update(clientBundles)
+                    .set(bundleValues)
+                    .where(eq(clientBundles.id, existingBundle[0].id));
+                  transferredCount++;
+                  console.log(`🔄 Updated existing bundle ${pkgItem.bundleId} with new quantities`);
+                }
                 console.log(`✅ Imported bundle ${pkgItem.bundleId} (qty ${bundleLevelQty}, cost $${totalBundleCost.toFixed(2)}) from package to client ${clientId}`);
               }
             } else if (pkgItem.itemType === 'product' && pkgItem.productId) {
