@@ -3527,7 +3527,7 @@ export default function ProductsSettings() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <div className="flex items-center gap-1.5">
+                <div className="h-6 flex items-center gap-1.5">
                   <Label htmlFor="template-dueDateOffset">Due Date Offset (days)</Label>
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>
@@ -3692,7 +3692,7 @@ export default function ProductsSettings() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="h-6 flex items-center gap-1.5">
                     <Label htmlFor="edit-template-dueDateOffset">Due Date Offset (days)</Label>
                     <TooltipProvider delayDuration={0}>
                       <Tooltip>
