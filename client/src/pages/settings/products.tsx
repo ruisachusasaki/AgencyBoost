@@ -3527,7 +3527,20 @@ export default function ProductsSettings() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="template-dueDateOffset">Due Date Offset (days)</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="template-dueDateOffset">Due Date Offset (days)</Label>
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" align="start" className="max-w-[260px] text-xs leading-relaxed z-[100]" sideOffset={5}>
+                        <p>Number of days after the client starts (onboarding) or the cycle begins (recurring) that this task is due.</p>
+                        <p className="mt-1 text-muted-foreground">Example: 7 means the task is due 1 week after the start date.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input id="template-dueDateOffset" name="dueDateOffset" type="number" defaultValue="7" min="0" />
               </div>
               <div>
@@ -3675,7 +3688,20 @@ export default function ProductsSettings() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="edit-template-dueDateOffset">Due Date Offset (days)</Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="edit-template-dueDateOffset">Due Date Offset (days)</Label>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" align="start" className="max-w-[260px] text-xs leading-relaxed z-[100]" sideOffset={5}>
+                          <p>Number of days after the client starts (onboarding) or the cycle begins (recurring) that this task is due.</p>
+                          <p className="mt-1 text-muted-foreground">Example: 7 means the task is due 1 week after the start date.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Input id="edit-template-dueDateOffset" name="dueDateOffset" type="number" defaultValue={editingTemplate.dueDateOffset} min="0" />
                 </div>
                 <div>
