@@ -14678,6 +14678,156 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.get("/api/clients/:clientId/generate-tasks-preview", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const skipExisting = req.query.skipExisting !== 'false';
+
+      const assignedProducts = await db.select({ productId: clientProducts.productId }).from(clientProducts).where(eq(clientProducts.clientId, clientId));
+      const assignedBundles = await db.select({ bundleId: clientBundles.bundleId }).from(clientBundles).where(eq(clientBundles.clientId, clientId));
+      const assignedPkgs = await db.select({ packageId: clientPackages.packageId }).from(clientPackages).where(eq(clientPackages.clientId, clientId));
+
+      const existingGens = skipExisting ? await db.select({
+        templateId: clientTaskGenerations.templateId,
+        generationType: clientTaskGenerations.generationType,
+      }).from(clientTaskGenerations).where(eq(clientTaskGenerations.clientId, clientId)) : [];
+
+      const existingSet = new Set(existingGens.map(g => `${g.templateId}-${g.generationType}`));
+
+      const previewItems: any[] = [];
+
+      for (const ap of assignedProducts) {
+        const [prod] = await db.select({ name: products.name }).from(products).where(eq(products.id, ap.productId));
+        const templates = await db.select().from(productTaskTemplates).where(and(eq(productTaskTemplates.productId, ap.productId), eq(productTaskTemplates.status, 'active')));
+        const onboarding = templates.filter(t => t.taskType === 'onboarding');
+        const recurring = templates.filter(t => t.taskType === 'recurring');
+        const onboardingNew = skipExisting ? onboarding.filter(t => !existingSet.has(`${t.id}-onboarding`)) : onboarding;
+        const recurringNew = skipExisting ? recurring.filter(t => !existingSet.has(`${t.id}-recurring`)) : recurring;
+        previewItems.push({ itemType: 'product', itemId: ap.productId, name: prod?.name || 'Unknown', onboardingTemplates: onboardingNew.length, recurringTemplates: recurringNew.length, totalOnboarding: onboarding.length, totalRecurring: recurring.length });
+      }
+
+      for (const ab of assignedBundles) {
+        const [bundle] = await db.select({ name: productBundles.name }).from(productBundles).where(eq(productBundles.id, ab.bundleId));
+        const templates = await db.select().from(productTaskTemplates).where(and(eq(productTaskTemplates.bundleId, ab.bundleId), eq(productTaskTemplates.status, 'active')));
+        const onboarding = templates.filter(t => t.taskType === 'onboarding');
+        const recurring = templates.filter(t => t.taskType === 'recurring');
+        const onboardingNew = skipExisting ? onboarding.filter(t => !existingSet.has(`${t.id}-onboarding`)) : onboarding;
+        const recurringNew = skipExisting ? recurring.filter(t => !existingSet.has(`${t.id}-recurring`)) : recurring;
+        previewItems.push({ itemType: 'bundle', itemId: ab.bundleId, name: bundle?.name || 'Unknown', onboardingTemplates: onboardingNew.length, recurringTemplates: recurringNew.length, totalOnboarding: onboarding.length, totalRecurring: recurring.length });
+      }
+
+      for (const ap of assignedPkgs) {
+        const [pkg] = await db.select({ name: productPackages.name }).from(productPackages).where(eq(productPackages.id, ap.packageId));
+        const templates = await db.select().from(productTaskTemplates).where(and(eq(productTaskTemplates.packageId, ap.packageId), eq(productTaskTemplates.status, 'active')));
+        const onboarding = templates.filter(t => t.taskType === 'onboarding');
+        const recurring = templates.filter(t => t.taskType === 'recurring');
+        const onboardingNew = skipExisting ? onboarding.filter(t => !existingSet.has(`${t.id}-onboarding`)) : onboarding;
+        const recurringNew = skipExisting ? recurring.filter(t => !existingSet.has(`${t.id}-recurring`)) : recurring;
+        previewItems.push({ itemType: 'package', itemId: ap.packageId, name: pkg?.name || 'Unknown', onboardingTemplates: onboardingNew.length, recurringTemplates: recurringNew.length, totalOnboarding: onboarding.length, totalRecurring: recurring.length });
+      }
+
+      res.json({ items: previewItems });
+    } catch (error: any) {
+      console.error("Error generating tasks preview:", error);
+      res.status(500).json({ message: "Failed to generate tasks preview" });
+    }
+  });
+
+  app.post("/api/clients/:clientId/generate-tasks", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { selectedItems, generationType, skipExisting } = req.body;
+
+      if (!generationType || !['onboarding', 'recurring', 'both'].includes(generationType)) {
+        return res.status(400).json({ message: "Invalid generation type" });
+      }
+      if (!Array.isArray(selectedItems) || selectedItems.length === 0) {
+        return res.status(400).json({ message: "No items selected" });
+      }
+
+      const items: Array<{ productId?: string; bundleId?: string; packageId?: string; quantity: number }> = [];
+      for (const si of selectedItems) {
+        if (si.itemType === 'product') items.push({ productId: si.itemId, quantity: 1 });
+        else if (si.itemType === 'bundle') items.push({ bundleId: si.itemId, quantity: 1 });
+        else if (si.itemType === 'package') items.push({ packageId: si.itemId, quantity: 1 });
+      }
+
+      let existingGenSet = new Set<string>();
+      if (skipExisting) {
+        const existingGens = await db.select({
+          templateId: clientTaskGenerations.templateId,
+          generationType: clientTaskGenerations.generationType,
+        }).from(clientTaskGenerations).where(eq(clientTaskGenerations.clientId, clientId));
+        existingGens.forEach(g => existingGenSet.add(`${g.templateId}-${g.generationType}`));
+      }
+
+      const filterItemsByExisting = async (itemList: typeof items, genType: 'onboarding' | 'recurring') => {
+        if (!skipExisting) return itemList;
+        const filtered: typeof items = [];
+        for (const item of itemList) {
+          const conditions: any[] = [eq(productTaskTemplates.taskType, genType), eq(productTaskTemplates.status, 'active')];
+          if (item.productId) conditions.push(eq(productTaskTemplates.productId, item.productId));
+          else if (item.bundleId) conditions.push(eq(productTaskTemplates.bundleId, item.bundleId));
+          else if (item.packageId) conditions.push(eq(productTaskTemplates.packageId, item.packageId));
+          else continue;
+          const templates = await db.select({ id: productTaskTemplates.id }).from(productTaskTemplates).where(and(...conditions));
+          const hasNew = templates.some(t => !existingGenSet.has(`${t.id}-${genType}`));
+          if (hasNew) filtered.push(item);
+        }
+        return filtered;
+      };
+
+      let totalOnboarding = 0;
+      let totalRecurring = 0;
+      const allErrors: string[] = [];
+
+      if (generationType === 'onboarding' || generationType === 'both') {
+        const filteredItems = await filterItemsByExisting(items, 'onboarding');
+        if (filteredItems.length > 0) {
+          const result = await generateTasksFromTemplates({
+            clientId,
+            items: filteredItems,
+            generationType: 'onboarding',
+          });
+          totalOnboarding = result.onboardingTasks;
+          allErrors.push(...result.errors);
+        }
+      }
+
+      if (generationType === 'recurring' || generationType === 'both') {
+        const filteredItems = await filterItemsByExisting(items, 'recurring');
+        if (filteredItems.length > 0) {
+          const [recurringConfig] = await db.select().from(clientRecurringConfig).where(eq(clientRecurringConfig.clientId, clientId));
+          const cycleNumber = (recurringConfig?.lastGeneratedCycle || 0) + 1;
+          const result = await generateTasksFromTemplates({
+            clientId,
+            items: filteredItems,
+            generationType: 'recurring',
+            cycleNumber,
+          });
+          totalRecurring = result.recurringTasks;
+          allErrors.push(...result.errors);
+
+          if (recurringConfig && result.recurringTasks > 0) {
+            await db.update(clientRecurringConfig)
+              .set({ lastGeneratedCycle: cycleNumber, updatedAt: new Date() })
+              .where(eq(clientRecurringConfig.id, recurringConfig.id));
+          }
+        }
+      }
+
+      res.json({
+        totalTasksCreated: totalOnboarding + totalRecurring,
+        onboardingTasks: totalOnboarding,
+        recurringTasks: totalRecurring,
+        errors: allErrors,
+      });
+    } catch (error: any) {
+      console.error("Error generating tasks:", error);
+      res.status(500).json({ message: "Failed to generate tasks" });
+    }
+  });
+
   // Get quotes available for import to a client
   app.get("/api/clients/:clientId/available-quotes", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     try {

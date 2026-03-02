@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList, Repeat } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList, Repeat, Layers } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 import ContactCardField from "@/components/contact-card-field";
 
@@ -2210,6 +2210,189 @@ const EditableField = ({
   );
 };
 
+function GenerateTasksDialog({ clientId, open, onOpenChange }: { clientId: string; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { toast } = useToast();
+  const [generationType, setGenerationType] = useState<'onboarding' | 'recurring' | 'both'>('onboarding');
+  const [skipExisting, setSkipExisting] = useState(true);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const { data: preview, isLoading } = useQuery<any>({
+    queryKey: [`/api/clients/${clientId}/generate-tasks-preview`, skipExisting ? 'skip' : 'all'],
+    queryFn: async () => {
+      const res = await fetch(`/api/clients/${clientId}/generate-tasks-preview?skipExisting=${skipExisting}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed');
+      return res.json();
+    },
+    enabled: open,
+  });
+
+  useEffect(() => {
+    if (preview?.items) {
+      setSelectedItems(new Set(preview.items.map((i: any) => `${i.itemType}-${i.itemId}`)));
+    }
+  }, [preview]);
+
+  const getSelectedPreviewItems = () => {
+    if (!preview?.items) return [];
+    return preview.items.filter((i: any) => selectedItems.has(`${i.itemType}-${i.itemId}`));
+  };
+
+  const getTotalTasks = () => {
+    const items = getSelectedPreviewItems();
+    let total = 0;
+    for (const item of items) {
+      if (generationType === 'onboarding' || generationType === 'both') total += item.onboardingTemplates;
+      if (generationType === 'recurring' || generationType === 'both') total += item.recurringTemplates;
+    }
+    return total;
+  };
+
+  const toggleItem = (key: string) => {
+    setSelectedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const handleGenerate = async () => {
+    const items = getSelectedPreviewItems().map((i: any) => ({ itemType: i.itemType, itemId: i.itemId }));
+    if (items.length === 0) return;
+    setIsGenerating(true);
+    try {
+      const res = await apiRequest('POST', `/api/clients/${clientId}/generate-tasks`, {
+        selectedItems: items,
+        generationType,
+        skipExisting,
+      });
+      const result = await res.json();
+      onOpenChange(false);
+      if (result.errors?.length > 0 && result.totalTasksCreated > 0) {
+        toast({ title: `Created ${result.totalTasksCreated} tasks (${result.onboardingTasks} onboarding, ${result.recurringTasks} recurring) with some warnings`, variant: "destructive" });
+      } else if (result.totalTasksCreated === 0) {
+        toast({ title: "No new tasks were generated. Templates may have already been processed." });
+      } else {
+        toast({ title: `Created ${result.totalTasksCreated} tasks (${result.onboardingTasks} onboarding, ${result.recurringTasks} recurring)` });
+      }
+    } catch (e: any) {
+      toast({ title: "Failed to generate tasks", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const itemTypeIcon = (type: string) => {
+    if (type === 'product') return <Package className="h-4 w-4 text-primary" />;
+    if (type === 'bundle') return <Layers className="h-4 w-4 text-blue-500" />;
+    return <Archive className="h-4 w-4 text-purple-500" />;
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Generate Tasks from Mapping</DialogTitle>
+          <DialogDescription>
+            Select which products to generate tasks for and choose the generation type.
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="py-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>
+        ) : !preview?.items || preview.items.length === 0 ? (
+          <div className="py-8 text-center text-gray-500">
+            <ClipboardList className="h-10 w-10 mx-auto mb-3 text-gray-400" />
+            <p>No products assigned to this client.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              {preview.items.map((item: any) => {
+                const key = `${item.itemType}-${item.itemId}`;
+                const hasTemplates = item.onboardingTemplates > 0 || item.recurringTemplates > 0;
+                return (
+                  <div key={key} className={cn("flex items-center gap-3 p-3 rounded-lg border", hasTemplates ? "border-gray-200 dark:border-gray-700" : "border-gray-100 dark:border-gray-800 opacity-60")}>
+                    <Checkbox
+                      checked={selectedItems.has(key)}
+                      onCheckedChange={() => toggleItem(key)}
+                      disabled={!hasTemplates}
+                      className="rounded-sm"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        {itemTypeIcon(item.itemType)}
+                        <span className="font-medium text-sm truncate">{item.name}</span>
+                        <Badge variant="outline" className="text-xs capitalize">{item.itemType}</Badge>
+                      </div>
+                      <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                        <span>{item.onboardingTemplates} onboarding</span>
+                        <span>{item.recurringTemplates} recurring</span>
+                        {skipExisting && (item.totalOnboarding > item.onboardingTemplates || item.totalRecurring > item.recurringTemplates) && (
+                          <span className="text-yellow-600 dark:text-yellow-400">({item.totalOnboarding - item.onboardingTemplates + item.totalRecurring - item.recurringTemplates} already generated)</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="space-y-3 pt-2 border-t">
+              <div>
+                <Label className="text-sm font-medium">Generation Type</Label>
+                <RadioGroup value={generationType} onValueChange={(v) => setGenerationType(v as any)} className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="onboarding" id="gen-onboarding" />
+                    <Label htmlFor="gen-onboarding" className="text-sm font-normal cursor-pointer">Generate Onboarding Tasks</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="recurring" id="gen-recurring" />
+                    <Label htmlFor="gen-recurring" className="text-sm font-normal cursor-pointer">Generate Recurring Tasks (Next Cycle)</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="both" id="gen-both" />
+                    <Label htmlFor="gen-both" className="text-sm font-normal cursor-pointer">Both</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={skipExisting}
+                  onCheckedChange={(checked) => setSkipExisting(!!checked)}
+                  className="rounded-sm"
+                  id="skip-existing"
+                />
+                <Label htmlFor="skip-existing" className="text-sm font-normal cursor-pointer">Skip already generated (avoid duplicates)</Label>
+              </div>
+            </div>
+
+            <div className="bg-primary/10 rounded-lg p-3 border border-primary/20">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Total tasks to generate</span>
+                <span className="text-lg font-bold text-primary">{getTotalTasks()}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button
+            onClick={handleGenerate}
+            disabled={isGenerating || getTotalTasks() === 0}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+          >
+            {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
+            {isGenerating ? 'Generating...' : 'Generate Tasks'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function RecurringTasksSection({ clientId }: { clientId: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -2870,6 +3053,7 @@ export default function EnhancedClientDetail() {
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [showImportQuoteModal, setShowImportQuoteModal] = useState(false);
+  const [showGenerateTasksModal, setShowGenerateTasksModal] = useState(false);
   const [selectedImportQuoteId, setSelectedImportQuoteId] = useState<string>('');
   const [isImporting, setIsImporting] = useState(false);
 
@@ -5848,6 +6032,17 @@ export default function EnhancedClientDetail() {
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg font-semibold">Products & Services</CardTitle>
                   <div className="flex gap-2">
+                    {isAdminOrManager && (
+                      <Button
+                        onClick={() => setShowGenerateTasksModal(true)}
+                        size="sm"
+                        variant="outline"
+                        className="border-primary text-primary hover:bg-primary/10"
+                      >
+                        <Zap className="h-4 w-4 mr-2" />
+                        Generate Tasks
+                      </Button>
+                    )}
                     <Button
                       onClick={() => {
                         setShowImportQuoteModal(true);
@@ -8243,6 +8438,8 @@ export default function EnhancedClientDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {isAdminOrManager && <GenerateTasksDialog clientId={clientId} open={showGenerateTasksModal} onOpenChange={setShowGenerateTasksModal} />}
 
       {/* Import from Quote Modal */}
       <Dialog open={showImportQuoteModal} onOpenChange={setShowImportQuoteModal}>
