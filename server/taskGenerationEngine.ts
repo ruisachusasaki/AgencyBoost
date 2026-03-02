@@ -66,8 +66,8 @@ export async function generateTasksFromTemplates(
   }
 
   const validStaffIds = new Set<string>();
-  const allStaff = await db.select({ id: staff.id }).from(staff);
-  allStaff.forEach((s) => validStaffIds.add(s.id));
+  const activeStaff = await db.select({ id: staff.id }).from(staff).where(eq(staff.isActive, true));
+  activeStaff.forEach((s) => validStaffIds.add(s.id));
 
   const productNameCache: Record<string, string> = {};
   const lookupProductName = async (productId: string): Promise<string> => {
@@ -123,6 +123,30 @@ export async function generateTasksFromTemplates(
         continue;
       }
 
+      const itemIdConditions: any[] = [
+        eq(clientTaskGenerations.clientId, clientId),
+        eq(clientTaskGenerations.generationType, generationType),
+      ];
+      if (item.productId) itemIdConditions.push(eq(clientTaskGenerations.productId, item.productId));
+      else if (item.bundleId) itemIdConditions.push(eq(clientTaskGenerations.bundleId, item.bundleId));
+      else if (item.packageId) itemIdConditions.push(eq(clientTaskGenerations.packageId, item.packageId));
+
+      if (cycleNumber !== undefined) {
+        itemIdConditions.push(eq(clientTaskGenerations.cycleNumber, cycleNumber));
+      }
+
+      const existingGeneration = await db
+        .select({ id: clientTaskGenerations.id })
+        .from(clientTaskGenerations)
+        .where(and(...itemIdConditions))
+        .limit(1);
+
+      if (existingGeneration.length > 0) {
+        const itemDesc = item.productId || item.bundleId || item.packageId || "unknown";
+        console.log(`[TaskGen] Skipping item ${itemDesc} — already generated for this ${generationType}${cycleNumber ? ` cycle ${cycleNumber}` : ''}`);
+        continue;
+      }
+
       const templates = await db
         .select()
         .from(productTaskTemplates)
@@ -175,8 +199,9 @@ export async function generateTasksFromTemplates(
             let assignedTo = template.assignedStaffId || null;
             if (assignedTo && !validStaffIds.has(assignedTo)) {
               console.warn(
-                `[TaskGen] Template ${template.id} references deleted staff ${assignedTo}, creating unassigned`
+                `[TaskGen] Template ${template.id} references inactive/deleted staff ${assignedTo}, creating unassigned`
               );
+              summary.errors.push(`Template "${template.name}" references inactive staff — task created unassigned`);
               assignedTo = null;
             }
 
