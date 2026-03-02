@@ -29,7 +29,13 @@ import {
   ChevronRight,
   Layers,
   Copy,
-  TrendingUp
+  TrendingUp,
+  ListChecks,
+  ClipboardList,
+  Users,
+  Clock,
+  GripVertical,
+  AlertCircle
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -106,6 +112,40 @@ interface PackageItem {
   bundle?: ProductBundle;
 }
 
+interface TaskTemplate {
+  id: string;
+  productId?: string;
+  bundleId?: string;
+  packageId?: string;
+  name: string;
+  description?: string;
+  taskType: string;
+  quantityMode: string;
+  departmentId?: string;
+  assignedStaffId?: string;
+  assignedStaffFirstName?: string;
+  assignedStaffLastName?: string;
+  dueDateOffset: number;
+  estimatedHours?: string;
+  priority: string;
+  sortOrder: number;
+  dependsOnTemplateId?: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface StaffMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+interface Department {
+  id: string;
+  name: string;
+}
+
 export default function ProductsSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -132,6 +172,14 @@ export default function ProductsSettings() {
   const [bundleFormType, setBundleFormType] = useState("recurring");
   const [packageItemSearch, setPackageItemSearch] = useState("");
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
+
+  // Task Mapping state
+  const [expandedTaskMappingItems, setExpandedTaskMappingItems] = useState<Set<string>>(new Set());
+  const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
+  const [isEditTemplateOpen, setIsEditTemplateOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
+  const [templateParentType, setTemplateParentType] = useState<'product' | 'bundle' | 'package'>('product');
+  const [templateParentId, setTemplateParentId] = useState<string>("");
   const [packageCurrentPage, setPackageCurrentPage] = useState(1);
   const [packagesPerPage, setPackagesPerPage] = useState(10);
   
@@ -206,6 +254,27 @@ export default function ProductsSettings() {
   // Fetch product packages
   const { data: packages = [], isLoading: isLoadingPackages } = useQuery<ProductPackage[]>({
     queryKey: ["/api/product-packages"],
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch task templates (for Task Mapping tab)
+  const { data: taskTemplates = [], isLoading: isLoadingTemplates } = useQuery<TaskTemplate[]>({
+    queryKey: ["/api/product-task-templates"],
+    enabled: activeTab === "taskMapping",
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch staff members (for template assignment)
+  const { data: staffMembers = [] } = useQuery<StaffMember[]>({
+    queryKey: ["/api/staff"],
+    enabled: activeTab === "taskMapping",
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch departments
+  const { data: departmentsList = [] } = useQuery<Department[]>({
+    queryKey: ["/api/departments"],
+    enabled: activeTab === "taskMapping",
     refetchOnWindowFocus: false,
   });
 
@@ -560,6 +629,104 @@ export default function ProductsSettings() {
       });
     },
   });
+
+  // Task Template mutations
+  const createTemplateMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/product-task-templates", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-task-templates"] });
+      setIsCreateTemplateOpen(false);
+      toast({ title: "Success", description: "Task template created successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to create template", variant: "destructive" });
+    },
+  });
+
+  const updateTemplateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest("PUT", `/api/product-task-templates/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-task-templates"] });
+      setIsEditTemplateOpen(false);
+      setEditingTemplate(null);
+      toast({ title: "Success", description: "Task template updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update template", variant: "destructive" });
+    },
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/product-task-templates/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-task-templates"] });
+      toast({ title: "Success", description: "Task template deactivated" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete template", variant: "destructive" });
+    },
+  });
+
+  // Task mapping helpers
+  const getTemplatesForItem = (type: 'product' | 'bundle' | 'package', itemId: string) => {
+    return taskTemplates.filter((t: TaskTemplate) => {
+      if (type === 'product') return t.productId === itemId;
+      if (type === 'bundle') return t.bundleId === itemId;
+      if (type === 'package') return t.packageId === itemId;
+      return false;
+    });
+  };
+
+  const toggleTaskMappingItem = (key: string) => {
+    setExpandedTaskMappingItems(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const handleCreateTemplate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data: any = {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string || null,
+      taskType: formData.get("taskType") as string,
+      quantityMode: formData.get("quantityMode") as string || "once",
+      departmentId: formData.get("departmentId") as string || null,
+      assignedStaffId: formData.get("assignedStaffId") as string || null,
+      dueDateOffset: parseInt(formData.get("dueDateOffset") as string) || 7,
+      estimatedHours: formData.get("estimatedHours") as string || null,
+      priority: formData.get("priority") as string || "medium",
+      status: "active",
+    };
+    if (templateParentType === 'product') data.productId = templateParentId;
+    else if (templateParentType === 'bundle') data.bundleId = templateParentId;
+    else if (templateParentType === 'package') data.packageId = templateParentId;
+    createTemplateMutation.mutate(data);
+  };
+
+  const handleUpdateTemplate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingTemplate) return;
+    const formData = new FormData(e.currentTarget);
+    const data: any = {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string || null,
+      taskType: formData.get("taskType") as string,
+      quantityMode: formData.get("quantityMode") as string || "once",
+      departmentId: formData.get("departmentId") as string || null,
+      assignedStaffId: formData.get("assignedStaffId") as string || null,
+      dueDateOffset: parseInt(formData.get("dueDateOffset") as string) || 7,
+      estimatedHours: formData.get("estimatedHours") as string || null,
+      priority: formData.get("priority") as string || "medium",
+      productId: editingTemplate.productId || null,
+      bundleId: editingTemplate.bundleId || null,
+      packageId: editingTemplate.packageId || null,
+    };
+    updateTemplateMutation.mutate({ id: editingTemplate.id, data });
+  };
 
   const handleCreateProduct = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1202,7 +1369,8 @@ export default function ProductsSettings() {
             { id: "products", name: "Products", icon: Package, count: products.length },
             { id: "bundles", name: "Bundles", icon: Package2, count: bundles.length },
             { id: "categories", name: "Categories", icon: ShoppingCart, count: categories.length },
-            { id: "packages", name: "Packages", icon: Layers, count: packages.length }
+            { id: "packages", name: "Packages", icon: Layers, count: packages.length },
+            { id: "taskMapping", name: "Task Mapping", icon: ListChecks, count: taskTemplates.length }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -1229,13 +1397,13 @@ export default function ProductsSettings() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder={`Search ${activeTab}...`}
-                value={activeTab === "categories" ? categorySearchTerm : activeTab === "packages" ? packageSearchTerm : searchTerm}
+                value={activeTab === "categories" ? categorySearchTerm : activeTab === "packages" ? packageSearchTerm : activeTab === "taskMapping" ? "" : searchTerm}
                 onChange={(e) => {
                   if (activeTab === "categories") {
                     setCategorySearchTerm(e.target.value);
                   } else if (activeTab === "packages") {
                     setPackageSearchTerm(e.target.value);
-                  } else {
+                  } else if (activeTab !== "taskMapping") {
                     setSearchTerm(e.target.value);
                   }
                 }}
@@ -2597,6 +2765,586 @@ export default function ProductsSettings() {
             </CardContent>
           </Card>
         )}
+
+        {/* Task Mapping Tab */}
+        {activeTab === "taskMapping" && (
+          <div className="space-y-6">
+            {isLoadingTemplates ? (
+              <div className="text-center py-8">Loading task templates...</div>
+            ) : (
+              <>
+                {/* Product-Level Templates */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="w-5 h-5" />
+                      Product Task Templates
+                    </CardTitle>
+                    <CardDescription>Task templates that generate when a product is assigned to a client</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {products.length === 0 ? (
+                      <div className="text-center py-6 text-gray-500">No products available</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {(() => {
+                          const grouped: Record<string, Product[]> = {};
+                          products.forEach((p: Product) => {
+                            const catName = categories.find((c: ProductCategory) => c.id === p.categoryId)?.name || "Uncategorized";
+                            if (!grouped[catName]) grouped[catName] = [];
+                            grouped[catName].push(p);
+                          });
+                          return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([catName, catProducts]) => (
+                            <div key={catName} className="mb-4">
+                              <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">{catName}</h4>
+                              {catProducts.map((product: Product) => {
+                                const templates = getTemplatesForItem('product', product.id);
+                                const onboardingCount = templates.filter((t: TaskTemplate) => t.taskType === 'onboarding').length;
+                                const recurringCount = templates.filter((t: TaskTemplate) => t.taskType === 'recurring').length;
+                                const isExpanded = expandedTaskMappingItems.has(`product-${product.id}`);
+                                return (
+                                  <div key={product.id} className="border rounded-lg mb-2">
+                                    <div
+                                      className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
+                                      onClick={() => toggleTaskMappingItem(`product-${product.id}`)}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                                        <span className="font-medium">{product.name}</span>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        {onboardingCount > 0 && (
+                                          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                                            {onboardingCount} Onboarding
+                                          </Badge>
+                                        )}
+                                        {recurringCount > 0 && (
+                                          <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">
+                                            {recurringCount} Recurring
+                                          </Badge>
+                                        )}
+                                        {templates.length === 0 && (
+                                          <span className="text-xs text-gray-400">No templates</span>
+                                        )}
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="text-primary border-primary hover:bg-primary/10"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTemplateParentType('product');
+                                            setTemplateParentId(product.id);
+                                            setIsCreateTemplateOpen(true);
+                                          }}
+                                        >
+                                          <Plus className="h-3 w-3 mr-1" /> Add
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    {isExpanded && (
+                                      <div className="border-t px-3 pb-3">
+                                        {templates.length === 0 ? (
+                                          <div className="text-center py-4 text-gray-400 text-sm flex items-center justify-center gap-2">
+                                            <AlertCircle className="h-4 w-4" />
+                                            No task templates mapped. Click "Add" to create one.
+                                          </div>
+                                        ) : (
+                                          <div className="overflow-x-auto">
+                                            <Table>
+                                              <TableHeader>
+                                                <TableRow>
+                                                  <TableHead>Template Name</TableHead>
+                                                  <TableHead>Type</TableHead>
+                                                  <TableHead className="hidden md:table-cell">Qty Mode</TableHead>
+                                                  <TableHead className="hidden lg:table-cell">Department</TableHead>
+                                                  <TableHead className="hidden lg:table-cell">Assigned Staff</TableHead>
+                                                  <TableHead className="hidden md:table-cell">Due Offset</TableHead>
+                                                  <TableHead className="hidden md:table-cell">Priority</TableHead>
+                                                  <TableHead className="w-20">Actions</TableHead>
+                                                </TableRow>
+                                              </TableHeader>
+                                              <TableBody>
+                                                {templates.sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder).map((tmpl: TaskTemplate) => (
+                                                  <TableRow key={tmpl.id}>
+                                                    <TableCell className="font-medium">{tmpl.name}</TableCell>
+                                                    <TableCell>
+                                                      <Badge className={tmpl.taskType === 'onboarding' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : 'bg-teal-100 text-teal-800 hover:bg-teal-100'}>
+                                                        {tmpl.taskType === 'onboarding' ? 'Onboarding' : 'Recurring'}
+                                                      </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="hidden md:table-cell capitalize">{tmpl.quantityMode.replace('_', ' ')}</TableCell>
+                                                    <TableCell className="hidden lg:table-cell">
+                                                      {tmpl.departmentId ? departmentsList.find((d: Department) => d.id === tmpl.departmentId)?.name || '-' : '-'}
+                                                    </TableCell>
+                                                    <TableCell className="hidden lg:table-cell">
+                                                      {tmpl.assignedStaffFirstName ? `${tmpl.assignedStaffFirstName} ${tmpl.assignedStaffLastName || ''}`.trim() : '-'}
+                                                    </TableCell>
+                                                    <TableCell className="hidden md:table-cell">{tmpl.dueDateOffset} days</TableCell>
+                                                    <TableCell className="hidden md:table-cell">
+                                                      <Badge variant="outline" className={
+                                                        tmpl.priority === 'urgent' ? 'border-red-300 text-red-700' :
+                                                        tmpl.priority === 'high' ? 'border-orange-300 text-orange-700' :
+                                                        tmpl.priority === 'low' ? 'border-gray-300 text-gray-500' :
+                                                        'border-gray-300 text-gray-700'
+                                                      }>
+                                                        {tmpl.priority}
+                                                      </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      <div className="flex gap-1">
+                                                        <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setIsEditTemplateOpen(true); }}>
+                                                          <Edit2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <AlertDialog>
+                                                          <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                                                              <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                          </AlertDialogTrigger>
+                                                          <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                              <AlertDialogTitle>Deactivate Template</AlertDialogTitle>
+                                                              <AlertDialogDescription>This will deactivate the template "{tmpl.name}". It can be reactivated later.</AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                              <AlertDialogAction onClick={() => deleteTemplateMutation.mutate(tmpl.id)}>Deactivate</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                          </AlertDialogContent>
+                                                        </AlertDialog>
+                                                      </div>
+                                                    </TableCell>
+                                                  </TableRow>
+                                                ))}
+                                              </TableBody>
+                                            </Table>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Bundle-Level Templates */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package2 className="w-5 h-5" />
+                      Bundle Task Templates
+                    </CardTitle>
+                    <CardDescription>Task templates mapped to bundles</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {bundles.length === 0 ? (
+                      <div className="text-center py-6 text-gray-500">No bundles available</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {bundles.map((bundle: ProductBundle) => {
+                          const templates = getTemplatesForItem('bundle', bundle.id);
+                          const onboardingCount = templates.filter((t: TaskTemplate) => t.taskType === 'onboarding').length;
+                          const recurringCount = templates.filter((t: TaskTemplate) => t.taskType === 'recurring').length;
+                          const isExpanded = expandedTaskMappingItems.has(`bundle-${bundle.id}`);
+                          return (
+                            <div key={bundle.id} className="border rounded-lg">
+                              <div
+                                className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
+                                onClick={() => toggleTaskMappingItem(`bundle-${bundle.id}`)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                                  <span className="font-medium">{bundle.name}</span>
+                                  <Badge variant="outline" className={bundle.type === 'one_time' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-teal-50 text-teal-700 border-teal-200'}>
+                                    {bundle.type === 'one_time' ? 'One-Time' : 'Monthly'}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  {onboardingCount > 0 && <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">{onboardingCount} Onboarding</Badge>}
+                                  {recurringCount > 0 && <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">{recurringCount} Recurring</Badge>}
+                                  {templates.length === 0 && <span className="text-xs text-gray-400">No templates</span>}
+                                  <Button size="sm" variant="outline" className="text-primary border-primary hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); setTemplateParentType('bundle'); setTemplateParentId(bundle.id); setIsCreateTemplateOpen(true); }}>
+                                    <Plus className="h-3 w-3 mr-1" /> Add
+                                  </Button>
+                                </div>
+                              </div>
+                              {isExpanded && (
+                                <div className="border-t px-3 pb-3">
+                                  {templates.length === 0 ? (
+                                    <div className="text-center py-4 text-gray-400 text-sm flex items-center justify-center gap-2">
+                                      <AlertCircle className="h-4 w-4" />
+                                      No task templates mapped. Click "Add" to create one.
+                                    </div>
+                                  ) : (
+                                    <div className="overflow-x-auto">
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow>
+                                            <TableHead>Template Name</TableHead>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead className="hidden md:table-cell">Qty Mode</TableHead>
+                                            <TableHead className="hidden lg:table-cell">Department</TableHead>
+                                            <TableHead className="hidden lg:table-cell">Assigned Staff</TableHead>
+                                            <TableHead className="hidden md:table-cell">Due Offset</TableHead>
+                                            <TableHead className="hidden md:table-cell">Priority</TableHead>
+                                            <TableHead className="w-20">Actions</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {templates.sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder).map((tmpl: TaskTemplate) => (
+                                            <TableRow key={tmpl.id}>
+                                              <TableCell className="font-medium">{tmpl.name}</TableCell>
+                                              <TableCell>
+                                                <Badge className={tmpl.taskType === 'onboarding' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : 'bg-teal-100 text-teal-800 hover:bg-teal-100'}>
+                                                  {tmpl.taskType === 'onboarding' ? 'Onboarding' : 'Recurring'}
+                                                </Badge>
+                                              </TableCell>
+                                              <TableCell className="hidden md:table-cell capitalize">{tmpl.quantityMode.replace('_', ' ')}</TableCell>
+                                              <TableCell className="hidden lg:table-cell">{tmpl.departmentId ? departmentsList.find((d: Department) => d.id === tmpl.departmentId)?.name || '-' : '-'}</TableCell>
+                                              <TableCell className="hidden lg:table-cell">{tmpl.assignedStaffFirstName ? `${tmpl.assignedStaffFirstName} ${tmpl.assignedStaffLastName || ''}`.trim() : '-'}</TableCell>
+                                              <TableCell className="hidden md:table-cell">{tmpl.dueDateOffset} days</TableCell>
+                                              <TableCell className="hidden md:table-cell">
+                                                <Badge variant="outline" className={
+                                                  tmpl.priority === 'urgent' ? 'border-red-300 text-red-700' :
+                                                  tmpl.priority === 'high' ? 'border-orange-300 text-orange-700' :
+                                                  tmpl.priority === 'low' ? 'border-gray-300 text-gray-500' :
+                                                  'border-gray-300 text-gray-700'
+                                                }>{tmpl.priority}</Badge>
+                                              </TableCell>
+                                              <TableCell>
+                                                <div className="flex gap-1">
+                                                  <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setIsEditTemplateOpen(true); }}>
+                                                    <Edit2 className="h-3.5 w-3.5" />
+                                                  </Button>
+                                                  <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700"><Trash2 className="h-3.5 w-3.5" /></Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                      <AlertDialogHeader>
+                                                        <AlertDialogTitle>Deactivate Template</AlertDialogTitle>
+                                                        <AlertDialogDescription>This will deactivate "{tmpl.name}".</AlertDialogDescription>
+                                                      </AlertDialogHeader>
+                                                      <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => deleteTemplateMutation.mutate(tmpl.id)}>Deactivate</AlertDialogAction>
+                                                      </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                  </AlertDialog>
+                                                </div>
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Package-Level Templates */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Layers className="w-5 h-5" />
+                      Package Task Templates
+                    </CardTitle>
+                    <CardDescription>Task templates mapped to packages</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {packages.length === 0 ? (
+                      <div className="text-center py-6 text-gray-500">No packages available</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {packages.map((pkg: ProductPackage) => {
+                          const templates = getTemplatesForItem('package', pkg.id);
+                          const onboardingCount = templates.filter((t: TaskTemplate) => t.taskType === 'onboarding').length;
+                          const recurringCount = templates.filter((t: TaskTemplate) => t.taskType === 'recurring').length;
+                          const isExpanded = expandedTaskMappingItems.has(`package-${pkg.id}`);
+                          return (
+                            <div key={pkg.id} className="border rounded-lg">
+                              <div
+                                className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
+                                onClick={() => toggleTaskMappingItem(`package-${pkg.id}`)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                                  <span className="font-medium">{pkg.name}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  {onboardingCount > 0 && <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">{onboardingCount} Onboarding</Badge>}
+                                  {recurringCount > 0 && <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">{recurringCount} Recurring</Badge>}
+                                  {templates.length === 0 && <span className="text-xs text-gray-400">No templates</span>}
+                                  <Button size="sm" variant="outline" className="text-primary border-primary hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); setTemplateParentType('package'); setTemplateParentId(pkg.id); setIsCreateTemplateOpen(true); }}>
+                                    <Plus className="h-3 w-3 mr-1" /> Add
+                                  </Button>
+                                </div>
+                              </div>
+                              {isExpanded && (
+                                <div className="border-t px-3 pb-3">
+                                  {templates.length === 0 ? (
+                                    <div className="text-center py-4 text-gray-400 text-sm flex items-center justify-center gap-2">
+                                      <AlertCircle className="h-4 w-4" />
+                                      No task templates mapped. Click "Add" to create one.
+                                    </div>
+                                  ) : (
+                                    <div className="overflow-x-auto">
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow>
+                                            <TableHead>Template Name</TableHead>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead className="hidden md:table-cell">Qty Mode</TableHead>
+                                            <TableHead className="hidden lg:table-cell">Department</TableHead>
+                                            <TableHead className="hidden lg:table-cell">Assigned Staff</TableHead>
+                                            <TableHead className="hidden md:table-cell">Due Offset</TableHead>
+                                            <TableHead className="hidden md:table-cell">Priority</TableHead>
+                                            <TableHead className="w-20">Actions</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {templates.sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder).map((tmpl: TaskTemplate) => (
+                                            <TableRow key={tmpl.id}>
+                                              <TableCell className="font-medium">{tmpl.name}</TableCell>
+                                              <TableCell>
+                                                <Badge className={tmpl.taskType === 'onboarding' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : 'bg-teal-100 text-teal-800 hover:bg-teal-100'}>
+                                                  {tmpl.taskType === 'onboarding' ? 'Onboarding' : 'Recurring'}
+                                                </Badge>
+                                              </TableCell>
+                                              <TableCell className="hidden md:table-cell capitalize">{tmpl.quantityMode.replace('_', ' ')}</TableCell>
+                                              <TableCell className="hidden lg:table-cell">{tmpl.departmentId ? departmentsList.find((d: Department) => d.id === tmpl.departmentId)?.name || '-' : '-'}</TableCell>
+                                              <TableCell className="hidden lg:table-cell">{tmpl.assignedStaffFirstName ? `${tmpl.assignedStaffFirstName} ${tmpl.assignedStaffLastName || ''}`.trim() : '-'}</TableCell>
+                                              <TableCell className="hidden md:table-cell">{tmpl.dueDateOffset} days</TableCell>
+                                              <TableCell className="hidden md:table-cell">
+                                                <Badge variant="outline" className={
+                                                  tmpl.priority === 'urgent' ? 'border-red-300 text-red-700' :
+                                                  tmpl.priority === 'high' ? 'border-orange-300 text-orange-700' :
+                                                  tmpl.priority === 'low' ? 'border-gray-300 text-gray-500' :
+                                                  'border-gray-300 text-gray-700'
+                                                }>{tmpl.priority}</Badge>
+                                              </TableCell>
+                                              <TableCell>
+                                                <div className="flex gap-1">
+                                                  <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setIsEditTemplateOpen(true); }}>
+                                                    <Edit2 className="h-3.5 w-3.5" />
+                                                  </Button>
+                                                  <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700"><Trash2 className="h-3.5 w-3.5" /></Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                      <AlertDialogHeader>
+                                                        <AlertDialogTitle>Deactivate Template</AlertDialogTitle>
+                                                        <AlertDialogDescription>This will deactivate "{tmpl.name}".</AlertDialogDescription>
+                                                      </AlertDialogHeader>
+                                                      <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => deleteTemplateMutation.mutate(tmpl.id)}>Deactivate</AlertDialogAction>
+                                                      </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                  </AlertDialog>
+                                                </div>
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </div>
+        )}
+
+      {/* Create Task Template Dialog */}
+      <Dialog open={isCreateTemplateOpen} onOpenChange={setIsCreateTemplateOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Task Template</DialogTitle>
+            <DialogDescription>
+              Map a task template to {templateParentType === 'product' ? 'this product' : templateParentType === 'bundle' ? 'this bundle' : 'this package'}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateTemplate} className="space-y-4">
+            <div>
+              <Label htmlFor="template-name">Template Name *</Label>
+              <Input id="template-name" name="name" required placeholder="e.g., Set up Google Ads account" />
+            </div>
+            <div>
+              <Label htmlFor="template-description">Description</Label>
+              <Textarea id="template-description" name="description" placeholder="Supports {{client.name}}, {{product.name}}, {{quantity}}" rows={3} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="template-taskType">Task Type *</Label>
+                <select name="taskType" id="template-taskType" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="onboarding" required>
+                  <option value="onboarding">Onboarding</option>
+                  <option value="recurring">Recurring</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="template-quantityMode">Quantity Mode</Label>
+                <select name="quantityMode" id="template-quantityMode" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="once">
+                  <option value="once">Once</option>
+                  <option value="per_unit">Per Unit</option>
+                  <option value="per_unit_named">Per Unit (Named)</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="template-departmentId">Department</Label>
+                <select name="departmentId" id="template-departmentId" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="">
+                  <option value="">None</option>
+                  {departmentsList.map((dept: Department) => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="template-assignedStaffId">Assigned Staff</Label>
+                <select name="assignedStaffId" id="template-assignedStaffId" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="">
+                  <option value="">Unassigned</option>
+                  {staffMembers.map((s: StaffMember) => (
+                    <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="template-dueDateOffset">Due Date Offset (days)</Label>
+                <Input id="template-dueDateOffset" name="dueDateOffset" type="number" defaultValue="7" min="0" />
+              </div>
+              <div>
+                <Label htmlFor="template-estimatedHours">Est. Hours</Label>
+                <Input id="template-estimatedHours" name="estimatedHours" type="number" step="0.25" placeholder="0" />
+              </div>
+              <div>
+                <Label htmlFor="template-priority">Priority</Label>
+                <select name="priority" id="template-priority" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="medium">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsCreateTemplateOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={createTemplateMutation.isPending}>
+                {createTemplateMutation.isPending ? "Creating..." : "Create Template"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Task Template Dialog */}
+      <Dialog open={isEditTemplateOpen} onOpenChange={(open) => { setIsEditTemplateOpen(open); if (!open) setEditingTemplate(null); }}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Task Template</DialogTitle>
+            <DialogDescription>Update this task template</DialogDescription>
+          </DialogHeader>
+          {editingTemplate && (
+            <form onSubmit={handleUpdateTemplate} className="space-y-4">
+              <div>
+                <Label htmlFor="edit-template-name">Template Name *</Label>
+                <Input id="edit-template-name" name="name" required defaultValue={editingTemplate.name} />
+              </div>
+              <div>
+                <Label htmlFor="edit-template-description">Description</Label>
+                <Textarea id="edit-template-description" name="description" defaultValue={editingTemplate.description || ""} rows={3} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-template-taskType">Task Type *</Label>
+                  <select name="taskType" id="edit-template-taskType" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue={editingTemplate.taskType} required>
+                    <option value="onboarding">Onboarding</option>
+                    <option value="recurring">Recurring</option>
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-template-quantityMode">Quantity Mode</Label>
+                  <select name="quantityMode" id="edit-template-quantityMode" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue={editingTemplate.quantityMode}>
+                    <option value="once">Once</option>
+                    <option value="per_unit">Per Unit</option>
+                    <option value="per_unit_named">Per Unit (Named)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-template-departmentId">Department</Label>
+                  <select name="departmentId" id="edit-template-departmentId" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue={editingTemplate.departmentId || ""}>
+                    <option value="">None</option>
+                    {departmentsList.map((dept: Department) => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-template-assignedStaffId">Assigned Staff</Label>
+                  <select name="assignedStaffId" id="edit-template-assignedStaffId" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue={editingTemplate.assignedStaffId || ""}>
+                    <option value="">Unassigned</option>
+                    {staffMembers.map((s: StaffMember) => (
+                      <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="edit-template-dueDateOffset">Due Date Offset (days)</Label>
+                  <Input id="edit-template-dueDateOffset" name="dueDateOffset" type="number" defaultValue={editingTemplate.dueDateOffset} min="0" />
+                </div>
+                <div>
+                  <Label htmlFor="edit-template-estimatedHours">Est. Hours</Label>
+                  <Input id="edit-template-estimatedHours" name="estimatedHours" type="number" step="0.25" defaultValue={editingTemplate.estimatedHours || ""} />
+                </div>
+                <div>
+                  <Label htmlFor="edit-template-priority">Priority</Label>
+                  <select name="priority" id="edit-template-priority" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue={editingTemplate.priority}>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => { setIsEditTemplateOpen(false); setEditingTemplate(null); }}>Cancel</Button>
+                <Button type="submit" disabled={updateTemplateMutation.isPending}>
+                  {updateTemplateMutation.isPending ? "Updating..." : "Update Template"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Package Dialog */}
       <Dialog open={isEditPackageOpen} onOpenChange={setIsEditPackageOpen}>
