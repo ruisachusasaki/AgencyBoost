@@ -3378,21 +3378,23 @@ export default function ProductsSettings() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="template-taskType">Task Type *</Label>
+                <div className="h-6 flex items-center">
+                  <Label htmlFor="template-taskType">Task Type *</Label>
+                </div>
                 <select name="taskType" id="template-taskType" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="onboarding" required>
                   <option value="onboarding">Onboarding</option>
                   <option value="recurring">Recurring</option>
                 </select>
               </div>
               <div>
-                <div className="flex items-center gap-1.5">
+                <div className="h-6 flex items-center gap-1.5">
                   <Label htmlFor="template-quantityMode">Quantity Mode</Label>
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
-                      <TooltipContent side="bottom" align="start" className="max-w-xs text-xs leading-relaxed z-[100]">
+                      <TooltipContent side="bottom" align="end" className="max-w-[280px] text-xs leading-relaxed z-[100]" sideOffset={5}>
                         <p className="font-semibold mb-1">Once</p>
                         <p className="mb-2">Creates a single task regardless of product quantity.</p>
                         <p className="font-semibold mb-1">Per Unit</p>
@@ -3478,21 +3480,23 @@ export default function ProductsSettings() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit-template-taskType">Task Type *</Label>
+                  <div className="h-6 flex items-center">
+                    <Label htmlFor="edit-template-taskType">Task Type *</Label>
+                  </div>
                   <select name="taskType" id="edit-template-taskType" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue={editingTemplate.taskType} required>
                     <option value="onboarding">Onboarding</option>
                     <option value="recurring">Recurring</option>
                   </select>
                 </div>
                 <div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="h-6 flex items-center gap-1.5">
                     <Label htmlFor="edit-template-quantityMode">Quantity Mode</Label>
                     <TooltipProvider delayDuration={0}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" align="start" className="max-w-xs text-xs leading-relaxed z-[100]">
+                        <TooltipContent side="bottom" align="end" className="max-w-[280px] text-xs leading-relaxed z-[100]" sideOffset={5}>
                           <p className="font-semibold mb-1">Once</p>
                           <p className="mb-2">Creates a single task regardless of product quantity.</p>
                           <p className="font-semibold mb-1">Per Unit</p>
