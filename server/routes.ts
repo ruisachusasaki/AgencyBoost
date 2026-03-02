@@ -2,6 +2,7 @@ import { getGoogleCalendarEventsForView } from "./googleCalendarEventsEndpoint";
 import { createCalendarEvent, updateCalendarEventStatus, getEventTimeEntries, createOneOnOneMeetingCalendarEvent } from "./googleCalendarCreateEvent";
 import { createOneOnOneMeetingCalendars, deleteOneOnOneMeetingCalendars, updateOneOnOneMeetingCalendars } from "./oneOnOneMeetingService";
 import { findFathomRecording } from "./fathomService";
+import { generateTasksFromTemplates } from "./taskGenerationEngine";
 import express, { type Express, type Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
@@ -53,7 +54,7 @@ import {
   oneOnOneProgressionStatuses,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, granularPermissions, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts, productPackages, packageItems, clientPackages, insertProductPackageSchema,
-  productTaskTemplates, insertProductTaskTemplateSchema,
+  productTaskTemplates, insertProductTaskTemplateSchema, clientTaskGenerations, clientRecurringConfig,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, documents, clientTransactions, clientHealthScores, clients,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, eventTimeEntries, smsIntegrations, emailIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments,
@@ -2903,7 +2904,90 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           console.error('Error creating deal from quote:', dealError);
         }
       }
-      
+
+      let taskGenerationSummary: any = null;
+
+      try {
+        const assignedProducts = await db
+          .select({ productId: clientProducts.productId })
+          .from(clientProducts)
+          .where(eq(clientProducts.clientId, client.id));
+
+        const assignedBundles = await db
+          .select({ bundleId: clientBundles.bundleId })
+          .from(clientBundles)
+          .where(eq(clientBundles.clientId, client.id));
+
+        const assignedPackages = await db
+          .select({ packageId: clientPackages.packageId })
+          .from(clientPackages)
+          .where(eq(clientPackages.clientId, client.id));
+
+        const generationItems: Array<{ productId?: string; bundleId?: string; packageId?: string; quantity: number }> = [];
+
+        for (const cp of assignedProducts) {
+          let qty = 1;
+          if (req.body.selectedQuoteId) {
+            const [qi] = await db.select({ quantity: quoteItems.quantity }).from(quoteItems)
+              .where(and(eq(quoteItems.quoteId, req.body.selectedQuoteId), eq(quoteItems.productId, cp.productId), eq(quoteItems.itemType, 'product')))
+              .limit(1);
+            if (qi) qty = qi.quantity;
+          }
+          generationItems.push({ productId: cp.productId, quantity: qty });
+        }
+
+        for (const cb of assignedBundles) {
+          let qty = 1;
+          if (req.body.selectedQuoteId) {
+            const [qi] = await db.select({ quantity: quoteItems.quantity }).from(quoteItems)
+              .where(and(eq(quoteItems.quoteId, req.body.selectedQuoteId), eq(quoteItems.bundleId, cb.bundleId), eq(quoteItems.itemType, 'bundle')))
+              .limit(1);
+            if (qi) qty = qi.quantity;
+          }
+          generationItems.push({ bundleId: cb.bundleId, quantity: qty });
+        }
+
+        for (const cpkg of assignedPackages) {
+          let qty = 1;
+          if (req.body.selectedQuoteId) {
+            const [qi] = await db.select({ quantity: quoteItems.quantity }).from(quoteItems)
+              .where(and(eq(quoteItems.quoteId, req.body.selectedQuoteId), eq(quoteItems.packageId, cpkg.packageId), eq(quoteItems.itemType, 'package')))
+              .limit(1);
+            if (qi) qty = qi.quantity;
+          }
+          generationItems.push({ packageId: cpkg.packageId, quantity: qty });
+        }
+
+        if (generationItems.length > 0) {
+          taskGenerationSummary = await generateTasksFromTemplates({
+            clientId: client.id,
+            items: generationItems,
+            generationType: 'onboarding',
+            cycleStartDate: new Date(),
+          });
+
+          console.log(`✅ Task generation for client ${client.id}: ${taskGenerationSummary.totalTasksCreated} onboarding tasks created`);
+          if (taskGenerationSummary.errors.length > 0) {
+            console.warn(`⚠️ Task generation warnings:`, taskGenerationSummary.errors);
+          }
+        }
+
+        const existingConfig = await db.select().from(clientRecurringConfig)
+          .where(eq(clientRecurringConfig.clientId, client.id)).limit(1);
+
+        if (existingConfig.length === 0) {
+          await db.insert(clientRecurringConfig).values({
+            clientId: client.id,
+            cycleStartDate: new Date(),
+            cycleLengthDays: 30,
+            status: 'active',
+          });
+          console.log(`✅ Created recurring config for client ${client.id}`);
+        }
+      } catch (taskGenError) {
+        console.error('Error generating onboarding tasks (non-blocking):', taskGenError);
+      }
+
       // Log the creation with authenticated user
       await createAuditLog(
         "created",
@@ -2917,7 +3001,10 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         req
       );
       
-      res.status(201).json(client);
+      res.status(201).json({
+        ...client,
+        taskGenerationSummary: taskGenerationSummary || undefined,
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
