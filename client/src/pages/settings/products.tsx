@@ -3360,7 +3360,7 @@ export default function ProductsSettings() {
 
       {/* Create Task Template Dialog */}
       <Dialog open={isCreateTemplateOpen} onOpenChange={setIsCreateTemplateOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Task Template</DialogTitle>
             <DialogDescription>
@@ -3387,12 +3387,12 @@ export default function ProductsSettings() {
               <div>
                 <div className="flex items-center gap-1.5">
                   <Label htmlFor="template-quantityMode">Quantity Mode</Label>
-                  <TooltipProvider>
+                  <TooltipProvider delayDuration={0}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-xs text-xs leading-relaxed">
+                      <TooltipContent side="bottom" align="start" className="max-w-xs text-xs leading-relaxed z-[100]">
                         <p className="font-semibold mb-1">Once</p>
                         <p className="mb-2">Creates a single task regardless of product quantity.</p>
                         <p className="font-semibold mb-1">Per Unit</p>
@@ -3461,7 +3461,7 @@ export default function ProductsSettings() {
 
       {/* Edit Task Template Dialog */}
       <Dialog open={isEditTemplateOpen} onOpenChange={(open) => { setIsEditTemplateOpen(open); if (!open) setEditingTemplate(null); }}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Task Template</DialogTitle>
             <DialogDescription>Update this task template</DialogDescription>
@@ -3487,12 +3487,12 @@ export default function ProductsSettings() {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <Label htmlFor="edit-template-quantityMode">Quantity Mode</Label>
-                    <TooltipProvider>
+                    <TooltipProvider delayDuration={0}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-xs text-xs leading-relaxed">
+                        <TooltipContent side="bottom" align="start" className="max-w-xs text-xs leading-relaxed z-[100]">
                           <p className="font-semibold mb-1">Once</p>
                           <p className="mb-2">Creates a single task regardless of product quantity.</p>
                           <p className="font-semibold mb-1">Per Unit</p>
