@@ -53,6 +53,7 @@ import {
   oneOnOneProgressionStatuses,
   users, authUsers, businessProfile, customFields, customFieldFolders, staff, departments, positions, tags, products, productCategories, auditLogs,
   roles, permissions, userRoles, granularPermissions, notificationSettings, clientProducts, clientBundles, productBundles, bundleProducts, productPackages, packageItems, clientPackages, insertProductPackageSchema,
+  productTaskTemplates, insertProductTaskTemplateSchema,
   clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, documents, clientTransactions, clientHealthScores, clients,
   calendars, calendarStaff, calendarAvailability, calendarAppointments, calendarDateOverrides, calendarIntegrations, eventTimeEntries, smsIntegrations, emailIntegrations, customFieldFileUploads,
   forms, formFields, formSubmissions, formFolders, leads, leadPipelineStages, leadNotes, leadAppointments, tasks, taskActivities, taskComments, taskCommentReactions, commentFiles, taskAttachments,
@@ -15544,6 +15545,237 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error) {
       console.error('Error duplicating package:', error);
       res.status(500).json({ message: "Failed to duplicate package" });
+    }
+  });
+
+  // ============ Product Task Templates ============
+
+  app.get("/api/product-task-templates", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
+    try {
+      const { productId, bundleId, packageId, taskType, status } = req.query;
+      const conditions: any[] = [];
+
+      if (productId) conditions.push(eq(productTaskTemplates.productId, productId as string));
+      if (bundleId) conditions.push(eq(productTaskTemplates.bundleId, bundleId as string));
+      if (packageId) conditions.push(eq(productTaskTemplates.packageId, packageId as string));
+      if (taskType) conditions.push(eq(productTaskTemplates.taskType, taskType as string));
+      if (status) {
+        conditions.push(eq(productTaskTemplates.status, status as string));
+      } else {
+        conditions.push(eq(productTaskTemplates.status, 'active'));
+      }
+
+      const results = await db
+        .select({
+          id: productTaskTemplates.id,
+          productId: productTaskTemplates.productId,
+          bundleId: productTaskTemplates.bundleId,
+          packageId: productTaskTemplates.packageId,
+          name: productTaskTemplates.name,
+          description: productTaskTemplates.description,
+          taskType: productTaskTemplates.taskType,
+          quantityMode: productTaskTemplates.quantityMode,
+          departmentId: productTaskTemplates.departmentId,
+          assignedStaffId: productTaskTemplates.assignedStaffId,
+          assignedStaffFirstName: staff.firstName,
+          assignedStaffLastName: staff.lastName,
+          dueDateOffset: productTaskTemplates.dueDateOffset,
+          estimatedHours: productTaskTemplates.estimatedHours,
+          priority: productTaskTemplates.priority,
+          sortOrder: productTaskTemplates.sortOrder,
+          dependsOnTemplateId: productTaskTemplates.dependsOnTemplateId,
+          status: productTaskTemplates.status,
+          createdAt: productTaskTemplates.createdAt,
+          updatedAt: productTaskTemplates.updatedAt,
+        })
+        .from(productTaskTemplates)
+        .leftJoin(staff, eq(productTaskTemplates.assignedStaffId, staff.id))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(asc(productTaskTemplates.sortOrder));
+
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching product task templates:', error);
+      res.status(500).json({ message: "Failed to fetch product task templates" });
+    }
+  });
+
+  app.get("/api/product-task-templates/:id", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
+    try {
+      const [template] = await db
+        .select({
+          id: productTaskTemplates.id,
+          productId: productTaskTemplates.productId,
+          bundleId: productTaskTemplates.bundleId,
+          packageId: productTaskTemplates.packageId,
+          name: productTaskTemplates.name,
+          description: productTaskTemplates.description,
+          taskType: productTaskTemplates.taskType,
+          quantityMode: productTaskTemplates.quantityMode,
+          departmentId: productTaskTemplates.departmentId,
+          assignedStaffId: productTaskTemplates.assignedStaffId,
+          assignedStaffFirstName: staff.firstName,
+          assignedStaffLastName: staff.lastName,
+          dueDateOffset: productTaskTemplates.dueDateOffset,
+          estimatedHours: productTaskTemplates.estimatedHours,
+          priority: productTaskTemplates.priority,
+          sortOrder: productTaskTemplates.sortOrder,
+          dependsOnTemplateId: productTaskTemplates.dependsOnTemplateId,
+          status: productTaskTemplates.status,
+          createdAt: productTaskTemplates.createdAt,
+          updatedAt: productTaskTemplates.updatedAt,
+        })
+        .from(productTaskTemplates)
+        .leftJoin(staff, eq(productTaskTemplates.assignedStaffId, staff.id))
+        .where(eq(productTaskTemplates.id, req.params.id));
+
+      if (!template) return res.status(404).json({ message: "Template not found" });
+      res.json(template);
+    } catch (error) {
+      console.error('Error fetching product task template:', error);
+      res.status(500).json({ message: "Failed to fetch product task template" });
+    }
+  });
+
+  app.post("/api/product-task-templates", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
+    try {
+      const data = req.body;
+
+      if (!data.productId && !data.bundleId && !data.packageId) {
+        return res.status(400).json({ message: "At least one of productId, bundleId, or packageId is required" });
+      }
+      if (!['onboarding', 'recurring'].includes(data.taskType)) {
+        return res.status(400).json({ message: "taskType must be 'onboarding' or 'recurring'" });
+      }
+      if (data.quantityMode && !['once', 'per_unit', 'per_unit_named'].includes(data.quantityMode)) {
+        return res.status(400).json({ message: "quantityMode must be 'once', 'per_unit', or 'per_unit_named'" });
+      }
+
+      const validated = insertProductTaskTemplateSchema.parse(data);
+      const [template] = await db.insert(productTaskTemplates).values(validated).returning();
+      res.status(201).json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error('Error creating product task template:', error);
+      res.status(500).json({ message: "Failed to create product task template" });
+    }
+  });
+
+  app.put("/api/product-task-templates/:id", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = req.body;
+
+      const [existing] = await db.select().from(productTaskTemplates).where(eq(productTaskTemplates.id, id));
+      if (!existing) return res.status(404).json({ message: "Template not found" });
+
+      if (!data.productId && !data.bundleId && !data.packageId) {
+        return res.status(400).json({ message: "At least one of productId, bundleId, or packageId is required" });
+      }
+      if (data.taskType && !['onboarding', 'recurring'].includes(data.taskType)) {
+        return res.status(400).json({ message: "taskType must be 'onboarding' or 'recurring'" });
+      }
+      if (data.quantityMode && !['once', 'per_unit', 'per_unit_named'].includes(data.quantityMode)) {
+        return res.status(400).json({ message: "quantityMode must be 'once', 'per_unit', or 'per_unit_named'" });
+      }
+
+      const [updated] = await db
+        .update(productTaskTemplates)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(productTaskTemplates.id, id))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating product task template:', error);
+      res.status(500).json({ message: "Failed to update product task template" });
+    }
+  });
+
+  app.delete("/api/product-task-templates/:id", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [existing] = await db.select().from(productTaskTemplates).where(eq(productTaskTemplates.id, id));
+      if (!existing) return res.status(404).json({ message: "Template not found" });
+
+      const [updated] = await db
+        .update(productTaskTemplates)
+        .set({ status: 'inactive', updatedAt: new Date() })
+        .where(eq(productTaskTemplates.id, id))
+        .returning();
+
+      res.json({ message: "Template deactivated", template: updated });
+    } catch (error) {
+      console.error('Error deleting product task template:', error);
+      res.status(500).json({ message: "Failed to delete product task template" });
+    }
+  });
+
+  app.get("/api/products/:productId/task-templates", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
+    try {
+      const results = await db
+        .select()
+        .from(productTaskTemplates)
+        .where(and(eq(productTaskTemplates.productId, req.params.productId), eq(productTaskTemplates.status, 'active')))
+        .orderBy(asc(productTaskTemplates.sortOrder));
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching product task templates:', error);
+      res.status(500).json({ message: "Failed to fetch task templates for product" });
+    }
+  });
+
+  app.get("/api/bundles/:bundleId/task-templates", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
+    try {
+      const results = await db
+        .select()
+        .from(productTaskTemplates)
+        .where(and(eq(productTaskTemplates.bundleId, req.params.bundleId), eq(productTaskTemplates.status, 'active')))
+        .orderBy(asc(productTaskTemplates.sortOrder));
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching bundle task templates:', error);
+      res.status(500).json({ message: "Failed to fetch task templates for bundle" });
+    }
+  });
+
+  app.get("/api/packages/:packageId/task-templates", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
+    try {
+      const results = await db
+        .select()
+        .from(productTaskTemplates)
+        .where(and(eq(productTaskTemplates.packageId, req.params.packageId), eq(productTaskTemplates.status, 'active')))
+        .orderBy(asc(productTaskTemplates.sortOrder));
+      res.json(results);
+    } catch (error) {
+      console.error('Error fetching package task templates:', error);
+      res.status(500).json({ message: "Failed to fetch task templates for package" });
+    }
+  });
+
+  app.patch("/api/product-task-templates/reorder", requireAuth(), requirePermission('products', 'canEdit'), async (req, res) => {
+    try {
+      const { items } = req.body;
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ message: "items must be an array of { id, sortOrder }" });
+      }
+
+      for (const item of items) {
+        if (!item.id || typeof item.sortOrder !== 'number') {
+          return res.status(400).json({ message: "Each item must have id and sortOrder (number)" });
+        }
+        await db
+          .update(productTaskTemplates)
+          .set({ sortOrder: item.sortOrder, updatedAt: new Date() })
+          .where(eq(productTaskTemplates.id, item.id));
+      }
+
+      res.json({ message: "Reorder successful", count: items.length });
+    } catch (error) {
+      console.error('Error reordering product task templates:', error);
+      res.status(500).json({ message: "Failed to reorder templates" });
     }
   });
 
