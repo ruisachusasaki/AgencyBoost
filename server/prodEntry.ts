@@ -13,10 +13,17 @@ let workerReady = false;
 let child: ChildProcess | null = null;
 
 const OK_HTML = `<!DOCTYPE html><html><head><title>AgencyBoost</title><meta http-equiv="refresh" content="3"></head><body><p>Loading...</p></body></html>`;
+const OK_JSON = JSON.stringify({ status: "ok" });
 
-function sendOk(res: ServerResponse) {
-  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-  res.end(OK_HTML);
+function sendOk(req: IncomingMessage, res: ServerResponse) {
+  const accept = req.headers["accept"] || "";
+  if (req.url === "/health" || req.url === "/api/health" || req.url === "/_health" || accept.includes("application/json")) {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(OK_JSON);
+  } else {
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(OK_HTML);
+  }
 }
 
 function proxyToWorker(req: IncomingMessage, res: ServerResponse) {
@@ -39,12 +46,12 @@ function proxyToWorker(req: IncomingMessage, res: ServerResponse) {
   );
 
   proxyReq.on("error", () => {
-    sendOk(res);
+    sendOk(req, res);
   });
 
   proxyReq.setTimeout(10000, () => {
     proxyReq.destroy();
-    sendOk(res);
+    sendOk(req, res);
   });
 
   req.pipe(proxyReq, { end: true });
@@ -54,7 +61,7 @@ const server = createServer((req, res) => {
   if (workerReady) {
     proxyToWorker(req, res);
   } else {
-    sendOk(res);
+    sendOk(req, res);
   }
 });
 
