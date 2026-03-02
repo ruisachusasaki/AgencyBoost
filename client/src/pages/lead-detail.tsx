@@ -157,16 +157,36 @@ export default function LeadDetail() {
       return await response.json();
     },
     onSuccess: (data: any) => {
-      // Invalidate leads cache to refresh the pipeline view
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: [`/api/leads/${leadId}`] });
       
-      toast({
-        title: "Lead converted to client",
-        variant: "default",
-        description: "The lead has been successfully converted to a client.",
-      });
-      // Redirect to the client detail page
+      const summary = data.taskGenerationSummary;
+      if (summary && summary.errors && summary.errors.length > 0 && summary.totalTasksCreated > 0) {
+        toast({
+          title: "Lead converted with warnings",
+          variant: "destructive",
+          description: `Client created with ${summary.totalTasksCreated} onboarding tasks, but some tasks failed to generate. Check Settings > Products > Task Mapping.`,
+        });
+      } else if (summary && summary.errors && summary.errors.length > 0 && summary.totalTasksCreated === 0) {
+        toast({
+          title: "Lead converted with warnings",
+          variant: "destructive",
+          description: "Lead converted but tasks failed to generate. Check Settings > Products > Task Mapping.",
+        });
+      } else if (summary && summary.totalTasksCreated > 0) {
+        toast({
+          title: "Lead converted to client",
+          variant: "default",
+          description: `Lead converted successfully! ${summary.totalTasksCreated} onboarding task${summary.totalTasksCreated === 1 ? '' : 's'} created.`,
+        });
+      } else {
+        toast({
+          title: "Lead converted to client",
+          variant: "default",
+          description: "Lead converted successfully. No task templates found — you can set up task mapping in Settings > Products.",
+        });
+      }
+
       setLocation(`/clients/${data.id}`);
     },
     onError: (error: any) => {
