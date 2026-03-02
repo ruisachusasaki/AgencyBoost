@@ -14297,6 +14297,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         id: products.id,
         name: products.name,
         description: products.description,
+        price: products.price,
         cost: products.cost,
         type: products.type,
         categoryId: products.categoryId,
