@@ -1,6 +1,6 @@
 import {
   initializeApp
-} from "./chunk-SWGEFBTY.js";
+} from "./chunk-RXYBS5QZ.js";
 import "./chunk-DE7YTT24.js";
 import "./chunk-MLXNLHMN.js";
 import "./chunk-BGP47S4B.js";

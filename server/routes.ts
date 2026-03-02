@@ -14203,7 +14203,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             cb.created_at as "createdAt",
             pb.name as "productName",
             pb.description as "productDescription",
-            NULL as "productPrice", -- Kept for compatibility but not used
+            NULL as "productPrice",
             COALESCE(
               (SELECT SUM(
                 p.cost * COALESCE(
@@ -14216,6 +14216,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                WHERE bp.bundle_id = cb.bundle_id), 
               0
             ) as "productCost",
+            COALESCE(pb.type, 'recurring') as "bundleCostType",
             'bundle' as "productType",
             'bundle' as "itemType"
           FROM client_bundles cb

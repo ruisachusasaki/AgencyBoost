@@ -3069,35 +3069,44 @@ export default function EnhancedClientDetail() {
   });
 
   // Calculate total cost of all client products and bundles
-  const totalProductsCost = useMemo(() => {
-    if (!clientProductsData || !Array.isArray(clientProductsData)) return 0;
+  const { monthlyCost, oneTimeCost, totalProductsCost } = useMemo(() => {
+    if (!clientProductsData || !Array.isArray(clientProductsData)) return { monthlyCost: 0, oneTimeCost: 0, totalProductsCost: 0 };
     
-    let total = 0;
+    let monthly = 0;
+    let oneTime = 0;
     
     clientProductsData.forEach((product: any) => {
+      let itemCost = 0;
       if (product.itemType === 'bundle') {
-        // Calculate bundle cost by summing all items in the bundle with client-specific quantities
         const bundleDetails = bundleDetailsData[product.productId];
         if (bundleDetails && Array.isArray(bundleDetails)) {
           bundleDetails.forEach((item: any) => {
-            // Handle various formats of cost fields (string, number, null, undefined)
-            // Try multiple possible field names: productCost, cost, price, productPrice
             const costValue = item.productCost || item.cost || item.price || item.productPrice || 0;
             const cost = typeof costValue === 'string' ? parseFloat(costValue) : Number(costValue);
             const validCost = isNaN(cost) ? 0 : cost;
-            
             const quantity = parseInt(item.quantity || '1');
-            total += validCost * quantity;
+            itemCost += validCost * quantity;
           });
         }
+        const bundleType = product.bundleCostType || 'recurring';
+        if (bundleType === 'one_time') {
+          oneTime += itemCost;
+        } else {
+          monthly += itemCost;
+        }
       } else {
-        // Individual product cost
         const cost = parseFloat(product.cost || product.productCost || '0');
-        total += cost;
+        itemCost = cost;
+        const prodType = product.productType || 'recurring';
+        if (prodType === 'one_time') {
+          oneTime += itemCost;
+        } else {
+          monthly += itemCost;
+        }
       }
     });
     
-    return total;
+    return { monthlyCost: monthly, oneTimeCost: oneTime, totalProductsCost: monthly + oneTime };
   }, [clientProductsData, bundleDetailsData]);
 
   // Helper function to calculate individual bundle cost
@@ -5644,18 +5653,28 @@ export default function EnhancedClientDetail() {
                     </Button>
                   </div>
                 </div>
-                {/* Total Cost Display - Only visible to Managers and Admins */}
                 {clientProductsData && clientProductsData.length > 0 && canViewCosts && (
                   <div className="bg-primary/10 p-3 rounded-lg border border-primary/20 mt-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <ShoppingBag className="w-5 h-5 text-primary" />
-                        <span className="text-sm font-medium text-gray-600">Total Products & Services Cost</span>
+                        <span className="text-sm font-medium text-gray-600">Monthly Cost</span>
                       </div>
-                      <div className="text-lg font-bold text-primary" data-testid="text-total-products-cost">
-                        ${totalProductsCost.toFixed(2)}
+                      <div className="text-lg font-bold text-primary" data-testid="text-monthly-cost">
+                        ${monthlyCost.toFixed(2)}
                       </div>
                     </div>
+                    {oneTimeCost > 0 && (
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-primary/10">
+                        <div className="flex items-center gap-2">
+                          <ShoppingBag className="w-5 h-5 text-orange-500" />
+                          <span className="text-sm font-medium text-gray-600">One-Time (Onboarding) Cost</span>
+                        </div>
+                        <div className="text-lg font-bold text-orange-500" data-testid="text-onetime-cost">
+                          ${oneTimeCost.toFixed(2)}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardHeader>
@@ -5695,6 +5714,15 @@ export default function EnhancedClientDetail() {
                                 {product.itemType === 'bundle' && (
                                   <span className="ml-2 text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
                                     Bundle
+                                  </span>
+                                )}
+                                {product.itemType === 'bundle' && (
+                                  <span className={`ml-1 text-xs px-2 py-1 rounded-full ${
+                                    product.bundleCostType === 'one_time' 
+                                      ? 'bg-orange-100 text-orange-800' 
+                                      : 'bg-teal-100 text-teal-800'
+                                  }`}>
+                                    {product.bundleCostType === 'one_time' ? 'One-Time' : 'Monthly'}
                                   </span>
                                 )}
                               </h4>
