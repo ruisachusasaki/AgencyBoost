@@ -2518,6 +2518,7 @@ export default function Reports() {
                       <HealthSortableHeader field="fulfillment">Fulfillment</HealthSortableHeader>
                       <HealthSortableHeader field="relationship">Relationship</HealthSortableHeader>
                       <HealthSortableHeader field="clientActions">Actions</HealthSortableHeader>
+                      <HealthSortableHeader field="createdAt">Created Date</HealthSortableHeader>
                       <TableHead className="text-center">Notes</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -2588,6 +2589,11 @@ export default function Reports() {
                             score.clientActions === 'Early' || score.clientActions === 'Up to Date' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                           }`}>
                             {score.clientActions}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-slate-600">
+                            {score.createdAt ? new Date(score.createdAt).toLocaleDateString() : '—'}
                           </span>
                         </TableCell>
                         <TableCell className="text-center">

@@ -5627,7 +5627,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       }
 
       // Validate sort field
-      const validSortFields = ['weekStartDate', 'clientName', 'healthIndicator', 'averageScore'];
+      const validSortFields = ['weekStartDate', 'clientName', 'healthIndicator', 'averageScore', 'createdAt'];
       if (!validSortFields.includes(filters.sort)) {
         return res.status(400).json({
           message: `Invalid sort field: ${filters.sort}. Valid fields are: ${validSortFields.join(', ')}`

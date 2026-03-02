@@ -5056,6 +5056,7 @@ export class DbStorage implements IStorage {
                        sort === 'clientName' ? clients.name :
                        sort === 'healthIndicator' ? clientHealthScores.healthIndicator :
                        sort === 'averageScore' ? clientHealthScores.averageScore :
+                       sort === 'createdAt' ? clientHealthScores.createdAt :
                        sort === 'goals' ? clientHealthScores.goals :
                        sort === 'fulfillment' ? clientHealthScores.fulfillment :
                        sort === 'relationship' ? clientHealthScores.relationship :
