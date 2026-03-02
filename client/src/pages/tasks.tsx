@@ -17,7 +17,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TaskIntakeDialog } from "@/components/task-intake-dialog";
-import { TaskDependencyIcons } from "@/components/task-dependency-icons";
+import { TaskDependencyIcons, TaskDependency } from "@/components/task-dependency-icons";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useHasPermission, useRolePermissions } from "@/hooks/use-has-permission";
@@ -166,6 +166,17 @@ export default function Tasks() {
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
+  });
+
+  const taskIds = useMemo(() => (tasks || []).map((t: Task) => t.id), [tasks]);
+  const { data: batchDepsData } = useQuery<Record<string, { dependencies: TaskDependency[]; dependentTasks: any[] }>>({
+    queryKey: ["/api/tasks/batch-dependencies", taskIds],
+    queryFn: async () => {
+      if (taskIds.length === 0) return {};
+      const res = await apiRequest("POST", "/api/tasks/batch-dependencies", { taskIds });
+      return res.json();
+    },
+    enabled: taskIds.length > 0,
   });
 
   const { data: clientsData } = useQuery<{ clients: Client[] }>({
@@ -1457,7 +1468,7 @@ export default function Tasks() {
                 <TooltipContent>Recurring task</TooltipContent>
               </Tooltip>
             )}
-            <TaskDependencyIcons taskId={task.id} />
+            <TaskDependencyIcons taskId={task.id} prefetchedDependencies={batchDepsData?.[task.id]?.dependencies} />
           </div>
         );
       
@@ -2215,7 +2226,7 @@ export default function Tasks() {
                     <TooltipContent>Recurring task</TooltipContent>
                   </Tooltip>
                 )}
-                <TaskDependencyIcons taskId={task.id} />
+                <TaskDependencyIcons taskId={task.id} prefetchedDependencies={batchDepsData?.[task.id]?.dependencies} />
               </div>
               <div className="flex items-center gap-1 ml-2">
                 <Link href={`/tasks/${task.id}`}>

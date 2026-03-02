@@ -21,6 +21,42 @@ import { eq, and, or } from 'drizzle-orm';
 export const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
 export const MOCK_ADMIN_USER_ID = '00000000-0000-4000-8000-000000000000';
 
+const PERMISSION_CACHE_TTL = 30_000;
+const permissionCache = new Map<string, { result: boolean; expires: number }>();
+
+function getCachedPermission(key: string): boolean | undefined {
+  const entry = permissionCache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() > entry.expires) {
+    permissionCache.delete(key);
+    return undefined;
+  }
+  return entry.result;
+}
+
+function setCachedPermission(key: string, result: boolean): void {
+  permissionCache.set(key, { result, expires: Date.now() + PERMISSION_CACHE_TTL });
+}
+
+export function clearPermissionCache(userId?: string): void {
+  if (userId) {
+    for (const key of permissionCache.keys()) {
+      if (key.startsWith(`${userId}:`)) {
+        permissionCache.delete(key);
+      }
+    }
+  } else {
+    permissionCache.clear();
+  }
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of permissionCache) {
+    if (now > entry.expires) permissionCache.delete(key);
+  }
+}, 60_000);
+
 // Extend express-session's SessionData interface instead of overriding Express.Request
 declare module 'express-session' {
   interface SessionData {
@@ -115,12 +151,11 @@ export async function hasPermission(
     'calendars': 'calendar',
   };
   const normalizedModule = moduleAliases[module] || module;
+  const cacheKey = `${userId}:${normalizedModule}:${permission}`;
+  const cached = getCachedPermission(cacheKey);
+  if (cached !== undefined) return cached;
 
   try {
-    console.log("🔍 hasPermission called for:", { userId, module: normalizedModule, permission });
-    
-    // Check if user has admin role through proper database queries
-    console.log("📝 Querying admin roles...");
     const adminRoles = await db
       .select({ roleId: userRoles.roleId, roleName: roles.name })
       .from(userRoles)
@@ -131,27 +166,22 @@ export async function hasPermission(
           eq(roles.name, 'Admin')
         )
       );
-    console.log("✅ Admin roles query completed:", adminRoles);
     
-    // Users with admin role have all permissions
     if (adminRoles.length > 0) {
+      setCachedPermission(cacheKey, true);
       return true;
     }
     
-    // For non-admin users, query actual roles and permissions from database
-    // This is the proper implementation that should be used in production:
-    
-    // 1. Get user roles
     const userRolesList = await db
       .select({ roleId: userRoles.roleId })
       .from(userRoles)
       .where(eq(userRoles.userId, userId));
     
     if (userRolesList.length === 0) {
-      return false; // User has no roles
+      setCachedPermission(cacheKey, false);
+      return false;
     }
     
-    // 2. Check granular permissions first (new system)
     for (const userRole of userRolesList) {
       const granularPerms = await db
         .select({
@@ -168,13 +198,12 @@ export async function hasPermission(
           )
         );
       
-      // If any granular permission is enabled for this module, grant access
       if (granularPerms.length > 0) {
+        setCachedPermission(cacheKey, true);
         return true;
       }
     }
     
-    // 3. Fallback to legacy permissions if no granular permissions found
     for (const userRole of userRolesList) {
       const rolePermissions = await db
         .select({
@@ -196,15 +225,17 @@ export async function hasPermission(
       
       for (const perm of rolePermissions) {
         if (perm[permission] === true) {
+          setCachedPermission(cacheKey, true);
           return true;
         }
       }
     }
     
+    setCachedPermission(cacheKey, false);
     return false;
   } catch (error) {
     console.error('Error checking permissions:', error);
-    return false; // Fail safely - deny access on error
+    return false;
   }
 }
 
@@ -215,8 +246,11 @@ export async function hasGranularPermission(
   userId: string,
   permissionKey: string
 ): Promise<boolean> {
+  const cacheKey = `${userId}:granular:${permissionKey}`;
+  const cached = getCachedPermission(cacheKey);
+  if (cached !== undefined) return cached;
+
   try {
-    // Check if user has admin role
     const adminRoles = await db
       .select({ roleId: userRoles.roleId, roleName: roles.name })
       .from(userRoles)
@@ -228,22 +262,21 @@ export async function hasGranularPermission(
         )
       );
     
-    // Admin users have all permissions
     if (adminRoles.length > 0) {
+      setCachedPermission(cacheKey, true);
       return true;
     }
     
-    // Get user roles
     const userRolesList = await db
       .select({ roleId: userRoles.roleId })
       .from(userRoles)
       .where(eq(userRoles.userId, userId));
     
     if (userRolesList.length === 0) {
+      setCachedPermission(cacheKey, false);
       return false;
     }
     
-    // Check granular permissions for the specific permission key
     for (const userRole of userRolesList) {
       const granularPerms = await db
         .select({
@@ -260,10 +293,12 @@ export async function hasGranularPermission(
         );
       
       if (granularPerms.length > 0) {
+        setCachedPermission(cacheKey, true);
         return true;
       }
     }
     
+    setCachedPermission(cacheKey, false);
     return false;
   } catch (error) {
     console.error('Error checking granular permission:', error);

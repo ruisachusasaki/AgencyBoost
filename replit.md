@@ -27,7 +27,7 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - Component-scoped CSS with design system variables.
 
 ### Technical Implementations
-- **Authentication & Authorization**: Direct Google OAuth 2.0 with multi-user support, session management, and role-based access control (Admin, Manager, User, Accounting). Features a comprehensive hierarchical permission system (module.tab.action format) with Admin bypass and backward compatibility for existing permissions.
+- **Authentication & Authorization**: Direct Google OAuth 2.0 with multi-user support, session management, and role-based access control (Admin, Manager, User, Accounting). Features a comprehensive hierarchical permission system (module.tab.action format) with Admin bypass and backward compatibility for existing permissions. Permission checks use an in-memory cache (30s TTL) in `server/auth.ts` to avoid redundant DB queries; cache is cleared automatically on role/permission updates via `clearPermissionCache()`.
 - **Data Management**: Relational schema, CRUD, audit logs, sorting, pagination, CSV import/export, and custom fields.
 - **Google Calendar Integration**: Per-user two-way sync with Google Calendar API, including incremental sync, contact creation, availability blocking, and workflow triggers.
 - **Business Timezone**: Account-level timezone setting for consistent date calculations.

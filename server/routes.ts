@@ -122,6 +122,7 @@ import {
   isCurrentUserAdmin,
   hasPermission,
   hasGranularPermission,
+  clearPermissionCache,
   IS_DEVELOPMENT,
   MOCK_ADMIN_USER_ID,
   normalizeUserIdForDb,
@@ -8070,6 +8071,83 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   });
 
   // Task Dependencies routes - Database Storage
+  // Batch fetch dependencies for multiple tasks
+  app.post("/api/tasks/batch-dependencies", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
+    try {
+      const { taskIds } = req.body;
+      if (!Array.isArray(taskIds) || taskIds.length === 0) {
+        return res.json({});
+      }
+
+      const limitedIds = taskIds.slice(0, 200);
+
+      const [deps, dependents] = await Promise.all([
+        db
+          .select({
+            id: taskDependencies.id,
+            taskId: taskDependencies.taskId,
+            dependsOnTaskId: taskDependencies.dependsOnTaskId,
+            dependencyType: taskDependencies.dependencyType,
+            createdAt: taskDependencies.createdAt,
+            task: {
+              id: tasks.id,
+              title: tasks.title,
+              status: tasks.status,
+              priority: tasks.priority,
+              assignedTo: tasks.assignedTo,
+              dueDate: tasks.dueDate,
+              completedAt: tasks.completedAt,
+            }
+          })
+          .from(taskDependencies)
+          .innerJoin(tasks, eq(taskDependencies.dependsOnTaskId, tasks.id))
+          .where(inArray(taskDependencies.taskId, limitedIds))
+          .orderBy(asc(taskDependencies.createdAt)),
+        db
+          .select({
+            id: taskDependencies.id,
+            taskId: taskDependencies.taskId,
+            dependsOnTaskId: taskDependencies.dependsOnTaskId,
+            dependencyType: taskDependencies.dependencyType,
+            createdAt: taskDependencies.createdAt,
+            task: {
+              id: tasks.id,
+              title: tasks.title,
+              status: tasks.status,
+              priority: tasks.priority,
+              assignedTo: tasks.assignedTo,
+              dueDate: tasks.dueDate,
+              completedAt: tasks.completedAt,
+            }
+          })
+          .from(taskDependencies)
+          .innerJoin(tasks, eq(taskDependencies.taskId, tasks.id))
+          .where(inArray(taskDependencies.dependsOnTaskId, limitedIds))
+          .orderBy(asc(taskDependencies.createdAt))
+      ]);
+
+      const result: Record<string, { dependencies: any[]; dependentTasks: any[] }> = {};
+      for (const id of limitedIds) {
+        result[id] = { dependencies: [], dependentTasks: [] };
+      }
+      for (const dep of deps) {
+        if (result[dep.taskId]) {
+          result[dep.taskId].dependencies.push(dep);
+        }
+      }
+      for (const dep of dependents) {
+        if (result[dep.dependsOnTaskId]) {
+          result[dep.dependsOnTaskId].dependentTasks.push(dep);
+        }
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching batch task dependencies:", error);
+      res.status(500).json({ message: "Failed to fetch batch task dependencies" });
+    }
+  });
+
   // Get dependencies for a specific task
   app.get("/api/tasks/:taskId/dependencies", requireAuth(), requirePermission('tasks', 'canView'), async (req, res) => {
     try {
@@ -16783,6 +16861,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         updatedRole,
         req
       );
+
+      clearPermissionCache();
 
       res.json(updatedRole);
     } catch (error) {

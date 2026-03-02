@@ -15,9 +15,10 @@ import {
 interface TaskDependencyIconsProps {
   taskId: string;
   className?: string;
+  prefetchedDependencies?: TaskDependency[];
 }
 
-interface TaskDependency {
+export interface TaskDependency {
   id: string;
   dependsOnTaskId: string;
   dependencyType: "finish_to_start" | "start_to_start" | "finish_to_finish" | "start_to_finish";
@@ -60,34 +61,29 @@ const dependencyTypeConfig = {
   }
 };
 
-export function TaskDependencyIcons({ taskId, className = "" }: TaskDependencyIconsProps) {
+export function TaskDependencyIcons({ taskId, className = "", prefetchedDependencies }: TaskDependencyIconsProps) {
   const { data: dependencyResponse, isLoading, error } = useQuery<DependencyResponse>({
     queryKey: [`/api/tasks/${taskId}/dependencies`],
+    enabled: prefetchedDependencies === undefined,
   });
 
-  // Extract dependencies array from the response
-  const dependencyList = dependencyResponse?.dependencies || [];
+  const dependencyList = prefetchedDependencies ?? dependencyResponse?.dependencies ?? [];
   
-  // Don't render anything while loading or if there are no dependencies
-  if (isLoading || dependencyList.length === 0) {
+  if (prefetchedDependencies === undefined && (isLoading || error)) {
     return null;
   }
 
-  // Log errors for debugging
-  if (error) {
-    console.error("Error loading task dependencies:", error);
+  if (dependencyList.length === 0) {
     return null;
   }
 
   return (
     <div className={`flex items-center gap-1 ml-2 ${className}`}>
       {dependencyList.map((dependency: TaskDependency) => {
-        // Skip if dependency data is incomplete or malformed
         if (!dependency || !dependency.id || !dependency.dependencyType) {
           return null;
         }
 
-        // Safely access task data
         const taskTitle = dependency.task?.title || "Unknown Task";
         
         const config = dependencyTypeConfig[dependency.dependencyType as keyof typeof dependencyTypeConfig];

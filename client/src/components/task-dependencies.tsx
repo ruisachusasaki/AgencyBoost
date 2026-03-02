@@ -146,6 +146,7 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/dependencies`] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/batch-dependencies"] });
       setShowAddForm(false);
       setSelectedTaskId("");
       setSelectedDependencyType("finish_to_start");
@@ -174,6 +175,7 @@ export function TaskDependencies({ taskId }: TaskDependenciesProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/dependencies`] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/batch-dependencies"] });
       toast({
         title: "Success",
         variant: "default",
