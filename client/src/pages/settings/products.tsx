@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Fragment, useCallback } from "react";
+import { useState, useEffect, useMemo, Fragment, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,10 +40,12 @@ import {
   Clock,
   GripVertical,
   AlertCircle,
-  Info
+  Info,
+  Tags
 } from "lucide-react";
 import { Link } from "wouter";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Product {
   id: string;
@@ -207,7 +209,36 @@ export default function ProductsSettings() {
   const [copyTargetId, setCopyTargetId] = useState("");
   const [packageCurrentPage, setPackageCurrentPage] = useState(1);
   const [packagesPerPage, setPackagesPerPage] = useState(10);
-  
+
+  const createDescriptionRef = useRef<HTMLTextAreaElement>(null);
+  const editDescriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  const mergeTagOptions = [
+    { tag: "{{client.name}}", label: "Client Name", description: "Company or client name" },
+    { tag: "{{client.email}}", label: "Client Email", description: "Client's email address" },
+    { tag: "{{product.name}}", label: "Product Name", description: "Name of the product/bundle/package" },
+    { tag: "{{quantity}}", label: "Quantity", description: "Number of units assigned" },
+    { tag: "{{cycle.number}}", label: "Cycle Number", description: "Current recurring cycle number" },
+    { tag: "{{cycle.startDate}}", label: "Cycle Start Date", description: "Start date of current cycle" },
+    { tag: "{{unit.number}}", label: "Unit Number", description: "Current unit number (Per Unit modes)" },
+    { tag: "{{unit.total}}", label: "Unit Total", description: "Total number of units (Per Unit modes)" },
+  ];
+
+  const insertMergeTag = (textareaRef: React.RefObject<HTMLTextAreaElement | null>, tag: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentValue = textarea.value;
+    const newValue = currentValue.substring(0, start) + tag + currentValue.substring(end);
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+    nativeInputValueSetter?.call(textarea, newValue);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    textarea.focus();
+    const newCursorPos = start + tag.length;
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+  };
+
   // Form state for controlled Select components
   const [createFormType, setCreateFormType] = useState("one_time");
   const [createFormStatus, setCreateFormStatus] = useState("active");
@@ -3373,8 +3404,34 @@ export default function ProductsSettings() {
               <Input id="template-name" name="name" required placeholder="e.g., Set up Google Ads account" />
             </div>
             <div>
-              <Label htmlFor="template-description">Description</Label>
-              <Textarea id="template-description" name="description" placeholder="Supports {{client.name}}, {{product.name}}, {{quantity}}" rows={3} />
+              <div className="flex items-center justify-between mb-1">
+                <Label htmlFor="template-description">Description</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
+                      <Tags className="h-3.5 w-3.5" />
+                      Merge Tags
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-72 p-2 z-[100]" sideOffset={5}>
+                    <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert at cursor position</p>
+                    <div className="space-y-0.5">
+                      {mergeTagOptions.map((option) => (
+                        <button
+                          key={option.tag}
+                          type="button"
+                          className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
+                          onClick={() => insertMergeTag(createDescriptionRef, option.tag)}
+                        >
+                          <span className="font-medium">{option.label}</span>
+                          <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{option.tag}</code>
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Textarea ref={createDescriptionRef} id="template-description" name="description" placeholder="e.g., Set up {{product.name}} for {{client.name}}" rows={3} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -3475,8 +3532,34 @@ export default function ProductsSettings() {
                 <Input id="edit-template-name" name="name" required defaultValue={editingTemplate.name} />
               </div>
               <div>
-                <Label htmlFor="edit-template-description">Description</Label>
-                <Textarea id="edit-template-description" name="description" defaultValue={editingTemplate.description || ""} rows={3} />
+                <div className="flex items-center justify-between mb-1">
+                  <Label htmlFor="edit-template-description">Description</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
+                        <Tags className="h-3.5 w-3.5" />
+                        Merge Tags
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-72 p-2 z-[100]" sideOffset={5}>
+                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert at cursor position</p>
+                      <div className="space-y-0.5">
+                        {mergeTagOptions.map((option) => (
+                          <button
+                            key={option.tag}
+                            type="button"
+                            className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
+                            onClick={() => insertMergeTag(editDescriptionRef, option.tag)}
+                          >
+                            <span className="font-medium">{option.label}</span>
+                            <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{option.tag}</code>
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <Textarea ref={editDescriptionRef} id="edit-template-description" name="description" defaultValue={editingTemplate.description || ""} rows={3} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
