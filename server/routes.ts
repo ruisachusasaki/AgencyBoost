@@ -14609,6 +14609,75 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.get("/api/clients/:clientId/recurring-config", requireAuth(), requirePermission('clients', 'canView'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const [config] = await db
+        .select()
+        .from(clientRecurringConfig)
+        .where(eq(clientRecurringConfig.clientId, clientId));
+      res.json(config || null);
+    } catch (error: any) {
+      console.error("Error fetching recurring config:", error);
+      res.status(500).json({ message: "Failed to fetch recurring config" });
+    }
+  });
+
+  app.put("/api/clients/:clientId/recurring-config", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { cycleStartDate, cycleLengthDays, advanceGenerationDays, status } = req.body;
+
+      if (status !== undefined && !['active', 'paused', 'stopped'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status. Must be 'active', 'paused', or 'stopped'." });
+      }
+      if (cycleLengthDays !== undefined && (typeof cycleLengthDays !== 'number' || cycleLengthDays < 1 || !Number.isFinite(cycleLengthDays))) {
+        return res.status(400).json({ message: "Cycle length must be a positive number." });
+      }
+      if (advanceGenerationDays !== undefined && (typeof advanceGenerationDays !== 'number' || advanceGenerationDays < 0 || !Number.isFinite(advanceGenerationDays))) {
+        return res.status(400).json({ message: "Advance generation days must be a non-negative number." });
+      }
+      if (cycleStartDate !== undefined && cycleStartDate !== null && isNaN(new Date(cycleStartDate).getTime())) {
+        return res.status(400).json({ message: "Invalid cycle start date." });
+      }
+
+      const [existing] = await db
+        .select()
+        .from(clientRecurringConfig)
+        .where(eq(clientRecurringConfig.clientId, clientId));
+
+      if (existing) {
+        const updateData: any = { updatedAt: new Date() };
+        if (cycleStartDate !== undefined) updateData.cycleStartDate = cycleStartDate ? new Date(cycleStartDate) : null;
+        if (cycleLengthDays !== undefined) updateData.cycleLengthDays = cycleLengthDays;
+        if (advanceGenerationDays !== undefined) updateData.advanceGenerationDays = advanceGenerationDays;
+        if (status !== undefined) updateData.status = status;
+
+        const [updated] = await db
+          .update(clientRecurringConfig)
+          .set(updateData)
+          .where(eq(clientRecurringConfig.id, existing.id))
+          .returning();
+        res.json(updated);
+      } else {
+        const [created] = await db
+          .insert(clientRecurringConfig)
+          .values({
+            clientId,
+            cycleStartDate: cycleStartDate ? new Date(cycleStartDate) : new Date(),
+            cycleLengthDays: cycleLengthDays || 30,
+            advanceGenerationDays: advanceGenerationDays ?? 3,
+            status: status || "active",
+          })
+          .returning();
+        res.json(created);
+      }
+    } catch (error: any) {
+      console.error("Error updating recurring config:", error);
+      res.status(500).json({ message: "Failed to update recurring config" });
+    }
+  });
+
   // Get quotes available for import to a client
   app.get("/api/clients/:clientId/available-quotes", requireAuth(), requirePermission('clients', 'canEdit'), async (req, res) => {
     try {

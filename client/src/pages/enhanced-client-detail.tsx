@@ -2210,6 +2210,224 @@ const EditableField = ({
   );
 };
 
+function RecurringTasksSection({ clientId }: { clientId: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [confirmAction, setConfirmAction] = useState<'paused' | 'stopped' | null>(null);
+
+  const { data: config, isLoading } = useQuery<any>({
+    queryKey: [`/api/clients/${clientId}/recurring-config`],
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest('PUT', `/api/clients/${clientId}/recurring-config`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/recurring-config`] });
+      toast({ title: "Recurring config updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update recurring config", variant: "destructive" });
+    },
+  });
+
+  const handleStatusChange = (newStatus: string) => {
+    if (newStatus === 'paused' || newStatus === 'stopped') {
+      setConfirmAction(newStatus);
+    } else {
+      updateMutation.mutate({ status: newStatus });
+    }
+  };
+
+  const confirmStatusChange = () => {
+    if (confirmAction) {
+      updateMutation.mutate({ status: confirmAction });
+      setConfirmAction(null);
+    }
+  };
+
+  const calculateNextGenDate = () => {
+    if (!config?.cycleStartDate || config.status !== 'active') return null;
+    const cycleStartMs = new Date(config.cycleStartDate).getTime();
+    const cycleLengthMs = (config.cycleLengthDays || 30) * 24 * 60 * 60 * 1000;
+    const lastGen = config.lastGeneratedCycle || 0;
+    const nextCycleStart = new Date(cycleStartMs + lastGen * cycleLengthMs);
+    const advanceDays = config.advanceGenerationDays || 3;
+    const genDate = new Date(nextCycleStart.getTime() - advanceDays * 24 * 60 * 60 * 1000);
+    return genDate;
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="mt-6">
+        <CardContent className="py-6 text-center">
+          <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const nextGenDate = calculateNextGenDate();
+  const statusColor = config?.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+    config?.status === 'paused' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+    'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+
+  return (
+    <>
+      <Card className="mt-6">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Repeat className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg font-semibold">Recurring Tasks</CardTitle>
+            </div>
+            {config && (
+              <Badge className={statusColor}>
+                {config.status === 'active' ? 'Active' : config.status === 'paused' ? 'Paused' : 'Stopped'}
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!config ? (
+            <div className="text-center py-6">
+              <Repeat className="h-10 w-10 mx-auto text-gray-400 mb-3" />
+              <p className="text-sm text-gray-500 mb-4">No recurring task schedule configured for this client.</p>
+              <Button
+                onClick={() => updateMutation.mutate({ status: 'active', cycleLengthDays: 30, advanceGenerationDays: 3 })}
+                size="sm"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                disabled={updateMutation.isPending}
+              >
+                {updateMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                Set Up Recurring Tasks
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Status</Label>
+                  <Select value={config.status} onValueChange={handleStatusChange}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="paused">Paused</SelectItem>
+                      <SelectItem value="stopped">Stopped</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Cycle Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full mt-1 justify-start text-left font-normal">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {config.cycleStartDate ? format(new Date(config.cycleStartDate), "MMM d, yyyy") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarUI
+                        mode="single"
+                        selected={config.cycleStartDate ? new Date(config.cycleStartDate) : undefined}
+                        onSelect={(date) => {
+                          if (date) updateMutation.mutate({ cycleStartDate: date.toISOString() });
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Cycle Length (days)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    defaultValue={config.cycleLengthDays || 30}
+                    key={`cycle-len-${config.cycleLengthDays}`}
+                    onBlur={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (!isNaN(val) && val > 0 && val !== config.cycleLengthDays) updateMutation.mutate({ cycleLengthDays: val });
+                    }}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Advance Generation (days before cycle)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    defaultValue={config.advanceGenerationDays ?? 3}
+                    key={`advance-gen-${config.advanceGenerationDays}`}
+                    onBlur={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (!isNaN(val) && val >= 0 && val !== config.advanceGenerationDays) updateMutation.mutate({ advanceGenerationDays: val });
+                    }}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Generated Cycle</span>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-1">
+                      {config.lastGeneratedCycle ? `#${config.lastGeneratedCycle}` : "None yet"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Next Generation Date</span>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-1">
+                      {config.status !== 'active' ? (
+                        <span className="text-yellow-600 dark:text-yellow-400 text-sm">{config.status === 'paused' ? 'Paused' : 'Stopped'}</span>
+                      ) : nextGenDate ? (
+                        format(nextGenDate, "MMM d, yyyy")
+                      ) : (
+                        "Not calculated"
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={confirmAction !== null} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction === 'paused' ? 'Pause Recurring Tasks?' : 'Stop Recurring Tasks?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction === 'paused'
+                ? 'Recurring task generation will be paused. Existing tasks won\'t be affected. Resume anytime.'
+                : 'Recurring task generation will stop permanently. You\'ll need to manually restart it.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmStatusChange}
+              className={confirmAction === 'stopped' ? 'bg-red-600 hover:bg-red-700' : 'bg-primary hover:bg-primary/90'}
+            >
+              {confirmAction === 'paused' ? 'Pause' : 'Stop'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 function ImportFromQuoteContent({ clientId, selectedQuoteId, setSelectedQuoteId, isImporting, setIsImporting, onSuccess }: {
   clientId: string;
   selectedQuoteId: string;
@@ -5926,6 +6144,8 @@ export default function EnhancedClientDetail() {
                 )}
               </CardContent>
             </Card>
+
+            {isAdminOrManager && <RecurringTasksSection clientId={clientId} />}
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-6 mt-6">
