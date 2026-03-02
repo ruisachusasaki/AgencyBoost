@@ -2035,6 +2035,13 @@ async function setupFullApp(server: any) {
       }).catch(err => {
         log(`⚠️ Failed to start long-running timer alert service: ${err.message}`);
       });
+
+      import('./recurringTaskService').then(({ startRecurringTaskService }) => {
+        startRecurringTaskService();
+        log("✅ Recurring task generation service started");
+      }).catch(err => {
+        log(`⚠️ Failed to start recurring task generation service: ${err.message}`);
+      });
     });
   } catch (err: any) {
     log(`❌ Error during app initialization: ${err.message}`);
