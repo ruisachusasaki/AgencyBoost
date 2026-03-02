@@ -1,0 +1,54 @@
+Create a server-side task generation engine as a utility module. This module will be called when a lead converts to a client to auto-generate onboarding tasks from the product/task mapping templates.
+
+Create a new file: server/taskGenerationEngine.ts
+
+**Core function: generateTasksFromTemplates()**
+
+Parameters:
+- clientId: number
+- items: Array of { productId?, bundleId?, packageId?, quantity: number }
+- generationType: 'onboarding' | 'recurring'
+- cycleNumber?: number (for recurring)
+- cycleStartDate?: Date (for recurring, defaults to now for onboarding)
+
+Logic:
+1. For each item, look up all active task templates matching the productId/bundleId/packageId and the generationType
+2. For each template, determine how many tasks to create based on quantityMode:
+   - 'once': 1 task
+   - 'per_unit': quantity tasks
+   - 'per_unit_named': quantity tasks with names like "Template Name 1 of {quantity}"
+3. For each task to create:
+   - Calculate due date: cycleStartDate + template.dueDateOffset days
+   - Resolve description variables:
+     - {{client.name}} → client's actual name (look up from DB)
+     - {{client.domain}} → client's domain/website
+     - {{product.name}} → product name (look up from DB)
+     - {{quantity}} → the quantity number
+     - {{cycle.number}} → cycleNumber
+     - {{cycle.startDate}} → formatted cycle start date
+     - {{unit.number}} → current unit number (for per_unit modes)
+     - {{unit.total}} → total quantity (for per_unit modes)
+   - Create the task in the tasks table with:
+     - title: resolved template name
+     - description: resolved template description
+     - clientId: the client ID
+     - assignedTo: template.assignedStaffId (if set)
+     - department: template.departmentId (if set)
+     - dueDate: calculated due date
+     - priority: template.priority
+     - status: appropriate default status for new tasks
+     - sourceTemplateId: template.id
+     - generationId: (set after creating the generation record)
+4. Create a record in client_task_generations for each product/template combination with the task IDs
+5. Return a summary: { totalTasksCreated, onboardingTasks, recurringTasks, errors }
+
+**Handle dependencies:**
+- If template A depends on template B, set task A's dependency to the task created from template B
+- Use the existing task dependency system in the tasks table
+
+**Error handling:**
+- If a template references a deleted staff member, create the task unassigned and log a warning
+- If any individual task fails to create, continue with others and include the error in the summary
+- Wrap the whole operation in a transaction
+
+Use the same Drizzle ORM patterns and database connection used in server/routes.ts.

@@ -1,0 +1,58 @@
+I need to add new database tables to my AgencyBoost CRM for a Product/Task Mapping feature. This feature lets admins create "task templates" that are tied to products — so when a lead converts to a client, the system auto-generates tasks from those templates.
+
+Add the following tables to shared/schema.ts using the same Drizzle ORM patterns already in the file:
+
+**Table: product_task_templates**
+- id: serial primary key
+- productId: integer, references products.id (nullable) — for product-level templates
+- bundleId: integer, references product_bundles.id (nullable) — for bundle-level templates  
+- packageId: integer, references product_packages.id (nullable) — for package-level templates
+- name: varchar(255), not null
+- description: text (nullable) — supports variable placeholders like {{client.name}}, {{product.name}}, {{quantity}}
+- taskType: varchar, not null — enum: 'onboarding' | 'recurring'
+- quantityMode: varchar, not null, default 'once' — enum: 'once' | 'per_unit' | 'per_unit_named'
+- departmentId: integer (nullable) — references whatever department field your tasks use
+- assignedStaffId: integer, references staff.id (nullable)
+- dueDateOffset: integer, not null, default 7 — days after conversion (onboarding) or cycle start (recurring)
+- estimatedHours: numeric (nullable)
+- priority: varchar, default 'medium' — enum: 'low' | 'medium' | 'high' | 'urgent'
+- sortOrder: integer, not null, default 0
+- dependsOnTemplateId: integer, references product_task_templates.id (nullable)
+- status: varchar, not null, default 'active' — enum: 'active' | 'inactive'
+- createdAt: timestamp, default now()
+- updatedAt: timestamp, default now()
+
+At least one of productId, bundleId, or packageId must be set (we'll enforce this in the API, not the schema).
+
+**Table: client_task_generations**
+- id: serial primary key
+- clientId: integer, references clients.id, not null
+- productId: integer, references products.id (nullable)
+- bundleId: integer, references product_bundles.id (nullable)
+- packageId: integer, references product_packages.id (nullable)
+- templateId: integer, references product_task_templates.id, not null
+- generationType: varchar, not null — 'onboarding' | 'recurring'
+- cycleNumber: integer (nullable) — for recurring, starts at 1
+- cycleStartDate: date (nullable)
+- cycleEndDate: date (nullable)
+- generatedAt: timestamp, default now()
+- taskIds: jsonb, default '[]' — array of created task IDs
+
+**Table: client_recurring_config**
+- id: serial primary key
+- clientId: integer, references clients.id, not null, unique
+- cycleStartDate: date (nullable) — defaults to conversion date
+- cycleLengthDays: integer, not null, default 30
+- advanceGenerationDays: integer, not null, default 3 — generate tasks X days before cycle starts
+- status: varchar, not null, default 'active' — 'active' | 'paused' | 'stopped'
+- lastGeneratedCycle: integer, default 0
+- createdAt: timestamp, default now()
+- updatedAt: timestamp, default now()
+
+Also add these two nullable columns to the existing tasks table:
+- sourceTemplateId: integer, references product_task_templates.id (nullable)
+- generationId: integer, references client_task_generations.id (nullable)
+
+Create the Zod insert/select schemas for each new table following the same patterns used for existing tables (use createInsertSchema and createSelectSchema from drizzle-zod).
+
+DO NOT modify vite.config.ts, package.json, or drizzle.config.ts.

@@ -904,6 +904,9 @@ export const tasks = pgTable("tasks", {
   
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
+
+  sourceTemplateId: varchar("source_template_id"),
+  generationId: varchar("generation_id"),
 });
 
 // Task Dependencies - Define prerequisite relationships between tasks
@@ -5390,3 +5393,77 @@ export const insertCallCenterTimeEntrySchema = createInsertSchema(callCenterTime
 });
 export type InsertCallCenterTimeEntry = z.infer<typeof insertCallCenterTimeEntrySchema>;
 export type CallCenterTimeEntry = typeof callCenterTimeEntries.$inferSelect;
+
+// Product Task Templates - task templates tied to products/bundles/packages for auto-generation
+export const productTaskTemplates = pgTable("product_task_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").references(() => products.id),
+  bundleId: varchar("bundle_id").references(() => productBundles.id),
+  packageId: varchar("package_id").references(() => productPackages.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  taskType: varchar("task_type").notNull(), // 'onboarding' | 'recurring'
+  quantityMode: varchar("quantity_mode").notNull().default("once"), // 'once' | 'per_unit' | 'per_unit_named'
+  departmentId: varchar("department_id").references(() => departments.id),
+  assignedStaffId: uuid("assigned_staff_id").references(() => staff.id),
+  dueDateOffset: integer("due_date_offset").notNull().default(7),
+  estimatedHours: decimal("estimated_hours", { precision: 6, scale: 2 }),
+  priority: varchar("priority").default("medium"), // 'low' | 'medium' | 'high' | 'urgent'
+  sortOrder: integer("sort_order").notNull().default(0),
+  dependsOnTemplateId: varchar("depends_on_template_id"),
+  status: varchar("status").notNull().default("active"), // 'active' | 'inactive'
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertProductTaskTemplateSchema = createInsertSchema(productTaskTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertProductTaskTemplate = z.infer<typeof insertProductTaskTemplateSchema>;
+export type ProductTaskTemplate = typeof productTaskTemplates.$inferSelect;
+
+// Client Task Generations - tracks which tasks were generated from templates for a client
+export const clientTaskGenerations = pgTable("client_task_generations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  productId: varchar("product_id").references(() => products.id),
+  bundleId: varchar("bundle_id").references(() => productBundles.id),
+  packageId: varchar("package_id").references(() => productPackages.id),
+  templateId: varchar("template_id").notNull().references(() => productTaskTemplates.id),
+  generationType: varchar("generation_type").notNull(), // 'onboarding' | 'recurring'
+  cycleNumber: integer("cycle_number"),
+  cycleStartDate: timestamp("cycle_start_date"),
+  cycleEndDate: timestamp("cycle_end_date"),
+  generatedAt: timestamp("generated_at").defaultNow(),
+  taskIds: jsonb("task_ids").default(sql`'[]'`),
+});
+
+export const insertClientTaskGenerationSchema = createInsertSchema(clientTaskGenerations).omit({
+  id: true,
+  generatedAt: true,
+});
+export type InsertClientTaskGeneration = z.infer<typeof insertClientTaskGenerationSchema>;
+export type ClientTaskGeneration = typeof clientTaskGenerations.$inferSelect;
+
+// Client Recurring Config - per-client configuration for recurring task generation cycles
+export const clientRecurringConfig = pgTable("client_recurring_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id).unique(),
+  cycleStartDate: timestamp("cycle_start_date"),
+  cycleLengthDays: integer("cycle_length_days").notNull().default(30),
+  advanceGenerationDays: integer("advance_generation_days").notNull().default(3),
+  status: varchar("status").notNull().default("active"), // 'active' | 'paused' | 'stopped'
+  lastGeneratedCycle: integer("last_generated_cycle").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertClientRecurringConfigSchema = createInsertSchema(clientRecurringConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertClientRecurringConfig = z.infer<typeof insertClientRecurringConfigSchema>;
+export type ClientRecurringConfig = typeof clientRecurringConfig.$inferSelect;
