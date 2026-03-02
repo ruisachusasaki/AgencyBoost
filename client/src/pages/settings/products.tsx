@@ -334,6 +334,18 @@ export default function ProductsSettings() {
     refetchOnWindowFocus: false,
   });
 
+  const { data: taskCategoriesList = [] } = useQuery<any[]>({
+    queryKey: ["/api/task-categories"],
+    enabled: activeTab === "taskMapping",
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: teamWorkflowsList = [] } = useQuery<any[]>({
+    queryKey: ["/api/team-workflows"],
+    enabled: activeTab === "taskMapping",
+    refetchOnWindowFocus: false,
+  });
+
   // Create product mutation
   const createProductMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/products", data),
@@ -846,6 +858,8 @@ export default function ProductsSettings() {
       taskType: formData.get("taskType") as string,
       quantityMode: formData.get("quantityMode") as string || "once",
       departmentId: formData.get("departmentId") as string || null,
+      categoryId: formData.get("categoryId") as string || null,
+      workflowId: formData.get("workflowId") as string || null,
       assignedStaffId: formData.get("assignedStaffId") as string || null,
       dueDateOffset: parseInt(formData.get("dueDateOffset") as string) || 7,
       estimatedHours: formData.get("estimatedHours") as string || null,
@@ -868,6 +882,8 @@ export default function ProductsSettings() {
       taskType: formData.get("taskType") as string,
       quantityMode: formData.get("quantityMode") as string || "once",
       departmentId: formData.get("departmentId") as string || null,
+      categoryId: formData.get("categoryId") as string || null,
+      workflowId: formData.get("workflowId") as string || null,
       assignedStaffId: formData.get("assignedStaffId") as string || null,
       dueDateOffset: parseInt(formData.get("dueDateOffset") as string) || 7,
       estimatedHours: formData.get("estimatedHours") as string || null,
@@ -3489,6 +3505,26 @@ export default function ProductsSettings() {
                 </select>
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="template-categoryId">Task Category</Label>
+                <select name="categoryId" id="template-categoryId" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="">
+                  <option value="">None</option>
+                  {taskCategoriesList.map((cat: any) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="template-workflowId">Task Workflow</Label>
+                <select name="workflowId" id="template-workflowId" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="">
+                  <option value="">None (use category default)</option>
+                  {teamWorkflowsList.filter((w: any) => w.isActive !== false).map((w: any) => (
+                    <option key={w.id} value={w.id}>{w.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="template-dueDateOffset">Due Date Offset (days)</Label>
@@ -3613,6 +3649,26 @@ export default function ProductsSettings() {
                     <option value="">Unassigned</option>
                     {staffMembers.map((s: StaffMember) => (
                       <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-template-categoryId">Task Category</Label>
+                  <select name="categoryId" id="edit-template-categoryId" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue={editingTemplate.categoryId || ""}>
+                    <option value="">None</option>
+                    {taskCategoriesList.map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-template-workflowId">Task Workflow</Label>
+                  <select name="workflowId" id="edit-template-workflowId" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue={editingTemplate.workflowId || ""}>
+                    <option value="">None (use category default)</option>
+                    {teamWorkflowsList.filter((w: any) => w.isActive !== false).map((w: any) => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
                     ))}
                   </select>
                 </div>

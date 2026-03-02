@@ -221,7 +221,8 @@ export async function generateTasksFromTemplates(
                 priority: priorityMap[template.priority || "medium"] || "normal",
                 assignedTo: assignedTo as any,
                 clientId,
-                categoryId: template.departmentId || undefined,
+                categoryId: template.categoryId || template.departmentId || undefined,
+                workflowId: template.workflowId || undefined,
                 dueDate: dueDate,
                 timeEstimate: template.estimatedHours
                   ? Math.round(parseFloat(template.estimatedHours) * 60)

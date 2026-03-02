@@ -5405,6 +5405,8 @@ export const productTaskTemplates = pgTable("product_task_templates", {
   taskType: varchar("task_type").notNull(), // 'onboarding' | 'recurring'
   quantityMode: varchar("quantity_mode").notNull().default("once"), // 'once' | 'per_unit' | 'per_unit_named'
   departmentId: varchar("department_id").references(() => departments.id),
+  categoryId: varchar("category_id").references(() => taskCategories.id),
+  workflowId: varchar("workflow_id").references(() => teamWorkflows.id),
   assignedStaffId: uuid("assigned_staff_id").references(() => staff.id),
   dueDateOffset: integer("due_date_offset").notNull().default(7),
   estimatedHours: decimal("estimated_hours", { precision: 6, scale: 2 }),
