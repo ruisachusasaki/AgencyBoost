@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Fragment, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, Fragment, useCallback, useRef, lazy, Suspense } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -212,8 +213,9 @@ export default function ProductsSettings() {
 
   const createNameRef = useRef<HTMLInputElement>(null);
   const editNameRef = useRef<HTMLInputElement>(null);
-  const createDescriptionRef = useRef<HTMLTextAreaElement>(null);
-  const editDescriptionRef = useRef<HTMLTextAreaElement>(null);
+  const [createTemplateDescription, setCreateTemplateDescription] = useState("");
+  const [editTemplateDescription, setEditTemplateDescription] = useState("");
+  const [descEditorKey, setDescEditorKey] = useState(0);
 
   const mergeTagOptions = [
     { tag: "{{client.name}}", label: "Client Name", description: "Company or client name" },
@@ -735,6 +737,7 @@ export default function ProductsSettings() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/product-task-templates"] });
       setEditingTemplate(data);
+      setEditTemplateDescription(data.description || "");
       setIsEditTemplateOpen(true);
       toast({ title: "Success", description: "Template duplicated — edit the copy below" });
     },
@@ -857,7 +860,7 @@ export default function ProductsSettings() {
     const formData = new FormData(e.currentTarget);
     const data: any = {
       name: formData.get("name") as string,
-      description: formData.get("description") as string || null,
+      description: createTemplateDescription || null,
       taskType: formData.get("taskType") as string,
       quantityMode: formData.get("quantityMode") as string || "once",
       departmentId: formData.get("departmentId") as string || null,
@@ -881,7 +884,7 @@ export default function ProductsSettings() {
     const formData = new FormData(e.currentTarget);
     const data: any = {
       name: formData.get("name") as string,
-      description: formData.get("description") as string || null,
+      description: editTemplateDescription || null,
       taskType: formData.get("taskType") as string,
       quantityMode: formData.get("quantityMode") as string || "once",
       departmentId: formData.get("departmentId") as string || null,
@@ -3090,7 +3093,7 @@ export default function ProductsSettings() {
                                                     </TableCell>
                                                     <TableCell>
                                                       <div className="flex gap-1">
-                                                        <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setIsEditTemplateOpen(true); }} title="Edit">
+                                                        <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setEditTemplateDescription(tmpl.description || ""); setIsEditTemplateOpen(true); }} title="Edit">
                                                           <Edit2 className="h-3.5 w-3.5" />
                                                         </Button>
                                                         <Button variant="ghost" size="sm" onClick={() => duplicateTemplateMutation.mutate(tmpl.id)} disabled={duplicateTemplateMutation.isPending} title="Duplicate">
@@ -3237,7 +3240,7 @@ export default function ProductsSettings() {
                                               </TableCell>
                                               <TableCell>
                                                 <div className="flex gap-1">
-                                                  <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setIsEditTemplateOpen(true); }}>
+                                                  <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setEditTemplateDescription(tmpl.description || ""); setIsEditTemplateOpen(true); }}>
                                                     <Edit2 className="h-3.5 w-3.5" />
                                                   </Button>
                                                   <AlertDialog>
@@ -3368,7 +3371,7 @@ export default function ProductsSettings() {
                                               </TableCell>
                                               <TableCell>
                                                 <div className="flex gap-1">
-                                                  <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setIsEditTemplateOpen(true); }}>
+                                                  <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setEditTemplateDescription(tmpl.description || ""); setIsEditTemplateOpen(true); }}>
                                                     <Edit2 className="h-3.5 w-3.5" />
                                                   </Button>
                                                   <AlertDialog>
@@ -3409,7 +3412,7 @@ export default function ProductsSettings() {
         )}
 
       {/* Create Task Template Dialog */}
-      <Dialog open={isCreateTemplateOpen} onOpenChange={setIsCreateTemplateOpen}>
+      <Dialog open={isCreateTemplateOpen} onOpenChange={(open) => { setIsCreateTemplateOpen(open); if (!open) { setCreateTemplateDescription(""); setDescEditorKey(k => k + 1); } }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Task Template</DialogTitle>
@@ -3450,7 +3453,7 @@ export default function ProductsSettings() {
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
-                <Label htmlFor="template-description">Description</Label>
+                <Label>Description</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
@@ -3459,14 +3462,14 @@ export default function ProductsSettings() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="end" className="w-72 p-2 z-[100]" sideOffset={5}>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert at cursor position</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert into description</p>
                     <div className="space-y-0.5">
                       {mergeTagOptions.map((option) => (
                         <button
                           key={option.tag}
                           type="button"
                           className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                          onClick={() => insertMergeTag(createDescriptionRef, option.tag)}
+                          onClick={() => { setCreateTemplateDescription(prev => { const updated = prev ? prev.replace(/<\/p>$/, option.tag + '</p>') : `<p>${option.tag}</p>`; return updated; }); setDescEditorKey(k => k + 1); }}
                         >
                           <span className="font-medium">{option.label}</span>
                           <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{option.tag}</code>
@@ -3476,7 +3479,13 @@ export default function ProductsSettings() {
                   </PopoverContent>
                 </Popover>
               </div>
-              <Textarea ref={createDescriptionRef} id="template-description" name="description" placeholder="e.g., Set up {{product.name}} for {{client.name}}" rows={3} />
+              <RichTextEditor
+                key={`create-desc-${descEditorKey}`}
+                content={createTemplateDescription}
+                onChange={setCreateTemplateDescription}
+                placeholder="e.g., Set up {{product.name}} for {{client.name}}"
+                className="min-h-[120px]"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -3641,7 +3650,7 @@ export default function ProductsSettings() {
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <Label htmlFor="edit-template-description">Description</Label>
+                  <Label>Description</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
@@ -3650,14 +3659,14 @@ export default function ProductsSettings() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-72 p-2 z-[100]" sideOffset={5}>
-                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert at cursor position</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert into description</p>
                       <div className="space-y-0.5">
                         {mergeTagOptions.map((option) => (
                           <button
                             key={option.tag}
                             type="button"
                             className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                            onClick={() => insertMergeTag(editDescriptionRef, option.tag)}
+                            onClick={() => { setEditTemplateDescription(prev => { const updated = prev ? prev.replace(/<\/p>$/, option.tag + '</p>') : `<p>${option.tag}</p>`; return updated; }); setDescEditorKey(k => k + 1); }}
                           >
                             <span className="font-medium">{option.label}</span>
                             <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{option.tag}</code>
@@ -3667,7 +3676,13 @@ export default function ProductsSettings() {
                     </PopoverContent>
                   </Popover>
                 </div>
-                <Textarea ref={editDescriptionRef} id="edit-template-description" name="description" defaultValue={editingTemplate.description || ""} rows={3} />
+                <RichTextEditor
+                  key={`edit-desc-${descEditorKey}`}
+                  content={editTemplateDescription}
+                  onChange={setEditTemplateDescription}
+                  placeholder="Task description..."
+                  className="min-h-[120px]"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
