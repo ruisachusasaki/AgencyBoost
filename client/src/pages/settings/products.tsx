@@ -193,6 +193,8 @@ export default function ProductsSettings() {
   const [editingPackage, setEditingPackage] = useState<ProductPackage | null>(null);
   const [packageItems, setPackageItems] = useState<Array<{itemType: string, productId?: string, bundleId?: string, quantity: number}>>([]);
   const [packageSearchTerm, setPackageSearchTerm] = useState("");
+  const [taskMappingSearchTerm, setTaskMappingSearchTerm] = useState("");
+  const [taskMappingCategoryFilter, setTaskMappingCategoryFilter] = useState("all");
   const [bundleFormType, setBundleFormType] = useState("recurring");
   const [packageItemSearch, setPackageItemSearch] = useState("");
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
@@ -1569,14 +1571,16 @@ export default function ProductsSettings() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder={`Search ${activeTab}...`}
-                value={activeTab === "categories" ? categorySearchTerm : activeTab === "packages" ? packageSearchTerm : activeTab === "taskMapping" ? "" : searchTerm}
+                placeholder={activeTab === "taskMapping" ? "Search products, bundles, templates..." : `Search ${activeTab}...`}
+                value={activeTab === "categories" ? categorySearchTerm : activeTab === "packages" ? packageSearchTerm : activeTab === "taskMapping" ? taskMappingSearchTerm : searchTerm}
                 onChange={(e) => {
                   if (activeTab === "categories") {
                     setCategorySearchTerm(e.target.value);
                   } else if (activeTab === "packages") {
                     setPackageSearchTerm(e.target.value);
-                  } else if (activeTab !== "taskMapping") {
+                  } else if (activeTab === "taskMapping") {
+                    setTaskMappingSearchTerm(e.target.value);
+                  } else {
                     setSearchTerm(e.target.value);
                   }
                 }}
@@ -1590,6 +1594,22 @@ export default function ProductsSettings() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="uncategorized">Uncategorized</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {activeTab === "taskMapping" && categories.length > 0 && (
+              <Select value={taskMappingCategoryFilter} onValueChange={setTaskMappingCategoryFilter}>
+                <SelectTrigger className="w-52">
+                  <SelectValue placeholder="All Product Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Product Types</SelectItem>
                   <SelectItem value="uncategorized">Uncategorized</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
@@ -2961,12 +2981,21 @@ export default function ProductsSettings() {
                     ) : (
                       <div className="space-y-2">
                         {(() => {
+                          const searchLower = taskMappingSearchTerm.toLowerCase();
+                          const filteredProducts = products.filter((p: Product) => {
+                            const matchesSearch = !searchLower || p.name.toLowerCase().includes(searchLower) ||
+                              getTemplatesForItem('product', p.id).some((t: TaskTemplate) => t.name.toLowerCase().includes(searchLower));
+                            const matchesCategory = taskMappingCategoryFilter === 'all' ||
+                              (taskMappingCategoryFilter === 'uncategorized' ? !p.categoryId : p.categoryId === taskMappingCategoryFilter);
+                            return matchesSearch && matchesCategory;
+                          });
                           const grouped: Record<string, Product[]> = {};
-                          products.forEach((p: Product) => {
+                          filteredProducts.forEach((p: Product) => {
                             const catName = categories.find((c: ProductCategory) => c.id === p.categoryId)?.name || "Uncategorized";
                             if (!grouped[catName]) grouped[catName] = [];
                             grouped[catName].push(p);
                           });
+                          if (filteredProducts.length === 0) return <div className="text-center py-4 text-gray-400 text-sm">No products match your search or filter</div>;
                           return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([catName, catProducts]) => (
                             <div key={catName} className="mb-4">
                               <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">{catName}</h4>
@@ -3151,7 +3180,7 @@ export default function ProductsSettings() {
                       <div className="text-center py-6 text-gray-500">No bundles available</div>
                     ) : (
                       <div className="space-y-2">
-                        {bundles.map((bundle: ProductBundle) => {
+                        {bundles.filter((b: ProductBundle) => !taskMappingSearchTerm || b.name.toLowerCase().includes(taskMappingSearchTerm.toLowerCase()) || getTemplatesForItem('bundle', b.id).some((t: TaskTemplate) => t.name.toLowerCase().includes(taskMappingSearchTerm.toLowerCase()))).map((bundle: ProductBundle) => {
                           const templates = getTemplatesForItem('bundle', bundle.id);
                           const onboardingCount = templates.filter((t: TaskTemplate) => t.taskType === 'onboarding').length;
                           const recurringCount = templates.filter((t: TaskTemplate) => t.taskType === 'recurring').length;
@@ -3290,7 +3319,7 @@ export default function ProductsSettings() {
                       <div className="text-center py-6 text-gray-500">No packages available</div>
                     ) : (
                       <div className="space-y-2">
-                        {packages.map((pkg: ProductPackage) => {
+                        {packages.filter((p: ProductPackage) => !taskMappingSearchTerm || p.name.toLowerCase().includes(taskMappingSearchTerm.toLowerCase()) || getTemplatesForItem('package', p.id).some((t: TaskTemplate) => t.name.toLowerCase().includes(taskMappingSearchTerm.toLowerCase()))).map((pkg: ProductPackage) => {
                           const templates = getTemplatesForItem('package', pkg.id);
                           const onboardingCount = templates.filter((t: TaskTemplate) => t.taskType === 'onboarding').length;
                           const recurringCount = templates.filter((t: TaskTemplate) => t.taskType === 'recurring').length;
