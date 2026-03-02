@@ -39,9 +39,11 @@ import {
   Users,
   Clock,
   GripVertical,
-  AlertCircle
+  AlertCircle,
+  Info
 } from "lucide-react";
 import { Link } from "wouter";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Product {
   id: string;
@@ -3383,7 +3385,24 @@ export default function ProductsSettings() {
                 </select>
               </div>
               <div>
-                <Label htmlFor="template-quantityMode">Quantity Mode</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="template-quantityMode">Quantity Mode</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs text-xs leading-relaxed">
+                        <p className="font-semibold mb-1">Once</p>
+                        <p className="mb-2">Creates a single task regardless of product quantity.</p>
+                        <p className="font-semibold mb-1">Per Unit</p>
+                        <p className="mb-2">Creates one task for each unit of the product (e.g. 5 units = 5 tasks).</p>
+                        <p className="font-semibold mb-1">Per Unit (Named)</p>
+                        <p>Same as Per Unit, but each task title includes the unit number (e.g. "Task — Unit 1 of 5").</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <select name="quantityMode" id="template-quantityMode" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="once">
                   <option value="once">Once</option>
                   <option value="per_unit">Per Unit</option>
@@ -3466,7 +3485,24 @@ export default function ProductsSettings() {
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="edit-template-quantityMode">Quantity Mode</Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="edit-template-quantityMode">Quantity Mode</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs text-xs leading-relaxed">
+                          <p className="font-semibold mb-1">Once</p>
+                          <p className="mb-2">Creates a single task regardless of product quantity.</p>
+                          <p className="font-semibold mb-1">Per Unit</p>
+                          <p className="mb-2">Creates one task for each unit of the product (e.g. 5 units = 5 tasks).</p>
+                          <p className="font-semibold mb-1">Per Unit (Named)</p>
+                          <p>Same as Per Unit, but each task title includes the unit number (e.g. "Task — Unit 1 of 5").</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <select name="quantityMode" id="edit-template-quantityMode" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue={editingTemplate.quantityMode}>
                     <option value="once">Once</option>
                     <option value="per_unit">Per Unit</option>
