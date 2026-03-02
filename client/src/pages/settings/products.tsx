@@ -686,6 +686,69 @@ export default function ProductsSettings() {
     },
   });
 
+  const reorderTemplateMutation = useMutation({
+    mutationFn: (items: Array<{ id: string; sortOrder: number }>) =>
+      apiRequest("PATCH", "/api/product-task-templates/reorder", { items }),
+    onError: (error: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/product-task-templates"] });
+      toast({ title: "Error", description: error.message || "Failed to reorder templates", variant: "destructive" });
+    },
+  });
+
+  const [dragState, setDragState] = useState<{ templateId: string; groupKey: string } | null>(null);
+
+  const handleTemplateDragStart = useCallback((e: React.DragEvent, templateId: string, groupKey: string) => {
+    setDragState({ templateId, groupKey });
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', templateId);
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  }, []);
+
+  const handleTemplateDragEnd = useCallback((e: React.DragEvent) => {
+    setDragState(null);
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+  }, []);
+
+  const handleTemplateDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handleTemplateDrop = useCallback((e: React.DragEvent, targetId: string, groupType: 'product' | 'bundle' | 'package', groupItemId: string) => {
+    e.preventDefault();
+    if (!dragState) return;
+    const sourceId = dragState.templateId;
+    const expectedGroupKey = `${groupType}-${groupItemId}`;
+    if (dragState.groupKey !== expectedGroupKey) return;
+    if (sourceId === targetId) return;
+
+    const templates = getTemplatesForItem(groupType, groupItemId)
+      .sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder);
+
+    const sourceIndex = templates.findIndex((t: TaskTemplate) => t.id === sourceId);
+    const targetIndex = templates.findIndex((t: TaskTemplate) => t.id === targetId);
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
+    const reordered = [...templates];
+    const [moved] = reordered.splice(sourceIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+
+    const items = reordered.map((t: TaskTemplate, i: number) => ({ id: t.id, sortOrder: i }));
+
+    queryClient.setQueryData(["/api/product-task-templates"], (old: TaskTemplate[] | undefined) => {
+      if (!old) return old;
+      const orderMap = new Map(items.map(item => [item.id, item.sortOrder]));
+      return old.map((t: TaskTemplate) => orderMap.has(t.id) ? { ...t, sortOrder: orderMap.get(t.id)! } : t);
+    });
+
+    reorderTemplateMutation.mutate(items);
+    setDragState(null);
+  }, [dragState, taskTemplates, queryClient, reorderTemplateMutation]);
+
   // Task mapping helpers
   const getTemplatesForItem = (type: 'product' | 'bundle' | 'package', itemId: string) => {
     return taskTemplates.filter((t: TaskTemplate) => {
@@ -2872,6 +2935,7 @@ export default function ProductsSettings() {
                                             <Table>
                                               <TableHeader>
                                                 <TableRow>
+                                                  <TableHead className="w-8"></TableHead>
                                                   <TableHead>Template Name</TableHead>
                                                   <TableHead>Type</TableHead>
                                                   <TableHead className="hidden md:table-cell">Qty Mode</TableHead>
@@ -2884,7 +2948,18 @@ export default function ProductsSettings() {
                                               </TableHeader>
                                               <TableBody>
                                                 {templates.sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder).map((tmpl: TaskTemplate) => (
-                                                  <TableRow key={tmpl.id}>
+                                                  <TableRow
+                                                    key={tmpl.id}
+                                                    draggable
+                                                    onDragStart={(e) => handleTemplateDragStart(e, tmpl.id, `product-${product.id}`)}
+                                                    onDragEnd={handleTemplateDragEnd}
+                                                    onDragOver={handleTemplateDragOver}
+                                                    onDrop={(e) => handleTemplateDrop(e, tmpl.id, 'product', product.id)}
+                                                    className={dragState?.templateId === tmpl.id ? 'opacity-50' : ''}
+                                                  >
+                                                    <TableCell className="w-8 cursor-grab active:cursor-grabbing">
+                                                      <GripVertical className="h-4 w-4 text-gray-400" />
+                                                    </TableCell>
                                                     <TableCell className="font-medium">{tmpl.name}</TableCell>
                                                     <TableCell>
                                                       <Badge className={tmpl.taskType === 'onboarding' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : 'bg-teal-100 text-teal-800 hover:bg-teal-100'}>
@@ -3005,6 +3080,7 @@ export default function ProductsSettings() {
                                       <Table>
                                         <TableHeader>
                                           <TableRow>
+                                            <TableHead className="w-8"></TableHead>
                                             <TableHead>Template Name</TableHead>
                                             <TableHead>Type</TableHead>
                                             <TableHead className="hidden md:table-cell">Qty Mode</TableHead>
@@ -3017,7 +3093,18 @@ export default function ProductsSettings() {
                                         </TableHeader>
                                         <TableBody>
                                           {templates.sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder).map((tmpl: TaskTemplate) => (
-                                            <TableRow key={tmpl.id}>
+                                            <TableRow
+                                              key={tmpl.id}
+                                              draggable
+                                              onDragStart={(e) => handleTemplateDragStart(e, tmpl.id, `bundle-${bundle.id}`)}
+                                              onDragEnd={handleTemplateDragEnd}
+                                              onDragOver={handleTemplateDragOver}
+                                              onDrop={(e) => handleTemplateDrop(e, tmpl.id, 'bundle', bundle.id)}
+                                              className={dragState?.templateId === tmpl.id ? 'opacity-50' : ''}
+                                            >
+                                              <TableCell className="w-8 cursor-grab active:cursor-grabbing">
+                                                <GripVertical className="h-4 w-4 text-gray-400" />
+                                              </TableCell>
                                               <TableCell className="font-medium">{tmpl.name}</TableCell>
                                               <TableCell>
                                                 <Badge className={tmpl.taskType === 'onboarding' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : 'bg-teal-100 text-teal-800 hover:bg-teal-100'}>
@@ -3124,6 +3211,7 @@ export default function ProductsSettings() {
                                       <Table>
                                         <TableHeader>
                                           <TableRow>
+                                            <TableHead className="w-8"></TableHead>
                                             <TableHead>Template Name</TableHead>
                                             <TableHead>Type</TableHead>
                                             <TableHead className="hidden md:table-cell">Qty Mode</TableHead>
@@ -3136,7 +3224,18 @@ export default function ProductsSettings() {
                                         </TableHeader>
                                         <TableBody>
                                           {templates.sort((a: TaskTemplate, b: TaskTemplate) => a.sortOrder - b.sortOrder).map((tmpl: TaskTemplate) => (
-                                            <TableRow key={tmpl.id}>
+                                            <TableRow
+                                              key={tmpl.id}
+                                              draggable
+                                              onDragStart={(e) => handleTemplateDragStart(e, tmpl.id, `package-${pkg.id}`)}
+                                              onDragEnd={handleTemplateDragEnd}
+                                              onDragOver={handleTemplateDragOver}
+                                              onDrop={(e) => handleTemplateDrop(e, tmpl.id, 'package', pkg.id)}
+                                              className={dragState?.templateId === tmpl.id ? 'opacity-50' : ''}
+                                            >
+                                              <TableCell className="w-8 cursor-grab active:cursor-grabbing">
+                                                <GripVertical className="h-4 w-4 text-gray-400" />
+                                              </TableCell>
                                               <TableCell className="font-medium">{tmpl.name}</TableCell>
                                               <TableCell>
                                                 <Badge className={tmpl.taskType === 'onboarding' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : 'bg-teal-100 text-teal-800 hover:bg-teal-100'}>
