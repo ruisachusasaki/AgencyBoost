@@ -11,13 +11,27 @@ var child = null;
 var OK_HTML = `<!DOCTYPE html><html><head><title>AgencyBoost</title><meta http-equiv="refresh" content="3"></head><body><p>Loading...</p></body></html>`;
 var OK_JSON = JSON.stringify({ status: "ok" });
 function sendOk(req, res) {
-  const accept = req.headers["accept"] || "";
-  if (req.url === "/health" || req.url === "/api/health" || req.url === "/_health" || accept.includes("application/json")) {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(OK_JSON);
-  } else {
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(OK_HTML);
+  if (res.headersSent || res.writableEnded) {
+    try {
+      res.end();
+    } catch (_) {
+    }
+    return;
+  }
+  try {
+    const accept = req.headers["accept"] || "";
+    if (req.url === "/health" || req.url === "/api/health" || req.url === "/_health" || accept.includes("application/json")) {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(OK_JSON);
+    } else {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(OK_HTML);
+    }
+  } catch (_) {
+    try {
+      res.end();
+    } catch (_2) {
+    }
   }
 }
 function proxyToWorker(req, res) {
@@ -34,14 +48,23 @@ function proxyToWorker(req, res) {
       }
     },
     (proxyRes) => {
-      res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
-      proxyRes.pipe(res, { end: true });
+      try {
+        if (!res.headersSent) {
+          res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+        }
+        proxyRes.pipe(res, { end: true });
+      } catch (_) {
+        try {
+          res.end();
+        } catch (_2) {
+        }
+      }
     }
   );
   proxyReq.on("error", () => {
     sendOk(req, res);
   });
-  proxyReq.setTimeout(1e4, () => {
+  proxyReq.setTimeout(3e4, () => {
     proxyReq.destroy();
     sendOk(req, res);
   });

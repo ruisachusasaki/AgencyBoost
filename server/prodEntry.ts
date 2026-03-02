@@ -16,13 +16,21 @@ const OK_HTML = `<!DOCTYPE html><html><head><title>AgencyBoost</title><meta http
 const OK_JSON = JSON.stringify({ status: "ok" });
 
 function sendOk(req: IncomingMessage, res: ServerResponse) {
-  const accept = req.headers["accept"] || "";
-  if (req.url === "/health" || req.url === "/api/health" || req.url === "/_health" || accept.includes("application/json")) {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(OK_JSON);
-  } else {
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(OK_HTML);
+  if (res.headersSent || res.writableEnded) {
+    try { res.end(); } catch (_) {}
+    return;
+  }
+  try {
+    const accept = req.headers["accept"] || "";
+    if (req.url === "/health" || req.url === "/api/health" || req.url === "/_health" || accept.includes("application/json")) {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(OK_JSON);
+    } else {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(OK_HTML);
+    }
+  } catch (_) {
+    try { res.end(); } catch (_) {}
   }
 }
 
@@ -40,8 +48,14 @@ function proxyToWorker(req: IncomingMessage, res: ServerResponse) {
       },
     },
     (proxyRes) => {
-      res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
-      proxyRes.pipe(res, { end: true });
+      try {
+        if (!res.headersSent) {
+          res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+        }
+        proxyRes.pipe(res, { end: true });
+      } catch (_) {
+        try { res.end(); } catch (_) {}
+      }
     }
   );
 
@@ -49,7 +63,7 @@ function proxyToWorker(req: IncomingMessage, res: ServerResponse) {
     sendOk(req, res);
   });
 
-  proxyReq.setTimeout(10000, () => {
+  proxyReq.setTimeout(30000, () => {
     proxyReq.destroy();
     sendOk(req, res);
   });
