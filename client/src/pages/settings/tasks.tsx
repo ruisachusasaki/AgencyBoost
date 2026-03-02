@@ -149,6 +149,228 @@ type Department = {
   isActive: boolean;
 };
 
+function TaskMappingSettings() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: settings, isLoading } = useQuery<{
+    autoGenerateOnConversion: boolean;
+    defaultCycleLength: number;
+    defaultAdvanceGenerationDays: number;
+    enableRecurringGeneration: boolean;
+  }>({
+    queryKey: ['/api/settings/task-mapping'],
+  });
+
+  const [localAutoGenerate, setLocalAutoGenerate] = useState(true);
+  const [localCycleLength, setLocalCycleLength] = useState("30");
+  const [localAdvanceDays, setLocalAdvanceDays] = useState("3");
+  const [localEnableRecurring, setLocalEnableRecurring] = useState(true);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setLocalAutoGenerate(settings.autoGenerateOnConversion);
+      setLocalCycleLength(String(settings.defaultCycleLength));
+      setLocalAdvanceDays(String(settings.defaultAdvanceGenerationDays));
+      setLocalEnableRecurring(settings.enableRecurringGeneration);
+      setHasChanges(false);
+    }
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PUT", "/api/settings/task-mapping", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/task-mapping'] });
+    },
+  });
+
+  const handleSave = async () => {
+    try {
+      await saveMutation.mutateAsync({
+        autoGenerateOnConversion: localAutoGenerate,
+        defaultCycleLength: parseInt(localCycleLength) || 30,
+        defaultAdvanceGenerationDays: parseInt(localAdvanceDays) || 3,
+        enableRecurringGeneration: localEnableRecurring,
+      });
+      setHasChanges(false);
+      toast({
+        title: "Settings saved",
+        description: "Task mapping settings have been updated.",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to save settings.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <div className="text-center text-muted-foreground">Loading settings...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const templateVariables = [
+    { variable: "{{client.name}}", description: "Client company name (falls back to contact name)" },
+    { variable: "{{client.email}}", description: "Client email address" },
+    { variable: "{{product.name}}", description: "Name of the product, bundle, or package" },
+    { variable: "{{quantity}}", description: "Quantity assigned (from quote or default 1)" },
+    { variable: "{{cycle.number}}", description: "Current recurring cycle number" },
+    { variable: "{{cycle.startDate}}", description: "Start date of the current cycle (YYYY-MM-DD)" },
+    { variable: "{{unit.number}}", description: "Current unit number (for per_unit modes)" },
+    { variable: "{{unit.total}}", description: "Total number of units (same as quantity)" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Task Generation Automation</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Control how tasks are automatically generated from product/task template mappings.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="auto-generate-toggle" className="font-medium">Auto-Generate on Conversion</Label>
+              <p className="text-sm text-muted-foreground">
+                Automatically generate onboarding tasks when a lead converts to a client
+              </p>
+            </div>
+            <Switch
+              id="auto-generate-toggle"
+              checked={localAutoGenerate}
+              onCheckedChange={(checked) => {
+                setLocalAutoGenerate(checked);
+                setHasChanges(true);
+              }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="recurring-toggle" className="font-medium">Enable Recurring Task Generation</Label>
+              <p className="text-sm text-muted-foreground">
+                Global switch for the recurring task scheduler. When off, no recurring tasks will be auto-generated for any client.
+              </p>
+            </div>
+            <Switch
+              id="recurring-toggle"
+              checked={localEnableRecurring}
+              onCheckedChange={(checked) => {
+                setLocalEnableRecurring(checked);
+                setHasChanges(true);
+              }}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="default-cycle-length" className="font-medium">Default Cycle Length</Label>
+              <p className="text-sm text-muted-foreground">
+                Default number of days per recurring cycle for new clients
+              </p>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="default-cycle-length"
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={localCycleLength}
+                  onChange={(e) => {
+                    setLocalCycleLength(e.target.value);
+                    setHasChanges(true);
+                  }}
+                  className="w-32"
+                />
+                <span className="text-sm text-muted-foreground">days</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="default-advance-days" className="font-medium">Default Advance Generation</Label>
+              <p className="text-sm text-muted-foreground">
+                Generate recurring tasks this many days before the next cycle
+              </p>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="default-advance-days"
+                  type="number"
+                  min="0"
+                  max="30"
+                  value={localAdvanceDays}
+                  onChange={(e) => {
+                    setLocalAdvanceDays(e.target.value);
+                    setHasChanges(true);
+                  }}
+                  className="w-32"
+                />
+                <span className="text-sm text-muted-foreground">days</span>
+              </div>
+            </div>
+          </div>
+
+          {hasChanges && (
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSave}
+                disabled={saveMutation.isPending}
+                style={{ backgroundColor: 'hsl(179, 100%, 39%)', color: 'white' }}
+              >
+                {saveMutation.isPending ? "Saving..." : "Save Settings"}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Available Template Variables</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Use these variables in task template names and descriptions. They will be replaced with actual values when tasks are generated.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-48">Variable</TableHead>
+                <TableHead>Resolves To</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {templateVariables.map((tv) => (
+                <TableRow key={tv.variable}>
+                  <TableCell>
+                    <code className="px-2 py-1 rounded text-sm font-mono bg-gray-100 dark:bg-gray-800 text-primary">
+                      {tv.variable}
+                    </code>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {tv.description}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function LongRunningTimerSettings() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -1734,6 +1956,7 @@ export default function TasksSettingsPage() {
             </div>
           </div>
 
+          <TaskMappingSettings />
           <LongRunningTimerSettings />
           <WeeklyHoursAlertSettings />
         </TabsContent>

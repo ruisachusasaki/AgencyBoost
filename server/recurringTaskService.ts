@@ -7,6 +7,7 @@ import {
   clientPackages,
   clientTaskGenerations,
   clients,
+  taskSettings,
 } from "@shared/schema";
 import { generateTasksFromTemplates } from "./taskGenerationEngine";
 
@@ -56,6 +57,14 @@ async function runRecurringTaskCheck() {
   console.log("[RecurringTasks] Starting recurring task check...");
 
   try {
+    const [killSwitchSetting] = await db.select().from(taskSettings)
+      .where(eq(taskSettings.settingKey, 'task_mapping_enable_recurring_generation'));
+    const recurringEnabled = (killSwitchSetting?.settingValue as any)?.value ?? true;
+    if (!recurringEnabled) {
+      console.log("[RecurringTasks] Recurring task generation is disabled via settings — skipping");
+      return;
+    }
+
     const configs = await db
       .select()
       .from(clientRecurringConfig)

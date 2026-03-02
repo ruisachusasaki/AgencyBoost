@@ -2908,10 +2908,17 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       let taskGenerationSummary: any = null;
 
       try {
-        const assignedProducts = await db
-          .select({ productId: clientProducts.productId })
-          .from(clientProducts)
-          .where(eq(clientProducts.clientId, client.id));
+        const [autoGenSetting] = await db.select().from(taskSettings)
+          .where(eq(taskSettings.settingKey, 'task_mapping_auto_generate_on_conversion'));
+        const autoGenerateEnabled = (autoGenSetting?.settingValue as any)?.value ?? true;
+
+        if (!autoGenerateEnabled) {
+          console.log(`[TaskGen] Auto-generate on conversion is disabled — skipping for client ${client.id}`);
+        } else {
+          const assignedProducts = await db
+            .select({ productId: clientProducts.productId })
+            .from(clientProducts)
+            .where(eq(clientProducts.clientId, client.id));
 
         const assignedBundles = await db
           .select({ bundleId: clientBundles.bundleId })
@@ -2971,6 +2978,15 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             console.warn(`⚠️ Task generation warnings:`, taskGenerationSummary.errors);
           }
         }
+        }
+
+        const [cycleLengthSetting] = await db.select().from(taskSettings)
+          .where(eq(taskSettings.settingKey, 'task_mapping_default_cycle_length'));
+        const defaultCycleLength = (cycleLengthSetting?.settingValue as any)?.value ?? 30;
+
+        const [advanceGenSetting] = await db.select().from(taskSettings)
+          .where(eq(taskSettings.settingKey, 'task_mapping_default_advance_generation_days'));
+        const defaultAdvanceDays = (advanceGenSetting?.settingValue as any)?.value ?? 3;
 
         const existingConfig = await db.select().from(clientRecurringConfig)
           .where(eq(clientRecurringConfig.clientId, client.id)).limit(1);
@@ -2979,10 +2995,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           await db.insert(clientRecurringConfig).values({
             clientId: client.id,
             cycleStartDate: new Date(),
-            cycleLengthDays: 30,
+            cycleLengthDays: defaultCycleLength,
+            advanceGenerationDays: defaultAdvanceDays,
             status: 'active',
           });
-          console.log(`✅ Created recurring config for client ${client.id}`);
+          console.log(`✅ Created recurring config for client ${client.id} (cycle: ${defaultCycleLength}d, advance: ${defaultAdvanceDays}d)`);
         }
       } catch (taskGenError) {
         console.error('Error generating onboarding tasks (non-blocking):', taskGenError);
@@ -24836,6 +24853,99 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       }
       console.error("Error saving task setting:", error);
       res.status(500).json({ message: "Failed to save task setting" });
+    }
+  });
+
+  // Task Mapping Settings Routes (admin only)
+  const TASK_MAPPING_SETTING_KEYS = [
+    'task_mapping_auto_generate_on_conversion',
+    'task_mapping_default_cycle_length',
+    'task_mapping_default_advance_generation_days',
+    'task_mapping_enable_recurring_generation',
+  ];
+
+  app.get("/api/settings/task-mapping", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const settings = await db.select().from(taskSettings)
+        .where(sql`${taskSettings.settingKey} LIKE 'task_mapping_%'`);
+
+      const result: Record<string, any> = {
+        autoGenerateOnConversion: true,
+        defaultCycleLength: 30,
+        defaultAdvanceGenerationDays: 3,
+        enableRecurringGeneration: true,
+      };
+
+      for (const s of settings) {
+        const val = (s.settingValue as any)?.value;
+        switch (s.settingKey) {
+          case 'task_mapping_auto_generate_on_conversion':
+            result.autoGenerateOnConversion = val ?? true;
+            break;
+          case 'task_mapping_default_cycle_length':
+            result.defaultCycleLength = val ?? 30;
+            break;
+          case 'task_mapping_default_advance_generation_days':
+            result.defaultAdvanceGenerationDays = val ?? 3;
+            break;
+          case 'task_mapping_enable_recurring_generation':
+            result.enableRecurringGeneration = val ?? true;
+            break;
+        }
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching task mapping settings:", error);
+      res.status(500).json({ message: "Failed to fetch task mapping settings" });
+    }
+  });
+
+  app.put("/api/settings/task-mapping", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const { autoGenerateOnConversion, defaultCycleLength, defaultAdvanceGenerationDays, enableRecurringGeneration } = req.body;
+
+      const updates: Array<{ key: string; value: any }> = [];
+
+      if (typeof autoGenerateOnConversion === 'boolean') {
+        updates.push({ key: 'task_mapping_auto_generate_on_conversion', value: autoGenerateOnConversion });
+      }
+      if (typeof defaultCycleLength === 'number' && isFinite(defaultCycleLength)) {
+        if (defaultCycleLength < 1 || defaultCycleLength > 365) {
+          return res.status(400).json({ message: "Default cycle length must be between 1 and 365 days" });
+        }
+        updates.push({ key: 'task_mapping_default_cycle_length', value: Math.round(defaultCycleLength) });
+      }
+      if (typeof defaultAdvanceGenerationDays === 'number' && isFinite(defaultAdvanceGenerationDays)) {
+        if (defaultAdvanceGenerationDays < 0 || defaultAdvanceGenerationDays > 30) {
+          return res.status(400).json({ message: "Advance generation days must be between 0 and 30" });
+        }
+        updates.push({ key: 'task_mapping_default_advance_generation_days', value: Math.round(defaultAdvanceGenerationDays) });
+      }
+      if (typeof enableRecurringGeneration === 'boolean') {
+        updates.push({ key: 'task_mapping_enable_recurring_generation', value: enableRecurringGeneration });
+      }
+
+      for (const u of updates) {
+        const [existing] = await db.select().from(taskSettings)
+          .where(eq(taskSettings.settingKey, u.key));
+
+        if (existing) {
+          await db.update(taskSettings)
+            .set({ settingValue: { value: u.value }, updatedAt: sql`now()` })
+            .where(eq(taskSettings.settingKey, u.key));
+        } else {
+          await db.insert(taskSettings).values({
+            settingKey: u.key,
+            settingValue: { value: u.value },
+          });
+        }
+      }
+
+      res.json({ message: "Task mapping settings updated successfully" });
+    } catch (error) {
+      console.error("Error saving task mapping settings:", error);
+      res.status(500).json({ message: "Failed to save task mapping settings" });
     }
   });
 
