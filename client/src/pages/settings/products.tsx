@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Fragment } from "react";
+import { useState, useEffect, useMemo, Fragment, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { 
   Plus, 
   Search, 
@@ -145,6 +149,21 @@ interface Department {
   id: string;
   name: string;
 }
+
+const taskTemplateFormSchema = z.object({
+  name: z.string().min(1, "Template name is required"),
+  description: z.string().optional(),
+  taskType: z.enum(["onboarding", "recurring"], { required_error: "Task type is required" }),
+  quantityMode: z.enum(["once", "per_unit", "per_unit_named"]),
+  departmentId: z.string().optional(),
+  assignedStaffId: z.string().optional(),
+  dueDateOffset: z.coerce.number().min(0, "Must be 0 or more").default(7),
+  estimatedHours: z.string().optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]),
+  dependsOnTemplateId: z.string().optional(),
+  status: z.enum(["active", "inactive"]),
+});
+type TaskTemplateFormValues = z.infer<typeof taskTemplateFormSchema>;
 
 export default function ProductsSettings() {
   const { toast } = useToast();
