@@ -1,11 +1,12 @@
 import express, { type Express } from "express";
 import { db } from "./db";
-import { proposals, proposalTerms, quotes, quoteItems, clients, leads, staff, products, productBundles, productPackages } from "@shared/schema";
+import { proposals, proposalTerms, quotes, quoteItems, clients, leads, staff, products, productBundles, productPackages, clientProducts, clientBundles, clientPackages, packageItems, deals, leadPipelineStages, taskSettings, clientRecurringConfig } from "@shared/schema";
 import { eq, desc, and, sql, lt, isNull, asc } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 import { createPaymentIntent, createACHPaymentIntent, isStripeConfigured, constructWebhookEvent, getStripe } from "./stripe";
 import { NotificationService } from "./notification-service";
+import { generateTasksFromTemplates } from "./taskGenerationEngine";
 
 function generatePublicToken(): string {
   return randomBytes(32).toString("hex");
@@ -658,10 +659,11 @@ async function triggerProposalFulfillment(proposal: any, notificationService: No
   try {
     console.log(`[Proposal Fulfillment] Starting fulfillment for proposal ${proposal.id}`);
 
+    const [quote] = await db.select().from(quotes).where(eq(quotes.id, proposal.quoteId));
+
     if (proposal.sentByUserId) {
       const [sender] = await db.select().from(staff).where(eq(staff.id, proposal.sentByUserId));
       if (sender) {
-        const [quote] = await db.select().from(quotes).where(eq(quotes.id, proposal.quoteId));
         try {
           await notificationService.sendDirectEmail({
             to: sender.email,
@@ -669,8 +671,192 @@ async function triggerProposalFulfillment(proposal: any, notificationService: No
             text: `Payment has been received for proposal "${quote?.name || 'Proposal'}" from ${proposal.signedByName}. The proposal is now complete and fulfillment has been triggered.`,
           });
         } catch (e) {
-          console.error("Error sending payment notification:", e);
+          console.error("[Proposal Fulfillment] Error sending payment notification:", e);
         }
+      }
+    }
+
+    let clientId = proposal.clientId;
+
+    if (proposal.leadId && !clientId) {
+      try {
+        const [lead] = await db.select().from(leads).where(eq(leads.id, proposal.leadId));
+        if (lead) {
+          const existingClient = await db.select().from(clients)
+            .where(eq(clients.email, lead.email || ""))
+            .limit(1);
+
+          if (existingClient.length > 0) {
+            clientId = existingClient[0].id;
+            console.log(`[Proposal Fulfillment] Lead ${lead.id} already converted to client ${clientId}`);
+          } else {
+            const [newClient] = await db.insert(clients).values({
+              name: lead.company || lead.name || proposal.signedByName || "New Client",
+              email: lead.email || proposal.signedByEmail || "",
+              phone: lead.phone || "",
+              company: lead.company || "",
+              status: "active",
+            }).returning();
+
+            clientId = newClient.id;
+            console.log(`[Proposal Fulfillment] Created client ${clientId} from lead ${lead.id}`);
+
+            const dealValue = quote ? parseFloat(quote.totalCost || "0") : parseFloat(lead.value?.toString() || "0");
+            await db.insert(deals).values({
+              leadId: lead.id,
+              clientId: clientId,
+              name: `${newClient.name} - ${lead.company || 'Deal'}`,
+              assignedTo: lead.assignedTo,
+              value: dealValue,
+              mrr: quote?.mrr ? parseFloat(quote.mrr.toString()) : 0,
+              wonDate: new Date(),
+              notes: `Deal created from proposal payment. Quote: ${quote?.name || quote?.id}`,
+            });
+            console.log(`[Proposal Fulfillment] Created deal for client ${clientId}`);
+
+            const closedWonStage = await db.select().from(leadPipelineStages)
+              .where(sql`LOWER(${leadPipelineStages.name}) = 'closed won'`)
+              .limit(1);
+
+            const leadUpdate: any = { status: 'Won' };
+            if (closedWonStage.length > 0) {
+              leadUpdate.stageId = closedWonStage[0].id;
+            }
+            await db.update(leads).set(leadUpdate).where(eq(leads.id, lead.id));
+            console.log(`[Proposal Fulfillment] Updated lead ${lead.id} to Won`);
+          }
+
+          await db.update(proposals).set({ clientId }).where(eq(proposals.id, proposal.id));
+        }
+      } catch (e) {
+        console.error("[Proposal Fulfillment] Error converting lead:", e);
+      }
+    }
+
+    if (clientId && quote) {
+      try {
+        const items = await db.select().from(quoteItems).where(eq(quoteItems.quoteId, quote.id));
+        let transferredCount = 0;
+
+        for (const item of items) {
+          if (item.itemType === 'product' && item.productId) {
+            const existing = await db.select().from(clientProducts)
+              .where(and(eq(clientProducts.clientId, clientId), eq(clientProducts.productId, item.productId)))
+              .limit(1);
+            if (existing.length === 0) {
+              await db.insert(clientProducts).values({ clientId, productId: item.productId });
+              transferredCount++;
+            }
+          } else if (item.itemType === 'bundle' && item.bundleId) {
+            const existing = await db.select().from(clientBundles)
+              .where(and(eq(clientBundles.clientId, clientId), eq(clientBundles.bundleId, item.bundleId)))
+              .limit(1);
+            if (existing.length === 0) {
+              await db.insert(clientBundles).values({ clientId, bundleId: item.bundleId, customQuantities: item.customQuantities });
+              transferredCount++;
+            }
+          } else if (item.itemType === 'package' && item.packageId) {
+            const existingPkg = await db.select().from(clientPackages)
+              .where(and(eq(clientPackages.clientId, clientId), eq(clientPackages.packageId, item.packageId)))
+              .limit(1);
+            if (existingPkg.length === 0) {
+              await db.insert(clientPackages).values({
+                clientId, packageId: item.packageId,
+                price: item.unitCost?.toString() || '0', status: 'active',
+                customQuantities: item.customQuantities,
+              });
+              transferredCount++;
+            }
+
+            const pkgItems = await db.select().from(packageItems).where(eq(packageItems.packageId, item.packageId));
+            for (const pkgItem of pkgItems) {
+              if (pkgItem.itemType === 'bundle' && pkgItem.bundleId) {
+                const ex = await db.select().from(clientBundles)
+                  .where(and(eq(clientBundles.clientId, clientId), eq(clientBundles.bundleId, pkgItem.bundleId)))
+                  .limit(1);
+                if (ex.length === 0) {
+                  await db.insert(clientBundles).values({ clientId, bundleId: pkgItem.bundleId });
+                  transferredCount++;
+                }
+              } else if (pkgItem.itemType === 'product' && pkgItem.productId) {
+                const ex = await db.select().from(clientProducts)
+                  .where(and(eq(clientProducts.clientId, clientId), eq(clientProducts.productId, pkgItem.productId)))
+                  .limit(1);
+                if (ex.length === 0) {
+                  await db.insert(clientProducts).values({ clientId, productId: pkgItem.productId });
+                  transferredCount++;
+                }
+              }
+            }
+          }
+        }
+        console.log(`[Proposal Fulfillment] Transferred ${transferredCount} items from quote ${quote.id} to client ${clientId}`);
+      } catch (e) {
+        console.error("[Proposal Fulfillment] Error transferring products:", e);
+      }
+
+      try {
+        const [autoGenSetting] = await db.select().from(taskSettings)
+          .where(eq(taskSettings.settingKey, 'task_mapping_auto_generate_on_conversion'));
+        const autoGenEnabled = autoGenSetting ? (autoGenSetting.settingValue as any)?.enabled !== false : true;
+
+        if (autoGenEnabled) {
+          const assignedProducts = await db.select().from(clientProducts).where(eq(clientProducts.clientId, clientId));
+          const assignedBundles = await db.select().from(clientBundles).where(eq(clientBundles.clientId, clientId));
+          const assignedPackages = await db.select().from(clientPackages).where(eq(clientPackages.clientId, clientId));
+
+          const generationItems: any[] = [];
+          for (const cp of assignedProducts) {
+            let qty = 1;
+            const [qi] = await db.select({ quantity: quoteItems.quantity }).from(quoteItems)
+              .where(and(eq(quoteItems.quoteId, quote.id), eq(quoteItems.productId, cp.productId), eq(quoteItems.itemType, 'product')))
+              .limit(1);
+            if (qi) qty = qi.quantity;
+            generationItems.push({ productId: cp.productId, quantity: qty });
+          }
+          for (const cb of assignedBundles) {
+            let qty = 1;
+            const [qi] = await db.select({ quantity: quoteItems.quantity }).from(quoteItems)
+              .where(and(eq(quoteItems.quoteId, quote.id), eq(quoteItems.bundleId, cb.bundleId), eq(quoteItems.itemType, 'bundle')))
+              .limit(1);
+            if (qi) qty = qi.quantity;
+            generationItems.push({ bundleId: cb.bundleId, quantity: qty });
+          }
+          for (const cpkg of assignedPackages) {
+            let qty = 1;
+            const [qi] = await db.select({ quantity: quoteItems.quantity }).from(quoteItems)
+              .where(and(eq(quoteItems.quoteId, quote.id), eq(quoteItems.packageId, cpkg.packageId), eq(quoteItems.itemType, 'package')))
+              .limit(1);
+            if (qi) qty = qi.quantity;
+            generationItems.push({ packageId: cpkg.packageId, quantity: qty });
+          }
+
+          if (generationItems.length > 0) {
+            const result = await generateTasksFromTemplates({
+              clientId, items: generationItems, generationType: 'onboarding', cycleStartDate: new Date(),
+            });
+            console.log(`[Proposal Fulfillment] Generated ${result.totalTasksCreated} onboarding tasks for client ${clientId}`);
+          }
+
+          const [cycleLengthSetting] = await db.select().from(taskSettings)
+            .where(eq(taskSettings.settingKey, 'task_mapping_default_cycle_length'));
+          const defaultCycleLength = (cycleLengthSetting?.settingValue as any)?.value ?? 30;
+          const [advanceGenSetting] = await db.select().from(taskSettings)
+            .where(eq(taskSettings.settingKey, 'task_mapping_default_advance_generation_days'));
+          const defaultAdvanceDays = (advanceGenSetting?.settingValue as any)?.value ?? 3;
+
+          const existingConfig = await db.select().from(clientRecurringConfig)
+            .where(eq(clientRecurringConfig.clientId, clientId)).limit(1);
+          if (existingConfig.length === 0) {
+            await db.insert(clientRecurringConfig).values({
+              clientId, cycleStartDate: new Date(),
+              cycleLengthDays: defaultCycleLength, advanceGenerationDays: defaultAdvanceDays, status: 'active',
+            });
+            console.log(`[Proposal Fulfillment] Created recurring config for client ${clientId}`);
+          }
+        }
+      } catch (e) {
+        console.error("[Proposal Fulfillment] Error generating tasks:", e);
       }
     }
 

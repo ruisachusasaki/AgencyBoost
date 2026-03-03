@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,8 +11,89 @@ import {
   CheckCircle, FileText, CreditCard, Building, Pen,
   Shield, Loader2, AlertCircle, ChevronDown, ChevronUp
 } from "lucide-react";
+import { loadStripe, type Stripe, type StripeElements } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 type ProposalStep = "review" | "sign" | "pay" | "complete";
+
+function CardPaymentForm({
+  clientSecret,
+  signerName,
+  signerEmail,
+  onSuccess,
+  onError,
+  amount,
+}: {
+  clientSecret: string;
+  signerName: string;
+  signerEmail: string;
+  onSuccess: () => void;
+  onError: (msg: string) => void;
+  amount: number;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [cardReady, setCardReady] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!stripe || !elements) return;
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) return;
+
+    setProcessing(true);
+    const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: cardElement,
+        billing_details: { name: signerName, email: signerEmail },
+      },
+    });
+
+    setProcessing(false);
+    if (error) {
+      onError(error.message || "Payment failed");
+    } else if (paymentIntent?.status === "succeeded") {
+      onSuccess();
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="border rounded-lg p-4 bg-white">
+        <CardElement
+          options={{
+            style: {
+              base: {
+                fontSize: "16px",
+                color: "#1a1a1a",
+                "::placeholder": { color: "#9ca3af" },
+                fontFamily: "system-ui, -apple-system, sans-serif",
+              },
+              invalid: { color: "#ef4444" },
+            },
+          }}
+          onChange={(e) => setCardReady(e.complete)}
+        />
+      </div>
+      <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+        <Shield className="h-3 w-3" />
+        Secured by Stripe. Your payment information is encrypted.
+      </div>
+      <Button
+        onClick={handleSubmit}
+        className="w-full bg-[#00C9C6] hover:bg-[#00A8A6] text-white py-3 text-lg"
+        disabled={processing || !cardReady || !stripe}
+        size="lg"
+      >
+        {processing ? (
+          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing Payment...</>
+        ) : (
+          <>Pay ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</>
+        )}
+      </Button>
+    </div>
+  );
+}
 
 export default function PublicProposal() {
   const { token } = useParams<{ token: string }>();
@@ -26,6 +106,10 @@ export default function PublicProposal() {
   const [typedSignature, setTypedSignature] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"card" | "ach" | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [achProcessing, setAchProcessing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const { data, isLoading, error, refetch } = useQuery<any>({
@@ -42,10 +126,18 @@ export default function PublicProposal() {
   });
 
   useEffect(() => {
+    if (data?.stripePublishableKey && !stripePromise) {
+      setStripePromise(loadStripe(data.stripePublishableKey));
+    }
+  }, [data?.stripePublishableKey]);
+
+  useEffect(() => {
     if (data?.proposal?.status === "completed") {
       setCurrentStep("complete");
     } else if (data?.proposal?.status === "signed" || data?.proposal?.status === "payment_pending") {
       setCurrentStep("pay");
+      if (data?.proposal?.signedByName) setSignerName(data.proposal.signedByName);
+      if (data?.proposal?.signedByEmail) setSignerEmail(data.proposal.signedByEmail);
     } else if (data?.proposal?.signedAt) {
       setCurrentStep("pay");
     }
@@ -70,57 +162,77 @@ export default function PublicProposal() {
     },
   });
 
-  const payMutation = useMutation({
-    mutationFn: async (payData: any) => {
-      const res = await fetch(`/api/proposals/public/${token}/pay`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payData),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message);
-      }
-      return res.json();
-    },
-    onSuccess: async (result) => {
-      if (result.clientSecret && data?.stripePublishableKey) {
-        const { loadStripe } = await import("@stripe/stripe-js");
-        const stripe = await loadStripe(data.stripePublishableKey);
-        if (stripe) {
-          if (paymentMethod === "card") {
-            const { error } = await stripe.confirmCardPayment(result.clientSecret, {
-              payment_method: {
-                card: cardElement!,
-                billing_details: { name: signerName, email: signerEmail },
-              },
-            });
-            if (error) {
-              alert(error.message);
-            } else {
-              setCurrentStep("complete");
-              refetch();
-            }
-          } else {
-            const { error } = await stripe.confirmUsBankAccountPayment(result.clientSecret, {
-              payment_method: {
-                us_bank_account: {},
-                billing_details: { name: signerName, email: signerEmail },
-              },
-            });
-            if (error) {
-              alert(error.message);
-            } else {
-              setCurrentStep("complete");
-              refetch();
-            }
-          }
-        }
-      }
-    },
-  });
+  const createPaymentIntent = useCallback(async (method: "card" | "ach") => {
+    setPaymentError(null);
+    setClientSecret(null);
 
-  let cardElement: any = null;
+    const res = await fetch(`/api/proposals/public/${token}/pay`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentMethod: method }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message);
+    }
+    const result = await res.json();
+    if (result.clientSecret) {
+      setClientSecret(result.clientSecret);
+    }
+    return result;
+  }, [token]);
+
+  const handleSelectPaymentMethod = async (method: "card" | "ach") => {
+    setPaymentMethod(method);
+    setPaymentError(null);
+    setClientSecret(null);
+
+    try {
+      await createPaymentIntent(method);
+    } catch (err: any) {
+      setPaymentError(err.message || "Failed to initialize payment");
+    }
+  };
+
+  const [achPending, setAchPending] = useState(false);
+
+  const handleACHPayment = async () => {
+    if (!clientSecret || !stripePromise) {
+      setPaymentError("Payment system is not available. Please try again or contact support.");
+      return;
+    }
+    setAchProcessing(true);
+    setPaymentError(null);
+
+    try {
+      const stripe = await stripePromise;
+      if (!stripe) throw new Error("Payment system not available");
+
+      const { error, paymentIntent } = await stripe.confirmUsBankAccountPayment(clientSecret, {
+        payment_method: {
+          us_bank_account: {},
+          billing_details: { name: signerName, email: signerEmail },
+        },
+      });
+
+      if (error) {
+        setPaymentError(error.message || "Payment failed");
+      } else if (paymentIntent?.status === "succeeded") {
+        setCurrentStep("complete");
+        refetch();
+      } else if (paymentIntent?.status === "processing") {
+        setAchPending(true);
+        setCurrentStep("complete");
+        refetch();
+      } else if (paymentIntent?.status === "requires_action") {
+        setPaymentError("Additional verification is required. Please follow the prompts from your bank.");
+      }
+    } catch (err: any) {
+      setPaymentError(err.message || "Payment failed");
+    } finally {
+      setAchProcessing(false);
+    }
+  };
 
   const initCanvas = () => {
     const canvas = canvasRef.current;
@@ -196,14 +308,6 @@ export default function PublicProposal() {
       return;
     }
     signMutation.mutate({ signerName, signerEmail, signatureData, termsAccepted });
-  };
-
-  const handlePay = () => {
-    if (!paymentMethod) {
-      alert("Please select a payment method");
-      return;
-    }
-    payMutation.mutate({ paymentMethod });
   };
 
   if (isLoading) {
@@ -508,7 +612,7 @@ export default function PublicProposal() {
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <button
-                        onClick={() => setPaymentMethod("card")}
+                        onClick={() => handleSelectPaymentMethod("card")}
                         className={`p-6 rounded-xl border-2 text-left transition-all ${
                           paymentMethod === "card"
                             ? "border-[#00C9C6] bg-[#00C9C6]/5 shadow-md"
@@ -520,7 +624,7 @@ export default function PublicProposal() {
                         <p className="text-sm text-gray-500 mt-1">Pay instantly with your card</p>
                       </button>
                       <button
-                        onClick={() => setPaymentMethod("ach")}
+                        onClick={() => handleSelectPaymentMethod("ach")}
                         className={`p-6 rounded-xl border-2 text-left transition-all ${
                           paymentMethod === "ach"
                             ? "border-[#00C9C6] bg-[#00C9C6]/5 shadow-md"
@@ -533,38 +637,59 @@ export default function PublicProposal() {
                       </button>
                     </div>
 
-                    {paymentMethod && (
-                      <div className="border rounded-lg p-6 bg-gray-50">
-                        <p className="text-sm text-gray-600 text-center mb-4">
-                          {paymentMethod === "card"
-                            ? "You'll be prompted to enter your card details securely via Stripe."
-                            : "You'll be prompted to connect your bank account securely via Stripe."}
-                        </p>
-                        <div className="flex items-center justify-center gap-2 text-xs text-gray-400 mb-4">
-                          <Shield className="h-3 w-3" />
-                          Secured by Stripe. Your payment information is encrypted.
+                    {paymentMethod === "card" && clientSecret && stripePromise && (
+                      <Elements stripe={stripePromise} options={{ clientSecret }}>
+                        <CardPaymentForm
+                          clientSecret={clientSecret}
+                          signerName={signerName}
+                          signerEmail={signerEmail}
+                          amount={paymentAmountValue}
+                          onSuccess={() => {
+                            setCurrentStep("complete");
+                            refetch();
+                          }}
+                          onError={(msg) => setPaymentError(msg)}
+                        />
+                      </Elements>
+                    )}
+
+                    {paymentMethod === "ach" && clientSecret && (
+                      <div className="space-y-4">
+                        <div className="border rounded-lg p-6 bg-gray-50 text-center">
+                          <Building className="h-10 w-10 mx-auto mb-3 text-[#00C9C6]" />
+                          <p className="text-sm text-gray-600 mb-2">
+                            Click the button below to securely connect your bank account via Stripe.
+                          </p>
+                          <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+                            <Shield className="h-3 w-3" />
+                            Secured by Stripe Financial Connections
+                          </div>
                         </div>
+                        <Button
+                          onClick={handleACHPayment}
+                          className="w-full bg-[#00C9C6] hover:bg-[#00A8A6] text-white py-3 text-lg"
+                          disabled={achProcessing}
+                          size="lg"
+                        >
+                          {achProcessing ? (
+                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting Bank Account...</>
+                          ) : (
+                            <>Pay ${paymentAmountValue.toLocaleString(undefined, { minimumFractionDigits: 2 })} via ACH</>
+                          )}
+                        </Button>
                       </div>
                     )}
 
-                    <div className="flex justify-end">
-                      <Button
-                        onClick={handlePay}
-                        className="bg-[#00C9C6] hover:bg-[#00A8A6] text-white px-8"
-                        disabled={!paymentMethod || payMutation.isPending}
-                        size="lg"
-                      >
-                        {payMutation.isPending ? (
-                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</>
-                        ) : (
-                          <>Pay ${paymentAmountValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</>
-                        )}
-                      </Button>
-                    </div>
+                    {paymentMethod && !clientSecret && (
+                      <div className="text-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-[#00C9C6]" />
+                        <p className="text-sm text-gray-500">Setting up payment...</p>
+                      </div>
+                    )}
 
-                    {payMutation.isError && (
+                    {paymentError && (
                       <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
-                        {(payMutation.error as Error).message}
+                        {paymentError}
                       </div>
                     )}
                   </>
@@ -580,8 +705,17 @@ export default function PublicProposal() {
               <CheckCircle className="h-10 w-10 text-green-600" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-3">Thank You!</h2>
-            <p className="text-lg text-gray-600 mb-2">Your proposal has been signed and payment has been received.</p>
-            <p className="text-gray-500">We'll be in touch shortly to get started on your project.</p>
+            {achPending ? (
+              <>
+                <p className="text-lg text-gray-600 mb-2">Your proposal has been signed and your ACH payment is being processed.</p>
+                <p className="text-gray-500">Bank transfers typically take 1-3 business days to complete. We'll notify you once the payment is confirmed.</p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg text-gray-600 mb-2">Your proposal has been signed and payment has been received.</p>
+                <p className="text-gray-500">We'll be in touch shortly to get started on your project.</p>
+              </>
+            )}
             <div className="mt-8 inline-flex items-center gap-2 bg-gray-100 rounded-full px-6 py-3">
               <CheckCircle className="h-5 w-5 text-green-500" />
               <span className="text-sm font-medium text-gray-700">Confirmation sent to {proposal?.signedByEmail || signerEmail}</span>
