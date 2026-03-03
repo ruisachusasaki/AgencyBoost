@@ -5005,6 +5005,7 @@ export class DbStorage implements IStorage {
         fulfillment: clientHealthScores.fulfillment,
         relationship: clientHealthScores.relationship,
         clientActions: clientHealthScores.clientActions,
+        paymentStatus: clientHealthScores.paymentStatus,
         totalScore: clientHealthScores.totalScore,
         averageScore: clientHealthScores.averageScore,
         healthIndicator: clientHealthScores.healthIndicator,
@@ -5057,6 +5058,7 @@ export class DbStorage implements IStorage {
                        sort === 'healthIndicator' ? clientHealthScores.healthIndicator :
                        sort === 'averageScore' ? clientHealthScores.averageScore :
                        sort === 'createdAt' ? clientHealthScores.createdAt :
+                       sort === 'paymentStatus' ? clientHealthScores.paymentStatus :
                        sort === 'goals' ? clientHealthScores.goals :
                        sort === 'fulfillment' ? clientHealthScores.fulfillment :
                        sort === 'relationship' ? clientHealthScores.relationship :

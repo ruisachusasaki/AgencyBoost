@@ -5019,7 +5019,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         goals: validatedInputData.goals,
         fulfillment: validatedInputData.fulfillment,
         relationship: validatedInputData.relationship,
-        clientActions: validatedInputData.clientActions
+        clientActions: validatedInputData.clientActions,
+        paymentStatus: validatedInputData.paymentStatus || 'Current'
       }, healthSettings);
       
       // Create complete data with calculated values for storage
@@ -5315,7 +5316,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       
       // Recalculate scoring if any scoring fields are being updated
       let updatedData = { ...validatedData };
-      const scoringFields = ['goals', 'fulfillment', 'relationship', 'clientActions'];
+      const scoringFields = ['goals', 'fulfillment', 'relationship', 'clientActions', 'paymentStatus'];
       const hasAnyScoreFieldUpdate = scoringFields.some(field => validatedData.hasOwnProperty(field));
       
       if (hasAnyScoreFieldUpdate) {
@@ -5324,6 +5325,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         const fulfillment = validatedData.fulfillment || oldHealthScore.fulfillment;
         const relationship = validatedData.relationship || oldHealthScore.relationship;
         const clientActions = validatedData.clientActions || oldHealthScore.clientActions;
+        const paymentStatus = (validatedData as any).paymentStatus || (oldHealthScore as any).paymentStatus || 'Current';
         
         // Load health settings and calculate metrics
         const healthSettingsRow2 = await db.select().from(taskSettings).where(eq(taskSettings.settingKey, "client_health_config"));
@@ -5332,7 +5334,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           goals,
           fulfillment,
           relationship,
-          clientActions
+          clientActions,
+          paymentStatus
         }, healthSettings2);
         
         updatedData = {
@@ -5530,7 +5533,12 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     try {
       const settings = await db.select().from(taskSettings).where(eq(taskSettings.settingKey, "client_health_config"));
       if (settings.length > 0) {
-        res.json(settings[0].settingValue);
+        const saved = settings[0].settingValue as any;
+        const defaults = getDefaultHealthSettings();
+        if (saved.fieldScoring && !saved.fieldScoring.paymentStatus) {
+          saved.fieldScoring.paymentStatus = defaults.fieldScoring.paymentStatus;
+        }
+        res.json(saved);
       } else {
         res.json(getDefaultHealthSettings());
       }
@@ -5627,7 +5635,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       }
 
       // Validate sort field
-      const validSortFields = ['weekStartDate', 'clientName', 'healthIndicator', 'averageScore', 'createdAt'];
+      const validSortFields = ['weekStartDate', 'clientName', 'healthIndicator', 'averageScore', 'createdAt', 'paymentStatus'];
       if (!validSortFields.includes(filters.sort)) {
         return res.status(400).json({
           message: `Invalid sort field: ${filters.sort}. Valid fields are: ${validSortFields.join(', ')}`

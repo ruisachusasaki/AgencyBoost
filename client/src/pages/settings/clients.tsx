@@ -1311,6 +1311,7 @@ interface HealthSettingsData {
     fulfillment: Record<string, number>;
     relationship: Record<string, number>;
     clientActions: Record<string, number>;
+    paymentStatus: Record<string, number>;
   };
   highlightRules: {
     weeksToEvaluate: number;
@@ -1376,6 +1377,7 @@ function ClientHealthSettings() {
     { key: 'fulfillment', label: 'Fulfillment', options: ['Early', 'On Time', 'Behind'] },
     { key: 'relationship', label: 'Relationship', options: ['Engaged', 'Passive', 'Disengaged'] },
     { key: 'clientActions', label: 'Client Actions', options: ['Early', 'Up to Date', 'Late'] },
+    { key: 'paymentStatus', label: 'Payment Status', options: ['Current', 'Past Due', 'HOLD'] },
   ];
 
   return (
@@ -1388,7 +1390,7 @@ function ClientHealthSettings() {
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             Set the average score boundaries that determine when a client's health is Green, Yellow, or Red.
-            Each metric scores 0–3, and the average of all four metrics is compared to these thresholds.
+            Each metric scores 0–3, and the average of all five metrics is compared to these thresholds.
           </p>
         </CardHeader>
         <CardContent>

@@ -50,6 +50,7 @@ export default function ClientHealthModal({
       fulfillment: "On Time", 
       relationship: "Engaged",
       clientActions: "Up to Date",
+      paymentStatus: "Current",
     },
   });
 
@@ -116,6 +117,12 @@ export default function ClientHealthModal({
     { value: "Early", label: "Early" },
     { value: "Up to Date", label: "Up to Date" },
     { value: "Late", label: "Late" },
+  ];
+
+  const paymentStatusOptions = [
+    { value: "Current", label: "Current" },
+    { value: "Past Due", label: "Past Due" },
+    { value: "HOLD", label: "HOLD" },
   ];
 
   return (
@@ -399,6 +406,37 @@ export default function ClientHealthModal({
                           </FormControl>
                           <SelectContent>
                             {clientActionsOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="paymentStatus"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-foreground">
+                          Payment Status <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          data-testid="select-payment-status"
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select payment status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {paymentStatusOptions.map((option) => (
                               <SelectItem key={option.value} value={option.value}>
                                 {option.label}
                               </SelectItem>

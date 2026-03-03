@@ -2518,6 +2518,7 @@ export default function Reports() {
                       <HealthSortableHeader field="fulfillment">Fulfillment</HealthSortableHeader>
                       <HealthSortableHeader field="relationship">Relationship</HealthSortableHeader>
                       <HealthSortableHeader field="clientActions">Actions</HealthSortableHeader>
+                      <HealthSortableHeader field="paymentStatus">Payment Status</HealthSortableHeader>
                       <HealthSortableHeader field="createdAt">Created Date</HealthSortableHeader>
                       <TableHead className="text-center">Notes</TableHead>
                     </TableRow>
@@ -2559,7 +2560,7 @@ export default function Reports() {
                         <TableCell>
                           <div className="text-sm">
                             <p className="font-medium">{Number(score.averageScore || 0).toFixed(2)}</p>
-                            <p className="text-xs text-slate-500">{score.totalScore}/12 total</p>
+                            <p className="text-xs text-slate-500">{score.totalScore}/15 total</p>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -2589,6 +2590,16 @@ export default function Reports() {
                             score.clientActions === 'Early' || score.clientActions === 'Up to Date' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                           }`}>
                             {score.clientActions}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            (score as any).paymentStatus === 'Current' ? 'bg-green-100 text-green-700' :
+                            (score as any).paymentStatus === 'Past Due' ? 'bg-yellow-100 text-yellow-700' :
+                            (score as any).paymentStatus === 'HOLD' ? 'bg-red-100 text-red-700' :
+                            'bg-green-100 text-green-700'
+                          }`}>
+                            {(score as any).paymentStatus || 'Current'}
                           </span>
                         </TableCell>
                         <TableCell>

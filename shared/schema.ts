@@ -573,8 +573,9 @@ export const clientHealthScores = pgTable("client_health_scores", {
   fulfillment: text("fulfillment").notNull(), // 'Early', 'On Time', 'Behind'
   relationship: text("relationship").notNull(), // 'Engaged', 'Passive', 'Disengaged'
   clientActions: text("client_actions").notNull(), // 'Early', 'Up to Date', 'Late'
-  totalScore: integer("total_score").notNull(), // Calculated from the 4 scoring fields
-  averageScore: decimal("average_score", { precision: 3, scale: 2 }).notNull(), // totalScore / 4
+  paymentStatus: text("payment_status").notNull().default("Current"), // 'Current', 'Past Due', 'HOLD'
+  totalScore: integer("total_score").notNull(), // Calculated from the 5 scoring fields
+  averageScore: decimal("average_score", { precision: 3, scale: 2 }).notNull(), // totalScore / 5
   healthIndicator: text("health_indicator").notNull(), // 'Green', 'Yellow', 'Red'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -2208,7 +2209,7 @@ export const healthScoreFilterSchema = z.object({
   latestPerClient: z.enum(['true', 'false']).transform(val => val === 'true').optional(),
   page: z.string().transform(Number).pipe(z.number().int().min(1)).optional().default('1'),
   limit: z.string().transform(Number).pipe(z.number().int().min(1).max(100)).optional().default('25'),
-  sort: z.enum(['weekStartDate', 'clientName', 'healthIndicator', 'totalScore', 'createdAt']).optional().default('weekStartDate'),
+  sort: z.enum(['weekStartDate', 'clientName', 'healthIndicator', 'totalScore', 'createdAt', 'paymentStatus']).optional().default('weekStartDate'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc')
 });
 

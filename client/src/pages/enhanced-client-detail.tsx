@@ -1346,6 +1346,14 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
         default: return 'text-gray-600 bg-gray-50';
       }
     }
+    if (metric === 'paymentStatus') {
+      switch (value) {
+        case 'Current': return 'text-green-600 bg-green-50';
+        case 'Past Due': return 'text-yellow-600 bg-yellow-50';
+        case 'HOLD': return 'text-red-600 bg-red-50';
+        default: return 'text-gray-600 bg-gray-50';
+      }
+    }
     return 'text-gray-600 bg-gray-50';
   }, []);
 
@@ -1577,6 +1585,12 @@ function ClientHealthTabContent({ clientId }: { clientId: string }) {
                       <div className="text-sm text-gray-500">Client Actions</div>
                       <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('clientActions', score.clientActions)}`}>
                         {score.clientActions}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm text-gray-500">Payment Status</div>
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${getMetricStyling('paymentStatus', (score as any).paymentStatus || 'Current')}`}>
+                        {(score as any).paymentStatus || 'Current'}
                       </div>
                     </div>
                   </div>

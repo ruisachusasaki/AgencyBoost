@@ -23,6 +23,11 @@ const DEFAULT_FIELD_SCORING = {
     Early: 3,
     "Up to Date": 3,
     Late: 1
+  },
+  paymentStatus: {
+    Current: 3,
+    "Past Due": 1,
+    HOLD: 0
   }
 } as const;
 
@@ -51,6 +56,7 @@ export interface HealthSettings {
     fulfillment: Record<string, number>;
     relationship: Record<string, number>;
     clientActions: Record<string, number>;
+    paymentStatus: Record<string, number>;
   };
   highlightRules: {
     weeksToEvaluate: number;
@@ -68,6 +74,7 @@ export function getDefaultHealthSettings(): HealthSettings {
       fulfillment: { ...DEFAULT_FIELD_SCORING.fulfillment },
       relationship: { ...DEFAULT_FIELD_SCORING.relationship },
       clientActions: { ...DEFAULT_FIELD_SCORING.clientActions },
+      paymentStatus: { ...DEFAULT_FIELD_SCORING.paymentStatus },
     },
     highlightRules: { ...DEFAULT_HIGHLIGHT_RULES },
   };
@@ -108,6 +115,7 @@ export function calculateHealthMetrics(data: {
   fulfillment: string;
   relationship: string;
   clientActions: string;
+  paymentStatus?: string;
 }, settings?: HealthSettings): {
   totalScore: number;
   averageScore: number;
@@ -117,9 +125,10 @@ export function calculateHealthMetrics(data: {
   const fulfillmentScore = calculateFieldScore('fulfillment', data.fulfillment, settings);
   const relationshipScore = calculateFieldScore('relationship', data.relationship, settings);
   const clientActionsScore = calculateFieldScore('clientActions', data.clientActions, settings);
+  const paymentStatusScore = calculateFieldScore('paymentStatus', data.paymentStatus || 'Current', settings);
   
-  const totalScore = goalsScore + fulfillmentScore + relationshipScore + clientActionsScore;
-  const averageScore = parseFloat((totalScore / 4).toFixed(2));
+  const totalScore = goalsScore + fulfillmentScore + relationshipScore + clientActionsScore + paymentStatusScore;
+  const averageScore = parseFloat((totalScore / 5).toFixed(2));
   
   const greenThreshold = settings?.greenThreshold ?? DEFAULT_HEALTH_THRESHOLDS.GREEN;
   const yellowThreshold = settings?.yellowThreshold ?? DEFAULT_HEALTH_THRESHOLDS.YELLOW;
