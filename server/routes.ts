@@ -83,7 +83,8 @@ import {
   taskCategories,
   tickets, ticketComments, ticketAttachments, ticketRoutingRules,
   insertTicketSchema, insertTicketCommentSchema, insertTicketRoutingRuleSchema,
-  salaryHistory
+  salaryHistory,
+  proposals, insertProposalSchema, proposalTerms, insertProposalTermsSchema
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
@@ -97,6 +98,8 @@ import twilio from "twilio";
 import mailgun from "mailgun.js";
 import formData from "form-data";
 import { NotificationService, setNotificationServiceInstance } from "./notification-service";
+import { getStripe, isStripeConfigured, createPaymentIntent, createACHPaymentIntent, constructWebhookEvent } from "./stripe";
+import { registerProposalRoutes, handleStripeWebhook } from "./proposalRoutes";
 import { EncryptionService } from "./encryption";
 import { eq, like, ilike, or, and, asc, desc, sql, inArray, isNotNull, isNull, gt, gte, lt, lte, getTableColumns } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -179,6 +182,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   // Initialize NotificationService for multi-channel notifications
   const notificationService = new NotificationService(appStorage);
   setNotificationServiceInstance(notificationService);
+
+  registerProposalRoutes(app, requireAuth, requirePermission, notificationService);
 
   // Configure multer for file uploads  
   const multerStorage = multer.memoryStorage();
@@ -16069,6 +16074,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           taskType: productTaskTemplates.taskType,
           quantityMode: productTaskTemplates.quantityMode,
           departmentId: productTaskTemplates.departmentId,
+          categoryId: productTaskTemplates.categoryId,
+          workflowId: productTaskTemplates.workflowId,
           assignedStaffId: productTaskTemplates.assignedStaffId,
           assignedStaffFirstName: staff.firstName,
           assignedStaffLastName: staff.lastName,
@@ -16106,6 +16113,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           taskType: productTaskTemplates.taskType,
           quantityMode: productTaskTemplates.quantityMode,
           departmentId: productTaskTemplates.departmentId,
+          categoryId: productTaskTemplates.categoryId,
+          workflowId: productTaskTemplates.workflowId,
           assignedStaffId: productTaskTemplates.assignedStaffId,
           assignedStaffFirstName: staff.firstName,
           assignedStaffLastName: staff.lastName,

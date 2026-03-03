@@ -1859,6 +1859,27 @@ app.post('/api/integrations/slack/events',
   }
 );
 
+// Stripe webhook with raw body for signature verification
+// MUST be registered before express.json()
+app.post('/api/webhooks/stripe',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    try {
+      const { handleStripeWebhook } = await import('./proposalRoutes');
+      const { getNotificationService } = await import('./notification-service');
+      const notificationService = getNotificationService();
+      if (notificationService) {
+        await handleStripeWebhook(req, res, notificationService);
+      } else {
+        res.status(503).json({ message: 'Service not ready' });
+      }
+    } catch (error) {
+      console.error('[Stripe Webhook] Error:', error);
+      res.status(500).json({ error: 'Failed to process webhook' });
+    }
+  }
+);
+
 // Standard body parsers for all other routes
 // Increased limit for CSV imports which can be large
 app.use(express.json({ limit: '10mb' }));
@@ -2034,6 +2055,13 @@ async function setupFullApp(server: any) {
         log("✅ Long-running timer alert service started");
       }).catch(err => {
         log(`⚠️ Failed to start long-running timer alert service: ${err.message}`);
+      });
+
+      import('./proposalReminderService').then(({ startProposalReminderService }) => {
+        startProposalReminderService();
+        log("✅ Proposal reminder service started");
+      }).catch(err => {
+        log(`⚠️ Failed to start proposal reminder service: ${err.message}`);
       });
 
       import('./recurringTaskService').then(({ startRecurringTaskService }) => {

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
@@ -12,7 +14,9 @@ import {
   Settings, 
   Banknote,
   Percent,
-  Save
+  Save,
+  Shield,
+  FileText
 } from "lucide-react";
 
 export default function SalesSettings() {
@@ -21,6 +25,10 @@ export default function SalesSettings() {
 
   // Sales Settings state
   const [minimumMargin, setMinimumMargin] = useState("");
+
+  // Terms & Conditions state
+  const [termsTitle, setTermsTitle] = useState("");
+  const [termsContent, setTermsContent] = useState("");
 
   // Fetch sales settings
   const { data: salesSettings, isLoading: isLoadingSettings } = useQuery({
@@ -50,12 +58,40 @@ export default function SalesSettings() {
     },
   });
 
+  // Fetch proposal terms
+  const { data: proposalTermsList = [] } = useQuery<any[]>({
+    queryKey: ['/api/proposal-terms'],
+  });
+
+  const activeTerms = proposalTermsList.find((t: any) => t.isActive);
+
+  const updateTermsMutation = useMutation({
+    mutationFn: async (data: { title: string; content: string }) => {
+      const res = await apiRequest('PUT', '/api/proposal-terms', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/proposal-terms'] });
+      toast({ title: "Terms & Conditions Updated" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update terms", variant: "destructive" });
+    },
+  });
+
   // Initialize minimum margin from settings
   useEffect(() => {
     if (salesSettings && salesSettings.minimumMarginThreshold !== undefined && salesSettings.minimumMarginThreshold !== null) {
       setMinimumMargin(salesSettings.minimumMarginThreshold.toString());
     }
   }, [salesSettings]);
+
+  useEffect(() => {
+    if (activeTerms) {
+      setTermsTitle(activeTerms.title);
+      setTermsContent(activeTerms.content);
+    }
+  }, [activeTerms]);
 
   const handleSaveSettings = () => {
     if (!minimumMargin || parseFloat(minimumMargin) < 0 || parseFloat(minimumMargin) > 100) {
@@ -97,7 +133,8 @@ export default function SalesSettings() {
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
           {[
-            { id: "general", name: "General Settings", icon: Settings }
+            { id: "general", name: "General Settings", icon: Settings },
+            { id: "terms", name: "Terms & Conditions", icon: Shield }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -182,6 +219,107 @@ export default function SalesSettings() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Terms & Conditions Tab */}
+      {activeTab === "terms" && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Proposal Terms & Conditions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                These terms will be displayed on client-facing proposals. Clients must accept them before signing.
+              </p>
+
+              {activeTerms && (
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <Badge variant="outline">Version {activeTerms.version}</Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Last updated: {new Date(activeTerms.updatedAt).toLocaleString()}
+                  </span>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="terms-title">Title</Label>
+                <Input
+                  id="terms-title"
+                  value={termsTitle}
+                  onChange={(e) => setTermsTitle(e.target.value)}
+                  placeholder="Terms & Conditions"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="terms-content">Content (HTML supported)</Label>
+                <Textarea
+                  id="terms-content"
+                  value={termsContent}
+                  onChange={(e) => setTermsContent(e.target.value)}
+                  placeholder="Enter your terms and conditions here..."
+                  className="min-h-[300px] font-mono text-sm"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => {
+                    if (!termsTitle || !termsContent) {
+                      toast({ title: "Error", description: "Title and content are required", variant: "destructive" });
+                      return;
+                    }
+                    updateTermsMutation.mutate({ title: termsTitle, content: termsContent });
+                  }}
+                  disabled={updateTermsMutation.isPending}
+                  className="gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  {updateTermsMutation.isPending ? "Saving..." : "Save Terms & Conditions"}
+                </Button>
+              </div>
+
+              {activeTerms && (
+                <div className="border-t pt-4 mt-4">
+                  <Label className="text-muted-foreground text-xs mb-2 block">Preview</Label>
+                  <div className="border rounded-lg p-4 bg-white dark:bg-gray-900 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: termsContent }} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {proposalTermsList.length > 1 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileText className="h-4 w-4" />
+                  Version History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {proposalTermsList.map((term: any) => (
+                    <div key={term.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={term.isActive ? "default" : "secondary"}>
+                          v{term.version}
+                        </Badge>
+                        <span className="text-sm">{term.title}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(term.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
     </div>

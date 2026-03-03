@@ -48,6 +48,7 @@ import {
   Info,
   MoreHorizontal
 } from "lucide-react";
+import ProposalsTab from "@/components/proposals-tab";
 
 export default function Sales() {
   const [activeTab, setActiveTab] = useState("quotes");
@@ -1044,6 +1045,7 @@ export default function Sales() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: "quotes", name: "Quotes", icon: Quote },
+            { id: "proposals", name: "Proposals", icon: FileText },
             { id: "reports", name: "Sales Reports", icon: BarChart3 },
             { id: "targets", name: "Targets", icon: Target }
           ].map((tab) => {
@@ -1766,6 +1768,9 @@ export default function Sales() {
         </div>
       )}
 
+
+      {/* Proposals Tab */}
+      {activeTab === "proposals" && <ProposalsTab />}
 
       {/* Quotes Tab */}
       {activeTab === "quotes" && (

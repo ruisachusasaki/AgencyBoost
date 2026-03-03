@@ -5470,3 +5470,59 @@ export const insertClientRecurringConfigSchema = createInsertSchema(clientRecurr
 });
 export type InsertClientRecurringConfig = z.infer<typeof insertClientRecurringConfigSchema>;
 export type ClientRecurringConfig = typeof clientRecurringConfig.$inferSelect;
+
+export const proposals = pgTable("proposals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  quoteId: varchar("quote_id").notNull().references(() => quotes.id),
+  clientId: varchar("client_id").references(() => clients.id),
+  leadId: varchar("lead_id").references(() => leads.id),
+  status: varchar("status", { length: 50 }).notNull().default("draft"),
+  signedAt: timestamp("signed_at"),
+  signedByName: varchar("signed_by_name", { length: 255 }),
+  signedByEmail: varchar("signed_by_email", { length: 255 }),
+  signatureData: text("signature_data"),
+  termsAccepted: boolean("terms_accepted").default(false),
+  termsVersionId: varchar("terms_version_id"),
+  paymentMethod: varchar("payment_method", { length: 50 }),
+  paymentIntentId: varchar("payment_intent_id", { length: 255 }),
+  paymentStatus: varchar("payment_status", { length: 50 }),
+  paidAt: timestamp("paid_at"),
+  paidAmount: decimal("paid_amount", { precision: 12, scale: 2 }),
+  paymentAmountType: varchar("payment_amount_type", { length: 50 }).default("full"),
+  customPaymentAmount: decimal("custom_payment_amount", { precision: 12, scale: 2 }),
+  publicToken: varchar("public_token", { length: 64 }).notNull().unique(),
+  reminderSentAt: timestamp("reminder_sent_at"),
+  reminderCount: integer("reminder_count").default(0),
+  expiresAt: timestamp("expires_at"),
+  sentAt: timestamp("sent_at"),
+  sentByUserId: uuid("sent_by_user_id").references(() => staff.id),
+  viewedAt: timestamp("viewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertProposalSchema = createInsertSchema(proposals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertProposal = z.infer<typeof insertProposalSchema>;
+export type Proposal = typeof proposals.$inferSelect;
+
+export const proposalTerms = pgTable("proposal_terms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  version: integer("version").notNull().default(1),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertProposalTermsSchema = createInsertSchema(proposalTerms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertProposalTerms = z.infer<typeof insertProposalTermsSchema>;
+export type ProposalTerms = typeof proposalTerms.$inferSelect;

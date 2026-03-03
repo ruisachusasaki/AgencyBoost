@@ -79,6 +79,7 @@ import NotificationsPage from "@/pages/notifications";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import PublicSurvey from "@/pages/public-survey";
+import PublicProposal from "@/pages/public-proposal";
 import TicketsPage from "@/pages/tickets";
 import TicketDetailPage from "@/pages/ticket-detail";
 import CallCenter from "@/pages/call-center";
@@ -110,6 +111,7 @@ function Router() {
       </Route>
       <Route path="/book/:customUrl" component={PublicBooking} />
       <Route path="/embed/:customUrl" component={BookingEmbed} />
+      <Route path="/proposal/:token" component={PublicProposal} />
       <Route path="/careers" component={CareersPage} />
       <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/s/:shortCode">
