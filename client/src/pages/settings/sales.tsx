@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import type { UploadResult } from "@uppy/core";
 import { 
   ArrowLeft, 
   Settings, 
@@ -16,26 +18,31 @@ import {
   Percent,
   Save,
   Shield,
-  FileText
+  FileText,
+  Palette,
+  Upload,
+  X,
+  Eye
 } from "lucide-react";
 
 export default function SalesSettings() {
   const [activeTab, setActiveTab] = useState("general");
   const { toast } = useToast();
 
-  // Sales Settings state
   const [minimumMargin, setMinimumMargin] = useState("");
 
-  // Terms & Conditions state
   const [termsTitle, setTermsTitle] = useState("");
   const [termsContent, setTermsContent] = useState("");
 
-  // Fetch sales settings
+  const [brandingLogo, setBrandingLogo] = useState("");
+  const [brandingCompanyName, setBrandingCompanyName] = useState("");
+  const [brandingColor, setBrandingColor] = useState("#00C9C6");
+  const [brandingFooterText, setBrandingFooterText] = useState("");
+
   const { data: salesSettings, isLoading: isLoadingSettings } = useQuery({
     queryKey: ['/api/sales-settings'],
   });
 
-  // Update sales settings mutation
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: { minimumMarginThreshold: string }) => {
       const res = await apiRequest('PATCH', '/api/sales-settings', data);
@@ -58,7 +65,6 @@ export default function SalesSettings() {
     },
   });
 
-  // Fetch proposal terms
   const { data: proposalTermsList = [] } = useQuery<any[]>({
     queryKey: ['/api/proposal-terms'],
   });
@@ -79,7 +85,36 @@ export default function SalesSettings() {
     },
   });
 
-  // Initialize minimum margin from settings
+  const { data: brandingData, isLoading: isLoadingBranding } = useQuery<any>({
+    queryKey: ['/api/settings/proposal-branding'],
+  });
+
+  const saveBrandingMutation = useMutation({
+    mutationFn: async (data: { logoUrl: string; companyName: string; primaryColor: string; footerText: string }) => {
+      const res = await apiRequest('PUT', '/api/settings/proposal-branding', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/proposal-branding'] });
+      toast({ title: "Proposal Branding Saved", description: "Your branding settings have been updated." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to save branding", variant: "destructive" });
+    },
+  });
+
+  const profileImageMutation = useMutation({
+    mutationFn: async (imageURL: string) => {
+      const response = await fetch("/api/profile-images", {
+        method: "PUT",
+        body: JSON.stringify({ profileImageURL: imageURL }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to save image");
+      return response.json();
+    },
+  });
+
   useEffect(() => {
     if (salesSettings && salesSettings.minimumMarginThreshold !== undefined && salesSettings.minimumMarginThreshold !== null) {
       setMinimumMargin(salesSettings.minimumMarginThreshold.toString());
@@ -92,6 +127,15 @@ export default function SalesSettings() {
       setTermsContent(activeTerms.content);
     }
   }, [activeTerms]);
+
+  useEffect(() => {
+    if (brandingData) {
+      setBrandingLogo(brandingData.logoUrl || "");
+      setBrandingCompanyName(brandingData.companyName || "");
+      setBrandingColor(brandingData.primaryColor || "#00C9C6");
+      setBrandingFooterText(brandingData.footerText || "");
+    }
+  }, [brandingData]);
 
   const handleSaveSettings = () => {
     if (!minimumMargin || parseFloat(minimumMargin) < 0 || parseFloat(minimumMargin) > 100) {
@@ -106,6 +150,31 @@ export default function SalesSettings() {
     updateSettingsMutation.mutate({
       minimumMarginThreshold: minimumMargin
     });
+  };
+
+  const handleSaveBranding = () => {
+    const colorToSave = /^#[0-9A-Fa-f]{6}$/.test(brandingColor) ? brandingColor : "#00C9C6";
+    if (colorToSave !== brandingColor) {
+      setBrandingColor(colorToSave);
+      toast({ title: "Invalid color reset to default", description: "Color must be a valid 6-digit hex value (e.g. #00C9C6).", variant: "destructive" });
+      return;
+    }
+    saveBrandingMutation.mutate({
+      logoUrl: brandingLogo,
+      companyName: brandingCompanyName,
+      primaryColor: colorToSave,
+      footerText: brandingFooterText,
+    });
+  };
+
+  const darkenColor = (hex: string, amount: number): string => {
+    let color = hex.replace('#', '');
+    if (color.length === 3) color = color.split('').map(c => c + c).join('');
+    const num = parseInt(color, 16);
+    const r = Math.max(0, Math.min(255, ((num >> 16) & 0xFF) + amount));
+    const g = Math.max(0, Math.min(255, ((num >> 8) & 0xFF) + amount));
+    const b = Math.max(0, Math.min(255, (num & 0xFF) + amount));
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
   };
 
   return (
@@ -129,12 +198,12 @@ export default function SalesSettings() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
           {[
             { id: "general", name: "General Settings", icon: Settings },
-            { id: "terms", name: "Terms & Conditions", icon: Shield }
+            { id: "terms", name: "Terms & Conditions", icon: Shield },
+            { id: "branding", name: "Proposal Branding", icon: Palette }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -156,7 +225,6 @@ export default function SalesSettings() {
         </nav>
       </div>
 
-      {/* General Settings Tab */}
       {activeTab === "general" && (
         <div className="space-y-6">
           <Card>
@@ -222,7 +290,6 @@ export default function SalesSettings() {
         </div>
       )}
 
-      {/* Terms & Conditions Tab */}
       {activeTab === "terms" && (
         <div className="space-y-6">
           <Card>
@@ -320,6 +387,191 @@ export default function SalesSettings() {
               </CardContent>
             </Card>
           )}
+        </div>
+      )}
+
+      {activeTab === "branding" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5" />
+                  Proposal Branding
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <p className="text-sm text-muted-foreground">
+                  Customize the appearance of client-facing proposals and emails. These settings override defaults from your Business Profile.
+                </p>
+
+                <div className="space-y-2">
+                  <Label>Company Logo</Label>
+                  <div className="flex items-center gap-4">
+                    {brandingLogo ? (
+                      <div className="relative">
+                        <img
+                          src={brandingLogo}
+                          alt="Logo"
+                          className="h-16 w-auto max-w-[200px] object-contain rounded border p-1"
+                        />
+                        <button
+                          onClick={() => setBrandingLogo("")}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="h-16 w-32 border-2 border-dashed rounded flex items-center justify-center text-muted-foreground text-xs">
+                        No logo
+                      </div>
+                    )}
+                    <ObjectUploader
+                      maxNumberOfFiles={1}
+                      maxFileSize={10485760}
+                      onGetUploadParameters={async () => {
+                        const response = await fetch("/api/objects/upload", { method: "POST" });
+                        const data = await response.json();
+                        return { method: "PUT" as const, url: data.uploadURL };
+                      }}
+                      onComplete={(result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+                        const uploadedFile = result.successful[0];
+                        if (uploadedFile?.uploadURL) {
+                          profileImageMutation.mutate(uploadedFile.uploadURL as string, {
+                            onSuccess: (data) => {
+                              setBrandingLogo(data.objectPath);
+                              toast({ title: "Logo Uploaded" });
+                            },
+                            onError: () => {
+                              toast({ title: "Error", description: "Failed to upload logo", variant: "destructive" });
+                            }
+                          });
+                        }
+                      }}
+                      buttonClassName="h-9"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Logo
+                    </ObjectUploader>
+                  </div>
+                  <p className="text-xs text-muted-foreground">PNG or JPG, max 10MB. Displayed in proposal header and emails.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="branding-company-name">Company Name</Label>
+                  <Input
+                    id="branding-company-name"
+                    value={brandingCompanyName}
+                    onChange={(e) => setBrandingCompanyName(e.target.value)}
+                    placeholder="Your Company Name"
+                  />
+                  <p className="text-xs text-muted-foreground">Shown in proposal header and emails.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="branding-color">Primary Brand Color</Label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      id="branding-color-picker"
+                      value={brandingColor}
+                      onChange={(e) => setBrandingColor(e.target.value)}
+                      className="w-10 h-10 rounded border cursor-pointer p-0"
+                    />
+                    <Input
+                      id="branding-color"
+                      value={brandingColor}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (/^#[0-9A-Fa-f]{0,6}$/.test(val) || val === "") {
+                          setBrandingColor(val);
+                        }
+                      }}
+                      placeholder="#00C9C6"
+                      className="max-w-[140px] font-mono"
+                    />
+                    <div
+                      className="h-10 flex-1 rounded border"
+                      style={{ background: `linear-gradient(135deg, ${brandingColor} 0%, ${darkenColor(brandingColor, -20)} 100%)` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Used for buttons, headers, and accents on proposals.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="branding-footer">Footer Text</Label>
+                  <Textarea
+                    id="branding-footer"
+                    value={brandingFooterText}
+                    onChange={(e) => setBrandingFooterText(e.target.value)}
+                    placeholder="e.g., Powered by Your Agency | www.youragency.com"
+                    rows={2}
+                  />
+                  <p className="text-xs text-muted-foreground">Optional tagline displayed at the bottom of proposals and emails.</p>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSaveBranding}
+                    disabled={saveBrandingMutation.isPending || isLoadingBranding}
+                    className="gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    {saveBrandingMutation.isPending ? "Saving..." : "Save Branding"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+              <Eye className="h-4 w-4" />
+              Live Preview
+            </div>
+            <Card className="overflow-hidden shadow-lg">
+              <div
+                className="p-6 text-white text-center"
+                style={{ background: `linear-gradient(135deg, ${brandingColor} 0%, ${darkenColor(brandingColor, -20)} 100%)` }}
+              >
+                {brandingLogo && (
+                  <img
+                    src={brandingLogo}
+                    alt="Logo"
+                    className="h-10 max-w-[160px] object-contain mx-auto mb-3"
+                    style={{ filter: "brightness(0) invert(1)" }}
+                  />
+                )}
+                {brandingCompanyName && (
+                  <p className="text-xs opacity-85 tracking-wider mb-2">{brandingCompanyName}</p>
+                )}
+                <h3 className="text-xl font-bold">Your Proposal is Ready</h3>
+                <p className="text-sm opacity-90 mt-1">Review, sign, and pay — all in one place</p>
+              </div>
+              <CardContent className="p-6">
+                <p className="text-sm text-gray-600 mb-4">Hi Client Name,</p>
+                <p className="text-sm text-gray-600 mb-4">We've prepared a proposal for you...</p>
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Proposal</p>
+                  <p className="font-semibold">Sample Service Package</p>
+                </div>
+                <div className="text-center mb-4">
+                  <button
+                    className="px-6 py-2.5 rounded-lg text-white font-semibold text-sm"
+                    style={{ backgroundColor: brandingColor }}
+                  >
+                    View & Sign Proposal
+                  </button>
+                </div>
+                {brandingFooterText && (
+                  <div className="border-t pt-3 mt-4 text-center">
+                    <p className="text-xs text-gray-400">{brandingFooterText}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
     </div>

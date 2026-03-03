@@ -23,6 +23,7 @@ function CardPaymentForm({
   onSuccess,
   onError,
   amount,
+  brandColor,
 }: {
   clientSecret: string;
   signerName: string;
@@ -30,6 +31,7 @@ function CardPaymentForm({
   onSuccess: () => void;
   onError: (msg: string) => void;
   amount: number;
+  brandColor: string;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -81,7 +83,8 @@ function CardPaymentForm({
       </div>
       <Button
         onClick={handleSubmit}
-        className="w-full bg-[#00C9C6] hover:bg-[#00A8A6] text-white py-3 text-lg"
+        className="w-full text-white py-3 text-lg"
+        style={{ backgroundColor: brandColor }}
         disabled={processing || !cardReady || !stripe}
         size="lg"
       >
@@ -93,6 +96,17 @@ function CardPaymentForm({
       </Button>
     </div>
   );
+}
+
+function darkenColor(hex: string, amount: number): string {
+  let color = hex.replace('#', '');
+  if (color.length === 3) color = color.split('').map(c => c + c).join('');
+  if (color.length !== 6) return hex;
+  const num = parseInt(color, 16);
+  const r = Math.max(0, Math.min(255, ((num >> 16) & 0xFF) + amount));
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0xFF) + amount));
+  const b = Math.max(0, Math.min(255, (num & 0xFF) + amount));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
 export default function PublicProposal() {
@@ -340,6 +354,12 @@ export default function PublicProposal() {
   const items = data?.items || [];
   const terms = data?.terms;
   const paymentAmountValue = data?.paymentAmount || 0;
+  const branding = data?.branding || {};
+  const brandColor = branding.primaryColor || "#00C9C6";
+  const brandColorDark = darkenColor(brandColor, -20);
+  const companyName = branding.companyName || "";
+  const logoUrl = branding.logoUrl || "";
+  const footerText = branding.footerText || "";
 
   const steps = [
     { id: "review", label: "Review", icon: FileText },
@@ -353,10 +373,15 @@ export default function PublicProposal() {
       <div className="bg-white border-b shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#00C9C6] flex items-center justify-center">
-              <FileText className="h-5 w-5 text-white" />
-            </div>
+            {logoUrl ? (
+              <img src={logoUrl} alt={companyName || "Logo"} className="h-10 w-auto max-w-[160px] object-contain" />
+            ) : (
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: brandColor }}>
+                <FileText className="h-5 w-5 text-white" />
+              </div>
+            )}
             <div>
+              {companyName && <p className="text-xs text-gray-400 font-medium tracking-wide uppercase">{companyName}</p>}
               <h1 className="text-xl font-bold text-gray-900">{quote?.name || "Proposal"}</h1>
               {data?.clientName && <p className="text-sm text-gray-500">Prepared for {data.clientName}</p>}
             </div>
@@ -373,14 +398,20 @@ export default function PublicProposal() {
             return (
               <div key={step.id} className="flex items-center">
                 <div className="flex flex-col items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                    isCompleted ? "bg-green-500 text-white" :
-                    isActive ? "bg-[#00C9C6] text-white shadow-lg shadow-[#00C9C6]/30" :
-                    "bg-gray-200 text-gray-500"
-                  }`}>
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                      isCompleted ? "bg-green-500 text-white" :
+                      isActive ? "text-white shadow-lg" :
+                      "bg-gray-200 text-gray-500"
+                    }`}
+                    style={isActive ? { backgroundColor: brandColor, boxShadow: `0 4px 14px ${brandColor}4D` } : undefined}
+                  >
                     {isCompleted ? <CheckCircle className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                   </div>
-                  <span className={`text-xs mt-1 font-medium ${isActive ? "text-[#00C9C6]" : isCompleted ? "text-green-600" : "text-gray-400"}`}>
+                  <span
+                    className={`text-xs mt-1 font-medium ${isCompleted ? "text-green-600" : !isActive ? "text-gray-400" : ""}`}
+                    style={isActive ? { color: brandColor } : undefined}
+                  >
                     {step.label}
                   </span>
                 </div>
@@ -395,7 +426,7 @@ export default function PublicProposal() {
         {currentStep === "review" && (
           <div className="space-y-6">
             <Card className="overflow-hidden">
-              <div className="bg-gradient-to-r from-[#00C9C6] to-[#00A8A6] p-6 text-white">
+              <div className="p-6 text-white" style={{ background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColorDark} 100%)` }}>
                 <h2 className="text-2xl font-bold">Proposal Summary</h2>
                 <p className="opacity-90 mt-1">Review the services and pricing below</p>
               </div>
@@ -421,7 +452,7 @@ export default function PublicProposal() {
                     ))}
                     <div className="flex items-center justify-between pt-4 border-t-2">
                       <span className="text-lg font-bold">Total</span>
-                      <span className="text-2xl font-bold text-[#00C9C6]">
+                      <span className="text-2xl font-bold" style={{ color: brandColor }}>
                         ${paymentAmountValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -444,7 +475,8 @@ export default function PublicProposal() {
             <div className="flex justify-end">
               <Button
                 onClick={() => setCurrentStep("sign")}
-                className="bg-[#00C9C6] hover:bg-[#00A8A6] text-white px-8 py-3 text-lg"
+                className="text-white px-8 py-3 text-lg"
+                style={{ backgroundColor: brandColor }}
                 size="lg"
               >
                 Continue to Sign
@@ -477,7 +509,7 @@ export default function PublicProposal() {
                       variant={signatureMode === "type" ? "default" : "outline"}
                       size="sm"
                       onClick={() => setSignatureMode("type")}
-                      className={signatureMode === "type" ? "bg-[#00C9C6] hover:bg-[#00A8A6]" : ""}
+                      style={signatureMode === "type" ? { backgroundColor: brandColor } : undefined}
                     >
                       Type
                     </Button>
@@ -485,7 +517,7 @@ export default function PublicProposal() {
                       variant={signatureMode === "draw" ? "default" : "outline"}
                       size="sm"
                       onClick={() => setSignatureMode("draw")}
-                      className={signatureMode === "draw" ? "bg-[#00C9C6] hover:bg-[#00A8A6]" : ""}
+                      style={signatureMode === "draw" ? { backgroundColor: brandColor } : undefined}
                     >
                       Draw
                     </Button>
@@ -538,7 +570,7 @@ export default function PublicProposal() {
                       className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50"
                     >
                       <div className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-[#00C9C6]" />
+                        <Shield className="h-5 w-5" style={{ color: brandColor }} />
                         <span className="font-medium">{terms.title || "Terms & Conditions"}</span>
                       </div>
                       {showTerms ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -567,7 +599,8 @@ export default function PublicProposal() {
                   <Button variant="outline" onClick={() => setCurrentStep("review")}>Back</Button>
                   <Button
                     onClick={handleSign}
-                    className="bg-[#00C9C6] hover:bg-[#00A8A6] text-white px-8"
+                    className="text-white px-8"
+                    style={{ backgroundColor: brandColor }}
                     disabled={signMutation.isPending}
                   >
                     {signMutation.isPending ? (
@@ -599,7 +632,7 @@ export default function PublicProposal() {
                   </div>
                   <h2 className="text-xl font-bold">Complete Payment</h2>
                   <p className="text-gray-500 mt-1">
-                    Amount due: <span className="text-2xl font-bold text-[#00C9C6]">${paymentAmountValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    Amount due: <span className="text-2xl font-bold" style={{ color: brandColor }}>${paymentAmountValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </p>
                 </div>
 
@@ -613,25 +646,27 @@ export default function PublicProposal() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <button
                         onClick={() => handleSelectPaymentMethod("card")}
-                        className={`p-6 rounded-xl border-2 text-left transition-all ${
-                          paymentMethod === "card"
-                            ? "border-[#00C9C6] bg-[#00C9C6]/5 shadow-md"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
+                        className="p-6 rounded-xl border-2 text-left transition-all"
+                        style={paymentMethod === "card" ? {
+                          borderColor: brandColor,
+                          backgroundColor: `${brandColor}0D`,
+                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                        } : { borderColor: '#e5e7eb' }}
                       >
-                        <CreditCard className={`h-8 w-8 mb-3 ${paymentMethod === "card" ? "text-[#00C9C6]" : "text-gray-400"}`} />
+                        <CreditCard className="h-8 w-8 mb-3" style={{ color: paymentMethod === "card" ? brandColor : "#9ca3af" }} />
                         <div className="font-semibold">Credit / Debit Card</div>
                         <p className="text-sm text-gray-500 mt-1">Pay instantly with your card</p>
                       </button>
                       <button
                         onClick={() => handleSelectPaymentMethod("ach")}
-                        className={`p-6 rounded-xl border-2 text-left transition-all ${
-                          paymentMethod === "ach"
-                            ? "border-[#00C9C6] bg-[#00C9C6]/5 shadow-md"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
+                        className="p-6 rounded-xl border-2 text-left transition-all"
+                        style={paymentMethod === "ach" ? {
+                          borderColor: brandColor,
+                          backgroundColor: `${brandColor}0D`,
+                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                        } : { borderColor: '#e5e7eb' }}
                       >
-                        <Building className={`h-8 w-8 mb-3 ${paymentMethod === "ach" ? "text-[#00C9C6]" : "text-gray-400"}`} />
+                        <Building className="h-8 w-8 mb-3" style={{ color: paymentMethod === "ach" ? brandColor : "#9ca3af" }} />
                         <div className="font-semibold">Bank Transfer (ACH)</div>
                         <p className="text-sm text-gray-500 mt-1">Pay directly from your bank account</p>
                       </button>
@@ -644,6 +679,7 @@ export default function PublicProposal() {
                           signerName={signerName}
                           signerEmail={signerEmail}
                           amount={paymentAmountValue}
+                          brandColor={brandColor}
                           onSuccess={() => {
                             setCurrentStep("complete");
                             refetch();
@@ -656,7 +692,7 @@ export default function PublicProposal() {
                     {paymentMethod === "ach" && clientSecret && (
                       <div className="space-y-4">
                         <div className="border rounded-lg p-6 bg-gray-50 text-center">
-                          <Building className="h-10 w-10 mx-auto mb-3 text-[#00C9C6]" />
+                          <Building className="h-10 w-10 mx-auto mb-3" style={{ color: brandColor }} />
                           <p className="text-sm text-gray-600 mb-2">
                             Click the button below to securely connect your bank account via Stripe.
                           </p>
@@ -667,7 +703,8 @@ export default function PublicProposal() {
                         </div>
                         <Button
                           onClick={handleACHPayment}
-                          className="w-full bg-[#00C9C6] hover:bg-[#00A8A6] text-white py-3 text-lg"
+                          className="w-full text-white py-3 text-lg"
+                          style={{ backgroundColor: brandColor }}
                           disabled={achProcessing}
                           size="lg"
                         >
@@ -682,7 +719,7 @@ export default function PublicProposal() {
 
                     {paymentMethod && !clientSecret && (
                       <div className="text-center py-4">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-[#00C9C6]" />
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" style={{ color: brandColor }} />
                         <p className="text-sm text-gray-500">Setting up payment...</p>
                       </div>
                     )}
@@ -723,6 +760,12 @@ export default function PublicProposal() {
           </div>
         )}
       </div>
+
+      {footerText && (
+        <div className="max-w-4xl mx-auto px-4 py-4 text-center">
+          <p className="text-xs text-gray-400">{footerText}</p>
+        </div>
+      )}
 
       <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" rel="stylesheet" />
     </div>

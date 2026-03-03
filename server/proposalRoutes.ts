@@ -1,6 +1,6 @@
 import express, { type Express } from "express";
 import { db } from "./db";
-import { proposals, proposalTerms, quotes, quoteItems, clients, leads, staff, products, productBundles, productPackages, clientProducts, clientBundles, clientPackages, packageItems, deals, leadPipelineStages, taskSettings, clientRecurringConfig } from "@shared/schema";
+import { proposals, proposalTerms, quotes, quoteItems, clients, leads, staff, products, productBundles, productPackages, clientProducts, clientBundles, clientPackages, packageItems, deals, leadPipelineStages, taskSettings, clientRecurringConfig, businessProfile } from "@shared/schema";
 import { eq, desc, and, sql, lt, isNull, asc } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { z } from "zod";
@@ -205,7 +205,20 @@ export function registerProposalRoutes(
       const proposalUrl = `${appUrl}/proposal/${proposal.publicToken}`;
       const quoteName = quote?.name || "Your Proposal";
 
-      const html = generateProposalEmailHtml(clientName, quoteName, proposalUrl);
+      let branding: any = { logoUrl: "", companyName: "", primaryColor: "#00C9C6", footerText: "" };
+      const [brandingSetting] = await db.select().from(taskSettings)
+        .where(eq(taskSettings.settingKey, 'proposal_branding'));
+      if (brandingSetting?.settingValue) {
+        branding = brandingSetting.settingValue;
+      } else {
+        const [profile] = await db.select().from(businessProfile).limit(1);
+        if (profile) {
+          branding.logoUrl = profile.logo || "";
+          branding.companyName = profile.companyName || "";
+        }
+      }
+
+      const html = generateProposalEmailHtml(clientName, quoteName, proposalUrl, branding);
 
       const emailResult = await notificationService.sendDirectEmail({
         to: clientEmail,
@@ -293,12 +306,26 @@ export function registerProposalRoutes(
         paymentAmount = parseFloat(proposal.customPaymentAmount);
       }
 
+      let branding: any = { logoUrl: "", companyName: "", primaryColor: "#00C9C6", footerText: "" };
+      const [brandingSetting] = await db.select().from(taskSettings)
+        .where(eq(taskSettings.settingKey, 'proposal_branding'));
+      if (brandingSetting?.settingValue) {
+        branding = brandingSetting.settingValue;
+      } else {
+        const [profile] = await db.select().from(businessProfile).limit(1);
+        if (profile) {
+          branding.logoUrl = profile.logo || "";
+          branding.companyName = profile.companyName || "";
+        }
+      }
+
       res.json({
         proposal: {
           id: proposal.id,
           status: proposal.status,
           signedAt: proposal.signedAt,
           signedByName: proposal.signedByName,
+          signedByEmail: proposal.signedByEmail,
           termsAccepted: proposal.termsAccepted,
           paymentMethod: proposal.paymentMethod,
           paymentStatus: proposal.paymentStatus,
@@ -314,6 +341,7 @@ export function registerProposalRoutes(
         paymentAmount,
         stripeConfigured: isStripeConfigured(),
         stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null,
+        branding,
       });
     } catch (error) {
       console.error("Error fetching public proposal:", error);
@@ -528,6 +556,65 @@ export function registerProposalRoutes(
     }
   });
 
+  app.get("/api/settings/proposal-branding", requireAuth(), async (req, res) => {
+    try {
+      const [setting] = await db.select().from(taskSettings)
+        .where(eq(taskSettings.settingKey, 'proposal_branding'));
+
+      if (setting?.settingValue) {
+        return res.json(setting.settingValue);
+      }
+
+      const [profile] = await db.select().from(businessProfile).limit(1);
+      res.json({
+        logoUrl: profile?.logo || "",
+        companyName: profile?.companyName || "",
+        primaryColor: "#00C9C6",
+        footerText: "",
+      });
+    } catch (error) {
+      console.error("Error fetching proposal branding:", error);
+      res.status(500).json({ message: "Failed to fetch proposal branding" });
+    }
+  });
+
+  app.put("/api/settings/proposal-branding", requireAuth(), async (req, res) => {
+    try {
+      const brandingSchema = z.object({
+        logoUrl: z.string().max(2000).default(""),
+        companyName: z.string().max(200).default(""),
+        primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Must be a valid hex color (e.g. #00C9C6)").default("#00C9C6"),
+        footerText: z.string().max(500).default(""),
+      });
+
+      const parsed = brandingSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid branding data", errors: parsed.error.flatten().fieldErrors });
+      }
+
+      const brandingData = parsed.data;
+
+      const [existing] = await db.select().from(taskSettings)
+        .where(eq(taskSettings.settingKey, 'proposal_branding'));
+
+      if (existing) {
+        await db.update(taskSettings)
+          .set({ settingValue: brandingData, updatedAt: new Date() })
+          .where(eq(taskSettings.settingKey, 'proposal_branding'));
+      } else {
+        await db.insert(taskSettings).values({
+          settingKey: 'proposal_branding',
+          settingValue: brandingData,
+        });
+      }
+
+      res.json(brandingData);
+    } catch (error) {
+      console.error("Error saving proposal branding:", error);
+      res.status(500).json({ message: "Failed to save proposal branding" });
+    }
+  });
+
   app.get("/api/stripe/config", async (req, res) => {
     res.json({
       configured: isStripeConfigured(),
@@ -536,7 +623,24 @@ export function registerProposalRoutes(
   });
 }
 
-function generateProposalEmailHtml(clientName: string, quoteName: string, proposalUrl: string): string {
+function generateProposalEmailHtml(
+  clientName: string,
+  quoteName: string,
+  proposalUrl: string,
+  branding: { logoUrl?: string; companyName?: string; primaryColor?: string; footerText?: string } = {}
+): string {
+  const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const rawColor = branding.primaryColor || "#00C9C6";
+  const color = /^#[0-9A-Fa-f]{6}$/.test(rawColor) ? rawColor : "#00C9C6";
+  const darkerColor = adjustColor(color, -15);
+  const companyName = escHtml(branding.companyName || "");
+  const logoHtml = branding.logoUrl
+    ? `<img src="${escHtml(branding.logoUrl)}" alt="${companyName}" style="max-height: 48px; max-width: 200px; margin-bottom: 12px;" />`
+    : "";
+  const footerContent = branding.footerText
+    ? `<p style="margin-bottom: 8px;">${escHtml(branding.footerText)}</p>`
+    : "";
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -545,7 +649,7 @@ function generateProposalEmailHtml(clientName: string, quoteName: string, propos
   <title>Your Proposal is Ready</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #00C9C6 0%, #00A8A6 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0; }
+    .header { background: linear-gradient(135deg, ${color} 0%, ${darkerColor} 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0; }
     .header h1 { margin: 0 0 8px; font-size: 28px; font-weight: 700; }
     .header p { margin: 0; opacity: 0.9; font-size: 16px; }
     .content { background: #ffffff; padding: 40px 30px; border: 1px solid #e0e0e0; border-top: none; }
@@ -554,15 +658,17 @@ function generateProposalEmailHtml(clientName: string, quoteName: string, propos
     .details-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 4px; }
     .details-value { font-size: 18px; font-weight: 600; color: #333; }
     .cta { text-align: center; margin: 32px 0; }
-    .button { display: inline-block; padding: 16px 40px; background: #00C9C6; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; }
+    .button { display: inline-block; padding: 16px 40px; background: ${color}; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; }
     .steps { margin: 24px 0; }
     .step { display: flex; align-items: center; margin-bottom: 12px; }
-    .step-number { width: 28px; height: 28px; border-radius: 50%; background: #00C9C6; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; margin-right: 12px; flex-shrink: 0; }
+    .step-number { width: 28px; height: 28px; border-radius: 50%; background: ${color}; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; margin-right: 12px; flex-shrink: 0; }
     .footer { background: #f5f5f5; padding: 24px; text-align: center; font-size: 13px; color: #888; border-radius: 0 0 12px 12px; border: 1px solid #e0e0e0; border-top: none; }
   </style>
 </head>
 <body>
   <div class="header">
+    ${logoHtml}
+    ${companyName ? `<p style="font-size: 13px; opacity: 0.85; margin-bottom: 12px; letter-spacing: 0.5px;">${companyName}</p>` : ""}
     <h1>Your Proposal is Ready</h1>
     <p>Review, sign, and pay — all in one place</p>
   </div>
@@ -584,10 +690,21 @@ function generateProposalEmailHtml(clientName: string, quoteName: string, propos
     <p style="font-size: 14px; color: #666;">If you have any questions, please don't hesitate to reach out.</p>
   </div>
   <div class="footer">
+    ${footerContent}
     <p>This is an automated message. Please do not reply directly to this email.</p>
   </div>
 </body>
 </html>`;
+}
+
+function adjustColor(hex: string, amount: number): string {
+  let color = hex.replace('#', '');
+  if (color.length === 3) color = color.split('').map(c => c + c).join('');
+  const num = parseInt(color, 16);
+  const r = Math.max(0, Math.min(255, ((num >> 16) & 0xFF) + amount));
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0xFF) + amount));
+  const b = Math.max(0, Math.min(255, (num & 0xFF) + amount));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
 export async function handleStripeWebhook(req: any, res: any, notificationService: NotificationService) {
