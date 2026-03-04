@@ -80,7 +80,7 @@ export default function Sales() {
   const [quotesShowLowMarginOnly, setQuotesShowLowMarginOnly] = useState(false);
   
   // Quotes sorting
-  type QuotesSortField = 'name' | 'clientName' | 'createdAt' | 'oneTimeCost' | 'monthlyCost' | 'desiredMargin' | 'status';
+  type QuotesSortField = 'name' | 'clientName' | 'createdBy' | 'createdAt' | 'oneTimeCost' | 'monthlyCost' | 'desiredMargin' | 'status';
   const [quotesSortField, setQuotesSortField] = useState<QuotesSortField>('createdAt');
   const [quotesSortOrder, setQuotesSortOrder] = useState<SortOrder>('desc');
   
@@ -2643,6 +2643,10 @@ export default function Sales() {
                           aVal = (a.clientName || a.leadName || '').toLowerCase();
                           bVal = (b.clientName || b.leadName || '').toLowerCase();
                           break;
+                        case 'createdBy':
+                          aVal = `${a.createdByName || ''} ${a.createdByLastName || ''}`.trim().toLowerCase();
+                          bVal = `${b.createdByName || ''} ${b.createdByLastName || ''}`.trim().toLowerCase();
+                          break;
                         case 'createdAt':
                           aVal = new Date(a.createdAt);
                           bVal = new Date(b.createdAt);
@@ -2743,7 +2747,7 @@ export default function Sales() {
                               <TableRow>
                                 <SortableQuoteHeader field="name">Quote Name</SortableQuoteHeader>
                                 <SortableQuoteHeader field="clientName">Client/Lead</SortableQuoteHeader>
-                                <TableHead>Created By</TableHead>
+                                <SortableQuoteHeader field="createdBy">Created By</SortableQuoteHeader>
                                 <SortableQuoteHeader field="createdAt">Created</SortableQuoteHeader>
                                 <SortableQuoteHeader field="oneTimeCost">One-Time Cost</SortableQuoteHeader>
                                 <SortableQuoteHeader field="monthlyCost">Monthly Cost</SortableQuoteHeader>
