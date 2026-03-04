@@ -335,10 +335,9 @@ export default function ProductsSettings() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch task templates (for Task Mapping tab)
+  // Fetch task templates (always loaded for tab count display)
   const { data: taskTemplates = [], isLoading: isLoadingTemplates } = useQuery<TaskTemplate[]>({
     queryKey: ["/api/product-task-templates"],
-    enabled: activeTab === "taskMapping",
     refetchOnWindowFocus: false,
   });
 
