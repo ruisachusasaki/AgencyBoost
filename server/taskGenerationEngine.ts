@@ -10,6 +10,7 @@ import {
   productTaskTemplates,
   clientTaskGenerations,
   staff,
+  customFields,
 } from "@shared/schema";
 import { format } from "date-fns";
 
@@ -56,13 +57,26 @@ export async function generateTasksFromTemplates(
   };
 
   const [clientRow] = await db
-    .select({ name: clients.name, company: clients.company, website: clients.website })
+    .select({ name: clients.name, company: clients.company, website: clients.website, email: clients.email, customFieldValues: clients.customFieldValues })
     .from(clients)
     .where(eq(clients.id, clientId));
 
   if (!clientRow) {
     summary.errors.push(`Client ${clientId} not found`);
     return summary;
+  }
+
+  const allCustomFields = await db.select({ id: customFields.id, name: customFields.name }).from(customFields);
+  const customFieldMap: Record<string, string> = {};
+  if (clientRow.customFieldValues && typeof clientRow.customFieldValues === 'object') {
+    const cfValues = clientRow.customFieldValues as Record<string, any>;
+    for (const field of allCustomFields) {
+      const key = `custom.${field.name.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '').toLowerCase()}`;
+      const value = cfValues[field.id];
+      if (value !== undefined && value !== null) {
+        customFieldMap[key] = Array.isArray(value) ? value.join(', ') : String(value);
+      }
+    }
   }
 
   const validStaffIds = new Set<string>();
@@ -181,6 +195,7 @@ export async function generateTasksFromTemplates(
 
             const vars: Record<string, string> = {
               "client.name": clientRow.company || clientRow.name,
+              "client.email": clientRow.email || "",
               "client.domain": clientRow.website || "",
               "product.name": itemName,
               quantity: String(item.quantity),
@@ -188,6 +203,7 @@ export async function generateTasksFromTemplates(
               "cycle.startDate": format(cycleStartDate, "yyyy-MM-dd"),
               "unit.number": String(unitNum),
               "unit.total": String(item.quantity),
+              ...customFieldMap,
             };
 
             const resolvedTitle = resolveVariables(taskTitle, vars);
