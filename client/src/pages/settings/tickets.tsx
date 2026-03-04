@@ -69,6 +69,7 @@ interface CustomFormField {
 
 interface FieldDraft {
   tempId: string;
+  dbId?: string;
   type: string;
   label: string;
   placeholder: string;
@@ -232,6 +233,7 @@ export default function TicketsSettingsPage() {
     },
     onSuccess: async (id: string) => {
       const fieldsPayload = formFields.map((f, idx) => ({
+        ...(f.dbId ? { id: f.dbId } : {}),
         type: f.type,
         label: f.label,
         placeholder: f.placeholder || null,
@@ -379,6 +381,7 @@ export default function TicketsSettingsPage() {
         setFormFields(
           data.fields.map((f: CustomFormField) => ({
             tempId: f.id,
+            dbId: f.id,
             type: f.type,
             label: f.label,
             placeholder: f.placeholder || "",

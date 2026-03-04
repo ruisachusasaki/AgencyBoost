@@ -40974,7 +40974,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         order: idx,
       }));
       if (fieldsData.length > 0) {
-        const validated = fieldsData.map((f: any) => insertCustomFormFieldSchema.parse(f));
+        const validated = fieldsData.map((f: any) => {
+          const parsed = insertCustomFormFieldSchema.parse(f);
+          if (f.id) return { ...parsed, id: f.id };
+          return parsed;
+        });
         await db.insert(customFormFields).values(validated);
       }
       const savedFields = await db.select().from(customFormFields).where(eq(customFormFields.formId, id)).orderBy(asc(customFormFields.order));
