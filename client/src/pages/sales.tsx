@@ -80,7 +80,7 @@ export default function Sales() {
   const [quotesShowLowMarginOnly, setQuotesShowLowMarginOnly] = useState(false);
   
   // Quotes sorting
-  type QuotesSortField = 'name' | 'clientName' | 'createdAt' | 'totalCost' | 'desiredMargin' | 'status';
+  type QuotesSortField = 'name' | 'clientName' | 'createdAt' | 'oneTimeCost' | 'monthlyCost' | 'desiredMargin' | 'status';
   const [quotesSortField, setQuotesSortField] = useState<QuotesSortField>('createdAt');
   const [quotesSortOrder, setQuotesSortOrder] = useState<SortOrder>('desc');
   
@@ -1024,6 +1024,8 @@ export default function Sales() {
       clientBudget: quoteData.budget, // Keep as string for decimal schema
       desiredMargin: quoteData.margin, // Keep as string for decimal schema
       totalCost: totals.totalCost.toString(),
+      oneTimeCost: totals.oneTimeCost.toString(),
+      monthlyCost: totals.monthlyCost.toString(),
       status: isLowMargin ? "pending_approval" : "draft",
       notes: quoteData.description || null,
       items: selectedProducts.map(item => {
@@ -2645,9 +2647,13 @@ export default function Sales() {
                           aVal = new Date(a.createdAt);
                           bVal = new Date(b.createdAt);
                           break;
-                        case 'totalCost':
-                          aVal = parseFloat(a.totalCost || 0);
-                          bVal = parseFloat(b.totalCost || 0);
+                        case 'oneTimeCost':
+                          aVal = parseFloat(a.oneTimeCost || 0);
+                          bVal = parseFloat(b.oneTimeCost || 0);
+                          break;
+                        case 'monthlyCost':
+                          aVal = parseFloat(a.monthlyCost || a.totalCost || 0);
+                          bVal = parseFloat(b.monthlyCost || b.totalCost || 0);
                           break;
                         case 'desiredMargin':
                           aVal = parseFloat(a.desiredMargin || 0);
@@ -2739,7 +2745,8 @@ export default function Sales() {
                                 <SortableQuoteHeader field="clientName">Client/Lead</SortableQuoteHeader>
                                 <TableHead>Created By</TableHead>
                                 <SortableQuoteHeader field="createdAt">Created</SortableQuoteHeader>
-                                <SortableQuoteHeader field="totalCost">Total Cost</SortableQuoteHeader>
+                                <SortableQuoteHeader field="oneTimeCost">One-Time Cost</SortableQuoteHeader>
+                                <SortableQuoteHeader field="monthlyCost">Monthly Cost</SortableQuoteHeader>
                                 <SortableQuoteHeader field="desiredMargin">Margin %</SortableQuoteHeader>
                                 <SortableQuoteHeader field="status">Status</SortableQuoteHeader>
                                 <TableHead>Actions</TableHead>
@@ -2774,9 +2781,14 @@ export default function Sales() {
                                       {new Date(quote.createdAt).toLocaleDateString()}
                                     </TableCell>
                                     
-                                    {/* Total Cost */}
-                                    <TableCell className="font-medium" data-testid={`text-quote-total-cost-${quote.id}`}>
-                                      ${parseFloat(quote.totalCost || 0).toLocaleString()}
+                                    {/* One-Time Cost */}
+                                    <TableCell className="font-medium" data-testid={`text-quote-onetime-cost-${quote.id}`}>
+                                      ${parseFloat(quote.oneTimeCost || 0).toLocaleString()}
+                                    </TableCell>
+                                    
+                                    {/* Monthly Cost */}
+                                    <TableCell className="font-medium" data-testid={`text-quote-monthly-cost-${quote.id}`}>
+                                      ${parseFloat(quote.monthlyCost || quote.totalCost || 0).toLocaleString()}
                                     </TableCell>
                                     
                                     {/* Margin % */}
@@ -3091,8 +3103,12 @@ export default function Sales() {
                     </p>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">Total Cost</Label>
-                    <p className="font-medium" data-testid="text-view-quote-cost">${parseFloat(quote.totalCost || 0).toLocaleString()}</p>
+                    <Label className="text-sm text-muted-foreground">One-Time Cost</Label>
+                    <p className="font-medium" data-testid="text-view-quote-onetime-cost">${parseFloat(quote.oneTimeCost || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Monthly Cost</Label>
+                    <p className="font-medium" data-testid="text-view-quote-monthly-cost">${parseFloat(quote.monthlyCost || quote.totalCost || 0).toLocaleString()}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Created By</Label>

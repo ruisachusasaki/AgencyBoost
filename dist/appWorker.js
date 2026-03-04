@@ -3,16 +3,16 @@ import {
 } from "./chunk-DE7YTT24.js";
 import {
   createOAuth2Client
-} from "./chunk-XWWUWXRV.js";
+} from "./chunk-7BE2TQYE.js";
 import {
   EncryptionService
 } from "./chunk-BGP47S4B.js";
 import {
   emitTrigger
-} from "./chunk-4Z3SPRNY.js";
+} from "./chunk-62VBYTHD.js";
 import {
   storage as storage2
-} from "./chunk-HN3KTCLE.js";
+} from "./chunk-CLNQUUMA.js";
 import {
   deleteAppointmentFromGoogleCalendar,
   syncAppointmentToGoogleCalendar
@@ -28,14 +28,14 @@ import {
 } from "./chunk-WPY5OZFU.js";
 import {
   registerProposalRoutes
-} from "./chunk-EGGR4KB6.js";
+} from "./chunk-WNW76QUL.js";
 import {
   generateTasksFromTemplates
-} from "./chunk-O6E4WH5D.js";
-import "./chunk-7P2V44NG.js";
+} from "./chunk-6BZCMLYT.js";
+import "./chunk-7YDUX3K5.js";
 import {
   db
-} from "./chunk-6E5ZACMQ.js";
+} from "./chunk-PNXZBUAS.js";
 import {
   aiAssistantSettings,
   aiIntegrations,
@@ -294,7 +294,7 @@ import {
   workflowExecutions,
   workflowTemplates,
   workflows
-} from "./chunk-LAXEHSWM.js";
+} from "./chunk-TIGQTVYH.js";
 import {
   __require
 } from "./chunk-R5U7XKVJ.js";
@@ -2556,8 +2556,8 @@ function requireClientPortalAuth() {
       });
     }
     try {
-      const { db: db2 } = await import("./db-GFHIMQ7B.js");
-      const { clientPortalUsers: clientPortalUsers2 } = await import("./schema-LKBS7AGM.js");
+      const { db: db2 } = await import("./db-XLVPQV5H.js");
+      const { clientPortalUsers: clientPortalUsers2 } = await import("./schema-OFJBW4MB.js");
       const { eq: eq12 } = await import("drizzle-orm");
       await db2.update(clientPortalUsers2).set({
         lastLogin: /* @__PURE__ */ new Date()
@@ -8514,7 +8514,7 @@ AgencyBoost CRM`
         fileUrl: normalizedFileUrl,
         uploadedBy: userId2
       }).returning();
-      const { commentFiles: commentFiles2 } = await import("./schema-LKBS7AGM.js");
+      const { commentFiles: commentFiles2 } = await import("./schema-OFJBW4MB.js");
       try {
         await db.insert(commentFiles2).values({
           id: attachment.id,
@@ -11229,8 +11229,8 @@ AgencyBoost CRM`
   });
   async function checkFileExists(fileId) {
     try {
-      const { db: db2 } = await import("./db-GFHIMQ7B.js");
-      const { commentFiles: commentFiles2, taskAttachments: taskAttachments2 } = await import("./schema-LKBS7AGM.js");
+      const { db: db2 } = await import("./db-XLVPQV5H.js");
+      const { commentFiles: commentFiles2, taskAttachments: taskAttachments2 } = await import("./schema-OFJBW4MB.js");
       const { eq: eq12 } = await import("drizzle-orm");
       const [commentFile] = await db2.select().from(commentFiles2).where(eq12(commentFiles2.id, fileId));
       if (commentFile) {
@@ -11268,8 +11268,8 @@ AgencyBoost CRM`
       if (!fileCheck.exists) {
         return res.status(404).json({ error: "File not found" });
       }
-      const { db: db2 } = await import("./db-GFHIMQ7B.js");
-      const { imageAnnotations: imageAnnotations2 } = await import("./schema-LKBS7AGM.js");
+      const { db: db2 } = await import("./db-XLVPQV5H.js");
+      const { imageAnnotations: imageAnnotations2 } = await import("./schema-OFJBW4MB.js");
       const { eq: eq12 } = await import("drizzle-orm");
       const annotations = await db2.select().from(imageAnnotations2).where(eq12(imageAnnotations2.fileId, req.params.fileId));
       res.json(annotations);
@@ -11299,14 +11299,14 @@ AgencyBoost CRM`
         createdAt: /* @__PURE__ */ new Date(),
         updatedAt: /* @__PURE__ */ new Date()
       });
-      const { db: db2 } = await import("./db-GFHIMQ7B.js");
-      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-LKBS7AGM.js");
+      const { db: db2 } = await import("./db-XLVPQV5H.js");
+      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-OFJBW4MB.js");
       const result = await db2.insert(imageAnnotations2).values(insertAnnotation).returning();
       const annotation = result[0];
       res.status(201).json(annotation);
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-LKBS7AGM.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-OFJBW4MB.js");
           const { eq: eq12 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -11343,7 +11343,7 @@ AgencyBoost CRM`
         console.log(`Annotation created with mentions: ${mentions.join(", ")}`);
         (async () => {
           try {
-            const { staff: staff2 } = await import("./schema-LKBS7AGM.js");
+            const { staff: staff2 } = await import("./schema-OFJBW4MB.js");
             const { inArray: inArray6 } = await import("drizzle-orm");
             const mentionedStaff = await db2.select({
               id: staff2.id,
@@ -11393,8 +11393,8 @@ AgencyBoost CRM`
         mentions,
         updatedAt: /* @__PURE__ */ new Date()
       };
-      const { db: db2 } = await import("./db-GFHIMQ7B.js");
-      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-LKBS7AGM.js");
+      const { db: db2 } = await import("./db-XLVPQV5H.js");
+      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-OFJBW4MB.js");
       const { eq: eq12 } = await import("drizzle-orm");
       const result = await db2.update(imageAnnotations2).set(updateData).where(eq12(imageAnnotations2.id, req.params.annotationId)).returning();
       if (result.length === 0) {
@@ -11403,7 +11403,7 @@ AgencyBoost CRM`
       res.json(result[0]);
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-LKBS7AGM.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-OFJBW4MB.js");
           const { eq: eq13 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -11443,7 +11443,7 @@ AgencyBoost CRM`
         console.log(`Annotation updated with mentions: ${mentions.join(", ")}`);
         (async () => {
           try {
-            const { staff: staff2 } = await import("./schema-LKBS7AGM.js");
+            const { staff: staff2 } = await import("./schema-OFJBW4MB.js");
             const { inArray: inArray6 } = await import("drizzle-orm");
             const mentionedStaff = await db2.select({
               id: staff2.id,
@@ -11484,8 +11484,8 @@ AgencyBoost CRM`
   });
   app2.delete("/api/annotations/:annotationId", requireAuth(), async (req, res) => {
     try {
-      const { db: db2 } = await import("./db-GFHIMQ7B.js");
-      const { imageAnnotations: imageAnnotations2 } = await import("./schema-LKBS7AGM.js");
+      const { db: db2 } = await import("./db-XLVPQV5H.js");
+      const { imageAnnotations: imageAnnotations2 } = await import("./schema-OFJBW4MB.js");
       const { eq: eq12 } = await import("drizzle-orm");
       const result = await db2.delete(imageAnnotations2).where(eq12(imageAnnotations2.id, req.params.annotationId)).returning();
       if (result.length === 0) {
@@ -11495,7 +11495,7 @@ AgencyBoost CRM`
       res.status(204).send();
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-LKBS7AGM.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-OFJBW4MB.js");
           const { eq: eq13 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -11538,8 +11538,8 @@ AgencyBoost CRM`
   });
   app2.patch("/api/annotations/:annotationId/toggle-complete", requireAuth(), async (req, res) => {
     try {
-      const { db: db2 } = await import("./db-GFHIMQ7B.js");
-      const { imageAnnotations: imageAnnotations2 } = await import("./schema-LKBS7AGM.js");
+      const { db: db2 } = await import("./db-XLVPQV5H.js");
+      const { imageAnnotations: imageAnnotations2 } = await import("./schema-OFJBW4MB.js");
       const { eq: eq12 } = await import("drizzle-orm");
       const [currentAnnotation] = await db2.select().from(imageAnnotations2).where(eq12(imageAnnotations2.id, req.params.annotationId));
       if (!currentAnnotation) {
@@ -11557,7 +11557,7 @@ AgencyBoost CRM`
       res.json(updatedAnnotation);
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-LKBS7AGM.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-OFJBW4MB.js");
           const { eq: eq13 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -18610,7 +18610,7 @@ ${appointment.description || ""}
   });
   app2.get("/api/integrations/slack/channels", requireAuth(), async (req, res) => {
     try {
-      const { slackService } = await import("./slack-service-XZ7EUE3L.js");
+      const { slackService } = await import("./slack-service-52FXGTIS.js");
       if (!slackService.isConfigured()) {
         return res.status(400).json({ error: "Slack not configured" });
       }
@@ -18627,7 +18627,7 @@ ${appointment.description || ""}
   });
   app2.get("/api/integrations/slack/users", requireAuth(), async (req, res) => {
     try {
-      const { slackService } = await import("./slack-service-XZ7EUE3L.js");
+      const { slackService } = await import("./slack-service-52FXGTIS.js");
       if (!slackService.isConfigured()) {
         return res.status(400).json({ error: "Slack not configured" });
       }
@@ -20994,7 +20994,7 @@ ${appointment.description || ""}
         }
       }
       try {
-        const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-IWVCPP5U.js");
+        const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-XJXYBK6G.js");
         const responsesObj = {};
         if (answers && answers.length > 0) {
           answers.forEach((answer) => {
@@ -26088,7 +26088,7 @@ ${appointment.description || ""}
   app2.post("/api/job-applications", async (req, res) => {
     try {
       console.log("Received job application:", req.body);
-      const insertJobApplicationSchema2 = (await import("./schema-LKBS7AGM.js")).insertJobApplicationSchema;
+      const insertJobApplicationSchema2 = (await import("./schema-OFJBW4MB.js")).insertJobApplicationSchema;
       const validatedData = insertJobApplicationSchema2.parse(req.body);
       const jobOpening = await db.select().from(jobOpenings).where(eq8(jobOpenings.id, validatedData.positionId)).limit(1);
       if (!jobOpening.length) {
@@ -29595,6 +29595,8 @@ ${appointment.description || ""}
         clientBudget: quotes.clientBudget,
         desiredMargin: quotes.desiredMargin,
         totalCost: quotes.totalCost,
+        oneTimeCost: quotes.oneTimeCost,
+        monthlyCost: quotes.monthlyCost,
         status: quotes.status,
         notes: quotes.notes,
         createdBy: quotes.createdBy,
@@ -29631,25 +29633,31 @@ ${appointment.description || ""}
       const effectiveStatus = desiredMargin < SALES_CONFIG.MINIMUM_MARGIN_THRESHOLD ? "pending_approval" : "draft";
       const result = await db.transaction(async (tx) => {
         let calculatedTotalCost = 0;
+        let calculatedOneTimeCost = 0;
+        let calculatedMonthlyCost = 0;
         const processedItems = [];
         if (req.body.items && Array.isArray(req.body.items)) {
           for (const item of req.body.items) {
             let unitCost = 0;
+            let itemIsOneTime = false;
             const quantity = parseInt(item.quantity) || 1;
             if (item.itemType === "product" && item.productId) {
-              const [product] = await tx.select({ cost: products.cost }).from(products).where(eq8(products.id, item.productId)).limit(1);
+              const [product] = await tx.select({ cost: products.cost, type: products.type }).from(products).where(eq8(products.id, item.productId)).limit(1);
               if (!product) {
                 throw new Error(`Product with ID ${item.productId} not found`);
               }
               unitCost = parseFloat(product.cost || "0");
+              itemIsOneTime = product.type === "one_time";
             } else if (item.itemType === "bundle" && item.bundleId) {
               const [bundle] = await tx.select({
                 id: productBundles.id,
-                name: productBundles.name
+                name: productBundles.name,
+                type: productBundles.type
               }).from(productBundles).where(eq8(productBundles.id, item.bundleId)).limit(1);
               if (!bundle) {
                 throw new Error(`Bundle with ID ${item.bundleId} not found`);
               }
+              itemIsOneTime = bundle.type === "one_time";
               const bundleProductsList = await tx.select({
                 productCost: products.cost
               }).from(bundleProducts).leftJoin(products, eq8(bundleProducts.productId, products.id)).where(eq8(bundleProducts.bundleId, item.bundleId));
@@ -29662,23 +29670,48 @@ ${appointment.description || ""}
               const [pkg] = await tx.select({ id: productPackages.id, name: productPackages.name }).from(productPackages).where(eq8(productPackages.id, item.packageId)).limit(1);
               if (!pkg) throw new Error(`Package with ID ${item.packageId} not found`);
               const pkgItems = await tx.select().from(packageItems).where(eq8(packageItems.packageId, item.packageId));
-              let packageCost = 0;
+              let packageOneTimeCost = 0;
+              let packageMonthlyCost = 0;
               for (const pi of pkgItems) {
                 if (pi.itemType === "product" && pi.productId) {
-                  const [p] = await tx.select({ cost: products.cost }).from(products).where(eq8(products.id, pi.productId));
-                  if (p) packageCost += parseFloat(p.cost || "0") * pi.quantity;
+                  const [p] = await tx.select({ cost: products.cost, type: products.type }).from(products).where(eq8(products.id, pi.productId));
+                  if (p) {
+                    const pCost = parseFloat(p.cost || "0") * pi.quantity;
+                    if (p.type === "one_time") {
+                      packageOneTimeCost += pCost;
+                    } else {
+                      packageMonthlyCost += pCost;
+                    }
+                  }
                 } else if (pi.itemType === "bundle" && pi.bundleId) {
+                  const [b] = await tx.select({ type: productBundles.type }).from(productBundles).where(eq8(productBundles.id, pi.bundleId));
                   const bps = await tx.select({ productCost: products.cost, quantity: bundleProducts.quantity }).from(bundleProducts).leftJoin(products, eq8(bundleProducts.productId, products.id)).where(eq8(bundleProducts.bundleId, pi.bundleId));
                   const bCost = bps.reduce((s, bp) => s + parseFloat(bp.productCost || "0") * (bp.quantity || 1), 0);
-                  packageCost += bCost * pi.quantity;
+                  const bundleTotalForPkg = bCost * pi.quantity;
+                  if (b && b.type === "one_time") {
+                    packageOneTimeCost += bundleTotalForPkg;
+                  } else {
+                    packageMonthlyCost += bundleTotalForPkg;
+                  }
                 }
               }
-              unitCost = packageCost;
+              unitCost = packageOneTimeCost + packageMonthlyCost;
+              const pkgOneTime = packageOneTimeCost * quantity;
+              const pkgMonthly = packageMonthlyCost * quantity;
+              calculatedOneTimeCost += pkgOneTime;
+              calculatedMonthlyCost += pkgMonthly;
             } else {
               throw new Error(`Invalid item type: ${item.itemType}. Must be 'product', 'bundle', or 'package'`);
             }
             const itemTotalCost = unitCost * quantity;
             calculatedTotalCost += itemTotalCost;
+            if (item.itemType !== "package") {
+              if (itemIsOneTime) {
+                calculatedOneTimeCost += itemTotalCost;
+              } else {
+                calculatedMonthlyCost += itemTotalCost;
+              }
+            }
             processedItems.push({
               productId: item.productId || null,
               bundleId: item.bundleId || null,
@@ -29695,7 +29728,9 @@ ${appointment.description || ""}
         const finalQuoteData = {
           ...validatedData,
           status: effectiveStatus,
-          totalCost: calculatedTotalCost.toString()
+          totalCost: calculatedTotalCost.toString(),
+          oneTimeCost: calculatedOneTimeCost.toString(),
+          monthlyCost: calculatedMonthlyCost.toString()
         };
         const [newQuote2] = await tx.insert(quotes).values(finalQuoteData).returning();
         if (processedItems.length > 0) {
@@ -29783,6 +29818,8 @@ ${appointment.description || ""}
         clientBudget: quotes.clientBudget,
         desiredMargin: quotes.desiredMargin,
         totalCost: quotes.totalCost,
+        oneTimeCost: quotes.oneTimeCost,
+        monthlyCost: quotes.monthlyCost,
         status: quotes.status,
         notes: quotes.notes,
         createdBy: quotes.createdBy,
@@ -29792,10 +29829,8 @@ ${appointment.description || ""}
         updatedAt: quotes.updatedAt,
         clientId: quotes.clientId,
         leadId: quotes.leadId,
-        // Join client data
         clientName: clients.name,
         clientCompany: clients.company,
-        // Join lead data  
         leadName: leads.name,
         leadCompany: leads.company
       }).from(quotes).leftJoin(clients, eq8(quotes.clientId, clients.id)).leftJoin(leads, eq8(quotes.leadId, leads.id)).where(eq8(quotes.id, id)).limit(1);
@@ -29917,6 +29952,8 @@ ${appointment.description || ""}
       }
       const result = await db.transaction(async (tx) => {
         let calculatedTotalCost = 0;
+        let calculatedOneTimeCost = 0;
+        let calculatedMonthlyCost = 0;
         const processedItems = [];
         for (const item of rawItems) {
           if (!item.itemType || !["product", "bundle", "package"].includes(item.itemType)) {
@@ -29933,20 +29970,24 @@ ${appointment.description || ""}
           }
           const quantity = Math.max(1, parseInt(item.quantity || "1"));
           let unitCost = 0;
+          let itemIsOneTime = false;
           if (item.itemType === "product" && item.productId) {
-            const [product] = await tx.select({ cost: products.cost }).from(products).where(eq8(products.id, item.productId)).limit(1);
+            const [product] = await tx.select({ cost: products.cost, type: products.type }).from(products).where(eq8(products.id, item.productId)).limit(1);
             if (!product) {
               throw new Error(`Product with ID ${item.productId} not found`);
             }
             unitCost = parseFloat(product.cost || "0");
+            itemIsOneTime = product.type === "one_time";
           } else if (item.itemType === "bundle" && item.bundleId) {
             const [bundle] = await tx.select({
               id: productBundles.id,
-              name: productBundles.name
+              name: productBundles.name,
+              type: productBundles.type
             }).from(productBundles).where(eq8(productBundles.id, item.bundleId)).limit(1);
             if (!bundle) {
               throw new Error(`Bundle with ID ${item.bundleId} not found`);
             }
+            itemIsOneTime = bundle.type === "one_time";
             const bundleProductsList = await tx.select({
               productCost: products.cost
             }).from(bundleProducts).leftJoin(products, eq8(bundleProducts.productId, products.id)).where(eq8(bundleProducts.bundleId, item.bundleId));
@@ -29959,21 +30000,44 @@ ${appointment.description || ""}
             const [pkg] = await tx.select({ id: productPackages.id }).from(productPackages).where(eq8(productPackages.id, item.packageId)).limit(1);
             if (!pkg) throw new Error(`Package with ID ${item.packageId} not found`);
             const pkgItems = await tx.select().from(packageItems).where(eq8(packageItems.packageId, item.packageId));
-            let packageCost = 0;
+            let packageOneTimeCost = 0;
+            let packageMonthlyCost = 0;
             for (const pi of pkgItems) {
               if (pi.itemType === "product" && pi.productId) {
-                const [p] = await tx.select({ cost: products.cost }).from(products).where(eq8(products.id, pi.productId));
-                if (p) packageCost += parseFloat(p.cost || "0") * pi.quantity;
+                const [p] = await tx.select({ cost: products.cost, type: products.type }).from(products).where(eq8(products.id, pi.productId));
+                if (p) {
+                  const pCost = parseFloat(p.cost || "0") * pi.quantity;
+                  if (p.type === "one_time") {
+                    packageOneTimeCost += pCost;
+                  } else {
+                    packageMonthlyCost += pCost;
+                  }
+                }
               } else if (pi.itemType === "bundle" && pi.bundleId) {
+                const [b] = await tx.select({ type: productBundles.type }).from(productBundles).where(eq8(productBundles.id, pi.bundleId));
                 const bps = await tx.select({ productCost: products.cost, quantity: bundleProducts.quantity }).from(bundleProducts).leftJoin(products, eq8(bundleProducts.productId, products.id)).where(eq8(bundleProducts.bundleId, pi.bundleId));
                 const bCost = bps.reduce((s, bp) => s + parseFloat(bp.productCost || "0") * (bp.quantity || 1), 0);
-                packageCost += bCost * pi.quantity;
+                const bundleTotalForPkg = bCost * pi.quantity;
+                if (b && b.type === "one_time") {
+                  packageOneTimeCost += bundleTotalForPkg;
+                } else {
+                  packageMonthlyCost += bundleTotalForPkg;
+                }
               }
             }
-            unitCost = packageCost;
+            unitCost = packageOneTimeCost + packageMonthlyCost;
+            calculatedOneTimeCost += packageOneTimeCost * quantity;
+            calculatedMonthlyCost += packageMonthlyCost * quantity;
           }
           const itemTotalCost = unitCost * quantity;
           calculatedTotalCost += itemTotalCost;
+          if (item.itemType !== "package") {
+            if (itemIsOneTime) {
+              calculatedOneTimeCost += itemTotalCost;
+            } else {
+              calculatedMonthlyCost += itemTotalCost;
+            }
+          }
           processedItems.push({
             quoteId: id,
             productId: item.productId || null,
@@ -29994,10 +30058,11 @@ ${appointment.description || ""}
           clientBudget: validatedQuote.clientBudget,
           desiredMargin: desiredMargin.toString(),
           totalCost: calculatedTotalCost.toString(),
+          oneTimeCost: calculatedOneTimeCost.toString(),
+          monthlyCost: calculatedMonthlyCost.toString(),
           status: effectiveStatus,
           notes: validatedQuote.notes,
           updatedAt: /* @__PURE__ */ new Date(),
-          // Preserve createdBy from existing quote
           createdBy: existingQuote.createdBy
         };
         await tx.update(quotes).set(updateData).where(eq8(quotes.id, id));
@@ -31097,7 +31162,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
   }
   app2.get("/api/google-calendar-events", requireAuth(), async (req, res) => {
     try {
-      const { calendarEvents: calendarEvents3 } = await import("./db-GFHIMQ7B.js");
+      const { calendarEvents: calendarEvents3 } = await import("./db-XLVPQV5H.js");
       const userId2 = req.session?.userId;
       if (!userId2) {
         return res.status(401).json({ error: "Not authenticated" });
@@ -31128,7 +31193,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
   app2.post("/api/calendar/events", requireAuth(), createCalendarEvent);
   app2.patch("/api/calendar/events/:eventId/status", requireAuth(), updateCalendarEventStatus);
   app2.get("/api/calendar/time-entries", requireAuth(), getEventTimeEntries);
-  const { chatWithAssistant } = await import("./ai-assistant-XDNPA4AW.js");
+  const { chatWithAssistant } = await import("./ai-assistant-BMG2QL5K.js");
   app2.get("/api/ai-assistant/settings", requireAuth(["admin"]), async (req, res) => {
     try {
       const [settings] = await db.select().from(aiAssistantSettings).limit(1);
@@ -33861,7 +33926,7 @@ router.post("/sync", async (req, res) => {
         });
       }
     }
-    const { syncUserCalendar } = await import("./googleCalendarSync-QF2LHSBN.js");
+    const { syncUserCalendar } = await import("./googleCalendarSync-TKKQRRG4.js");
     syncUserCalendar(req.session.userId, "primary").then((result) => {
       console.log(`[Sync Complete] User ${req.session?.userId}: ${result.eventsCreated} created, ${result.eventsUpdated} updated, ${result.eventsDeleted} deleted`);
     }).catch((error) => {
@@ -33925,7 +33990,7 @@ router.post("/auto-sync", async (req, res) => {
         message: "Data is recent, no sync needed"
       });
     }
-    const { syncUserCalendar } = await import("./googleCalendarSync-QF2LHSBN.js");
+    const { syncUserCalendar } = await import("./googleCalendarSync-TKKQRRG4.js");
     syncUserCalendar(req.session.userId, "primary").then((result) => {
       console.log(`[Auto-Sync Complete] User ${req.session?.userId}: ${result.eventsCreated} created, ${result.eventsUpdated} updated, ${result.eventsDeleted} deleted`);
     }).catch((error) => {
@@ -35482,7 +35547,7 @@ app.post(
           console.warn("[Slack Events] Missing signature headers");
           return res.status(401).json({ error: "Missing authentication headers" });
         }
-        const { slackService } = await import("./slack-service-XZ7EUE3L.js");
+        const { slackService } = await import("./slack-service-52FXGTIS.js");
         if (!slackService.verifySlackRequest(timestamp, signature, rawBody)) {
           console.warn("[Slack Events] Invalid signature - rejecting request");
           return res.status(401).json({ error: "Invalid signature" });
@@ -35502,7 +35567,7 @@ app.post(
         console.log("[Slack Events] URL verification challenge received");
         return res.json({ challenge: payload.challenge });
       }
-      const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-IWVCPP5U.js");
+      const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-XJXYBK6G.js");
       if (payload.type === "event_callback") {
         const event = payload.event;
         console.log(`[Slack Events] Received event: ${event.type}`, {
@@ -35586,7 +35651,7 @@ app.post(
   express2.raw({ type: "application/json" }),
   async (req, res) => {
     try {
-      const { handleStripeWebhook: handleStripeWebhook2 } = await import("./proposalRoutes-PE457KAH.js");
+      const { handleStripeWebhook: handleStripeWebhook2 } = await import("./proposalRoutes-UNED2GCM.js");
       const { getNotificationService } = await import("./notification-service-2QQMBITT.js");
       const notificationService = getNotificationService();
       if (notificationService) {
@@ -35696,6 +35761,19 @@ async function ensureQuotesProposalColumns() {
     log(`Quotes proposal columns migration error: ${error.message}`);
   }
 }
+async function ensureQuotesCostBreakdownColumns() {
+  try {
+    log("Running startup migration: ensureQuotesCostBreakdownColumns");
+    await db.execute(sql6`
+      ALTER TABLE quotes
+      ADD COLUMN IF NOT EXISTS one_time_cost decimal(10,2) DEFAULT '0',
+      ADD COLUMN IF NOT EXISTS monthly_cost decimal(10,2) DEFAULT '0';
+    `);
+    log("Quotes cost breakdown columns migration completed successfully");
+  } catch (error) {
+    log(`Quotes cost breakdown columns migration error: ${error.message}`);
+  }
+}
 async function ensureTicketExternalSubmissionColumns() {
   try {
     log("Running startup migration: ensureTicketExternalSubmissionColumns");
@@ -35783,6 +35861,7 @@ async function runStartupMigrations() {
   try {
     await ensureClientBriefColumns();
     await ensureQuotesProposalColumns();
+    await ensureQuotesCostBreakdownColumns();
     await ensureTicketExternalSubmissionColumns();
     await ensureFormsTablesExist();
     await initializeCoreClientBriefSections();
@@ -35826,31 +35905,31 @@ async function setupFullApp(server) {
     appFullyLoaded = true;
     log("\u2705 All routes and middleware configured");
     runStartupMigrations().then(() => {
-      import("./googleCalendarBackgroundSync-MHJLQLYL.js").then(({ startBackgroundSync }) => {
+      import("./googleCalendarBackgroundSync-6JS75436.js").then(({ startBackgroundSync }) => {
         startBackgroundSync();
         log("\u2705 Google Calendar background sync started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start background calendar sync: ${err.message}`);
       });
-      import("./weeklyHoursCheckService-NQUYL43V.js").then(({ startWeeklyHoursCheck }) => {
+      import("./weeklyHoursCheckService-E4F7IK6K.js").then(({ startWeeklyHoursCheck }) => {
         startWeeklyHoursCheck();
         log("\u2705 Weekly hours check service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start weekly hours check service: ${err.message}`);
       });
-      import("./longRunningTimerService-SHLMIXM4.js").then(({ startLongRunningTimerCheck }) => {
+      import("./longRunningTimerService-WSW5HEIW.js").then(({ startLongRunningTimerCheck }) => {
         startLongRunningTimerCheck();
         log("\u2705 Long-running timer alert service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start long-running timer alert service: ${err.message}`);
       });
-      import("./proposalReminderService-QCVZNWX5.js").then(({ startProposalReminderService }) => {
+      import("./proposalReminderService-CCR5NFP2.js").then(({ startProposalReminderService }) => {
         startProposalReminderService();
         log("\u2705 Proposal reminder service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start proposal reminder service: ${err.message}`);
       });
-      import("./recurringTaskService-4EAAJ36X.js").then(({ startRecurringTaskService }) => {
+      import("./recurringTaskService-6UQGTF3U.js").then(({ startRecurringTaskService }) => {
         startRecurringTaskService();
         log("\u2705 Recurring task generation service started");
       }).catch((err) => {
@@ -35885,7 +35964,7 @@ async function seedIntakeDescriptionTemplates() {
   log("Running startup migration: seedIntakeDescriptionTemplates");
   try {
     const { sectionDescriptionTemplates } = await import("./seed-description-templates-XFHPZJLE.js");
-    const { taskIntakeSections: taskIntakeSections2 } = await import("./schema-LKBS7AGM.js");
+    const { taskIntakeSections: taskIntakeSections2 } = await import("./schema-OFJBW4MB.js");
     for (const [sectionName, template] of Object.entries(sectionDescriptionTemplates)) {
       await db.update(taskIntakeSections2).set({ descriptionTemplate: template, updatedAt: /* @__PURE__ */ new Date() }).where(eq11(taskIntakeSections2.sectionName, sectionName));
     }

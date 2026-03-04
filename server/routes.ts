@@ -36449,6 +36449,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           clientBudget: quotes.clientBudget,
           desiredMargin: quotes.desiredMargin,
           totalCost: quotes.totalCost,
+          oneTimeCost: quotes.oneTimeCost,
+          monthlyCost: quotes.monthlyCost,
           status: quotes.status,
           notes: quotes.notes,
           createdBy: quotes.createdBy,
@@ -36500,17 +36502,19 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const result = await db.transaction(async (tx) => {
         // Calculate total cost from quote items using DATABASE prices (not client values)
         let calculatedTotalCost = 0;
+        let calculatedOneTimeCost = 0;
+        let calculatedMonthlyCost = 0;
         const processedItems: any[] = [];
         
         if (req.body.items && Array.isArray(req.body.items)) {
           for (const item of req.body.items) {
             let unitCost = 0;
+            let itemIsOneTime = false;
             const quantity = parseInt(item.quantity) || 1;
             
             if (item.itemType === 'product' && item.productId) {
-              // Get actual product cost from database
               const [product] = await tx
-                .select({ cost: products.cost })
+                .select({ cost: products.cost, type: products.type })
                 .from(products)
                 .where(eq(products.id, item.productId))
                 .limit(1);
@@ -36520,12 +36524,13 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
               }
               
               unitCost = parseFloat(product.cost || '0');
+              itemIsOneTime = product.type === 'one_time';
             } else if (item.itemType === 'bundle' && item.bundleId) {
-              // Verify bundle exists
               const [bundle] = await tx
                 .select({ 
                   id: productBundles.id,
-                  name: productBundles.name
+                  name: productBundles.name,
+                  type: productBundles.type
                 })
                 .from(productBundles)
                 .where(eq(productBundles.id, item.bundleId))
@@ -36535,7 +36540,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                 throw new Error(`Bundle with ID ${item.bundleId} not found`);
               }
               
-              // Calculate bundle cost from constituent products (each product = 1 unit)
+              itemIsOneTime = bundle.type === 'one_time';
+              
               const bundleProductsList = await tx
                 .select({
                   productCost: products.cost,
@@ -36546,7 +36552,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
               
               const bundleCost = bundleProductsList.reduce((sum, bp) => {
                 const cost = parseFloat(bp.productCost || '0');
-                return sum + cost; // Each product is 1 unit by default
+                return sum + cost;
               }, 0);
               
               unitCost = bundleCost;
@@ -36559,24 +36565,50 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
               if (!pkg) throw new Error(`Package with ID ${item.packageId} not found`);
 
               const pkgItems = await tx.select().from(packageItems).where(eq(packageItems.packageId, item.packageId));
-              let packageCost = 0;
+              let packageOneTimeCost = 0;
+              let packageMonthlyCost = 0;
               for (const pi of pkgItems) {
                 if (pi.itemType === 'product' && pi.productId) {
-                  const [p] = await tx.select({ cost: products.cost }).from(products).where(eq(products.id, pi.productId));
-                  if (p) packageCost += parseFloat(p.cost || '0') * pi.quantity;
+                  const [p] = await tx.select({ cost: products.cost, type: products.type }).from(products).where(eq(products.id, pi.productId));
+                  if (p) {
+                    const pCost = parseFloat(p.cost || '0') * pi.quantity;
+                    if (p.type === 'one_time') {
+                      packageOneTimeCost += pCost;
+                    } else {
+                      packageMonthlyCost += pCost;
+                    }
+                  }
                 } else if (pi.itemType === 'bundle' && pi.bundleId) {
+                  const [b] = await tx.select({ type: productBundles.type }).from(productBundles).where(eq(productBundles.id, pi.bundleId));
                   const bps = await tx.select({ productCost: products.cost, quantity: bundleProducts.quantity }).from(bundleProducts).leftJoin(products, eq(bundleProducts.productId, products.id)).where(eq(bundleProducts.bundleId, pi.bundleId));
                   const bCost = bps.reduce((s, bp) => s + parseFloat(bp.productCost || '0') * (bp.quantity || 1), 0);
-                  packageCost += bCost * pi.quantity;
+                  const bundleTotalForPkg = bCost * pi.quantity;
+                  if (b && b.type === 'one_time') {
+                    packageOneTimeCost += bundleTotalForPkg;
+                  } else {
+                    packageMonthlyCost += bundleTotalForPkg;
+                  }
                 }
               }
-              unitCost = packageCost;
+              unitCost = packageOneTimeCost + packageMonthlyCost;
+              const pkgOneTime = packageOneTimeCost * quantity;
+              const pkgMonthly = packageMonthlyCost * quantity;
+              calculatedOneTimeCost += pkgOneTime;
+              calculatedMonthlyCost += pkgMonthly;
             } else {
               throw new Error(`Invalid item type: ${item.itemType}. Must be 'product', 'bundle', or 'package'`);
             }
             
             const itemTotalCost = unitCost * quantity;
             calculatedTotalCost += itemTotalCost;
+            
+            if (item.itemType !== 'package') {
+              if (itemIsOneTime) {
+                calculatedOneTimeCost += itemTotalCost;
+              } else {
+                calculatedMonthlyCost += itemTotalCost;
+              }
+            }
             
             processedItems.push({
               productId: item.productId || null,
@@ -36592,11 +36624,12 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           }
         }
 
-        // Override status and totalCost based on server calculations
         const finalQuoteData = {
           ...validatedData,
           status: effectiveStatus,
           totalCost: calculatedTotalCost.toString(),
+          oneTimeCost: calculatedOneTimeCost.toString(),
+          monthlyCost: calculatedMonthlyCost.toString(),
         };
 
         // Create the quote
@@ -36717,6 +36750,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           clientBudget: quotes.clientBudget,
           desiredMargin: quotes.desiredMargin,
           totalCost: quotes.totalCost,
+          oneTimeCost: quotes.oneTimeCost,
+          monthlyCost: quotes.monthlyCost,
           status: quotes.status,
           notes: quotes.notes,
           createdBy: quotes.createdBy,
@@ -36726,10 +36761,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           updatedAt: quotes.updatedAt,
           clientId: quotes.clientId,
           leadId: quotes.leadId,
-          // Join client data
           clientName: clients.name,
           clientCompany: clients.company,
-          // Join lead data  
           leadName: leads.name,
           leadCompany: leads.company,
         })
@@ -36906,12 +36939,12 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
       // Use transaction for atomic update with proper validation
       const result = await db.transaction(async (tx) => {
-        // Validate and calculate costs inside transaction
         let calculatedTotalCost = 0;
+        let calculatedOneTimeCost = 0;
+        let calculatedMonthlyCost = 0;
         const processedItems: any[] = [];
 
         for (const item of rawItems) {
-          // Validate item structure
           if (!item.itemType || !['product', 'bundle', 'package'].includes(item.itemType)) {
             throw new Error("Invalid item type. Must be 'product', 'bundle', or 'package'");
           }
@@ -36930,10 +36963,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
           const quantity = Math.max(1, parseInt(item.quantity || '1'));
           let unitCost = 0;
+          let itemIsOneTime = false;
 
           if (item.itemType === 'product' && item.productId) {
             const [product] = await tx
-              .select({ cost: products.cost })
+              .select({ cost: products.cost, type: products.type })
               .from(products)
               .where(eq(products.id, item.productId))
               .limit(1);
@@ -36943,12 +36977,13 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             }
             
             unitCost = parseFloat(product.cost || '0');
+            itemIsOneTime = product.type === 'one_time';
           } else if (item.itemType === 'bundle' && item.bundleId) {
-            // Verify bundle exists
             const [bundle] = await tx
               .select({ 
                 id: productBundles.id,
-                name: productBundles.name
+                name: productBundles.name,
+                type: productBundles.type
               })
               .from(productBundles)
               .where(eq(productBundles.id, item.bundleId))
@@ -36958,7 +36993,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
               throw new Error(`Bundle with ID ${item.bundleId} not found`);
             }
             
-            // Calculate bundle cost from constituent products (each product = 1 unit)
+            itemIsOneTime = bundle.type === 'one_time';
+            
             const bundleProductsList = await tx
               .select({
                 productCost: products.cost,
@@ -36969,7 +37005,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             
             const bundleCost = bundleProductsList.reduce((sum, bp) => {
               const cost = parseFloat(bp.productCost || '0');
-              return sum + cost; // Each product is 1 unit by default
+              return sum + cost;
             }, 0);
             
             unitCost = bundleCost;
@@ -36982,22 +37018,46 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             if (!pkg) throw new Error(`Package with ID ${item.packageId} not found`);
 
             const pkgItems = await tx.select().from(packageItems).where(eq(packageItems.packageId, item.packageId));
-            let packageCost = 0;
+            let packageOneTimeCost = 0;
+            let packageMonthlyCost = 0;
             for (const pi of pkgItems) {
               if (pi.itemType === 'product' && pi.productId) {
-                const [p] = await tx.select({ cost: products.cost }).from(products).where(eq(products.id, pi.productId));
-                if (p) packageCost += parseFloat(p.cost || '0') * pi.quantity;
+                const [p] = await tx.select({ cost: products.cost, type: products.type }).from(products).where(eq(products.id, pi.productId));
+                if (p) {
+                  const pCost = parseFloat(p.cost || '0') * pi.quantity;
+                  if (p.type === 'one_time') {
+                    packageOneTimeCost += pCost;
+                  } else {
+                    packageMonthlyCost += pCost;
+                  }
+                }
               } else if (pi.itemType === 'bundle' && pi.bundleId) {
+                const [b] = await tx.select({ type: productBundles.type }).from(productBundles).where(eq(productBundles.id, pi.bundleId));
                 const bps = await tx.select({ productCost: products.cost, quantity: bundleProducts.quantity }).from(bundleProducts).leftJoin(products, eq(bundleProducts.productId, products.id)).where(eq(bundleProducts.bundleId, pi.bundleId));
                 const bCost = bps.reduce((s, bp) => s + parseFloat(bp.productCost || '0') * (bp.quantity || 1), 0);
-                packageCost += bCost * pi.quantity;
+                const bundleTotalForPkg = bCost * pi.quantity;
+                if (b && b.type === 'one_time') {
+                  packageOneTimeCost += bundleTotalForPkg;
+                } else {
+                  packageMonthlyCost += bundleTotalForPkg;
+                }
               }
             }
-            unitCost = packageCost;
+            unitCost = packageOneTimeCost + packageMonthlyCost;
+            calculatedOneTimeCost += packageOneTimeCost * quantity;
+            calculatedMonthlyCost += packageMonthlyCost * quantity;
           }
 
           const itemTotalCost = unitCost * quantity;
           calculatedTotalCost += itemTotalCost;
+
+          if (item.itemType !== 'package') {
+            if (itemIsOneTime) {
+              calculatedOneTimeCost += itemTotalCost;
+            } else {
+              calculatedMonthlyCost += itemTotalCost;
+            }
+          }
 
           processedItems.push({
             quoteId: id,
@@ -37013,7 +37073,6 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           });
         }
 
-        // Prepare update data, preserving createdBy
         const updateData = {
           name: validatedQuote.name,
           clientId: validatedQuote.clientId,
@@ -37021,20 +37080,19 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           clientBudget: validatedQuote.clientBudget,
           desiredMargin: desiredMargin.toString(),
           totalCost: calculatedTotalCost.toString(),
+          oneTimeCost: calculatedOneTimeCost.toString(),
+          monthlyCost: calculatedMonthlyCost.toString(),
           status: effectiveStatus,
           notes: validatedQuote.notes,
           updatedAt: new Date(),
-          // Preserve createdBy from existing quote
           createdBy: existingQuote.createdBy,
         };
 
-        // Update the quote
         await tx
           .update(quotes)
           .set(updateData)
           .where(eq(quotes.id, id));
 
-        // Delete existing quote items
         await tx.delete(quoteItems).where(eq(quoteItems.quoteId, id));
 
         // Insert new quote items

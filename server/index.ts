@@ -2014,6 +2014,20 @@ async function ensureQuotesProposalColumns() {
   }
 }
 
+async function ensureQuotesCostBreakdownColumns() {
+  try {
+    log("Running startup migration: ensureQuotesCostBreakdownColumns");
+    await db.execute(sql`
+      ALTER TABLE quotes
+      ADD COLUMN IF NOT EXISTS one_time_cost decimal(10,2) DEFAULT '0',
+      ADD COLUMN IF NOT EXISTS monthly_cost decimal(10,2) DEFAULT '0';
+    `);
+    log("Quotes cost breakdown columns migration completed successfully");
+  } catch (error: any) {
+    log(`Quotes cost breakdown columns migration error: ${error.message}`);
+  }
+}
+
 async function ensureTicketExternalSubmissionColumns() {
   try {
     log("Running startup migration: ensureTicketExternalSubmissionColumns");
@@ -2103,6 +2117,7 @@ async function runStartupMigrations() {
   try {
     await ensureClientBriefColumns();
     await ensureQuotesProposalColumns();
+    await ensureQuotesCostBreakdownColumns();
     await ensureTicketExternalSubmissionColumns();
     await ensureFormsTablesExist();
     await initializeCoreClientBriefSections();

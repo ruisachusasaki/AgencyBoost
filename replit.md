@@ -39,7 +39,7 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Sales Reports**: Pipeline and Sales Rep Reports with date range filtering.
 - **Onboarding Contracting & Payment (Quotes as Proposals)**: Quotes function as proposals. Upon "sent" status, a public link is generated and emailed to clients for review, digital signing, and payment (Stripe via CardElement or ACH). A Stripe webhook handles payment confirmation, triggering lead-to-client conversion, deal creation, product transfer, and onboarding task generation. Proposal branding is customizable.
 - **Sales Settings**: Dynamic minimum margin threshold configuration for quotes.
-- **Quotes Management**: Table-based layout with sortable columns, inline status updates, and low margin highlighting.
+- **Quotes Management**: Table-based layout with sortable columns (One-Time Cost, Monthly Cost separated), inline status updates, and low margin highlighting.
 - **Lead Management**: Customizable lead source options.
 - **Product Packages**: Allows creating packages of bundles and individual products with configurable quantities, including build fees, monthly retail prices, and profit margin calculations.
 - **Quote to Client Products Transfer**: Automatic transfer of accepted quote products/bundles/packages to the client.
