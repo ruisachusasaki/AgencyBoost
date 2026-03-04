@@ -127,9 +127,9 @@ export default function PublicProposal() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const { data, isLoading, error, refetch } = useQuery<any>({
-    queryKey: ["/api/proposals/public", token],
+    queryKey: ["/api/quotes/public", token],
     queryFn: async () => {
-      const res = await fetch(`/api/proposals/public/${token}`);
+      const res = await fetch(`/api/quotes/public/${token}`);
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || "Failed to load proposal");
@@ -159,7 +159,7 @@ export default function PublicProposal() {
 
   const signMutation = useMutation({
     mutationFn: async (signData: any) => {
-      const res = await fetch(`/api/proposals/public/${token}/sign`, {
+      const res = await fetch(`/api/quotes/public/${token}/sign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(signData),
@@ -180,7 +180,7 @@ export default function PublicProposal() {
     setPaymentError(null);
     setClientSecret(null);
 
-    const res = await fetch(`/api/proposals/public/${token}/pay`, {
+    const res = await fetch(`/api/quotes/public/${token}/pay`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ paymentMethod: method }),

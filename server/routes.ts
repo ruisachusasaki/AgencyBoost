@@ -37152,12 +37152,14 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
       // Define valid status transitions
       const validTransitions: Record<string, string[]> = {
-        "draft": ["draft", "sent"], // Can stay draft or move to sent
-        "pending_approval": ["pending_approval"], // Can only stay pending (changed by approval endpoint)
-        "approved": ["approved", "sent"], // Can stay approved or move to sent
-        "sent": ["sent", "accepted"], // Can stay sent or move to accepted
-        "accepted": ["accepted"], // Final state
-        "rejected": ["rejected"], // Final state
+        "draft": ["draft", "sent"],
+        "pending_approval": ["pending_approval"],
+        "approved": ["approved", "sent"],
+        "sent": ["sent", "signed", "accepted"],
+        "signed": ["signed", "completed"],
+        "completed": ["completed"],
+        "accepted": ["accepted"],
+        "rejected": ["rejected"],
       };
 
       // Check if quote exists
@@ -37180,13 +37182,25 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         });
       }
 
+      const updateData: any = {
+        status: status,
+        updatedAt: new Date(),
+      };
+
+      if (status === 'sent' && !quote.publicToken) {
+        updateData.publicToken = randomBytes(32).toString('hex');
+        updateData.sentAt = new Date();
+        updateData.sentByUserId = userId;
+        updateData.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        if (!quote.paymentAmountType) {
+          updateData.paymentAmountType = 'full';
+        }
+      }
+
       // Update quote status
       const [updatedQuote] = await db
         .update(quotes)
-        .set({
-          status: status,
-          updatedAt: new Date(),
-        })
+        .set(updateData)
         .where(eq(quotes.id, id))
         .returning();
 

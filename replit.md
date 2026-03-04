@@ -1,7 +1,7 @@
 # AgencyBoost CRM System
 
 ## Overview
-AgencyBoost is a comprehensive CRM system for marketing agencies, aiming to enhance operational efficiency and oversight. It streamlines client, project, campaign, lead, task, and invoice management through features like client asset approval workflows, robust automation, sales reporting, and a responsive user interface.
+AgencyBoost is a comprehensive CRM system designed for marketing agencies. Its primary purpose is to enhance operational efficiency and oversight across various agency functions. Key capabilities include streamlined management of clients, projects, campaigns, leads, tasks, and invoices. The system incorporates features such as client asset approval workflows, robust automation, detailed sales reporting, and a responsive user interface to support agency growth and productivity.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -22,44 +22,44 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Database**: PostgreSQL with Drizzle ORM.
 
 ### UI/UX Decisions
-- Responsive sidebar navigation and mobile-first design using Radix UI, shadcn/ui, and Tailwind CSS.
+- Responsive design leveraging Radix UI, shadcn/ui, and Tailwind CSS.
 - Dark/Light Mode with localStorage persistence and system preference detection.
-- Component-scoped CSS with design system variables.
+- Component-scoped CSS using design system variables.
 
 ### Technical Implementations
-- **Authentication & Authorization**: Direct Google OAuth 2.0 with multi-user support, session management, and role-based access control (Admin, Manager, User, Accounting). Features a comprehensive hierarchical permission system (module.tab.action format) with Admin bypass and backward compatibility for existing permissions. Permission checks use an in-memory cache (30s TTL) in `server/auth.ts` to avoid redundant DB queries; cache is cleared automatically on role/permission updates via `clearPermissionCache()`.
-- **Data Management**: Relational schema, CRUD, audit logs, sorting, pagination, CSV import/export, and custom fields.
-- **Google Calendar Integration**: Per-user two-way sync with Google Calendar API, including incremental sync, contact creation, availability blocking, and workflow triggers.
-- **Business Timezone**: Account-level timezone setting for consistent date calculations.
-- **Task Management**: Hierarchical sub-tasks, scheduling, dependencies, recurring tasks, bulk actions. Features a section-based task intake form with conditional visibility, templated description generation, and automatic assignment rules based on form answers. Supports product/task mapping via `product_task_templates` for auto-generating tasks on lead conversion. Tasks have optional `source_template_id` and `generation_id` columns linking back to templates. Related tables: `product_task_templates`, `client_task_generations`, `client_recurring_config`. Task generation engine at `server/taskGenerationEngine.ts` handles onboarding/recurring task creation with variable interpolation ({{client.name}}, {{product.name}}, etc.), quantity modes (once/per_unit/per_unit_named), dependency chaining, staff validation (deactivated staff → unassigned), and idempotency checks (prevents duplicate generation). Template fields include `categoryId` (references `task_categories`) and `workflowId` (references `team_workflows`) which are applied to generated tasks. Task Mapping Settings (admin-only, under Settings > Tasks > Settings tab): auto-generate on conversion toggle, enable recurring generation kill switch, default cycle length (days), default advance generation days, and a read-only template variables reference table. Settings stored in `task_settings` key-value table with `task_mapping_*` prefixed keys. Kill switches are enforced in `server/recurringTaskService.ts` and the lead conversion handler in `server/routes.ts`. Default cycle/advance values are used when creating `client_recurring_config` for new clients. API: `GET/PUT /api/settings/task-mapping`. Template CRUD includes duplicate single template (`POST /api/product-task-templates/:id/duplicate`) and copy all templates between items (`POST /api/product-task-templates/copy-to-item`). Create/Edit template modal includes merge tag insertion button for description field. Performance indexes on `product_task_templates` (productId, bundleId, packageId, taskType, status) and `client_task_generations` (clientId, cycleNumber, composite).
-- **Communication**: Smart Lists, Email/SMS, Twilio-based VoIP calling, document management, notes, calendar management, and unified templating.
-- **Automation System**: API-driven, database-backed workflow engine with triggers and action types, supporting conditional evaluation and variable interpolation. Includes full Zapier-like Slack integration for various actions and triggers.
-- **Client Management**: Client team assignment, health scoring (5 metrics: Goals, Fulfillment, Relationship, Client Actions, Payment Status), asset approval workflow with annotation, customizable column views, billing information, and bulk actions.
-- **HR Features**: Time off requests, job application forms, expense reports, 1-on-1 meeting tracker (on-demand recurring, integrates with internal/Google Calendar), 1v1 performance reports, and an interactive organization chart. Includes PX Meetings, a collaborative team meeting feature with customizable segments, recurring options, field-level auto-save, and presence tracking.
+- **Authentication & Authorization**: Direct Google OAuth 2.0, multi-user support, session management, and role-based access control (Admin, Manager, User, Accounting) with a hierarchical permission system.
+- **Data Management**: Relational schema, standard CRUD operations, audit logs, sorting, pagination, CSV import/export, and custom fields.
+- **Google Calendar Integration**: Per-user two-way sync with Google Calendar API, including availability blocking and workflow triggers.
+- **Business Timezone**: Account-level timezone setting.
+- **Task Management**: Hierarchical sub-tasks, scheduling, dependencies, recurring tasks, bulk actions. Features a section-based task intake form, templated description generation, and automatic assignment. Product-to-task mapping supports automated task generation on lead conversion, with a robust task generation engine handling variable interpolation, quantity modes, and idempotency.
+- **Communication**: Smart Lists, Email/SMS, Twilio-based VoIP calling, document management, notes, calendar, and unified templating.
+- **Automation System**: API-driven, database-backed workflow engine supporting triggers, actions, conditional evaluation, and variable interpolation, including Zapier-like Slack integration.
+- **Client Management**: Team assignment, health scoring, asset approval workflows with annotation, customizable views, billing, and bulk actions.
+- **HR Features**: Time off requests, job application forms, expense reports, 1-on-1 meeting tracker, performance reports, and an interactive organization chart. Includes PX Meetings for collaborative team meetings.
 - **Sales Reports**: Pipeline and Sales Rep Reports with date range filtering.
-- **Onboarding Contracting & Payment (Proposals)**: Full client onboarding flow from quote to payment. Sales creates proposals from approved quotes, emails them to clients via Mailgun. Clients receive a public link (`/proposal/:token`) to review, sign (typed or drawn signature with T&C acceptance), and pay (Stripe credit card via CardElement or ACH via Financial Connections). Stripe webhook (`/api/webhooks/stripe`) handles payment confirmation and triggers fulfillment: auto lead-to-client conversion, deal creation, quote product/bundle/package transfer, onboarding task generation, and recurring config setup. Background reminder service checks hourly for unsigned proposals (3-day threshold, max 3 reminders). T&C managed under Settings > Sales with version tracking. **Proposal Branding**: Customizable branding (logo, company name, primary color, footer text) under Settings > Sales > Proposal Branding tab with live preview. Branding is applied to public proposal pages (dynamic colors, logo, company name, footer) and email templates. Stored via `task_settings` key `proposal_branding`, falls back to `business_profile` defaults. API: `GET/PUT /api/settings/proposal-branding`. Tables: `proposals`, `proposal_terms`. Key files: `server/proposalRoutes.ts`, `server/stripe.ts`, `server/proposalReminderService.ts`, `client/src/pages/public-proposal.tsx`, `client/src/components/proposals-tab.tsx`, `client/src/pages/settings/sales.tsx`.
+- **Onboarding Contracting & Payment (Quotes as Proposals)**: Quotes function as proposals. Upon "sent" status, a public link is generated and emailed to clients for review, digital signing, and payment (Stripe via CardElement or ACH). A Stripe webhook handles payment confirmation, triggering lead-to-client conversion, deal creation, product transfer, and onboarding task generation. Proposal branding is customizable.
 - **Sales Settings**: Dynamic minimum margin threshold configuration for quotes.
-- **Quotes Management**: Modern table-based layout with sortable columns, inline status updates, and low margin highlighting.
+- **Quotes Management**: Table-based layout with sortable columns, inline status updates, and low margin highlighting.
 - **Lead Management**: Customizable lead source options.
-- **Product Packages**: Packages system under Settings > Products that allows creating packages containing both bundles and individual products with configurable quantities. Features include Build Fee and Monthly Retail Price fields, per-item cost/price breakdown in expanded view (one-time vs recurring split), profit margin calculations, and Duplicate Package functionality. Packages can be assigned to clients and added to quotes. Tables: `product_packages` (with `build_fee`, `monthly_retail_price` columns), `package_items`, `client_packages`. Quote items support `itemType: 'package'` with `packageId`.
-- **Quote to Client Products Transfer**: Automatic transfer of accepted quote products/bundles/packages.
+- **Product Packages**: Allows creating packages of bundles and individual products with configurable quantities, including build fees, monthly retail prices, and profit margin calculations.
+- **Quote to Client Products Transfer**: Automatic transfer of accepted quote products/bundles/packages to the client.
 - **Predictive Hiring Alerts**: Staffing capacity prediction with configurable alerts.
-- **Team Workload Reports**: Comprehensive analytics for staff workload.
+- **Team Workload Reports**: Analytics for staff workload.
 - **Activity & Comments**: Global timer, activity logging, and a threaded comments system with @mentions and emoji picker.
-- **Time Entry Editing**: Admins and managers can edit time entries in the TimeSheet View.
-- **Long-Running Timer Alerts**: Background service notifies users and admins of timers exceeding a configurable threshold.
-- **Weekly Hours System Alerts**: Built-in background service that automatically notifies managers and admins when team members log fewer than a configurable threshold (default 40 hours) per week. Runs on a configurable check day, with persistent duplicate prevention, calendar time inclusion option, and settings UI in Settings > Tasks.
-- **File & Media**: Advanced uploads, inline media display, voice recording, secure object storage, and collaborative annotation.
-- **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, search, draft/published workflow, version history, auto-generated Table of Contents, and related articles suggestions.
-- **AI Assistant**: OpenAI-powered chat widget indexing Knowledge Base content for quick answers, featuring conversation history and source citations.
-- **User Preferences**: Per-user view customization for column visibility and widths, including drag-to-resize for task tables.
-- **Notification System**: Database-backed system with bell icon, @mention detection, and settings panel.
+- **Time Entry Editing**: Admins and managers can edit time entries.
+- **Long-Running Timer Alerts**: Background service for timers exceeding a threshold.
+- **Weekly Hours System Alerts**: Background service notifies managers/admins if team members log fewer than a configurable threshold of hours weekly.
+- **File & Media**: Advanced uploads, inline display, voice recording, secure object storage, and collaborative annotation.
+- **Knowledge Base**: Notion-like platform with categories, hierarchy, RBAC, search, draft/published workflow, version history, and auto-generated Table of Contents.
+- **AI Assistant**: OpenAI-powered chat widget indexing Knowledge Base content for quick answers with conversation history and source citations.
+- **User Preferences**: Per-user view customization for column visibility and widths.
+- **Notification System**: Database-backed system with bell icon and @mention detection.
 - **User Profile Settings**: Rich text editor for email signatures.
 - **Multi-Dashboard System**: Users can create multiple named dashboards with tab-based navigation.
 - **Dashboard Widgets**: Customizable dashboards with drag-and-drop widget management and real-time data.
-- **Global Search**: Intelligent search across clients, leads, and tasks with real-time results and direct navigation.
-- **Ticketing System**: Admin-only bug report and feature request tracking with CRUD, comments, status lifecycle, priority levels, type classification, response time analytics, screenshot uploads, Loom video URL field, and automatic ticket routing rules.
-- **Call Center Time Tracking**: Simplified clock-in/clock-out interface for call center staff. Users select a client and start/stop timers. Features weekly summary with date/client/hours breakdown, client switching mid-shift, auto-redirect for call-center-only users, and a dedicated "Call Center Cost" report under Reports showing labor cost by client using staff hourly rates. Managed through normal Settings > Staff with call_center permission module. Table: `call_center_time_entries`.
+- **Global Search**: Intelligent search across clients, leads, and tasks.
+- **Ticketing System**: Admin-only bug report and feature request tracking with CRUD, comments, status lifecycle, priority levels, type classification, response time analytics, screenshot uploads, Loom video field, and automatic routing rules.
+- **Call Center Time Tracking**: Simplified clock-in/clock-out interface for call center staff, with client selection, weekly summaries, client switching, and a dedicated "Call Center Cost" report.
 
 ## External Dependencies
 
@@ -91,12 +91,3 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 ### Session Management
 - **Connect PG Simple**: PostgreSQL session store for Express.
 - **Express Session**: Session middleware.
-
-## Production Deployment Architecture
-- **Target**: VM (always-running for background services)
-- **Build**: Pre-built `dist/` folder committed to repo. Build command is `echo "pre-built"`. To rebuild: `vite build && esbuild server/prodEntry.ts server/appWorker.ts server/index.ts --platform=node --packages=external --bundle --splitting --format=esm --outdir=dist`
-- **Entry Point**: `dist/prodEntry.js` — tiny HTTP server that responds to health checks instantly with 200 status
-- **Key Design**: `prodEntry.ts` starts listening on the port immediately (within milliseconds), returns 200 for ALL requests during startup. Then spawns `appWorker.js` as a child process (on PORT+1) that loads the full Express app. Once the worker sends "ready" via IPC, prodEntry proxies all requests to it. If proxy fails, falls back to 200 HTML response.
-- **Important**: The heavy 1.4MB Express bundle MUST load in a child process because `import()` blocks the event loop during JS parsing. Single-process approaches fail health checks on slow deployment machines.
-- **Important**: `server/index.ts` auto-starts unless `PROD_ENTRY` env var is set (which `prodEntry.ts` sets before importing). This prevents duplicate server.listen() conflicts.
-- **Important**: `dist/` is NOT in `.gitignore` — pre-built files are included in deployment to avoid build timeouts.

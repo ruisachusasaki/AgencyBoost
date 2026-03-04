@@ -1982,10 +1982,43 @@ async function syncStaffRolesToUserRoles() {
  * Run all startup migrations
  * Called AFTER server starts listening to avoid Cloud Run health check timeout
  */
+async function ensureQuotesProposalColumns() {
+  try {
+    log("Running startup migration: ensureQuotesProposalColumns");
+    await db.execute(sql`
+      ALTER TABLE quotes
+      ADD COLUMN IF NOT EXISTS public_token varchar,
+      ADD COLUMN IF NOT EXISTS signed_at timestamp,
+      ADD COLUMN IF NOT EXISTS signed_by_name varchar,
+      ADD COLUMN IF NOT EXISTS signed_by_email varchar,
+      ADD COLUMN IF NOT EXISTS signature_data text,
+      ADD COLUMN IF NOT EXISTS terms_accepted boolean,
+      ADD COLUMN IF NOT EXISTS terms_version_id varchar,
+      ADD COLUMN IF NOT EXISTS payment_method varchar,
+      ADD COLUMN IF NOT EXISTS payment_intent_id varchar,
+      ADD COLUMN IF NOT EXISTS payment_status varchar,
+      ADD COLUMN IF NOT EXISTS paid_at timestamp,
+      ADD COLUMN IF NOT EXISTS paid_amount decimal(10,2),
+      ADD COLUMN IF NOT EXISTS payment_amount_type varchar,
+      ADD COLUMN IF NOT EXISTS custom_payment_amount decimal(10,2),
+      ADD COLUMN IF NOT EXISTS reminder_sent_at timestamp,
+      ADD COLUMN IF NOT EXISTS reminder_count integer DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS expires_at timestamp,
+      ADD COLUMN IF NOT EXISTS sent_at timestamp,
+      ADD COLUMN IF NOT EXISTS sent_by_user_id uuid,
+      ADD COLUMN IF NOT EXISTS viewed_at timestamp;
+    `);
+    log("Quotes proposal columns migration completed successfully");
+  } catch (error: any) {
+    log(`Quotes proposal columns migration error: ${error.message}`);
+  }
+}
+
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
     await ensureClientBriefColumns();
+    await ensureQuotesProposalColumns();
     await initializeCoreClientBriefSections();
     await initializeDefaultAutomationTriggers();
     await initializeDefaultAutomationActions();

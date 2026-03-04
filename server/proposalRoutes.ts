@@ -1,6 +1,6 @@
 import express, { type Express } from "express";
 import { db } from "./db";
-import { proposals, proposalTerms, quotes, quoteItems, clients, leads, staff, products, productBundles, productPackages, clientProducts, clientBundles, clientPackages, packageItems, deals, leadPipelineStages, taskSettings, clientRecurringConfig, businessProfile } from "@shared/schema";
+import { proposalTerms, quotes, quoteItems, clients, leads, staff, products, productBundles, productPackages, clientProducts, clientBundles, clientPackages, packageItems, deals, leadPipelineStages, taskSettings, clientRecurringConfig, businessProfile } from "@shared/schema";
 import { eq, desc, and, sql, lt, isNull, asc } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { z } from "zod";
@@ -12,180 +12,54 @@ function generatePublicToken(): string {
   return randomBytes(32).toString("hex");
 }
 
+async function loadBranding() {
+  let branding: any = { logoUrl: "", companyName: "", primaryColor: "#00C9C6", footerText: "" };
+  const [brandingSetting] = await db.select().from(taskSettings)
+    .where(eq(taskSettings.settingKey, 'proposal_branding'));
+  if (brandingSetting?.settingValue) {
+    branding = brandingSetting.settingValue;
+  } else {
+    const [profile] = await db.select().from(businessProfile).limit(1);
+    if (profile) {
+      branding.logoUrl = profile.logo || "";
+      branding.companyName = profile.companyName || "";
+    }
+  }
+  return branding;
+}
+
 export function registerProposalRoutes(
   app: Express,
   requireAuth: () => any,
   requirePermission: (module: string, permission: string) => any,
   notificationService: NotificationService
 ) {
-  app.get("/api/proposals", requireAuth(), async (req, res) => {
+
+  app.post("/api/quotes/:id/send-proposal", requireAuth(), async (req, res) => {
     try {
-      const results = await db
-        .select({
-          id: proposals.id,
-          quoteId: proposals.quoteId,
-          clientId: proposals.clientId,
-          leadId: proposals.leadId,
-          status: proposals.status,
-          signedAt: proposals.signedAt,
-          signedByName: proposals.signedByName,
-          signedByEmail: proposals.signedByEmail,
-          termsAccepted: proposals.termsAccepted,
-          paymentMethod: proposals.paymentMethod,
-          paymentStatus: proposals.paymentStatus,
-          paidAt: proposals.paidAt,
-          paidAmount: proposals.paidAmount,
-          paymentAmountType: proposals.paymentAmountType,
-          customPaymentAmount: proposals.customPaymentAmount,
-          publicToken: proposals.publicToken,
-          reminderCount: proposals.reminderCount,
-          expiresAt: proposals.expiresAt,
-          sentAt: proposals.sentAt,
-          viewedAt: proposals.viewedAt,
-          createdAt: proposals.createdAt,
-          updatedAt: proposals.updatedAt,
-          quoteName: quotes.name,
-          clientName: clients.company,
-          leadName: leads.name,
-          sentByFirstName: staff.firstName,
-          sentByLastName: staff.lastName,
-        })
-        .from(proposals)
-        .leftJoin(quotes, eq(proposals.quoteId, quotes.id))
-        .leftJoin(clients, eq(proposals.clientId, clients.id))
-        .leftJoin(leads, eq(proposals.leadId, leads.id))
-        .leftJoin(staff, eq(proposals.sentByUserId, staff.id))
-        .orderBy(desc(proposals.createdAt));
+      const { id } = req.params;
+      const { recipientEmail, recipientName, paymentAmountType, customPaymentAmount } = req.body;
 
-      res.json(results);
-    } catch (error) {
-      console.error("Error fetching proposals:", error);
-      res.status(500).json({ message: "Failed to fetch proposals" });
-    }
-  });
-
-  app.get("/api/proposals/:id", requireAuth(), async (req, res) => {
-    try {
-      const [proposal] = await db
-        .select()
-        .from(proposals)
-        .where(eq(proposals.id, req.params.id));
-
-      if (!proposal) return res.status(404).json({ message: "Proposal not found" });
-
-      const [quote] = await db.select().from(quotes).where(eq(quotes.id, proposal.quoteId));
-      const items = await db.select().from(quoteItems).where(eq(quoteItems.quoteId, proposal.quoteId));
-
-      let client = null;
-      if (proposal.clientId) {
-        const [c] = await db.select().from(clients).where(eq(clients.id, proposal.clientId));
-        client = c;
-      }
-
-      let lead = null;
-      if (proposal.leadId) {
-        const [l] = await db.select().from(leads).where(eq(leads.id, proposal.leadId));
-        lead = l;
-      }
-
-      res.json({ proposal, quote, items, client, lead });
-    } catch (error) {
-      console.error("Error fetching proposal:", error);
-      res.status(500).json({ message: "Failed to fetch proposal" });
-    }
-  });
-
-  app.post("/api/proposals", requireAuth(), async (req, res) => {
-    try {
-      const { quoteId, paymentAmountType, customPaymentAmount, expiresInDays } = req.body;
-
-      if (!quoteId) {
-        return res.status(400).json({ message: "quoteId is required" });
-      }
-
-      const [quote] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+      const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
       if (!quote) return res.status(404).json({ message: "Quote not found" });
 
-      if (!["approved", "accepted", "sent"].includes(quote.status)) {
-        return res.status(400).json({ message: "Quote must be approved, sent, or accepted to create a proposal" });
+      if (!["draft", "approved", "sent"].includes(quote.status)) {
+        return res.status(400).json({ message: "Quote must be in draft, approved, or sent status to send as proposal" });
       }
-
-      const existingProposal = await db
-        .select()
-        .from(proposals)
-        .where(eq(proposals.quoteId, quoteId));
-
-      if (existingProposal.length > 0) {
-        return res.status(400).json({ message: "A proposal already exists for this quote" });
-      }
-
-      const expiresAt = expiresInDays
-        ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-      const [proposal] = await db.insert(proposals).values({
-        quoteId,
-        clientId: quote.clientId,
-        leadId: quote.leadId,
-        status: "draft",
-        publicToken: generatePublicToken(),
-        paymentAmountType: paymentAmountType || "full",
-        customPaymentAmount: customPaymentAmount || null,
-        expiresAt,
-        sentByUserId: (req as any).user?.id,
-      }).returning();
-
-      res.status(201).json(proposal);
-    } catch (error) {
-      console.error("Error creating proposal:", error);
-      res.status(500).json({ message: "Failed to create proposal" });
-    }
-  });
-
-  app.put("/api/proposals/:id", requireAuth(), async (req, res) => {
-    try {
-      const { id } = req.params;
-      const data = req.body;
-
-      const [existing] = await db.select().from(proposals).where(eq(proposals.id, id));
-      if (!existing) return res.status(404).json({ message: "Proposal not found" });
-
-      const [updated] = await db
-        .update(proposals)
-        .set({ ...data, updatedAt: new Date() })
-        .where(eq(proposals.id, id))
-        .returning();
-
-      res.json(updated);
-    } catch (error) {
-      console.error("Error updating proposal:", error);
-      res.status(500).json({ message: "Failed to update proposal" });
-    }
-  });
-
-  app.post("/api/proposals/:id/send", requireAuth(), async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { recipientEmail, recipientName } = req.body;
-
-      const [proposal] = await db.select().from(proposals).where(eq(proposals.id, id));
-      if (!proposal) return res.status(404).json({ message: "Proposal not found" });
-
-      const [quote] = await db.select().from(quotes).where(eq(quotes.id, proposal.quoteId));
 
       let clientEmail = recipientEmail;
       let clientName = recipientName || "Client";
 
-      if (!clientEmail && proposal.leadId) {
-        const [lead] = await db.select().from(leads).where(eq(leads.id, proposal.leadId));
+      if (!clientEmail && quote.leadId) {
+        const [lead] = await db.select().from(leads).where(eq(leads.id, quote.leadId));
         if (lead) {
           clientEmail = lead.email;
           clientName = lead.name || clientName;
         }
       }
 
-      if (!clientEmail && proposal.clientId) {
-        const [client] = await db.select().from(clients).where(eq(clients.id, proposal.clientId));
+      if (!clientEmail && quote.clientId) {
+        const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
         if (client) {
           clientEmail = client.email;
           clientName = client.company || client.contactName || clientName;
@@ -196,28 +70,44 @@ export function registerProposalRoutes(
         return res.status(400).json({ message: "No recipient email found. Please provide recipientEmail." });
       }
 
+      const publicToken = quote.publicToken || generatePublicToken();
+      const expiresAt = quote.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      const updateData: any = {
+        status: "sent",
+        publicToken,
+        expiresAt,
+        sentAt: new Date(),
+        sentByUserId: (req as any).user?.id,
+        updatedAt: new Date(),
+      };
+
+      if (paymentAmountType) {
+        updateData.paymentAmountType = paymentAmountType;
+      }
+      if (customPaymentAmount) {
+        updateData.customPaymentAmount = customPaymentAmount;
+      }
+      if (!quote.paymentAmountType) {
+        updateData.paymentAmountType = paymentAmountType || "full";
+      }
+
+      const [updated] = await db
+        .update(quotes)
+        .set(updateData)
+        .where(eq(quotes.id, id))
+        .returning();
+
       const appUrl = process.env.REPLIT_DOMAINS
         ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
         : process.env.REPLIT_DEV_DOMAIN
           ? `https://${process.env.REPLIT_DEV_DOMAIN}`
           : "https://agencyflow.app";
 
-      const proposalUrl = `${appUrl}/proposal/${proposal.publicToken}`;
-      const quoteName = quote?.name || "Your Proposal";
+      const proposalUrl = `${appUrl}/proposal/${publicToken}`;
+      const quoteName = quote.name || "Your Proposal";
 
-      let branding: any = { logoUrl: "", companyName: "", primaryColor: "#00C9C6", footerText: "" };
-      const [brandingSetting] = await db.select().from(taskSettings)
-        .where(eq(taskSettings.settingKey, 'proposal_branding'));
-      if (brandingSetting?.settingValue) {
-        branding = brandingSetting.settingValue;
-      } else {
-        const [profile] = await db.select().from(businessProfile).limit(1);
-        if (profile) {
-          branding.logoUrl = profile.logo || "";
-          branding.companyName = profile.companyName || "";
-        }
-      }
-
+      const branding = await loadBranding();
       const html = generateProposalEmailHtml(clientName, quoteName, proposalUrl, branding);
 
       const emailResult = await notificationService.sendDirectEmail({
@@ -227,47 +117,87 @@ export function registerProposalRoutes(
         html,
       });
 
-      const [updated] = await db
-        .update(proposals)
-        .set({
-          status: "sent",
-          sentAt: new Date(),
-          sentByUserId: (req as any).user?.id,
-          updatedAt: new Date(),
-        })
-        .where(eq(proposals.id, id))
-        .returning();
-
-      res.json({ proposal: updated, emailSent: emailResult.sent, recipientEmail: clientEmail });
+      res.json({ quote: updated, emailSent: emailResult.sent, recipientEmail: clientEmail, proposalUrl });
     } catch (error) {
-      console.error("Error sending proposal:", error);
+      console.error("Error sending quote as proposal:", error);
       res.status(500).json({ message: "Failed to send proposal" });
     }
   });
 
-  app.get("/api/proposals/public/:token", async (req, res) => {
+  app.post("/api/quotes/:id/resend-proposal", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { recipientEmail } = req.body;
+
+      const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
+      if (!quote) return res.status(404).json({ message: "Quote not found" });
+
+      if (!quote.publicToken) {
+        return res.status(400).json({ message: "This quote has not been sent as a proposal yet" });
+      }
+
+      let clientEmail = recipientEmail;
+      let clientName = "Client";
+
+      if (!clientEmail && quote.leadId) {
+        const [lead] = await db.select().from(leads).where(eq(leads.id, quote.leadId));
+        if (lead) { clientEmail = lead.email; clientName = lead.name || clientName; }
+      }
+      if (!clientEmail && quote.clientId) {
+        const [client] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
+        if (client) { clientEmail = client.email; clientName = client.company || client.contactName || clientName; }
+      }
+
+      if (!clientEmail) {
+        return res.status(400).json({ message: "No recipient email found" });
+      }
+
+      const appUrl = process.env.REPLIT_DOMAINS
+        ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+        : process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : "https://agencyflow.app";
+
+      const proposalUrl = `${appUrl}/proposal/${quote.publicToken}`;
+      const branding = await loadBranding();
+      const html = generateProposalEmailHtml(clientName, quote.name, proposalUrl, branding);
+
+      const emailResult = await notificationService.sendDirectEmail({
+        to: clientEmail,
+        subject: `Your Proposal: ${quote.name}`,
+        text: `Hi ${clientName},\n\nA reminder about your proposal. Please review, sign, and complete payment at:\n\n${proposalUrl}\n\nThank you!`,
+        html,
+      });
+
+      res.json({ emailSent: emailResult.sent, recipientEmail: clientEmail });
+    } catch (error) {
+      console.error("Error resending proposal:", error);
+      res.status(500).json({ message: "Failed to resend proposal" });
+    }
+  });
+
+  app.get("/api/quotes/public/:token", async (req, res) => {
     try {
       const { token } = req.params;
-      const [proposal] = await db
+      const [quote] = await db
         .select()
-        .from(proposals)
-        .where(eq(proposals.publicToken, token));
+        .from(quotes)
+        .where(eq(quotes.publicToken, token));
 
-      if (!proposal) return res.status(404).json({ message: "Proposal not found" });
+      if (!quote) return res.status(404).json({ message: "Proposal not found" });
 
-      if (proposal.expiresAt && new Date(proposal.expiresAt) < new Date()) {
+      if (quote.expiresAt && new Date(quote.expiresAt) < new Date()) {
         return res.status(410).json({ message: "This proposal has expired" });
       }
 
-      if (!proposal.viewedAt) {
+      if (!quote.viewedAt) {
         await db
-          .update(proposals)
-          .set({ viewedAt: new Date(), status: proposal.status === "sent" ? "viewed" : proposal.status, updatedAt: new Date() })
-          .where(eq(proposals.id, proposal.id));
+          .update(quotes)
+          .set({ viewedAt: new Date(), updatedAt: new Date() })
+          .where(eq(quotes.id, quote.id));
       }
 
-      const [quote] = await db.select().from(quotes).where(eq(quotes.id, proposal.quoteId));
-      const items = await db.select().from(quoteItems).where(eq(quoteItems.quoteId, proposal.quoteId));
+      const items = await db.select().from(quoteItems).where(eq(quoteItems.quoteId, quote.id));
 
       const enrichedItems = await Promise.all(items.map(async (item) => {
         let itemName = "";
@@ -286,11 +216,11 @@ export function registerProposalRoutes(
       }));
 
       let clientName = "";
-      if (proposal.clientId) {
-        const [c] = await db.select().from(clients).where(eq(clients.id, proposal.clientId));
+      if (quote.clientId) {
+        const [c] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
         if (c) clientName = c.company || c.contactName || "";
-      } else if (proposal.leadId) {
-        const [l] = await db.select().from(leads).where(eq(leads.id, proposal.leadId));
+      } else if (quote.leadId) {
+        const [l] = await db.select().from(leads).where(eq(leads.id, quote.leadId));
         if (l) clientName = l.name || "";
       }
 
@@ -301,40 +231,29 @@ export function registerProposalRoutes(
         .orderBy(desc(proposalTerms.version))
         .limit(1);
 
-      let paymentAmount = parseFloat(quote?.totalCost || "0");
-      if (proposal.paymentAmountType === "custom" && proposal.customPaymentAmount) {
-        paymentAmount = parseFloat(proposal.customPaymentAmount);
+      let paymentAmount = parseFloat(quote.clientBudget || quote.totalCost || "0");
+      if (quote.paymentAmountType === "custom" && quote.customPaymentAmount) {
+        paymentAmount = parseFloat(quote.customPaymentAmount);
       }
 
-      let branding: any = { logoUrl: "", companyName: "", primaryColor: "#00C9C6", footerText: "" };
-      const [brandingSetting] = await db.select().from(taskSettings)
-        .where(eq(taskSettings.settingKey, 'proposal_branding'));
-      if (brandingSetting?.settingValue) {
-        branding = brandingSetting.settingValue;
-      } else {
-        const [profile] = await db.select().from(businessProfile).limit(1);
-        if (profile) {
-          branding.logoUrl = profile.logo || "";
-          branding.companyName = profile.companyName || "";
-        }
-      }
+      const branding = await loadBranding();
 
       res.json({
         proposal: {
-          id: proposal.id,
-          status: proposal.status,
-          signedAt: proposal.signedAt,
-          signedByName: proposal.signedByName,
-          signedByEmail: proposal.signedByEmail,
-          termsAccepted: proposal.termsAccepted,
-          paymentMethod: proposal.paymentMethod,
-          paymentStatus: proposal.paymentStatus,
-          paidAt: proposal.paidAt,
-          paidAmount: proposal.paidAmount,
-          paymentAmountType: proposal.paymentAmountType,
-          expiresAt: proposal.expiresAt,
+          id: quote.id,
+          status: quote.status,
+          signedAt: quote.signedAt,
+          signedByName: quote.signedByName,
+          signedByEmail: quote.signedByEmail,
+          termsAccepted: quote.termsAccepted,
+          paymentMethod: quote.paymentMethod,
+          paymentStatus: quote.paymentStatus,
+          paidAt: quote.paidAt,
+          paidAmount: quote.paidAmount,
+          paymentAmountType: quote.paymentAmountType,
+          expiresAt: quote.expiresAt,
         },
-        quote: quote ? { name: quote.name, totalCost: quote.totalCost, clientBudget: quote.clientBudget, notes: quote.notes } : null,
+        quote: { name: quote.name, totalCost: quote.totalCost, clientBudget: quote.clientBudget, notes: quote.notes },
         items: enrichedItems,
         clientName,
         terms: activeTerms[0] || null,
@@ -349,7 +268,7 @@ export function registerProposalRoutes(
     }
   });
 
-  app.post("/api/proposals/public/:token/sign", async (req, res) => {
+  app.post("/api/quotes/public/:token/sign", async (req, res) => {
     try {
       const { token } = req.params;
       const { signerName, signerEmail, signatureData, termsAccepted } = req.body;
@@ -361,18 +280,18 @@ export function registerProposalRoutes(
         return res.status(400).json({ message: "You must accept the Terms & Conditions" });
       }
 
-      const [proposal] = await db
+      const [quote] = await db
         .select()
-        .from(proposals)
-        .where(eq(proposals.publicToken, token));
+        .from(quotes)
+        .where(eq(quotes.publicToken, token));
 
-      if (!proposal) return res.status(404).json({ message: "Proposal not found" });
+      if (!quote) return res.status(404).json({ message: "Proposal not found" });
 
-      if (proposal.signedAt) {
+      if (quote.signedAt) {
         return res.status(400).json({ message: "This proposal has already been signed" });
       }
 
-      if (proposal.expiresAt && new Date(proposal.expiresAt) < new Date()) {
+      if (quote.expiresAt && new Date(quote.expiresAt) < new Date()) {
         return res.status(410).json({ message: "This proposal has expired" });
       }
 
@@ -384,7 +303,7 @@ export function registerProposalRoutes(
         .limit(1);
 
       const [updated] = await db
-        .update(proposals)
+        .update(quotes)
         .set({
           status: "signed",
           signedAt: new Date(),
@@ -395,18 +314,17 @@ export function registerProposalRoutes(
           termsVersionId: activeTerms[0]?.id || null,
           updatedAt: new Date(),
         })
-        .where(eq(proposals.id, proposal.id))
+        .where(eq(quotes.id, quote.id))
         .returning();
 
-      if (proposal.sentByUserId) {
-        const [sender] = await db.select().from(staff).where(eq(staff.id, proposal.sentByUserId));
+      if (quote.sentByUserId) {
+        const [sender] = await db.select().from(staff).where(eq(staff.id, quote.sentByUserId));
         if (sender) {
-          const [quote] = await db.select().from(quotes).where(eq(quotes.id, proposal.quoteId));
           try {
             await notificationService.sendDirectEmail({
               to: sender.email,
-              subject: `Proposal Signed: ${quote?.name || 'Proposal'}`,
-              text: `Great news! ${signerName} (${signerEmail}) has signed the proposal "${quote?.name || 'Proposal'}". Awaiting payment.`,
+              subject: `Proposal Signed: ${quote.name}`,
+              text: `Great news! ${signerName} (${signerEmail}) has signed the proposal "${quote.name}". Awaiting payment.`,
             });
           } catch (e) {
             console.error("Error sending signature notification:", e);
@@ -421,7 +339,7 @@ export function registerProposalRoutes(
     }
   });
 
-  app.post("/api/proposals/public/:token/pay", async (req, res) => {
+  app.post("/api/quotes/public/:token/pay", async (req, res) => {
     try {
       const { token } = req.params;
       const { paymentMethod } = req.body;
@@ -434,27 +352,24 @@ export function registerProposalRoutes(
         return res.status(503).json({ message: "Payment processing is not configured" });
       }
 
-      const [proposal] = await db
+      const [quote] = await db
         .select()
-        .from(proposals)
-        .where(eq(proposals.publicToken, token));
+        .from(quotes)
+        .where(eq(quotes.publicToken, token));
 
-      if (!proposal) return res.status(404).json({ message: "Proposal not found" });
+      if (!quote) return res.status(404).json({ message: "Proposal not found" });
 
-      if (!proposal.signedAt) {
+      if (!quote.signedAt) {
         return res.status(400).json({ message: "Proposal must be signed before payment" });
       }
 
-      if (proposal.paidAt) {
+      if (quote.paidAt) {
         return res.status(400).json({ message: "Payment has already been completed" });
       }
 
-      const [quote] = await db.select().from(quotes).where(eq(quotes.id, proposal.quoteId));
-      if (!quote) return res.status(404).json({ message: "Associated quote not found" });
-
-      let paymentAmount = parseFloat(quote.totalCost || "0");
-      if (proposal.paymentAmountType === "custom" && proposal.customPaymentAmount) {
-        paymentAmount = parseFloat(proposal.customPaymentAmount);
+      let paymentAmount = parseFloat(quote.clientBudget || quote.totalCost || "0");
+      if (quote.paymentAmountType === "custom" && quote.customPaymentAmount) {
+        paymentAmount = parseFloat(quote.customPaymentAmount);
       }
 
       if (paymentAmount <= 0) {
@@ -462,18 +377,17 @@ export function registerProposalRoutes(
       }
 
       const metadata = {
-        proposalId: proposal.id,
-        quoteId: proposal.quoteId,
-        clientId: proposal.clientId || "",
-        leadId: proposal.leadId || "",
+        quoteId: quote.id,
+        clientId: quote.clientId || "",
+        leadId: quote.leadId || "",
       };
 
       let result;
       if (paymentMethod === "ach") {
         result = await createACHPaymentIntent(
           paymentAmount,
-          proposal.signedByEmail || "",
-          proposal.signedByName || "",
+          quote.signedByEmail || "",
+          quote.signedByName || "",
           metadata
         );
       } else {
@@ -495,16 +409,15 @@ export function registerProposalRoutes(
       }
 
       await db
-        .update(proposals)
+        .update(quotes)
         .set({
           paymentMethod,
           paymentIntentId: result.paymentIntent.id,
           paymentStatus: "pending",
           paidAmount: paymentAmount.toString(),
-          status: "payment_pending",
           updatedAt: new Date(),
         })
-        .where(eq(proposals.id, proposal.id));
+        .where(eq(quotes.id, quote.id));
 
       res.json({ clientSecret: result.clientSecret });
     } catch (error) {
@@ -530,22 +443,28 @@ export function registerProposalRoutes(
     try {
       const { title, content } = req.body;
       if (!title || !content) {
-        return res.status(400).json({ message: "title and content are required" });
+        return res.status(400).json({ message: "Title and content are required" });
       }
 
-      await db
-        .update(proposalTerms)
-        .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(proposalTerms.isActive, true));
+      const existing = await db
+        .select()
+        .from(proposalTerms)
+        .orderBy(desc(proposalTerms.version))
+        .limit(1);
 
-      const maxVersion = await db
-        .select({ maxVer: sql<number>`COALESCE(MAX(${proposalTerms.version}), 0)` })
-        .from(proposalTerms);
+      const nextVersion = existing.length > 0 ? existing[0].version + 1 : 1;
+
+      if (existing.length > 0) {
+        await db
+          .update(proposalTerms)
+          .set({ isActive: false })
+          .where(eq(proposalTerms.isActive, true));
+      }
 
       const [newTerms] = await db.insert(proposalTerms).values({
         title,
         content,
-        version: (maxVersion[0]?.maxVer || 0) + 1,
+        version: nextVersion,
         isActive: true,
       }).returning();
 
@@ -558,20 +477,8 @@ export function registerProposalRoutes(
 
   app.get("/api/settings/proposal-branding", requireAuth(), async (req, res) => {
     try {
-      const [setting] = await db.select().from(taskSettings)
-        .where(eq(taskSettings.settingKey, 'proposal_branding'));
-
-      if (setting?.settingValue) {
-        return res.json(setting.settingValue);
-      }
-
-      const [profile] = await db.select().from(businessProfile).limit(1);
-      res.json({
-        logoUrl: profile?.logo || "",
-        companyName: profile?.companyName || "",
-        primaryColor: "#00C9C6",
-        footerText: "",
-      });
+      const branding = await loadBranding();
+      res.json(branding);
     } catch (error) {
       console.error("Error fetching proposal branding:", error);
       res.status(500).json({ message: "Failed to fetch proposal branding" });
@@ -673,11 +580,11 @@ function generateProposalEmailHtml(
     <p>Review, sign, and pay — all in one place</p>
   </div>
   <div class="content">
-    <p class="greeting">Hi ${clientName},</p>
+    <p class="greeting">Hi ${escHtml(clientName)},</p>
     <p>We've prepared a proposal for you. Please review the details, sign, and complete payment to get started.</p>
     <div class="details">
       <div class="details-label">Proposal</div>
-      <div class="details-value">${quoteName}</div>
+      <div class="details-value">${escHtml(quoteName)}</div>
     </div>
     <div class="steps">
       <div class="step"><span class="step-number">1</span><span>Review the proposal details and pricing</span></div>
@@ -725,18 +632,18 @@ export async function handleStripeWebhook(req: any, res: any, notificationServic
 
   if (event.type === "payment_intent.succeeded") {
     const paymentIntent = event.data.object as any;
-    const proposalId = paymentIntent.metadata?.proposalId;
+    const quoteId = paymentIntent.metadata?.quoteId;
 
-    if (proposalId) {
+    if (quoteId) {
       try {
-        const [proposal] = await db
+        const [quote] = await db
           .select()
-          .from(proposals)
-          .where(eq(proposals.id, proposalId));
+          .from(quotes)
+          .where(eq(quotes.id, quoteId));
 
-        if (proposal) {
+        if (quote) {
           await db
-            .update(proposals)
+            .update(quotes)
             .set({
               status: "completed",
               paymentStatus: "paid",
@@ -744,9 +651,9 @@ export async function handleStripeWebhook(req: any, res: any, notificationServic
               paidAmount: (paymentIntent.amount / 100).toFixed(2),
               updatedAt: new Date(),
             })
-            .where(eq(proposals.id, proposalId));
+            .where(eq(quotes.id, quoteId));
 
-          await triggerProposalFulfillment(proposal, notificationService);
+          await triggerQuoteFulfillment(quote, notificationService);
         }
       } catch (error) {
         console.error("Error processing payment success:", error);
@@ -756,48 +663,46 @@ export async function handleStripeWebhook(req: any, res: any, notificationServic
 
   if (event.type === "payment_intent.payment_failed") {
     const paymentIntent = event.data.object as any;
-    const proposalId = paymentIntent.metadata?.proposalId;
+    const quoteId = paymentIntent.metadata?.quoteId;
 
-    if (proposalId) {
+    if (quoteId) {
       await db
-        .update(proposals)
+        .update(quotes)
         .set({
           paymentStatus: "failed",
           updatedAt: new Date(),
         })
-        .where(eq(proposals.id, proposalId));
+        .where(eq(quotes.id, quoteId));
     }
   }
 
   res.json({ received: true });
 }
 
-async function triggerProposalFulfillment(proposal: any, notificationService: NotificationService) {
+async function triggerQuoteFulfillment(quote: any, notificationService: NotificationService) {
   try {
-    console.log(`[Proposal Fulfillment] Starting fulfillment for proposal ${proposal.id}`);
+    console.log(`[Quote Fulfillment] Starting fulfillment for quote ${quote.id}`);
 
-    const [quote] = await db.select().from(quotes).where(eq(quotes.id, proposal.quoteId));
-
-    if (proposal.sentByUserId) {
-      const [sender] = await db.select().from(staff).where(eq(staff.id, proposal.sentByUserId));
+    if (quote.sentByUserId) {
+      const [sender] = await db.select().from(staff).where(eq(staff.id, quote.sentByUserId));
       if (sender) {
         try {
           await notificationService.sendDirectEmail({
             to: sender.email,
-            subject: `Payment Received: ${quote?.name || 'Proposal'}`,
-            text: `Payment has been received for proposal "${quote?.name || 'Proposal'}" from ${proposal.signedByName}. The proposal is now complete and fulfillment has been triggered.`,
+            subject: `Payment Received: ${quote.name}`,
+            text: `Payment has been received for proposal "${quote.name}" from ${quote.signedByName}. The proposal is now complete and fulfillment has been triggered.`,
           });
         } catch (e) {
-          console.error("[Proposal Fulfillment] Error sending payment notification:", e);
+          console.error("[Quote Fulfillment] Error sending payment notification:", e);
         }
       }
     }
 
-    let clientId = proposal.clientId;
+    let clientId = quote.clientId;
 
-    if (proposal.leadId && !clientId) {
+    if (quote.leadId && !clientId) {
       try {
-        const [lead] = await db.select().from(leads).where(eq(leads.id, proposal.leadId));
+        const [lead] = await db.select().from(leads).where(eq(leads.id, quote.leadId));
         if (lead) {
           const existingClient = await db.select().from(clients)
             .where(eq(clients.email, lead.email || ""))
@@ -805,31 +710,31 @@ async function triggerProposalFulfillment(proposal: any, notificationService: No
 
           if (existingClient.length > 0) {
             clientId = existingClient[0].id;
-            console.log(`[Proposal Fulfillment] Lead ${lead.id} already converted to client ${clientId}`);
+            console.log(`[Quote Fulfillment] Lead ${lead.id} already converted to client ${clientId}`);
           } else {
             const [newClient] = await db.insert(clients).values({
-              name: lead.company || lead.name || proposal.signedByName || "New Client",
-              email: lead.email || proposal.signedByEmail || "",
+              name: lead.company || lead.name || quote.signedByName || "New Client",
+              email: lead.email || quote.signedByEmail || "",
               phone: lead.phone || "",
               company: lead.company || "",
               status: "active",
             }).returning();
 
             clientId = newClient.id;
-            console.log(`[Proposal Fulfillment] Created client ${clientId} from lead ${lead.id}`);
+            console.log(`[Quote Fulfillment] Created client ${clientId} from lead ${lead.id}`);
 
-            const dealValue = quote ? parseFloat(quote.totalCost || "0") : parseFloat(lead.value?.toString() || "0");
+            const dealValue = parseFloat(quote.totalCost || "0");
             await db.insert(deals).values({
               leadId: lead.id,
               clientId: clientId,
               name: `${newClient.name} - ${lead.company || 'Deal'}`,
               assignedTo: lead.assignedTo,
               value: dealValue,
-              mrr: quote?.mrr ? parseFloat(quote.mrr.toString()) : 0,
+              mrr: quote.mrr ? parseFloat(quote.mrr.toString()) : 0,
               wonDate: new Date(),
-              notes: `Deal created from proposal payment. Quote: ${quote?.name || quote?.id}`,
+              notes: `Deal created from proposal payment. Quote: ${quote.name || quote.id}`,
             });
-            console.log(`[Proposal Fulfillment] Created deal for client ${clientId}`);
+            console.log(`[Quote Fulfillment] Created deal for client ${clientId}`);
 
             const closedWonStage = await db.select().from(leadPipelineStages)
               .where(sql`LOWER(${leadPipelineStages.name}) = 'closed won'`)
@@ -840,17 +745,17 @@ async function triggerProposalFulfillment(proposal: any, notificationService: No
               leadUpdate.stageId = closedWonStage[0].id;
             }
             await db.update(leads).set(leadUpdate).where(eq(leads.id, lead.id));
-            console.log(`[Proposal Fulfillment] Updated lead ${lead.id} to Won`);
+            console.log(`[Quote Fulfillment] Updated lead ${lead.id} to Won`);
           }
 
-          await db.update(proposals).set({ clientId }).where(eq(proposals.id, proposal.id));
+          await db.update(quotes).set({ clientId }).where(eq(quotes.id, quote.id));
         }
       } catch (e) {
-        console.error("[Proposal Fulfillment] Error converting lead:", e);
+        console.error("[Quote Fulfillment] Error converting lead:", e);
       }
     }
 
-    if (clientId && quote) {
+    if (clientId) {
       try {
         const items = await db.select().from(quoteItems).where(eq(quoteItems.quoteId, quote.id));
         let transferredCount = 0;
@@ -907,9 +812,9 @@ async function triggerProposalFulfillment(proposal: any, notificationService: No
             }
           }
         }
-        console.log(`[Proposal Fulfillment] Transferred ${transferredCount} items from quote ${quote.id} to client ${clientId}`);
+        console.log(`[Quote Fulfillment] Transferred ${transferredCount} items from quote ${quote.id} to client ${clientId}`);
       } catch (e) {
-        console.error("[Proposal Fulfillment] Error transferring products:", e);
+        console.error("[Quote Fulfillment] Error transferring products:", e);
       }
 
       try {
@@ -952,7 +857,7 @@ async function triggerProposalFulfillment(proposal: any, notificationService: No
             const result = await generateTasksFromTemplates({
               clientId, items: generationItems, generationType: 'onboarding', cycleStartDate: new Date(),
             });
-            console.log(`[Proposal Fulfillment] Generated ${result.totalTasksCreated} onboarding tasks for client ${clientId}`);
+            console.log(`[Quote Fulfillment] Generated ${result.totalTasksCreated} onboarding tasks for client ${clientId}`);
           }
 
           const [cycleLengthSetting] = await db.select().from(taskSettings)
@@ -969,16 +874,16 @@ async function triggerProposalFulfillment(proposal: any, notificationService: No
               clientId, cycleStartDate: new Date(),
               cycleLengthDays: defaultCycleLength, advanceGenerationDays: defaultAdvanceDays, status: 'active',
             });
-            console.log(`[Proposal Fulfillment] Created recurring config for client ${clientId}`);
+            console.log(`[Quote Fulfillment] Created recurring config for client ${clientId}`);
           }
         }
       } catch (e) {
-        console.error("[Proposal Fulfillment] Error generating tasks:", e);
+        console.error("[Quote Fulfillment] Error generating tasks:", e);
       }
     }
 
-    console.log(`[Proposal Fulfillment] Fulfillment complete for proposal ${proposal.id}`);
+    console.log(`[Quote Fulfillment] Fulfillment complete for quote ${quote.id}`);
   } catch (error) {
-    console.error("[Proposal Fulfillment] Error:", error);
+    console.error("[Quote Fulfillment] Error:", error);
   }
 }

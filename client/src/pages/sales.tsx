@@ -46,9 +46,13 @@ import {
   Target,
   ChevronUp,
   Info,
-  MoreHorizontal
+  MoreHorizontal,
+  Send,
+  Copy,
+  RefreshCw,
+  CreditCard,
+  PenTool
 } from "lucide-react";
-import ProposalsTab from "@/components/proposals-tab";
 
 export default function Sales() {
   const [activeTab, setActiveTab] = useState("quotes");
@@ -79,6 +83,11 @@ export default function Sales() {
   type QuotesSortField = 'name' | 'clientName' | 'createdAt' | 'totalCost' | 'desiredMargin' | 'status';
   const [quotesSortField, setQuotesSortField] = useState<QuotesSortField>('createdAt');
   const [quotesSortOrder, setQuotesSortOrder] = useState<SortOrder>('desc');
+  
+  const [sendProposalQuote, setSendProposalQuote] = useState<any>(null);
+  const [sendProposalEmail, setSendProposalEmail] = useState("");
+  const [sendProposalPaymentType, setSendProposalPaymentType] = useState("full");
+  const [sendProposalCustomAmount, setSendProposalCustomAmount] = useState("");
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -890,6 +899,73 @@ export default function Sales() {
     },
   });
 
+  const sendProposalMutation = useMutation({
+    mutationFn: async ({ quoteId, recipientEmail, paymentAmountType, customPaymentAmount }: { quoteId: string; recipientEmail?: string; paymentAmountType?: string; customPaymentAmount?: string }) => {
+      return await apiRequest("POST", `/api/quotes/${quoteId}/send-proposal`, { recipientEmail, paymentAmountType, customPaymentAmount });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      setSendProposalQuote(null);
+      setSendProposalEmail("");
+      setSendProposalPaymentType("full");
+      setSendProposalCustomAmount("");
+      toast({
+        title: "Proposal Sent",
+        variant: "default",
+        description: data?.recipientEmail ? `Proposal email sent to ${data.recipientEmail}` : "Proposal has been sent successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to send proposal.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resendProposalMutation = useMutation({
+    mutationFn: async ({ quoteId, recipientEmail }: { quoteId: string; recipientEmail?: string }) => {
+      return await apiRequest("POST", `/api/quotes/${quoteId}/resend-proposal`, { recipientEmail });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Proposal Resent",
+        variant: "default",
+        description: "Proposal email has been resent.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to resend proposal.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleQuoteStatusChange = (quoteId: string, newStatus: string, quote: any) => {
+    if (newStatus === "sent") {
+      setSendProposalQuote(quote);
+      setSendProposalEmail("");
+      setSendProposalPaymentType("full");
+      setSendProposalCustomAmount("");
+      return;
+    }
+    updateQuoteStatusMutation.mutate({ quoteId, newStatus });
+  };
+
+  const handleCopyProposalLink = (publicToken: string) => {
+    const appUrl = window.location.origin;
+    const url = `${appUrl}/proposal/${publicToken}`;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link Copied",
+      variant: "default",
+      description: "Proposal link copied to clipboard.",
+    });
+  };
+
   // Update quote status mutation
   const updateQuoteStatusMutation = useMutation({
     mutationFn: async ({ quoteId, newStatus }: { quoteId: string; newStatus: string }) => {
@@ -1018,6 +1094,10 @@ export default function Sales() {
         return "bg-blue-100 text-blue-800";
       case "accepted":
         return "bg-emerald-100 text-emerald-800";
+      case "signed":
+        return "bg-purple-100 text-purple-800";
+      case "completed":
+        return "bg-teal-100 text-teal-800";
       case "rejected":
         return "bg-red-100 text-red-800";
       default:
@@ -1045,7 +1125,6 @@ export default function Sales() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: "quotes", name: "Quotes", icon: Quote },
-            { id: "proposals", name: "Proposals", icon: FileText },
             { id: "reports", name: "Sales Reports", icon: BarChart3 },
             { id: "targets", name: "Targets", icon: Target }
           ].map((tab) => {
@@ -1769,9 +1848,6 @@ export default function Sales() {
       )}
 
 
-      {/* Proposals Tab */}
-      {activeTab === "proposals" && <ProposalsTab />}
-
       {/* Quotes Tab */}
       {activeTab === "quotes" && (
         <div className="space-y-6">
@@ -2374,7 +2450,9 @@ export default function Sales() {
                         <SelectItem value="pending_approval">Pending Approval</SelectItem>
                         <SelectItem value="approved">Approved</SelectItem>
                         <SelectItem value="sent">Sent</SelectItem>
+                        <SelectItem value="signed">Signed</SelectItem>
                         <SelectItem value="accepted">Accepted</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="rejected">Rejected</SelectItem>
                       </SelectContent>
                     </Select>
@@ -2713,8 +2791,8 @@ export default function Sales() {
                                       {quote.status !== 'rejected' ? (
                                         <Select
                                           value={quote.status}
-                                          onValueChange={(newStatus) => updateQuoteStatusMutation.mutate({ quoteId: quote.id, newStatus })}
-                                          disabled={updateQuoteStatusMutation.isPending}
+                                          onValueChange={(newStatus) => handleQuoteStatusChange(quote.id, newStatus, quote)}
+                                          disabled={updateQuoteStatusMutation.isPending || sendProposalMutation.isPending}
                                         >
                                           <SelectTrigger className="w-[140px] h-8" data-testid={`select-quote-status-${quote.id}`}>
                                             <SelectValue />
@@ -2741,6 +2819,12 @@ export default function Sales() {
                                                 <SelectItem value="sent">Sent</SelectItem>
                                                 <SelectItem value="accepted">Accepted</SelectItem>
                                               </>
+                                            )}
+                                            {quote.status === 'signed' && (
+                                              <SelectItem value="signed">Signed</SelectItem>
+                                            )}
+                                            {quote.status === 'completed' && (
+                                              <SelectItem value="completed">Completed</SelectItem>
                                             )}
                                             {quote.status === 'accepted' && (
                                               <SelectItem value="accepted">Accepted</SelectItem>
@@ -2814,6 +2898,33 @@ export default function Sales() {
                                             <p>Edit Quote</p>
                                           </TooltipContent>
                                         </Tooltip>
+                                        {quote.publicToken && (
+                                          <div className="flex items-center gap-1 mr-1">
+                                            {quote.signedAt && (
+                                              <Tooltip>
+                                                <TooltipTrigger>
+                                                  <Badge className="bg-purple-100 text-purple-800 text-xs px-1.5 py-0.5">
+                                                    <PenTool className="h-3 w-3 mr-0.5" />
+                                                    Signed
+                                                  </Badge>
+                                                </TooltipTrigger>
+                                                <TooltipContent>Signed by {quote.signedByName}</TooltipContent>
+                                              </Tooltip>
+                                            )}
+                                            {quote.paymentStatus === 'paid' && (
+                                              <Badge className="bg-teal-100 text-teal-800 text-xs px-1.5 py-0.5">
+                                                <CreditCard className="h-3 w-3 mr-0.5" />
+                                                Paid
+                                              </Badge>
+                                            )}
+                                            {quote.paymentStatus === 'pending' && (
+                                              <Badge className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5">
+                                                <Clock className="h-3 w-3 mr-0.5" />
+                                                Payment Pending
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        )}
                                         <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -2821,6 +2932,31 @@ export default function Sales() {
                                             </Button>
                                           </DropdownMenuTrigger>
                                           <DropdownMenuContent align="end">
+                                            {(quote.status === 'draft' || quote.status === 'approved') && (
+                                              <DropdownMenuItem
+                                                onClick={() => handleQuoteStatusChange(quote.id, 'sent', quote)}
+                                              >
+                                                <Send className="mr-2 h-4 w-4" />
+                                                Send as Proposal
+                                              </DropdownMenuItem>
+                                            )}
+                                            {quote.publicToken && (
+                                              <>
+                                                <DropdownMenuItem
+                                                  onClick={() => handleCopyProposalLink(quote.publicToken)}
+                                                >
+                                                  <Copy className="mr-2 h-4 w-4" />
+                                                  Copy Proposal Link
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                  onClick={() => resendProposalMutation.mutate({ quoteId: quote.id })}
+                                                  disabled={resendProposalMutation.isPending}
+                                                >
+                                                  <RefreshCw className="mr-2 h-4 w-4" />
+                                                  Resend Email
+                                                </DropdownMenuItem>
+                                              </>
+                                            )}
                                             <DropdownMenuItem
                                               onClick={() => setDeleteConfirmQuoteId(quote.id)}
                                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -3184,6 +3320,97 @@ export default function Sales() {
                 data-testid="button-save-target"
               >
                 {(createTargetMutation.isPending || updateTargetMutation.isPending) ? "Saving..." : editingTargetId ? "Update" : "Create"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Proposal Dialog */}
+      <Dialog open={sendProposalQuote !== null} onOpenChange={(open) => !open && setSendProposalQuote(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send as Proposal</DialogTitle>
+            <DialogDescription>
+              Send this quote to the client as a proposal with a signing and payment link.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Quote</Label>
+              <p className="text-sm font-medium mt-1">{sendProposalQuote?.name}</p>
+              <p className="text-sm text-muted-foreground">
+                Total: ${parseFloat(sendProposalQuote?.totalCost || 0).toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="recipient-email">Recipient Email</Label>
+              <Input
+                id="recipient-email"
+                type="email"
+                placeholder="Leave empty to use lead/client email"
+                value={sendProposalEmail}
+                onChange={(e) => setSendProposalEmail(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                If left empty, the system will use the lead or client email on file.
+              </p>
+            </div>
+            <div>
+              <Label>Payment Amount</Label>
+              <Select value={sendProposalPaymentType} onValueChange={setSendProposalPaymentType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full">Full Amount</SelectItem>
+                  <SelectItem value="custom">Custom Amount</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {sendProposalPaymentType === "custom" && (
+              <div>
+                <Label htmlFor="custom-amount">Custom Payment Amount ($)</Label>
+                <Input
+                  id="custom-amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Enter amount"
+                  value={sendProposalCustomAmount}
+                  onChange={(e) => setSendProposalCustomAmount(e.target.value)}
+                />
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setSendProposalQuote(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-primary hover:bg-primary/90"
+                onClick={() => {
+                  if (sendProposalQuote) {
+                    sendProposalMutation.mutate({
+                      quoteId: sendProposalQuote.id,
+                      recipientEmail: sendProposalEmail || undefined,
+                      paymentAmountType: sendProposalPaymentType,
+                      customPaymentAmount: sendProposalPaymentType === "custom" ? sendProposalCustomAmount : undefined,
+                    });
+                  }
+                }}
+                disabled={sendProposalMutation.isPending}
+              >
+                {sendProposalMutation.isPending ? (
+                  <>Sending...</>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Proposal
+                  </>
+                )}
               </Button>
             </div>
           </div>
