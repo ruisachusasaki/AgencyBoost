@@ -1555,11 +1555,11 @@ export default function ProductsSettings() {
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
           {[
-            { id: "products", name: "Products", icon: Package, count: products.length },
-            { id: "bundles", name: "Bundles", icon: Package2, count: bundles.length },
+            { id: "products", name: "Products", icon: Package, count: isLoadingProducts ? null : products.length },
+            { id: "bundles", name: "Bundles", icon: Package2, count: isLoadingBundles ? null : bundles.length },
             { id: "categories", name: "Categories", icon: ShoppingCart, count: categories.length },
-            { id: "packages", name: "Packages", icon: Layers, count: packages.length },
-            { id: "taskMapping", name: "Task Mapping", icon: ListChecks, count: taskTemplates.length }
+            { id: "packages", name: "Packages", icon: Layers, count: isLoadingPackages ? null : packages.length },
+            { id: "taskMapping", name: "Task Mapping", icon: ListChecks, count: isLoadingTemplates ? null : taskTemplates.length }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -1573,7 +1573,7 @@ export default function ProductsSettings() {
                 }`}
               >
                 <Icon className="h-4 w-4" />
-                {tab.name} ({tab.count})
+                {tab.name} ({tab.count !== null ? tab.count : "..."})
               </button>
             );
           })}
