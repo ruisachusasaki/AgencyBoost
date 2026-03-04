@@ -536,12 +536,13 @@ export default function SalesSettings() {
                 style={{ background: `linear-gradient(135deg, ${brandingColor} 0%, ${darkenColor(brandingColor, -20)} 100%)` }}
               >
                 {brandingLogo && (
-                  <img
-                    src={brandingLogo}
-                    alt="Logo"
-                    className="h-10 max-w-[160px] object-contain mx-auto mb-3"
-                    style={{ filter: "brightness(0) invert(1)" }}
-                  />
+                  <div className="inline-block bg-white/90 rounded-lg px-3 py-2 mb-3">
+                    <img
+                      src={brandingLogo}
+                      alt="Logo"
+                      className="h-10 max-w-[160px] object-contain mx-auto"
+                    />
+                  </div>
                 )}
                 {brandingCompanyName && (
                   <p className="text-xs opacity-85 tracking-wider mb-2">{brandingCompanyName}</p>
