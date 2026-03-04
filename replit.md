@@ -58,7 +58,7 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Multi-Dashboard System**: Users can create multiple named dashboards with tab-based navigation.
 - **Dashboard Widgets**: Customizable dashboards with drag-and-drop widget management and real-time data.
 - **Global Search**: Intelligent search across clients, leads, and tasks.
-- **Ticketing System**: Admin-only bug report and feature request tracking with CRUD, comments, status lifecycle, priority levels, type classification, response time analytics, screenshot uploads, Loom video field, and automatic routing rules.
+- **Ticketing System**: Admin-only bug report and feature request tracking with CRUD, comments, status lifecycle, priority levels, type classification, response time analytics, screenshot uploads, Loom video field, automatic routing rules (with source-based matching), source tracking (`source` column — "AgencyBoost" for internal, form name for external), embeddable ticket intake forms (via Custom Forms system with field builder at Settings > Tickets > Forms tab), public ticket form page (`/public/ticket-form/:shortCode`), and Kanban view with drag-and-drop status updates.
 - **Call Center Time Tracking**: Simplified clock-in/clock-out interface for call center staff, with client selection, weekly summaries, client switching, and a dedicated "Call Center Cost" report.
 
 ## External Dependencies

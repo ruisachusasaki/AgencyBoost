@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Trash2, Eye, Pencil, ChevronLeft, ChevronRight, Ticket, AlertCircle, Clock, CheckCircle2, BarChart3, Upload, X, Video, Image as ImageIcon, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Trash2, Eye, Pencil, ChevronLeft, ChevronRight, Ticket, AlertCircle, Clock, CheckCircle2, BarChart3, Upload, X, Video, Image as ImageIcon, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Check, ChevronsUpDown, List, Columns3, GripVertical, PauseCircle, User } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
@@ -34,6 +34,7 @@ interface TicketData {
   tags?: string[];
   loomVideoUrl?: string;
   screenshots?: string[];
+  source?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -123,6 +124,148 @@ function getStatusBadge(status: string) {
   );
 }
 
+const KANBAN_COLUMNS = [
+  { key: "open", label: "Open", icon: AlertCircle, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-900/20", border: "border-blue-200 dark:border-blue-800" },
+  { key: "in_progress", label: "In Progress", icon: Clock, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-900/20", border: "border-amber-200 dark:border-amber-800" },
+  { key: "on_hold", label: "On Hold", icon: PauseCircle, color: "text-gray-600 dark:text-gray-400", bg: "bg-gray-50 dark:bg-gray-800/40", border: "border-gray-200 dark:border-gray-700" },
+  { key: "resolved", label: "Resolved", icon: CheckCircle2, color: "text-green-600 dark:text-green-400", bg: "bg-green-50 dark:bg-green-900/20", border: "border-green-200 dark:border-green-800" },
+];
+
+function KanbanView({
+  tickets,
+  isLoading,
+  staff,
+  draggedTicket,
+  setDraggedTicket,
+  dragOverColumn,
+  setDragOverColumn,
+  onStatusChange,
+  onNavigate,
+  getStaffName,
+}: {
+  tickets: TicketData[];
+  isLoading: boolean;
+  staff: StaffMember[];
+  draggedTicket: TicketData | null;
+  setDraggedTicket: (t: TicketData | null) => void;
+  dragOverColumn: string | null;
+  setDragOverColumn: (c: string | null) => void;
+  onStatusChange: (id: number, status: string) => void;
+  onNavigate: (id: number) => void;
+  getStaffName: (id?: string) => string;
+}) {
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-4 gap-4">
+        {KANBAN_COLUMNS.map((col) => (
+          <div key={col.key} className="space-y-3">
+            <Skeleton className="h-8 w-full" />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full" />
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const ticketsByStatus = KANBAN_COLUMNS.reduce((acc, col) => {
+    acc[col.key] = tickets.filter((t) => t.status === col.key);
+    return acc;
+  }, {} as Record<string, TicketData[]>);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 min-h-[400px]">
+      {KANBAN_COLUMNS.map((col) => {
+        const ColIcon = col.icon;
+        const columnTickets = ticketsByStatus[col.key] || [];
+        const isOver = dragOverColumn === col.key;
+
+        return (
+          <div
+            key={col.key}
+            className={`rounded-lg border-2 transition-colors ${isOver ? "border-primary bg-primary/5" : `border-transparent`}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              setDragOverColumn(col.key);
+            }}
+            onDragLeave={() => setDragOverColumn(null)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOverColumn(null);
+              if (draggedTicket && draggedTicket.status !== col.key) {
+                onStatusChange(draggedTicket.id, col.key);
+              }
+              setDraggedTicket(null);
+            }}
+          >
+            <div className={`flex items-center gap-2 px-3 py-2.5 rounded-t-lg ${col.bg}`}>
+              <ColIcon className={`w-4 h-4 ${col.color}`} />
+              <span className={`text-sm font-semibold ${col.color}`}>{col.label}</span>
+              <Badge variant="secondary" className="ml-auto text-xs h-5 px-1.5">
+                {columnTickets.length}
+              </Badge>
+            </div>
+            <div className="p-2 space-y-2 min-h-[100px]">
+              {columnTickets.length === 0 ? (
+                <div className="flex items-center justify-center h-24 text-sm text-gray-400 dark:text-gray-500 border border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+                  No tickets
+                </div>
+              ) : (
+                columnTickets.map((ticket) => (
+                  <div
+                    key={ticket.id}
+                    draggable
+                    onDragStart={(e) => {
+                      setDraggedTicket(ticket);
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", String(ticket.id));
+                    }}
+                    onDragEnd={() => {
+                      setDraggedTicket(null);
+                      setDragOverColumn(null);
+                    }}
+                    onClick={() => onNavigate(ticket.id)}
+                    className={`group cursor-grab active:cursor-grabbing bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-sm hover:shadow-md transition-all ${
+                      draggedTicket?.id === ticket.id ? "opacity-50 scale-95" : ""
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="text-xs font-mono text-gray-400 dark:text-gray-500">{ticket.ticketNumber}</span>
+                      <GripVertical className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                    </div>
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 mb-2">
+                      {ticket.title}
+                    </h4>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {getTypeBadge(ticket.type)}
+                      {getPriorityBadge(ticket.priority)}
+                    </div>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                          <User className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                        </div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[80px]">
+                          {ticket.assignedToName || getStaffName(ticket.assignedTo)}
+                        </span>
+                      </div>
+                      <Badge variant="outline" className="bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-[10px] px-1.5 py-0">
+                        {ticket.source || "AgencyBoost"}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const defaultFormData = {
   title: "",
   description: "",
@@ -138,6 +281,9 @@ export default function TicketsPage() {
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<"tickets" | "reports">("tickets");
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
+  const [draggedTicket, setDraggedTicket] = useState<TicketData | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const allStatuses = ["open", "in_progress", "on_hold", "resolved"];
   const defaultStatuses = ["open", "in_progress", "on_hold"];
   const [statusFilter, setStatusFilter] = useState<string[]>(defaultStatuses);
@@ -387,10 +533,28 @@ export default function TicketsPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tickets</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage bug reports and feature requests</p>
         </div>
-        <Button className="bg-primary hover:bg-primary/90 text-white" onClick={() => { setEditingTicket(null); setFormData(defaultFormData); setIsCreateDialogOpen(true); }}>
-          <Plus className="w-4 h-4 mr-2" />
-          New Ticket
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center border rounded-lg overflow-hidden">
+            <button
+              className={`p-2 transition-colors ${viewMode === "list" ? "bg-primary text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+              onClick={() => setViewMode("list")}
+              title="List View"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              className={`p-2 transition-colors ${viewMode === "kanban" ? "bg-primary text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+              onClick={() => setViewMode("kanban")}
+              title="Kanban View"
+            >
+              <Columns3 className="w-4 h-4" />
+            </button>
+          </div>
+          <Button className="bg-primary hover:bg-primary/90 text-white" onClick={() => { setEditingTicket(null); setFormData(defaultFormData); setIsCreateDialogOpen(true); }}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Ticket
+          </Button>
+        </div>
       </div>
 
       <div className="flex space-x-1 border-b border-gray-200 dark:border-gray-700">
@@ -563,6 +727,20 @@ export default function TicketsPage() {
             </Card>
           </div>
 
+          {viewMode === "kanban" ? (
+            <KanbanView
+              tickets={tickets}
+              isLoading={isLoading}
+              staff={staff}
+              draggedTicket={draggedTicket}
+              setDraggedTicket={setDraggedTicket}
+              dragOverColumn={dragOverColumn}
+              setDragOverColumn={setDragOverColumn}
+              onStatusChange={(id, status) => updateMutation.mutate({ id, data: { status } })}
+              onNavigate={(id) => setLocation(`/tickets/${id}`)}
+              getStaffName={getStaffName}
+            />
+          ) : (
           <Card>
             <CardContent className="p-0">
               {isLoading ? (
@@ -599,6 +777,7 @@ export default function TicketsPage() {
                         </TableHead>
                         <TableHead>Submitted By</TableHead>
                         <TableHead>Assigned To</TableHead>
+                        <TableHead>Source</TableHead>
                         <TableHead className="cursor-pointer select-none hover:text-[hsl(179,100%,39%)]" onClick={() => handleSort("createdAt")}>
                           <div className="flex items-center">Created <SortIcon column="createdAt" /></div>
                         </TableHead>
@@ -619,6 +798,11 @@ export default function TicketsPage() {
                           <TableCell>{getStatusBadge(ticket.status)}</TableCell>
                           <TableCell className="text-sm">{ticket.submittedByName || getStaffName(ticket.submittedBy) || "-"}</TableCell>
                           <TableCell className="text-sm">{ticket.assignedToName || getStaffName(ticket.assignedTo) || "-"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300 text-xs">
+                              {ticket.source || "AgencyBoost"}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-sm text-gray-500">
                             {ticket.createdAt ? format(new Date(ticket.createdAt), "MMM d, yyyy") : "-"}
                           </TableCell>
@@ -643,8 +827,9 @@ export default function TicketsPage() {
               )}
             </CardContent>
           </Card>
+          )}
 
-          {(ticketsData?.pagination?.total || 0) > 0 && (
+          {viewMode === "list" && (ticketsData?.pagination?.total || 0) > 0 && (
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3">
                 <p className="text-sm text-gray-500 dark:text-gray-400">

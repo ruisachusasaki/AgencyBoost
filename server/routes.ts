@@ -40065,11 +40065,13 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           const rules = await db.select().from(ticketRoutingRules)
             .where(eq(ticketRoutingRules.isActive, true))
             .orderBy(ticketRoutingRules.priority);
+          const ticketSource = "AgencyBoost";
           for (const rule of rules) {
             const conditions = JSON.parse(rule.conditions || "{}");
             let match = true;
             if (conditions.type && conditions.type !== (type || "bug")) match = false;
             if (conditions.priority && conditions.priority !== (priority || "medium")) match = false;
+            if (conditions.source && conditions.source !== ticketSource) match = false;
             if (match && rule.assignToUserId) {
               finalAssignedTo = rule.assignToUserId;
               break;
@@ -40086,6 +40088,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         type: type || "bug",
         priority: priority || "medium",
         status: "open",
+        source: "AgencyBoost",
         submittedBy: userId,
         assignedTo: finalAssignedTo,
         tags: ticketTags || null,
@@ -41062,6 +41065,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           submitterName: mappedValues.name || submitterName || null,
           submitterEmail: mappedValues.email || submitterEmail || null,
           platform: platformValue,
+          source: form.name || "External Form",
           loomVideoUrl: mappedValues.loomVideoUrl || null,
           screenshots: mappedValues.screenshots ? (Array.isArray(mappedValues.screenshots) ? mappedValues.screenshots : [mappedValues.screenshots]) : null,
         };
@@ -41081,6 +41085,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             let matches = true;
             if (conditions.type && conditions.type !== ticketData.type) matches = false;
             if (conditions.priority && conditions.priority !== ticketData.priority) matches = false;
+            if (conditions.source && conditions.source !== ticketData.source) matches = false;
             if (matches && rule.assignToUserId && !ticketData.assignedTo) {
               await db.update(tickets).set({ assignedTo: rule.assignToUserId }).where(eq(tickets.id, ticket.id));
               break;

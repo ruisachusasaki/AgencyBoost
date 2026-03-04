@@ -5300,6 +5300,7 @@ export const tickets = pgTable("tickets", {
   submitterName: text("submitter_name"),
   submitterEmail: text("submitter_email"),
   platform: text("platform"),
+  source: text("source").default("AgencyBoost"),
   firstResponseAt: timestamp("first_response_at"),
   resolvedAt: timestamp("resolved_at"),
   closedAt: timestamp("closed_at"),

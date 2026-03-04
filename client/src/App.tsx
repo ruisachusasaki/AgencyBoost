@@ -79,6 +79,7 @@ import NotificationsPage from "@/pages/notifications";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import PublicSurvey from "@/pages/public-survey";
+import PublicTicketForm from "@/pages/public-ticket-form";
 import PublicProposal from "@/pages/public-proposal";
 import TicketsPage from "@/pages/tickets";
 import TicketDetailPage from "@/pages/ticket-detail";
@@ -120,6 +121,7 @@ function Router() {
       <Route path="/embed/survey/:shortCode">
         {(params) => <PublicSurvey shortCode={params.shortCode} embed={true} />}
       </Route>
+      <Route path="/public/ticket-form/:shortCode" component={PublicTicketForm} />
       
       {/* Protected routes - authentication required */}
       <Route path="/">
