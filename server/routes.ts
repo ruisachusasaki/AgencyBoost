@@ -7280,7 +7280,17 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(404).json({ message: "Task not found" });
       }
 
-      const partialData = insertTaskSchema.partial().parse(req.body);
+      const body = { ...req.body };
+      const nullRecurringFields: Record<string, null> = {};
+      const recurringNullableFields = ['recurringEndOccurrences', 'recurringInterval', 'recurringEndDate'] as const;
+      for (const field of recurringNullableFields) {
+        if (field in body && (body[field] === null || body[field] === '')) {
+          nullRecurringFields[field] = null;
+          body[field] = undefined;
+        }
+      }
+
+      const partialData = { ...insertTaskSchema.partial().parse(body), ...nullRecurringFields };
       
       // Validate client approval invariants when relevant fields are being modified
       if (partialData.requiresClientApproval !== undefined || partialData.visibleToClient !== undefined || partialData.clientId !== undefined) {
