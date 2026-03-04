@@ -106,6 +106,7 @@ const FIELD_MAPPINGS = [
   { value: "name", label: "Submitter Name" },
   { value: "email", label: "Submitter Email" },
   { value: "loomVideoUrl", label: "Loom Video URL" },
+  { value: "screenshots", label: "Screenshot / File Attachment" },
 ];
 
 export default function TicketsSettingsPage() {

@@ -41090,10 +41090,40 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const destConfig = (form.destinationConfig || {}) as Record<string, any>;
       const platformValue = platform || form.platformLabel || "Form";
 
+      const fallbackDescription = (() => {
+        if (mappedValues.description && mappedValues.description.trim()) return mappedValues.description;
+        const unmappedParts: string[] = [];
+        for (const field of fields) {
+          const val = answers?.[field.id];
+          if (val === undefined || val === null || val === "") continue;
+          if (field.fieldMapping && field.fieldMapping !== "none") continue;
+          if (field.type === "file") continue;
+          unmappedParts.push(`${field.label}: ${val}`);
+        }
+        return unmappedParts.length > 0 ? unmappedParts.join("\n") : "";
+      })();
+
+      let normalizedScreenshots: string[] | null = null;
+      if (mappedValues.screenshots) {
+        const raw = Array.isArray(mappedValues.screenshots) ? mappedValues.screenshots : [mappedValues.screenshots];
+        try {
+          const { ObjectStorageService } = await import("./objectStorage");
+          const objectStorageService = new ObjectStorageService();
+          normalizedScreenshots = raw.map((url: string) => {
+            if (url.startsWith("https://storage.googleapis.com/")) {
+              return objectStorageService.normalizeObjectEntityPath(url);
+            }
+            return url;
+          });
+        } catch {
+          normalizedScreenshots = raw;
+        }
+      }
+
       if (form.destination === "ticket") {
         const ticketData: any = {
           title: mappedValues.title || form.name + " submission",
-          description: mappedValues.description || "",
+          description: fallbackDescription,
           type: mappedValues.type || destConfig.defaultType || "bug",
           priority: mappedValues.priority || destConfig.defaultPriority || "medium",
           submitterName: mappedValues.name || submitterName || null,
@@ -41101,7 +41131,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           platform: platformValue,
           source: form.name || "External Form",
           loomVideoUrl: mappedValues.loomVideoUrl || null,
-          screenshots: mappedValues.screenshots ? (Array.isArray(mappedValues.screenshots) ? mappedValues.screenshots : [mappedValues.screenshots]) : null,
+          screenshots: normalizedScreenshots,
         };
         if (destConfig.assignedTo) ticketData.assignedTo = destConfig.assignedTo;
         const [ticket] = await db.insert(tickets).values(ticketData).returning();
