@@ -245,10 +245,11 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
       });
       onSuccess?.();
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Task update error:", error);
       toast({
         title: "Error",
-        description: "Failed to update task. Please try again.",
+        description: error?.message || "Failed to update task. Please try again.",
         variant: "destructive",
       });
     },
@@ -348,6 +349,13 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
         workflowId: taskData.workflowId && taskData.workflowId !== "" ? taskData.workflowId : null,
         startDate: taskData.startDate ? new Date(taskData.startDate) : null,
         dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
+        isRecurring: !!taskData.isRecurring,
+        recurringInterval: taskData.isRecurring ? (taskData.recurringInterval || 1) : null,
+        recurringUnit: taskData.isRecurring ? (taskData.recurringUnit || "days") : null,
+        recurringEndType: taskData.isRecurring ? (taskData.recurringEndType || "never") : null,
+        recurringEndDate: taskData.isRecurring && taskData.recurringEndDate ? new Date(taskData.recurringEndDate) : null,
+        recurringEndOccurrences: taskData.isRecurring ? (taskData.recurringEndOccurrences || null) : null,
+        createIfOverdue: taskData.isRecurring ? !!taskData.createIfOverdue : false,
       };
       updateTaskMutation.mutate(cleanData);
       return;
@@ -379,6 +387,13 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
         workflowId: taskData.workflowId && taskData.workflowId !== "" ? taskData.workflowId : null,
         startDate: taskData.startDate ? new Date(taskData.startDate) : null,
         dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
+        isRecurring: !!taskData.isRecurring,
+        recurringInterval: taskData.isRecurring ? (taskData.recurringInterval || 1) : null,
+        recurringUnit: taskData.isRecurring ? (taskData.recurringUnit || "days") : null,
+        recurringEndType: taskData.isRecurring ? (taskData.recurringEndType || "never") : null,
+        recurringEndDate: taskData.isRecurring && taskData.recurringEndDate ? new Date(taskData.recurringEndDate) : null,
+        recurringEndOccurrences: taskData.isRecurring ? (taskData.recurringEndOccurrences || null) : null,
+        createIfOverdue: taskData.isRecurring ? !!taskData.createIfOverdue : false,
       };
       createTaskMutation.mutate(cleanData);
     }
@@ -960,7 +975,7 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
         {/* Recurring Task Settings */}
         <div className="space-y-4 border-t pt-4">
           <div className="flex items-center gap-2">
-            <Repeat className="h-4 w-4 text-blue-500" />
+            <Repeat className="h-4 w-4 text-primary" />
             <h3 className="font-medium">Recurring Task Settings</h3>
           </div>
           
@@ -988,7 +1003,7 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
           />
 
           {isRecurringEnabled && (
-            <div className="space-y-4 pl-6 border-l-2 border-blue-100">
+            <div className="space-y-4 pl-6 border-l-2 border-primary/20">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}

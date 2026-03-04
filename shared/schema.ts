@@ -1505,13 +1505,13 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
     if (val instanceof Date) return val;
     return new Date(val);
   }),
-  // Ensure recurring fields are properly typed
-  isRecurring: z.boolean().optional().default(false),
-  recurringInterval: z.number().optional(),
-  recurringUnit: z.enum(["hours", "days", "weeks", "months", "years"]).optional(),
-  recurringEndType: z.enum(["never", "on_date", "after_occurrences"]).optional(),
-  recurringEndOccurrences: z.number().optional(),
-  createIfOverdue: z.boolean().optional().default(false),
+  // Ensure recurring fields are properly typed (nullable to support clearing when disabling recurring)
+  isRecurring: z.boolean().nullable().optional().default(false),
+  recurringInterval: z.number().nullable().optional(),
+  recurringUnit: z.enum(["hours", "days", "weeks", "months", "years"]).nullable().optional(),
+  recurringEndType: z.enum(["never", "on_date", "after_occurrences"]).nullable().optional(),
+  recurringEndOccurrences: z.number().nullable().optional(),
+  createIfOverdue: z.boolean().nullable().optional().default(false),
   // Client approval workflow validation
   requiresClientApproval: z.boolean().optional().default(false),
   clientApprovalStatus: z.enum(["pending", "approved", "rejected", "changes_requested"]).optional().default("pending"),
@@ -5292,11 +5292,14 @@ export const tickets = pgTable("tickets", {
   type: text("type").notNull().default("bug"),
   priority: text("priority").notNull().default("medium"),
   status: text("status").notNull().default("open"),
-  submittedBy: uuid("submitted_by").notNull().references(() => staff.id),
+  submittedBy: uuid("submitted_by").references(() => staff.id),
   assignedTo: uuid("assigned_to").references(() => staff.id),
   tags: text("tags").array(),
   loomVideoUrl: text("loom_video_url"),
   screenshots: text("screenshots").array(),
+  submitterName: text("submitter_name"),
+  submitterEmail: text("submitter_email"),
+  platform: text("platform"),
   firstResponseAt: timestamp("first_response_at"),
   resolvedAt: timestamp("resolved_at"),
   closedAt: timestamp("closed_at"),
@@ -5546,3 +5549,87 @@ export const insertProposalTermsSchema = createInsertSchema(proposalTerms).omit(
 });
 export type InsertProposalTerms = z.infer<typeof insertProposalTermsSchema>;
 export type ProposalTerms = typeof proposalTerms.$inferSelect;
+
+// ============================
+// Custom Forms System (standalone form builder — NOT marketing surveys)
+// ============================
+
+export const customForms = pgTable("custom_forms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("draft"),
+  shortCode: varchar("short_code", { length: 20 }).unique().notNull(),
+  destination: text("destination").notNull(),
+  destinationConfig: jsonb("destination_config").default({}),
+  settings: jsonb("settings").default({}),
+  styling: jsonb("styling").default({}),
+  embedApiKey: varchar("embed_api_key", { length: 64 }).unique(),
+  platformLabel: text("platform_label"),
+  createdBy: uuid("created_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_custom_forms_status").on(table.status),
+  index("idx_custom_forms_short_code").on(table.shortCode),
+  index("idx_custom_forms_created_by").on(table.createdBy),
+]);
+
+export const customFormFields = pgTable("custom_form_fields", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull().references(() => customForms.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  label: text("label").notNull(),
+  placeholder: text("placeholder"),
+  required: boolean("required").default(false),
+  options: text("options").array(),
+  validation: jsonb("validation"),
+  fieldMapping: text("field_mapping"),
+  order: integer("order").notNull().default(0),
+  settings: jsonb("settings").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_custom_form_fields_form").on(table.formId),
+  index("idx_custom_form_fields_order").on(table.formId, table.order),
+]);
+
+export const customFormSubmissions = pgTable("custom_form_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").notNull().references(() => customForms.id, { onDelete: "cascade" }),
+  submitterName: text("submitter_name"),
+  submitterEmail: text("submitter_email"),
+  platform: text("platform"),
+  answers: jsonb("answers").default({}),
+  destinationId: varchar("destination_id"),
+  destinationType: text("destination_type"),
+  ipAddress: text("ip_address"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_custom_form_submissions_form").on(table.formId),
+  index("idx_custom_form_submissions_dest").on(table.destinationId),
+]);
+
+export const insertCustomFormSchema = createInsertSchema(customForms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type CustomForm = typeof customForms.$inferSelect;
+export type InsertCustomForm = z.infer<typeof insertCustomFormSchema>;
+
+export const insertCustomFormFieldSchema = createInsertSchema(customFormFields).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type CustomFormField = typeof customFormFields.$inferSelect;
+export type InsertCustomFormField = z.infer<typeof insertCustomFormFieldSchema>;
+
+export const insertCustomFormSubmissionSchema = createInsertSchema(customFormSubmissions).omit({
+  id: true,
+  createdAt: true,
+});
+export type CustomFormSubmission = typeof customFormSubmissions.$inferSelect;
+export type InsertCustomFormSubmission = z.infer<typeof insertCustomFormSubmissionSchema>;

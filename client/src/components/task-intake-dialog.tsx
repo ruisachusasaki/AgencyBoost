@@ -1014,7 +1014,7 @@ export function TaskIntakeDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [validateCurrentSection, visibleSections, answers, formData?.formId, parentTaskId, toast, onOpenChange, onSuccess, setLocation]);
+  }, [validateCurrentSection, visibleSections, answers, formData?.formId, parentTaskId, toast, onOpenChange, onSuccess, setLocation, isRecurring, recurringInterval, recurringUnit, recurringEndType, recurringEndDate, recurringEndOccurrences, selectedCategoryId]);
 
   const resetForm = useCallback(() => {
     setAnswers({});

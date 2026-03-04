@@ -84,7 +84,9 @@ import {
   tickets, ticketComments, ticketAttachments, ticketRoutingRules,
   insertTicketSchema, insertTicketCommentSchema, insertTicketRoutingRuleSchema,
   salaryHistory,
-  proposals, insertProposalSchema, proposalTerms, insertProposalTermsSchema
+  proposals, insertProposalSchema, proposalTerms, insertProposalTermsSchema,
+  customForms, customFormFields, customFormSubmissions,
+  insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
@@ -40812,6 +40814,366 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+
+  // ============================
+  // Custom Forms API
+  // ============================
+
+  // List all custom forms (with submission count)
+  app.get("/api/custom-forms", requireAuth(), async (req, res) => {
+    try {
+      const allForms = await db.select().from(customForms).orderBy(desc(customForms.createdAt));
+      const submissionCounts = await db.select({
+        formId: customFormSubmissions.formId,
+        count: sql<number>`count(*)::int`,
+      }).from(customFormSubmissions).groupBy(customFormSubmissions.formId);
+      const countMap = new Map(submissionCounts.map(s => [s.formId, s.count]));
+      const result = allForms.map(f => ({ ...f, submissionCount: countMap.get(f.id) || 0 }));
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error listing custom forms:", error);
+      res.status(500).json({ error: "Failed to list forms" });
+    }
+  });
+
+  // Create a custom form
+  app.post("/api/custom-forms", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      const shortCode = nanoid(10);
+      const embedApiKey = randomBytes(32).toString('hex');
+      const formData = {
+        ...req.body,
+        shortCode,
+        embedApiKey,
+        createdBy: userId,
+      };
+      const validated = insertCustomFormSchema.parse(formData);
+      const [created] = await db.insert(customForms).values(validated).returning();
+      res.status(201).json(created);
+    } catch (error: any) {
+      console.error("Error creating custom form:", error);
+      res.status(500).json({ error: "Failed to create form" });
+    }
+  });
+
+  // Get a single custom form with its fields
+  app.get("/api/custom-forms/:id", requireAuth(), async (req, res) => {
+    try {
+      const [form] = await db.select().from(customForms).where(eq(customForms.id, req.params.id));
+      if (!form) return res.status(404).json({ error: "Form not found" });
+      const fields = await db.select().from(customFormFields).where(eq(customFormFields.formId, form.id)).orderBy(asc(customFormFields.order));
+      res.json({ ...form, fields });
+    } catch (error: any) {
+      console.error("Error getting custom form:", error);
+      res.status(500).json({ error: "Failed to get form" });
+    }
+  });
+
+  // Update a custom form
+  app.put("/api/custom-forms/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [existing] = await db.select().from(customForms).where(eq(customForms.id, id));
+      if (!existing) return res.status(404).json({ error: "Form not found" });
+      const [updated] = await db.update(customForms)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(customForms.id, id))
+        .returning();
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating custom form:", error);
+      res.status(500).json({ error: "Failed to update form" });
+    }
+  });
+
+  // Delete a custom form (cascade deletes fields + submissions)
+  app.delete("/api/custom-forms/:id", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(customForms).where(eq(customForms.id, id));
+      res.json({ message: "Form deleted" });
+    } catch (error: any) {
+      console.error("Error deleting custom form:", error);
+      res.status(500).json({ error: "Failed to delete form" });
+    }
+  });
+
+  // Batch save fields (replaces all fields for the form)
+  app.post("/api/custom-forms/:id/fields", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [form] = await db.select().from(customForms).where(eq(customForms.id, id));
+      if (!form) return res.status(404).json({ error: "Form not found" });
+      await db.delete(customFormFields).where(eq(customFormFields.formId, id));
+      const fieldsData = (req.body.fields || []).map((field: any, idx: number) => ({
+        ...field,
+        formId: id,
+        order: idx,
+      }));
+      if (fieldsData.length > 0) {
+        const validated = fieldsData.map((f: any) => insertCustomFormFieldSchema.parse(f));
+        await db.insert(customFormFields).values(validated);
+      }
+      const savedFields = await db.select().from(customFormFields).where(eq(customFormFields.formId, id)).orderBy(asc(customFormFields.order));
+      res.json(savedFields);
+    } catch (error: any) {
+      console.error("Error saving custom form fields:", error);
+      res.status(500).json({ error: "Failed to save fields" });
+    }
+  });
+
+  // Delete a single field
+  app.delete("/api/custom-forms/:id/fields/:fieldId", requireAuth(), async (req, res) => {
+    try {
+      await db.delete(customFormFields).where(eq(customFormFields.id, req.params.fieldId));
+      res.json({ message: "Field deleted" });
+    } catch (error: any) {
+      console.error("Error deleting custom form field:", error);
+      res.status(500).json({ error: "Failed to delete field" });
+    }
+  });
+
+  // List submissions for a form
+  app.get("/api/custom-forms/:id/submissions", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = (page - 1) * limit;
+      const submissions = await db.select().from(customFormSubmissions)
+        .where(eq(customFormSubmissions.formId, id))
+        .orderBy(desc(customFormSubmissions.createdAt))
+        .limit(limit)
+        .offset(offset);
+      const [{ count }] = await db.select({ count: sql<number>`count(*)::int` })
+        .from(customFormSubmissions)
+        .where(eq(customFormSubmissions.formId, id));
+      res.json({ submissions, total: count, page, limit });
+    } catch (error: any) {
+      console.error("Error listing submissions:", error);
+      res.status(500).json({ error: "Failed to list submissions" });
+    }
+  });
+
+  // Regenerate embed API key
+  app.post("/api/custom-forms/:id/regenerate-key", requireAuth(), async (req, res) => {
+    try {
+      const newKey = randomBytes(32).toString('hex');
+      const [updated] = await db.update(customForms)
+        .set({ embedApiKey: newKey, updatedAt: new Date() })
+        .where(eq(customForms.id, req.params.id))
+        .returning();
+      if (!updated) return res.status(404).json({ error: "Form not found" });
+      res.json({ embedApiKey: newKey });
+    } catch (error: any) {
+      console.error("Error regenerating key:", error);
+      res.status(500).json({ error: "Failed to regenerate key" });
+    }
+  });
+
+  // ============================
+  // Public Form Endpoints (no auth)
+  // ============================
+
+  // Get public form by shortCode
+  app.get("/api/public/forms/:shortCode", async (req, res) => {
+    try {
+      const [form] = await db.select().from(customForms).where(eq(customForms.shortCode, req.params.shortCode));
+      if (!form || form.status !== "published") return res.status(404).json({ error: "Form not found" });
+      const fields = await db.select().from(customFormFields).where(eq(customFormFields.formId, form.id)).orderBy(asc(customFormFields.order));
+      res.json({
+        id: form.id,
+        name: form.name,
+        description: form.description,
+        styling: form.styling,
+        settings: form.settings,
+        destination: form.destination,
+        platformLabel: form.platformLabel,
+        embedApiKey: form.embedApiKey,
+        fields,
+      });
+    } catch (error: any) {
+      console.error("Error fetching public form:", error);
+      res.status(500).json({ error: "Failed to fetch form" });
+    }
+  });
+
+  // Submit a public form
+  app.post("/api/public/forms/:shortCode/submit", async (req, res) => {
+    try {
+      const [form] = await db.select().from(customForms).where(eq(customForms.shortCode, req.params.shortCode));
+      if (!form || form.status !== "published") return res.status(404).json({ error: "Form not found" });
+      const fields = await db.select().from(customFormFields).where(eq(customFormFields.formId, form.id));
+      const { answers, submitterName, submitterEmail, platform } = req.body;
+
+      // Validate required fields
+      for (const field of fields) {
+        if (field.required && (!answers || !answers[field.id] || (typeof answers[field.id] === 'string' && answers[field.id].trim() === ''))) {
+          return res.status(400).json({ error: `${field.label} is required` });
+        }
+      }
+
+      // Build field mapping
+      const mappedValues: Record<string, any> = {};
+      for (const field of fields) {
+        if (field.fieldMapping && answers && answers[field.id] !== undefined) {
+          mappedValues[field.fieldMapping] = answers[field.id];
+        }
+      }
+
+      let destinationId: string | null = null;
+      let destinationType: string | null = null;
+      let referenceNumber: string | null = null;
+      const destConfig = (form.destinationConfig || {}) as Record<string, any>;
+      const platformValue = platform || form.platformLabel || "Form";
+
+      if (form.destination === "ticket") {
+        const ticketData: any = {
+          title: mappedValues.title || form.name + " submission",
+          description: mappedValues.description || "",
+          type: mappedValues.type || destConfig.defaultType || "bug",
+          priority: mappedValues.priority || destConfig.defaultPriority || "medium",
+          submitterName: mappedValues.name || submitterName || null,
+          submitterEmail: mappedValues.email || submitterEmail || null,
+          platform: platformValue,
+          loomVideoUrl: mappedValues.loomVideoUrl || null,
+          screenshots: mappedValues.screenshots ? (Array.isArray(mappedValues.screenshots) ? mappedValues.screenshots : [mappedValues.screenshots]) : null,
+        };
+        if (destConfig.assignedTo) ticketData.assignedTo = destConfig.assignedTo;
+        const [ticket] = await db.insert(tickets).values(ticketData).returning();
+        destinationId = ticket.id;
+        destinationType = "ticket";
+        referenceNumber = `T-${ticket.ticketNumber}`;
+
+        // Run ticket routing rules
+        const activeRules = await db.select().from(ticketRoutingRules)
+          .where(eq(ticketRoutingRules.isActive, true))
+          .orderBy(desc(ticketRoutingRules.priority));
+        for (const rule of activeRules) {
+          try {
+            const conditions = typeof rule.conditions === 'string' ? JSON.parse(rule.conditions) : rule.conditions;
+            let matches = true;
+            if (conditions.type && conditions.type !== ticketData.type) matches = false;
+            if (conditions.priority && conditions.priority !== ticketData.priority) matches = false;
+            if (matches && rule.assignToUserId && !ticketData.assignedTo) {
+              await db.update(tickets).set({ assignedTo: rule.assignToUserId }).where(eq(tickets.id, ticket.id));
+              break;
+            }
+          } catch { /* ignore rule errors */ }
+        }
+      } else if (form.destination === "task") {
+        const taskData: any = {
+          title: mappedValues.title || form.name + " submission",
+          description: mappedValues.description || "",
+          priority: mappedValues.priority || destConfig.defaultPriority || "medium",
+          status: "todo",
+        };
+        if (mappedValues.dueDate) taskData.dueDate = new Date(mappedValues.dueDate);
+        if (destConfig.clientId) taskData.clientId = destConfig.clientId;
+        if (destConfig.assignedTo) taskData.assignedTo = destConfig.assignedTo;
+        const [task] = await db.insert(tasks).values(taskData).returning();
+        destinationId = task.id;
+        destinationType = "task";
+        referenceNumber = `TASK-${task.id.slice(0, 8)}`;
+      }
+
+      // Store submission
+      const [submission] = await db.insert(customFormSubmissions).values({
+        formId: form.id,
+        submitterName: mappedValues.name || submitterName || null,
+        submitterEmail: mappedValues.email || submitterEmail || null,
+        platform: platformValue,
+        answers: answers || {},
+        destinationId,
+        destinationType,
+        ipAddress: (req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || '').split(',')[0].trim(),
+        completedAt: new Date(),
+      }).returning();
+
+      res.json({
+        success: true,
+        submissionId: submission.id,
+        referenceNumber,
+        destinationType,
+        destinationId,
+      });
+    } catch (error: any) {
+      console.error("Error submitting public form:", error);
+      res.status(500).json({ error: "Failed to submit form" });
+    }
+  });
+
+  // Public file upload for forms — returns signed upload URL
+  app.post("/api/public/forms/upload-url", async (req, res) => {
+    try {
+      const apiKey = req.headers['x-form-key'] as string;
+      if (!apiKey) return res.status(401).json({ error: "API key required" });
+      const [form] = await db.select().from(customForms).where(eq(customForms.embedApiKey, apiKey));
+      if (!form) return res.status(401).json({ error: "Invalid API key" });
+      const objectStorage = new ObjectStorageService();
+      const uploadUrl = await objectStorage.getObjectEntityUploadURL();
+      res.json({ uploadUrl });
+    } catch (error: any) {
+      console.error("Error generating upload URL:", error);
+      res.status(500).json({ error: "Failed to generate upload URL" });
+    }
+  });
+
+  // Serve form widget JS
+  app.get("/api/public/form-widget.js", (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    const fs = require('fs');
+    const path = require('path');
+    const widgetPath = path.join(process.cwd(), 'public', 'form-widget.js');
+    if (fs.existsSync(widgetPath)) {
+      res.sendFile(widgetPath);
+    } else {
+      res.status(404).send('// Widget not found');
+    }
+  });
+
+  // Seed default Bug Report form
+  app.post("/api/custom-forms/seed-bug-report", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req, res);
+      if (!userId) return;
+      const existing = await db.select().from(customForms).where(eq(customForms.name, "Bug Report"));
+      if (existing.length > 0) return res.json({ message: "Bug Report form already exists", form: existing[0] });
+      const shortCode = nanoid(10);
+      const embedApiKey = randomBytes(32).toString('hex');
+      const [form] = await db.insert(customForms).values({
+        name: "Bug Report",
+        description: "Submit a bug report or feature request",
+        status: "draft",
+        shortCode,
+        destination: "ticket",
+        destinationConfig: { defaultType: "bug", defaultPriority: "medium" },
+        settings: { successMessage: "Thank you! Your report has been submitted.", allowMultiple: true },
+        styling: { primaryColor: "#00C9C6", buttonText: "Submit Report" },
+        embedApiKey,
+        platformLabel: "External",
+        createdBy: userId,
+      }).returning();
+      const defaultFields = [
+        { formId: form.id, type: "short_text", label: "Your Name", placeholder: "Enter your name", required: true, fieldMapping: "name", order: 0 },
+        { formId: form.id, type: "email", label: "Email Address", placeholder: "your@email.com", required: true, fieldMapping: "email", order: 1 },
+        { formId: form.id, type: "short_text", label: "Subject", placeholder: "Brief description of the issue", required: true, fieldMapping: "title", order: 2 },
+        { formId: form.id, type: "long_text", label: "Description", placeholder: "Describe the issue in detail...", required: true, fieldMapping: "description", order: 3 },
+        { formId: form.id, type: "dropdown", label: "Type", required: true, options: ["Bug", "Feature Request", "Improvement", "Question"], fieldMapping: "type", order: 4, settings: {} },
+        { formId: form.id, type: "file_upload", label: "Screenshot", required: false, fieldMapping: "screenshots", order: 5, settings: {} },
+        { formId: form.id, type: "url", label: "Loom Video URL", placeholder: "https://www.loom.com/share/...", required: false, fieldMapping: "loomVideoUrl", order: 6 },
+      ];
+      await db.insert(customFormFields).values(defaultFields);
+      const fields = await db.select().from(customFormFields).where(eq(customFormFields.formId, form.id)).orderBy(asc(customFormFields.order));
+      res.status(201).json({ ...form, fields });
+    } catch (error: any) {
+      console.error("Error seeding bug report form:", error);
+      res.status(500).json({ error: "Failed to seed bug report form" });
+    }
+  });
 
   return httpServer;
 }

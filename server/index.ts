@@ -2014,11 +2014,97 @@ async function ensureQuotesProposalColumns() {
   }
 }
 
+async function ensureTicketExternalSubmissionColumns() {
+  try {
+    log("Running startup migration: ensureTicketExternalSubmissionColumns");
+    await db.execute(sql`
+      ALTER TABLE tickets
+      ADD COLUMN IF NOT EXISTS submitter_name text,
+      ADD COLUMN IF NOT EXISTS submitter_email text,
+      ADD COLUMN IF NOT EXISTS platform text;
+    `);
+    await db.execute(sql`
+      ALTER TABLE tickets ALTER COLUMN submitted_by DROP NOT NULL;
+    `);
+    log("Ticket external submission columns migration completed successfully");
+  } catch (error: any) {
+    log(`Ticket external submission columns migration error: ${error.message}`);
+  }
+}
+
+async function ensureFormsTablesExist() {
+  try {
+    log("Running startup migration: ensureFormsTablesExist");
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS custom_forms (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        name text NOT NULL,
+        description text,
+        status text NOT NULL DEFAULT 'draft',
+        short_code varchar(20) UNIQUE NOT NULL,
+        destination text NOT NULL,
+        destination_config jsonb DEFAULT '{}',
+        settings jsonb DEFAULT '{}',
+        styling jsonb DEFAULT '{}',
+        embed_api_key varchar(64) UNIQUE,
+        platform_label text,
+        created_by uuid REFERENCES staff(id),
+        created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS idx_custom_forms_status ON custom_forms(status);
+      CREATE INDEX IF NOT EXISTS idx_custom_forms_short_code ON custom_forms(short_code);
+      CREATE INDEX IF NOT EXISTS idx_custom_forms_created_by ON custom_forms(created_by);
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS custom_form_fields (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        form_id varchar NOT NULL REFERENCES custom_forms(id) ON DELETE CASCADE,
+        type text NOT NULL,
+        label text NOT NULL,
+        placeholder text,
+        required boolean DEFAULT false,
+        options text[],
+        validation jsonb,
+        field_mapping text,
+        "order" integer NOT NULL DEFAULT 0,
+        settings jsonb DEFAULT '{}',
+        created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS idx_custom_form_fields_form ON custom_form_fields(form_id);
+      CREATE INDEX IF NOT EXISTS idx_custom_form_fields_order ON custom_form_fields(form_id, "order");
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS custom_form_submissions (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        form_id varchar NOT NULL REFERENCES custom_forms(id) ON DELETE CASCADE,
+        submitter_name text,
+        submitter_email text,
+        platform text,
+        answers jsonb DEFAULT '{}',
+        destination_id varchar,
+        destination_type text,
+        ip_address text,
+        completed_at timestamp,
+        created_at timestamp DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS idx_custom_form_submissions_form ON custom_form_submissions(form_id);
+      CREATE INDEX IF NOT EXISTS idx_custom_form_submissions_dest ON custom_form_submissions(destination_id);
+    `);
+    log("Forms tables migration completed successfully");
+  } catch (error: any) {
+    log(`Forms tables migration error: ${error.message}`);
+  }
+}
+
 async function runStartupMigrations() {
   log("Starting background migrations...");
   try {
     await ensureClientBriefColumns();
     await ensureQuotesProposalColumns();
+    await ensureTicketExternalSubmissionColumns();
+    await ensureFormsTablesExist();
     await initializeCoreClientBriefSections();
     await initializeDefaultAutomationTriggers();
     await initializeDefaultAutomationActions();
