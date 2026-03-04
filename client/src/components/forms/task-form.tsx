@@ -267,6 +267,13 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
       requiresClientApproval?: boolean;
       assigneeStrategy: string;
       dateStrategy: string;
+      isRecurring?: boolean;
+      recurringInterval?: number | null;
+      recurringUnit?: string | null;
+      recurringEndType?: string | null;
+      recurringEndDate?: Date | null;
+      recurringEndOccurrences?: number | null;
+      createIfOverdue?: boolean;
     }) => {
       const response = await apiRequest("POST", `/api/task-templates/${data.templateId}/instantiate`, {
         title: data.title,
@@ -277,6 +284,13 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
         requiresClientApproval: data.requiresClientApproval || false,
         assigneeStrategy: data.assigneeStrategy,
         dateStrategy: data.dateStrategy,
+        isRecurring: data.isRecurring || false,
+        recurringInterval: data.isRecurring ? (data.recurringInterval || 1) : null,
+        recurringUnit: data.isRecurring ? (data.recurringUnit || "days") : null,
+        recurringEndType: data.isRecurring ? (data.recurringEndType || "never") : null,
+        recurringEndDate: data.isRecurring && data.recurringEndDate ? data.recurringEndDate : null,
+        recurringEndOccurrences: data.isRecurring ? (data.recurringEndOccurrences || null) : null,
+        createIfOverdue: data.isRecurring ? !!data.createIfOverdue : false,
       });
       return response;
     },
@@ -374,6 +388,13 @@ export default function TaskForm({ task, onSuccess, defaultLeadId }: TaskFormPro
         requiresClientApproval: data.requiresClientApproval || false,
         assigneeStrategy,
         dateStrategy,
+        isRecurring: !!data.isRecurring,
+        recurringInterval: data.isRecurring ? (data.recurringInterval || 1) : null,
+        recurringUnit: data.isRecurring ? (data.recurringUnit || "days") : null,
+        recurringEndType: data.isRecurring ? (data.recurringEndType || "never") : null,
+        recurringEndDate: data.isRecurring && data.recurringEndDate ? new Date(data.recurringEndDate) : null,
+        recurringEndOccurrences: data.isRecurring ? (data.recurringEndOccurrences || null) : null,
+        createIfOverdue: data.isRecurring ? !!data.createIfOverdue : false,
       });
     } else {
       // Regular task creation - exclude templateId from data sent to API

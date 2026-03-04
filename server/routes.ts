@@ -8544,7 +8544,14 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         visibleToClient = false,
         requiresClientApproval = false,
         assigneeStrategy = 'clear',
-        dateStrategy = 'clear'
+        dateStrategy = 'clear',
+        isRecurring = false,
+        recurringInterval = null,
+        recurringUnit = null,
+        recurringEndType = null,
+        recurringEndDate = null,
+        recurringEndOccurrences = null,
+        createIfOverdue = false
       } = req.body;
 
       // Fetch the template
@@ -8583,7 +8590,14 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           parentTaskId: parentTaskId,
           visibleToClient: (clientId || templateData.clientId) ? visibleToClient : false, // Only apply if there's a client
           requiresClientApproval: (clientId || templateData.clientId) ? requiresClientApproval : false, // Only apply if there's a client
-          createdBy: normalizedUserId
+          createdBy: normalizedUserId,
+          isRecurring: !parentTaskId ? !!isRecurring : false,
+          recurringInterval: !parentTaskId && isRecurring ? (recurringInterval || 1) : null,
+          recurringUnit: !parentTaskId && isRecurring ? (recurringUnit || "days") : null,
+          recurringEndType: !parentTaskId && isRecurring ? (recurringEndType || "never") : null,
+          recurringEndDate: !parentTaskId && isRecurring && recurringEndDate ? new Date(recurringEndDate) : null,
+          recurringEndOccurrences: !parentTaskId && isRecurring ? (recurringEndOccurrences || null) : null,
+          createIfOverdue: !parentTaskId && isRecurring ? !!createIfOverdue : false,
         };
 
         // Handle assignee strategy
