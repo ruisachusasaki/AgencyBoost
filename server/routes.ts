@@ -27532,6 +27532,25 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const sectionsWithAnswers = Array.from(sectionMap.values())
         .filter(s => s.answers.length > 0);
 
+      for (const section of sectionsWithAnswers) {
+        for (const answer of section.answers) {
+          if ((answer.internalLabel === "client_select" || answer.questionType === "client") && answer.answerValue) {
+            if (answer.answerValue === "no_client") {
+              answer.answerValue = "No client (internal task)";
+            } else {
+              try {
+                const [client] = await db.select({ name: clients.name, company: clients.company })
+                  .from(clients)
+                  .where(eq(clients.id, answer.answerValue));
+                if (client) {
+                  answer.answerValue = client.company || client.name;
+                }
+              } catch {}
+            }
+          }
+        }
+      }
+
       res.json({
         id: fullSubmission.id,
         taskId: fullSubmission.taskId,

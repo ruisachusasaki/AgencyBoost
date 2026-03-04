@@ -792,7 +792,7 @@ function Router() {
       <Route path="/settings/products">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.products.view">
               <MainLayout>
                 <Products />
               </MainLayout>
