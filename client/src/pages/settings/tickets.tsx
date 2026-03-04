@@ -205,21 +205,27 @@ export default function TicketsSettingsPage() {
       return resp.json();
     },
     onSuccess: async (created: CustomForm) => {
-      if (formFields.length > 0) {
-        const fieldsPayload = formFields.map((f, idx) => ({
-          type: f.type,
-          label: f.label,
-          placeholder: f.placeholder || null,
-          required: f.required,
-          options: f.options.length > 0 ? f.options : null,
-          fieldMapping: f.fieldMapping !== "none" ? f.fieldMapping : null,
-          order: idx,
-        }));
-        await apiRequest("POST", `/api/custom-forms/${created.id}/fields`, { fields: fieldsPayload });
+      try {
+        if (formFields.length > 0) {
+          const fieldsPayload = formFields.map((f, idx) => ({
+            type: f.type,
+            label: f.label,
+            placeholder: f.placeholder || null,
+            required: f.required,
+            options: f.options.length > 0 ? f.options : null,
+            fieldMapping: f.fieldMapping !== "none" ? f.fieldMapping : null,
+            order: idx,
+          }));
+          await apiRequest("POST", `/api/custom-forms/${created.id}/fields`, { fields: fieldsPayload });
+        }
+        queryClient.invalidateQueries({ queryKey: ["/api/custom-forms"] });
+        toast({ title: "Form created", description: "Ticket intake form created successfully." });
+        closeFormDialog();
+      } catch (err: any) {
+        queryClient.invalidateQueries({ queryKey: ["/api/custom-forms"] });
+        toast({ title: "Form created with errors", description: err?.message || "Form was created but fields could not be saved. Please edit the form to add fields.", variant: "destructive" });
+        closeFormDialog();
       }
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-forms"] });
-      toast({ title: "Form created", description: "Ticket intake form created successfully." });
-      closeFormDialog();
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error?.message || "Failed to create form.", variant: "destructive" });
@@ -232,20 +238,25 @@ export default function TicketsSettingsPage() {
       return id;
     },
     onSuccess: async (id: string) => {
-      const fieldsPayload = formFields.map((f, idx) => ({
-        ...(f.dbId ? { id: f.dbId } : {}),
-        type: f.type,
-        label: f.label,
-        placeholder: f.placeholder || null,
-        required: f.required,
-        options: f.options.length > 0 ? f.options : null,
-        fieldMapping: f.fieldMapping !== "none" ? f.fieldMapping : null,
-        order: idx,
-      }));
-      await apiRequest("POST", `/api/custom-forms/${id}/fields`, { fields: fieldsPayload });
-      queryClient.invalidateQueries({ queryKey: ["/api/custom-forms"] });
-      toast({ title: "Form updated", description: "Ticket intake form updated successfully." });
-      closeFormDialog();
+      try {
+        const fieldsPayload = formFields.map((f, idx) => ({
+          ...(f.dbId ? { id: f.dbId } : {}),
+          type: f.type,
+          label: f.label,
+          placeholder: f.placeholder || null,
+          required: f.required,
+          options: f.options.length > 0 ? f.options : null,
+          fieldMapping: f.fieldMapping !== "none" ? f.fieldMapping : null,
+          order: idx,
+        }));
+        await apiRequest("POST", `/api/custom-forms/${id}/fields`, { fields: fieldsPayload });
+        queryClient.invalidateQueries({ queryKey: ["/api/custom-forms"] });
+        toast({ title: "Form updated", description: "Ticket intake form updated successfully." });
+        closeFormDialog();
+      } catch (err: any) {
+        queryClient.invalidateQueries({ queryKey: ["/api/custom-forms"] });
+        toast({ title: "Error saving fields", description: err?.message || "Form was updated but fields could not be saved.", variant: "destructive" });
+      }
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error?.message || "Failed to update form.", variant: "destructive" });
