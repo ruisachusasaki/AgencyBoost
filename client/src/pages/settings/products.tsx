@@ -3216,7 +3216,8 @@ export default function ProductsSettings() {
                         className="h-7 pl-7 text-xs"
                       />
                     </div>
-                    <div className="space-y-0.5 max-h-64 overflow-y-auto">
+                    <div className="max-h-64 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
+                      <div className="space-y-0.5">
                       {(() => {
                         const filtered = mergeTagOptions.filter(o => 
                           o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || 
@@ -3243,6 +3244,7 @@ export default function ProductsSettings() {
                       {mergeTagOptions.filter(o => o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())).length === 0 && (
                         <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
                       )}
+                      </div>
                     </div>
                   </PopoverContent>
                 </Popover>
@@ -3270,7 +3272,8 @@ export default function ProductsSettings() {
                         className="h-7 pl-7 text-xs"
                       />
                     </div>
-                    <div className="space-y-0.5 max-h-64 overflow-y-auto">
+                    <div className="max-h-64 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
+                      <div className="space-y-0.5">
                       {(() => {
                         const filtered = mergeTagOptions.filter(o => 
                           o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || 
@@ -3297,6 +3300,7 @@ export default function ProductsSettings() {
                       {mergeTagOptions.filter(o => o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())).length === 0 && (
                         <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
                       )}
+                      </div>
                     </div>
                   </PopoverContent>
                 </Popover>
@@ -3461,7 +3465,8 @@ export default function ProductsSettings() {
                           className="h-7 pl-7 text-xs"
                         />
                       </div>
-                      <div className="space-y-0.5 max-h-64 overflow-y-auto">
+                      <div className="max-h-64 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
+                        <div className="space-y-0.5">
                         {(() => {
                           const filtered = mergeTagOptions.filter(o => 
                             o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || 
@@ -3488,6 +3493,7 @@ export default function ProductsSettings() {
                         {mergeTagOptions.filter(o => o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())).length === 0 && (
                           <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
                         )}
+                        </div>
                       </div>
                     </PopoverContent>
                   </Popover>
@@ -3515,7 +3521,8 @@ export default function ProductsSettings() {
                           className="h-7 pl-7 text-xs"
                         />
                       </div>
-                      <div className="space-y-0.5 max-h-64 overflow-y-auto">
+                      <div className="max-h-64 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
+                        <div className="space-y-0.5">
                         {(() => {
                           const filtered = mergeTagOptions.filter(o => 
                             o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || 
@@ -3542,6 +3549,7 @@ export default function ProductsSettings() {
                         {mergeTagOptions.filter(o => o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())).length === 0 && (
                           <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
                         )}
+                        </div>
                       </div>
                     </PopoverContent>
                   </Popover>
