@@ -426,7 +426,7 @@ export default function MyProfile() {
                 } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
               >
                 <UserCheck className="h-4 w-4" />
-                <span>PX</span>
+                <span>HR</span>
               </button>
             </nav>
           </div>
