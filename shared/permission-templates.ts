@@ -599,12 +599,12 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
       },
       {
         tab: 'px_meetings',
-        label: 'PX Meetings',
-        description: 'Manage PX team meetings',
+        label: 'HR Meetings',
+        description: 'Manage HR team meetings',
         permissions: [
-          { key: 'hr.px_meetings.view', label: 'View PX meetings', description: 'See PX meetings', action: 'view' },
-          { key: 'hr.px_meetings.create', label: 'Create PX meetings', description: 'Schedule PX meetings', action: 'create' },
-          { key: 'hr.px_meetings.manage', label: 'Manage PX meetings', description: 'Edit PX meetings', action: 'manage' },
+          { key: 'hr.px_meetings.view', label: 'View HR meetings', description: 'See HR meetings', action: 'view' },
+          { key: 'hr.px_meetings.create', label: 'Create HR meetings', description: 'Schedule HR meetings', action: 'create' },
+          { key: 'hr.px_meetings.manage', label: 'Manage HR meetings', description: 'Edit HR meetings', action: 'manage' },
         ],
       },
       {
@@ -860,11 +860,11 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
       },
       {
         tab: 'px_settings',
-        label: 'PX Settings',
-        description: 'Configure PX/HR settings',
+        label: 'HR Settings',
+        description: 'Configure HR settings',
         permissions: [
-          { key: 'settings.px_settings.view', label: 'View PX Settings', description: 'See PX configuration', action: 'view' },
-          { key: 'settings.px_settings.manage', label: 'Manage PX Settings', description: 'Configure PX settings', action: 'manage' },
+          { key: 'settings.px_settings.view', label: 'View HR Settings', description: 'See HR configuration', action: 'view' },
+          { key: 'settings.px_settings.manage', label: 'Manage HR Settings', description: 'Configure HR settings', action: 'manage' },
         ],
       },
       {

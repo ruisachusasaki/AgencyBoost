@@ -583,7 +583,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
         assignedTo,
         status: "todo",
         priority: "medium",
-        description: `Converted from PX meeting action item`,
+        description: `Converted from HR meeting action item`,
       });
       const task = await taskResponse.json();
       return task;
@@ -2393,7 +2393,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             </DialogTitle>
             <DialogDescription>
               {createDialogStep === 1 
-                ? "Schedule a new PX team meeting" 
+                ? "Schedule a new HR team meeting" 
                 : "Choose which segments to include in this meeting"}
             </DialogDescription>
           </DialogHeader>
@@ -2404,7 +2404,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
               <Label htmlFor="title">Meeting Title *</Label>
               <Input
                 id="title"
-                placeholder="e.g., Weekly PX Sync"
+                placeholder="e.g., Weekly HR Sync"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               />
