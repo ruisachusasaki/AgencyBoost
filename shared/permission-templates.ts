@@ -599,12 +599,12 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
       },
       {
         tab: 'px_meetings',
-        label: 'HR Meetings',
-        description: 'Manage HR team meetings',
+        label: 'Meetings',
+        description: 'Manage team meetings',
         permissions: [
-          { key: 'hr.px_meetings.view', label: 'View HR meetings', description: 'See HR meetings', action: 'view' },
-          { key: 'hr.px_meetings.create', label: 'Create HR meetings', description: 'Schedule HR meetings', action: 'create' },
-          { key: 'hr.px_meetings.manage', label: 'Manage HR meetings', description: 'Edit HR meetings', action: 'manage' },
+          { key: 'hr.px_meetings.view', label: 'View meetings', description: 'See meetings', action: 'view' },
+          { key: 'hr.px_meetings.create', label: 'Create meetings', description: 'Schedule meetings', action: 'create' },
+          { key: 'hr.px_meetings.manage', label: 'Manage meetings', description: 'Edit meetings', action: 'manage' },
         ],
       },
       {

@@ -8173,7 +8173,7 @@ export default function EnhancedClientDetail() {
                     ) : clientMeetings.length === 0 ? (
                       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                         <ClipboardList className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-                        <p className="text-sm">No HR meetings linked to this client</p>
+                        <p className="text-sm">No meetings linked to this client</p>
                         <p className="text-xs mt-1">Link meetings from HR &gt; Meetings</p>
                       </div>
                     ) : (
