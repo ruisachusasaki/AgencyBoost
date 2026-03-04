@@ -105,3 +105,6 @@ externalPort = 9000
 
 [agent]
 integrations = ["javascript_object_storage:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_slack:1.0.0", "google-calendar:1.0.0", "javascript_stripe:1.0.0"]
+
+[objectStorage]
+defaultBucketID = "replit-objstore-b3f7e038-92b6-4869-8fa4-401cadf44271"
