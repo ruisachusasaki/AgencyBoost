@@ -39880,10 +39880,20 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.get("/api/tickets/sources", requireAuth(), requireGranularPermission("tickets.list.view"), async (req, res) => {
+    try {
+      const sources = await db.selectDistinct({ source: tickets.source }).from(tickets).where(sql`${tickets.source} IS NOT NULL`);
+      res.json(sources.map(s => s.source).filter(Boolean).sort());
+    } catch (error) {
+      console.error("Error fetching ticket sources:", error);
+      res.status(500).json({ error: "Failed to fetch ticket sources" });
+    }
+  });
+
   // GET /api/tickets - List tickets with filters and pagination
   app.get("/api/tickets", requireAuth(), requireGranularPermission("tickets.list.view"), async (req, res) => {
     try {
-      const { status, type, priority, assignedTo, search, page = "1", limit = "20", sortBy, sortDir } = req.query;
+      const { status, type, priority, assignedTo, search, source, page = "1", limit = "20", sortBy, sortDir } = req.query;
       const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
       const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
       const offset = (pageNum - 1) * limitNum;
@@ -39906,6 +39916,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           conditions.push(eq(tickets.assignedTo, assignedTo as string));
         }
       }
+      if (source) conditions.push(eq(tickets.source, source as string));
       if (search) conditions.push(ilike(tickets.title, `%${search}%`));
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -39940,6 +39951,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           closedAt: tickets.closedAt,
           createdAt: tickets.createdAt,
           updatedAt: tickets.updatedAt,
+          source: tickets.source,
+          ticketSubmitterName: tickets.submitterName,
           submitterFirstName: submitter.firstName,
           submitterLastName: submitter.lastName,
           assigneeFirstName: assignee.firstName,
@@ -39963,7 +39976,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       res.json({
         tickets: ticketList.map(t => ({
           ...t,
-          submitterName: t.submitterFirstName ? `${t.submitterFirstName} ${t.submitterLastName}` : null,
+          submitterName: t.submitterFirstName ? `${t.submitterFirstName} ${t.submitterLastName}` : (t.ticketSubmitterName || null),
           assigneeName: t.assigneeFirstName ? `${t.assigneeFirstName} ${t.assigneeLastName}` : null,
         })),
         pagination: {
@@ -39998,6 +40011,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           screenshots: tickets.screenshots,
           submittedBy: tickets.submittedBy,
           assignedTo: tickets.assignedTo,
+          source: tickets.source,
+          ticketSubmitterName: tickets.submitterName,
           firstResponseAt: tickets.firstResponseAt,
           resolvedAt: tickets.resolvedAt,
           closedAt: tickets.closedAt,
@@ -40045,7 +40060,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
       res.json({
         ...ticket,
-        submitterName: ticket.submitterFirstName ? `${ticket.submitterFirstName} ${ticket.submitterLastName}` : null,
+        submitterName: ticket.submitterFirstName ? `${ticket.submitterFirstName} ${ticket.submitterLastName}` : (ticket.ticketSubmitterName || null),
         assigneeName: ticket.assigneeFirstName ? `${ticket.assigneeFirstName} ${ticket.assigneeLastName}` : null,
         comments: comments.map(c => ({
           ...c,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckCircle, Loader2, AlertCircle, FileText } from "lucide-react";
+import { CheckCircle, Loader2, AlertCircle, FileText, RotateCcw, Upload } from "lucide-react";
 
 interface FormField {
   id: string;
@@ -28,6 +28,7 @@ interface FormConfig {
   settings: Record<string, any> | null;
   destination: string;
   platformLabel: string | null;
+  embedApiKey: string | null;
   fields: FormField[];
 }
 
@@ -45,6 +46,9 @@ export default function PublicTicketForm() {
   const [submitterName, setSubmitterName] = useState("");
   const [submitterEmail, setSubmitterEmail] = useState("");
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
+  const [fileNames, setFileNames] = useState<Record<string, string>>({});
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     if (!shortCode) return;
@@ -62,6 +66,20 @@ export default function PublicTicketForm() {
         setLoading(false);
       });
   }, [shortCode]);
+
+  const resetForm = () => {
+    setSubmitted(false);
+    setReferenceNumber(null);
+    setAnswers({});
+    setSubmitterName("");
+    setSubmitterEmail("");
+    setValidationErrors({});
+    setUploadingFiles({});
+    setFileNames({});
+    Object.values(fileInputRefs.current).forEach(input => {
+      if (input) input.value = "";
+    });
+  };
 
   const validate = (): boolean => {
     const errors: Record<string, string> = {};
@@ -84,9 +102,53 @@ export default function PublicTicketForm() {
     return Object.keys(errors).length === 0;
   };
 
+  const handleFileUpload = async (fieldId: string, file: File) => {
+    if (!form?.embedApiKey) {
+      setFileNames(prev => ({ ...prev, [fieldId]: file.name }));
+      setAnswers(prev => ({ ...prev, [fieldId]: file.name }));
+      return;
+    }
+
+    setUploadingFiles(prev => ({ ...prev, [fieldId]: true }));
+    try {
+      const urlResp = await fetch("/api/public/forms/upload-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-form-key": form.embedApiKey,
+        },
+        body: JSON.stringify({ fileName: file.name, contentType: file.type }),
+      });
+
+      if (!urlResp.ok) throw new Error("Failed to get upload URL");
+      const { uploadUrl } = await urlResp.json();
+
+      await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      const fileUrl = uploadUrl.split("?")[0];
+      setAnswers(prev => ({ ...prev, [fieldId]: fileUrl }));
+      setFileNames(prev => ({ ...prev, [fieldId]: file.name }));
+    } catch (err) {
+      setFileNames(prev => ({ ...prev, [fieldId]: file.name }));
+      setAnswers(prev => ({ ...prev, [fieldId]: file.name }));
+    } finally {
+      setUploadingFiles(prev => ({ ...prev, [fieldId]: false }));
+    }
+  };
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!validate()) return;
+
+    const isUploading = Object.values(uploadingFiles).some(v => v);
+    if (isUploading) {
+      setValidationErrors({ _form: "Please wait for file uploads to complete." });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -151,10 +213,20 @@ export default function PublicTicketForm() {
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Submitted Successfully!</h2>
             <p className="text-sm text-gray-500 mb-4">Your submission has been received. We'll get back to you soon.</p>
             {referenceNumber && (
-              <p className="text-sm font-mono text-gray-600 bg-gray-50 py-2 px-4 rounded-lg inline-block">
+              <p className="text-sm font-mono text-gray-600 bg-gray-50 py-2 px-4 rounded-lg inline-block mb-4">
                 Reference: {referenceNumber}
               </p>
             )}
+            <div>
+              <Button
+                variant="outline"
+                onClick={resetForm}
+                className="mt-2"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Submit Another
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -258,14 +330,29 @@ export default function PublicTicketForm() {
                   )}
 
                   {field.type === "file" && (
-                    <Input
-                      type="file"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) setAnswers({ ...answers, [field.id]: file.name });
-                      }}
-                      className={validationErrors[field.id] ? "border-red-500" : ""}
-                    />
+                    <div>
+                      <Input
+                        type="file"
+                        ref={(el) => { fileInputRefs.current[field.id] = el; }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(field.id, file);
+                        }}
+                        className={validationErrors[field.id] ? "border-red-500" : ""}
+                      />
+                      {uploadingFiles[field.id] && (
+                        <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Uploading...
+                        </div>
+                      )}
+                      {fileNames[field.id] && !uploadingFiles[field.id] && (
+                        <div className="flex items-center gap-1.5 mt-1.5 text-xs text-green-600">
+                          <Upload className="w-3 h-3" />
+                          {fileNames[field.id]}
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {validationErrors[field.id] && (
@@ -282,7 +369,7 @@ export default function PublicTicketForm() {
 
               <Button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || Object.values(uploadingFiles).some(v => v)}
                 className="w-full text-white"
                 style={{ backgroundColor: primaryColor }}
               >

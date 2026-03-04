@@ -29,6 +29,7 @@ interface TicketData {
   status: string;
   submittedBy?: string;
   submittedByName?: string;
+  submitterName?: string;
   assignedTo?: string;
   assignedToName?: string;
   tags?: string[];
@@ -290,6 +291,7 @@ export default function TicketsPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [assignedToFilter, setAssignedToFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -311,6 +313,7 @@ export default function TicketsPage() {
     if (typeFilter !== "all") params.set("type", typeFilter);
     if (priorityFilter !== "all") params.set("priority", priorityFilter);
     if (assignedToFilter !== "all") params.set("assignedTo", assignedToFilter);
+    if (sourceFilter !== "all") params.set("source", sourceFilter);
     if (searchTerm) params.set("search", searchTerm);
     params.set("page", String(currentPage));
     params.set("limit", String(pageSize));
@@ -331,6 +334,7 @@ export default function TicketsPage() {
     if (typeFilter !== "all") params.set("type", typeFilter);
     if (priorityFilter !== "all") params.set("priority", priorityFilter);
     if (assignedToFilter !== "all") params.set("assignedTo", assignedToFilter);
+    if (sourceFilter !== "all") params.set("source", sourceFilter);
     if (searchTerm) params.set("search", searchTerm);
     const qs = params.toString();
     return qs ? `?${qs}` : "";
@@ -342,6 +346,10 @@ export default function TicketsPage() {
 
   const { data: staff = [] } = useQuery<StaffMember[]>({
     queryKey: ["/api/staff"],
+  });
+
+  const { data: ticketSources = [] } = useQuery<string[]>({
+    queryKey: ["/api/tickets/sources"],
   });
 
   const tickets = ticketsData?.tickets || [];
@@ -533,28 +541,10 @@ export default function TicketsPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tickets</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage bug reports and feature requests</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center border rounded-lg overflow-hidden">
-            <button
-              className={`p-2 transition-colors ${viewMode === "list" ? "bg-primary text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
-              onClick={() => setViewMode("list")}
-              title="List View"
-            >
-              <List className="w-4 h-4" />
-            </button>
-            <button
-              className={`p-2 transition-colors ${viewMode === "kanban" ? "bg-primary text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
-              onClick={() => setViewMode("kanban")}
-              title="Kanban View"
-            >
-              <Columns3 className="w-4 h-4" />
-            </button>
-          </div>
-          <Button className="bg-primary hover:bg-primary/90 text-white" onClick={() => { setEditingTicket(null); setFormData(defaultFormData); setIsCreateDialogOpen(true); }}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Ticket
-          </Button>
-        </div>
+        <Button className="bg-primary hover:bg-primary/90 text-white" onClick={() => { setEditingTicket(null); setFormData(defaultFormData); setIsCreateDialogOpen(true); }}>
+          <Plus className="w-4 h-4 mr-2" />
+          New Ticket
+        </Button>
       </div>
 
       <div className="flex space-x-1 border-b border-gray-200 dark:border-gray-700">
@@ -669,6 +659,18 @@ export default function TicketsPage() {
               </SelectContent>
             </Select>
 
+            <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-[170px]">
+                <SelectValue placeholder="Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                {(ticketSources || []).map((s: string) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -677,6 +679,23 @@ export default function TicketsPage() {
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 className="pl-9"
               />
+            </div>
+
+            <div className="flex items-center border rounded-lg overflow-hidden ml-auto">
+              <button
+                className={`p-2 transition-colors ${viewMode === "list" ? "bg-primary text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                onClick={() => setViewMode("list")}
+                title="List View"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                className={`p-2 transition-colors ${viewMode === "kanban" ? "bg-primary text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                onClick={() => setViewMode("kanban")}
+                title="Kanban View"
+              >
+                <Columns3 className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
@@ -796,7 +815,7 @@ export default function TicketsPage() {
                           <TableCell>{getTypeBadge(ticket.type)}</TableCell>
                           <TableCell>{getPriorityBadge(ticket.priority)}</TableCell>
                           <TableCell>{getStatusBadge(ticket.status)}</TableCell>
-                          <TableCell className="text-sm">{ticket.submittedByName || getStaffName(ticket.submittedBy) || "-"}</TableCell>
+                          <TableCell className="text-sm">{ticket.submitterName || ticket.submittedByName || getStaffName(ticket.submittedBy) || "-"}</TableCell>
                           <TableCell className="text-sm">{ticket.assignedToName || getStaffName(ticket.assignedTo) || "-"}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300 text-xs">
