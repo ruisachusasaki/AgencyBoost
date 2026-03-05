@@ -2992,12 +2992,36 @@ function IncidentLogSection({ staffId, staffName }: { staffId: string; staffName
 
             <div className="space-y-2">
               <Label>Follow-up Date</Label>
-              <Input
-                type="date"
-                value={formData.followUpDate}
-                onChange={(e) => setFormData(p => ({ ...p, followUpDate: e.target.value }))}
-                data-testid="input-incident-followup"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.followUpDate && "text-muted-foreground"
+                    )}
+                    data-testid="input-incident-followup"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.followUpDate
+                      ? format(new Date(formData.followUpDate + "T00:00:00"), "MMM d, yyyy")
+                      : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.followUpDate ? new Date(formData.followUpDate + "T00:00:00") : undefined}
+                    onSelect={(date) => {
+                      setFormData(p => ({
+                        ...p,
+                        followUpDate: date ? format(date, "yyyy-MM-dd") : "",
+                      }));
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="flex items-center gap-2">
