@@ -30,9 +30,39 @@ interface FormField {
   order: number;
 }
 
+interface OnboardingBranding {
+  companyName: string;
+  logoUrl: string;
+  primaryColor: string;
+  welcomeHeading: string;
+  welcomeDescription: string;
+  submitButtonText: string;
+  successHeading: string;
+  successDescription: string;
+}
+
 interface OnboardingFormConfig {
   fields: FormField[];
+  branding?: OnboardingBranding;
 }
+
+const defaultBranding: OnboardingBranding = {
+  companyName: '',
+  logoUrl: '',
+  primaryColor: '#16a34a',
+  welcomeHeading: 'Welcome to the Team!',
+  welcomeDescription: "We're excited to have you join us! Please complete the onboarding form below to help us get everything set up for your first day.",
+  submitButtonText: 'Submit Onboarding Information',
+  successHeading: 'Onboarding Information Submitted!',
+  successDescription: 'Thank you for completing your onboarding form. Our HR team will review your information and contact you with next steps.',
+};
+
+const lightenColor = (hex: string, amount: number): string => {
+  const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + amount);
+  const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + amount);
+  const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + amount);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+};
 
 // Default fields that match the form editor defaults
 const defaultFormFields: FormField[] = [
@@ -135,6 +165,10 @@ export default function OnboardingPage() {
     queryKey: ["/api/new-hire-onboarding-form-config"],
     retry: false,
   });
+
+  const branding: OnboardingBranding = configData?.branding
+    ? { ...defaultBranding, ...configData.branding }
+    : defaultBranding;
 
   // Create dynamic form schema based on configuration
   const createFormSchema = (fields: FormField[]) => {
@@ -466,9 +500,9 @@ export default function OnboardingPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <Clock className="h-8 w-8 animate-spin mx-auto mb-2 text-green-600" />
+          <Clock className="h-8 w-8 animate-spin mx-auto mb-2 text-gray-500" />
           <p className="text-gray-600">Loading onboarding form...</p>
         </div>
       </div>
@@ -476,20 +510,37 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
+    <div
+      className="min-h-screen"
+      style={{
+        background: `linear-gradient(135deg, ${lightenColor(branding.primaryColor, 210)} 0%, ${lightenColor(branding.primaryColor, 190)} 100%)`
+      }}
+    >
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="p-3 bg-green-100 rounded-full">
-                <UserPlus className="h-8 w-8 text-green-600" />
+            {(branding.logoUrl || branding.companyName) && (
+              <div className="flex items-center justify-center gap-3 mb-4">
+                {branding.logoUrl && (
+                  <img src={branding.logoUrl} alt="Company logo" className="h-12 w-auto object-contain" />
+                )}
+                {branding.companyName && (
+                  <span className="text-xl font-semibold text-gray-800">{branding.companyName}</span>
+                )}
               </div>
-              <h1 className="text-4xl font-bold text-gray-900">Welcome to the Team!</h1>
+            )}
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div
+                className="p-3 rounded-full"
+                style={{ backgroundColor: lightenColor(branding.primaryColor, 200) }}
+              >
+                <UserPlus className="h-8 w-8" style={{ color: branding.primaryColor }} />
+              </div>
+              <h1 className="text-4xl font-bold text-gray-900">{branding.welcomeHeading}</h1>
             </div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We're excited to have you join us! Please complete the onboarding form below 
-              to help us get everything set up for your first day.
+              {branding.welcomeDescription}
             </p>
           </div>
         </div>
@@ -500,17 +551,22 @@ export default function OnboardingPage() {
         {submissionComplete ? (
           <Card className="text-center">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-center gap-2 text-green-600 mb-4">
+              <div className="flex items-center justify-center gap-2 mb-4" style={{ color: branding.primaryColor }}>
                 <CheckCircle className="h-8 w-8" />
-                <h2 className="text-2xl font-semibold">Onboarding Information Submitted!</h2>
+                <h2 className="text-2xl font-semibold">{branding.successHeading}</h2>
               </div>
               <p className="text-gray-600 text-lg mb-6">
-                Thank you for completing your onboarding form. Our HR team will review your information 
-                and contact you with next steps.
+                {branding.successDescription}
               </p>
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-800 font-medium">What happens next?</p>
-                <ul className="text-green-700 mt-2 text-left list-disc list-inside space-y-1">
+              <div
+                className="p-4 rounded-lg border"
+                style={{
+                  backgroundColor: lightenColor(branding.primaryColor, 220),
+                  borderColor: lightenColor(branding.primaryColor, 180),
+                }}
+              >
+                <p className="font-medium" style={{ color: branding.primaryColor }}>What happens next?</p>
+                <ul className="mt-2 text-left list-disc list-inside space-y-1" style={{ color: branding.primaryColor }}>
                   <li>HR will review your information within 1-2 business days</li>
                   <li>You'll receive an email with your account setup instructions</li>
                   <li>We'll schedule your first day orientation</li>
@@ -522,7 +578,7 @@ export default function OnboardingPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-6 w-6 text-green-600" />
+                <Building2 className="h-6 w-6" style={{ color: branding.primaryColor }} />
                 New Hire Onboarding Form
               </CardTitle>
               <CardDescription>
@@ -540,7 +596,8 @@ export default function OnboardingPage() {
                   <div className="pt-6 border-t">
                     <Button 
                       type="submit" 
-                      className="w-full bg-green-600 hover:bg-green-700" 
+                      className="w-full text-white" 
+                      style={{ backgroundColor: branding.primaryColor }}
                       disabled={submitMutation.isPending}
                       data-testid="button-submit-onboarding"
                     >
@@ -552,7 +609,7 @@ export default function OnboardingPage() {
                       ) : (
                         <>
                           <UserPlus className="h-4 w-4 mr-2" />
-                          Submit Onboarding Information
+                          {branding.submitButtonText}
                         </>
                       )}
                     </Button>
