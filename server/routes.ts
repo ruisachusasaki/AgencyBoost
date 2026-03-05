@@ -28767,6 +28767,50 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  // Onboarding logo upload (admin uploads company logo for branding)
+  app.post("/api/onboarding-logo-upload", requireAuth(), requirePermission('hr', 'canManage'), upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      if (req.file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({ error: "Logo file size exceeds 5MB limit" });
+      }
+
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ error: "Only PNG, JPG, SVG, and WebP images are allowed" });
+      }
+
+      const { ObjectStorageService, sanitizeFileName } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
+
+      const sanitized = sanitizeFileName(req.file.originalname);
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: req.file.buffer,
+        headers: {
+          'Content-Type': req.file.mimetype || 'image/png',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload to object storage');
+      }
+
+      const urlObj = new URL(uploadUrl);
+      const objectPath = urlObj.pathname;
+      const fileUrl = `/objects${objectPath}`;
+
+      res.json({ fileUrl, fileName: sanitized });
+    } catch (error) {
+      console.error("Error uploading onboarding logo:", error);
+      res.status(500).json({ error: "Failed to upload logo" });
+    }
+  });
+
   // Onboarding file upload (new hire uploads filled-out forms) - PUBLIC (no auth required, like submission)
   app.post("/api/onboarding-file-upload", upload.single('file'), async (req, res) => {
     try {

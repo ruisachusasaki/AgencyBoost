@@ -3289,6 +3289,7 @@ export type InsertJobApplicationFormConfig = z.infer<typeof insertJobApplication
 export const newHireOnboardingFormConfig = pgTable("new_hire_onboarding_form_config", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   fields: jsonb("fields").notNull(), // Array of form field configurations
+  branding: jsonb("branding"), // Branding & style settings (logo, colors, text)
   updatedBy: varchar("updated_by").notNull().references(() => users.id),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Plus, 
   Edit2, 
@@ -30,10 +31,45 @@ import {
   Upload,
   Download,
   X,
-  Loader2
+  Loader2,
+  Paintbrush,
+  Image as ImageIcon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+
+interface OnboardingBranding {
+  companyName: string;
+  logoUrl: string;
+  primaryColor: string;
+  welcomeHeading: string;
+  welcomeDescription: string;
+  submitButtonText: string;
+  successHeading: string;
+  successDescription: string;
+}
+
+const defaultBranding: OnboardingBranding = {
+  companyName: '',
+  logoUrl: '',
+  primaryColor: '#16a34a',
+  welcomeHeading: 'Welcome to the Team!',
+  welcomeDescription: "We're excited to have you join us! Please complete the onboarding form below to help us get everything set up for your first day.",
+  submitButtonText: 'Submit Onboarding Information',
+  successHeading: 'Onboarding Information Submitted!',
+  successDescription: 'Thank you for completing your onboarding form. Our HR team will review your information and contact you with next steps.',
+};
+
+const colorPresets = [
+  { name: 'Green', value: '#16a34a' },
+  { name: 'Teal', value: '#00C9C6' },
+  { name: 'Blue', value: '#2563eb' },
+  { name: 'Purple', value: '#7c3aed' },
+  { name: 'Red', value: '#dc2626' },
+  { name: 'Orange', value: '#ea580c' },
+  { name: 'Pink', value: '#db2777' },
+  { name: 'Slate', value: '#475569' },
+];
 
 interface FormField {
   id: string;
@@ -145,6 +181,7 @@ export default function NewHireOnboardingFormEditor() {
   });
 
   const [fields, setFields] = useState<FormField[]>(defaultFields);
+  const [branding, setBranding] = useState<OnboardingBranding>(defaultBranding);
   const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
   const [editingField, setEditingField] = useState<FormField | null>(null);
   const [fieldForm, setFieldForm] = useState<Partial<FormField>>({
@@ -157,6 +194,7 @@ export default function NewHireOnboardingFormEditor() {
     templateFileName: ''
   });
   const [uploadingTemplate, setUploadingTemplate] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -166,12 +204,15 @@ export default function NewHireOnboardingFormEditor() {
     if (configData?.fields) {
       setFields(configData.fields);
     }
+    if (configData?.branding) {
+      setBranding({ ...defaultBranding, ...configData.branding });
+    }
   }, [configData]);
 
   // Save configuration mutation
   const saveConfigMutation = useMutation({
-    mutationFn: async (fields: FormField[]) => {
-      return apiRequest('POST', '/api/new-hire-onboarding-form-config', { fields });
+    mutationFn: async (payload: { fields: FormField[]; branding: OnboardingBranding }) => {
+      return apiRequest('POST', '/api/new-hire-onboarding-form-config', payload);
     },
     onSuccess: () => {
       toast({
@@ -191,7 +232,7 @@ export default function NewHireOnboardingFormEditor() {
   });
 
   const handleSaveConfiguration = () => {
-    saveConfigMutation.mutate(fields);
+    saveConfigMutation.mutate({ fields, branding });
   };
 
   const handleDragEnd = (result: DropResult) => {
@@ -326,6 +367,71 @@ export default function NewHireOnboardingFormEditor() {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/onboarding-logo-upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload logo');
+      }
+
+      const result = await response.json();
+      setBranding(prev => ({ ...prev, logoUrl: result.fileUrl }));
+
+      toast({
+        title: "Logo Uploaded",
+        variant: "default",
+        description: "Company logo uploaded successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload logo",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = '';
+    }
+  };
+
+  const hexToHsl = (hex: string): string => {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+        case g: h = ((b - r) / d + 2) / 6; break;
+        case b: h = ((r - g) / d + 4) / 6; break;
+      }
+    }
+    return `${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%`;
+  };
+
+  const lightenColor = (hex: string, amount: number): string => {
+    const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + amount);
+    const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + amount);
+    const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + amount);
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  };
+
   const getFieldIcon = (type: string) => {
     switch (type) {
       case 'email': return <Mail className="h-4 w-4" />;
@@ -420,6 +526,247 @@ export default function NewHireOnboardingFormEditor() {
         </CardContent>
       </Card>
 
+      <Tabs defaultValue="fields" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="fields">Form Fields</TabsTrigger>
+          <TabsTrigger value="branding" className="flex items-center gap-1.5">
+            <Paintbrush className="h-3.5 w-3.5" />
+            Branding & Style
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="branding" className="space-y-6">
+          {/* Branding Preview */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Paintbrush className="h-5 w-5" />
+                Branding & Style
+              </CardTitle>
+              <CardDescription>
+                Customize the look and feel of your public onboarding form. Changes apply to the page new hires see when filling out the form.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {/* Company Logo */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Company Logo</Label>
+                <p className="text-sm text-muted-foreground">Upload your company logo to display at the top of the onboarding form. Recommended: PNG or SVG, at least 200px wide.</p>
+                <div className="flex items-start gap-4">
+                  {branding.logoUrl ? (
+                    <div className="relative group">
+                      <div className="w-32 h-32 border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center bg-white overflow-hidden">
+                        <img src={branding.logoUrl} alt="Company logo" className="max-w-full max-h-full object-contain p-2" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setBranding(prev => ({ ...prev, logoUrl: '' }))}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        onChange={handleLogoUpload}
+                        disabled={uploadingLogo}
+                      />
+                      <div className="w-32 h-32 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-primary hover:text-primary transition-colors">
+                        {uploadingLogo ? (
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        ) : (
+                          <>
+                            <ImageIcon className="h-8 w-8" />
+                            <span className="text-xs text-center">Upload Logo</span>
+                          </>
+                        )}
+                      </div>
+                    </label>
+                  )}
+                  <div className="space-y-2 flex-1">
+                    <Label htmlFor="company-name">Company Name</Label>
+                    <Input
+                      id="company-name"
+                      placeholder="Your Company Name"
+                      value={branding.companyName}
+                      onChange={(e) => setBranding(prev => ({ ...prev, companyName: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">Displayed alongside the logo in the header. Leave empty to hide.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Primary Color */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Primary Color</Label>
+                <p className="text-sm text-muted-foreground">This color is used for the background gradient, buttons, icons, and accents on the onboarding form.</p>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {colorPresets.map((preset) => (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() => setBranding(prev => ({ ...prev, primaryColor: preset.value }))}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                          branding.primaryColor === preset.value
+                            ? 'border-slate-900 shadow-sm'
+                            : 'border-slate-200 hover:border-slate-400'
+                        }`}
+                      >
+                        <div
+                          className="w-5 h-5 rounded-full border border-slate-200"
+                          style={{ backgroundColor: preset.value }}
+                        />
+                        <span className="text-sm">{preset.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Label htmlFor="custom-color" className="shrink-0">Custom:</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        id="custom-color"
+                        value={branding.primaryColor}
+                        onChange={(e) => setBranding(prev => ({ ...prev, primaryColor: e.target.value }))}
+                        className="w-10 h-10 rounded cursor-pointer border border-slate-200"
+                      />
+                      <Input
+                        value={branding.primaryColor}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (/^#[0-9a-fA-F]{0,6}$/.test(v)) {
+                            setBranding(prev => ({ ...prev, primaryColor: v }));
+                          }
+                        }}
+                        className="w-28 font-mono"
+                        placeholder="#000000"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Text Customization */}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Text Customization</Label>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="welcome-heading">Welcome Heading</Label>
+                    <Input
+                      id="welcome-heading"
+                      value={branding.welcomeHeading}
+                      onChange={(e) => setBranding(prev => ({ ...prev, welcomeHeading: e.target.value }))}
+                      placeholder="Welcome to the Team!"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="welcome-description">Welcome Description</Label>
+                    <Textarea
+                      id="welcome-description"
+                      value={branding.welcomeDescription}
+                      onChange={(e) => setBranding(prev => ({ ...prev, welcomeDescription: e.target.value }))}
+                      placeholder="We're excited to have you join us..."
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="submit-button-text">Submit Button Text</Label>
+                    <Input
+                      id="submit-button-text"
+                      value={branding.submitButtonText}
+                      onChange={(e) => setBranding(prev => ({ ...prev, submitButtonText: e.target.value }))}
+                      placeholder="Submit Onboarding Information"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="success-heading">Success Heading</Label>
+                    <Input
+                      id="success-heading"
+                      value={branding.successHeading}
+                      onChange={(e) => setBranding(prev => ({ ...prev, successHeading: e.target.value }))}
+                      placeholder="Onboarding Information Submitted!"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="success-description">Success Description</Label>
+                    <Textarea
+                      id="success-description"
+                      value={branding.successDescription}
+                      onChange={(e) => setBranding(prev => ({ ...prev, successDescription: e.target.value }))}
+                      placeholder="Thank you for completing your onboarding form..."
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Preview */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Preview</Label>
+                <div
+                  className="rounded-lg border overflow-hidden"
+                  style={{
+                    background: `linear-gradient(135deg, ${lightenColor(branding.primaryColor, 200)} 0%, ${lightenColor(branding.primaryColor, 180)} 100%)`
+                  }}
+                >
+                  <div className="bg-white border-b px-6 py-4">
+                    <div className="flex items-center justify-center gap-3">
+                      {branding.logoUrl && (
+                        <img src={branding.logoUrl} alt="Logo" className="h-10 w-auto object-contain" />
+                      )}
+                      {branding.companyName && (
+                        <span className="text-lg font-semibold text-slate-800">{branding.companyName}</span>
+                      )}
+                    </div>
+                    <div className="text-center mt-2">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <div
+                          className="p-1.5 rounded-full"
+                          style={{ backgroundColor: lightenColor(branding.primaryColor, 200) }}
+                        >
+                          <User className="h-4 w-4" style={{ color: branding.primaryColor }} />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900">{branding.welcomeHeading || 'Welcome to the Team!'}</h3>
+                      </div>
+                      <p className="text-xs text-slate-500 max-w-md mx-auto line-clamp-2">{branding.welcomeDescription}</p>
+                    </div>
+                  </div>
+                  <div className="px-6 py-4">
+                    <div className="bg-white rounded-lg border p-4 space-y-3">
+                      <div className="h-3 bg-slate-100 rounded w-24" />
+                      <div className="h-8 bg-slate-50 rounded border" />
+                      <div className="h-3 bg-slate-100 rounded w-32" />
+                      <div className="h-8 bg-slate-50 rounded border" />
+                      <button
+                        className="w-full py-2 rounded-md text-white text-sm font-medium"
+                        style={{ backgroundColor: branding.primaryColor }}
+                        disabled
+                      >
+                        {branding.submitButtonText || 'Submit Onboarding Information'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button 
+              onClick={handleSaveConfiguration}
+              disabled={saveConfigMutation.isPending}
+            >
+              {saveConfigMutation.isPending ? "Saving..." : "Save Configuration"}
+            </Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="fields" className="space-y-6">
       {/* Actions */}
       <div className="flex justify-between items-center">
         <div className="flex gap-2">
@@ -699,6 +1046,8 @@ export default function NewHireOnboardingFormEditor() {
           </DragDropContext>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
