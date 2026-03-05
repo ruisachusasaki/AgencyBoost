@@ -223,22 +223,24 @@ export default function JobApplicationFormEditor() {
   };
 
   const handleSaveField = (fieldData: Partial<FormField>) => {
+    const cleanedData = {
+      ...fieldData,
+      options: fieldData.options?.filter(opt => opt.trim())
+    };
     if (editingField) {
-      // Update existing field
       setFields(prev => prev.map(field => 
         field.id === editingField.id 
-          ? { ...field, ...fieldData }
+          ? { ...field, ...cleanedData }
           : field
       ));
     } else {
-      // Add new field
       const newField: FormField = {
         id: `field_${Date.now()}`,
-        label: fieldData.label || '',
-        type: fieldData.type || 'text',
-        placeholder: fieldData.placeholder || '',
-        required: fieldData.required || false,
-        options: fieldData.options || [],
+        label: cleanedData.label || '',
+        type: cleanedData.type || 'text',
+        placeholder: cleanedData.placeholder || '',
+        required: cleanedData.required || false,
+        options: cleanedData.options || [],
         order: fields.length
       };
       setFields(prev => [...prev, newField]);
@@ -536,10 +538,15 @@ function FieldEditor({ field, onSave, onCancel }: FieldEditorProps) {
             value={formData.options?.join('\n') || ''}
             onChange={(e) => setFormData(prev => ({ 
               ...prev, 
-              options: e.target.value.split('\n').filter(opt => opt.trim()) 
+              options: e.target.value.split('\n')
             }))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.stopPropagation();
+              }
+            }}
             placeholder="Option 1&#10;Option 2&#10;Option 3"
-            rows={4}
+            rows={5}
           />
         </div>
       )}

@@ -342,10 +342,14 @@ export default function FormBuilder({ formId: propFormId }: FormBuilderProps) {
       styling: formStyling,
     });
 
+    const cleanedFields = formFields.map(f => ({
+      ...f,
+      options: f.options?.filter(opt => opt.trim())
+    }));
     saveFormMutation.mutate({
       name: formName,
       description: formDescription,
-      fields: formFields,
+      fields: cleanedFields,
       status: "draft",
     });
   };
@@ -360,10 +364,14 @@ export default function FormBuilder({ formId: propFormId }: FormBuilderProps) {
       return;
     }
 
+    const cleanedFields = formFields.map(f => ({
+      ...f,
+      options: f.options?.filter(opt => opt.trim())
+    }));
     saveFormMutation.mutate({
       name: formName,
       description: formDescription,
-      fields: formFields,
+      fields: cleanedFields,
       status: "published",
     });
   };
@@ -1914,10 +1922,15 @@ function FormFieldEditor({ field, onUpdate, onDelete, dragProps }: FormFieldEdit
               <Textarea
                 value={field.options?.join('\n') || ''}
                 onChange={(e) => onUpdate({ 
-                  options: e.target.value.split('\n').filter(opt => opt.trim()) 
+                  options: e.target.value.split('\n')
                 })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.stopPropagation();
+                  }
+                }}
                 placeholder="Option 1&#10;Option 2&#10;Option 3"
-                rows={4}
+                rows={5}
                 data-testid={`textarea-field-options-${field.id}`}
               />
             </div>

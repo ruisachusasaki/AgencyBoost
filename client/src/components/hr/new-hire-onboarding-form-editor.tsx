@@ -209,7 +209,7 @@ export default function NewHireOnboardingFormEditor() {
       type: fieldForm.type!,
       placeholder: fieldForm.placeholder,
       required: fieldForm.required!,
-      options: fieldForm.options,
+      options: fieldForm.options?.filter(opt => opt.trim()),
       order: fields.length
     };
 
@@ -241,7 +241,7 @@ export default function NewHireOnboardingFormEditor() {
             type: fieldForm.type!,
             placeholder: fieldForm.placeholder,
             required: fieldForm.required!,
-            options: fieldForm.options
+            options: fieldForm.options?.filter(opt => opt.trim())
           }
         : field
     );
@@ -433,9 +433,15 @@ export default function NewHireOnboardingFormEditor() {
                       value={fieldForm.options?.join('\n') || ''}
                       onChange={(e) => setFieldForm({ 
                         ...fieldForm, 
-                        options: e.target.value.split('\n').filter(opt => opt.trim()) 
+                        options: e.target.value.split('\n')
                       })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.stopPropagation();
+                        }
+                      }}
                       placeholder="Option 1&#10;Option 2&#10;Option 3"
+                      rows={5}
                       data-testid="textarea-field-options"
                     />
                   </div>
