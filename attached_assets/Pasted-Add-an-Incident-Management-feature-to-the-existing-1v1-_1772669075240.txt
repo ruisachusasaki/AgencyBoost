@@ -1,0 +1,89 @@
+Add an Incident Management feature to the existing 1v1 meeting UI. This feature lives inside the 1v1 right column, below the existing "Private Notes" section. It is visible and editable only by Managers and Admins — identical access rules to Private Notes.
+
+---
+
+PROTECTIVE RULES — DO NOT TOUCH:
+- Do not modify any existing 1v1 meeting logic, fields, save behavior, or data
+- Do not modify any existing Private Notes functionality
+- Do not modify any auth/permission middleware
+- Do not modify vite.config.ts, package.json, or drizzle.config.ts
+- Do not alter any existing schema tables — only add new ones
+
+---
+
+PHASE 1 — DATABASE
+
+Add a new table `staff_incidents` to `shared/schema.ts` with the following columns:
+- id (serial, primary key)
+- staffId (integer, references staff.id, not null)
+- incidentType (text, not null)
+- status (text, not null, default 'open') — values: 'open', 'resolved', 'escalated'
+- description (text) — manager's notes about the incident
+- witness (text) — name of HR rep or witness present
+- employeeAcknowledged (boolean, default false)
+- employeeAcknowledgedAt (timestamp)
+- followUpDate (date) — optional scheduled follow-up
+- createdBy (integer, references staff.id) — who logged it
+- createdAt (timestamp, default now())
+- updatedAt (timestamp, default now())
+
+Valid incidentType values:
+verbal_warning, written_warning, final_written_warning, pip_initiated, pip_checkin, pip_passed, pip_failed, attendance_concern, no_call_no_show, policy_violation, code_of_conduct_violation, commendation, promotion_discussion, compensation_review, role_change, suspension, termination_voluntary, termination_involuntary
+
+Run the migration after adding the table.
+
+---
+
+PHASE 2 — API
+
+Add the following RESTful routes to server/routes.ts. All routes require requireAuth(). All routes require the user to be Admin or Manager (check req.user.role).
+
+GET    /api/staff/:staffId/incidents    — list all incidents for a staff member, ordered by createdAt desc
+POST   /api/staff/:staffId/incidents    — create a new incident
+PUT    /api/staff/incidents/:id         — update an incident (status, description, witness, followUpDate, employeeAcknowledged)
+DELETE /api/staff/incidents/:id         — delete an incident (admin only)
+
+On POST, automatically set createdBy to req.user.id and createdAt to now.
+On PUT, if employeeAcknowledged is being set to true and employeeAcknowledgedAt is not already set, auto-populate employeeAcknowledgedAt to now.
+
+---
+
+PHASE 3 — FRONTEND
+
+In the component that renders the individual 1v1 meeting detail view (accessible via HR > 1v1 Meetings > clicking a specific meeting), locate the right column section that contains Private Notes. Add the Incident Log section directly below it in that same file.
+
+This section renders only when req.user.role === 'admin' || req.user.role === 'manager'.
+
+Section header: "Incident Log" with a + button to open the Add Incident dialog.
+
+Incident list: Render existing incidents for this staff member fetched from GET /api/staff/:staffId/incidents. Each incident card shows:
+- Incident type as a human-readable label (e.g. pip_initiated → "PIP Initiated")
+- A colored status badge: Open (yellow), Resolved (green), Escalated (red)
+- Date/time logged (createdAt), formatted as "Mar 4, 2026 at 2:34 PM"
+- Description truncated to 2 lines with expand toggle
+- Witness name if present
+- "Employee Acknowledged" checkmark + timestamp if acknowledged
+- Follow-up date if set
+- Edit and Delete icon buttons (delete shows a confirmation dialog before proceeding)
+
+Add/Edit Incident dialog (shadcn Dialog) contains:
+- Incident Type — shadcn Select with all incident types grouped into sections: "Progressive Discipline", "Attendance & Conduct", "Recognition & Development", "Separation"
+- Status — Select: Open / Resolved / Escalated
+- Description — Textarea
+- Witness — Text input (placeholder: "HR rep or witness name")
+- Follow-up Date — Date input
+- Employee Acknowledged — Checkbox. If checked, show a note: "Timestamp will be recorded automatically."
+
+Use TanStack Query for all data fetching. Use useQuery({ queryKey: ['/api/staff/:staffId/incidents'] }) and useMutation for create/update/delete with proper cache invalidation on success.
+
+Use toast notifications with only "default" and "destructive" variants for success and error states.
+
+Use the primary teal theme color hsl(179, 100%, 39%) for the + button and any accent elements. Do not use blue.
+
+---
+
+PHASE 4 — VERIFY
+
+- Confirm the existing 1v1 save/load behavior is completely unchanged
+- Confirm incidents are not visible to non-manager/non-admin users
+- Confirm incidents persist independently of 1v1 meeting records (linked to staffId, not meetingId)

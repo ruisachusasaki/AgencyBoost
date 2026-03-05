@@ -1,18 +1,18 @@
 import {
   PERMISSION_KEY_MIGRATION_MAP
-} from "./chunk-DE7YTT24.js";
+} from "./chunk-KS5WMKSE.js";
 import {
   createOAuth2Client
-} from "./chunk-7BE2TQYE.js";
+} from "./chunk-5Y3IKJKP.js";
 import {
   EncryptionService
 } from "./chunk-BGP47S4B.js";
 import {
   emitTrigger
-} from "./chunk-62VBYTHD.js";
+} from "./chunk-5ONLC6YI.js";
 import {
   storage as storage2
-} from "./chunk-CLNQUUMA.js";
+} from "./chunk-JLTVJ5LY.js";
 import {
   deleteAppointmentFromGoogleCalendar,
   syncAppointmentToGoogleCalendar
@@ -28,14 +28,14 @@ import {
 } from "./chunk-WPY5OZFU.js";
 import {
   registerProposalRoutes
-} from "./chunk-WNW76QUL.js";
+} from "./chunk-RNGVLFOR.js";
 import {
   generateTasksFromTemplates
-} from "./chunk-6BZCMLYT.js";
-import "./chunk-7YDUX3K5.js";
+} from "./chunk-32EG5X25.js";
+import "./chunk-43NVPNZC.js";
 import {
   db
-} from "./chunk-PNXZBUAS.js";
+} from "./chunk-IFN2WCKL.js";
 import {
   aiAssistantSettings,
   aiIntegrations,
@@ -155,6 +155,7 @@ import {
   insertSocialMediaAccountSchema,
   insertSocialMediaPostSchema,
   insertSocialMediaTemplateSchema,
+  insertStaffIncidentSchema,
   insertStaffSchema,
   insertTagSchema,
   insertTaskCategorySchema,
@@ -238,6 +239,7 @@ import {
   socialMediaAccounts,
   socialMediaPosts,
   staff,
+  staffIncidents,
   staffLinkedEmails,
   tags,
   taskActivities,
@@ -294,7 +296,7 @@ import {
   workflowExecutions,
   workflowTemplates,
   workflows
-} from "./chunk-TIGQTVYH.js";
+} from "./chunk-O42M22MF.js";
 import {
   __require
 } from "./chunk-R5U7XKVJ.js";
@@ -2556,8 +2558,8 @@ function requireClientPortalAuth() {
       });
     }
     try {
-      const { db: db2 } = await import("./db-XLVPQV5H.js");
-      const { clientPortalUsers: clientPortalUsers2 } = await import("./schema-OFJBW4MB.js");
+      const { db: db2 } = await import("./db-ZOMYSHAI.js");
+      const { clientPortalUsers: clientPortalUsers2 } = await import("./schema-MCLNSYNZ.js");
       const { eq: eq12 } = await import("drizzle-orm");
       await db2.update(clientPortalUsers2).set({
         lastLogin: /* @__PURE__ */ new Date()
@@ -8514,7 +8516,7 @@ AgencyBoost CRM`
         fileUrl: normalizedFileUrl,
         uploadedBy: userId2
       }).returning();
-      const { commentFiles: commentFiles2 } = await import("./schema-OFJBW4MB.js");
+      const { commentFiles: commentFiles2 } = await import("./schema-MCLNSYNZ.js");
       try {
         await db.insert(commentFiles2).values({
           id: attachment.id,
@@ -11229,8 +11231,8 @@ AgencyBoost CRM`
   });
   async function checkFileExists(fileId) {
     try {
-      const { db: db2 } = await import("./db-XLVPQV5H.js");
-      const { commentFiles: commentFiles2, taskAttachments: taskAttachments2 } = await import("./schema-OFJBW4MB.js");
+      const { db: db2 } = await import("./db-ZOMYSHAI.js");
+      const { commentFiles: commentFiles2, taskAttachments: taskAttachments2 } = await import("./schema-MCLNSYNZ.js");
       const { eq: eq12 } = await import("drizzle-orm");
       const [commentFile] = await db2.select().from(commentFiles2).where(eq12(commentFiles2.id, fileId));
       if (commentFile) {
@@ -11268,8 +11270,8 @@ AgencyBoost CRM`
       if (!fileCheck.exists) {
         return res.status(404).json({ error: "File not found" });
       }
-      const { db: db2 } = await import("./db-XLVPQV5H.js");
-      const { imageAnnotations: imageAnnotations2 } = await import("./schema-OFJBW4MB.js");
+      const { db: db2 } = await import("./db-ZOMYSHAI.js");
+      const { imageAnnotations: imageAnnotations2 } = await import("./schema-MCLNSYNZ.js");
       const { eq: eq12 } = await import("drizzle-orm");
       const annotations = await db2.select().from(imageAnnotations2).where(eq12(imageAnnotations2.fileId, req.params.fileId));
       res.json(annotations);
@@ -11299,14 +11301,14 @@ AgencyBoost CRM`
         createdAt: /* @__PURE__ */ new Date(),
         updatedAt: /* @__PURE__ */ new Date()
       });
-      const { db: db2 } = await import("./db-XLVPQV5H.js");
-      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-OFJBW4MB.js");
+      const { db: db2 } = await import("./db-ZOMYSHAI.js");
+      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-MCLNSYNZ.js");
       const result = await db2.insert(imageAnnotations2).values(insertAnnotation).returning();
       const annotation = result[0];
       res.status(201).json(annotation);
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-OFJBW4MB.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-MCLNSYNZ.js");
           const { eq: eq12 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -11343,7 +11345,7 @@ AgencyBoost CRM`
         console.log(`Annotation created with mentions: ${mentions.join(", ")}`);
         (async () => {
           try {
-            const { staff: staff2 } = await import("./schema-OFJBW4MB.js");
+            const { staff: staff2 } = await import("./schema-MCLNSYNZ.js");
             const { inArray: inArray6 } = await import("drizzle-orm");
             const mentionedStaff = await db2.select({
               id: staff2.id,
@@ -11393,8 +11395,8 @@ AgencyBoost CRM`
         mentions,
         updatedAt: /* @__PURE__ */ new Date()
       };
-      const { db: db2 } = await import("./db-XLVPQV5H.js");
-      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-OFJBW4MB.js");
+      const { db: db2 } = await import("./db-ZOMYSHAI.js");
+      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-MCLNSYNZ.js");
       const { eq: eq12 } = await import("drizzle-orm");
       const result = await db2.update(imageAnnotations2).set(updateData).where(eq12(imageAnnotations2.id, req.params.annotationId)).returning();
       if (result.length === 0) {
@@ -11403,7 +11405,7 @@ AgencyBoost CRM`
       res.json(result[0]);
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-OFJBW4MB.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-MCLNSYNZ.js");
           const { eq: eq13 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -11443,7 +11445,7 @@ AgencyBoost CRM`
         console.log(`Annotation updated with mentions: ${mentions.join(", ")}`);
         (async () => {
           try {
-            const { staff: staff2 } = await import("./schema-OFJBW4MB.js");
+            const { staff: staff2 } = await import("./schema-MCLNSYNZ.js");
             const { inArray: inArray6 } = await import("drizzle-orm");
             const mentionedStaff = await db2.select({
               id: staff2.id,
@@ -11484,8 +11486,8 @@ AgencyBoost CRM`
   });
   app2.delete("/api/annotations/:annotationId", requireAuth(), async (req, res) => {
     try {
-      const { db: db2 } = await import("./db-XLVPQV5H.js");
-      const { imageAnnotations: imageAnnotations2 } = await import("./schema-OFJBW4MB.js");
+      const { db: db2 } = await import("./db-ZOMYSHAI.js");
+      const { imageAnnotations: imageAnnotations2 } = await import("./schema-MCLNSYNZ.js");
       const { eq: eq12 } = await import("drizzle-orm");
       const result = await db2.delete(imageAnnotations2).where(eq12(imageAnnotations2.id, req.params.annotationId)).returning();
       if (result.length === 0) {
@@ -11495,7 +11497,7 @@ AgencyBoost CRM`
       res.status(204).send();
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-OFJBW4MB.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-MCLNSYNZ.js");
           const { eq: eq13 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -11538,8 +11540,8 @@ AgencyBoost CRM`
   });
   app2.patch("/api/annotations/:annotationId/toggle-complete", requireAuth(), async (req, res) => {
     try {
-      const { db: db2 } = await import("./db-XLVPQV5H.js");
-      const { imageAnnotations: imageAnnotations2 } = await import("./schema-OFJBW4MB.js");
+      const { db: db2 } = await import("./db-ZOMYSHAI.js");
+      const { imageAnnotations: imageAnnotations2 } = await import("./schema-MCLNSYNZ.js");
       const { eq: eq12 } = await import("drizzle-orm");
       const [currentAnnotation] = await db2.select().from(imageAnnotations2).where(eq12(imageAnnotations2.id, req.params.annotationId));
       if (!currentAnnotation) {
@@ -11557,7 +11559,7 @@ AgencyBoost CRM`
       res.json(updatedAnnotation);
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-OFJBW4MB.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-MCLNSYNZ.js");
           const { eq: eq13 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -15485,7 +15487,7 @@ AgencyBoost CRM`
   });
   app2.get("/api/roles-permissions/export", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const { generateCSV } = await import("./roles-permissions-csv-ROR6KAYG.js");
+      const { generateCSV } = await import("./roles-permissions-csv-NCSKMB7D.js");
       const allRoles = await db.select({
         id: roles.id,
         name: roles.name
@@ -15518,7 +15520,7 @@ AgencyBoost CRM`
     try {
       const userId2 = getAuthenticatedUserIdOrFail(req, res);
       if (!userId2) return;
-      const { parseCSV, getAllValidPermissionKeys } = await import("./roles-permissions-csv-ROR6KAYG.js");
+      const { parseCSV, getAllValidPermissionKeys } = await import("./roles-permissions-csv-NCSKMB7D.js");
       const { csvContent } = req.body;
       if (!csvContent || typeof csvContent !== "string") {
         return res.status(400).json({ message: "CSV content is required" });
@@ -15553,7 +15555,7 @@ AgencyBoost CRM`
     try {
       const userId2 = getAuthenticatedUserIdOrFail(req, res);
       if (!userId2) return;
-      const { getAllValidPermissionKeys } = await import("./roles-permissions-csv-ROR6KAYG.js");
+      const { getAllValidPermissionKeys } = await import("./roles-permissions-csv-NCSKMB7D.js");
       const { roles: roleDataList } = req.body;
       if (!roleDataList || !Array.isArray(roleDataList)) {
         return res.status(400).json({ message: "Role data is required" });
@@ -18610,7 +18612,7 @@ ${appointment.description || ""}
   });
   app2.get("/api/integrations/slack/channels", requireAuth(), async (req, res) => {
     try {
-      const { slackService } = await import("./slack-service-52FXGTIS.js");
+      const { slackService } = await import("./slack-service-XFFVCABQ.js");
       if (!slackService.isConfigured()) {
         return res.status(400).json({ error: "Slack not configured" });
       }
@@ -18627,7 +18629,7 @@ ${appointment.description || ""}
   });
   app2.get("/api/integrations/slack/users", requireAuth(), async (req, res) => {
     try {
-      const { slackService } = await import("./slack-service-52FXGTIS.js");
+      const { slackService } = await import("./slack-service-XFFVCABQ.js");
       if (!slackService.isConfigured()) {
         return res.status(400).json({ error: "Slack not configured" });
       }
@@ -20994,7 +20996,7 @@ ${appointment.description || ""}
         }
       }
       try {
-        const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-XJXYBK6G.js");
+        const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-WKBPH5UT.js");
         const responsesObj = {};
         if (answers && answers.length > 0) {
           answers.forEach((answer) => {
@@ -25174,6 +25176,106 @@ ${appointment.description || ""}
       res.status(500).json({ error: "Failed to fetch performance reports" });
     }
   });
+  app2.get("/api/staff/:staffId/incidents", requireAuth(), async (req, res) => {
+    try {
+      const userId2 = getAuthenticatedUserIdOrFail(req);
+      const isAdmin = await isCurrentUserAdmin(req);
+      const userStaff = await db.select({ roleId: staff.roleId }).from(staff).where(eq8(staff.id, userId2)).limit(1);
+      const userRole = userStaff[0]?.roleId ? (await db.select({ name: roles.name }).from(roles).where(eq8(roles.id, userStaff[0].roleId)).limit(1))[0]?.name : null;
+      if (!isAdmin && userRole?.toLowerCase() !== "manager") {
+        return res.status(403).json({ message: "Only managers and admins can view incidents" });
+      }
+      const { staffId } = req.params;
+      const incidents = await db.select({
+        id: staffIncidents.id,
+        staffId: staffIncidents.staffId,
+        incidentType: staffIncidents.incidentType,
+        status: staffIncidents.status,
+        description: staffIncidents.description,
+        witness: staffIncidents.witness,
+        employeeAcknowledged: staffIncidents.employeeAcknowledged,
+        employeeAcknowledgedAt: staffIncidents.employeeAcknowledgedAt,
+        followUpDate: staffIncidents.followUpDate,
+        createdBy: staffIncidents.createdBy,
+        createdAt: staffIncidents.createdAt,
+        updatedAt: staffIncidents.updatedAt,
+        createdByFirstName: staff.firstName,
+        createdByLastName: staff.lastName
+      }).from(staffIncidents).leftJoin(staff, eq8(staffIncidents.createdBy, staff.id)).where(eq8(staffIncidents.staffId, staffId)).orderBy(desc2(staffIncidents.createdAt));
+      res.json(incidents);
+    } catch (error) {
+      console.error("Error fetching staff incidents:", error);
+      res.status(500).json({ message: "Failed to fetch incidents" });
+    }
+  });
+  app2.post("/api/staff/:staffId/incidents", requireAuth(), async (req, res) => {
+    try {
+      const userId2 = getAuthenticatedUserIdOrFail(req);
+      const isAdmin = await isCurrentUserAdmin(req);
+      const userStaff = await db.select({ roleId: staff.roleId }).from(staff).where(eq8(staff.id, userId2)).limit(1);
+      const userRole = userStaff[0]?.roleId ? (await db.select({ name: roles.name }).from(roles).where(eq8(roles.id, userStaff[0].roleId)).limit(1))[0]?.name : null;
+      if (!isAdmin && userRole?.toLowerCase() !== "manager") {
+        return res.status(403).json({ message: "Only managers and admins can create incidents" });
+      }
+      const { staffId } = req.params;
+      const validated = insertStaffIncidentSchema.parse({
+        ...req.body,
+        staffId,
+        createdBy: userId2
+      });
+      const [created] = await db.insert(staffIncidents).values(validated).returning();
+      res.status(201).json(created);
+    } catch (error) {
+      console.error("Error creating staff incident:", error);
+      res.status(500).json({ message: "Failed to create incident" });
+    }
+  });
+  app2.put("/api/staff/incidents/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId2 = getAuthenticatedUserIdOrFail(req);
+      const isAdmin = await isCurrentUserAdmin(req);
+      const userStaff = await db.select({ roleId: staff.roleId }).from(staff).where(eq8(staff.id, userId2)).limit(1);
+      const userRole = userStaff[0]?.roleId ? (await db.select({ name: roles.name }).from(roles).where(eq8(roles.id, userStaff[0].roleId)).limit(1))[0]?.name : null;
+      if (!isAdmin && userRole?.toLowerCase() !== "manager") {
+        return res.status(403).json({ message: "Only managers and admins can update incidents" });
+      }
+      const { id } = req.params;
+      const [existing] = await db.select().from(staffIncidents).where(eq8(staffIncidents.id, parseInt(id))).limit(1);
+      if (!existing) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      const updateData = {
+        ...req.body,
+        updatedAt: /* @__PURE__ */ new Date()
+      };
+      if (req.body.employeeAcknowledged === true && !existing.employeeAcknowledgedAt) {
+        updateData.employeeAcknowledgedAt = /* @__PURE__ */ new Date();
+      }
+      const [updated] = await db.update(staffIncidents).set(updateData).where(eq8(staffIncidents.id, parseInt(id))).returning();
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating staff incident:", error);
+      res.status(500).json({ message: "Failed to update incident" });
+    }
+  });
+  app2.delete("/api/staff/incidents/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId2 = getAuthenticatedUserIdOrFail(req);
+      const isAdmin = await isCurrentUserAdmin(req);
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Only admins can delete incidents" });
+      }
+      const { id } = req.params;
+      const [deleted] = await db.delete(staffIncidents).where(eq8(staffIncidents.id, parseInt(id))).returning();
+      if (!deleted) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+      res.json({ message: "Incident deleted" });
+    } catch (error) {
+      console.error("Error deleting staff incident:", error);
+      res.status(500).json({ message: "Failed to delete incident" });
+    }
+  });
   app2.get("/api/offboarding-form-config", async (req, res) => {
     try {
       let config;
@@ -26088,7 +26190,7 @@ ${appointment.description || ""}
   app2.post("/api/job-applications", async (req, res) => {
     try {
       console.log("Received job application:", req.body);
-      const insertJobApplicationSchema2 = (await import("./schema-OFJBW4MB.js")).insertJobApplicationSchema;
+      const insertJobApplicationSchema2 = (await import("./schema-MCLNSYNZ.js")).insertJobApplicationSchema;
       const validatedData = insertJobApplicationSchema2.parse(req.body);
       const jobOpening = await db.select().from(jobOpenings).where(eq8(jobOpenings.id, validatedData.positionId)).limit(1);
       if (!jobOpening.length) {
@@ -31162,7 +31264,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
   }
   app2.get("/api/google-calendar-events", requireAuth(), async (req, res) => {
     try {
-      const { calendarEvents: calendarEvents3 } = await import("./db-XLVPQV5H.js");
+      const { calendarEvents: calendarEvents3 } = await import("./db-ZOMYSHAI.js");
       const userId2 = req.session?.userId;
       if (!userId2) {
         return res.status(401).json({ error: "Not authenticated" });
@@ -31193,7 +31295,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
   app2.post("/api/calendar/events", requireAuth(), createCalendarEvent);
   app2.patch("/api/calendar/events/:eventId/status", requireAuth(), updateCalendarEventStatus);
   app2.get("/api/calendar/time-entries", requireAuth(), getEventTimeEntries);
-  const { chatWithAssistant } = await import("./ai-assistant-BMG2QL5K.js");
+  const { chatWithAssistant } = await import("./ai-assistant-PYF2X5IT.js");
   app2.get("/api/ai-assistant/settings", requireAuth(["admin"]), async (req, res) => {
     try {
       const [settings] = await db.select().from(aiAssistantSettings).limit(1);
@@ -33926,7 +34028,7 @@ router.post("/sync", async (req, res) => {
         });
       }
     }
-    const { syncUserCalendar } = await import("./googleCalendarSync-TKKQRRG4.js");
+    const { syncUserCalendar } = await import("./googleCalendarSync-7XSQTCMD.js");
     syncUserCalendar(req.session.userId, "primary").then((result) => {
       console.log(`[Sync Complete] User ${req.session?.userId}: ${result.eventsCreated} created, ${result.eventsUpdated} updated, ${result.eventsDeleted} deleted`);
     }).catch((error) => {
@@ -33990,7 +34092,7 @@ router.post("/auto-sync", async (req, res) => {
         message: "Data is recent, no sync needed"
       });
     }
-    const { syncUserCalendar } = await import("./googleCalendarSync-TKKQRRG4.js");
+    const { syncUserCalendar } = await import("./googleCalendarSync-7XSQTCMD.js");
     syncUserCalendar(req.session.userId, "primary").then((result) => {
       console.log(`[Auto-Sync Complete] User ${req.session?.userId}: ${result.eventsCreated} created, ${result.eventsUpdated} updated, ${result.eventsDeleted} deleted`);
     }).catch((error) => {
@@ -35547,7 +35649,7 @@ app.post(
           console.warn("[Slack Events] Missing signature headers");
           return res.status(401).json({ error: "Missing authentication headers" });
         }
-        const { slackService } = await import("./slack-service-52FXGTIS.js");
+        const { slackService } = await import("./slack-service-XFFVCABQ.js");
         if (!slackService.verifySlackRequest(timestamp, signature, rawBody)) {
           console.warn("[Slack Events] Invalid signature - rejecting request");
           return res.status(401).json({ error: "Invalid signature" });
@@ -35567,7 +35669,7 @@ app.post(
         console.log("[Slack Events] URL verification challenge received");
         return res.json({ challenge: payload.challenge });
       }
-      const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-XJXYBK6G.js");
+      const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-WKBPH5UT.js");
       if (payload.type === "event_callback") {
         const event = payload.event;
         console.log(`[Slack Events] Received event: ${event.type}`, {
@@ -35651,7 +35753,7 @@ app.post(
   express2.raw({ type: "application/json" }),
   async (req, res) => {
     try {
-      const { handleStripeWebhook: handleStripeWebhook2 } = await import("./proposalRoutes-UNED2GCM.js");
+      const { handleStripeWebhook: handleStripeWebhook2 } = await import("./proposalRoutes-E6AKAYGA.js");
       const { getNotificationService } = await import("./notification-service-2QQMBITT.js");
       const notificationService = getNotificationService();
       if (notificationService) {
@@ -35905,31 +36007,31 @@ async function setupFullApp(server) {
     appFullyLoaded = true;
     log("\u2705 All routes and middleware configured");
     runStartupMigrations().then(() => {
-      import("./googleCalendarBackgroundSync-6JS75436.js").then(({ startBackgroundSync }) => {
+      import("./googleCalendarBackgroundSync-MQGWU5VM.js").then(({ startBackgroundSync }) => {
         startBackgroundSync();
         log("\u2705 Google Calendar background sync started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start background calendar sync: ${err.message}`);
       });
-      import("./weeklyHoursCheckService-E4F7IK6K.js").then(({ startWeeklyHoursCheck }) => {
+      import("./weeklyHoursCheckService-Y5GCSX32.js").then(({ startWeeklyHoursCheck }) => {
         startWeeklyHoursCheck();
         log("\u2705 Weekly hours check service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start weekly hours check service: ${err.message}`);
       });
-      import("./longRunningTimerService-WSW5HEIW.js").then(({ startLongRunningTimerCheck }) => {
+      import("./longRunningTimerService-BR2BUWAL.js").then(({ startLongRunningTimerCheck }) => {
         startLongRunningTimerCheck();
         log("\u2705 Long-running timer alert service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start long-running timer alert service: ${err.message}`);
       });
-      import("./proposalReminderService-CCR5NFP2.js").then(({ startProposalReminderService }) => {
+      import("./proposalReminderService-URSVTNX7.js").then(({ startProposalReminderService }) => {
         startProposalReminderService();
         log("\u2705 Proposal reminder service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start proposal reminder service: ${err.message}`);
       });
-      import("./recurringTaskService-6UQGTF3U.js").then(({ startRecurringTaskService }) => {
+      import("./recurringTaskService-R5CH4LPS.js").then(({ startRecurringTaskService }) => {
         startRecurringTaskService();
         log("\u2705 Recurring task generation service started");
       }).catch((err) => {
@@ -35964,7 +36066,7 @@ async function seedIntakeDescriptionTemplates() {
   log("Running startup migration: seedIntakeDescriptionTemplates");
   try {
     const { sectionDescriptionTemplates } = await import("./seed-description-templates-XFHPZJLE.js");
-    const { taskIntakeSections: taskIntakeSections2 } = await import("./schema-OFJBW4MB.js");
+    const { taskIntakeSections: taskIntakeSections2 } = await import("./schema-MCLNSYNZ.js");
     for (const [sectionName, template] of Object.entries(sectionDescriptionTemplates)) {
       await db.update(taskIntakeSections2).set({ descriptionTemplate: template, updatedAt: /* @__PURE__ */ new Date() }).where(eq11(taskIntakeSections2.sectionName, sectionName));
     }

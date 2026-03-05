@@ -4994,6 +4994,30 @@ export const insertPxMeetingAttendeeSchema = createInsertSchema(pxMeetingAttende
 export type PxMeetingAttendee = typeof pxMeetingAttendees.$inferSelect;
 export type InsertPxMeetingAttendee = z.infer<typeof insertPxMeetingAttendeeSchema>;
 
+// Staff Incidents (Incident Management for 1v1 Meetings)
+export const staffIncidents = pgTable("staff_incidents", {
+  id: serial("id").primaryKey(),
+  staffId: uuid("staff_id").notNull().references(() => staff.id),
+  incidentType: text("incident_type").notNull(),
+  status: text("status").notNull().default("open"),
+  description: text("description"),
+  witness: text("witness"),
+  employeeAcknowledged: boolean("employee_acknowledged").default(false),
+  employeeAcknowledgedAt: timestamp("employee_acknowledged_at"),
+  followUpDate: date("follow_up_date"),
+  createdBy: uuid("created_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertStaffIncidentSchema = createInsertSchema(staffIncidents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type StaffIncident = typeof staffIncidents.$inferSelect;
+export type InsertStaffIncident = z.infer<typeof insertStaffIncidentSchema>;
+
 export const insertSurveySchema = createInsertSchema(surveys).omit({
   id: true,
   createdAt: true,

@@ -80,6 +80,7 @@ import {
   emailTemplates, smsTemplates,
   toolDirectoryCategories, toolDirectoryTools,
   pxMeetings, pxMeetingAttendees,
+  staffIncidents, insertStaffIncidentSchema,
   taskCategories,
   tickets, ticketComments, ticketAttachments, ticketRoutingRules,
   insertTicketSchema, insertTicketCommentSchema, insertTicketRoutingRuleSchema,
@@ -30519,6 +30520,138 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error) {
       console.error("Error fetching 1-on-1 performance reports:", error);
       res.status(500).json({ error: "Failed to fetch performance reports" });
+    }
+  });
+
+  // ============================================
+  // STAFF INCIDENTS API ROUTES
+  // ============================================
+
+  app.get("/api/staff/:staffId/incidents", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req);
+      const isAdmin = await isCurrentUserAdmin(req);
+      const userStaff = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, userId)).limit(1);
+      const userRole = userStaff[0]?.roleId ? (await db.select({ name: roles.name }).from(roles).where(eq(roles.id, userStaff[0].roleId)).limit(1))[0]?.name : null;
+      if (!isAdmin && userRole?.toLowerCase() !== 'manager') {
+        return res.status(403).json({ message: "Only managers and admins can view incidents" });
+      }
+
+      const { staffId } = req.params;
+      const incidents = await db
+        .select({
+          id: staffIncidents.id,
+          staffId: staffIncidents.staffId,
+          incidentType: staffIncidents.incidentType,
+          status: staffIncidents.status,
+          description: staffIncidents.description,
+          witness: staffIncidents.witness,
+          employeeAcknowledged: staffIncidents.employeeAcknowledged,
+          employeeAcknowledgedAt: staffIncidents.employeeAcknowledgedAt,
+          followUpDate: staffIncidents.followUpDate,
+          createdBy: staffIncidents.createdBy,
+          createdAt: staffIncidents.createdAt,
+          updatedAt: staffIncidents.updatedAt,
+          createdByFirstName: staff.firstName,
+          createdByLastName: staff.lastName,
+        })
+        .from(staffIncidents)
+        .leftJoin(staff, eq(staffIncidents.createdBy, staff.id))
+        .where(eq(staffIncidents.staffId, staffId))
+        .orderBy(desc(staffIncidents.createdAt));
+
+      res.json(incidents);
+    } catch (error) {
+      console.error("Error fetching staff incidents:", error);
+      res.status(500).json({ message: "Failed to fetch incidents" });
+    }
+  });
+
+  app.post("/api/staff/:staffId/incidents", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req);
+      const isAdmin = await isCurrentUserAdmin(req);
+      const userStaff = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, userId)).limit(1);
+      const userRole = userStaff[0]?.roleId ? (await db.select({ name: roles.name }).from(roles).where(eq(roles.id, userStaff[0].roleId)).limit(1))[0]?.name : null;
+      if (!isAdmin && userRole?.toLowerCase() !== 'manager') {
+        return res.status(403).json({ message: "Only managers and admins can create incidents" });
+      }
+
+      const { staffId } = req.params;
+      const validated = insertStaffIncidentSchema.parse({
+        ...req.body,
+        staffId,
+        createdBy: userId,
+      });
+
+      const [created] = await db.insert(staffIncidents).values(validated).returning();
+      res.status(201).json(created);
+    } catch (error) {
+      console.error("Error creating staff incident:", error);
+      res.status(500).json({ message: "Failed to create incident" });
+    }
+  });
+
+  app.put("/api/staff/incidents/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req);
+      const isAdmin = await isCurrentUserAdmin(req);
+      const userStaff = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, userId)).limit(1);
+      const userRole = userStaff[0]?.roleId ? (await db.select({ name: roles.name }).from(roles).where(eq(roles.id, userStaff[0].roleId)).limit(1))[0]?.name : null;
+      if (!isAdmin && userRole?.toLowerCase() !== 'manager') {
+        return res.status(403).json({ message: "Only managers and admins can update incidents" });
+      }
+
+      const { id } = req.params;
+      const [existing] = await db.select().from(staffIncidents).where(eq(staffIncidents.id, parseInt(id))).limit(1);
+      if (!existing) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      const updateData: any = {
+        ...req.body,
+        updatedAt: new Date(),
+      };
+
+      if (req.body.employeeAcknowledged === true && !existing.employeeAcknowledgedAt) {
+        updateData.employeeAcknowledgedAt = new Date();
+      }
+
+      const [updated] = await db
+        .update(staffIncidents)
+        .set(updateData)
+        .where(eq(staffIncidents.id, parseInt(id)))
+        .returning();
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating staff incident:", error);
+      res.status(500).json({ message: "Failed to update incident" });
+    }
+  });
+
+  app.delete("/api/staff/incidents/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserIdOrFail(req);
+      const isAdmin = await isCurrentUserAdmin(req);
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Only admins can delete incidents" });
+      }
+
+      const { id } = req.params;
+      const [deleted] = await db
+        .delete(staffIncidents)
+        .where(eq(staffIncidents.id, parseInt(id)))
+        .returning();
+
+      if (!deleted) {
+        return res.status(404).json({ message: "Incident not found" });
+      }
+
+      res.json({ message: "Incident deleted" });
+    } catch (error) {
+      console.error("Error deleting staff incident:", error);
+      res.status(500).json({ message: "Failed to delete incident" });
     }
   });
 

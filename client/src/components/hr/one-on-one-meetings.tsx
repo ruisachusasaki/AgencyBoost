@@ -50,8 +50,16 @@ import {
   RotateCcw,
   Play,
   Square,
-  Repeat
+  Repeat,
+  Shield,
+  Edit,
+  ChevronDown,
+  ChevronUp,
+  Check,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { SelectGroup, SelectLabel } from "@/components/ui/select";
+import { queryClient } from "@/lib/queryClient";
 import { Switch } from "@/components/ui/switch";
 
 interface DirectReport {
@@ -2655,8 +2663,394 @@ function MeetingEditor({
               </CardContent>
             </Card>
           )}
+
+          {/* Incident Log - Only visible to managers/admins */}
+          {viewMode === "my-direct-reports" && directReport && (
+            <IncidentLogSection staffId={directReport.id} staffName={`${directReport.firstName} ${directReport.lastName}`} />
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+const INCIDENT_TYPES = [
+  { group: "Progressive Discipline", items: [
+    { value: "verbal_warning", label: "Verbal Warning" },
+    { value: "written_warning", label: "Written Warning" },
+    { value: "final_written_warning", label: "Final Written Warning" },
+    { value: "pip_initiated", label: "PIP Initiated" },
+    { value: "pip_checkin", label: "PIP Check-in" },
+    { value: "pip_passed", label: "PIP Passed" },
+    { value: "pip_failed", label: "PIP Failed" },
+  ]},
+  { group: "Attendance & Conduct", items: [
+    { value: "attendance_concern", label: "Attendance Concern" },
+    { value: "no_call_no_show", label: "No Call / No Show" },
+    { value: "policy_violation", label: "Policy Violation" },
+    { value: "code_of_conduct_violation", label: "Code of Conduct Violation" },
+  ]},
+  { group: "Recognition & Development", items: [
+    { value: "commendation", label: "Commendation" },
+    { value: "promotion_discussion", label: "Promotion Discussion" },
+    { value: "compensation_review", label: "Compensation Review" },
+    { value: "role_change", label: "Role Change" },
+  ]},
+  { group: "Separation", items: [
+    { value: "suspension", label: "Suspension" },
+    { value: "termination_voluntary", label: "Termination (Voluntary)" },
+    { value: "termination_involuntary", label: "Termination (Involuntary)" },
+  ]},
+];
+
+const INCIDENT_TYPE_MAP: Record<string, string> = {};
+INCIDENT_TYPES.forEach(g => g.items.forEach(i => { INCIDENT_TYPE_MAP[i.value] = i.label; }));
+
+function IncidentLogSection({ staffId, staffName }: { staffId: string; staffName: string }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingIncident, setEditingIncident] = useState<any>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+  const [formData, setFormData] = useState({
+    incidentType: "",
+    status: "open",
+    description: "",
+    witness: "",
+    followUpDate: "",
+    employeeAcknowledged: false,
+  });
+
+  const { data: incidents = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/staff', staffId, 'incidents'],
+    queryFn: async () => {
+      const res = await fetch(`/api/staff/${staffId}/incidents`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!staffId,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const resp = await apiRequest("POST", `/api/staff/${staffId}/incidents`, data);
+      return resp.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['/api/staff', staffId, 'incidents'] });
+      toast({ title: "Incident logged successfully" });
+      closeDialog();
+    },
+    onError: () => {
+      toast({ title: "Failed to create incident", variant: "destructive" });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const resp = await apiRequest("PUT", `/api/staff/incidents/${id}`, data);
+      return resp.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['/api/staff', staffId, 'incidents'] });
+      toast({ title: "Incident updated successfully" });
+      closeDialog();
+    },
+    onError: () => {
+      toast({ title: "Failed to update incident", variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/staff/incidents/${id}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['/api/staff', staffId, 'incidents'] });
+      toast({ title: "Incident deleted" });
+      setDeleteConfirmId(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to delete incident", variant: "destructive" });
+    },
+  });
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditingIncident(null);
+    setFormData({ incidentType: "", status: "open", description: "", witness: "", followUpDate: "", employeeAcknowledged: false });
+  };
+
+  const openEditDialog = (incident: any) => {
+    setEditingIncident(incident);
+    setFormData({
+      incidentType: incident.incidentType,
+      status: incident.status,
+      description: incident.description || "",
+      witness: incident.witness || "",
+      followUpDate: incident.followUpDate || "",
+      employeeAcknowledged: incident.employeeAcknowledged || false,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSubmit = () => {
+    if (!formData.incidentType) {
+      toast({ title: "Please select an incident type", variant: "destructive" });
+      return;
+    }
+    const payload = {
+      incidentType: formData.incidentType,
+      status: formData.status,
+      description: formData.description || null,
+      witness: formData.witness || null,
+      followUpDate: formData.followUpDate || null,
+      employeeAcknowledged: formData.employeeAcknowledged,
+    };
+    if (editingIncident) {
+      updateMutation.mutate({ id: editingIncident.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  const toggleExpand = (id: number) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case "open": return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Open</Badge>;
+      case "resolved": return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Resolved</Badge>;
+      case "escalated": return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Escalated</Badge>;
+      default: return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Incident Log
+              </CardTitle>
+              <CardDescription className="text-xs">Only visible to managers and admins</CardDescription>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => { setEditingIncident(null); setFormData({ incidentType: "", status: "open", description: "", witness: "", followUpDate: "", employeeAcknowledged: false }); setDialogOpen(true); }}
+              className="bg-primary hover:bg-primary/90 text-white h-7 w-7 p-0"
+              data-testid="btn-add-incident"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : incidents.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No incidents logged for {staffName}</p>
+          ) : (
+            <div className="space-y-3">
+              {incidents.map((incident: any) => {
+                const isExpanded = expandedIds.has(incident.id);
+                const desc = incident.description || "";
+                const isLong = desc.length > 120;
+                return (
+                  <div key={incident.id} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm">{INCIDENT_TYPE_MAP[incident.incidentType] || incident.incidentType}</span>
+                          {statusBadge(incident.status)}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(incident.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                          {incident.createdByFirstName && ` · by ${incident.createdByFirstName} ${incident.createdByLastName || ""}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEditDialog(incident)} data-testid={`btn-edit-incident-${incident.id}`}>
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-700" onClick={() => setDeleteConfirmId(incident.id)} data-testid={`btn-delete-incident-${incident.id}`}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {desc && (
+                      <div className="text-sm text-gray-700 dark:text-gray-300">
+                        <p className={!isExpanded && isLong ? "line-clamp-2" : ""}>
+                          {desc}
+                        </p>
+                        {isLong && (
+                          <button className="text-xs text-primary hover:underline mt-0.5" onClick={() => toggleExpand(incident.id)}>
+                            {isExpanded ? "Show less" : "Show more"}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      {incident.witness && (
+                        <span>Witness: {incident.witness}</span>
+                      )}
+                      {incident.followUpDate && (
+                        <span>Follow-up: {format(new Date(incident.followUpDate), "MMM d, yyyy")}</span>
+                      )}
+                      {incident.employeeAcknowledged && (
+                        <span className="flex items-center gap-1 text-green-600">
+                          <Check className="h-3 w-3" />
+                          Acknowledged
+                          {incident.employeeAcknowledgedAt && ` · ${format(new Date(incident.employeeAcknowledgedAt), "MMM d, yyyy")}`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Incident Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingIncident ? "Edit Incident" : "Log Incident"}</DialogTitle>
+            <DialogDescription>
+              {editingIncident ? "Update the incident details" : `Log a new incident for ${staffName}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Incident Type *</Label>
+              <Select value={formData.incidentType} onValueChange={(val) => setFormData(p => ({ ...p, incidentType: val }))}>
+                <SelectTrigger data-testid="select-incident-type">
+                  <SelectValue placeholder="Select type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {INCIDENT_TYPES.map(group => (
+                    <SelectGroup key={group.group}>
+                      <SelectLabel>{group.group}</SelectLabel>
+                      {group.items.map(item => (
+                        <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={formData.status} onValueChange={(val) => setFormData(p => ({ ...p, status: val }))}>
+                <SelectTrigger data-testid="select-incident-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="resolved">Resolved</SelectItem>
+                  <SelectItem value="escalated">Escalated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                placeholder="Notes about the incident..."
+                value={formData.description}
+                onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
+                rows={4}
+                data-testid="textarea-incident-description"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Witness</Label>
+              <Input
+                placeholder="HR rep or witness name"
+                value={formData.witness}
+                onChange={(e) => setFormData(p => ({ ...p, witness: e.target.value }))}
+                data-testid="input-incident-witness"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Follow-up Date</Label>
+              <Input
+                type="date"
+                value={formData.followUpDate}
+                onChange={(e) => setFormData(p => ({ ...p, followUpDate: e.target.value }))}
+                data-testid="input-incident-followup"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="employee-acknowledged"
+                checked={formData.employeeAcknowledged}
+                onCheckedChange={(checked) => setFormData(p => ({ ...p, employeeAcknowledged: !!checked }))}
+                data-testid="checkbox-incident-acknowledged"
+              />
+              <Label htmlFor="employee-acknowledged" className="text-sm cursor-pointer">
+                Employee Acknowledged
+              </Label>
+            </div>
+            {formData.employeeAcknowledged && !editingIncident?.employeeAcknowledgedAt && (
+              <p className="text-xs text-muted-foreground ml-6 -mt-2">Timestamp will be recorded automatically.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Cancel</Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={createMutation.isPending || updateMutation.isPending}
+              className="bg-primary hover:bg-primary/90"
+              data-testid="btn-save-incident"
+            >
+              {(createMutation.isPending || updateMutation.isPending) ? "Saving..." : editingIncident ? "Update" : "Log Incident"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmId !== null} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Incident</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this incident? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => { if (deleteConfirmId !== null) deleteMutation.mutate(deleteConfirmId); }}
+              disabled={deleteMutation.isPending}
+              data-testid="btn-confirm-delete-incident"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
