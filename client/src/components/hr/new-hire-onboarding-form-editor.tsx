@@ -154,8 +154,7 @@ export default function NewHireOnboardingFormEditor() {
     required: false,
     options: [],
     templateFileUrl: '',
-    templateFileName: '',
-    acceptedFileTypes: '.pdf,.doc,.docx,.jpg,.png'
+    templateFileName: ''
   });
   const [uploadingTemplate, setUploadingTemplate] = useState(false);
 
@@ -223,12 +222,12 @@ export default function NewHireOnboardingFormEditor() {
       options: fieldForm.options?.filter(opt => opt.trim()),
       templateFileUrl: fieldForm.type === 'file' ? fieldForm.templateFileUrl : undefined,
       templateFileName: fieldForm.type === 'file' ? fieldForm.templateFileName : undefined,
-      acceptedFileTypes: fieldForm.type === 'file' ? (fieldForm.acceptedFileTypes || '.pdf,.doc,.docx,.jpg,.png') : undefined,
+      acceptedFileTypes: fieldForm.type === 'file' ? '.pdf,.doc,.docx,.jpg,.png' : undefined,
       order: fields.length
     };
 
     setFields([...fields, newField]);
-    setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [], templateFileUrl: '', templateFileName: '', acceptedFileTypes: '.pdf,.doc,.docx,.jpg,.png' });
+    setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [], templateFileUrl: '', templateFileName: '' });
     setIsFieldModalOpen(false);
   };
 
@@ -242,7 +241,6 @@ export default function NewHireOnboardingFormEditor() {
       options: field.options || [],
       templateFileUrl: field.templateFileUrl || '',
       templateFileName: field.templateFileName || '',
-      acceptedFileTypes: field.acceptedFileTypes || '.pdf,.doc,.docx,.jpg,.png'
     });
     setIsFieldModalOpen(true);
   };
@@ -261,14 +259,14 @@ export default function NewHireOnboardingFormEditor() {
             options: fieldForm.options?.filter(opt => opt.trim()),
             templateFileUrl: fieldForm.type === 'file' ? fieldForm.templateFileUrl : undefined,
             templateFileName: fieldForm.type === 'file' ? fieldForm.templateFileName : undefined,
-            acceptedFileTypes: fieldForm.type === 'file' ? (fieldForm.acceptedFileTypes || '.pdf,.doc,.docx,.jpg,.png') : undefined,
+            acceptedFileTypes: fieldForm.type === 'file' ? '.pdf,.doc,.docx,.jpg,.png' : undefined,
           }
         : field
     );
 
     setFields(updatedFields);
     setEditingField(null);
-    setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [], templateFileUrl: '', templateFileName: '', acceptedFileTypes: '.pdf,.doc,.docx,.jpg,.png' });
+    setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [], templateFileUrl: '', templateFileName: '' });
     setIsFieldModalOpen(false);
   };
 
@@ -518,7 +516,7 @@ export default function NewHireOnboardingFormEditor() {
                     <div>
                       <Label className="text-sm font-medium">Downloadable Template (Optional)</Label>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Upload a form template (e.g., W9, W4) that new hires can download, fill out, and re-upload.
+                        Upload a form template (e.g., W-9, W-8BEN) that new hires can download, fill out, and re-upload.
                       </p>
                       
                       {fieldForm.templateFileUrl ? (
@@ -563,15 +561,8 @@ export default function NewHireOnboardingFormEditor() {
                     </div>
 
                     <div>
-                      <Label htmlFor="accepted-file-types">Accepted File Types</Label>
-                      <Input
-                        id="accepted-file-types"
-                        value={fieldForm.acceptedFileTypes || ''}
-                        onChange={(e) => setFieldForm({ ...fieldForm, acceptedFileTypes: e.target.value })}
-                        placeholder=".pdf,.doc,.docx,.jpg,.png"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Comma-separated file extensions (e.g., .pdf,.doc,.docx,.jpg,.png)
+                      <p className="text-xs text-muted-foreground">
+                        Accepted file types: PDF, DOC, DOCX, JPG, PNG
                       </p>
                     </div>
                   </div>
@@ -600,7 +591,7 @@ export default function NewHireOnboardingFormEditor() {
                     onClick={() => {
                       setIsFieldModalOpen(false);
                       setEditingField(null);
-                      setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [], templateFileUrl: '', templateFileName: '', acceptedFileTypes: '.pdf,.doc,.docx,.jpg,.png' });
+                      setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [], templateFileUrl: '', templateFileName: '' });
                     }}
                     data-testid="button-cancel-field"
                   >
