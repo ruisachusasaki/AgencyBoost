@@ -10,7 +10,6 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Plus, 
   Edit2, 
@@ -195,6 +194,7 @@ export default function NewHireOnboardingFormEditor() {
   });
   const [uploadingTemplate, setUploadingTemplate] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [activeEditorTab, setActiveEditorTab] = useState<"fields" | "branding">("fields");
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -526,16 +526,34 @@ export default function NewHireOnboardingFormEditor() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="fields" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="fields">Form Fields</TabsTrigger>
-          <TabsTrigger value="branding" className="flex items-center gap-1.5">
+      <div className="space-y-6">
+        <div className="flex items-center gap-0 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-fit">
+          <button
+            onClick={() => setActiveEditorTab("fields")}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              activeEditorTab === "fields"
+                ? "text-white shadow-sm"
+                : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            }`}
+            style={activeEditorTab === "fields" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
+          >
+            Form Fields
+          </button>
+          <button
+            onClick={() => setActiveEditorTab("branding")}
+            className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              activeEditorTab === "branding"
+                ? "text-white shadow-sm"
+                : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            }`}
+            style={activeEditorTab === "branding" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
+          >
             <Paintbrush className="h-3.5 w-3.5" />
             Branding & Style
-          </TabsTrigger>
-        </TabsList>
+          </button>
+        </div>
 
-        <TabsContent value="branding" className="space-y-6">
+        {activeEditorTab === "branding" && (<div className="space-y-6">
           {/* Branding Preview */}
           <Card>
             <CardHeader>
@@ -764,9 +782,9 @@ export default function NewHireOnboardingFormEditor() {
               {saveConfigMutation.isPending ? "Saving..." : "Save Configuration"}
             </Button>
           </div>
-        </TabsContent>
+        </div>)}
 
-        <TabsContent value="fields" className="space-y-6">
+        {activeEditorTab === "fields" && (<div className="space-y-6">
       {/* Actions */}
       <div className="flex justify-between items-center">
         <div className="flex gap-2">
@@ -1046,8 +1064,8 @@ export default function NewHireOnboardingFormEditor() {
           </DragDropContext>
         </CardContent>
       </Card>
-        </TabsContent>
-      </Tabs>
+        </div>)}
+      </div>
     </div>
   );
 }
