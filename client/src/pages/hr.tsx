@@ -316,16 +316,16 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   
   // Granular HR permissions
   const { permissions: hrPermissions } = useHasPermissions([
-    'hr.view_staff_directory',
-    'hr.manage_staff',
-    'hr.view_time_off_requests',
-    'hr.manage_time_off_requests',
-    'hr.view_job_applications',
-    'hr.manage_job_applications',
-    'hr.view_job_openings',
-    'hr.manage_job_openings',
-    'hr.view_expense_reports',
-    'hr.manage_expense_reports',
+    'hr.staff.view',
+    'hr.staff.edit',
+    'hr.time_off.view_all',
+    'hr.time_off.approve',
+    'hr.applications.view',
+    'hr.applications.manage',
+    'hr.job_openings.view',
+    'hr.job_openings.edit',
+    'hr.expenses.view_all',
+    'hr.expenses.approve',
     'hr.px_meetings.view',
     'hr.px_meetings.create',
     'hr.px_meetings.manage',
@@ -338,16 +338,16 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   ]);
   
   // Permission-based access (falls back to role-based for backwards compatibility)
-  const canViewStaffDirectory = isAdmin || hrPermissions['hr.view_staff_directory'];
-  const canManageStaff = isAdmin || hrPermissions['hr.manage_staff'];
-  const canViewTimeOffRequests = isAdmin || hrPermissions['hr.view_time_off_requests'];
-  const canManageTimeOffRequests = isAdmin || hrPermissions['hr.manage_time_off_requests'];
-  const canViewJobApplications = isAdmin || hrPermissions['hr.view_job_applications'];
-  const canManageJobApplications = isAdmin || hrPermissions['hr.manage_job_applications'];
-  const canViewJobOpenings = isAdmin || hrPermissions['hr.view_job_openings'];
-  const canManageJobOpeningsPermission = isAdmin || hrPermissions['hr.manage_job_openings'];
-  const canViewExpenseReports = isAdmin || isAccounting || hrPermissions['hr.view_expense_reports'];
-  const canManageExpenseReports = isAdmin || hrPermissions['hr.manage_expense_reports'];
+  const canViewStaffDirectory = isAdmin || hrPermissions['hr.staff.view'];
+  const canManageStaff = isAdmin || hrPermissions['hr.staff.edit'];
+  const canViewTimeOffRequests = isAdmin || hrPermissions['hr.time_off.view_all'];
+  const canManageTimeOffRequests = isAdmin || hrPermissions['hr.time_off.approve'];
+  const canViewJobApplications = isAdmin || hrPermissions['hr.applications.view'];
+  const canManageJobApplications = isAdmin || hrPermissions['hr.applications.manage'];
+  const canViewJobOpenings = isAdmin || hrPermissions['hr.job_openings.view'];
+  const canManageJobOpeningsPermission = isAdmin || hrPermissions['hr.job_openings.edit'];
+  const canViewExpenseReports = isAdmin || isAccounting || hrPermissions['hr.expenses.view_all'];
+  const canManageExpenseReports = isAdmin || hrPermissions['hr.expenses.approve'];
   const canViewPxMeetings = isAdmin || isManager || hrPermissions['hr.px_meetings.view'];
   const canViewOneOnOne = isAdmin || isManager || hrPermissions['hr.one_on_one.view_own'] || hrPermissions['hr.one_on_one.view_all'];
   const canViewOffboarding = isAdmin || isManager || hrPermissions['hr.offboarding.view'] || hrPermissions['hr.offboarding.manage'];

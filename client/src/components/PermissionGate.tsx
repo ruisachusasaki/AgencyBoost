@@ -12,12 +12,12 @@ interface PermissionGateProps {
  * PermissionGate component for conditionally rendering content based on user permissions
  * 
  * Usage:
- * <PermissionGate permission="tasks.delete_tasks">
+ * <PermissionGate permission="tasks.all.delete">
  *   <DeleteButton />
  * </PermissionGate>
  * 
  * With fallback:
- * <PermissionGate permission="hr.manage_staff" fallback={<ReadOnlyView />}>
+ * <PermissionGate permission="hr.staff.edit" fallback={<ReadOnlyView />}>
  *   <EditableView />
  * </PermissionGate>
  */
@@ -55,7 +55,7 @@ interface MultiPermissionGateProps {
  * MultiPermissionGate component for checking multiple permissions
  * 
  * Usage:
- * <MultiPermissionGate permissions={["tasks.view_all_tasks", "tasks.manage_all_tasks"]} requireAll={false}>
+ * <MultiPermissionGate permissions={["tasks.all.view", "tasks.all.edit"]} requireAll={false}>
  *   <AdminTaskView />
  * </MultiPermissionGate>
  */

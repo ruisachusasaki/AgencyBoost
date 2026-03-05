@@ -189,17 +189,16 @@ export default function Clients() {
   
   // Granular clients permissions
   const { permissions: clientPermissions } = useHasPermissions([
-    'clients.delete_clients',
-    'clients.export_data',
-    'clients.manage_clients',
-    'clients.list.import',
+    'clients.list.delete',
     'clients.list.export',
+    'clients.details.edit',
+    'clients.list.import',
   ]);
   
   // Check if user can perform any bulk actions (determines checkbox visibility)
-  const canPerformBulkActions = clientPermissions['clients.delete_clients'] || 
-                                 clientPermissions['clients.export_data'] || 
-                                 clientPermissions['clients.manage_clients'];
+  const canPerformBulkActions = clientPermissions['clients.list.delete'] || 
+                                 clientPermissions['clients.list.export'] || 
+                                 clientPermissions['clients.details.edit'];
 
   const { data: clientsData, isLoading } = useQuery<PaginatedClientsResponse>({
     queryKey: [`/api/clients?page=${currentPage}&limit=${pageSize}`],
@@ -972,7 +971,7 @@ export default function Clients() {
         </div>
         <div className="flex items-center gap-2">
           {/* Delete Button - requires delete permission */}
-          <PermissionGate permission="clients.delete_clients">
+          <PermissionGate permission="clients.list.delete">
             <Dialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" data-testid="button-bulk-delete">
@@ -1037,7 +1036,7 @@ export default function Clients() {
           </Dialog>
 
           {/* Export Button - requires export permission */}
-          <PermissionGate permission="clients.export_data">
+          <PermissionGate permission="clients.list.export">
             <Button variant="outline" size="sm" onClick={handleBulkExport} disabled={isExporting} data-testid="button-bulk-export">
               <Download className="h-4 w-4 mr-1" />
               {isExporting ? "Exporting..." : "Export"}
@@ -1634,7 +1633,7 @@ export default function Clients() {
           <Users className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
         </div>
-        <PermissionGate permission="clients.manage_clients">
+        <PermissionGate permission="clients.details.edit">
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Client
@@ -1818,7 +1817,7 @@ export default function Clients() {
             </>
           )}
           
-          {(clientPermissions['clients.list.export'] || clientPermissions['clients.export_data']) && (
+          {clientPermissions['clients.list.export'] && (
             <Button
               variant="outline"
               onClick={handleExport}

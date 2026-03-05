@@ -20,8 +20,8 @@ export default function Training() {
   const [activeTab, setActiveTab] = useState("browse");
   
   // Check permissions
-  const { hasPermission: canViewAnalytics } = useHasPermission('training.view_analytics');
-  const { hasPermission: canManageCourses } = useHasPermission('training.manage_courses');
+  const { hasPermission: canViewAnalytics } = useHasPermission('training.analytics.view');
+  const { hasPermission: canManageCourses } = useHasPermission('training.courses.edit');
   
   // Fetch training data
   const { data: categories = [] } = useQuery({

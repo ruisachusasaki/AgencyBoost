@@ -243,7 +243,7 @@ function Router() {
       <Route path="/task-templates">
         {() => (
           <AuthGate>
-            <RequirePermission module="tasks" permission="tasks.manage_task_templates">
+            <RequirePermission module="tasks" permission="tasks.templates.manage">
               <MainLayout>
                 <TaskTemplatesPage />
               </MainLayout>
@@ -315,7 +315,7 @@ function Router() {
       <Route path="/workflows/build">
         {() => (
           <AuthGate>
-            <RequirePermission module="workflows" permission="workflows.manage_workflows">
+            <RequirePermission module="workflows" permission="workflows.list.edit">
               <MainLayout>
                 <WorkflowBuilder />
               </MainLayout>
@@ -327,7 +327,7 @@ function Router() {
       <Route path="/hr/applicant/:id">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="hr" permission="hr.view_job_applications">
+            <RequirePermission module="hr" permission="hr.applications.view">
               <MainLayout>
                 <ApplicantDetailPage />
               </MainLayout>
@@ -387,7 +387,7 @@ function Router() {
       <Route path="/training/analytics">
         {() => (
           <AuthGate>
-            <RequirePermission module="training" permission="training.view_analytics">
+            <RequirePermission module="training" permission="training.analytics.view">
               <MainLayout>
                 <TrainingAnalytics />
               </MainLayout>
@@ -399,7 +399,7 @@ function Router() {
       <Route path="/training/courses/:id">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="training" permission="training.view_courses">
+            <RequirePermission module="training" permission="training.courses.view">
               <MainLayout>
                 <CourseDetail />
               </MainLayout>
@@ -411,7 +411,7 @@ function Router() {
       <Route path="/training/lessons/:id">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="training" permission="training.view_lessons">
+            <RequirePermission module="training" permission="training.lessons.view">
               <MainLayout>
                 <LessonDetail />
               </MainLayout>
@@ -423,7 +423,7 @@ function Router() {
       <Route path="/training/courses/:id/edit">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="training" permission="training.manage_courses">
+            <RequirePermission module="training" permission="training.courses.edit">
               <MainLayout>
                 <EditCourse />
               </MainLayout>
@@ -435,7 +435,7 @@ function Router() {
       <Route path="/training/courses/:id/lessons">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="training" permission="training.manage_lessons">
+            <RequirePermission module="training" permission="training.lessons.edit">
               <MainLayout>
                 <LessonManagement />
               </MainLayout>
@@ -447,7 +447,7 @@ function Router() {
       <Route path="/training/courses/:id/lessons/create">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="training" permission="training.manage_lessons">
+            <RequirePermission module="training" permission="training.lessons.edit">
               <MainLayout>
                 <CreateLesson />
               </MainLayout>
@@ -459,7 +459,7 @@ function Router() {
       <Route path="/training/courses/:courseId/lessons/:id/edit">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="training" permission="training.manage_lessons">
+            <RequirePermission module="training" permission="training.lessons.edit">
               <MainLayout>
                 <EditLesson />
               </MainLayout>
@@ -471,7 +471,7 @@ function Router() {
       <Route path="/training/create">
         {() => (
           <AuthGate>
-            <RequirePermission module="training" permission="training.manage_courses">
+            <RequirePermission module="training" permission="training.courses.edit">
               <MainLayout>
                 <CreateCourse />
               </MainLayout>
@@ -495,7 +495,7 @@ function Router() {
       <Route path="/resources/articles/:id">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="knowledge_base" permission="knowledge_base.view_articles">
+            <RequirePermission module="knowledge_base" permission="knowledge_base.articles.view">
               <MainLayout>
                 <ArticleView />
               </MainLayout>
@@ -508,7 +508,7 @@ function Router() {
       <Route path="/articles/:id">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="knowledge_base" permission="knowledge_base.view_articles">
+            <RequirePermission module="knowledge_base" permission="knowledge_base.articles.view">
               <MainLayout>
                 <ArticleView />
               </MainLayout>
@@ -532,7 +532,7 @@ function Router() {
       <Route path="/calendar/settings">
         {() => (
           <AuthGate>
-            <RequirePermission module="calendar" permission="calendar.manage_all_events">
+            <RequirePermission module="calendar" permission="calendar.all.manage">
               <MainLayout>
                 <CalendarSettings />
               </MainLayout>
@@ -544,7 +544,7 @@ function Router() {
       <Route path="/calendar-settings">
         {() => (
           <AuthGate>
-            <RequirePermission module="calendar" permission="calendar.manage_all_events">
+            <RequirePermission module="calendar" permission="calendar.all.manage">
               <MainLayout>
                 <CalendarSettings />
               </MainLayout>

@@ -22,7 +22,7 @@ interface RequirePermissionProps {
  * </RequirePermission>
  * 
  * Usage for specific permission:
- * <RequirePermission module="tasks" permission="tasks.manage_task_templates">
+ * <RequirePermission module="tasks" permission="tasks.templates.manage">
  *   <TemplatesSection />
  * </RequirePermission>
  */

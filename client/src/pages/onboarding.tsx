@@ -3,13 +3,17 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { CheckCircle, Clock, UserPlus, Building2, Download, Upload, FileText, X, Loader2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CheckCircle, Clock, UserPlus, Building2, Download, Upload, FileText, X, Loader2, Calendar as CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -413,9 +417,40 @@ export default function OnboardingPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              ) : field.type === 'date' ? (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formField.value && "text-muted-foreground"
+                      )}
+                      data-testid={`input-${field.id}`}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formField.value
+                        ? format(new Date(formField.value), "MMM d, yyyy")
+                        : field.placeholder || "Select a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formField.value ? new Date(formField.value) : undefined}
+                      onSelect={(date) => {
+                        formField.onChange(date ? format(date, "yyyy-MM-dd") : "");
+                      }}
+                      captionLayout="dropdown-buttons"
+                      fromYear={1940}
+                      toYear={new Date().getFullYear()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               ) : (
                 <Input
-                  type={field.type === 'email' ? 'email' : field.type === 'date' ? 'date' : 'text'}
+                  type={field.type === 'email' ? 'email' : 'text'}
                   placeholder={field.placeholder}
                   data-testid={`input-${field.id}`}
                   {...formField}

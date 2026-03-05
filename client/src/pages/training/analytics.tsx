@@ -65,7 +65,7 @@ export default function TrainingAnalytics() {
   const [, setLocation] = useLocation();
   
   // Check permission for viewing analytics
-  const { hasPermission: canViewAnalytics, isLoading: permissionLoading } = useHasPermission('training.view_analytics');
+  const { hasPermission: canViewAnalytics, isLoading: permissionLoading } = useHasPermission('training.analytics.view');
 
   // Redirect if user doesn't have permission
   useEffect(() => {
