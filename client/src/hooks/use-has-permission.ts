@@ -126,14 +126,42 @@ const PERMISSION_KEY_MIGRATION_MAP: Record<string, string> = {
   'reports.export_reports': 'reports.sales.export',
   
   // Settings module
-  'settings.view_general_settings': 'settings.general.view',
-  'settings.manage_general_settings': 'settings.general.edit',
-  'settings.view_roles_permissions': 'settings.roles.view',
-  'settings.manage_roles_permissions': 'settings.roles.edit',
+  'settings.view_general_settings': 'settings.business_profile.view',
+  'settings.manage_general_settings': 'settings.business_profile.manage',
+  'settings.view_roles_permissions': 'settings.roles_permissions.view',
+  'settings.manage_roles_permissions': 'settings.roles_permissions.manage',
   'settings.view_custom_fields': 'settings.custom_fields.view',
   'settings.manage_custom_fields': 'settings.custom_fields.manage',
   'settings.view_integrations': 'settings.integrations.view',
   'settings.manage_integrations': 'settings.integrations.manage',
+  'settings.view_staff': 'settings.staff.view',
+  'settings.manage_staff': 'settings.staff.manage',
+  'settings.view_px_settings': 'settings.px_settings.view',
+  'settings.manage_px_settings': 'settings.px_settings.manage',
+  'settings.view_clients': 'settings.clients.view',
+  'settings.manage_clients': 'settings.clients.manage',
+  'settings.view_sales': 'settings.sales.view',
+  'settings.manage_sales': 'settings.sales.manage',
+  'settings.view_leads': 'settings.leads.view',
+  'settings.manage_leads': 'settings.leads.manage',
+  'settings.view_calendar': 'settings.calendar.view',
+  'settings.manage_calendar': 'settings.calendar.manage',
+  'settings.view_ai_assistant': 'settings.ai_assistant.view',
+  'settings.manage_ai_assistant': 'settings.ai_assistant.manage',
+  'settings.view_tags': 'settings.tags.view',
+  'settings.manage_tags': 'settings.tags.manage',
+  'settings.view_products': 'settings.products.view',
+  'settings.manage_products': 'settings.products.manage',
+  'settings.view_tasks': 'settings.tasks.view',
+  'settings.manage_tasks': 'settings.tasks.manage',
+  'settings.view_workflows': 'settings.workflows.view',
+  'settings.manage_workflows': 'settings.workflows.manage',
+  'settings.view_audit_logs': 'settings.audit_logs.view',
+  'settings.manage_audit_logs': 'settings.audit_logs.manage',
+  'settings.view_tickets': 'settings.tickets.view',
+  'settings.manage_tickets': 'settings.tickets.manage',
+  'settings.view_permission_audit': 'settings.permission_audit.view',
+  'settings.manage_permission_audit': 'settings.permission_audit.manage',
 };
 
 /**
@@ -204,32 +232,26 @@ export function useHasPermission(permissionKey: string) {
 
   // Check granular permissions from API (flat array format)
   if (currentUser.granularPermissions && currentUser.granularPermissions.length > 0) {
-    // Check for specific permission key (format: "module.tab.action" or "module.subPermissionKey")
     if (permissionKey.includes('.')) {
-      // Look for match on permissionKey (try both old and new formats)
-      const hasPermission = currentUser.granularPermissions.some(
+      const hasGranular = currentUser.granularPermissions.some(
         (gp) => gp.enabled === true && permissionMatches(gp.permissionKey, permissionKey)
       );
-      return { hasPermission, isLoading: false };
-    }
-    
-    // Check for module-level access (user can access module if ANY permission for it is enabled)
-    // Also check for module.access permission in new format
-    const hasModulePermission = currentUser.granularPermissions.some(
-      (gp) => gp.enabled === true && (
-        gp.module === permissionKey ||
-        gp.permissionKey === `${permissionKey}.access`
-      )
-    );
-    
-    if (hasModulePermission) {
-      return { hasPermission: true, isLoading: false };
+      if (hasGranular) return { hasPermission: true, isLoading: false };
+    } else {
+      const hasModulePermission = currentUser.granularPermissions.some(
+        (gp) => gp.enabled === true && (
+          gp.module === permissionKey ||
+          gp.permissionKey === `${permissionKey}.access`
+        )
+      );
+      if (hasModulePermission) return { hasPermission: true, isLoading: false };
     }
   }
 
-  // Fallback to legacy permissions
+  // Fallback to legacy permissions (always check, even if granular permissions exist but didn't match)
   if (currentUser.permissions) {
-    const permission = currentUser.permissions.find((p) => p.module === permissionKey);
+    const legacyModule = permissionKey.includes('.') ? permissionKey.split('.')[0] : permissionKey;
+    const permission = currentUser.permissions.find((p) => p.module === legacyModule);
     if (permission?.canView === true) {
       return { hasPermission: true, isLoading: false };
     }

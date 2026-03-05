@@ -84,31 +84,24 @@ export default function RequirePermission({
 
     // Check granular permissions (flat array format from API)
     if (currentUser?.granularPermissions && currentUser.granularPermissions.length > 0) {
-      // If specific permission is provided, check for exact match only (strict enforcement)
       if (permission) {
-        // Check for permission match using the shared permissionMatches function
-        // This handles both old (clients.view_clients) and new (clients.list.view) formats
-        // through normalization, maintaining backward compatibility
         const hasMatch = currentUser.granularPermissions.some(
           (gp: any) => gp.enabled === true && permissionMatches(gp.permissionKey, permission)
         );
         
         if (hasMatch) return true;
-        
-        // DENY if specific permission is required but not found
-        return false;
+      } else {
+        const hasModuleAccess = currentUser.granularPermissions.some(
+          (gp: any) => gp.module === module && gp.enabled === true
+        );
+        if (hasModuleAccess) return true;
       }
-      
-      // Otherwise check if user has ANY permission for the module (module-level access)
-      return currentUser.granularPermissions.some(
-        (gp: any) => gp.module === module && gp.enabled === true
-      );
     }
     
-    // Fallback to legacy permissions
+    // Fallback to legacy permissions (always check, even if granular permissions exist but didn't match)
     if (currentUser?.permissions) {
       const modulePermission = currentUser.permissions.find((p: any) => p.module === module);
-      return modulePermission?.canView === true;
+      if (modulePermission?.canView === true) return true;
     }
 
     // DENY by default

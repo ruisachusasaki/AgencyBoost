@@ -993,6 +993,15 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
           { key: 'settings.audit_logs.manage', label: 'Manage Audit Logs', description: 'Export audit logs', action: 'manage' },
         ],
       },
+      {
+        tab: 'tickets',
+        label: 'Tickets',
+        description: 'Manage ticket settings and forms',
+        permissions: [
+          { key: 'settings.tickets.view', label: 'View Ticket Settings', description: 'See ticket configuration', action: 'view' },
+          { key: 'settings.tickets.manage', label: 'Manage Ticket Settings', description: 'Configure ticket settings and forms', action: 'manage' },
+        ],
+      },
     ],
   },
   {
@@ -1221,6 +1230,8 @@ export const PERMISSION_KEY_MIGRATION_MAP: Record<string, string> = {
   'settings.roles.delete': 'settings.roles_permissions.manage',
   'settings.hr.view': 'settings.px_settings.view',
   'settings.hr.manage': 'settings.px_settings.manage',
+  'settings.view_tickets': 'settings.tickets.view',
+  'settings.manage_tickets': 'settings.tickets.manage',
 };
 
 /**

@@ -41,7 +41,7 @@ const allSettingsNavigation: SettingsNavItem[] = [
   { name: "Leads", href: "/settings/leads", icon: Target, permission: "settings.leads.view" },
   { name: "Roles & Permissions", href: "/settings/roles-permissions", icon: Shield, permission: "settings.roles_permissions.view" },
   { name: "Permission Audit", href: "/settings/permission-audit", icon: ShieldCheck, permission: "settings.permission_audit.view" },
-  { name: "Calendar Settings", href: "/calendar-settings", icon: Calendar, permission: "settings.calendar.view" },
+  { name: "Calendar Settings", href: "/settings/calendar-settings", icon: Calendar, permission: "settings.calendar.view" },
   { name: "Integrations", href: "/settings/integrations", icon: Plug, permission: "settings.integrations.view" },
   { name: "AI Assistant", href: "/settings/ai-assistant", icon: Bot, permission: "settings.ai_assistant.view" },
   { name: "Custom Fields", href: "/settings/custom-fields", icon: Database, permission: "settings.custom_fields.view" },
@@ -50,7 +50,7 @@ const allSettingsNavigation: SettingsNavItem[] = [
   { name: "Tasks", href: "/settings/tasks", icon: Layers, permission: "settings.tasks.view" },
   { name: "Workflows", href: "/settings/automation-triggers", icon: Zap, permission: "settings.workflows.view" },
   { name: "Audit Logs", href: "/settings/audit-logs", icon: ScrollText, permission: "settings.audit_logs.view" },
-  { name: "Tickets", href: "/settings/tickets", icon: Ticket, permission: "settings.view_general_settings" },
+  { name: "Tickets", href: "/settings/tickets", icon: Ticket, permission: "settings.tickets.view" },
 ];
 
 export default function Settings() {

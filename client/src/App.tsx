@@ -568,7 +568,7 @@ function Router() {
       <Route path="/settings/business-profile">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.business_profile.view">
               <MainLayout>
                 <BusinessProfile />
               </MainLayout>
@@ -600,7 +600,7 @@ function Router() {
       <Route path="/settings/staff">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.staff.view">
               <MainLayout>
                 <Staff />
               </MainLayout>
@@ -612,7 +612,7 @@ function Router() {
       <Route path="/settings/staff/:id">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.staff.view">
               <MainLayout>
                 <StaffDetail />
               </MainLayout>
@@ -624,7 +624,7 @@ function Router() {
       <Route path="/settings/teams/:id">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.staff.view">
               <MainLayout>
                 <TeamDetail />
               </MainLayout>
@@ -636,7 +636,7 @@ function Router() {
       <Route path="/settings/hr-settings">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.px_settings.view">
               <MainLayout>
                 <HRSettings />
               </MainLayout>
@@ -648,7 +648,7 @@ function Router() {
       <Route path="/settings/clients">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.clients.view">
               <MainLayout>
                 <ClientsSettings />
               </MainLayout>
@@ -660,7 +660,7 @@ function Router() {
       <Route path="/settings/sales">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.sales.view">
               <MainLayout>
                 <SalesSettings />
               </MainLayout>
@@ -672,7 +672,7 @@ function Router() {
       <Route path="/settings/leads">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.leads.view">
               <MainLayout>
                 <LeadsSettings />
               </MainLayout>
@@ -684,7 +684,7 @@ function Router() {
       <Route path="/settings/roles-permissions">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_roles_permissions">
+            <RequirePermission module="settings" permission="settings.roles_permissions.view">
               <MainLayout>
                 <RolesPermissions />
               </MainLayout>
@@ -696,7 +696,7 @@ function Router() {
       <Route path="/settings/permission-audit">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_roles_permissions">
+            <RequirePermission module="settings" permission="settings.permission_audit.view">
               <MainLayout>
                 <PermissionAudit />
               </MainLayout>
@@ -708,7 +708,7 @@ function Router() {
       <Route path="/settings/integrations">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_integrations">
+            <RequirePermission module="settings" permission="settings.integrations.view">
               <MainLayout>
                 <Integrations />
               </MainLayout>
@@ -720,7 +720,7 @@ function Router() {
       <Route path="/settings/ai-assistant">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_integrations">
+            <RequirePermission module="settings" permission="settings.ai_assistant.view">
               <MainLayout>
                 <AiAssistantSettings />
               </MainLayout>
@@ -732,7 +732,7 @@ function Router() {
       <Route path="/settings/custom-fields">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_custom_fields">
+            <RequirePermission module="settings" permission="settings.custom_fields.view">
               <MainLayout>
                 <CustomFields />
               </MainLayout>
@@ -744,7 +744,7 @@ function Router() {
       <Route path="/settings/custom-fields/:id/edit">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.manage_custom_fields">
+            <RequirePermission module="settings" permission="settings.custom_fields.manage">
               <MainLayout>
                 <EditFolder />
               </MainLayout>
@@ -756,7 +756,7 @@ function Router() {
       <Route path="/settings/calendar-settings">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.calendar.view">
               <MainLayout>
                 <CalendarSettings />
               </MainLayout>
@@ -768,7 +768,7 @@ function Router() {
       <Route path="/settings/calendar/:id/edit">
         {(params) => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.manage_general_settings">
+            <RequirePermission module="settings" permission="settings.calendar.manage">
               <MainLayout>
                 <CalendarEdit />
               </MainLayout>
@@ -780,7 +780,7 @@ function Router() {
       <Route path="/settings/tags">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.tags.view">
               <MainLayout>
                 <Tags />
               </MainLayout>
@@ -804,7 +804,7 @@ function Router() {
       <Route path="/settings/tasks">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.tasks.view">
               <MainLayout>
                 <TasksSettings />
               </MainLayout>
@@ -816,7 +816,7 @@ function Router() {
       <Route path="/settings/automation-triggers">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.workflows.view">
               <MainLayout>
                 <AutomationTriggers />
               </MainLayout>
@@ -828,7 +828,7 @@ function Router() {
       <Route path="/settings/audit-logs">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.audit_logs.view">
               <MainLayout>
                 <AuditLogs />
               </MainLayout>
@@ -840,7 +840,7 @@ function Router() {
       <Route path="/settings/tickets">
         {() => (
           <AuthGate>
-            <RequirePermission module="settings" permission="settings.view_general_settings">
+            <RequirePermission module="settings" permission="settings.tickets.view">
               <MainLayout>
                 <TicketsSettings />
               </MainLayout>

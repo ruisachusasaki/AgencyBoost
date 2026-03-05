@@ -27,7 +27,7 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - Component-scoped CSS using design system variables.
 
 ### Technical Implementations
-- **Authentication & Authorization**: Direct Google OAuth 2.0, multi-user support, session management, and role-based access control (Admin, Manager, User, Accounting) with a hierarchical permission system.
+- **Authentication & Authorization**: Replit OIDC Auth + email/password login, multi-user support, session management, and role-based access control (Admin, Manager, User, Accounting) with a hierarchical permission system. Permission keys use dot-notation format (e.g., `settings.staff.view`, `settings.leads.manage`). A migration map in `use-has-permission.ts` handles old-format keys (e.g., `settings.view_general_settings`) → new-format translation for backward compatibility. All 18 settings sub-routes in App.tsx use specific permission keys matching their corresponding tile in settings.tsx. The `RequirePermission` component always falls through to legacy permissions when granular permissions don't match.
 - **Data Management**: Relational schema, standard CRUD operations, audit logs, sorting, pagination, CSV import/export, and custom fields.
 - **Google Calendar Integration**: Per-user two-way sync with Google Calendar API, including availability blocking and workflow triggers.
 - **Business Timezone**: Account-level timezone setting.
