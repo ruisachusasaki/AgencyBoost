@@ -28732,6 +28732,102 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  // Onboarding template file upload (admin uploads fillable forms like W9, W4)
+  app.post("/api/onboarding-template-upload", requireAuth(), requirePermission('hr', 'canManage'), upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const { ObjectStorageService, sanitizeFileName } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
+
+      const sanitized = sanitizeFileName(req.file.originalname);
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: req.file.buffer,
+        headers: {
+          'Content-Type': req.file.mimetype || 'application/octet-stream',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload to object storage');
+      }
+
+      const urlObj = new URL(uploadUrl);
+      const objectPath = urlObj.pathname;
+      const fileUrl = `/objects${objectPath}`;
+
+      res.json({ fileUrl, fileName: sanitized });
+    } catch (error) {
+      console.error("Error uploading onboarding template:", error);
+      res.status(500).json({ error: "Failed to upload template file" });
+    }
+  });
+
+  // Onboarding file upload (new hire uploads filled-out forms) - PUBLIC (no auth required, like submission)
+  app.post("/api/onboarding-file-upload", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      if (req.file.size > 10 * 1024 * 1024) {
+        return res.status(400).json({ error: "File size exceeds 10MB limit" });
+      }
+
+      const { ObjectStorageService, sanitizeFileName } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
+
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: req.file.buffer,
+        headers: {
+          'Content-Type': req.file.mimetype || 'application/octet-stream',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload to object storage');
+      }
+
+      const urlObj = new URL(uploadUrl);
+      const objectPath = urlObj.pathname;
+      const fileUrl = `/objects${objectPath}`;
+      const sanitized = sanitizeFileName(req.file.originalname);
+
+      res.json({ fileUrl, fileName: sanitized });
+    } catch (error) {
+      console.error("Error uploading onboarding file:", error);
+      res.status(500).json({ error: "Failed to upload file" });
+    }
+  });
+
+  // Download onboarding template file (PUBLIC - new hires need to download templates)
+  app.get("/api/onboarding-template-download", async (req, res) => {
+    try {
+      const { fileUrl } = req.query;
+      if (!fileUrl || typeof fileUrl !== 'string') {
+        return res.status(400).json({ error: "Missing fileUrl parameter" });
+      }
+
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(fileUrl);
+      await objectStorageService.downloadObject(objectFile, res, 0);
+    } catch (error) {
+      console.error("Error downloading onboarding template:", error);
+      const { ObjectNotFoundError } = await import("./objectStorage");
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      res.status(500).json({ error: "Failed to download template" });
+    }
+  });
+
   // New Hire Onboarding Form Submission Routes
   app.post("/api/new-hire-onboarding-submissions", async (req, res) => {
     try {

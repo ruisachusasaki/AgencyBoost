@@ -26,7 +26,11 @@ import {
   Heart,
   Shirt,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Upload,
+  Download,
+  X,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -34,10 +38,13 @@ import { apiRequest } from "@/lib/queryClient";
 interface FormField {
   id: string;
   label: string;
-  type: 'text' | 'email' | 'phone' | 'textarea' | 'date' | 'select';
+  type: 'text' | 'email' | 'phone' | 'textarea' | 'date' | 'select' | 'file';
   placeholder?: string;
   required: boolean;
   options?: string[];
+  templateFileUrl?: string;
+  templateFileName?: string;
+  acceptedFileTypes?: string;
   order: number;
 }
 
@@ -145,8 +152,12 @@ export default function NewHireOnboardingFormEditor() {
     type: 'text',
     placeholder: '',
     required: false,
-    options: []
+    options: [],
+    templateFileUrl: '',
+    templateFileName: '',
+    acceptedFileTypes: '.pdf,.doc,.docx,.jpg,.png'
   });
+  const [uploadingTemplate, setUploadingTemplate] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -210,11 +221,14 @@ export default function NewHireOnboardingFormEditor() {
       placeholder: fieldForm.placeholder,
       required: fieldForm.required!,
       options: fieldForm.options?.filter(opt => opt.trim()),
+      templateFileUrl: fieldForm.type === 'file' ? fieldForm.templateFileUrl : undefined,
+      templateFileName: fieldForm.type === 'file' ? fieldForm.templateFileName : undefined,
+      acceptedFileTypes: fieldForm.type === 'file' ? (fieldForm.acceptedFileTypes || '.pdf,.doc,.docx,.jpg,.png') : undefined,
       order: fields.length
     };
 
     setFields([...fields, newField]);
-    setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [] });
+    setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [], templateFileUrl: '', templateFileName: '', acceptedFileTypes: '.pdf,.doc,.docx,.jpg,.png' });
     setIsFieldModalOpen(false);
   };
 
@@ -225,7 +239,10 @@ export default function NewHireOnboardingFormEditor() {
       type: field.type,
       placeholder: field.placeholder,
       required: field.required,
-      options: field.options || []
+      options: field.options || [],
+      templateFileUrl: field.templateFileUrl || '',
+      templateFileName: field.templateFileName || '',
+      acceptedFileTypes: field.acceptedFileTypes || '.pdf,.doc,.docx,.jpg,.png'
     });
     setIsFieldModalOpen(true);
   };
@@ -241,14 +258,17 @@ export default function NewHireOnboardingFormEditor() {
             type: fieldForm.type!,
             placeholder: fieldForm.placeholder,
             required: fieldForm.required!,
-            options: fieldForm.options?.filter(opt => opt.trim())
+            options: fieldForm.options?.filter(opt => opt.trim()),
+            templateFileUrl: fieldForm.type === 'file' ? fieldForm.templateFileUrl : undefined,
+            templateFileName: fieldForm.type === 'file' ? fieldForm.templateFileName : undefined,
+            acceptedFileTypes: fieldForm.type === 'file' ? (fieldForm.acceptedFileTypes || '.pdf,.doc,.docx,.jpg,.png') : undefined,
           }
         : field
     );
 
     setFields(updatedFields);
     setEditingField(null);
-    setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [] });
+    setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [], templateFileUrl: '', templateFileName: '', acceptedFileTypes: '.pdf,.doc,.docx,.jpg,.png' });
     setIsFieldModalOpen(false);
   };
 
@@ -265,6 +285,49 @@ export default function NewHireOnboardingFormEditor() {
     });
   };
 
+  const handleTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingTemplate(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/onboarding-template-upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload template file');
+      }
+
+      const result = await response.json();
+      setFieldForm(prev => ({
+        ...prev,
+        templateFileUrl: result.fileUrl,
+        templateFileName: file.name,
+      }));
+
+      toast({
+        title: "Template Uploaded",
+        variant: "default",
+        description: `${file.name} uploaded successfully`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload template file",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingTemplate(false);
+      e.target.value = '';
+    }
+  };
+
   const getFieldIcon = (type: string) => {
     switch (type) {
       case 'email': return <Mail className="h-4 w-4" />;
@@ -272,6 +335,7 @@ export default function NewHireOnboardingFormEditor() {
       case 'textarea': return <FileText className="h-4 w-4" />;
       case 'date': return <Calendar className="h-4 w-4" />;
       case 'select': return <Type className="h-4 w-4" />;
+      case 'file': return <Upload className="h-4 w-4" />;
       default: return <Type className="h-4 w-4" />;
     }
   };
@@ -283,6 +347,7 @@ export default function NewHireOnboardingFormEditor() {
       case 'textarea': return 'bg-purple-100 text-purple-800';
       case 'date': return 'bg-orange-100 text-orange-800';
       case 'select': return 'bg-yellow-100 text-yellow-800';
+      case 'file': return 'bg-cyan-100 text-cyan-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -410,6 +475,7 @@ export default function NewHireOnboardingFormEditor() {
                       <SelectItem value="textarea">Multi-line Text</SelectItem>
                       <SelectItem value="date">Date</SelectItem>
                       <SelectItem value="select">Dropdown Select</SelectItem>
+                      <SelectItem value="file">File Upload</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -446,6 +512,70 @@ export default function NewHireOnboardingFormEditor() {
                     />
                   </div>
                 )}
+
+                {fieldForm.type === 'file' && (
+                  <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+                    <div>
+                      <Label className="text-sm font-medium">Downloadable Template (Optional)</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Upload a form template (e.g., W9, W4) that new hires can download, fill out, and re-upload.
+                      </p>
+                      
+                      {fieldForm.templateFileUrl ? (
+                        <div className="flex items-center gap-2 mt-2 p-2 border rounded-md bg-background">
+                          <FileText className="h-4 w-4 text-primary shrink-0" />
+                          <span className="text-sm truncate flex-1">{fieldForm.templateFileName || 'Template file'}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setFieldForm(prev => ({ ...prev, templateFileUrl: '', templateFileName: '' }))}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="mt-2">
+                          <label className="cursor-pointer">
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept=".pdf,.doc,.docx,.xls,.xlsx"
+                              onChange={handleTemplateUpload}
+                              disabled={uploadingTemplate}
+                            />
+                            <div className="flex items-center justify-center gap-2 border-2 border-dashed rounded-md p-4 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                              {uploadingTemplate ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-4 w-4" />
+                                  Click to upload template file
+                                </>
+                              )}
+                            </div>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="accepted-file-types">Accepted File Types</Label>
+                      <Input
+                        id="accepted-file-types"
+                        value={fieldForm.acceptedFileTypes || ''}
+                        onChange={(e) => setFieldForm({ ...fieldForm, acceptedFileTypes: e.target.value })}
+                        placeholder=".pdf,.doc,.docx,.jpg,.png"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Comma-separated file extensions (e.g., .pdf,.doc,.docx,.jpg,.png)
+                      </p>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="flex items-center space-x-2">
                   <Switch
@@ -470,7 +600,7 @@ export default function NewHireOnboardingFormEditor() {
                     onClick={() => {
                       setIsFieldModalOpen(false);
                       setEditingField(null);
-                      setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [] });
+                      setFieldForm({ label: '', type: 'text', placeholder: '', required: false, options: [], templateFileUrl: '', templateFileName: '', acceptedFileTypes: '.pdf,.doc,.docx,.jpg,.png' });
                     }}
                     data-testid="button-cancel-field"
                   >
@@ -527,11 +657,17 @@ export default function NewHireOnboardingFormEditor() {
                                 <GripVertical className="h-4 w-4 text-muted-foreground" />
                               </div>
                               
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 {getFieldIcon(field.type)}
                                 <span className="font-medium">{field.label}</span>
                                 {field.required && (
                                   <Badge variant="secondary" className="text-xs">Required</Badge>
+                                )}
+                                {field.type === 'file' && field.templateFileUrl && (
+                                  <Badge variant="outline" className="text-xs gap-1">
+                                    <Download className="h-3 w-3" />
+                                    Has Template
+                                  </Badge>
                                 )}
                               </div>
                             </div>

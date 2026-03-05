@@ -314,7 +314,8 @@ export function useHasPermissions(permissionKeys: string[]) {
 
     // Fallback to legacy permissions if not found
     if (!permissions[permissionKey] && currentUser.permissions) {
-      const permission = currentUser.permissions.find((p) => p.module === permissionKey);
+      const legacyModule = permissionKey.includes('.') ? permissionKey.split('.')[0] : permissionKey;
+      const permission = currentUser.permissions.find((p) => p.module === legacyModule);
       if (permission?.canView === true) {
         permissions[permissionKey] = true;
       }

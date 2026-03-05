@@ -9,17 +9,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { CheckCircle, Clock, UserPlus, Building2 } from "lucide-react";
+import { CheckCircle, Clock, UserPlus, Building2, Download, Upload, FileText, X, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 interface FormField {
   id: string;
   label: string;
-  type: 'text' | 'email' | 'phone' | 'textarea' | 'date' | 'select';
+  type: 'text' | 'email' | 'phone' | 'textarea' | 'date' | 'select' | 'file';
   placeholder?: string;
   required: boolean;
   options?: string[];
+  templateFileUrl?: string;
+  templateFileName?: string;
+  acceptedFileTypes?: string;
   order: number;
 }
 
@@ -119,6 +122,8 @@ const defaultFormFields: FormField[] = [
 
 export default function OnboardingPage() {
   const [submissionComplete, setSubmissionComplete] = useState(false);
+  const [fileUploads, setFileUploads] = useState<Record<string, { url: string; name: string }>>({});
+  const [uploadingFields, setUploadingFields] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   // Fetch form configuration
@@ -132,6 +137,17 @@ export default function OnboardingPage() {
     const schemaFields: Record<string, z.ZodTypeAny> = {};
     
     fields.forEach(field => {
+      if (field.type === 'file') {
+        // File fields are validated separately via fileUploads state
+        // We still store the URL as a string in the form data
+        let fieldSchema: z.ZodTypeAny = z.string();
+        if (!field.required) {
+          fieldSchema = fieldSchema.optional().or(z.literal(''));
+        }
+        schemaFields[field.id] = fieldSchema;
+        return;
+      }
+
       let fieldSchema: z.ZodTypeAny;
       
       switch (field.type) {
@@ -223,11 +239,144 @@ export default function OnboardingPage() {
     }
   });
 
+  const handleFileUpload = async (fieldId: string, file: File) => {
+    setUploadingFields(prev => ({ ...prev, [fieldId]: true }));
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/onboarding-file-upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload file');
+      }
+
+      const result = await response.json();
+      setFileUploads(prev => ({ ...prev, [fieldId]: { url: result.fileUrl, name: file.name } }));
+      form.setValue(fieldId, result.fileUrl);
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload file. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFields(prev => ({ ...prev, [fieldId]: false }));
+    }
+  };
+
+  const removeFileUpload = (fieldId: string) => {
+    setFileUploads(prev => {
+      const updated = { ...prev };
+      delete updated[fieldId];
+      return updated;
+    });
+    form.setValue(fieldId, '');
+  };
+
   const onSubmit = (data: Record<string, string>) => {
-    submitMutation.mutate(data);
+    // Validate required file fields
+    const fileFields = fields.filter(f => f.type === 'file' && f.required);
+    for (const field of fileFields) {
+      if (!fileUploads[field.id]) {
+        toast({
+          title: "Missing Upload",
+          description: `Please upload a file for "${field.label}"`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    // Merge file upload URLs into form data
+    const mergedData = { ...data };
+    Object.entries(fileUploads).forEach(([fieldId, upload]) => {
+      mergedData[fieldId] = upload.url;
+      mergedData[`${fieldId}_filename`] = upload.name;
+    });
+
+    submitMutation.mutate(mergedData);
   };
 
   const renderFormField = (field: FormField) => {
+    if (field.type === 'file') {
+      return (
+        <div key={field.id} className="space-y-2 md:col-span-2">
+          <label className="text-sm font-medium flex items-center gap-1">
+            {field.label}
+            {field.required && <span className="text-red-500">*</span>}
+          </label>
+
+          {field.templateFileUrl && (
+            <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <Download className="h-4 w-4 text-blue-600 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-blue-800 font-medium">
+                  Download the template, fill it out, then upload it below
+                </p>
+                <a
+                  href={`/api/onboarding-template-download?fileUrl=${encodeURIComponent(field.templateFileUrl)}`}
+                  download={field.templateFileName || 'template'}
+                  className="text-sm text-blue-600 hover:text-blue-800 underline inline-flex items-center gap-1 mt-1"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  {field.templateFileName || 'Download Template'}
+                </a>
+              </div>
+            </div>
+          )}
+
+          {fileUploads[field.id] ? (
+            <div className="flex items-center gap-2 p-3 border border-green-200 bg-green-50 rounded-lg">
+              <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+              <span className="text-sm text-green-800 flex-1 truncate">
+                {fileUploads[field.id].name}
+              </span>
+              <button
+                type="button"
+                onClick={() => removeFileUpload(field.id)}
+                className="p-1 hover:bg-green-100 rounded"
+              >
+                <X className="h-4 w-4 text-green-600" />
+              </button>
+            </div>
+          ) : (
+            <label className="cursor-pointer block">
+              <input
+                type="file"
+                className="hidden"
+                accept={field.acceptedFileTypes || '.pdf,.doc,.docx,.jpg,.png'}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(field.id, file);
+                  e.target.value = '';
+                }}
+                disabled={uploadingFields[field.id]}
+              />
+              <div className="flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-lg p-6 text-gray-500 hover:border-green-500 hover:text-green-600 transition-colors">
+                {uploadingFields[field.id] ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="text-sm">Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-5 w-5" />
+                    <span className="text-sm">
+                      {field.placeholder || 'Click to upload your file'}
+                    </span>
+                  </>
+                )}
+              </div>
+            </label>
+          )}
+        </div>
+      );
+    }
+
     return (
       <FormField
         key={field.id}
