@@ -530,13 +530,14 @@ export default function NewHireOnboardingFormEditor() {
         <div className="flex items-center gap-0 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-fit">
           <button
             onClick={() => setActiveEditorTab("fields")}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
               activeEditorTab === "fields"
                 ? "text-white shadow-sm"
                 : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             }`}
             style={activeEditorTab === "fields" ? { backgroundColor: "hsl(179, 100%, 39%)" } : {}}
           >
+            <FileText className="h-3.5 w-3.5" />
             Form Fields
           </button>
           <button
