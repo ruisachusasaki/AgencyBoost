@@ -1,6 +1,6 @@
 import {
   PERMISSION_KEY_MIGRATION_MAP
-} from "./chunk-KS5WMKSE.js";
+} from "./chunk-27BMMX5V.js";
 import {
   createOAuth2Client
 } from "./chunk-5Y3IKJKP.js";
@@ -15487,7 +15487,7 @@ AgencyBoost CRM`
   });
   app2.get("/api/roles-permissions/export", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const { generateCSV } = await import("./roles-permissions-csv-NCSKMB7D.js");
+      const { generateCSV } = await import("./roles-permissions-csv-ZFGVGMWP.js");
       const allRoles = await db.select({
         id: roles.id,
         name: roles.name
@@ -15520,7 +15520,7 @@ AgencyBoost CRM`
     try {
       const userId2 = getAuthenticatedUserIdOrFail(req, res);
       if (!userId2) return;
-      const { parseCSV, getAllValidPermissionKeys } = await import("./roles-permissions-csv-NCSKMB7D.js");
+      const { parseCSV, getAllValidPermissionKeys } = await import("./roles-permissions-csv-ZFGVGMWP.js");
       const { csvContent } = req.body;
       if (!csvContent || typeof csvContent !== "string") {
         return res.status(400).json({ message: "CSV content is required" });
@@ -15555,7 +15555,7 @@ AgencyBoost CRM`
     try {
       const userId2 = getAuthenticatedUserIdOrFail(req, res);
       if (!userId2) return;
-      const { getAllValidPermissionKeys } = await import("./roles-permissions-csv-NCSKMB7D.js");
+      const { getAllValidPermissionKeys } = await import("./roles-permissions-csv-ZFGVGMWP.js");
       const { roles: roleDataList } = req.body;
       if (!roleDataList || !Array.isArray(roleDataList)) {
         return res.status(400).json({ message: "Role data is required" });
@@ -23926,6 +23926,84 @@ ${appointment.description || ""}
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ error: "Failed to save form configuration" });
+    }
+  });
+  app2.post("/api/onboarding-template-upload", requireAuth(), requirePermission("hr", "canManage"), upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const { ObjectStorageService: ObjectStorageService2, sanitizeFileName: sanitizeFileName3 } = await import("./objectStorage-UJEH2VW3.js");
+      const objectStorageService = new ObjectStorageService2();
+      const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
+      const sanitized = sanitizeFileName3(req.file.originalname);
+      const response = await fetch(uploadUrl, {
+        method: "PUT",
+        body: req.file.buffer,
+        headers: {
+          "Content-Type": req.file.mimetype || "application/octet-stream"
+        }
+      });
+      if (!response.ok) {
+        throw new Error("Failed to upload to object storage");
+      }
+      const urlObj = new URL(uploadUrl);
+      const objectPath = urlObj.pathname;
+      const fileUrl = `/objects${objectPath}`;
+      res.json({ fileUrl, fileName: sanitized });
+    } catch (error) {
+      console.error("Error uploading onboarding template:", error);
+      res.status(500).json({ error: "Failed to upload template file" });
+    }
+  });
+  app2.post("/api/onboarding-file-upload", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      if (req.file.size > 10 * 1024 * 1024) {
+        return res.status(400).json({ error: "File size exceeds 10MB limit" });
+      }
+      const { ObjectStorageService: ObjectStorageService2, sanitizeFileName: sanitizeFileName3 } = await import("./objectStorage-UJEH2VW3.js");
+      const objectStorageService = new ObjectStorageService2();
+      const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
+      const response = await fetch(uploadUrl, {
+        method: "PUT",
+        body: req.file.buffer,
+        headers: {
+          "Content-Type": req.file.mimetype || "application/octet-stream"
+        }
+      });
+      if (!response.ok) {
+        throw new Error("Failed to upload to object storage");
+      }
+      const urlObj = new URL(uploadUrl);
+      const objectPath = urlObj.pathname;
+      const fileUrl = `/objects${objectPath}`;
+      const sanitized = sanitizeFileName3(req.file.originalname);
+      res.json({ fileUrl, fileName: sanitized });
+    } catch (error) {
+      console.error("Error uploading onboarding file:", error);
+      res.status(500).json({ error: "Failed to upload file" });
+    }
+  });
+  app2.get("/api/onboarding-template-download", async (req, res) => {
+    try {
+      const { fileUrl } = req.query;
+      if (!fileUrl || typeof fileUrl !== "string") {
+        return res.status(400).json({ error: "Missing fileUrl parameter" });
+      }
+      const { ObjectStorageService: ObjectStorageService2 } = await import("./objectStorage-UJEH2VW3.js");
+      const objectStorageService = new ObjectStorageService2();
+      const objectFile = await objectStorageService.getObjectEntityFile(fileUrl);
+      await objectStorageService.downloadObject(objectFile, res, 0);
+    } catch (error) {
+      console.error("Error downloading onboarding template:", error);
+      const { ObjectNotFoundError: ObjectNotFoundError2 } = await import("./objectStorage-UJEH2VW3.js");
+      if (error instanceof ObjectNotFoundError2) {
+        return res.sendStatus(404);
+      }
+      res.status(500).json({ error: "Failed to download template" });
     }
   });
   app2.post("/api/new-hire-onboarding-submissions", async (req, res) => {
