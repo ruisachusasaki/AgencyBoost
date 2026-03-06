@@ -1201,21 +1201,21 @@ export default function Tasks() {
     return filtered;
   }, [tasks, currentFilter, searchTerm, statusFilter, assigneeFilter, priorityFilter, clientFilter, categoryFilter, overdueFilter, timeFilter, showCompleted, showCancelled, sortField, sortDirection, staff, clients, taskCategories]);
 
-  // Handle column reordering (excluding name column)
   const handleColumnDragEnd = (result: any) => {
     if (!result.destination) return;
+    if (result.source.index === result.destination.index) return;
 
-    // Don't allow reordering if trying to move the name column
-    const reorderableColumns = columns.slice(1); // Exclude first column (name)
-    const items = Array.from(reorderableColumns);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+    const draggableVisible = visibleColumns.slice(1);
+    const reordered = Array.from(draggableVisible);
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
 
-    // Reconstruct the full columns array with name always first
-    const newColumns = [columns[0], ...items];
+    const newOrder = [visibleColumns[0], ...reordered];
+    const hidden = columns.filter(col => !col.visible);
+    const newColumns = [...newOrder, ...hidden];
+
     setColumns(newColumns);
-    
-    // Save the new order to API
+
     const columnPrefs = newColumns.map(col => ({ id: col.id, visible: col.visible, width: col.width }));
     saveColumnPreferencesMutation.mutate(columnPrefs);
     
