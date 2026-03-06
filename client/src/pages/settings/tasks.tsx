@@ -708,6 +708,8 @@ export default function TasksSettingsPage() {
   const [currentWorkflow, setCurrentWorkflow] = useState<TeamWorkflow | null>(null);
   const [workflowStatuses, setWorkflowStatuses] = useState<{id: string; order: number; isRequired: boolean; statusId: string}[]>([]);
   const [newWorkflowStatuses, setNewWorkflowStatuses] = useState<{id: string; order: number; isRequired: boolean; statusId: string}[]>([]);
+  const [wfSortField, setWfSortField] = useState<'name' | 'isDefault' | 'isActive' | 'createdAt'>('createdAt');
+  const [wfSortDir, setWfSortDir] = useState<'asc' | 'desc'>('desc');
   const { toast} = useToast();
   const queryClient = useQueryClient();
 
@@ -1734,18 +1736,56 @@ export default function TasksSettingsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Status Flow</TableHead>
-                      <TableHead>Default</TableHead>
-                      <TableHead>Active</TableHead>
-                      <TableHead>Created</TableHead>
+                      {([
+                        { field: 'name' as const, label: 'Name' },
+                        { field: null, label: 'Description' },
+                        { field: null, label: 'Status Flow' },
+                        { field: 'isDefault' as const, label: 'Default' },
+                        { field: 'isActive' as const, label: 'Active' },
+                        { field: 'createdAt' as const, label: 'Created' },
+                      ]).map(col => (
+                        <TableHead
+                          key={col.label}
+                          className={col.field ? "cursor-pointer select-none hover:bg-muted/50 transition-colors" : ""}
+                          onClick={col.field ? () => {
+                            if (wfSortField === col.field) {
+                              setWfSortDir(d => d === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setWfSortField(col.field!);
+                              setWfSortDir('asc');
+                            }
+                          } : undefined}
+                        >
+                          <div className="flex items-center gap-1">
+                            {col.label}
+                            {col.field && (
+                              wfSortField === col.field ? (
+                                wfSortDir === 'asc' ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />
+                              ) : (
+                                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+                              )
+                            )}
+                          </div>
+                        </TableHead>
+                      ))}
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {workflows
-                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    {[...workflows]
+                      .sort((a, b) => {
+                        let cmp = 0;
+                        if (wfSortField === 'name') {
+                          cmp = (a.name || '').localeCompare(b.name || '');
+                        } else if (wfSortField === 'isDefault') {
+                          cmp = (a.isDefault ? 1 : 0) - (b.isDefault ? 1 : 0);
+                        } else if (wfSortField === 'isActive') {
+                          cmp = (a.isActive ? 1 : 0) - (b.isActive ? 1 : 0);
+                        } else if (wfSortField === 'createdAt') {
+                          cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                        }
+                        return wfSortDir === 'asc' ? cmp : -cmp;
+                      })
                       .map((workflow) => (
                         <TableRow key={workflow.id}>
                           <TableCell className="font-medium">{workflow.name}</TableCell>
