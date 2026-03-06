@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "wouter";
-import { ArrowLeft, Plus, Edit, Trash2, Route, Copy, ExternalLink, FileText, ChevronUp, ChevronDown, GripVertical, Code, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, Route, Copy, ExternalLink, FileText, ChevronUp, ChevronDown, GripVertical, Code, Eye, EyeOff, RefreshCw, MoreVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -409,6 +410,47 @@ export default function TicketsSettingsPage() {
     setShowFormDialog(true);
   };
 
+  const handleDuplicateForm = async (form: CustomForm) => {
+    setEditingForm(null);
+    setFormName(`${form.name} (Copy)`);
+    setFormDescription(form.description || "");
+    setFormStatus("draft");
+    const config = form.destinationConfig || {};
+    setFormDefaultType(config.defaultType || "bug");
+    setFormDefaultPriority(config.defaultPriority || "medium");
+
+    try {
+      const resp = await fetch(`/api/custom-forms/${form.id}`);
+      const data = await resp.json();
+      if (data.fields) {
+        setFormFields(
+          data.fields.map((f: CustomFormField) => ({
+            tempId: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            type: f.type,
+            label: f.label,
+            placeholder: f.placeholder || "",
+            required: !!f.required,
+            options: f.options || [],
+            fieldMapping: f.fieldMapping || "none",
+          }))
+        );
+      }
+    } catch {
+      setFormFields([]);
+      toast({
+        title: "Warning",
+        description: "Could not load form fields. The duplicate will start without fields.",
+        variant: "destructive",
+      });
+    }
+
+    setShowFormDialog(true);
+    toast({
+      title: "Duplicating Form",
+      description: `Creating a copy of "${form.name}". Make any changes and save.`,
+    });
+  };
+
   const addField = () => {
     if (!fieldDraft.label.trim()) {
       toast({ title: "Validation Error", description: "Field label is required.", variant: "destructive" });
@@ -679,12 +721,28 @@ export default function TicketsSettingsPage() {
                           <Code className="w-4 h-4 mr-1" />
                           Embed
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditForm(form)} title="Edit">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={() => setDeletingForm(form)} title="Delete">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditForm(form)}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDuplicateForm(form)}>
+                              <Copy className="w-4 h-4 mr-2" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setDeletingForm(form)}>
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </CardContent>
