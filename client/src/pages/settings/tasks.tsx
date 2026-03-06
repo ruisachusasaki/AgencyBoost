@@ -712,6 +712,8 @@ export default function TasksSettingsPage() {
   const [wfSortDir, setWfSortDir] = useState<'asc' | 'desc'>('desc');
   const [stSortField, setStSortField] = useState<'sortOrder' | 'name' | 'isDefault' | 'isActive' | 'isSystemStatus'>('sortOrder');
   const [stSortDir, setStSortDir] = useState<'asc' | 'desc'>('asc');
+  const [prSortField, setPrSortField] = useState<'sortOrder' | 'name' | 'isDefault' | 'isActive' | 'isSystemPriority'>('sortOrder');
+  const [prSortDir, setPrSortDir] = useState<'asc' | 'desc'>('desc');
   const { toast} = useToast();
   const queryClient = useQueryClient();
 
@@ -1625,24 +1627,64 @@ export default function TasksSettingsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12">Order</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Value</TableHead>
-                        <TableHead>Color</TableHead>
-                        <TableHead>Icon</TableHead>
-                        <TableHead>Default</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>System</TableHead>
+                        {([
+                          { field: 'sortOrder' as const, label: 'Order', className: 'w-12' },
+                          { field: 'name' as const, label: 'Name', className: '' },
+                          { field: null, label: 'Value', className: '' },
+                          { field: null, label: 'Color', className: '' },
+                          { field: null, label: 'Icon', className: '' },
+                          { field: 'isDefault' as const, label: 'Default', className: '' },
+                          { field: 'isActive' as const, label: 'Status', className: '' },
+                          { field: 'isSystemPriority' as const, label: 'System', className: '' },
+                        ]).map(col => (
+                          <TableHead
+                            key={col.label}
+                            className={`${col.className} ${col.field ? "cursor-pointer select-none hover:bg-muted/50 transition-colors" : ""}`}
+                            onClick={col.field ? () => {
+                              if (prSortField === col.field) {
+                                setPrSortDir(d => d === 'asc' ? 'desc' : 'asc');
+                              } else {
+                                setPrSortField(col.field!);
+                                setPrSortDir('asc');
+                              }
+                            } : undefined}
+                          >
+                            <div className="flex items-center gap-1">
+                              {col.label}
+                              {col.field && (
+                                prSortField === col.field ? (
+                                  prSortDir === 'asc' ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+                                )
+                              )}
+                            </div>
+                          </TableHead>
+                        ))}
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
-                    <Droppable droppableId="task-priorities">
+                    <Droppable droppableId="task-priorities" isDropDisabled={prSortField !== 'sortOrder'}>
                       {(provided) => (
                         <TableBody {...provided.droppableProps} ref={provided.innerRef}>
-                          {priorities
-                            .sort((a, b) => (b.sortOrder || 0) - (a.sortOrder || 0))
+                          {[...priorities]
+                            .sort((a, b) => {
+                              let cmp = 0;
+                              if (prSortField === 'sortOrder') {
+                                cmp = (a.sortOrder || 0) - (b.sortOrder || 0);
+                              } else if (prSortField === 'name') {
+                                cmp = (a.name || '').localeCompare(b.name || '');
+                              } else if (prSortField === 'isDefault') {
+                                cmp = (a.isDefault ? 1 : 0) - (b.isDefault ? 1 : 0);
+                              } else if (prSortField === 'isActive') {
+                                cmp = (a.isActive ? 1 : 0) - (b.isActive ? 1 : 0);
+                              } else if (prSortField === 'isSystemPriority') {
+                                cmp = (a.isSystemPriority ? 1 : 0) - (b.isSystemPriority ? 1 : 0);
+                              }
+                              return prSortDir === 'asc' ? cmp : -cmp;
+                            })
                             .map((priority, index) => (
-                              <Draggable key={priority.id} draggableId={priority.id} index={index}>
+                              <Draggable key={priority.id} draggableId={priority.id} index={index} isDragDisabled={prSortField !== 'sortOrder'}>
                                 {(provided, snapshot) => (
                                   <TableRow 
                                     ref={provided.innerRef}
@@ -1652,8 +1694,8 @@ export default function TasksSettingsPage() {
                                     <TableCell>
                                       <div className="flex items-center">
                                         <div
-                                          {...provided.dragHandleProps}
-                                          className="cursor-move text-muted-foreground hover:text-gray-600"
+                                          {...(prSortField === 'sortOrder' ? provided.dragHandleProps : {})}
+                                          className={prSortField === 'sortOrder' ? "cursor-move text-muted-foreground hover:text-gray-600" : "text-muted-foreground/40"}
                                         >
                                           <GripVertical className="h-4 w-4" />
                                         </div>
