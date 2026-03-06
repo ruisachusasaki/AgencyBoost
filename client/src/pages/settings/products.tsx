@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RichTextEditor } from "@/components/rich-text-editor";
+import { RichTextEditor, type RichTextEditorHandle } from "@/components/rich-text-editor";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -218,6 +218,8 @@ export default function ProductsSettings() {
   const [createTemplateDescription, setCreateTemplateDescription] = useState("");
   const [editTemplateDescription, setEditTemplateDescription] = useState("");
   const [descEditorKey, setDescEditorKey] = useState(0);
+  const createDescEditorRef = useRef<RichTextEditorHandle | null>(null);
+  const editDescEditorRef = useRef<RichTextEditorHandle | null>(null);
   const [mergeTagSearch, setMergeTagSearch] = useState("");
 
   const nativeMergeTagOptions = [
@@ -3287,7 +3289,7 @@ export default function ProductsSettings() {
                                 key={option.tag}
                                 type="button"
                                 className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                onClick={() => { setCreateTemplateDescription(prev => { const updated = prev ? prev.replace(/<\/p>$/, option.tag + '</p>') : `<p>${option.tag}</p>`; return updated; }); setDescEditorKey(k => k + 1); }}
+                                onClick={() => { if (createDescEditorRef.current) { createDescEditorRef.current.insertText(option.tag); } else { setCreateTemplateDescription(prev => prev ? prev + option.tag : option.tag); } }}
                               >
                                 <span className="font-medium truncate mr-2">{option.label}</span>
                                 <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
@@ -3310,6 +3312,7 @@ export default function ProductsSettings() {
                 onChange={setCreateTemplateDescription}
                 placeholder="e.g., Set up {{product.name}} for {{client.name}}"
                 className="min-h-[120px]"
+                editorRef={createDescEditorRef}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -3536,7 +3539,7 @@ export default function ProductsSettings() {
                                   key={option.tag}
                                   type="button"
                                   className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                  onClick={() => { setEditTemplateDescription(prev => { const updated = prev ? prev.replace(/<\/p>$/, option.tag + '</p>') : `<p>${option.tag}</p>`; return updated; }); setDescEditorKey(k => k + 1); }}
+                                  onClick={() => { if (editDescEditorRef.current) { editDescEditorRef.current.insertText(option.tag); } else { setEditTemplateDescription(prev => prev ? prev + option.tag : option.tag); } }}
                                 >
                                   <span className="font-medium truncate mr-2">{option.label}</span>
                                   <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
@@ -3559,6 +3562,7 @@ export default function ProductsSettings() {
                   onChange={setEditTemplateDescription}
                   placeholder="Task description..."
                   className="min-h-[120px]"
+                  editorRef={editDescEditorRef}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">

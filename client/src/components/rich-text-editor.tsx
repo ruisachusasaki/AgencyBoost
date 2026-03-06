@@ -36,11 +36,16 @@ import {
 } from 'lucide-react';
 import { CalloutExtension, ToggleExtension, ToggleSummary, ToggleContent, ColumnsExtension, ColumnExtension, CustomTaskItem } from './tiptap-extensions';
 
+export interface RichTextEditorHandle {
+  insertText: (text: string) => void;
+}
+
 interface RichTextEditorProps {
   content: string;
   onChange: (content: string) => void;
   placeholder?: string;
   className?: string;
+  editorRef?: React.MutableRefObject<RichTextEditorHandle | null>;
 }
 
 const lineHeightClasses = {
@@ -81,7 +86,7 @@ export const convertTextToHtml = (text: string): string => {
     .join('');
 };
 
-export function RichTextEditor({ content, onChange, placeholder = "Start typing...", className }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, placeholder = "Start typing...", className, editorRef }: RichTextEditorProps) {
   const { toast } = useToast();
   const [currentLineHeight, setCurrentLineHeight] = useState('1.3');
   const [selectedImageSize, setSelectedImageSize] = useState<'small' | 'medium' | 'large' | 'full'>('full');
@@ -181,14 +186,19 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
     ],
     content: stripEmptyParagraphsHelper(htmlFormattedContent),
     onCreate: ({ editor }) => {
-      // Clean up any empty paragraphs TipTap might have inserted on create
       const currentHTML = editor.getHTML();
       const cleaned = stripEmptyParagraphsHelper(currentHTML);
       if (currentHTML !== cleaned) {
-        // Use setTimeout to avoid update-during-render issues
         setTimeout(() => {
           editor.commands.setContent(cleaned, false);
         }, 0);
+      }
+      if (editorRef) {
+        editorRef.current = {
+          insertText: (text: string) => {
+            editor.chain().focus().insertContent(text).run();
+          },
+        };
       }
     },
     onUpdate: ({ editor }) => {
