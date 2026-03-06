@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useHasPermissions, useRolePermissions } from "@/hooks/use-has-permission";
 import { PermissionGate } from "@/components/PermissionGate";
 import { useBusinessTimezone, getLocalDateString, getTodayInTimezone, getStartOfWeekInTimezone, getEndOfWeekInTimezone } from "@/hooks/use-business-timezone";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { 
@@ -58,6 +58,8 @@ import {
   StickyNote,
   Layers,
   Headphones,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { 
   exportTimeTrackingData,
@@ -129,6 +131,8 @@ export default function Reports() {
     'reports.cost_per_client.view',
     'reports.call_center_cost.view',
     'reports.sales.export',
+    'call_center.time_tracking.add_time',
+    'call_center.time_tracking.edit_time',
   ]);
   
   // Time display mode state
@@ -282,6 +286,12 @@ export default function Reports() {
   const [ccDateTo, setCcDateTo] = useState(() => formatLocalDateStr(new Date()));
   const [ccFromOpen, setCcFromOpen] = useState(false);
   const [ccToOpen, setCcToOpen] = useState(false);
+  const [ccAddTimeOpen, setCcAddTimeOpen] = useState(false);
+  const [ccEditEntryOpen, setCcEditEntryOpen] = useState(false);
+  const [ccEntriesOpen, setCcEntriesOpen] = useState(false);
+  const [ccEntriesFilter, setCcEntriesFilter] = useState<{ userId?: string; clientId?: string }>({});
+  const [ccEditingEntry, setCcEditingEntry] = useState<any>(null);
+  const [ccAddForm, setCcAddForm] = useState({ userId: '', clientId: '', date: formatLocalDateStr(new Date()), startTime: '09:00', endTime: '17:00' });
 
   interface CcReportUser {
     userId: string;
@@ -366,6 +376,100 @@ export default function Reports() {
       grandTotalCost: ccData.grandTotalCost,
     };
   }, [ccData]);
+
+  const canAddCcTime = !!reportPermissions['call_center.time_tracking.add_time'];
+  const canEditCcTime = !!reportPermissions['call_center.time_tracking.edit_time'];
+
+  const { data: ccEntriesData, isLoading: ccEntriesLoading, refetch: refetchCcEntries } = useQuery<{ entries: any[] }>({
+    queryKey: ["/api/call-center/entries-detail", ccDateFrom, ccDateTo, ccEntriesFilter.userId, ccEntriesFilter.clientId],
+    queryFn: async () => {
+      const params = new URLSearchParams({ dateFrom: ccDateFrom, dateTo: ccDateTo });
+      if (ccEntriesFilter.userId) params.set('userId', ccEntriesFilter.userId);
+      if (ccEntriesFilter.clientId) params.set('clientId', ccEntriesFilter.clientId);
+      const res = await fetch(`/api/call-center/entries-detail?${params}`, { credentials: 'include' });
+      if (!res.ok) throw new Error("Failed to fetch entries");
+      return res.json();
+    },
+    enabled: ccEntriesOpen && (canAddCcTime || canEditCcTime),
+  });
+
+  const ccAddTimeMutation = useMutation({
+    mutationFn: async (data: { userId: string; clientId: string; startTime: string; endTime: string }) => {
+      const res = await apiRequest('POST', '/api/call-center/manual-entry', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reports/call-center-cost"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/call-center/entries-detail"] });
+      setCcAddTimeOpen(false);
+      setCcAddForm({ userId: '', clientId: '', date: formatLocalDateStr(new Date()), startTime: '09:00', endTime: '17:00' });
+      toast({ title: "Time entry added", description: "The manual time entry has been created successfully." });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to add time entry", variant: "destructive" });
+    },
+  });
+
+  const ccEditTimeMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; userId?: string; clientId?: string; startTime?: string; endTime?: string }) => {
+      const res = await apiRequest('PATCH', `/api/call-center/time-entry/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reports/call-center-cost"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/call-center/entries-detail"] });
+      setCcEditEntryOpen(false);
+      setCcEditingEntry(null);
+      toast({ title: "Time entry updated", description: "The time entry has been updated and costs recalculated." });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to update time entry", variant: "destructive" });
+    },
+  });
+
+  const ccDeleteTimeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest('DELETE', `/api/call-center/time-entry/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reports/call-center-cost"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/call-center/entries-detail"] });
+      toast({ title: "Time entry deleted", description: "The time entry has been removed." });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to delete time entry", variant: "destructive" });
+    },
+  });
+
+  const handleCcAddTime = () => {
+    const { userId, clientId, date, startTime, endTime } = ccAddForm;
+    if (!userId || !clientId || !date || !startTime || !endTime) {
+      toast({ title: "Missing fields", description: "Please fill in all fields.", variant: "destructive" });
+      return;
+    }
+    const startISO = `${date}T${startTime}:00`;
+    const endISO = `${date}T${endTime}:00`;
+    if (new Date(endISO) <= new Date(startISO)) {
+      toast({ title: "Invalid times", description: "End time must be after start time.", variant: "destructive" });
+      return;
+    }
+    ccAddTimeMutation.mutate({ userId, clientId, startTime: startISO, endTime: endISO });
+  };
+
+  const handleCcEditSave = () => {
+    if (!ccEditingEntry) return;
+    const updates: any = { id: ccEditingEntry.id };
+    if (ccEditingEntry.editUserId !== ccEditingEntry.userId) updates.userId = ccEditingEntry.editUserId;
+    if (ccEditingEntry.editClientId !== ccEditingEntry.clientId) updates.clientId = ccEditingEntry.editClientId;
+    if (ccEditingEntry.editDate && ccEditingEntry.editStartTime) {
+      updates.startTime = `${ccEditingEntry.editDate}T${ccEditingEntry.editStartTime}:00`;
+    }
+    if (ccEditingEntry.editDate && ccEditingEntry.editEndTime) {
+      updates.endTime = `${ccEditingEntry.editDate}T${ccEditingEntry.editEndTime}:00`;
+    }
+    ccEditTimeMutation.mutate(updates);
+  };
 
   const exportCcCsv = () => {
     if (!ccTableData || ccTableData.rows.length === 0) return;
@@ -5740,6 +5844,27 @@ export default function Reports() {
                     <Download className="h-4 w-4" />
                     Export CSV
                   </Button>
+                  {(canAddCcTime || canEditCcTime) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setCcEntriesOpen(true); setCcEntriesFilter({}); }}
+                      className="h-9 gap-1"
+                    >
+                      <Clock className="h-4 w-4" />
+                      View Entries
+                    </Button>
+                  )}
+                  {canAddCcTime && (
+                    <Button
+                      size="sm"
+                      onClick={() => setCcAddTimeOpen(true)}
+                      className="h-9 gap-1"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Time
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -5783,8 +5908,16 @@ export default function Reports() {
                             const cell = row.cells[col.clientId];
                             const hasCost = cell && cell.cost > 0;
                             const hasTime = cell && cell.minutes > 0;
+                            const canClick = hasTime && (canAddCcTime || canEditCcTime);
                             return (
-                              <TableCell key={col.clientId} className="text-right">
+                              <TableCell
+                                key={col.clientId}
+                                className={cn("text-right", canClick && "cursor-pointer hover:bg-muted/40 transition-colors")}
+                                onClick={canClick ? () => {
+                                  setCcEntriesFilter({ userId: row.userId, clientId: col.clientId });
+                                  setCcEntriesOpen(true);
+                                } : undefined}
+                              >
                                 {hasTime ? (
                                   <div>
                                     <div className={hasCost ? "font-medium" : "text-muted-foreground"}>
@@ -5844,6 +5977,250 @@ export default function Reports() {
           </Card>
         </div>
       )}
+
+      {/* CC Add Time Modal */}
+      <Dialog open={ccAddTimeOpen} onOpenChange={setCcAddTimeOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5 text-primary" />
+              Add Call Center Time
+            </DialogTitle>
+            <DialogDescription>Manually add a time entry for a call center rep.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Call Center Rep</Label>
+              <Select value={ccAddForm.userId} onValueChange={(v) => setCcAddForm(prev => ({ ...prev, userId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select staff member" /></SelectTrigger>
+                <SelectContent>
+                  {staffData.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Client</Label>
+              <Select value={ccAddForm.clientId} onValueChange={(v) => setCcAddForm(prev => ({ ...prev, clientId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                <SelectContent>
+                  {clients.filter((c: any) => c.status === 'active').map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Input type="date" value={ccAddForm.date} onChange={(e) => setCcAddForm(prev => ({ ...prev, date: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Start Time</Label>
+                <Input type="time" value={ccAddForm.startTime} onChange={(e) => setCcAddForm(prev => ({ ...prev, startTime: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>End Time</Label>
+                <Input type="time" value={ccAddForm.endTime} onChange={(e) => setCcAddForm(prev => ({ ...prev, endTime: e.target.value }))} />
+              </div>
+            </div>
+            {ccAddForm.startTime && ccAddForm.endTime && ccAddForm.date && (() => {
+              const start = new Date(`${ccAddForm.date}T${ccAddForm.startTime}:00`);
+              const end = new Date(`${ccAddForm.date}T${ccAddForm.endTime}:00`);
+              const mins = Math.round((end.getTime() - start.getTime()) / 60000);
+              if (mins > 0) {
+                return (
+                  <div className="text-sm text-muted-foreground bg-muted/50 rounded p-2">
+                    Duration: <strong>{Math.floor(mins / 60)}h {mins % 60}m</strong> ({(mins / 60).toFixed(2)} hours)
+                  </div>
+                );
+              }
+              return null;
+            })()}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCcAddTimeOpen(false)}>Cancel</Button>
+            <Button onClick={handleCcAddTime} disabled={ccAddTimeMutation.isPending}>
+              {ccAddTimeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+              Add Time Entry
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CC View Entries Modal */}
+      <Dialog open={ccEntriesOpen} onOpenChange={setCcEntriesOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Call Center Time Entries
+            </DialogTitle>
+            <DialogDescription>
+              {ccEntriesFilter.userId || ccEntriesFilter.clientId
+                ? "Showing filtered entries for the selected date range."
+                : "All entries for the selected date range."}
+              {' '}({ccDateFrom} to {ccDateTo})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            {ccEntriesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="ml-2 text-muted-foreground">Loading entries...</span>
+              </div>
+            ) : !ccEntriesData?.entries?.length ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Clock className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                <p>No time entries found for this filter.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Staff Member</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Start</TableHead>
+                    <TableHead>End</TableHead>
+                    <TableHead className="text-right">Duration</TableHead>
+                    {canEditCcTime && <TableHead className="text-right">Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ccEntriesData.entries.map((entry: any) => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="font-medium">{entry.userName}</TableCell>
+                      <TableCell>{entry.clientName}</TableCell>
+                      <TableCell>{entry.startTime ? format(new Date(entry.startTime), "MMM d, yyyy") : "—"}</TableCell>
+                      <TableCell>{entry.startTime ? format(new Date(entry.startTime), "h:mm a") : "—"}</TableCell>
+                      <TableCell>{entry.endTime ? format(new Date(entry.endTime), "h:mm a") : "—"}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {entry.duration != null ? `${Math.floor(entry.duration / 60)}h ${entry.duration % 60}m` : "—"}
+                      </TableCell>
+                      {canEditCcTime && (
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => {
+                                const st = entry.startTime ? new Date(entry.startTime) : null;
+                                const et = entry.endTime ? new Date(entry.endTime) : null;
+                                setCcEditingEntry({
+                                  ...entry,
+                                  editUserId: entry.userId,
+                                  editClientId: entry.clientId,
+                                  editDate: st ? format(st, 'yyyy-MM-dd') : '',
+                                  editStartTime: st ? format(st, 'HH:mm') : '',
+                                  editEndTime: et ? format(et, 'HH:mm') : '',
+                                });
+                                setCcEditEntryOpen(true);
+                              }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                if (confirm("Delete this time entry? This cannot be undone.")) {
+                                  ccDeleteTimeMutation.mutate(entry.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCcEntriesOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CC Edit Entry Modal */}
+      <Dialog open={ccEditEntryOpen} onOpenChange={(open) => { setCcEditEntryOpen(open); if (!open) setCcEditingEntry(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-primary" />
+              Edit Time Entry
+            </DialogTitle>
+            <DialogDescription>Update the time entry details. Costs will be recalculated automatically.</DialogDescription>
+          </DialogHeader>
+          {ccEditingEntry && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Call Center Rep</Label>
+                <Select value={ccEditingEntry.editUserId} onValueChange={(v) => setCcEditingEntry((prev: any) => ({ ...prev, editUserId: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {staffData.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Client</Label>
+                <Select value={ccEditingEntry.editClientId} onValueChange={(v) => setCcEditingEntry((prev: any) => ({ ...prev, editClientId: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {clients.filter((c: any) => c.status === 'active').map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Input type="date" value={ccEditingEntry.editDate} onChange={(e) => setCcEditingEntry((prev: any) => ({ ...prev, editDate: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Time</Label>
+                  <Input type="time" value={ccEditingEntry.editStartTime} onChange={(e) => setCcEditingEntry((prev: any) => ({ ...prev, editStartTime: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>End Time</Label>
+                  <Input type="time" value={ccEditingEntry.editEndTime} onChange={(e) => setCcEditingEntry((prev: any) => ({ ...prev, editEndTime: e.target.value }))} />
+                </div>
+              </div>
+              {ccEditingEntry.editStartTime && ccEditingEntry.editEndTime && ccEditingEntry.editDate && (() => {
+                const start = new Date(`${ccEditingEntry.editDate}T${ccEditingEntry.editStartTime}:00`);
+                const end = new Date(`${ccEditingEntry.editDate}T${ccEditingEntry.editEndTime}:00`);
+                const mins = Math.round((end.getTime() - start.getTime()) / 60000);
+                if (mins > 0) {
+                  return (
+                    <div className="text-sm text-muted-foreground bg-muted/50 rounded p-2">
+                      Duration: <strong>{Math.floor(mins / 60)}h {mins % 60}m</strong> ({(mins / 60).toFixed(2)} hours)
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCcEditEntryOpen(false); setCcEditingEntry(null); }}>Cancel</Button>
+            <Button onClick={handleCcEditSave} disabled={ccEditTimeMutation.isPending}>
+              {ccEditTimeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Time Entry Modal - for admins/managers only */}
       <Dialog open={editTimeModalOpen} onOpenChange={setEditTimeModalOpen}>

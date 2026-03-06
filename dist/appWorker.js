@@ -1,6 +1,6 @@
 import {
   PERMISSION_KEY_MIGRATION_MAP
-} from "./chunk-27BMMX5V.js";
+} from "./chunk-TA3ROV2W.js";
 import {
   createOAuth2Client
 } from "./chunk-Z6W5ABZY.js";
@@ -15487,7 +15487,7 @@ AgencyBoost CRM`
   });
   app2.get("/api/roles-permissions/export", requireAuth(), requireAdmin(), async (req, res) => {
     try {
-      const { generateCSV } = await import("./roles-permissions-csv-ZFGVGMWP.js");
+      const { generateCSV } = await import("./roles-permissions-csv-KQUOSXC6.js");
       const allRoles = await db.select({
         id: roles.id,
         name: roles.name
@@ -15520,7 +15520,7 @@ AgencyBoost CRM`
     try {
       const userId2 = getAuthenticatedUserIdOrFail(req, res);
       if (!userId2) return;
-      const { parseCSV, getAllValidPermissionKeys } = await import("./roles-permissions-csv-ZFGVGMWP.js");
+      const { parseCSV, getAllValidPermissionKeys } = await import("./roles-permissions-csv-KQUOSXC6.js");
       const { csvContent } = req.body;
       if (!csvContent || typeof csvContent !== "string") {
         return res.status(400).json({ message: "CSV content is required" });
@@ -15555,7 +15555,7 @@ AgencyBoost CRM`
     try {
       const userId2 = getAuthenticatedUserIdOrFail(req, res);
       if (!userId2) return;
-      const { getAllValidPermissionKeys } = await import("./roles-permissions-csv-ZFGVGMWP.js");
+      const { getAllValidPermissionKeys } = await import("./roles-permissions-csv-KQUOSXC6.js");
       const { roles: roleDataList } = req.body;
       if (!roleDataList || !Array.isArray(roleDataList)) {
         return res.status(400).json({ message: "Role data is required" });
@@ -32992,6 +32992,212 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
     } catch (error) {
       console.error("Error getting all call center entries:", error);
       res.status(500).json({ error: "Failed to get entries" });
+    }
+  });
+  app2.post("/api/call-center/manual-entry", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId2 = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId2) return;
+      const isAdmin = await isCurrentUserAdmin(req);
+      let hasAccess = isAdmin;
+      if (!hasAccess) {
+        const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq8(userRoles.userId, currentUserId2));
+        const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        if (roleIds.length > 0) {
+          const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
+            and6(
+              inArray5(granularPermissions.roleId, roleIds),
+              eq8(granularPermissions.permissionKey, "call_center.time_tracking.add_time"),
+              eq8(granularPermissions.enabled, true)
+            )
+          );
+          hasAccess = perms.length > 0;
+        }
+      }
+      if (!hasAccess) {
+        return res.status(403).json({ error: "You don't have permission to add call center time entries" });
+      }
+      const { userId: userId2, clientId, startTime, endTime } = req.body;
+      if (!userId2 || !clientId || !startTime || !endTime) {
+        return res.status(400).json({ error: "userId, clientId, startTime, and endTime are required" });
+      }
+      const start2 = new Date(startTime);
+      const end = new Date(endTime);
+      if (end <= start2) {
+        return res.status(400).json({ error: "End time must be after start time" });
+      }
+      const durationMinutes = Math.round((end.getTime() - start2.getTime()) / 6e4);
+      const [entry] = await db.insert(callCenterTimeEntries).values({
+        userId: userId2,
+        clientId,
+        startTime: start2,
+        endTime: end,
+        duration: durationMinutes,
+        isRunning: false
+      }).returning();
+      res.json(entry);
+    } catch (error) {
+      console.error("Error creating manual call center time entry:", error);
+      res.status(500).json({ error: "Failed to create time entry" });
+    }
+  });
+  app2.patch("/api/call-center/time-entry/:id", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId2 = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId2) return;
+      const isAdmin = await isCurrentUserAdmin(req);
+      let hasAccess = isAdmin;
+      if (!hasAccess) {
+        const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq8(userRoles.userId, currentUserId2));
+        const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        if (roleIds.length > 0) {
+          const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
+            and6(
+              inArray5(granularPermissions.roleId, roleIds),
+              eq8(granularPermissions.permissionKey, "call_center.time_tracking.edit_time"),
+              eq8(granularPermissions.enabled, true)
+            )
+          );
+          hasAccess = perms.length > 0;
+        }
+      }
+      if (!hasAccess) {
+        return res.status(403).json({ error: "You don't have permission to edit call center time entries" });
+      }
+      const { id } = req.params;
+      const { userId: userId2, clientId, startTime, endTime } = req.body;
+      const existing = await db.select().from(callCenterTimeEntries).where(eq8(callCenterTimeEntries.id, id)).limit(1);
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "Time entry not found" });
+      }
+      const updates = { updatedAt: /* @__PURE__ */ new Date() };
+      if (userId2) updates.userId = userId2;
+      if (clientId) updates.clientId = clientId;
+      const newStart = startTime ? new Date(startTime) : existing[0].startTime;
+      const newEnd = endTime ? new Date(endTime) : existing[0].endTime;
+      if (newStart && newEnd) {
+        if (newEnd <= newStart) {
+          return res.status(400).json({ error: "End time must be after start time" });
+        }
+        updates.startTime = newStart;
+        updates.endTime = newEnd;
+        updates.duration = Math.round((newEnd.getTime() - newStart.getTime()) / 6e4);
+      }
+      const [updated] = await db.update(callCenterTimeEntries).set(updates).where(eq8(callCenterTimeEntries.id, id)).returning();
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating call center time entry:", error);
+      res.status(500).json({ error: "Failed to update time entry" });
+    }
+  });
+  app2.delete("/api/call-center/time-entry/:id", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId2 = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId2) return;
+      const isAdmin = await isCurrentUserAdmin(req);
+      let hasAccess = isAdmin;
+      if (!hasAccess) {
+        const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq8(userRoles.userId, currentUserId2));
+        const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        if (roleIds.length > 0) {
+          const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
+            and6(
+              inArray5(granularPermissions.roleId, roleIds),
+              eq8(granularPermissions.permissionKey, "call_center.time_tracking.edit_time"),
+              eq8(granularPermissions.enabled, true)
+            )
+          );
+          hasAccess = perms.length > 0;
+        }
+      }
+      if (!hasAccess) {
+        return res.status(403).json({ error: "You don't have permission to delete call center time entries" });
+      }
+      const { id } = req.params;
+      const existing = await db.select().from(callCenterTimeEntries).where(eq8(callCenterTimeEntries.id, id)).limit(1);
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "Time entry not found" });
+      }
+      await db.delete(callCenterTimeEntries).where(eq8(callCenterTimeEntries.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting call center time entry:", error);
+      res.status(500).json({ error: "Failed to delete time entry" });
+    }
+  });
+  app2.get("/api/call-center/entries-detail", requireAuth(), async (req, res) => {
+    try {
+      const currentUserId2 = getAuthenticatedUserIdOrFail(req, res);
+      if (!currentUserId2) return;
+      const isAdmin = await isCurrentUserAdmin(req);
+      let hasAccess = isAdmin;
+      if (!hasAccess) {
+        const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq8(userRoles.userId, currentUserId2));
+        const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        if (roleIds.length > 0) {
+          const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
+            and6(
+              inArray5(granularPermissions.roleId, roleIds),
+              or4(
+                eq8(granularPermissions.permissionKey, "call_center.time_tracking.edit_time"),
+                eq8(granularPermissions.permissionKey, "call_center.time_tracking.add_time"),
+                eq8(granularPermissions.permissionKey, "reports.call_center_cost.view")
+              ),
+              eq8(granularPermissions.enabled, true)
+            )
+          );
+          hasAccess = perms.length > 0;
+        }
+      }
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No permission to view entry details" });
+      }
+      const { dateFrom, dateTo, userId: filterUserId, clientId: filterClientId } = req.query;
+      if (!dateFrom || !dateTo || typeof dateFrom !== "string" || typeof dateTo !== "string") {
+        return res.status(400).json({ error: "dateFrom and dateTo are required" });
+      }
+      const fromDate = /* @__PURE__ */ new Date(dateFrom + "T00:00:00");
+      const toDate = /* @__PURE__ */ new Date(dateTo + "T23:59:59");
+      const conditions = [
+        gte(callCenterTimeEntries.startTime, fromDate),
+        lte(callCenterTimeEntries.startTime, toDate),
+        eq8(callCenterTimeEntries.isRunning, false)
+      ];
+      if (filterUserId && typeof filterUserId === "string") {
+        conditions.push(eq8(callCenterTimeEntries.userId, filterUserId));
+      }
+      if (filterClientId && typeof filterClientId === "string") {
+        conditions.push(eq8(callCenterTimeEntries.clientId, filterClientId));
+      }
+      const rawEntries = await db.select().from(callCenterTimeEntries).where(and6(...conditions)).orderBy(desc2(callCenterTimeEntries.startTime));
+      const entryClientIds = [...new Set(rawEntries.map((e) => e.clientId).filter(Boolean))];
+      const entryUserIds = [...new Set(rawEntries.map((e) => e.userId).filter(Boolean))];
+      const cLk = {};
+      const uLk = {};
+      if (entryClientIds.length > 0) {
+        const cRows = await db.select({ id: clients.id, companyName: clients.company }).from(clients).where(inArray5(clients.id, entryClientIds));
+        for (const c of cRows) {
+          cLk[c.id] = c.companyName;
+        }
+      }
+      if (entryUserIds.length > 0) {
+        const uRows = await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName }).from(staff).where(inArray5(staff.id, entryUserIds));
+        for (const u of uRows) {
+          uLk[u.id] = u;
+        }
+      }
+      const entries = rawEntries.map((e) => {
+        const u = uLk[e.userId] || {};
+        return {
+          ...e,
+          clientName: cLk[e.clientId] || "Unknown",
+          userName: `${u.firstName || ""} ${u.lastName || ""}`.trim() || "Unknown"
+        };
+      });
+      res.json({ entries });
+    } catch (error) {
+      console.error("Error fetching call center entry details:", error);
+      res.status(500).json({ error: "Failed to fetch entries" });
     }
   });
   app2.post("/api/reports/call-center-cost", requireAuth(), async (req, res) => {

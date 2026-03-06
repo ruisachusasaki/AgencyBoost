@@ -827,6 +827,8 @@ export const PERMISSION_TEMPLATES: PermissionModule[] = [
           { key: 'call_center.time_tracking.clock_in', label: 'Clock In/Out', description: 'Can clock in and out for clients', action: 'create' },
           { key: 'call_center.time_tracking.view_own', label: 'View Own Report', description: 'Can view own weekly time report', action: 'view' },
           { key: 'call_center.time_tracking.view_all', label: 'View All Reports', description: 'Can view all call center time entries', action: 'view' },
+          { key: 'call_center.time_tracking.add_time', label: 'Add Time Entry', description: 'Can manually add call center time entries for any rep', action: 'create' },
+          { key: 'call_center.time_tracking.edit_time', label: 'Edit Time Entry', description: 'Can edit existing call center time entries', action: 'edit' },
         ],
       },
     ],
