@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FolderOpen, Edit, Check, X, ChevronDown, ChevronUp } from "lucide-react";
@@ -17,16 +17,75 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
   const [editValue, setEditValue] = useState(task.description || "");
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const descriptionRef = useRef<HTMLDivElement>(null);
 
-  // Update edit value when task description changes
   useEffect(() => {
     if (!isEditing) {
       setEditValue(task.description || "");
     }
   }, [task.description, isEditing]);
-  // Configure display limits
-  const COLLAPSED_HEIGHT = 150; // pixels - increased for better text visibility
-  const COLLAPSED_LINES = 6; // maximum lines to show when collapsed
+  const COLLAPSED_HEIGHT = 150;
+  const COLLAPSED_LINES = 6;
+
+  const toggleChecklistItem = useCallback(async (checkboxIndex: number) => {
+    const description = task.description;
+    if (!description) return;
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(description, 'text/html');
+    const taskItems = doc.querySelectorAll('li[data-type="taskItem"]');
+
+    if (checkboxIndex >= 0 && checkboxIndex < taskItems.length) {
+      const item = taskItems[checkboxIndex];
+      const currentChecked = item.getAttribute('data-checked') === 'true';
+      const newChecked = !currentChecked;
+
+      item.setAttribute('data-checked', newChecked ? 'true' : 'false');
+
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        if (newChecked) {
+          checkbox.setAttribute('checked', 'checked');
+        } else {
+          checkbox.removeAttribute('checked');
+        }
+      }
+
+      const updatedHtml = doc.body.innerHTML;
+      try {
+        await onUpdate({ description: updatedHtml });
+      } catch (error) {
+        console.error("Error toggling checklist item:", error);
+      }
+    }
+  }, [task.description, onUpdate]);
+
+  useEffect(() => {
+    const container = descriptionRef.current;
+    if (!container || isEditing) return;
+
+    const handleCheckboxClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' && target.getAttribute('type') === 'checkbox') {
+        const taskItemLi = target.closest('li[data-type="taskItem"]');
+        if (!taskItemLi) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const allTaskItems = container.querySelectorAll('li[data-type="taskItem"]');
+        const index = Array.from(allTaskItems).indexOf(taskItemLi);
+        if (index >= 0) {
+          toggleChecklistItem(index);
+        }
+      }
+    };
+
+    container.addEventListener('click', handleCheckboxClick, true);
+    return () => {
+      container.removeEventListener('click', handleCheckboxClick, true);
+    };
+  }, [isEditing, toggleChecklistItem]);
 
   const handleSave = async () => {
     if (editValue === task.description) {
@@ -50,34 +109,42 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
     setIsEditing(false);
   };
 
-  // Convert markdown to HTML if content appears to be markdown
   const convertMarkdownToHtml = (content: string): string => {
     if (!content) return "";
-    // Check if content already contains significant HTML
     const hasHtmlTags = /<(div|p|h[1-6]|ul|ol|li|table|br|span|a|strong|em)[^>]*>/i.test(content);
     if (hasHtmlTags) {
-      // Already HTML, sanitize and return
-      return DOMPurify.sanitize(content);
+      return DOMPurify.sanitize(content, {
+        ADD_TAGS: ['input'],
+        ADD_ATTR: ['checked', 'type', 'data-checked', 'data-type'],
+      });
     }
-    // Content appears to be markdown, convert it
     try {
       const html = marked.parse(content, { async: false }) as string;
       return DOMPurify.sanitize(html);
     } catch (e) {
-      // If marked fails, return the content as-is
       return DOMPurify.sanitize(content);
     }
   };
 
-  // Strip HTML tags for length calculation
   const stripHtml = (html: string) => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
     return temp.textContent || temp.innerText || '';
   };
 
-  // Check if content needs expansion capability based on rendered height
   const needsExpansion = task.description && stripHtml(task.description).length > 250;
+
+  const handleDescriptionClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' && target.getAttribute('type') === 'checkbox') {
+      return;
+    }
+    const taskItemLabel = target.closest('li[data-type="taskItem"] > label');
+    if (taskItemLabel) {
+      return;
+    }
+    setIsEditing(true);
+  };
 
   return (
     <Card>
@@ -145,6 +212,7 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
             {task.description ? (
               <>
                 <div
+                  ref={descriptionRef}
                   className={`text-slate-600 dark:text-slate-300 cursor-text hover:bg-slate-50 dark:hover:bg-slate-800 p-3 rounded-lg transition-all duration-200 prose prose-sm max-w-none dark:prose-invert prose-headings:text-slate-800 dark:prose-headings:text-slate-100 prose-p:text-slate-700 dark:prose-p:text-slate-300 prose-strong:text-slate-800 dark:prose-strong:text-slate-100 prose-em:text-slate-600 dark:prose-em:text-slate-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-700 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-blockquote:border-l-slate-300 dark:prose-blockquote:border-l-slate-600 prose-ul:text-slate-700 dark:prose-ul:text-slate-300 prose-ol:text-slate-700 dark:prose-ol:text-slate-300 ${
                     needsExpansion && !isExpanded 
                       ? 'overflow-hidden relative' 
@@ -159,7 +227,7 @@ export default function TaskDescriptionCard({ task, onUpdate }: TaskDescriptionC
                         }
                       : {}
                   }
-                  onClick={() => setIsEditing(true)}
+                  onClick={handleDescriptionClick}
                   data-testid="text-description"
                   dangerouslySetInnerHTML={{ __html: convertMarkdownToHtml(task.description || "") }}
                 />
