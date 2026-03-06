@@ -710,6 +710,8 @@ export default function TasksSettingsPage() {
   const [newWorkflowStatuses, setNewWorkflowStatuses] = useState<{id: string; order: number; isRequired: boolean; statusId: string}[]>([]);
   const [wfSortField, setWfSortField] = useState<'name' | 'isDefault' | 'isActive' | 'createdAt'>('createdAt');
   const [wfSortDir, setWfSortDir] = useState<'asc' | 'desc'>('desc');
+  const [stSortField, setStSortField] = useState<'sortOrder' | 'name' | 'isDefault' | 'isActive' | 'isSystemStatus'>('sortOrder');
+  const [stSortDir, setStSortDir] = useState<'asc' | 'desc'>('asc');
   const { toast} = useToast();
   const queryClient = useQueryClient();
 
@@ -1441,28 +1443,68 @@ export default function TasksSettingsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12">Order</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Value</TableHead>
-                        <TableHead>Color</TableHead>
-                        <TableHead>Default</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>System</TableHead>
+                        {([
+                          { field: 'sortOrder' as const, label: 'Order', className: 'w-12' },
+                          { field: 'name' as const, label: 'Name', className: '' },
+                          { field: null, label: 'Value', className: '' },
+                          { field: null, label: 'Color', className: '' },
+                          { field: 'isDefault' as const, label: 'Default', className: '' },
+                          { field: 'isActive' as const, label: 'Status', className: '' },
+                          { field: 'isSystemStatus' as const, label: 'System', className: '' },
+                        ]).map(col => (
+                          <TableHead
+                            key={col.label}
+                            className={`${col.className} ${col.field ? "cursor-pointer select-none hover:bg-muted/50 transition-colors" : ""}`}
+                            onClick={col.field ? () => {
+                              if (stSortField === col.field) {
+                                setStSortDir(d => d === 'asc' ? 'desc' : 'asc');
+                              } else {
+                                setStSortField(col.field!);
+                                setStSortDir('asc');
+                              }
+                            } : undefined}
+                          >
+                            <div className="flex items-center gap-1">
+                              {col.label}
+                              {col.field && (
+                                stSortField === col.field ? (
+                                  stSortDir === 'asc' ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+                                )
+                              )}
+                            </div>
+                          </TableHead>
+                        ))}
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
-                    <Droppable droppableId="task-statuses">
+                    <Droppable droppableId="task-statuses" isDropDisabled={stSortField !== 'sortOrder'}>
                       {(provided) => (
                         <TableBody {...provided.droppableProps} ref={provided.innerRef}>
-                          {statuses
-                            .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+                          {[...statuses]
+                            .sort((a, b) => {
+                              let cmp = 0;
+                              if (stSortField === 'sortOrder') {
+                                cmp = (a.sortOrder || 0) - (b.sortOrder || 0);
+                              } else if (stSortField === 'name') {
+                                cmp = (a.name || '').localeCompare(b.name || '');
+                              } else if (stSortField === 'isDefault') {
+                                cmp = (a.isDefault ? 1 : 0) - (b.isDefault ? 1 : 0);
+                              } else if (stSortField === 'isActive') {
+                                cmp = (a.isActive ? 1 : 0) - (b.isActive ? 1 : 0);
+                              } else if (stSortField === 'isSystemStatus') {
+                                cmp = (a.isSystemStatus ? 1 : 0) - (b.isSystemStatus ? 1 : 0);
+                              }
+                              return stSortDir === 'asc' ? cmp : -cmp;
+                            })
                             .map((status, index) => (
-                              <Draggable key={status.id} draggableId={status.id} index={index}>
+                              <Draggable key={status.id} draggableId={status.id} index={index} isDragDisabled={stSortField !== 'sortOrder'}>
                                 {(provided) => (
                                   <TableRow
                                     ref={provided.innerRef}
                                     {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
+                                    {...(stSortField === 'sortOrder' ? provided.dragHandleProps : {})}
                                   >
                           <TableCell>
                             <div className="flex items-center">
