@@ -714,6 +714,8 @@ export default function TasksSettingsPage() {
   const [stSortDir, setStSortDir] = useState<'asc' | 'desc'>('asc');
   const [prSortField, setPrSortField] = useState<'sortOrder' | 'name' | 'isDefault' | 'isActive' | 'isSystemPriority'>('sortOrder');
   const [prSortDir, setPrSortDir] = useState<'asc' | 'desc'>('desc');
+  const [catSortField, setCatSortField] = useState<'name' | 'isDefault' | 'createdAt'>('createdAt');
+  const [catSortDir, setCatSortDir] = useState<'asc' | 'desc'>('desc');
   const { toast} = useToast();
   const queryClient = useQueryClient();
 
@@ -1986,16 +1988,54 @@ export default function TasksSettingsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Color</TableHead>
-                      <TableHead>Icon</TableHead>
-                      <TableHead>Default</TableHead>
-                      <TableHead>Created</TableHead>
+                      {([
+                        { field: 'name' as const, label: 'Name' },
+                        { field: null, label: 'Color' },
+                        { field: null, label: 'Icon' },
+                        { field: 'isDefault' as const, label: 'Default' },
+                        { field: 'createdAt' as const, label: 'Created' },
+                      ]).map(col => (
+                        <TableHead
+                          key={col.label}
+                          className={col.field ? "cursor-pointer select-none hover:bg-muted/50 transition-colors" : ""}
+                          onClick={col.field ? () => {
+                            if (catSortField === col.field) {
+                              setCatSortDir(d => d === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setCatSortField(col.field!);
+                              setCatSortDir('asc');
+                            }
+                          } : undefined}
+                        >
+                          <div className="flex items-center gap-1">
+                            {col.label}
+                            {col.field && (
+                              catSortField === col.field ? (
+                                catSortDir === 'asc' ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />
+                              ) : (
+                                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+                              )
+                            )}
+                          </div>
+                        </TableHead>
+                      ))}
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {categories.map((category) => (
+                    {[...categories]
+                      .sort((a, b) => {
+                        let cmp = 0;
+                        if (catSortField === 'name') {
+                          cmp = (a.name || '').localeCompare(b.name || '');
+                        } else if (catSortField === 'isDefault') {
+                          cmp = (a.isDefault ? 1 : 0) - (b.isDefault ? 1 : 0);
+                        } else if (catSortField === 'createdAt') {
+                          cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                        }
+                        return catSortDir === 'asc' ? cmp : -cmp;
+                      })
+                      .map((category) => (
                       <TableRow key={category.id}>
                         <TableCell>
                           <div className="font-medium">{category.name}</div>
