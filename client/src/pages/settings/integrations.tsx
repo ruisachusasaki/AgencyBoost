@@ -624,12 +624,7 @@ export default function Integrations() {
       }
       return;
     } else if (integrationId === "slack") {
-      // Slack is already connected via environment variables
-      toast({
-        title: "Already Connected",
-        variant: "default",
-        description: "Slack integration is configured via environment variables and ready to use!",
-      });
+      setIsSlackConfigDialogOpen(true);
       return;
     } else if (integrationId === "mailgun") {
       // Open MailGun configuration dialog
