@@ -300,7 +300,7 @@ export default function Reports() {
     dateTo: string;
   }
 
-  const { data: ccData, isLoading: ccLoading } = useQuery<CcReportData>({
+  const { data: ccData, isLoading: ccLoading, isError: ccError, error: ccErrorMsg } = useQuery<CcReportData>({
     queryKey: ["/api/reports/call-center-cost", ccDateFrom, ccDateTo],
     queryFn: async () => {
       const res = await fetch("/api/reports/call-center-cost", {
@@ -314,6 +314,111 @@ export default function Reports() {
     },
     enabled: activeTab === "call-center-cost" && !!reportPermissions['reports.call_center_cost.view'],
   });
+
+  const ccTableData = useMemo(() => {
+    if (!ccData || ccData.report.length === 0) return null;
+
+    const clientMap = new Map<string, string>();
+    for (const user of ccData.report) {
+      for (const client of user.clients) {
+        if (!clientMap.has(client.clientId)) {
+          clientMap.set(client.clientId, client.clientName);
+        }
+      }
+    }
+    const columns: CpcColumn[] = Array.from(clientMap.entries())
+      .map(([clientId, clientName]) => ({ clientId, clientName }))
+      .sort((a, b) => a.clientName.localeCompare(b.clientName));
+
+    const rows: CpcRow[] = ccData.report.map(user => {
+      const cells: Record<string, CpcCell> = {};
+      for (const client of user.clients) {
+        cells[client.clientId] = { minutes: client.totalMinutes, cost: client.totalCost };
+      }
+      return {
+        userId: user.userId,
+        userName: user.userName,
+        cells,
+        totalMinutes: user.totalMinutes,
+        totalCost: user.totalCost,
+      };
+    });
+
+    const columnTotals: Record<string, CpcCell> = {};
+    for (const col of columns) {
+      let totalMin = 0;
+      let totalCost = 0;
+      for (const row of rows) {
+        const cell = row.cells[col.clientId];
+        if (cell) {
+          totalMin += cell.minutes;
+          totalCost += cell.cost;
+        }
+      }
+      columnTotals[col.clientId] = { minutes: totalMin, cost: totalCost };
+    }
+
+    return {
+      columns,
+      rows,
+      columnTotals,
+      grandTotalMinutes: Math.round(ccData.grandTotalHours * 60),
+      grandTotalCost: ccData.grandTotalCost,
+    };
+  }, [ccData]);
+
+  const exportCcCsv = () => {
+    if (!ccTableData || ccTableData.rows.length === 0) return;
+    const headers = ["Staff Member", ...ccTableData.columns.map(c => c.clientName), "Total"];
+    const csvRows = [headers.join(",")];
+
+    for (const row of ccTableData.rows) {
+      const cells = [
+        `"${row.userName}"`,
+        ...ccTableData.columns.map(c => {
+          const cell = row.cells[c.clientId];
+          return cell && cell.cost > 0 ? `$${cell.cost.toFixed(2)}` : "$0.00";
+        }),
+        `$${row.totalCost.toFixed(2)}`
+      ];
+      csvRows.push(cells.join(","));
+    }
+
+    const totalRow = [
+      '"Total"',
+      ...ccTableData.columns.map(c => {
+        const t = ccTableData.columnTotals[c.clientId];
+        return t ? `$${t.cost.toFixed(2)}` : "$0.00";
+      }),
+      `$${ccTableData.grandTotalCost.toFixed(2)}`
+    ];
+    csvRows.push(totalRow.join(","));
+
+    const hoursHeaders = ["\nHours Breakdown"];
+    csvRows.push(hoursHeaders.join(","));
+    const hHeaders = ["Staff Member", ...ccTableData.columns.map(c => c.clientName), "Total"];
+    csvRows.push(hHeaders.join(","));
+
+    for (const row of ccTableData.rows) {
+      const cells = [
+        `"${row.userName}"`,
+        ...ccTableData.columns.map(c => {
+          const cell = row.cells[c.clientId];
+          return cell ? (cell.minutes / 60).toFixed(2) : "0.00";
+        }),
+        (row.totalMinutes / 60).toFixed(2)
+      ];
+      csvRows.push(cells.join(","));
+    }
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `call-center-cost_${ccDateFrom}_to_${ccDateTo}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // User authentication and role data
   const { data: currentUser } = useQuery<{ id: string; name: string; email: string; roles: string[] }>({
@@ -5584,45 +5689,57 @@ export default function Reports() {
                   <CardDescription>Call center labor cost breakdown by client based on clock-in time and hourly rates</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Popover open={ccFromOpen} onOpenChange={setCcFromOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-9 gap-1">
-                        <CalendarIcon className="h-4 w-4" />
-                        {ccDateFrom ? format(new Date(ccDateFrom + "T12:00:00"), "MMM d, yyyy") : "From"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                      <CalendarComponent
-                        mode="single"
-                        selected={ccDateFrom ? new Date(ccDateFrom + "T12:00:00") : undefined}
-                        onSelect={(date) => {
-                          if (date) setCcDateFrom(formatLocalDateStr(date));
-                          setCcFromOpen(false);
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <span className="text-muted-foreground text-sm">to</span>
-                  <Popover open={ccToOpen} onOpenChange={setCcToOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-9 gap-1">
-                        <CalendarIcon className="h-4 w-4" />
-                        {ccDateTo ? format(new Date(ccDateTo + "T12:00:00"), "MMM d, yyyy") : "To"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                      <CalendarComponent
-                        mode="single"
-                        selected={ccDateTo ? new Date(ccDateTo + "T12:00:00") : undefined}
-                        onSelect={(date) => {
-                          if (date) setCcDateTo(formatLocalDateStr(date));
-                          setCcToOpen(false);
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <div className="flex items-center gap-2">
+                    <Popover open={ccFromOpen} onOpenChange={setCcFromOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 gap-1">
+                          <CalendarIcon className="h-4 w-4" />
+                          {ccDateFrom ? format(new Date(ccDateFrom + "T12:00:00"), "MMM d, yyyy") : "From"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <CalendarComponent
+                          mode="single"
+                          selected={ccDateFrom ? new Date(ccDateFrom + "T12:00:00") : undefined}
+                          onSelect={(date) => {
+                            if (date) setCcDateFrom(formatLocalDateStr(date));
+                            setCcFromOpen(false);
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <span className="text-muted-foreground text-sm">to</span>
+                    <Popover open={ccToOpen} onOpenChange={setCcToOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 gap-1">
+                          <CalendarIcon className="h-4 w-4" />
+                          {ccDateTo ? format(new Date(ccDateTo + "T12:00:00"), "MMM d, yyyy") : "To"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <CalendarComponent
+                          mode="single"
+                          selected={ccDateTo ? new Date(ccDateTo + "T12:00:00") : undefined}
+                          onSelect={(date) => {
+                            if (date) setCcDateTo(formatLocalDateStr(date));
+                            setCcToOpen(false);
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportCcCsv}
+                    disabled={!ccTableData || ccTableData.rows.length === 0}
+                    className="h-9 gap-1"
+                  >
+                    <Download className="h-4 w-4" />
+                    Export CSV
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -5632,69 +5749,95 @@ export default function Reports() {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <span className="ml-2 text-muted-foreground">Generating report...</span>
                 </div>
-              ) : !ccData || ccData.report.length === 0 ? (
+              ) : ccError ? (
+                <div className="text-center py-12 text-destructive">
+                  <Headphones className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="font-medium">Failed to load report</p>
+                  <p className="text-sm text-muted-foreground">{(ccErrorMsg as Error)?.message || "An error occurred"}</p>
+                </div>
+              ) : !ccTableData || ccTableData.rows.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Headphones className="h-12 w-12 mx-auto mb-3 opacity-50" />
                   <p className="font-medium">No call center time tracked in this date range</p>
                   <p className="text-sm">Adjust the date range or ensure call center staff have clocked in for clients.</p>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <Card>
-                      <CardContent className="pt-4 pb-4">
-                        <div className="text-sm text-muted-foreground">Total Hours</div>
-                        <div className="text-2xl font-bold text-primary">{ccData.grandTotalHours}h</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="pt-4 pb-4">
-                        <div className="text-sm text-muted-foreground">Total Cost</div>
-                        <div className="text-2xl font-bold">${ccData.grandTotalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="pt-4 pb-4">
-                        <div className="text-sm text-muted-foreground">Staff Members</div>
-                        <div className="text-2xl font-bold">{ccData.report.length}</div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {ccData.report.map((user) => (
-                    <Card key={user.userId}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-background z-10 min-w-[180px] font-semibold">Staff Member</TableHead>
+                        {ccTableData.columns.map(col => (
+                          <TableHead key={col.clientId} className="text-right min-w-[120px] font-semibold">
+                            {col.clientName}
+                          </TableHead>
+                        ))}
+                        <TableHead className="text-right min-w-[120px] font-bold bg-muted/50">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {ccTableData.rows.map(row => (
+                        <TableRow key={row.userId}>
+                          <TableCell className="sticky left-0 bg-background z-10 font-medium">{row.userName}</TableCell>
+                          {ccTableData.columns.map(col => {
+                            const cell = row.cells[col.clientId];
+                            const hasCost = cell && cell.cost > 0;
+                            const hasTime = cell && cell.minutes > 0;
+                            return (
+                              <TableCell key={col.clientId} className="text-right">
+                                {hasTime ? (
+                                  <div>
+                                    <div className={hasCost ? "font-medium" : "text-muted-foreground"}>
+                                      {hasCost ? `$${cell.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "N/A"}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {(cell.minutes / 60).toFixed(1)}h
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-right font-bold bg-muted/50">
+                            <div>
+                              <div>${row.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                              <div className="text-xs text-muted-foreground font-normal">
+                                {(row.totalMinutes / 60).toFixed(1)}h
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="border-t-2 font-bold bg-muted/30">
+                        <TableCell className="sticky left-0 bg-muted/30 z-10 font-bold">Total</TableCell>
+                        {ccTableData.columns.map(col => {
+                          const t = ccTableData.columnTotals[col.clientId];
+                          return (
+                            <TableCell key={col.clientId} className="text-right font-bold">
+                              {t ? (
+                                <div>
+                                  <div>${t.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                  <div className="text-xs text-muted-foreground font-normal">
+                                    {(t.minutes / 60).toFixed(1)}h
+                                  </div>
+                                </div>
+                              ) : "—"}
+                            </TableCell>
+                          );
+                        })}
+                        <TableCell className="text-right font-bold bg-primary/10">
                           <div>
-                            <CardTitle className="text-base">{user.userName}</CardTitle>
-                            <CardDescription>
-                              ${user.hourlyRate.toFixed(2)}/hr | {user.totalHours}h total | ${user.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total cost
-                            </CardDescription>
+                            <div className="text-primary">${ccTableData.grandTotalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                            <div className="text-xs text-muted-foreground font-normal">
+                              {(ccTableData.grandTotalMinutes / 60).toFixed(1)}h
+                            </div>
                           </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Client</TableHead>
-                              <TableHead className="text-right">Hours</TableHead>
-                              <TableHead className="text-right">Cost</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {user.clients.map((client) => (
-                              <TableRow key={client.clientId}>
-                                <TableCell className="font-medium">{client.clientName}</TableCell>
-                                <TableCell className="text-right">{(client.totalMinutes / 60).toFixed(1)}h</TableCell>
-                                <TableCell className="text-right">${client.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
