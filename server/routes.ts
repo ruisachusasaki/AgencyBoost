@@ -42945,7 +42945,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         }
       }
 
-      const { dayNumber, sortOrder, title, description, itemType, referenceId, isRequired } = req.body;
+      const { dayNumber, sortOrder, title, description, itemType, referenceId, isRequired, resources } = req.body;
 
       if (!['text', 'kb_article', 'training_course'].includes(itemType)) {
         return res.status(400).json({ error: "itemType must be 'text', 'kb_article', or 'training_course'" });
@@ -42962,6 +42962,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         description: description || null,
         itemType,
         referenceId: referenceId || null,
+        resources: Array.isArray(resources) ? resources : [],
         isRequired: isRequired !== undefined ? isRequired : true,
       }).returning();
 
@@ -42977,7 +42978,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     try {
       const itemId = parseInt(req.params.itemId);
       const templateId = parseInt(req.params.id);
-      const { dayNumber, sortOrder, title, description, itemType, referenceId, isRequired } = req.body;
+      const { dayNumber, sortOrder, title, description, itemType, referenceId, isRequired, resources } = req.body;
 
       const updateData: Record<string, any> = {};
       if (dayNumber !== undefined) updateData.dayNumber = dayNumber;
@@ -42991,6 +42992,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         updateData.itemType = itemType;
       }
       if (referenceId !== undefined) updateData.referenceId = referenceId;
+      if (resources !== undefined) updateData.resources = Array.isArray(resources) ? resources : [];
       if (isRequired !== undefined) updateData.isRequired = isRequired;
 
       const [updated] = await db.update(onboardingTemplateItems)

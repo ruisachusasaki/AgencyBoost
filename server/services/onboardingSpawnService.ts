@@ -115,6 +115,7 @@ export async function spawnOnboardingChecklist(staffId: string): Promise<{ succe
             description: item.description,
             itemType: item.itemType,
             referenceId: item.referenceId,
+            resources: item.resources || [],
             isRequired: item.isRequired,
             isCompleted: false,
             autoCompleted: false,

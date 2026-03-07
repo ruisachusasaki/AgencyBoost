@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, Pencil, Trash2, GripVertical, Loader2, FileText, BookOpen, GraduationCap, AlertTriangle, Settings2, Calendar, Lock } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, GripVertical, Loader2, FileText, BookOpen, GraduationCap, AlertTriangle, Settings2, Calendar, Lock, Link as LinkIcon } from "lucide-react";
 import TemplateItemForm from "./TemplateItemForm";
 
 interface TemplateItem {
@@ -19,7 +19,8 @@ interface TemplateItem {
   title: string;
   description: string | null;
   itemType: string;
-  referenceId: number | null;
+  referenceId: string | null;
+  resources: Array<{ label: string; url: string }> | null;
   isRequired: boolean;
 }
 
@@ -320,6 +321,12 @@ export default function TemplateBuilder({ templateId }: TemplateBuilderProps) {
                                 <p className="font-medium text-sm">{item.title}</p>
                                 {item.description && (
                                   <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p>
+                                )}
+                                {Array.isArray(item.resources) && item.resources.length > 0 && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <LinkIcon className="h-3 w-3" />
+                                    <span>{item.resources.length} resource{item.resources.length !== 1 ? "s" : ""} attached</span>
+                                  </div>
                                 )}
                               </div>
                               <div className="flex items-center gap-1 shrink-0">

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, Lock, AlertTriangle, ExternalLink, RefreshCw } from "lucide-react";
+import { Loader2, Lock, AlertTriangle, ExternalLink, RefreshCw, Link as LinkIcon } from "lucide-react";
 import { format, addDays } from "date-fns";
 import OnboardingProgressBar from "./OnboardingProgressBar";
 
@@ -232,6 +232,17 @@ export default function OnboardingInstanceDrawer({ instanceId, open, onClose }: 
                                   <div className="flex items-center gap-1 mt-0.5">
                                     <AlertTriangle className="h-3 w-3 text-yellow-500" />
                                     <span className="text-[10px] text-yellow-600">Resource unavailable</span>
+                                  </div>
+                                )}
+                                {Array.isArray(item.resources) && item.resources.length > 0 && (
+                                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                                    {item.resources.map((r: any, ri: number) => (
+                                      <a key={ri} href={r.url} target="_blank" rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[11px] text-[hsl(179,100%,39%)] hover:underline">
+                                        <LinkIcon className="h-2.5 w-2.5" />
+                                        {r.label}
+                                      </a>
+                                    ))}
                                   </div>
                                 )}
                               </div>

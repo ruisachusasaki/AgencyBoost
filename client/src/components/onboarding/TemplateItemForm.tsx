@@ -8,7 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, X, FileText, BookOpen, GraduationCap, Search } from "lucide-react";
+import { Loader2, X, FileText, BookOpen, GraduationCap, Search, Plus, Link as LinkIcon, Trash2 } from "lucide-react";
+
+interface Resource {
+  label: string;
+  url: string;
+}
 
 interface TemplateItem {
   id: number;
@@ -18,7 +23,8 @@ interface TemplateItem {
   title: string;
   description: string | null;
   itemType: string;
-  referenceId: number | null;
+  referenceId: string | null;
+  resources: Resource[] | null;
   isRequired: boolean;
 }
 
@@ -38,11 +44,14 @@ export default function TemplateItemForm({ open, onOpenChange, templateId, total
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isRequired, setIsRequired] = useState(true);
-  const [referenceId, setReferenceId] = useState<number | null>(null);
+  const [referenceId, setReferenceId] = useState<string | null>(null);
   const [referenceName, setReferenceName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [newResourceLabel, setNewResourceLabel] = useState("");
+  const [newResourceUrl, setNewResourceUrl] = useState("");
 
   useEffect(() => {
     if (editItem) {
@@ -53,6 +62,7 @@ export default function TemplateItemForm({ open, onOpenChange, templateId, total
       setIsRequired(editItem.isRequired);
       setReferenceId(editItem.referenceId);
       setReferenceName("");
+      setResources(Array.isArray(editItem.resources) ? editItem.resources : []);
     } else {
       setDayNumber(defaultDay);
       setItemType("text");
@@ -62,7 +72,10 @@ export default function TemplateItemForm({ open, onOpenChange, templateId, total
       setReferenceId(null);
       setReferenceName("");
       setSearchQuery("");
+      setResources([]);
     }
+    setNewResourceLabel("");
+    setNewResourceUrl("");
   }, [editItem, defaultDay, open]);
 
   useEffect(() => {
@@ -90,6 +103,7 @@ export default function TemplateItemForm({ open, onOpenChange, templateId, total
         description: description || null,
         itemType,
         referenceId: itemType === "text" ? null : referenceId,
+        resources,
         isRequired,
       };
       if (editItem) {
@@ -125,15 +139,32 @@ export default function TemplateItemForm({ open, onOpenChange, templateId, total
   };
 
   const handleSelectResult = (result: any) => {
-    setReferenceId(parseInt(result.id) || result.id);
+    setReferenceId(String(result.id));
     setReferenceName(result.title);
     setShowResults(false);
     setSearchQuery("");
   };
 
+  const addResource = () => {
+    const url = newResourceUrl.trim();
+    const label = newResourceLabel.trim() || url;
+    if (!url) return;
+    let finalUrl = url;
+    if (!/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = "https://" + finalUrl;
+    }
+    setResources([...resources, { label, url: finalUrl }]);
+    setNewResourceLabel("");
+    setNewResourceUrl("");
+  };
+
+  const removeResource = (index: number) => {
+    setResources(resources.filter((_, i) => i !== index));
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editItem ? "Edit Item" : "Add Item"}</DialogTitle>
         </DialogHeader>
@@ -240,6 +271,55 @@ export default function TemplateItemForm({ open, onOpenChange, templateId, total
               )}
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5">
+              <LinkIcon className="h-3.5 w-3.5" />
+              Resources
+            </Label>
+            {resources.length > 0 && (
+              <div className="space-y-1.5">
+                {resources.map((r, i) => (
+                  <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-muted rounded-md text-sm group">
+                    <LinkIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    <a href={r.url} target="_blank" rel="noopener noreferrer"
+                      className="text-[hsl(179,100%,39%)] hover:underline truncate flex-1">
+                      {r.label}
+                    </a>
+                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => removeResource(i)}>
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Input
+                value={newResourceLabel}
+                onChange={(e) => setNewResourceLabel(e.target.value)}
+                placeholder="Label (optional)"
+                className="flex-1"
+              />
+              <Input
+                value={newResourceUrl}
+                onChange={(e) => setNewResourceUrl(e.target.value)}
+                placeholder="https://..."
+                className="flex-[2]"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addResource();
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" size="icon" className="flex-shrink-0"
+                onClick={addResource} disabled={!newResourceUrl.trim()}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">Attach external links, documents, or reference materials.</p>
+          </div>
 
           <div className="flex items-center justify-between">
             <Label htmlFor="isRequired">Required item</Label>
