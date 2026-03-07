@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, Pencil, Trash2, ClipboardList, Calendar, Lock, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ClipboardList, Calendar, Lock, Loader2, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface OnboardingTemplate {
   id: number;
@@ -48,6 +49,11 @@ export default function OnboardingTemplates() {
 
   const { data: departmentsData = [] } = useQuery<Department[]>({
     queryKey: ["/api/departments"],
+  });
+
+  const { data: positionsData = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: [`/api/departments/${newTemplate.teamId}/positions`],
+    enabled: !!newTemplate.teamId,
   });
 
   const createMutation = useMutation({
@@ -189,7 +195,7 @@ export default function OnboardingTemplates() {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Department</Label>
-              <Select value={newTemplate.teamId} onValueChange={(v) => setNewTemplate(p => ({ ...p, teamId: v }))}>
+              <Select value={newTemplate.teamId} onValueChange={(v) => setNewTemplate(p => ({ ...p, teamId: v, positionName: "" }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
@@ -202,14 +208,35 @@ export default function OnboardingTemplates() {
             </div>
             <div className="space-y-2">
               <Label>Position Name</Label>
-              <Input
+              <Select
                 value={newTemplate.positionName}
-                onChange={(e) => setNewTemplate(p => ({ ...p, positionName: e.target.value }))}
-                placeholder="e.g. Marketing Coordinator"
-              />
+                onValueChange={(v) => setNewTemplate(p => ({ ...p, positionName: v }))}
+                disabled={!newTemplate.teamId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={newTemplate.teamId ? "Select position" : "Select a department first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {positionsData.map((p) => (
+                    <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <Label>Total Days</Label>
+              <div className="flex items-center gap-1.5">
+                <Label>Total Days</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5 text-gray-400 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Total number of Business Days onboarding takes</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Input
                 type="number"
                 min={1}
