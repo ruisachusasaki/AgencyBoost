@@ -41946,6 +41946,245 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   });
 
   // ═══════════════════════════════════════════════════════════
+  // ONBOARDING — NEW HIRE CHECKLIST ROUTES
+  // ═══════════════════════════════════════════════════════════
+
+  app.get("/api/onboarding/my-checklist", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+
+      const [instance] = await db.select()
+        .from(onboardingInstances)
+        .where(and(
+          eq(onboardingInstances.staffId, userId),
+          eq(onboardingInstances.status, "active")
+        ))
+        .limit(1);
+
+      if (!instance) {
+        const [completedInstance] = await db.select()
+          .from(onboardingInstances)
+          .where(and(
+            eq(onboardingInstances.staffId, userId),
+            eq(onboardingInstances.status, "completed")
+          ))
+          .orderBy(desc(onboardingInstances.completedAt))
+          .limit(1);
+
+        if (!completedInstance) {
+          return res.json({ instance: null, items: [] });
+        }
+
+        const snapshot = completedInstance.templateSnapshot as any;
+        const items = await db.select()
+          .from(onboardingInstanceItems)
+          .where(eq(onboardingInstanceItems.instanceId, completedInstance.id))
+          .orderBy(onboardingInstanceItems.dayNumber, onboardingInstanceItems.sortOrder);
+
+        const enrichedItems = await Promise.all(items.map(async (item) => {
+          let referenceTitle: string | null = null;
+          let referenceUrl: string | null = null;
+          if (item.itemType === "kb_article" && item.referenceId) {
+            const [article] = await db.select({ title: knowledgeBaseArticles.title, slug: knowledgeBaseArticles.slug })
+              .from(knowledgeBaseArticles)
+              .where(eq(knowledgeBaseArticles.id, String(item.referenceId)));
+            if (article) {
+              referenceTitle = article.title;
+              referenceUrl = `/knowledge-base/${article.slug}`;
+            }
+          } else if (item.itemType === "training_course" && item.referenceId) {
+            const [course] = await db.select({ title: trainingCourses.title })
+              .from(trainingCourses)
+              .where(eq(trainingCourses.id, String(item.referenceId)));
+            if (course) {
+              referenceTitle = course.title;
+              referenceUrl = `/training/courses/${item.referenceId}`;
+            }
+          }
+          return { ...item, referenceTitle, referenceUrl };
+        }));
+
+        return res.json({
+          instance: {
+            ...completedInstance,
+            totalDays: snapshot?.totalDays || 1,
+            dayUnlockMode: snapshot?.dayUnlockMode || "calendar",
+          },
+          items: enrichedItems,
+        });
+      }
+
+      const snapshot = instance.templateSnapshot as any;
+      const items = await db.select()
+        .from(onboardingInstanceItems)
+        .where(eq(onboardingInstanceItems.instanceId, instance.id))
+        .orderBy(onboardingInstanceItems.dayNumber, onboardingInstanceItems.sortOrder);
+
+      const enrichedItems = await Promise.all(items.map(async (item) => {
+        let referenceTitle: string | null = null;
+        let referenceUrl: string | null = null;
+        if (item.itemType === "kb_article" && item.referenceId) {
+          const [article] = await db.select({ title: knowledgeBaseArticles.title, slug: knowledgeBaseArticles.slug })
+            .from(knowledgeBaseArticles)
+            .where(eq(knowledgeBaseArticles.id, String(item.referenceId)));
+          if (article) {
+            referenceTitle = article.title;
+            referenceUrl = `/knowledge-base/${article.slug}`;
+          }
+        } else if (item.itemType === "training_course" && item.referenceId) {
+          const [course] = await db.select({ title: trainingCourses.title })
+            .from(trainingCourses)
+            .where(eq(trainingCourses.id, String(item.referenceId)));
+          if (course) {
+            referenceTitle = course.title;
+            referenceUrl = `/training/courses/${item.referenceId}`;
+          }
+        }
+        return { ...item, referenceTitle, referenceUrl };
+      }));
+
+      res.json({
+        instance: {
+          ...instance,
+          totalDays: snapshot?.totalDays || 1,
+          dayUnlockMode: snapshot?.dayUnlockMode || "calendar",
+        },
+        items: enrichedItems,
+      });
+    } catch (error: any) {
+      console.error("Error fetching onboarding checklist:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding checklist" });
+    }
+  });
+
+  app.patch("/api/onboarding/my-checklist/items/:itemId", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+      const itemId = parseInt(req.params.itemId);
+      const { isCompleted } = req.body;
+
+      if (typeof isCompleted !== "boolean") {
+        return res.status(400).json({ error: "isCompleted must be a boolean" });
+      }
+
+      const [item] = await db.select()
+        .from(onboardingInstanceItems)
+        .where(eq(onboardingInstanceItems.id, itemId));
+
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      const [instance] = await db.select()
+        .from(onboardingInstances)
+        .where(and(
+          eq(onboardingInstances.id, item.instanceId),
+          eq(onboardingInstances.staffId, userId),
+          eq(onboardingInstances.status, "active")
+        ));
+
+      if (!instance) {
+        return res.status(403).json({ error: "Item does not belong to your active onboarding checklist" });
+      }
+
+      const updateData = isCompleted
+        ? { isCompleted: true, completedAt: new Date(), completedBy: userId, autoCompleted: false }
+        : { isCompleted: false, completedAt: null, completedBy: null, autoCompleted: false };
+
+      const [updated] = await db.update(onboardingInstanceItems)
+        .set(updateData)
+        .where(eq(onboardingInstanceItems.id, itemId))
+        .returning();
+
+      if (isCompleted) {
+        const allRequiredItems = await db.select()
+          .from(onboardingInstanceItems)
+          .where(and(
+            eq(onboardingInstanceItems.instanceId, instance.id),
+            eq(onboardingInstanceItems.isRequired, true)
+          ));
+
+        const allComplete = allRequiredItems.every(i => i.id === itemId ? true : i.isCompleted);
+
+        if (allComplete) {
+          await db.update(onboardingInstances)
+            .set({ status: "completed", completedAt: new Date() })
+            .where(eq(onboardingInstances.id, instance.id));
+        }
+      } else {
+        if (instance.status === "completed") {
+          await db.update(onboardingInstances)
+            .set({ status: "active", completedAt: null })
+            .where(eq(onboardingInstances.id, instance.id));
+        }
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating onboarding item:", error);
+      res.status(500).json({ error: "Failed to update onboarding item" });
+    }
+  });
+
+  app.get("/api/onboarding/my-checklist/progress", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+
+      const [instance] = await db.select()
+        .from(onboardingInstances)
+        .where(and(
+          eq(onboardingInstances.staffId, userId),
+          sql`${onboardingInstances.status} IN ('active', 'completed')`
+        ))
+        .orderBy(desc(onboardingInstances.createdAt))
+        .limit(1);
+
+      if (!instance) {
+        return res.json({ totalItems: 0, completedItems: 0, requiredItems: 0, completedRequiredItems: 0, currentDay: 0, totalDays: 0, percentComplete: 0, isComplete: false });
+      }
+
+      const snapshot = instance.templateSnapshot as any;
+      const totalDays = snapshot?.totalDays || 1;
+
+      const items = await db.select()
+        .from(onboardingInstanceItems)
+        .where(eq(onboardingInstanceItems.instanceId, instance.id));
+
+      const totalItems = items.length;
+      const completedItems = items.filter(i => i.isCompleted).length;
+      const requiredItems = items.filter(i => i.isRequired).length;
+      const completedRequiredItems = items.filter(i => i.isRequired && i.isCompleted).length;
+
+      const startDate = new Date(instance.startDate);
+      const today = new Date();
+      let daysDiff = 0;
+      const d = new Date(startDate);
+      while (d <= today) {
+        const dow = d.getDay();
+        if (dow !== 0 && dow !== 6) daysDiff++;
+        d.setDate(d.getDate() + 1);
+      }
+      const currentDay = Math.max(1, Math.min(daysDiff, totalDays));
+
+      const percentComplete = requiredItems > 0 ? Math.round((completedRequiredItems / requiredItems) * 100) : 100;
+
+      res.json({
+        totalItems,
+        completedItems,
+        requiredItems,
+        completedRequiredItems,
+        currentDay,
+        totalDays,
+        percentComplete,
+        isComplete: instance.status === "completed",
+      });
+    } catch (error: any) {
+      console.error("Error fetching onboarding progress:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding progress" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════
   // ONBOARDING TEMPLATES API
   // ═══════════════════════════════════════════════════════════
 

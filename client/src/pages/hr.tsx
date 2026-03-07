@@ -49,7 +49,8 @@ import {
   Presentation,
   Plus,
   List,
-  LayoutGrid
+  LayoutGrid,
+  ClipboardCheck
 } from "lucide-react";
 import { Staff, TimeOffRequest, JobApplication } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -65,6 +66,7 @@ import OffboardingForm from "@/components/hr/offboarding-form";
 import OffboardingSubmissionsView from "@/components/hr/offboarding-submissions-view";
 import OneOnOneMeetings from "@/components/hr/one-on-one-meetings";
 import PxMeetings from "@/components/hr/px-meetings";
+import OnboardingChecklist from "@/pages/hr/OnboardingChecklist";
 import OrgChart from "@/components/hr/org-chart";
 
 interface HRPageProps {
@@ -386,6 +388,16 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
     queryKey: ["/api/new-hire-onboarding-submissions"],
     enabled: isManager || isAdmin,
   });
+
+  const { data: myOnboardingData } = useQuery<{ instance: any | null }>({
+    queryKey: ["/api/onboarding/my-checklist"],
+    queryFn: async () => {
+      const res = await fetch("/api/onboarding/my-checklist", { credentials: "include" });
+      if (!res.ok) return { instance: null };
+      return res.json();
+    },
+  });
+  const hasOnboardingChecklist = !!myOnboardingData?.instance || isAdmin || isManager;
 
   // Fetch job openings (visible to all, but creation restricted to managers/admins)
   const { data: jobOpenings = [] } = useQuery<any[]>({
@@ -1158,6 +1170,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
               ...(canViewExpenseReports ? [{ id: "expense-submissions", name: "Expense Submissions", icon: Receipt, count: 0, overflowOnly: true }] : []),
               ...(canViewOffboarding ? [{ id: "offboarding-form", name: "Offboarding Form", icon: UserCheck, count: 0, overflowOnly: true }] : []),
               ...(canViewOffboarding ? [{ id: "offboarding-submissions", name: "Offboarding Submissions", icon: Users, count: 0, overflowOnly: true }] : []),
+              ...(hasOnboardingChecklist ? [{ id: "onboarding-checklist", name: "Onboarding Checklist", icon: ClipboardCheck, count: 0, overflowOnly: true }] : []),
               ...(canManageStaff || isManager || isAdmin ? [{ id: "reports", name: "Reports", icon: FileText, count: 0, overflowOnly: true }] : [])
             ];
             
@@ -3675,6 +3688,10 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
 
       {activeTab === "px-meetings" && canViewPxMeetings && (
         <PxMeetings meetingId={activeMeetingId} />
+      )}
+
+      {activeTab === "onboarding-checklist" && hasOnboardingChecklist && (
+        <OnboardingChecklist />
       )}
 
       {/* Time Off Request Dialog */}
