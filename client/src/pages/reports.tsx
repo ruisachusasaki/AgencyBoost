@@ -6049,7 +6049,7 @@ export default function Reports() {
               <Select value={ccAddForm.clientId} onValueChange={(v) => setCcAddForm(prev => ({ ...prev, clientId: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
                 <SelectContent>
-                  {clients.filter((c: any) => c.status === 'active').map((c: any) => (
+                  {clients.map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -6246,7 +6246,7 @@ export default function Reports() {
                 <Select value={ccEditingEntry.editClientId} onValueChange={(v) => setCcEditingEntry((prev: any) => ({ ...prev, editClientId: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {clients.filter((c: any) => c.status === 'active').map((c: any) => (
+                    {clients.map((c: any) => (
                       <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>
                     ))}
                   </SelectContent>
