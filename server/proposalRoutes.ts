@@ -4,7 +4,7 @@ import { proposalTerms, quotes, quoteItems, clients, leads, staff, products, pro
 import { eq, desc, and, sql, lt, isNull, asc } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { z } from "zod";
-import { createPaymentIntent, createACHPaymentIntent, isStripeConfigured, constructWebhookEvent, getStripe } from "./stripe";
+import { createPaymentIntent, createACHPaymentIntent, isStripeConfigured, constructWebhookEvent, getStripe, getOrCreateCustomer, createSubscription } from "./stripe";
 import { NotificationService } from "./notification-service";
 import { generateTasksFromTemplates } from "./taskGenerationEngine";
 
@@ -38,7 +38,7 @@ export function registerProposalRoutes(
   app.post("/api/quotes/:id/send-proposal", requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
-      const { recipientEmail, recipientName, paymentAmountType, customPaymentAmount } = req.body;
+      const { recipientEmail, recipientName, paymentAmountType, customPaymentAmount, billingMode } = req.body;
 
       const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
       if (!quote) return res.status(404).json({ message: "Quote not found" });
@@ -90,6 +90,9 @@ export function registerProposalRoutes(
       }
       if (!quote.paymentAmountType) {
         updateData.paymentAmountType = paymentAmountType || "full";
+      }
+      if (billingMode && ["trial", "immediate"].includes(billingMode)) {
+        updateData.billingMode = billingMode;
       }
 
       const [updated] = await db
@@ -231,7 +234,16 @@ export function registerProposalRoutes(
         .orderBy(desc(proposalTerms.version))
         .limit(1);
 
-      let paymentAmount = parseFloat(quote.clientBudget || quote.totalCost || "0");
+      const buildFee = parseFloat(quote.oneTimeCost || "0");
+      const monthlyFee = parseFloat(quote.clientBudget || "0");
+      const billingMode = quote.billingMode || "trial";
+
+      let payNowAmount = buildFee;
+      if (billingMode === "immediate") {
+        payNowAmount = buildFee + monthlyFee;
+      }
+
+      let paymentAmount = payNowAmount;
       if (quote.paymentAmountType === "custom" && quote.customPaymentAmount) {
         paymentAmount = parseFloat(quote.customPaymentAmount);
       }
@@ -252,12 +264,17 @@ export function registerProposalRoutes(
           paidAmount: quote.paidAmount,
           paymentAmountType: quote.paymentAmountType,
           expiresAt: quote.expiresAt,
+          subscriptionStatus: quote.subscriptionStatus,
         },
-        quote: { name: quote.name, totalCost: quote.totalCost, clientBudget: quote.clientBudget, notes: quote.notes },
+        quote: { name: quote.name, totalCost: quote.totalCost, clientBudget: quote.clientBudget, notes: quote.notes, oneTimeCost: quote.oneTimeCost, monthlyCost: quote.monthlyCost },
         items: enrichedItems,
         clientName,
         terms: activeTerms[0] || null,
         paymentAmount,
+        buildFee,
+        monthlyFee,
+        billingMode,
+        payNowAmount,
         stripeConfigured: isStripeConfigured(),
         stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null,
         branding,
@@ -367,45 +384,64 @@ export function registerProposalRoutes(
         return res.status(400).json({ message: "Payment has already been completed" });
       }
 
-      let paymentAmount = parseFloat(quote.clientBudget || quote.totalCost || "0");
-      if (quote.paymentAmountType === "custom" && quote.customPaymentAmount) {
-        paymentAmount = parseFloat(quote.customPaymentAmount);
+      const buildFee = parseFloat(quote.oneTimeCost || "0");
+      const monthlyFee = parseFloat(quote.clientBudget || "0");
+      const billingMode = quote.billingMode || "trial";
+
+      let payNowAmount = buildFee;
+      if (billingMode === "immediate") {
+        payNowAmount = buildFee + monthlyFee;
       }
 
-      if (paymentAmount <= 0) {
+      if (quote.paymentAmountType === "custom" && quote.customPaymentAmount) {
+        payNowAmount = parseFloat(quote.customPaymentAmount);
+      }
+
+      if (payNowAmount <= 0) {
         return res.status(400).json({ message: "Invalid payment amount" });
       }
+
+      const stripe = getStripe();
+      if (!stripe) return res.status(503).json({ message: "Stripe not configured" });
+
+      const customerEmail = quote.signedByEmail || "";
+      const customerName = quote.signedByName || "";
+      const customer = await getOrCreateCustomer(customerEmail, customerName);
+      if (!customer) return res.status(500).json({ message: "Failed to create customer" });
 
       const metadata = {
         quoteId: quote.id,
         clientId: quote.clientId || "",
         leadId: quote.leadId || "",
+        billingMode,
+        monthlyFee: monthlyFee.toString(),
+        buildFee: buildFee.toString(),
       };
 
       let result;
       if (paymentMethod === "ach") {
-        result = await createACHPaymentIntent(
-          paymentAmount,
-          quote.signedByEmail || "",
-          quote.signedByName || "",
-          metadata
-        );
-      } else {
-        const stripe = getStripe();
-        if (!stripe) return res.status(503).json({ message: "Stripe not configured" });
-
         const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(paymentAmount * 100),
+          amount: Math.round(payNowAmount * 100),
           currency: "usd",
+          customer: customer.id,
+          payment_method_types: ["us_bank_account"],
+          payment_method_options: {
+            us_bank_account: {
+              financial_connections: { permissions: ["payment_method" as any] },
+            },
+          },
+          metadata,
+        });
+        result = { paymentIntent, clientSecret: paymentIntent.client_secret! };
+      } else {
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(payNowAmount * 100),
+          currency: "usd",
+          customer: customer.id,
           payment_method_types: ["card"],
           metadata,
         });
-
-        result = { paymentIntent, clientSecret: paymentIntent.client_secret };
-      }
-
-      if (!result) {
-        return res.status(500).json({ message: "Failed to create payment" });
+        result = { paymentIntent, clientSecret: paymentIntent.client_secret! };
       }
 
       await db
@@ -414,12 +450,19 @@ export function registerProposalRoutes(
           paymentMethod,
           paymentIntentId: result.paymentIntent.id,
           paymentStatus: "pending",
-          paidAmount: paymentAmount.toString(),
+          paidAmount: payNowAmount.toString(),
+          stripeCustomerId: customer.id,
           updatedAt: new Date(),
         })
         .where(eq(quotes.id, quote.id));
 
-      res.json({ clientSecret: result.clientSecret });
+      res.json({
+        clientSecret: result.clientSecret,
+        payNowAmount,
+        buildFee,
+        monthlyFee,
+        billingMode,
+      });
     } catch (error) {
       console.error("Error creating payment:", error);
       res.status(500).json({ message: "Failed to create payment" });
@@ -654,10 +697,65 @@ export async function handleStripeWebhook(req: any, res: any, notificationServic
             .where(eq(quotes.id, quoteId));
 
           await triggerQuoteFulfillment(quote, notificationService);
+
+          const monthlyFee = parseFloat(paymentIntent.metadata?.monthlyFee || quote.clientBudget || "0");
+          const billingMode = paymentIntent.metadata?.billingMode || quote.billingMode || "trial";
+          const customerId = quote.stripeCustomerId || paymentIntent.customer;
+
+          if (monthlyFee > 0 && customerId && !quote.stripeSubscriptionId) {
+            try {
+              const trialDays = billingMode === "trial" ? 30 : 0;
+              const paymentMethodId = typeof paymentIntent.payment_method === 'string'
+                ? paymentIntent.payment_method
+                : paymentIntent.payment_method?.id;
+
+              const sub = await createSubscription(
+                customerId,
+                monthlyFee,
+                { quoteId: quote.id, quoteName: quote.name || "Monthly Service" },
+                trialDays,
+                paymentMethodId || undefined
+              );
+
+              if (sub) {
+                await db.update(quotes).set({
+                  stripeSubscriptionId: sub.id,
+                  subscriptionStatus: sub.status,
+                  updatedAt: new Date(),
+                }).where(eq(quotes.id, quoteId));
+
+                console.log(`[Quote Fulfillment] Created subscription ${sub.id} (${sub.status}) for quote ${quoteId}, $${monthlyFee}/mo, trial: ${trialDays}d`);
+              }
+            } catch (subError) {
+              console.error(`[Quote Fulfillment] Error creating subscription for quote ${quoteId}:`, subError);
+            }
+          }
         }
       } catch (error) {
         console.error("Error processing payment success:", error);
       }
+    }
+  }
+
+  if (event.type === "customer.subscription.updated") {
+    const subscription = event.data.object as any;
+    const quoteId = subscription.metadata?.quoteId;
+    if (quoteId) {
+      await db.update(quotes).set({
+        subscriptionStatus: subscription.status,
+        updatedAt: new Date(),
+      }).where(eq(quotes.id, quoteId));
+    }
+  }
+
+  if (event.type === "customer.subscription.deleted") {
+    const subscription = event.data.object as any;
+    const quoteId = subscription.metadata?.quoteId;
+    if (quoteId) {
+      await db.update(quotes).set({
+        subscriptionStatus: "canceled",
+        updatedAt: new Date(),
+      }).where(eq(quotes.id, quoteId));
     }
   }
 

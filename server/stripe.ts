@@ -76,6 +76,70 @@ export async function createACHPaymentIntent(
   };
 }
 
+export async function getOrCreateCustomer(
+  email: string,
+  name: string
+): Promise<Stripe.Customer | null> {
+  const stripe = getStripe();
+  if (!stripe) return null;
+
+  const existing = await stripe.customers.list({ email, limit: 1 });
+  if (existing.data.length > 0) return existing.data[0];
+
+  return stripe.customers.create({ email, name });
+}
+
+export async function createSubscription(
+  customerId: string,
+  monthlyAmount: number,
+  metadata: Record<string, string> = {},
+  trialDays: number = 0,
+  defaultPaymentMethodId?: string
+): Promise<Stripe.Subscription | null> {
+  const stripe = getStripe();
+  if (!stripe) return null;
+
+  if (defaultPaymentMethodId) {
+    try {
+      await stripe.paymentMethods.attach(defaultPaymentMethodId, { customer: customerId });
+    } catch (e: any) {
+      if (!e.message?.includes('already been attached')) {
+        console.error('[Stripe] Error attaching payment method:', e.message);
+      }
+    }
+    await stripe.customers.update(customerId, {
+      invoice_settings: { default_payment_method: defaultPaymentMethodId },
+    });
+  }
+
+  const price = await stripe.prices.create({
+    unit_amount: Math.round(monthlyAmount * 100),
+    currency: 'usd',
+    recurring: { interval: 'month' },
+    product_data: {
+      name: metadata.quoteName || 'Monthly Service Fee',
+      metadata,
+    },
+  });
+
+  const subscriptionData: Stripe.SubscriptionCreateParams = {
+    customer: customerId,
+    items: [{ price: price.id }],
+    metadata,
+    payment_behavior: 'allow_incomplete',
+  };
+
+  if (defaultPaymentMethodId) {
+    subscriptionData.default_payment_method = defaultPaymentMethodId;
+  }
+
+  if (trialDays > 0) {
+    subscriptionData.trial_period_days = trialDays;
+  }
+
+  return stripe.subscriptions.create(subscriptionData);
+}
+
 export async function retrievePaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent | null> {
   const stripe = getStripe();
   if (!stripe) return null;

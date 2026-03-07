@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   CheckCircle, FileText, CreditCard, Building, Pen,
-  Shield, Loader2, AlertCircle, ChevronDown, ChevronUp
+  Shield, Loader2, AlertCircle, ChevronDown, ChevronUp,
+  Calendar, Repeat
 } from "lucide-react";
 import { loadStripe, type Stripe, type StripeElements } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -109,6 +110,10 @@ function darkenColor(hex: string, amount: number): string {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
+function formatCurrency(amount: number): string {
+  return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export default function PublicProposal() {
   const { token } = useParams<{ token: string }>();
   const [currentStep, setCurrentStep] = useState<ProposalStep>("review");
@@ -176,7 +181,7 @@ export default function PublicProposal() {
     },
   });
 
-  const createPaymentIntent = useCallback(async (method: "card" | "ach") => {
+  const createPaymentIntentFn = useCallback(async (method: "card" | "ach") => {
     setPaymentError(null);
     setClientSecret(null);
 
@@ -202,7 +207,7 @@ export default function PublicProposal() {
     setClientSecret(null);
 
     try {
-      await createPaymentIntent(method);
+      await createPaymentIntentFn(method);
     } catch (err: any) {
       setPaymentError(err.message || "Failed to initialize payment");
     }
@@ -353,13 +358,19 @@ export default function PublicProposal() {
   const quote = data?.quote;
   const items = data?.items || [];
   const terms = data?.terms;
-  const paymentAmountValue = data?.paymentAmount || 0;
   const branding = data?.branding || {};
   const brandColor = branding.primaryColor || "#00C9C6";
   const brandColorDark = darkenColor(brandColor, -20);
   const companyName = branding.companyName || "";
   const logoUrl = branding.logoUrl || "";
   const footerText = branding.footerText || "";
+
+  const buildFee = data?.buildFee || 0;
+  const monthlyFee = data?.monthlyFee || 0;
+  const billingMode = data?.billingMode || "trial";
+  const payNowAmount = data?.payNowAmount || data?.paymentAmount || 0;
+  const hasRecurring = monthlyFee > 0;
+  const hasBuildFee = buildFee > 0;
 
   const steps = [
     { id: "review", label: "Review", icon: FileText },
@@ -433,27 +444,87 @@ export default function PublicProposal() {
               <CardContent className="p-6">
                 {items.length > 0 ? (
                   <div className="space-y-4">
-                    {items.map((item: any, index: number) => (
-                      <div key={item.id || index} className="flex items-center justify-between py-3 border-b last:border-0">
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900">{item.itemName || item.notes || `${item.itemType} Item`}</div>
-                          {item.itemDescription && (
-                            <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{item.itemDescription}</p>
-                          )}
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="capitalize text-xs">{item.itemType}</Badge>
-                            {item.quantity > 1 && <span className="text-xs text-gray-500">Qty: {item.quantity}</span>}
+                    {items.map((item: any, index: number) => {
+                      const isRecurring = item.isRecurring;
+                      return (
+                        <div key={item.id || index} className="flex items-center justify-between py-3 border-b last:border-0">
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{item.itemName || item.notes || `${item.itemType} Item`}</div>
+                            {item.itemDescription && (
+                              <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{item.itemDescription}</p>
+                            )}
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="capitalize text-xs">{item.itemType}</Badge>
+                              {item.quantity > 1 && <span className="text-xs text-gray-500">Qty: {item.quantity}</span>}
+                            </div>
+                          </div>
+                          <div className="text-right pl-4">
+                            <div className="font-semibold text-gray-900">${formatCurrency(parseFloat(item.totalCost || "0"))}</div>
                           </div>
                         </div>
-                        <div className="text-right pl-4">
-                          <div className="font-semibold text-gray-900">${parseFloat(item.totalCost || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      );
+                    })}
+
+                    {(hasBuildFee || hasRecurring) && (
+                      <div className="pt-4 border-t-2 space-y-3">
+                        {hasBuildFee && (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-gray-500" />
+                              <span className="font-medium text-gray-700">Build Fee</span>
+                              <span className="text-xs text-gray-400">(one-time)</span>
+                            </div>
+                            <span className="text-lg font-bold text-gray-900">${formatCurrency(buildFee)}</span>
+                          </div>
+                        )}
+                        {hasRecurring && (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Repeat className="h-4 w-4 text-gray-500" />
+                              <span className="font-medium text-gray-700">Monthly Fee</span>
+                              <span className="text-xs text-gray-400">(recurring)</span>
+                            </div>
+                            <span className="text-lg font-bold text-gray-900">${formatCurrency(monthlyFee)}/mo</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {hasRecurring && (
+                      <div className="rounded-lg p-4 mt-2" style={{ backgroundColor: `${brandColor}0D`, borderLeft: `3px solid ${brandColor}` }}>
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: brandColor }} />
+                          <div className="text-sm text-gray-700">
+                            {billingMode === "trial" ? (
+                              <>
+                                <p className="font-medium">Payment Summary</p>
+                                <p className="mt-1">
+                                  {hasBuildFee
+                                    ? `You'll pay the Build Fee of $${formatCurrency(buildFee)} today. Your monthly billing of $${formatCurrency(monthlyFee)}/mo begins 30 days after payment.`
+                                    : `Your monthly billing of $${formatCurrency(monthlyFee)}/mo begins 30 days from today.`
+                                  }
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="font-medium">Payment Summary</p>
+                                <p className="mt-1">
+                                  {hasBuildFee
+                                    ? `You'll pay $${formatCurrency(buildFee + monthlyFee)} today (Build Fee + first month). Monthly billing of $${formatCurrency(monthlyFee)}/mo continues each month after.`
+                                    : `You'll pay $${formatCurrency(monthlyFee)} today. Monthly billing of $${formatCurrency(monthlyFee)}/mo continues each month after.`
+                                  }
+                                </p>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    ))}
-                    <div className="flex items-center justify-between pt-4 border-t-2">
-                      <span className="text-lg font-bold">Total</span>
+                    )}
+
+                    <div className="flex items-center justify-between pt-3 border-t">
+                      <span className="text-lg font-bold">Due Today</span>
                       <span className="text-2xl font-bold" style={{ color: brandColor }}>
-                        ${paymentAmountValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        ${formatCurrency(payNowAmount)}
                       </span>
                     </div>
                   </div>
@@ -631,9 +702,36 @@ export default function PublicProposal() {
                     Proposal Signed Successfully
                   </div>
                   <h2 className="text-xl font-bold">Complete Payment</h2>
-                  <p className="text-gray-500 mt-1">
-                    Amount due: <span className="text-2xl font-bold" style={{ color: brandColor }}>${paymentAmountValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                  </p>
+                </div>
+
+                <div className="rounded-lg border bg-gray-50 p-4 space-y-2">
+                  {hasBuildFee && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Build Fee (one-time)</span>
+                      <span className="font-medium">${formatCurrency(buildFee)}</span>
+                    </div>
+                  )}
+                  {hasRecurring && billingMode === "immediate" && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">First Month</span>
+                      <span className="font-medium">${formatCurrency(monthlyFee)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="font-semibold">Due Now</span>
+                    <span className="text-xl font-bold" style={{ color: brandColor }}>${formatCurrency(payNowAmount)}</span>
+                  </div>
+                  {hasRecurring && (
+                    <div className="flex items-center justify-between text-xs text-gray-500 pt-1">
+                      <span className="flex items-center gap-1">
+                        <Repeat className="h-3 w-3" />
+                        Monthly recurring
+                      </span>
+                      <span>
+                        ${formatCurrency(monthlyFee)}/mo {billingMode === "trial" ? "(starts in 30 days)" : "(next month)"}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {!data?.stripeConfigured ? (
@@ -678,7 +776,7 @@ export default function PublicProposal() {
                           clientSecret={clientSecret}
                           signerName={signerName}
                           signerEmail={signerEmail}
-                          amount={paymentAmountValue}
+                          amount={payNowAmount}
                           brandColor={brandColor}
                           onSuccess={() => {
                             setCurrentStep("complete");
@@ -711,7 +809,7 @@ export default function PublicProposal() {
                           {achProcessing ? (
                             <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting Bank Account...</>
                           ) : (
-                            <>Pay ${paymentAmountValue.toLocaleString(undefined, { minimumFractionDigits: 2 })} via ACH</>
+                            <>Pay ${formatCurrency(payNowAmount)} via ACH</>
                           )}
                         </Button>
                       </div>
@@ -750,7 +848,17 @@ export default function PublicProposal() {
             ) : (
               <>
                 <p className="text-lg text-gray-600 mb-2">Your proposal has been signed and payment has been received.</p>
-                <p className="text-gray-500">We'll be in touch shortly to get started on your project.</p>
+                {hasRecurring && (
+                  <p className="text-gray-500">
+                    {billingMode === "trial"
+                      ? `Your monthly billing of $${formatCurrency(monthlyFee)}/mo will begin in 30 days.`
+                      : `Your monthly billing of $${formatCurrency(monthlyFee)}/mo will continue each month.`
+                    }
+                  </p>
+                )}
+                {!hasRecurring && (
+                  <p className="text-gray-500">We'll be in touch shortly to get started on your project.</p>
+                )}
               </>
             )}
             <div className="mt-8 inline-flex items-center gap-2 bg-gray-100 rounded-full px-6 py-3">

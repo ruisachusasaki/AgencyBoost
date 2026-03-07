@@ -88,6 +88,7 @@ export default function Sales() {
   const [sendProposalEmail, setSendProposalEmail] = useState("");
   const [sendProposalPaymentType, setSendProposalPaymentType] = useState("full");
   const [sendProposalCustomAmount, setSendProposalCustomAmount] = useState("");
+  const [sendProposalBillingMode, setSendProposalBillingMode] = useState<"trial" | "immediate">("trial");
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -900,8 +901,8 @@ export default function Sales() {
   });
 
   const sendProposalMutation = useMutation({
-    mutationFn: async ({ quoteId, recipientEmail, paymentAmountType, customPaymentAmount }: { quoteId: string; recipientEmail?: string; paymentAmountType?: string; customPaymentAmount?: string }) => {
-      return await apiRequest("POST", `/api/quotes/${quoteId}/send-proposal`, { recipientEmail, paymentAmountType, customPaymentAmount });
+    mutationFn: async ({ quoteId, recipientEmail, paymentAmountType, customPaymentAmount, billingMode }: { quoteId: string; recipientEmail?: string; paymentAmountType?: string; customPaymentAmount?: string; billingMode?: string }) => {
+      return await apiRequest("POST", `/api/quotes/${quoteId}/send-proposal`, { recipientEmail, paymentAmountType, customPaymentAmount, billingMode });
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
@@ -909,6 +910,7 @@ export default function Sales() {
       setSendProposalEmail("");
       setSendProposalPaymentType("full");
       setSendProposalCustomAmount("");
+      setSendProposalBillingMode("trial");
       toast({
         title: "Proposal Sent",
         variant: "default",
@@ -3348,7 +3350,7 @@ export default function Sales() {
 
       {/* Send Proposal Dialog */}
       <Dialog open={sendProposalQuote !== null} onOpenChange={(open) => !open && setSendProposalQuote(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Send as Proposal</DialogTitle>
             <DialogDescription>
@@ -3359,10 +3361,28 @@ export default function Sales() {
             <div>
               <Label>Quote</Label>
               <p className="text-sm font-medium mt-1">{sendProposalQuote?.name}</p>
-              <p className="text-sm text-muted-foreground">
-                Total: ${parseFloat(sendProposalQuote?.totalCost || 0).toLocaleString()}
-              </p>
             </div>
+
+            <div className="rounded-lg border bg-muted/50 p-3 space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Build Fee (one-time)</span>
+                <span className="font-medium">${parseFloat(sendProposalQuote?.oneTimeCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Monthly Fee (recurring)</span>
+                <span className="font-medium">${parseFloat(sendProposalQuote?.clientBudget || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}/mo</span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t">
+                <span className="font-semibold">Due Today</span>
+                <span className="font-bold text-primary">
+                  ${(
+                    parseFloat(sendProposalQuote?.oneTimeCost || 0) +
+                    (sendProposalBillingMode === "immediate" ? parseFloat(sendProposalQuote?.clientBudget || 0) : 0)
+                  ).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+
             <div>
               <Label htmlFor="recipient-email">Recipient Email</Label>
               <Input
@@ -3376,6 +3396,39 @@ export default function Sales() {
                 If left empty, the system will use the lead or client email on file.
               </p>
             </div>
+
+            {parseFloat(sendProposalQuote?.clientBudget || 0) > 0 && (
+              <div>
+                <Label>Billing Mode</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setSendProposalBillingMode("trial")}
+                    className={`p-3 rounded-lg border-2 text-left text-sm transition-all ${
+                      sendProposalBillingMode === "trial"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <div className="font-medium">30-Day Trial</div>
+                    <p className="text-xs text-muted-foreground mt-0.5">Monthly billing starts 30 days after build fee payment</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSendProposalBillingMode("immediate")}
+                    className={`p-3 rounded-lg border-2 text-left text-sm transition-all ${
+                      sendProposalBillingMode === "immediate"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <div className="font-medium">Immediate</div>
+                    <p className="text-xs text-muted-foreground mt-0.5">First month charged with build fee upfront</p>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div>
               <Label>Payment Amount</Label>
               <Select value={sendProposalPaymentType} onValueChange={setSendProposalPaymentType}>
@@ -3418,6 +3471,7 @@ export default function Sales() {
                       recipientEmail: sendProposalEmail || undefined,
                       paymentAmountType: sendProposalPaymentType,
                       customPaymentAmount: sendProposalPaymentType === "custom" ? sendProposalCustomAmount : undefined,
+                      billingMode: sendProposalBillingMode,
                     });
                   }
                 }}
