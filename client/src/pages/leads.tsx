@@ -13,14 +13,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban, UserPlus, ChevronUp, ChevronDown, MoreHorizontal, Filter, X, User as UserIcon } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calendar, DollarSign, Percent, Settings, Users, Kanban, UserPlus, ChevronUp, ChevronDown, MoreHorizontal, Filter, X, User as UserIcon, SlidersHorizontal, GripVertical, Clock, Mail, Phone, Building2, Globe, Hash, Lock } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import CustomFieldsLeadForm from "@/components/forms/custom-fields-lead-form";
 import PipelineStageManager from "@/components/pipeline-stage-manager";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import type { Lead, LeadPipelineStage, User, Tag, Client } from "@shared/schema";
+import type { Lead, LeadPipelineStage, User, Tag, Client, CustomField } from "@shared/schema";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
 
 interface Column {
   key: string;
@@ -46,6 +49,32 @@ const AVAILABLE_COLUMNS: Column[] = [
 
 type SortField = 'name' | 'email' | 'company' | 'phone' | 'stage' | 'value' | 'source' | 'assignedTo' | 'lastContactDate' | 'createdAt';
 
+interface PipelineCardField {
+  key: string;
+  label: string;
+  locked?: boolean;
+  defaultVisible: boolean;
+  isCustomField?: boolean;
+}
+
+const PIPELINE_CARD_FIELDS: PipelineCardField[] = [
+  { key: 'name', label: 'Lead Name', locked: true, defaultVisible: true },
+  { key: 'company', label: 'Company', defaultVisible: true },
+  { key: 'assignedTo', label: 'Assigned To', defaultVisible: true },
+  { key: 'createdAt', label: 'Created Date', defaultVisible: true },
+  { key: 'value', label: 'Potential Value', defaultVisible: true },
+  { key: 'email', label: 'Email', defaultVisible: false },
+  { key: 'phone', label: 'Phone', defaultVisible: false },
+  { key: 'source', label: 'Source', defaultVisible: false },
+  { key: 'probability', label: 'Probability', defaultVisible: false },
+  { key: 'status', label: 'Status', defaultVisible: false },
+  { key: 'lastContactDate', label: 'Last Contact', defaultVisible: false },
+  { key: 'projectedCloseDate', label: 'Projected Days to Close', defaultVisible: false },
+  { key: 'tags', label: 'Tags', defaultVisible: false },
+];
+
+const STORAGE_KEY = 'agencyboost_pipeline_card_fields';
+
 export default function Leads() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,6 +82,15 @@ export default function Leads() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [activeTab, setActiveTab] = useState("pipeline");
   const [showStageManager, setShowStageManager] = useState(false);
+  const [showManageFields, setShowManageFields] = useState(false);
+  const [cardFieldSearch, setCardFieldSearch] = useState("");
+  const [pipelineCardFields, setPipelineCardFields] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return PIPELINE_CARD_FIELDS.filter(f => f.defaultVisible).map(f => f.key);
+  });
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
@@ -88,6 +126,10 @@ export default function Leads() {
     queryKey: ["/api/clients"],
   });
   const clients = clientsData?.clients || [];
+
+  const { data: customFields = [] } = useQuery<CustomField[]>({
+    queryKey: ["/api/custom-fields"],
+  });
 
   const deleteLeadMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -367,6 +409,144 @@ export default function Leads() {
       return format(new Date(date), 'MMM dd, yyyy');
     }
     return format(date, 'MMM dd, yyyy');
+  };
+
+  const allCardFields: PipelineCardField[] = [
+    ...PIPELINE_CARD_FIELDS,
+    ...customFields.map(cf => ({
+      key: `custom_${cf.id}`,
+      label: cf.name,
+      defaultVisible: false,
+      isCustomField: true,
+    })),
+  ];
+
+  const togglePipelineCardField = (fieldKey: string) => {
+    const locked = PIPELINE_CARD_FIELDS.find(f => f.key === fieldKey)?.locked;
+    if (locked) return;
+    setPipelineCardFields(prev => {
+      const next = prev.includes(fieldKey) 
+        ? prev.filter(k => k !== fieldKey)
+        : [...prev, fieldKey];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const getBusinessDaysRemaining = (targetDate: Date | string | null): number | null => {
+    if (!targetDate) return null;
+    const target = new Date(targetDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    target.setHours(0, 0, 0, 0);
+    if (target <= today) return 0;
+    let count = 0;
+    const cursor = new Date(today);
+    while (cursor < target) {
+      cursor.setDate(cursor.getDate() + 1);
+      const dow = cursor.getDay();
+      if (dow !== 0 && dow !== 6) count++;
+    }
+    return count;
+  };
+
+  const renderCardFieldValue = (lead: Lead, fieldKey: string) => {
+    if (fieldKey.startsWith('custom_')) {
+      const cfId = fieldKey.replace('custom_', '');
+      const cf = customFields.find(f => f.id === cfId);
+      const data = lead.customFieldData as Record<string, any> | null;
+      const val = data?.[cfId] ?? data?.[cf?.name || ''];
+      if (val === null || val === undefined || val === '') return null;
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-gray-600">
+          <Hash className="w-3 h-3 flex-shrink-0" />
+          <span className="text-gray-400">{cf?.name}:</span>
+          <span className="truncate">{Array.isArray(val) ? val.join(', ') : String(val)}</span>
+        </div>
+      );
+    }
+    switch (fieldKey) {
+      case 'email':
+        if (!lead.email) return null;
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <Mail className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{lead.email}</span>
+          </div>
+        );
+      case 'phone':
+        if (!lead.phone) return null;
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <Phone className="w-3 h-3 flex-shrink-0" />
+            <span>{lead.phone}</span>
+          </div>
+        );
+      case 'source':
+        if (!lead.source) return null;
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <Globe className="w-3 h-3 flex-shrink-0" />
+            <span className="text-gray-400">Source:</span>
+            <span>{lead.source}</span>
+          </div>
+        );
+      case 'probability':
+        if (lead.probability === null || lead.probability === undefined) return null;
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <Percent className="w-3 h-3 flex-shrink-0" />
+            <span>{lead.probability}%</span>
+          </div>
+        );
+      case 'status':
+        if (!lead.status) return null;
+        return (
+          <div className="flex items-center gap-1.5 text-xs">
+            <Badge variant={lead.status === 'Won' ? 'default' : lead.status === 'Lost' ? 'destructive' : 'secondary'} className="text-[10px] px-1.5 py-0">
+              {lead.status}
+            </Badge>
+          </div>
+        );
+      case 'lastContactDate':
+        if (!lead.lastContactDate) return null;
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <Calendar className="w-3 h-3 flex-shrink-0" />
+            <span className="text-gray-400">Last Contact:</span>
+            <span>{format(new Date(lead.lastContactDate), "MMM d, yyyy")}</span>
+          </div>
+        );
+      case 'projectedCloseDate': {
+        const remaining = getBusinessDaysRemaining(lead.projectedCloseDate);
+        if (remaining === null) return null;
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+            <Clock className="w-3 h-3 flex-shrink-0" />
+            <span className="text-gray-400">Close in:</span>
+            <span className={remaining === 0 ? 'text-red-600 font-medium' : ''}>
+              {remaining === 0 ? 'Due today' : `${remaining} day${remaining !== 1 ? 's' : ''}`}
+            </span>
+          </div>
+        );
+      }
+      case 'tags': {
+        const leadTags = lead.tags as string[] | null;
+        if (!leadTags || leadTags.length === 0) return null;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {leadTags.slice(0, 3).map(t => (
+              <Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0">{t}</Badge>
+            ))}
+            {leadTags.length > 3 && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">+{leadTags.length - 3}</Badge>
+            )}
+          </div>
+        );
+      }
+      default:
+        return null;
+    }
   };
 
   const getLeadInitials = (lead: Lead) => {
@@ -805,6 +985,10 @@ export default function Leads() {
                 className="pl-10 w-64"
               />
             </div>
+            <Button variant="outline" onClick={() => setShowManageFields(true)}>
+              <SlidersHorizontal className="h-4 w-4 mr-2" />
+              Manage Fields
+            </Button>
             <Button variant="outline" onClick={() => setShowStageManager(true)}>
               <Settings className="h-4 w-4 mr-2" />
               Manage Pipeline
@@ -1078,11 +1262,12 @@ export default function Leads() {
                                                       </div>
                                                       <div>
                                                         <h3 className="font-medium text-sm">{lead.name}</h3>
-                                                        {lead.company && (
+                                                        {pipelineCardFields.includes('company') && lead.company && (
                                                           <p className="text-xs text-gray-600">{lead.company}</p>
                                                         )}
                                                       </div>
                                                     </div>
+                                                    {pipelineCardFields.includes('assignedTo') && (
                                                     <div className="flex items-center gap-1">
                                                       <TooltipProvider>
                                                         <Tooltip>
@@ -1093,7 +1278,6 @@ export default function Leads() {
                                                                   const staffMember = staff.find(s => s.id === lead.assignedTo);
                                                                   
                                                                   if (staffMember?.profileImage) {
-                                                                    // Convert object storage path to proper URL format  
                                                                     const imageUrl = `/objects${staffMember.profileImage}`;
                                                                     return (
                                                                       <img
@@ -1101,7 +1285,6 @@ export default function Leads() {
                                                                         alt={`${staffMember.firstName} ${staffMember.lastName}`}
                                                                         className="w-6 h-6 rounded-full object-cover"
                                                                         onError={(e) => {
-                                                                          // Fallback to initials if image fails to load
                                                                           e.currentTarget.style.display = 'none';
                                                                           e.currentTarget.nextElementSibling?.setAttribute('style', 'display: flex');
                                                                         }}
@@ -1115,7 +1298,6 @@ export default function Leads() {
                                                                     );
                                                                   }
                                                                 }
-                                                                // Default unassigned user image
                                                                 return (
                                                                   <div className="w-6 h-6 bg-gray-400 text-white text-xs rounded-full flex items-center justify-center">
                                                                     <Users className="w-3 h-3" />
@@ -1130,19 +1312,28 @@ export default function Leads() {
                                                         </Tooltip>
                                                       </TooltipProvider>
                                                     </div>
+                                                    )}
                                                   </div>
                                                   
-                                                  <div className="space-y-3 text-xs">
-                                                    <div className="flex items-center gap-1 text-gray-600">
-                                                      <Calendar className="w-3 h-3" />
-                                                      {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
-                                                    </div>
-                                                    {lead.value && (
+                                                  <div className="space-y-2 text-xs">
+                                                    {pipelineCardFields.includes('createdAt') && (
+                                                      <div className="flex items-center gap-1 text-gray-600">
+                                                        <Calendar className="w-3 h-3" />
+                                                        {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
+                                                      </div>
+                                                    )}
+                                                    {pipelineCardFields.includes('value') && lead.value && (
                                                       <div className="flex items-center gap-1 text-green-600">
                                                         <DollarSign className="w-3 h-3" />
                                                         ${Number(lead.value).toLocaleString()}
                                                       </div>
                                                     )}
+                                                    {pipelineCardFields
+                                                      .filter(k => !['name', 'company', 'assignedTo', 'createdAt', 'value'].includes(k))
+                                                      .map(fieldKey => {
+                                                        const rendered = renderCardFieldValue(lead, fieldKey);
+                                                        return rendered ? <div key={fieldKey}>{rendered}</div> : null;
+                                                      })}
                                                   </div>
                                                 </CardContent>
                                               </Card>
@@ -1286,6 +1477,94 @@ export default function Leads() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Manage Pipeline Card Fields Sheet */}
+      <Sheet open={showManageFields} onOpenChange={setShowManageFields}>
+        <SheetContent className="w-[400px] sm:w-[440px] p-0 flex flex-col">
+          <SheetHeader className="p-6 pb-4 border-b flex-shrink-0">
+            <SheetTitle className="text-lg font-semibold">Customize Card</SheetTitle>
+            <p className="text-sm text-muted-foreground">
+              Fields ({pipelineCardFields.length} of {allCardFields.length})
+            </p>
+          </SheetHeader>
+          <div className="px-6 pt-4 pb-2 flex-shrink-0">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search fields..."
+                value={cardFieldSearch}
+                onChange={(e) => setCardFieldSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+          <ScrollArea className="flex-1 px-6">
+            <div className="space-y-1 pb-6">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2">Active Fields</div>
+              {allCardFields
+                .filter(f => pipelineCardFields.includes(f.key))
+                .filter(f => !cardFieldSearch || f.label.toLowerCase().includes(cardFieldSearch.toLowerCase()))
+                .map(field => (
+                  <div
+                    key={field.key}
+                    className="flex items-center gap-3 py-2.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
+                  >
+                    <GripVertical className="h-4 w-4 text-muted-foreground/40 flex-shrink-0" />
+                    <Checkbox
+                      checked={true}
+                      disabled={field.locked}
+                      onCheckedChange={() => togglePipelineCardField(field.key)}
+                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <span className="text-sm flex-1">{field.label}</span>
+                    {field.locked && <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />}
+                    {field.isCustomField && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Custom</Badge>}
+                  </div>
+                ))}
+
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 mt-4 border-t pt-4">Available Fields</div>
+              {allCardFields
+                .filter(f => !pipelineCardFields.includes(f.key))
+                .filter(f => !cardFieldSearch || f.label.toLowerCase().includes(cardFieldSearch.toLowerCase()))
+                .map(field => (
+                  <div
+                    key={field.key}
+                    className="flex items-center gap-3 py-2.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
+                  >
+                    <GripVertical className="h-4 w-4 text-muted-foreground/20 flex-shrink-0" />
+                    <Checkbox
+                      checked={false}
+                      onCheckedChange={() => togglePipelineCardField(field.key)}
+                    />
+                    <span className="text-sm flex-1 text-muted-foreground">{field.label}</span>
+                    {field.isCustomField && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Custom</Badge>}
+                  </div>
+                ))}
+              {allCardFields
+                .filter(f => !pipelineCardFields.includes(f.key))
+                .filter(f => !cardFieldSearch || f.label.toLowerCase().includes(cardFieldSearch.toLowerCase()))
+                .length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {cardFieldSearch ? 'No matching fields found.' : 'All fields are currently active.'}
+                </p>
+              )}
+            </div>
+          </ScrollArea>
+          <div className="border-t p-4 flex-shrink-0">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                const defaults = PIPELINE_CARD_FIELDS.filter(f => f.defaultVisible).map(f => f.key);
+                setPipelineCardFields(defaults);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
+              }}
+            >
+              Reset to Defaults
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
