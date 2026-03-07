@@ -11868,9 +11868,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       if (search && typeof search === 'string') {
         whereConditions.push(
           or(
-            like(sql`${staff.firstName} || ' ' || ${staff.lastName}`, `%${search}%`),
-            like(staff.email, `%${search}%`),
-            like(staff.department, `%${search}%`)
+            ilike(sql`${staff.firstName} || ' ' || ${staff.lastName}`, `%${search}%`),
+            ilike(staff.email, `%${search}%`),
+            ilike(staff.department, `%${search}%`)
           )
         );
       }

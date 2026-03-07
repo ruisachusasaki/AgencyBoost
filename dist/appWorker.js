@@ -11613,9 +11613,9 @@ AgencyBoost CRM`
       if (search && typeof search === "string") {
         whereConditions.push(
           or4(
-            like2(sql3`${staff.firstName} || ' ' || ${staff.lastName}`, `%${search}%`),
-            like2(staff.email, `%${search}%`),
-            like2(staff.department, `%${search}%`)
+            ilike(sql3`${staff.firstName} || ' ' || ${staff.lastName}`, `%${search}%`),
+            ilike(staff.email, `%${search}%`),
+            ilike(staff.department, `%${search}%`)
           )
         );
       }
