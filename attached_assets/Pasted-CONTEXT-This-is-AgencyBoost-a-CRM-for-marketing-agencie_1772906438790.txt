@@ -1,0 +1,84 @@
+CONTEXT:
+This is AgencyBoost, a CRM for marketing agencies. We are building a NEW 
+"New Hire Onboarding Checklists" feature. This is a standalone module — 
+completely separate from the existing Tasks system.
+
+The database uses PostgreSQL with Drizzle ORM. Schema is defined in 
+shared/schema.ts. Do NOT modify any existing tables or existing schema 
+definitions.
+
+TASK:
+Add the following NEW tables to shared/schema.ts and create the 
+corresponding Drizzle migration.
+
+NEW TABLES:
+
+1. onboarding_templates
+   - id (serial primary key)
+   - teamId (integer, references teams table, not null)
+   - positionName (text, not null) — must match position names as stored 
+     on staff records
+   - totalDays (integer, not null, default 10)
+   - dayUnlockMode (text, not null, default 'calendar') — either 
+     'calendar' or 'completion'
+   - createdBy (integer, references staff/users table)
+   - createdAt (timestamp, default now)
+   - updatedAt (timestamp, default now)
+
+2. onboarding_template_items
+   - id (serial primary key)
+   - templateId (integer, references onboarding_templates, not null, 
+     cascade delete)
+   - dayNumber (integer, not null) — which day this item belongs to (1-N)
+   - sortOrder (integer, not null, default 0) — for drag-and-drop ordering
+   - title (text, not null)
+   - description (text, nullable)
+   - itemType (text, not null) — 'text', 'kb_article', or 
+     'training_course'
+   - referenceId (integer, nullable) — KB article ID or training course ID
+   - isRequired (boolean, default true)
+   - createdAt (timestamp, default now)
+
+3. onboarding_instances
+   - id (serial primary key)
+   - staffId (integer, references staff/users table, not null)
+   - templateId (integer, references onboarding_templates, nullable) — 
+     kept for reference but instance is driven by snapshot
+   - templateSnapshot (jsonb, not null) — full copy of template + all 
+     items at spawn time
+   - status (text, not null, default 'active') — 'active', 'completed', 
+     'paused'
+   - startDate (date, not null) — copied from staff start_date at spawn 
+     time
+   - completedAt (timestamp, nullable)
+   - createdAt (timestamp, default now)
+
+4. onboarding_instance_items
+   - id (serial primary key)
+   - instanceId (integer, references onboarding_instances, not null, 
+     cascade delete)
+   - templateItemId (integer, nullable) — reference to original template 
+     item for LMS sync lookups
+   - dayNumber (integer, not null)
+   - sortOrder (integer, not null, default 0)
+   - title (text, not null)
+   - description (text, nullable)
+   - itemType (text, not null) — 'text', 'kb_article', or 
+     'training_course'
+   - referenceId (integer, nullable)
+   - isRequired (boolean, default true)
+   - isCompleted (boolean, default false)
+   - completedAt (timestamp, nullable)
+   - completedBy (integer, nullable, references staff/users table)
+   - autoCompleted (boolean, default false) — true when marked complete 
+     via LMS sync
+   - createdAt (timestamp, default now)
+
+PROTECTIVE RULES:
+- Do NOT modify any existing tables, types, or schema definitions
+- Do NOT touch vite.config.ts, package.json, or drizzle.config.ts
+- Do NOT alter any existing routes, components, or server logic
+- Only add — never remove or rename existing schema elements
+- After adding to schema.ts, run the Drizzle migration to push changes 
+  to the database
+- Confirm all 4 tables were created successfully

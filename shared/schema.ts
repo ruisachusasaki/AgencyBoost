@@ -5665,3 +5665,72 @@ export const insertCustomFormSubmissionSchema = createInsertSchema(customFormSub
 });
 export type CustomFormSubmission = typeof customFormSubmissions.$inferSelect;
 export type InsertCustomFormSubmission = z.infer<typeof insertCustomFormSubmissionSchema>;
+
+export const onboardingTemplates = pgTable("onboarding_templates", {
+  id: serial("id").primaryKey(),
+  teamId: varchar("team_id").references(() => departments.id).notNull(),
+  positionName: text("position_name").notNull(),
+  totalDays: integer("total_days").notNull().default(10),
+  dayUnlockMode: text("day_unlock_mode").notNull().default("calendar"),
+  createdBy: uuid("created_by").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const onboardingTemplateItems = pgTable("onboarding_template_items", {
+  id: serial("id").primaryKey(),
+  templateId: integer("template_id").references(() => onboardingTemplates.id, { onDelete: "cascade" }).notNull(),
+  dayNumber: integer("day_number").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  title: text("title").notNull(),
+  description: text("description"),
+  itemType: text("item_type").notNull(),
+  referenceId: integer("reference_id"),
+  isRequired: boolean("is_required").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const onboardingInstances = pgTable("onboarding_instances", {
+  id: serial("id").primaryKey(),
+  staffId: uuid("staff_id").references(() => staff.id).notNull(),
+  templateId: integer("template_id").references(() => onboardingTemplates.id),
+  templateSnapshot: jsonb("template_snapshot").notNull(),
+  status: text("status").notNull().default("active"),
+  startDate: date("start_date").notNull(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const onboardingInstanceItems = pgTable("onboarding_instance_items", {
+  id: serial("id").primaryKey(),
+  instanceId: integer("instance_id").references(() => onboardingInstances.id, { onDelete: "cascade" }).notNull(),
+  templateItemId: integer("template_item_id"),
+  dayNumber: integer("day_number").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  title: text("title").notNull(),
+  description: text("description"),
+  itemType: text("item_type").notNull(),
+  referenceId: integer("reference_id"),
+  isRequired: boolean("is_required").default(true),
+  isCompleted: boolean("is_completed").default(false),
+  completedAt: timestamp("completed_at"),
+  completedBy: uuid("completed_by").references(() => staff.id),
+  autoCompleted: boolean("auto_completed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOnboardingTemplateSchema = createInsertSchema(onboardingTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export type OnboardingTemplate = typeof onboardingTemplates.$inferSelect;
+export type InsertOnboardingTemplate = z.infer<typeof insertOnboardingTemplateSchema>;
+
+export const insertOnboardingTemplateItemSchema = createInsertSchema(onboardingTemplateItems).omit({ id: true, createdAt: true });
+export type OnboardingTemplateItem = typeof onboardingTemplateItems.$inferSelect;
+export type InsertOnboardingTemplateItem = z.infer<typeof insertOnboardingTemplateItemSchema>;
+
+export const insertOnboardingInstanceSchema = createInsertSchema(onboardingInstances).omit({ id: true, createdAt: true });
+export type OnboardingInstance = typeof onboardingInstances.$inferSelect;
+export type InsertOnboardingInstance = z.infer<typeof insertOnboardingInstanceSchema>;
+
+export const insertOnboardingInstanceItemSchema = createInsertSchema(onboardingInstanceItems).omit({ id: true, createdAt: true });
+export type OnboardingInstanceItem = typeof onboardingInstanceItems.$inferSelect;
+export type InsertOnboardingInstanceItem = z.infer<typeof insertOnboardingInstanceItemSchema>;

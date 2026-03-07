@@ -1,0 +1,200 @@
+CONTEXT:
+This is AgencyBoost, a CRM for marketing agencies. We are building a 
+"New Hire Onboarding Checklists" feature. The database tables 
+(onboarding_templates, onboarding_template_items, onboarding_instances, 
+onboarding_instance_items) have already been created in the last prompt.
+
+This prompt builds the TEMPLATE BUILDER — where managers design onboarding 
+checklists per position. This lives under Settings > HR Settings as a new 
+tab called "Onboarding Templates".
+
+ALWAYS use the primary teal theme color (hsl(179, 100%, 39%) / #00C9C6) 
+for buttons, accents, and interactive elements. Never use blue.
+
+═══════════════════════════════════════
+PART A — BACKEND API ROUTES
+═══════════════════════════════════════
+
+Add the following routes to server/routes.ts. All routes require 
+requireAuth(). Admin bypasses all permission checks.
+
+GET    /api/onboarding-templates
+  - Admins: return all templates with teamName joined
+  - Managers: return only templates where teamId matches the manager's 
+    assigned team
+  - Include item count per template
+
+GET    /api/onboarding-templates/:id
+  - Return full template with all onboarding_template_items ordered by 
+    dayNumber ASC, sortOrder ASC
+
+POST   /api/onboarding-templates
+  - Body: { teamId, positionName, totalDays, dayUnlockMode }
+  - Set createdBy to the authenticated user's id
+  - Managers can only create for their own teamId
+
+PUT    /api/onboarding-templates/:id
+  - Body: { positionName, totalDays, dayUnlockMode }
+  - Managers can only edit templates belonging to their team
+
+DELETE /api/onboarding-templates/:id
+  - Soft check: if any onboarding_instances reference this templateId, 
+    return a 400 with message "Cannot delete — active onboarding instances 
+    exist for this template." Otherwise delete cascade.
+
+POST   /api/onboarding-templates/:id/items
+  - Body: { dayNumber, sortOrder, title, description, itemType, 
+    referenceId, isRequired }
+  - Validates itemType is one of: 'text', 'kb_article', 'training_course'
+  - If itemType is 'text', referenceId must be null
+
+PUT    /api/onboarding-templates/:id/items/:itemId
+  - Body: same fields as POST, all optional
+  - Updates only the fields provided
+
+DELETE /api/onboarding-templates/:id/items/:itemId
+  - Hard delete (items have no instances of their own)
+
+PUT    /api/onboarding-templates/:id/items/reorder
+  - Body: { items: [{ id, dayNumber, sortOrder }] }
+  - Bulk update dayNumber and sortOrder for drag-and-drop saves
+  - Use a transaction to update all items atomically
+
+GET    /api/kb-articles/search?q=searchTerm
+  - If this route does not already exist, add it
+  - Return active/published KB articles matching the search term
+  - Fields: id, title, category, slug
+  - Limit 10 results
+
+GET    /api/training-courses/search?q=searchTerm
+  - If this route does not already exist, add it
+  - Return published/active training courses matching search term
+  - Fields: id, title, description (truncated to 100 chars)
+  - Limit 10 results
+  - Check the existing LMS/training tables to find the correct table 
+    and status field names before writing this query
+
+═══════════════════════════════════════
+PART B — FRONTEND TEMPLATE BUILDER
+═══════════════════════════════════════
+
+Create the following new files:
+  client/src/pages/settings/OnboardingTemplates.tsx
+  client/src/components/onboarding/TemplateBuilder.tsx
+  client/src/components/onboarding/TemplateItemForm.tsx
+  client/src/components/onboarding/ResourceSearchModal.tsx
+
+─────────────────────────────────────
+OnboardingTemplates.tsx (List Page)
+─────────────────────────────────────
+- Page header: "Onboarding Templates" with a "+ New Template" button 
+  (teal, top right)
+- Templates displayed in a grouped layout — each group is a Department/
+  Team name as a section header, with cards beneath for each template 
+  in that team
+- Each template card shows:
+    - Position name (bold)
+    - Day count: "X-day checklist"
+    - Item count: "Y items"
+    - Unlock mode badge: "Calendar" or "Completion-gated"
+    - Edit button (pencil icon)
+    - Delete button (trash icon, with confirmation dialog)
+- Clicking Edit navigates to /settings/onboarding-templates/:id
+- "+ New Template" opens a modal/dialog with fields:
+    - Department (dropdown, populated from teams API)
+    - Position Name (text input)
+    - Total Days (number input, default 10, min 1, max 90)
+    - Day Unlock Mode (radio or select: "Calendar-based" | 
+      "Completion-gated")
+    - Save button creates the template then navigates to the builder
+
+─────────────────────────────────────
+TemplateBuilder.tsx (Builder Page)
+─────────────────────────────────────
+This is the main drag-and-drop editor for a single template.
+
+Layout:
+- Left panel: day navigation sidebar — a vertical list of "Day 1", 
+  "Day 2" ... "Day N" buttons. Clicking jumps to that day's section.
+  Active day highlighted in teal.
+- Right panel: scrollable content area with one section per day
+
+Each Day Section:
+- Header: "Day 1", "Day 2" etc. with an "+ Add Item" button on the right
+- Items within a day are draggable (use @hello-pangea/dnd or 
+  react-beautiful-dnd if already installed, otherwise use a simple 
+  mouse-event based drag approach with onDragStart/onDragOver/onDrop)
+- Drag handle icon (GripVertical from lucide-react) on the left of 
+  each item
+- Items can be dragged between days as well as within a day
+- After drag ends, call the reorder API endpoint to persist new order
+
+Each Item Card shows:
+- Drag handle (left)
+- Item type badge: "Text", "KB Article", or "Training Course" — each 
+  a different subtle color (teal for text, purple for KB, orange for 
+  training)
+- Title (bold)
+- Description preview (1 line, truncated)
+- For KB Article items: a small "📄 Article linked" indicator with 
+  article title
+- For Training Course items: a small "🎓 Course linked" indicator with 
+  course title
+- Broken link warning: if referenceId is set but the referenced 
+  article/course cannot be found in the search results, show a yellow 
+  warning badge "⚠ Resource not found"
+- Edit icon (pencil) — opens TemplateItemForm in a slide-over panel 
+  or dialog
+- Delete icon (trash) — confirmation then delete
+
+─────────────────────────────────────
+TemplateItemForm.tsx (Add/Edit Item)
+─────────────────────────────────────
+A dialog/sheet that opens when adding or editing a template item.
+
+Fields:
+- Day Number (number input or dropdown of available days)
+- Item Type (segmented control or tabs): Text | KB Article | 
+  Training Course
+- Title (text input, required)
+- Description (textarea, optional)
+- Is Required (toggle/checkbox)
+
+Conditional fields based on Item Type:
+- If "Text": no additional fields
+- If "KB Article": show a search field that calls 
+  /api/kb-articles/search?q= as the user types (debounced 300ms). 
+  Results appear as a dropdown list showing title + category. 
+  Clicking a result sets referenceId and shows the selected article 
+  title with a clear (X) button.
+- If "Training Course": same pattern but calls 
+  /api/training-courses/search?q=. Show title + truncated description.
+
+Save button: POST or PUT to the appropriate items endpoint, then 
+invalidate the template query to refresh.
+
+─────────────────────────────────────
+Navigation Integration
+─────────────────────────────────────
+- Add "Onboarding Templates" as a tab under Settings > HR Settings 
+  (alongside existing HR Settings tabs)
+- Add routes in the router:
+    /settings/hr/onboarding-templates → OnboardingTemplates.tsx
+    /settings/hr/onboarding-templates/:id → TemplateBuilder.tsx
+- Managers and Admins can access. Regular Users cannot see this tab.
+
+═══════════════════════════════════════
+PROTECTIVE RULES
+═══════════════════════════════════════
+- Do NOT modify any existing tables, schema, or migrations
+- Do NOT modify any existing routes — only ADD new ones
+- Do NOT touch vite.config.ts, package.json, or drizzle.config.ts
+- Do NOT modify any existing HR Settings tabs or their functionality
+- Do NOT modify any existing KB or Training/LMS components
+- Use TanStack Query v5 object form for all queries:
+  useQuery({ queryKey: [...], queryFn: ... })
+- Toast notifications: only "default" and "destructive" variants
+- Icons from lucide-react only
+- All buttons and accents must use teal: hsl(179, 100%, 39%)
+- Check the existing teams, staff, kb_articles, and training tables 
+  carefully before writing any query — use actual column names
