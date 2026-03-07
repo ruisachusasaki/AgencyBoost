@@ -2218,6 +2218,13 @@ async function setupFullApp(server: any) {
       }).catch(err => {
         log(`⚠️ Failed to start recurring task generation service: ${err.message}`);
       });
+
+      import('./services/onboardingNotificationService').then(({ startOnboardingNotificationService }) => {
+        startOnboardingNotificationService();
+        log("✅ Onboarding notification service started");
+      }).catch(err => {
+        log(`⚠️ Failed to start onboarding notification service: ${err.message}`);
+      });
     });
   } catch (err: any) {
     log(`❌ Error during app initialization: ${err.message}`);

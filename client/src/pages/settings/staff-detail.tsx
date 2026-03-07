@@ -25,6 +25,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Staff, InsertStaff, Role, NotificationSettings, InsertNotificationSettings, Department, Position, StaffLinkedEmail } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import NotificationSettingsPanel from "@/components/settings/NotificationSettingsPanel";
+import StaffOnboardingHistory from "@/components/onboarding/StaffOnboardingHistory";
 
 const userTypes = [
   "Admin",
@@ -1372,6 +1373,10 @@ export default function StaffDetail() {
               </Card>
             </form>
           </Form>
+
+          {isAdmin && id && (
+            <StaffOnboardingHistory staffId={id} />
+          )}
         </div>
       </div>
     </div>

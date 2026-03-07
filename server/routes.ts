@@ -42304,6 +42304,138 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   });
 
   // ═══════════════════════════════════════════════════════════
+  // ONBOARDING — STAFF ONBOARDING HISTORY
+  // ═══════════════════════════════════════════════════════════
+
+  app.get("/api/staff/:staffId/onboarding-history", requireAuth(), async (req, res) => {
+    try {
+      const isAdmin = await isCurrentUserAdmin(req);
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Admin or Manager access required" });
+      }
+
+      const { staffId } = req.params;
+
+      const instances = await db.select()
+        .from(onboardingInstances)
+        .where(eq(onboardingInstances.staffId, staffId))
+        .orderBy(sql`${onboardingInstances.createdAt} DESC`);
+
+      const result = [];
+      for (const inst of instances) {
+        const items = await db.select()
+          .from(onboardingInstanceItems)
+          .where(eq(onboardingInstanceItems.instanceId, inst.id));
+
+        const totalItems = items.length;
+        const completedItems = items.filter(i => i.isCompleted).length;
+        const requiredItems = items.filter(i => i.isRequired).length;
+        const completedRequiredItems = items.filter(i => i.isRequired && i.isCompleted).length;
+        const percentComplete = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
+        const snapshot = inst.templateSnapshot as any;
+
+        result.push({
+          id: inst.id,
+          status: inst.status,
+          startDate: inst.startDate,
+          completedAt: inst.completedAt,
+          createdAt: inst.createdAt,
+          totalDays: snapshot?.totalDays || 0,
+          positionName: snapshot?.positionName || "Unknown",
+          totalItems,
+          completedItems,
+          requiredItems,
+          completedRequiredItems,
+          percentComplete,
+        });
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching onboarding history:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding history" });
+    }
+  });
+
+  app.get("/api/staff/:staffId/onboarding-history/:instanceId", requireAuth(), async (req, res) => {
+    try {
+      const isAdmin = await isCurrentUserAdmin(req);
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Admin or Manager access required" });
+      }
+
+      const instanceId = parseInt(req.params.instanceId);
+      const { staffId } = req.params;
+
+      const [instance] = await db.select()
+        .from(onboardingInstances)
+        .where(and(
+          eq(onboardingInstances.id, instanceId),
+          eq(onboardingInstances.staffId, staffId)
+        ));
+
+      if (!instance) {
+        return res.status(404).json({ error: "Instance not found" });
+      }
+
+      const items = await db.select()
+        .from(onboardingInstanceItems)
+        .where(eq(onboardingInstanceItems.instanceId, instanceId))
+        .orderBy(onboardingInstanceItems.dayNumber, onboardingInstanceItems.orderIndex);
+
+      const snapshot = instance.templateSnapshot as any;
+
+      const completedByIds = [...new Set(items.filter(i => i.completedBy).map(i => i.completedBy!))];
+      let completedByMap: Record<string, string> = {};
+      if (completedByIds.length > 0) {
+        const staffMembers = await db.select({ id: staff.id, firstName: staff.firstName, lastName: staff.lastName })
+          .from(staff)
+          .where(sql`${staff.id} IN ${completedByIds}`);
+        for (const s of staffMembers) {
+          completedByMap[s.id] = `${s.firstName} ${s.lastName}`;
+        }
+      }
+
+      const dayMap: Record<number, any[]> = {};
+      for (const item of items) {
+        const dn = item.dayNumber;
+        if (!dayMap[dn]) dayMap[dn] = [];
+        dayMap[dn].push({
+          ...item,
+          completedByName: item.completedBy ? completedByMap[item.completedBy] || null : null,
+        });
+      }
+
+      const days = Object.entries(dayMap).map(([dayNum, dayItems]) => ({
+        dayNumber: parseInt(dayNum),
+        items: dayItems,
+      })).sort((a, b) => a.dayNumber - b.dayNumber);
+
+      const totalItems = items.length;
+      const completedItems = items.filter(i => i.isCompleted).length;
+      const requiredItems = items.filter(i => i.isRequired).length;
+      const completedRequiredItems = items.filter(i => i.isRequired && i.isCompleted).length;
+
+      res.json({
+        ...instance,
+        positionName: snapshot?.positionName || "Unknown",
+        totalDays: snapshot?.totalDays || 0,
+        dayUnlockMode: snapshot?.dayUnlockMode || "calendar",
+        totalItems,
+        completedItems,
+        requiredItems,
+        completedRequiredItems,
+        percentComplete: totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0,
+        days,
+      });
+    } catch (error: any) {
+      console.error("Error fetching onboarding history detail:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding history detail" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════
   // ONBOARDING — LMS SYNC (ADMIN MANUAL TRIGGER)
   // ═══════════════════════════════════════════════════════════
 

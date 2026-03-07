@@ -27,7 +27,8 @@ import {
   MoreHorizontal,
   GripVertical,
   Network,
-  ClipboardList
+  ClipboardList,
+  BellRing
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +41,7 @@ import OrgChartStructureBuilder from "@/components/hr/org-chart-structure-builde
 import OnboardingTemplates from "@/pages/settings/OnboardingTemplates";
 import { Link } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 
 // Progression Status Manager Component
@@ -488,6 +490,107 @@ interface TimeOffCategory {
   createdAt: string;
 }
 
+function OnboardingAlertsSettings() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: allSettings = [] } = useQuery<any[]>({
+    queryKey: ["/api/task-settings"],
+  });
+
+  const getSettingValue = (key: string, defaultVal: any) => {
+    const setting = allSettings.find((s: any) => s.settingKey === key);
+    if (!setting) return defaultVal;
+    const val = typeof setting.settingValue === 'object' ? (setting.settingValue as any).value : setting.settingValue;
+    return val ?? defaultVal;
+  };
+
+  const dayUnlockEnabled = getSettingValue("onboarding_day_unlock_notifications", true);
+  const behindThreshold = parseInt(String(getSettingValue("onboarding_behind_schedule_threshold", 2)), 10) || 2;
+
+  const [localDayUnlock, setLocalDayUnlock] = useState<boolean | null>(null);
+  const [localThreshold, setLocalThreshold] = useState<number | null>(null);
+
+  const effectiveDayUnlock = localDayUnlock !== null ? localDayUnlock : dayUnlockEnabled === true || dayUnlockEnabled === "true";
+  const effectiveThreshold = localThreshold !== null ? localThreshold : behindThreshold;
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/task-settings", {
+        settingKey: "onboarding_day_unlock_notifications",
+        settingValue: { value: effectiveDayUnlock },
+        description: "Notify new hires when next day unlocks",
+      });
+      await apiRequest("POST", "/api/task-settings", {
+        settingKey: "onboarding_behind_schedule_threshold",
+        settingValue: { value: effectiveThreshold },
+        description: "Behind schedule alert threshold (days)",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-settings"] });
+      toast({ title: "Onboarding alert settings saved" });
+      setLocalDayUnlock(null);
+      setLocalThreshold(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to save settings", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BellRing className="h-5 w-5 text-[hsl(179,100%,39%)]" />
+          Onboarding Alerts
+        </CardTitle>
+        <CardDescription>Configure automated notifications for the onboarding process</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="space-y-1 flex-1 mr-4">
+            <label className="text-sm font-medium">Notify new hires when next day unlocks</label>
+            <p className="text-xs text-gray-500">
+              Send an in-app notification each morning when a new onboarding day becomes available for the hire
+            </p>
+          </div>
+          <Switch
+            checked={effectiveDayUnlock}
+            onCheckedChange={(checked) => setLocalDayUnlock(checked)}
+            className="data-[state=checked]:bg-[hsl(179,100%,39%)]"
+          />
+        </div>
+
+        <div className="p-4 border rounded-lg space-y-2">
+          <label className="text-sm font-medium">Behind schedule alert threshold (days)</label>
+          <p className="text-xs text-gray-500">
+            Notify the team manager when a new hire has incomplete required items from this many days ago or more
+          </p>
+          <Input
+            type="number"
+            min={1}
+            max={14}
+            value={effectiveThreshold}
+            onChange={(e) => setLocalThreshold(Math.max(1, Math.min(14, parseInt(e.target.value) || 1)))}
+            className="w-24"
+          />
+        </div>
+
+        <div className="flex justify-end">
+          <Button
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending}
+            className="bg-[hsl(179,100%,39%)] hover:bg-[hsl(179,100%,33%)] text-white"
+          >
+            {saveMutation.isPending ? "Saving..." : "Save Settings"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function HRSettingsPage() {
   const [activeTab, setActiveTab] = useState("time-off-types");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -652,7 +755,8 @@ export default function HRSettingsPage() {
                 { id: "offboarding-form", name: "Offboarding Form", icon: Users },
                 { id: "one-on-one-settings", name: "1v1 Settings", icon: MessageCircle },
                 { id: "org-chart", name: "Org Chart", icon: Network },
-                { id: "onboarding-templates", name: "Onboarding Templates", icon: ClipboardList }
+                { id: "onboarding-templates", name: "Onboarding Templates", icon: ClipboardList },
+                { id: "onboarding-alerts", name: "Onboarding Alerts", icon: BellRing }
               ];
               
               const visibleTabs = allTabs.slice(0, visibleTabsCount);
@@ -756,6 +860,10 @@ export default function HRSettingsPage() {
 
         <TabsContent value="onboarding-templates" className="space-y-6">
           <OnboardingTemplates />
+        </TabsContent>
+
+        <TabsContent value="onboarding-alerts" className="space-y-6">
+          <OnboardingAlertsSettings />
         </TabsContent>
 
       </Tabs>
