@@ -2950,7 +2950,7 @@ export default function Sales() {
                                             </Button>
                                           </DropdownMenuTrigger>
                                           <DropdownMenuContent align="end">
-                                            {(quote.status === 'draft' || quote.status === 'approved') && (
+                                            {!quote.publicToken && quote.status !== 'rejected' && (
                                               <DropdownMenuItem
                                                 onClick={() => handleQuoteStatusChange(quote.id, 'sent', quote)}
                                               >
