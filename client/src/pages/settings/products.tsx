@@ -215,6 +215,8 @@ export default function ProductsSettings() {
 
   const createNameRef = useRef<HTMLInputElement>(null);
   const editNameRef = useRef<HTMLInputElement>(null);
+  const createNameCursorRef = useRef<number>(0);
+  const editNameCursorRef = useRef<number>(0);
   const [createTemplateDescription, setCreateTemplateDescription] = useState("");
   const [editTemplateDescription, setEditTemplateDescription] = useState("");
   const [descEditorKey, setDescEditorKey] = useState(0);
@@ -247,20 +249,27 @@ export default function ProductsSettings() {
     return [...nativeMergeTagOptions, ...customFieldTags];
   }, [customFieldsList]);
 
-  const insertMergeTag = (ref: React.RefObject<HTMLTextAreaElement | HTMLInputElement | null>, tag: string) => {
+  const saveCursorPosition = (ref: React.RefObject<HTMLInputElement | null>, cursorRef: React.MutableRefObject<number>) => {
+    const el = ref.current;
+    if (el) {
+      cursorRef.current = el.selectionStart ?? el.value.length;
+    }
+  };
+
+  const insertMergeTagIntoInput = (ref: React.RefObject<HTMLInputElement | null>, cursorRef: React.MutableRefObject<number>, tag: string) => {
     const el = ref.current;
     if (!el) return;
-    const start = el.selectionStart ?? 0;
-    const end = el.selectionEnd ?? 0;
+    const pos = cursorRef.current;
     const currentValue = el.value;
-    const newValue = currentValue.substring(0, start) + tag + currentValue.substring(end);
-    const proto = el instanceof HTMLTextAreaElement ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    const newValue = currentValue.substring(0, pos) + tag + currentValue.substring(pos);
+    const proto = window.HTMLInputElement.prototype;
     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
     nativeInputValueSetter?.call(el, newValue);
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.focus();
-    const newCursorPos = start + tag.length;
+    const newCursorPos = pos + tag.length;
     el.setSelectionRange(newCursorPos, newCursorPos);
+    cursorRef.current = newCursorPos;
   };
 
   // Form state for controlled Select components
@@ -3205,7 +3214,7 @@ export default function ProductsSettings() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label htmlFor="template-name">Template Name *</Label>
-                <Popover onOpenChange={() => setMergeTagSearch("")}>
+                <Popover onOpenChange={(open) => { setMergeTagSearch(""); if (open) saveCursorPosition(createNameRef, createNameCursorRef); }}>
                   <PopoverTrigger asChild>
                     <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
                       <Tags className="h-3.5 w-3.5" />
@@ -3239,7 +3248,7 @@ export default function ProductsSettings() {
                                 key={option.tag}
                                 type="button"
                                 className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                onClick={() => insertMergeTag(createNameRef, option.tag)}
+                                onClick={() => insertMergeTagIntoInput(createNameRef, createNameCursorRef, option.tag)}
                               >
                                 <span className="font-medium truncate mr-2">{option.label}</span>
                                 <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
@@ -3256,7 +3265,7 @@ export default function ProductsSettings() {
                   </PopoverContent>
                 </Popover>
               </div>
-              <Input ref={createNameRef} id="template-name" name="name" required placeholder="e.g., Set up {{product.name}} for {{client.name}}" />
+              <Input ref={createNameRef} id="template-name" name="name" required placeholder="e.g., Set up {{product.name}} for {{client.name}}" onBlur={() => saveCursorPosition(createNameRef, createNameCursorRef)} />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -3295,7 +3304,7 @@ export default function ProductsSettings() {
                                 key={option.tag}
                                 type="button"
                                 className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                onClick={() => { const tag = option.tag; setTimeout(() => { if (createDescEditorRef.current) { createDescEditorRef.current.insertText(tag); } else { setCreateTemplateDescription(prev => prev ? prev + tag : tag); } }, 50); }}
+                                onClick={() => { const tag = option.tag; setTimeout(() => { if (createDescEditorRef.current) { createDescEditorRef.current.insertText(tag); } else { setCreateTemplateDescription(prev => prev ? prev + tag : tag); } }, 150); }}
                               >
                                 <span className="font-medium truncate mr-2">{option.label}</span>
                                 <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
@@ -3456,7 +3465,7 @@ export default function ProductsSettings() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <Label htmlFor="edit-template-name">Template Name *</Label>
-                  <Popover onOpenChange={() => setMergeTagSearch("")}>
+                  <Popover onOpenChange={(open) => { setMergeTagSearch(""); if (open) saveCursorPosition(editNameRef, editNameCursorRef); }}>
                     <PopoverTrigger asChild>
                       <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
                         <Tags className="h-3.5 w-3.5" />
@@ -3490,7 +3499,7 @@ export default function ProductsSettings() {
                                   key={option.tag}
                                   type="button"
                                   className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                  onClick={() => insertMergeTag(editNameRef, option.tag)}
+                                  onClick={() => insertMergeTagIntoInput(editNameRef, editNameCursorRef, option.tag)}
                                 >
                                   <span className="font-medium truncate mr-2">{option.label}</span>
                                   <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
@@ -3507,7 +3516,7 @@ export default function ProductsSettings() {
                     </PopoverContent>
                   </Popover>
                 </div>
-                <Input ref={editNameRef} id="edit-template-name" name="name" required defaultValue={editingTemplate.name} />
+                <Input ref={editNameRef} id="edit-template-name" name="name" required defaultValue={editingTemplate.name} onBlur={() => saveCursorPosition(editNameRef, editNameCursorRef)} />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
@@ -3546,7 +3555,7 @@ export default function ProductsSettings() {
                                   key={option.tag}
                                   type="button"
                                   className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                  onClick={() => { const tag = option.tag; setTimeout(() => { if (editDescEditorRef.current) { editDescEditorRef.current.insertText(tag); } else { setEditTemplateDescription(prev => prev ? prev + tag : tag); } }, 50); }}
+                                  onClick={() => { const tag = option.tag; setTimeout(() => { if (editDescEditorRef.current) { editDescEditorRef.current.insertText(tag); } else { setEditTemplateDescription(prev => prev ? prev + tag : tag); } }, 150); }}
                                 >
                                   <span className="font-medium truncate mr-2">{option.label}</span>
                                   <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
