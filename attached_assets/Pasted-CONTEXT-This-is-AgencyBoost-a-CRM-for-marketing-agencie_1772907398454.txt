@@ -1,0 +1,228 @@
+CONTEXT:
+This is AgencyBoost, a CRM for marketing agencies. We are building a 
+"New Hire Onboarding Checklists" feature. The following are already built:
+  - DB tables: onboarding_templates, onboarding_template_items, 
+    onboarding_instances, onboarding_instance_items
+  - Template builder under Settings > HR Settings > Onboarding Templates
+  - Spawn logic that creates instances on staff creation
+  - New hire view under HR > Onboarding Checklist
+  - Manager tracking dashboard under HR > Onboarding
+
+This prompt adds LMS AUTO-SYNC — when a new hire completes a training 
+course inside AgencyBoost's built-in LMS, any onboarding checklist items 
+linked to that course are automatically marked complete.
+
+═══════════════════════════════════════
+PART A — UNDERSTAND THE EXISTING LMS
+═══════════════════════════════════════
+
+Before writing any code, carefully read the existing LMS/training system:
+
+1. Find the training/LMS related tables in shared/schema.ts
+   - Identify the course completions table (likely something like 
+     training_completions, course_completions, or similar)
+   - Note the exact column names for: userId/staffId, courseId, 
+     completedAt, status
+   - Note the exact column names on the courses table for: id, title, 
+     status/publishedState
+
+2. Find the existing route(s) where a course completion is recorded
+   - Search routes.ts for POST endpoints related to training 
+     completions or course progress
+   - Identify exactly where a completion record is inserted or 
+     a status is updated to 'completed'
+   - Note the route path and handler logic
+
+3. Find if there is an existing completion event, hook, or service 
+   pattern already used elsewhere in the codebase
+   - If a completion triggers anything else already (notifications, 
+     badges, etc.), follow the same pattern
+
+Document your findings in a brief comment block at the top of the 
+new service file before writing any logic.
+
+═══════════════════════════════════════
+PART B — AUTO-SYNC SERVICE
+═══════════════════════════════════════
+
+Create a new file: server/services/onboardingLmsSyncService.ts
+
+Export a single async function:
+
+  syncLmsCompletion(staffId: number, courseId: number): Promise<void>
+
+Logic:
+
+STEP 1 — Find active onboarding instance for this staff member
+  - Query onboarding_instances where staffId = staffId AND 
+    status = 'active'
+  - If none found: return early (this staff member has no active 
+    onboarding — nothing to sync)
+
+STEP 2 — Find matching incomplete checklist items
+  - Query onboarding_instance_items where:
+      instanceId = instance.id
+      AND itemType = 'training_course'
+      AND referenceId = courseId
+      AND isCompleted = false
+  - If none found: return early (no checklist items link to 
+    this course, or already completed)
+
+STEP 3 — Mark matching items complete
+  - For each matching item, update onboarding_instance_items:
+      isCompleted = true
+      completedAt = now()
+      completedBy = staffId  (the hire themselves, auto-action)
+      autoCompleted = true
+  - Perform all updates in a single transaction
+
+STEP 4 — Check for full instance completion
+  - After marking items complete, query onboarding_instance_items 
+    for this instance:
+      count of isRequired = true AND isCompleted = false
+  - If count = 0 (all required items done):
+      update onboarding_instances set status = 'completed', 
+      completedAt = now() where id = instance.id
+
+STEP 5 — Send in-app notification to the hire
+  - Use the same notification pattern established in 
+    onboardingSpawnService.ts (Prompt 3)
+  - Notification:
+      title: "Onboarding item auto-completed"
+      message: "Your training completion was detected and 
+      '{courseTitle}' has been marked complete on your 
+      onboarding checklist."
+      userId: staffId
+  - Fetch courseTitle from the LMS courses table using courseId
+  - If notification system unavailable, console.log and skip
+
+STEP 6 — If instance was just completed (Step 4 triggered):
+  - Send an ADDITIONAL notification to the hire:
+      title: "🎉 Onboarding complete!"
+      message: "You've completed all required items in your 
+      onboarding checklist. Great work!"
+      userId: staffId
+  - Also notify the hire's manager:
+      - Find the manager: query staff table for a user where 
+        teamId = hire's teamId AND role = 'manager' (or however 
+        managers are identified — check existing pattern)
+      - If manager found, send notification:
+          title: "[Hire Name] completed onboarding"
+          message: "[First Last] has completed all required items 
+          in their onboarding checklist."
+          userId: managerId
+
+  The function must NEVER throw an unhandled error.
+  Wrap all logic in try/catch — on error, log and return.
+
+═══════════════════════════════════════
+PART C — HOOK INTO EXISTING LMS
+═══════════════════════════════════════
+
+Find the existing route where course completion is recorded 
+(identified in Part A Step 2).
+
+IMPORTANT: Read the full handler carefully before modifying. 
+Understand exactly what it does. Only add to it — do not change 
+existing logic.
+
+After the completion record is successfully saved, add at the 
+end of the success block:
+
+  // Auto-sync onboarding checklist items for this course
+  // Fire-and-forget — must not block or delay the LMS response
+  syncLmsCompletion(userId, courseId).catch(err =>
+    console.error('Onboarding LMS sync error:', err)
+  );
+
+Where userId and courseId are the values already available in 
+the handler context. Use the actual variable names present in 
+the existing handler — do not rename or reassign them.
+
+Import syncLmsCompletion at the top of routes.ts from 
+'./services/onboardingLmsSyncService'.
+
+═══════════════════════════════════════
+PART D — FRONTEND AUTO-COMPLETE INDICATOR
+═══════════════════════════════════════
+
+The ChecklistItem.tsx component built in Prompt 4 already renders 
+an "Auto-completed via Training" badge when autoCompleted = true.
+
+Verify this is working correctly:
+
+1. Confirm ChecklistItem.tsx renders the autoCompleted badge when 
+   autoCompleted = true — if not, add it now:
+     - Small teal badge beneath the item title
+     - Text: "Auto-completed via Training"
+     - Icon: Zap from lucide-react (small, inline)
+
+2. In OnboardingChecklist.tsx (the hire's view), ensure the 
+   TanStack Query for /api/onboarding/my-checklist has an 
+   appropriate refetch strategy so auto-completions appear 
+   without a manual page refresh:
+     - Set refetchInterval: 30000 (poll every 30 seconds while 
+       the page is open)
+     - This means if a hire completes a course in another tab, 
+       their checklist updates within 30 seconds automatically
+
+3. In OnboardingInstanceDrawer.tsx (the manager's drawer from 
+   Prompt 5), apply the same refetchInterval: 30000 to the 
+   instance detail query so managers see auto-completions 
+   update in near real-time as well
+
+═══════════════════════════════════════
+PART E — MANUAL SYNC ENDPOINT (ADMIN)
+═══════════════════════════════════════
+
+Add a utility route for admins to manually trigger a sync 
+in case of edge cases or missed events:
+
+POST /api/onboarding/instances/:instanceId/sync-lms
+  - Admin only
+  - For each onboarding_instance_item in this instance where:
+      itemType = 'training_course'
+      AND referenceId IS NOT NULL
+      AND isCompleted = false
+    Query the LMS completions table to check if staffId has 
+    a completion record for that courseId
+    If a completion exists: call syncLmsCompletion(staffId, courseId)
+  - Returns: 
+    { 
+      synced: number,    -- count of items that were auto-completed
+      message: string 
+    }
+  - Use case: a hire completed a course before the onboarding 
+    checklist existed, or a sync was missed due to a bug
+
+Add a "Sync LMS Completions" button in OnboardingInstanceDrawer.tsx:
+  - Only visible to Admins
+  - Small outline button in the drawer header area
+  - Icon: RefreshCw from lucide-react
+  - On click: calls POST /api/onboarding/instances/:id/sync-lms
+  - On success: show toast "Synced X training completions" and 
+    invalidate the instance query to refresh the drawer
+  - On error: show destructive toast
+
+═══════════════════════════════════════
+PROTECTIVE RULES
+═══════════════════════════════════════
+- Do NOT modify any existing LMS/training routes — only ADD 
+  the fire-and-forget call at the end of the completion handler
+- Do NOT modify any existing LMS components, pages, or logic
+- Do NOT modify OnboardingChecklist.tsx beyond adding 
+  refetchInterval — do not restructure or restyle it
+- Do NOT modify OnboardingInstanceDrawer.tsx beyond adding 
+  refetchInterval and the admin Sync button
+- Do NOT touch vite.config.ts, package.json, or drizzle.config.ts
+- Do NOT modify any existing schema or migrations
+- The sync service must NEVER block the LMS completion response — 
+  always fire-and-forget with .catch()
+- The sync service must NEVER throw unhandled errors — full 
+  try/catch wrapping required
+- All updates in Step 3 must be in a single transaction
+- Use actual column names from the LMS tables — read schema 
+  before writing any queries
+- Toast notifications: only "default" and "destructive" variants
+- Icons from lucide-react only
+- Teal accents: hsl(179, 100%, 39%)

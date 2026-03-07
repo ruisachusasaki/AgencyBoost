@@ -1,0 +1,255 @@
+CONTEXT:
+This is AgencyBoost, a CRM for marketing agencies. We are building a 
+"New Hire Onboarding Checklists" feature. The following are already built:
+  - DB tables: onboarding_templates, onboarding_template_items, 
+    onboarding_instances, onboarding_instance_items
+  - Template builder UI under Settings > HR Settings > Onboarding Templates
+  - Spawn logic that creates an onboarding_instance when a staff member 
+    is created
+
+This prompt builds the NEW HIRE VIEW — a new tab under the HR section 
+where the logged-in new hire can see and interact with their personal 
+onboarding checklist.
+
+ALWAYS use the primary teal theme color (hsl(179, 100%, 39%) / #00C9C6) 
+for buttons, accents, progress bars, and interactive elements. Never blue.
+
+═══════════════════════════════════════
+PART A — BACKEND API ROUTES
+═══════════════════════════════════════
+
+Add the following routes to server/routes.ts. All require requireAuth().
+
+─────────────────────────────────────
+GET /api/onboarding/my-checklist
+─────────────────────────────────────
+- Fetch the active onboarding_instance for the currently 
+  authenticated user (match on staffId = req.user.id, 
+  status = 'active')
+- If none found, return { instance: null }
+- Join and return all onboarding_instance_items for that instance 
+  ordered by dayNumber ASC, sortOrder ASC
+- For each item where itemType = 'kb_article' and referenceId is set:
+    attempt to join the KB articles table and include article title 
+    and slug in the response (if article not found, include 
+    referenceTitle: null to signal broken link)
+- For each item where itemType = 'training_course' and referenceId 
+  is set:
+    attempt to join the training/LMS courses table and include 
+    course title in the response (if not found, include 
+    referenceTitle: null)
+- Return shape:
+  {
+    instance: {
+      id, staffId, startDate, status, totalDays, dayUnlockMode,
+      completedAt, createdAt
+    },
+    items: [
+      {
+        id, instanceId, dayNumber, sortOrder, title, description,
+        itemType, referenceId, referenceTitle (nullable),
+        referenceUrl (nullable — slug-based URL for KB articles),
+        isRequired, isCompleted, completedAt, autoCompleted
+      }
+    ]
+  }
+
+─────────────────────────────────────
+PATCH /api/onboarding/my-checklist/items/:itemId
+─────────────────────────────────────
+- Authenticated user can only update items belonging to their own 
+  active instance
+- Body: { isCompleted: boolean }
+- If marking complete:
+    set isCompleted = true, completedAt = now(), 
+    completedBy = req.user.id
+- If unchecking:
+    set isCompleted = false, completedAt = null, completedBy = null,
+    autoCompleted = false
+- After update: check if ALL isRequired items in the instance are 
+  now complete. If yes:
+    update onboarding_instances set status = 'completed', 
+    completedAt = now() for this instance
+- Return the updated item
+
+─────────────────────────────────────
+GET /api/onboarding/my-checklist/progress
+─────────────────────────────────────
+- Returns summary stats for the authenticated user's active instance:
+  {
+    totalItems: number,
+    completedItems: number,
+    requiredItems: number,
+    completedRequiredItems: number,
+    currentDay: number,        -- days elapsed since startDate + 1
+    totalDays: number,
+    percentComplete: number,   -- based on required items only
+    isComplete: boolean
+  }
+- currentDay: calculate as DATEDIFF between today and startDate. 
+  Cap at totalDays. Minimum 1. Use business days if possible 
+  (skip weekends), otherwise calendar days is acceptable.
+
+═══════════════════════════════════════
+PART B — FRONTEND NEW HIRE VIEW
+═══════════════════════════════════════
+
+Create the following new files:
+  client/src/pages/hr/OnboardingChecklist.tsx
+  client/src/components/onboarding/ChecklistDaySection.tsx
+  client/src/components/onboarding/ChecklistItem.tsx
+
+─────────────────────────────────────
+OnboardingChecklist.tsx (Main Page)
+─────────────────────────────────────
+Query /api/onboarding/my-checklist on load.
+
+CASE 1 — No active instance (instance: null):
+  Show a friendly empty state:
+  - Illustration or large icon (ClipboardList from lucide-react)
+  - Heading: "No onboarding checklist yet"
+  - Subtext: "Your manager will set up your onboarding checklist. 
+    Check back soon!"
+  - No error, no broken UI
+
+CASE 2 — Active instance exists:
+  Page layout:
+  
+  TOP SECTION — Progress Header Card:
+  - "Welcome to the team! Here's your onboarding journey." 
+    (warm, friendly tone)
+  - Hire's name pulled from auth context
+  - Progress bar (teal) showing % of required items complete
+  - Stats row: "X of Y items complete · Day Z of N · 
+    [X days remaining OR 'Final day!' OR 'Checklist complete!']"
+  - If status = 'completed': replace progress bar with a green 
+    completion banner: "🎉 You've completed your onboarding! 
+    Great work." — checklist remains visible in read-only mode
+
+  LEFT SIDEBAR — Day Navigation:
+  - Vertical list of day buttons: "Day 1", "Day 2" ... "Day N"
+  - Each shows a small completion indicator:
+      - Fully complete day: teal checkmark circle
+      - Partially complete: teal half-fill or progress dot
+      - Locked day: lock icon (gray)
+      - Current day: teal highlight/bold
+  - Clicking a day smoothly scrolls to that day's section
+  - On mobile: replace sidebar with a horizontal scrollable 
+    day pill row at the top
+
+  MAIN CONTENT — Day Sections:
+  - Render one ChecklistDaySection per day (1 through totalDays)
+  - Days are ordered numerically
+
+─────────────────────────────────────
+ChecklistDaySection.tsx
+─────────────────────────────────────
+Props: { dayNumber, items, dayUnlockMode, startDate, isComplete, 
+         instanceStatus }
+
+Day unlock logic (replicate server-side, compute client-side for UI):
+  - Calendar mode: 
+      unlockDate = startDate + (dayNumber - 1) weekdays
+      isUnlocked = today >= unlockDate
+  - Completion mode:
+      isUnlocked = dayNumber === 1 OR all items in dayNumber-1 
+      are complete
+
+Section header:
+  - "Day {N}" bold, large
+  - If isUnlocked: show date this day corresponds to 
+    (e.g. "Monday, March 10") in gray subtext
+  - If NOT isUnlocked:
+      - Show lock icon + "Unlocks {date}" in gray
+      - Dim the entire section (opacity-50)
+      - Items are visible but not interactive (no checkboxes)
+  - Completion badge: if all required items in this day are done, 
+    show a small teal "Day Complete ✓" badge next to the day header
+
+Render each item using ChecklistItem component.
+
+─────────────────────────────────────
+ChecklistItem.tsx
+─────────────────────────────────────
+Props: { item, isUnlocked, isReadOnly, onToggle }
+
+Layout (horizontal card):
+  LEFT: Circular checkbox
+    - Circular, NOT square (matches task completion style per 
+      AgencyBoost preferences)
+    - Checked state: teal fill with white checkmark
+    - Unchecked: gray border circle
+    - Disabled/grayed if isUnlocked = false or isReadOnly = true
+    - On click: call onToggle(item.id, !item.isCompleted)
+    - Optimistic UI: update local state immediately, revert on error
+
+  MIDDLE: Item content
+    - Title (bold, strike-through if isCompleted)
+    - Description (gray, smaller, if present)
+    - Item type badge:
+        "Text" — subtle gray badge
+        "KB Article" — subtle purple badge  
+        "Training Course" — subtle orange badge
+    - If autoCompleted = true: small teal badge "Auto-completed 
+      via Training" beneath the title
+    - If referenceTitle is null but referenceId is set: yellow 
+      warning badge "⚠ Resource unavailable"
+
+  RIGHT: Action link (if applicable)
+    - If itemType = 'kb_article' and referenceTitle is not null:
+        Button/link: "Read Article →" 
+        Opens KB article URL in a new tab
+    - If itemType = 'training_course' and referenceTitle is not null:
+        Button/link: "Start Course →"
+        Opens training course page in a new tab or navigates 
+        internally (use existing LMS route pattern)
+    - If referenceTitle is null: no link shown
+
+  COMPLETION STATE:
+    - When isCompleted: entire card gets a subtle teal-tinted 
+      background (teal at ~5% opacity)
+    - completedAt timestamp shown in small gray text if completed:
+      "Completed March 10 at 2:34 PM"
+
+═══════════════════════════════════════
+PART C — NAVIGATION INTEGRATION
+═══════════════════════════════════════
+
+Add "Onboarding Checklist" as a tab under the HR section in the 
+main navigation/sidebar.
+
+- Tab label: "Onboarding Checklist"
+- Icon: ClipboardCheck from lucide-react
+- Route: /hr/onboarding-checklist
+- Visibility rules:
+    - ONLY show this tab if the logged-in user has an active OR 
+      completed onboarding_instance
+    - Query GET /api/onboarding/my-checklist on app load (or when 
+      HR section is visited) to determine visibility
+    - Do NOT show the tab to users with no instance — keeps the 
+      nav clean for existing staff
+    - Admins and Managers: always show the tab (they may want to 
+      preview what new hires see)
+
+Add the route in the router:
+  /hr/onboarding-checklist → OnboardingChecklist.tsx
+
+═══════════════════════════════════════
+PROTECTIVE RULES
+═══════════════════════════════════════
+- Do NOT modify any existing HR tabs, routes, or components
+- Do NOT modify any existing navigation items — only ADD the new tab
+- Do NOT touch vite.config.ts, package.json, or drizzle.config.ts
+- Do NOT modify any existing schema or migrations
+- Do NOT modify any existing KB or LMS/training components
+- Use TanStack Query v5 object form:
+  useQuery({ queryKey: [...], queryFn: ... })
+- useMutation for the PATCH toggle endpoint
+- Optimistic updates on checkbox toggle — revert on API error
+- Toast notifications: only "default" and "destructive" variants
+- Circular checkboxes only (NOT square) — matches AgencyBoost 
+  task completion style
+- Icons from lucide-react only
+- All teal accents: hsl(179, 100%, 39%)
+- Check actual KB article table column names (slug, status, etc.) 
+  and LMS/training table column names before writing any joins

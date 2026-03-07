@@ -1,0 +1,263 @@
+CONTEXT:
+This is AgencyBoost, a CRM for marketing agencies. We are building a 
+"New Hire Onboarding Checklists" feature. The following are already built:
+  - DB tables: onboarding_templates, onboarding_template_items, 
+    onboarding_instances, onboarding_instance_items
+  - Template builder under Settings > HR Settings > Onboarding Templates
+  - Spawn logic that creates instances on staff creation
+  - New hire view under HR > Onboarding Checklist
+
+This prompt builds the MANAGER TRACKING DASHBOARD — where managers and 
+admins monitor the onboarding progress of all new hires on their team.
+This lives under HR > Onboarding (a separate tab from the hire's own 
+"Onboarding Checklist" tab).
+
+ALWAYS use the primary teal theme color (hsl(179, 100%, 39%) / #00C9C6) 
+for buttons, accents, progress bars, and interactive elements. Never blue.
+
+═══════════════════════════════════════
+PART A — BACKEND API ROUTES
+═══════════════════════════════════════
+
+Add the following routes to server/routes.ts. All require requireAuth().
+All require Admin or Manager role — regular Users cannot access these.
+
+─────────────────────────────────────
+GET /api/onboarding/instances
+─────────────────────────────────────
+- Admins: return ALL onboarding instances across all teams
+- Managers: return only instances where the staff member's teamId 
+  matches the manager's assigned team
+- Query params (all optional):
+    ?status=active|completed|all  (default: active)
+    ?teamId=123                   (admin only filter)
+    ?search=name                  (filter by staff member name)
+- Join and return for each instance:
+    - Staff member: id, firstName, lastName, email, position, 
+      teamId, teamName, avatarUrl
+    - Instance: id, status, startDate, completedAt, createdAt,
+      totalDays (from templateSnapshot->totalDays),
+      dayUnlockMode (from templateSnapshot->dayUnlockMode)
+    - Progress stats (compute in SQL or application layer):
+        totalItems: count of onboarding_instance_items for instance
+        completedItems: count where isCompleted = true
+        requiredItems: count where isRequired = true
+        completedRequiredItems: count where isRequired = true 
+          AND isCompleted = true
+        currentDay: days elapsed since startDate (min 1, max totalDays)
+        percentComplete: (completedRequiredItems / requiredItems) * 100
+        isBehind: boolean — true if there exist isRequired = false AND 
+          isCompleted = false items from days BEFORE currentDay
+- Order by: startDate DESC
+
+─────────────────────────────────────
+GET /api/onboarding/instances/:instanceId
+─────────────────────────────────────
+- Return full instance detail for a single onboarding instance
+- Include all fields from the list endpoint above
+- Additionally include ALL onboarding_instance_items ordered by 
+  dayNumber ASC, sortOrder ASC
+- For each item: attempt to join KB article title and training 
+  course title via referenceId (same as Prompt 4 Part A)
+- Managers can only access instances belonging to their team
+- Admins can access any instance
+
+─────────────────────────────────────
+PATCH /api/onboarding/instances/:instanceId/items/:itemId
+─────────────────────────────────────
+- Allows a Manager or Admin to check/uncheck items on behalf 
+  of the hire
+- Body: { isCompleted: boolean }
+- Same completion logic as the hire's own PATCH endpoint from 
+  Prompt 4:
+    - Mark complete: isCompleted = true, completedAt = now(), 
+      completedBy = req.user.id
+    - Uncheck: isCompleted = false, completedAt = null, 
+      completedBy = null, autoCompleted = false
+- After update: check if ALL isRequired items are complete — 
+  if yes, mark instance status = 'completed', completedAt = now()
+- Return updated item
+
+─────────────────────────────────────
+PATCH /api/onboarding/instances/:instanceId/status
+─────────────────────────────────────
+- Admin or Manager only
+- Body: { status: 'active' | 'paused' | 'completed' }
+- Updates instance status
+- Used for manually pausing or reopening an onboarding instance
+- Return updated instance
+
+═══════════════════════════════════════
+PART B — FRONTEND MANAGER DASHBOARD
+═══════════════════════════════════════
+
+Create the following new files:
+  client/src/pages/hr/OnboardingDashboard.tsx
+  client/src/components/onboarding/OnboardingInstanceCard.tsx
+  client/src/components/onboarding/OnboardingInstanceDrawer.tsx
+  client/src/components/onboarding/OnboardingProgressBar.tsx
+
+─────────────────────────────────────
+OnboardingDashboard.tsx (Main Page)
+─────────────────────────────────────
+Page header: "Onboarding Dashboard" with subtitle "Track your 
+team's new hire progress"
+
+TOP SUMMARY STRIP — 4 stat cards in a row:
+  1. Active Onboardings — count of active instances
+  2. Completed This Month — count completed in current calendar month
+  3. Behind Schedule — count where isBehind = true
+  4. Avg. Completion — average percentComplete across active instances
+  All stat cards use teal accent for the number value.
+
+FILTERS BAR (below summary strip):
+  - Search input: filter by hire name (debounced 300ms)
+  - Status filter: dropdown — "Active", "Completed", "All"
+  - Department filter (Admin only): dropdown populated from teams API
+  - All filters update the query params and refetch
+
+MAIN TABLE — one row per onboarding instance:
+
+Columns:
+  1. HIRE
+     - Avatar + full name (bold) + position title beneath in gray
+     
+  2. DEPARTMENT
+     - Team/department name
+     
+  3. START DATE
+     - Formatted date (e.g. "Mar 10, 2026")
+     
+  4. PROGRESS
+     - OnboardingProgressBar component (teal fill)
+     - "X of Y required items · Z%" beneath bar in gray small text
+     
+  5. DAY
+     - "Day X of N" 
+     - If currentDay > totalDays: show "Day N of N (Complete)"
+     
+  6. STATUS BADGE
+     - Active: teal badge
+     - Completed: green badge
+     - Paused: gray badge
+     - Behind: red badge (overrides Active if isBehind = true)
+     
+  7. ACTIONS
+     - "View Details" button (outline, teal) — opens 
+       OnboardingInstanceDrawer
+     - Kebab menu (three dots) with options:
+         "Pause Onboarding" (if active)
+         "Resume Onboarding" (if paused)
+         "Mark as Complete"
+       Each calls PATCH /api/onboarding/instances/:id/status with 
+       appropriate status value and confirmation dialog before action
+
+Empty state (no instances):
+  - Icon: Users from lucide-react
+  - "No active onboardings"
+  - "New hire onboarding checklists will appear here when staff 
+    members are added with a matching position template."
+
+─────────────────────────────────────
+OnboardingProgressBar.tsx
+─────────────────────────────────────
+A reusable simple progress bar component.
+
+Props: { percent: number, showLabel?: boolean, size?: 'sm' | 'md' }
+
+- Teal fill bar (hsl(179, 100%, 39%))
+- Rounded ends
+- Smooth CSS transition on value change
+- Optional percentage label to the right
+- sm size: h-1.5, md size: h-2.5
+
+─────────────────────────────────────
+OnboardingInstanceDrawer.tsx
+─────────────────────────────────────
+A slide-over drawer (from the right) that opens when a manager 
+clicks "View Details" on a hire's row.
+
+Query GET /api/onboarding/instances/:instanceId on open.
+
+DRAWER HEADER:
+  - Avatar + hire's full name + position
+  - Status badge
+  - Start date + "Day X of N"
+  - Progress bar (OnboardingProgressBar, md size)
+  - "X of Y required items complete"
+  - Close button (X, top right)
+
+DRAWER BODY — full checklist grouped by day:
+  Same day-by-day accordion layout as the hire's own view 
+  (ChecklistDaySection style) but in a condensed read-for-manager 
+  format:
+
+  Each day section:
+  - "Day N — [date]" header
+  - Day completion badge if all required items done
+  - Items listed beneath with:
+      - Circular checkbox (manager CAN toggle these — calls 
+        PATCH /api/onboarding/instances/:instanceId/items/:itemId)
+      - Title + type badge
+      - If isCompleted: "Completed [date] by [name]" in gray small text
+      - If autoCompleted: teal "Auto-completed via Training" badge
+      - If isBehind item (required, incomplete, day < currentDay): 
+          red "Overdue" badge
+
+  Locked days: still shown but labeled "🔒 Not yet unlocked" — 
+  manager CAN still check items in locked days (manager override)
+
+DRAWER FOOTER:
+  - "Pause Onboarding" / "Resume" button (if applicable)
+  - "Mark as Complete" button
+  Both with confirmation dialogs before action.
+
+After any item toggle or status change in the drawer:
+  - Invalidate /api/onboarding/instances query so the table 
+    updates automatically in the background
+
+═══════════════════════════════════════
+PART C — NAVIGATION INTEGRATION
+═══════════════════════════════════════
+
+Add "Onboarding" as a tab under the HR section in the main 
+navigation/sidebar.
+
+- Tab label: "Onboarding"
+- Icon: Users from lucide-react
+- Route: /hr/onboarding
+- Visibility: Admins and Managers ONLY — regular Users do NOT 
+  see this tab
+- Position this tab BEFORE the "Onboarding Checklist" tab 
+  (hire's personal tab) in the nav order
+
+Add the route in the router:
+  /hr/onboarding → OnboardingDashboard.tsx
+
+Note: The hire's personal tab added in Prompt 4 was 
+"Onboarding Checklist" at /hr/onboarding-checklist. These are 
+TWO SEPARATE tabs. Do not merge or confuse them:
+  - /hr/onboarding → Manager dashboard (Admins + Managers only)
+  - /hr/onboarding-checklist → Personal checklist (new hire's view)
+
+═══════════════════════════════════════
+PROTECTIVE RULES
+═══════════════════════════════════════
+- Do NOT modify any existing HR tabs, routes, or components
+- Do NOT modify the OnboardingChecklist.tsx built in Prompt 4
+- Do NOT modify any existing navigation items — only ADD new ones
+- Do NOT touch vite.config.ts, package.json, or drizzle.config.ts
+- Do NOT modify any existing schema or migrations
+- Use TanStack Query v5 object form:
+  useQuery({ queryKey: [...], queryFn: ... })
+- useMutation for all PATCH endpoints
+- After any mutation: invalidate both the list query AND the 
+  specific instance query
+- Toast notifications: only "default" and "destructive" variants
+- Circular checkboxes in the drawer (NOT square)
+- Icons from lucide-react only
+- All teal accents: hsl(179, 100%, 39%)
+- Check actual staff table column names (firstName, lastName, 
+  avatarUrl, teamId, position) before writing any joins
+- isBehind logic: a hire is behind if any isRequired = true AND 
+  isCompleted = false items exist for days LESS THAN currentDay

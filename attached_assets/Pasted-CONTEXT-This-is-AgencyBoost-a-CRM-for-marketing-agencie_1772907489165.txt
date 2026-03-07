@@ -1,0 +1,328 @@
+CONTEXT:
+This is AgencyBoost, a CRM for marketing agencies. We are building a 
+"New Hire Onboarding Checklists" feature. The following are already built:
+  - DB tables: onboarding_templates, onboarding_template_items, 
+    onboarding_instances, onboarding_instance_items
+  - Template builder under Settings > HR Settings > Onboarding Templates
+  - Spawn logic that creates instances on staff creation
+  - New hire view under HR > Onboarding Checklist
+  - Manager tracking dashboard under HR > Onboarding
+  - LMS auto-sync service
+
+This final prompt adds two remaining pieces:
+  1. Background notification jobs (daily day-unlock alerts + 
+     behind-schedule manager alerts)
+  2. Completed checklist archive on the staff profile page
+
+═══════════════════════════════════════
+PART A — UNDERSTAND EXISTING BACKGROUND
+        SERVICE PATTERNS
+═══════════════════════════════════════
+
+Before writing any code, carefully read the existing background 
+service architecture:
+
+1. Find how existing scheduled/background jobs are implemented
+   - The app has background services (e.g. weekly hours alerts, 
+     long-running timer alerts) — find these in the codebase
+   - Identify the file(s) where scheduled jobs are registered 
+     (likely server/appWorker.ts or a scheduler file)
+   - Note the scheduling pattern used (node-cron, setInterval, 
+     or similar)
+   - Note how these jobs access the database
+
+2. Find the existing notification creation pattern
+   - Identify the notifications table structure (columns: id, 
+     userId, title, message, isRead, createdAt — verify actual 
+     names)
+   - Find the helper function or direct insert pattern used to 
+     create notifications elsewhere in the codebase
+   - Use the EXACT same pattern — do not invent a new one
+
+3. Find the configurable settings pattern
+   - Existing background services have configurable thresholds 
+     stored in a settings table (e.g. weekly hours threshold, 
+     timer alert threshold)
+   - Find where these settings are stored and how they are read 
+     by background jobs
+   - We will add two new configurable settings for onboarding
+
+Document findings in a comment block at the top of the new 
+scheduler file before writing any logic.
+
+═══════════════════════════════════════
+PART B — CONFIGURABLE SETTINGS
+═══════════════════════════════════════
+
+Add two new configurable settings to wherever HR/onboarding 
+settings are stored (follow the existing settings pattern exactly):
+
+Setting 1: onboarding_day_unlock_notifications
+  - Type: boolean
+  - Default: true
+  - Label: "Notify new hires when next day unlocks"
+  - Description: "Send an in-app notification each morning when 
+    a new onboarding day becomes available for the hire"
+
+Setting 2: onboarding_behind_schedule_threshold
+  - Type: integer (number of days)
+  - Default: 2
+  - Label: "Behind schedule alert threshold (days)"
+  - Description: "Notify the team manager when a new hire has 
+    incomplete required items from this many days ago or more"
+
+Add these settings to the HR Settings UI:
+  - Find the existing Settings > HR Settings page
+  - Add an "Onboarding Alerts" section (below existing content, 
+    do not reorganize existing sections)
+  - Setting 1: toggle/switch with label and description
+  - Setting 2: number input (min 1, max 14) with label and 
+    description
+  - Save button that persists via the existing settings API 
+    pattern
+  - Use teal for the toggle active state and save button
+
+═══════════════════════════════════════
+PART C — BACKGROUND NOTIFICATION JOBS
+═══════════════════════════════════════
+
+Create a new file: server/services/onboardingNotificationService.ts
+
+Export two async functions following the patterns found in Part A.
+
+─────────────────────────────────────
+Function 1: runDayUnlockNotifications()
+─────────────────────────────────────
+Purpose: Each morning, notify new hires when a new onboarding 
+day has just become available.
+
+Logic:
+
+STEP 1 — Check setting
+  - Read onboarding_day_unlock_notifications setting
+  - If false: return early
+
+STEP 2 — Find all active onboarding instances
+  - Query onboarding_instances where status = 'active'
+  - Only process instances where dayUnlockMode = 'calendar'
+    (completion-gated instances unlock based on actions, 
+    not time — no morning notification needed)
+
+STEP 3 — For each instance, calculate today's unlocked day
+  - currentDay = business days elapsed since startDate + 1
+    (skip Saturday and Sunday when counting)
+  - Cap at totalDays (from templateSnapshot)
+  - If currentDay = 1 AND instance was created today: skip 
+    (spawn notification already sent at creation — avoid 
+    duplicate on Day 1)
+
+STEP 4 — Check if this day was JUST unlocked today
+  - We only want to notify on the FIRST run of each new day
+  - Check: does a notification already exist for this staffId 
+    with title matching "Day {currentDay} of your onboarding 
+    is ready" created today (same calendar date)?
+  - If yes: skip (already notified today)
+  - If no: proceed
+
+STEP 5 — Check there are actually items in this day
+  - Query onboarding_instance_items where instanceId = id 
+    AND dayNumber = currentDay
+  - If no items exist for this day: skip
+
+STEP 6 — Send notification to the hire
+  - title: "Day {currentDay} of your onboarding is ready"
+  - message: "Your Day {currentDay} onboarding items are now 
+    unlocked. Head to HR > Onboarding Checklist to continue."
+  - userId: instance.staffId
+
+  Wrap all per-instance logic in try/catch — one failing 
+  instance must not stop others from processing.
+
+─────────────────────────────────────
+Function 2: runBehindScheduleAlerts()
+─────────────────────────────────────
+Purpose: Alert managers when a new hire has fallen behind on 
+their onboarding checklist.
+
+Logic:
+
+STEP 1 — Read threshold setting
+  - Read onboarding_behind_schedule_threshold (default 2)
+  - threshold = number of days
+
+STEP 2 — Find all active instances that are behind
+  - Query onboarding_instances where status = 'active'
+  - For each instance, compute currentDay (same business day 
+    logic as above)
+  - An instance is "behind" if:
+      there exist onboarding_instance_items where:
+        instanceId = instance.id
+        AND isRequired = true
+        AND isCompleted = false
+        AND dayNumber <= (currentDay - threshold)
+  - Collect all behind instances with their hire's staffId, 
+    name, teamId, and list of overdue day numbers
+
+STEP 3 — Deduplicate — do not spam managers
+  - For each behind instance, check if a "behind schedule" 
+    notification was already sent for this instance TODAY
+  - Search notifications for userId = managerId AND title 
+    containing hire's name AND createdAt = today's date
+  - If already sent today: skip this instance
+
+STEP 4 — Find the manager for each behind hire
+  - Use the same manager-lookup pattern from 
+    onboardingLmsSyncService.ts (Prompt 6)
+  - If no manager found: log warning and skip
+
+STEP 5 — Send notification to the manager
+  - title: "[First Last] is behind on onboarding"
+  - message: "[First Last] has incomplete required items from 
+    Day {earliest overdue day}. They are currently on Day 
+    {currentDay} of {totalDays}."
+  - userId: managerId
+
+  Wrap all per-instance logic in try/catch — one failing 
+  instance must not stop others.
+
+═══════════════════════════════════════
+PART D — REGISTER JOBS IN SCHEDULER
+═══════════════════════════════════════
+
+Find the existing background job scheduler (appWorker.ts or 
+equivalent — identified in Part A).
+
+Following the EXACT same pattern used for existing scheduled jobs, 
+register two new jobs:
+
+Job 1 — Day Unlock Notifications
+  - Schedule: every weekday morning at 8:00 AM in the 
+    account's configured business timezone
+    (check how existing jobs handle timezone — follow same 
+    pattern. If no timezone handling exists use '0 8 * * 1-5')
+  - Calls: runDayUnlockNotifications()
+  - Wrap in try/catch — log errors, never crash the worker
+
+Job 2 — Behind Schedule Alerts
+  - Schedule: every weekday morning at 8:30 AM
+    (30 minutes after unlock notifications so managers see 
+    hire notifications first)
+  - Calls: runBehindScheduleAlerts()
+  - Wrap in try/catch — log errors, never crash the worker
+
+Import both functions from 
+'./services/onboardingNotificationService'.
+
+═══════════════════════════════════════
+PART E — COMPLETED CHECKLIST ARCHIVE
+        ON STAFF PROFILE
+═══════════════════════════════════════
+
+Add an "Onboarding History" section to the existing staff member 
+profile page (Settings > Staff > Specific Staff Member).
+
+─────────────────────────────────────
+New API Route
+─────────────────────────────────────
+
+Add to server/routes.ts:
+
+GET /api/staff/:staffId/onboarding-history
+  - requireAuth() — Admin or Manager only
+  - Return ALL onboarding_instances for this staffId (any status)
+  - Order by createdAt DESC
+  - For each instance include:
+      id, status, startDate, completedAt, createdAt,
+      totalDays (from templateSnapshot->totalDays),
+      positionName (from templateSnapshot->positionName),
+      progress stats:
+        totalItems, completedItems, requiredItems, 
+        completedRequiredItems, percentComplete
+  - Do NOT include full item lists here (kept lightweight)
+
+GET /api/staff/:staffId/onboarding-history/:instanceId
+  - Return full instance detail including ALL items
+  - Same shape as GET /api/onboarding/instances/:instanceId
+  - Admin or Manager only
+
+─────────────────────────────────────
+Frontend — Onboarding History Section
+─────────────────────────────────────
+
+Create: 
+  client/src/components/onboarding/StaffOnboardingHistory.tsx
+
+Find the existing staff member detail page 
+(Settings > Staff > Specific Staff Member) and add 
+StaffOnboardingHistory as a new section at the BOTTOM of the 
+page — below Work Information and all existing sections. 
+Do not reorganize or modify any existing sections.
+
+StaffOnboardingHistory.tsx:
+
+- Section header: "Onboarding History" with a 
+  ClipboardCheck icon (lucide-react)
+- Only visible to Admins and Managers
+- Query GET /api/staff/:staffId/onboarding-history on mount
+
+EMPTY STATE (no instances):
+  - Small gray text: "No onboarding history for this staff member."
+  - If Admin or Manager: show the "Spawn Onboarding Checklist" 
+    button already added in Prompt 3 (do not duplicate the 
+    button — confirm it is already rendered in Work Information 
+    and simply reference it in the empty state text: 
+    "Use the 'Spawn Onboarding Checklist' button in Work 
+    Information above to get started.")
+
+INSTANCE LIST (one card per instance):
+
+Each card shows:
+  - Position name (bold) from templateSnapshot
+  - Status badge: Active (teal) | Completed (green) | Paused (gray)
+  - Start date: "Started March 10, 2026"
+  - Completion date (if completed): "Completed March 21, 2026"
+  - Duration: "Completed in X days" OR "In progress — Day X of N"
+  - Progress bar (OnboardingProgressBar, sm size)
+  - "X of Y required items complete"
+  - "View Full Checklist" link/button (outline, small)
+    Opens a dialog/modal showing the full read-only checklist:
+      - Same day-by-day layout as the manager drawer 
+        (OnboardingInstanceDrawer style)
+      - Read-only — no checkboxes interactive
+      - Items show completion status, completedAt date, 
+        completedBy name, and autoCompleted badge
+      - Dialog title: "[Name]'s Onboarding — [Position]"
+
+Multiple instances (e.g. someone onboarded twice due to role 
+change):
+  - All instances listed, newest first
+  - Each is its own card — no collapsing needed
+
+═══════════════════════════════════════
+PROTECTIVE RULES
+═══════════════════════════════════════
+- Do NOT modify any existing background jobs or their schedules
+- Do NOT modify any existing notification logic or templates
+- Do NOT modify any existing HR Settings sections — only ADD 
+  the new "Onboarding Alerts" section below existing content
+- Do NOT modify the existing staff member profile page structure 
+  — only APPEND StaffOnboardingHistory at the bottom
+- Do NOT modify any existing staff profile sections or tabs
+- Do NOT touch vite.config.ts, package.json, or drizzle.config.ts
+- Do NOT modify any existing schema or migrations
+- Do NOT modify any previously built onboarding components — 
+  only ADD the StaffOnboardingHistory component and wire it in
+- Background jobs must NEVER crash the worker process — full 
+  try/catch on every job and every per-instance loop iteration
+- Deduplication is mandatory for both notification jobs — 
+  managers and hires must never receive the same alert twice 
+  in one day
+- Use actual column names from the notifications table — read 
+  schema before writing any queries
+- Follow the EXACT existing scheduler registration pattern — 
+  do not introduce a new scheduling library
+- Toast notifications: only "default" and "destructive" variants
+- Icons from lucide-react only
+- All teal accents: hsl(179, 100%, 39%)
+- The archive view is READ-ONLY — no item toggling, no status 
+  changes from the staff profile page

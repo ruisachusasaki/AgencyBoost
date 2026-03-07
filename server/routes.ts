@@ -87,7 +87,9 @@ import {
   salaryHistory,
   proposals, insertProposalSchema, proposalTerms, insertProposalTermsSchema,
   customForms, customFormFields, customFormSubmissions,
-  insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema
+  insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema,
+  onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems,
+  insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema
 } from "@shared/schema";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
@@ -41886,6 +41888,385 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error: any) {
       console.error("Error seeding bug report form:", error);
       res.status(500).json({ error: "Failed to seed bug report form" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ONBOARDING TEMPLATES API
+  // ═══════════════════════════════════════════════════════════
+
+  app.get("/api/onboarding-templates", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+      const isAdmin = await isCurrentUserAdmin(req);
+
+      const [currentUser] = await db.select({ department: staff.department }).from(staff).where(eq(staff.id, userId));
+
+      let templates;
+      if (isAdmin) {
+        templates = await db.select({
+          id: onboardingTemplates.id,
+          teamId: onboardingTemplates.teamId,
+          positionName: onboardingTemplates.positionName,
+          totalDays: onboardingTemplates.totalDays,
+          dayUnlockMode: onboardingTemplates.dayUnlockMode,
+          createdBy: onboardingTemplates.createdBy,
+          createdAt: onboardingTemplates.createdAt,
+          updatedAt: onboardingTemplates.updatedAt,
+          teamName: departments.name,
+          itemCount: sql<number>`(SELECT COUNT(*) FROM onboarding_template_items WHERE template_id = ${onboardingTemplates.id})::int`,
+        })
+          .from(onboardingTemplates)
+          .leftJoin(departments, eq(onboardingTemplates.teamId, departments.id))
+          .orderBy(departments.name, onboardingTemplates.positionName);
+      } else {
+        const [dept] = currentUser?.department
+          ? await db.select({ id: departments.id }).from(departments).where(eq(departments.name, currentUser.department))
+          : [null];
+        if (!dept) {
+          return res.json([]);
+        }
+        templates = await db.select({
+          id: onboardingTemplates.id,
+          teamId: onboardingTemplates.teamId,
+          positionName: onboardingTemplates.positionName,
+          totalDays: onboardingTemplates.totalDays,
+          dayUnlockMode: onboardingTemplates.dayUnlockMode,
+          createdBy: onboardingTemplates.createdBy,
+          createdAt: onboardingTemplates.createdAt,
+          updatedAt: onboardingTemplates.updatedAt,
+          teamName: departments.name,
+          itemCount: sql<number>`(SELECT COUNT(*) FROM onboarding_template_items WHERE template_id = ${onboardingTemplates.id})::int`,
+        })
+          .from(onboardingTemplates)
+          .leftJoin(departments, eq(onboardingTemplates.teamId, departments.id))
+          .where(eq(onboardingTemplates.teamId, dept.id))
+          .orderBy(onboardingTemplates.positionName);
+      }
+      res.json(templates);
+    } catch (error: any) {
+      console.error("Error fetching onboarding templates:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding templates" });
+    }
+  });
+
+  app.get("/api/onboarding-templates/:id", requireAuth(), async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const [template] = await db.select({
+        id: onboardingTemplates.id,
+        teamId: onboardingTemplates.teamId,
+        positionName: onboardingTemplates.positionName,
+        totalDays: onboardingTemplates.totalDays,
+        dayUnlockMode: onboardingTemplates.dayUnlockMode,
+        createdBy: onboardingTemplates.createdBy,
+        createdAt: onboardingTemplates.createdAt,
+        updatedAt: onboardingTemplates.updatedAt,
+        teamName: departments.name,
+      })
+        .from(onboardingTemplates)
+        .leftJoin(departments, eq(onboardingTemplates.teamId, departments.id))
+        .where(eq(onboardingTemplates.id, templateId));
+
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      const items = await db.select()
+        .from(onboardingTemplateItems)
+        .where(eq(onboardingTemplateItems.templateId, templateId))
+        .orderBy(onboardingTemplateItems.dayNumber, onboardingTemplateItems.sortOrder);
+
+      res.json({ ...template, items });
+    } catch (error: any) {
+      console.error("Error fetching onboarding template:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding template" });
+    }
+  });
+
+  app.post("/api/onboarding-templates", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+      const isAdmin = await isCurrentUserAdmin(req);
+
+      const parsed = insertOnboardingTemplateSchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+
+      if (!isAdmin) {
+        const [currentUser] = await db.select({ department: staff.department }).from(staff).where(eq(staff.id, userId));
+        const [dept] = currentUser?.department
+          ? await db.select({ id: departments.id }).from(departments).where(eq(departments.name, currentUser.department))
+          : [null];
+        if (!dept || dept.id !== parsed.teamId) {
+          return res.status(403).json({ error: "You can only create templates for your own team" });
+        }
+      }
+
+      const [template] = await db.insert(onboardingTemplates).values(parsed).returning();
+      res.status(201).json(template);
+    } catch (error: any) {
+      console.error("Error creating onboarding template:", error);
+      res.status(500).json({ error: "Failed to create onboarding template" });
+    }
+  });
+
+  app.put("/api/onboarding-templates/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+      const isAdmin = await isCurrentUserAdmin(req);
+      const templateId = parseInt(req.params.id);
+
+      const [existing] = await db.select().from(onboardingTemplates).where(eq(onboardingTemplates.id, templateId));
+      if (!existing) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      if (!isAdmin) {
+        const [currentUser] = await db.select({ department: staff.department }).from(staff).where(eq(staff.id, userId));
+        const [dept] = currentUser?.department
+          ? await db.select({ id: departments.id }).from(departments).where(eq(departments.name, currentUser.department))
+          : [null];
+        if (!dept || dept.id !== existing.teamId) {
+          return res.status(403).json({ error: "You can only edit templates for your own team" });
+        }
+      }
+
+      const { positionName, totalDays, dayUnlockMode } = req.body;
+      const [updated] = await db.update(onboardingTemplates)
+        .set({
+          ...(positionName !== undefined && { positionName }),
+          ...(totalDays !== undefined && { totalDays }),
+          ...(dayUnlockMode !== undefined && { dayUnlockMode }),
+          updatedAt: new Date(),
+        })
+        .where(eq(onboardingTemplates.id, templateId))
+        .returning();
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating onboarding template:", error);
+      res.status(500).json({ error: "Failed to update onboarding template" });
+    }
+  });
+
+  app.delete("/api/onboarding-templates/:id", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+      const isAdmin = await isCurrentUserAdmin(req);
+      const templateId = parseInt(req.params.id);
+
+      if (!isAdmin) {
+        const [existing] = await db.select({ teamId: onboardingTemplates.teamId }).from(onboardingTemplates).where(eq(onboardingTemplates.id, templateId));
+        if (existing) {
+          const [currentUser] = await db.select({ department: staff.department }).from(staff).where(eq(staff.id, userId));
+          const [dept] = currentUser?.department
+            ? await db.select({ id: departments.id }).from(departments).where(eq(departments.name, currentUser.department))
+            : [null];
+          if (!dept || dept.id !== existing.teamId) {
+            return res.status(403).json({ error: "You can only delete templates for your own team" });
+          }
+        }
+      }
+
+      const [instance] = await db.select({ id: onboardingInstances.id })
+        .from(onboardingInstances)
+        .where(eq(onboardingInstances.templateId, templateId))
+        .limit(1);
+
+      if (instance) {
+        return res.status(400).json({ error: "Cannot delete — active onboarding instances exist for this template." });
+      }
+
+      await db.delete(onboardingTemplates).where(eq(onboardingTemplates.id, templateId));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting onboarding template:", error);
+      res.status(500).json({ error: "Failed to delete onboarding template" });
+    }
+  });
+
+  app.post("/api/onboarding-templates/:id/items", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+      const isAdmin = await isCurrentUserAdmin(req);
+      const templateId = parseInt(req.params.id);
+
+      const [tmpl] = await db.select({ teamId: onboardingTemplates.teamId }).from(onboardingTemplates).where(eq(onboardingTemplates.id, templateId));
+      if (!tmpl) return res.status(404).json({ error: "Template not found" });
+
+      if (!isAdmin) {
+        const [currentUser] = await db.select({ department: staff.department }).from(staff).where(eq(staff.id, userId));
+        const [dept] = currentUser?.department
+          ? await db.select({ id: departments.id }).from(departments).where(eq(departments.name, currentUser.department))
+          : [null];
+        if (!dept || dept.id !== tmpl.teamId) {
+          return res.status(403).json({ error: "You can only modify templates for your own team" });
+        }
+      }
+
+      const { dayNumber, sortOrder, title, description, itemType, referenceId, isRequired } = req.body;
+
+      if (!['text', 'kb_article', 'training_course'].includes(itemType)) {
+        return res.status(400).json({ error: "itemType must be 'text', 'kb_article', or 'training_course'" });
+      }
+      if (itemType === 'text' && referenceId) {
+        return res.status(400).json({ error: "referenceId must be null for text items" });
+      }
+
+      const [item] = await db.insert(onboardingTemplateItems).values({
+        templateId,
+        dayNumber,
+        sortOrder: sortOrder || 0,
+        title,
+        description: description || null,
+        itemType,
+        referenceId: referenceId || null,
+        isRequired: isRequired !== undefined ? isRequired : true,
+      }).returning();
+
+      await db.update(onboardingTemplates).set({ updatedAt: new Date() }).where(eq(onboardingTemplates.id, templateId));
+      res.status(201).json(item);
+    } catch (error: any) {
+      console.error("Error creating onboarding template item:", error);
+      res.status(500).json({ error: "Failed to create template item" });
+    }
+  });
+
+  app.put("/api/onboarding-templates/:id/items/:itemId", requireAuth(), async (req, res) => {
+    try {
+      const itemId = parseInt(req.params.itemId);
+      const templateId = parseInt(req.params.id);
+      const { dayNumber, sortOrder, title, description, itemType, referenceId, isRequired } = req.body;
+
+      const updateData: Record<string, any> = {};
+      if (dayNumber !== undefined) updateData.dayNumber = dayNumber;
+      if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
+      if (title !== undefined) updateData.title = title;
+      if (description !== undefined) updateData.description = description;
+      if (itemType !== undefined) {
+        if (!['text', 'kb_article', 'training_course'].includes(itemType)) {
+          return res.status(400).json({ error: "itemType must be 'text', 'kb_article', or 'training_course'" });
+        }
+        updateData.itemType = itemType;
+      }
+      if (referenceId !== undefined) updateData.referenceId = referenceId;
+      if (isRequired !== undefined) updateData.isRequired = isRequired;
+
+      const [updated] = await db.update(onboardingTemplateItems)
+        .set(updateData)
+        .where(and(eq(onboardingTemplateItems.id, itemId), eq(onboardingTemplateItems.templateId, templateId)))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      await db.update(onboardingTemplates).set({ updatedAt: new Date() }).where(eq(onboardingTemplates.id, templateId));
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating onboarding template item:", error);
+      res.status(500).json({ error: "Failed to update template item" });
+    }
+  });
+
+  app.delete("/api/onboarding-templates/:id/items/:itemId", requireAuth(), async (req, res) => {
+    try {
+      const itemId = parseInt(req.params.itemId);
+      const templateId = parseInt(req.params.id);
+      await db.delete(onboardingTemplateItems)
+        .where(and(eq(onboardingTemplateItems.id, itemId), eq(onboardingTemplateItems.templateId, templateId)));
+      await db.update(onboardingTemplates).set({ updatedAt: new Date() }).where(eq(onboardingTemplates.id, templateId));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting onboarding template item:", error);
+      res.status(500).json({ error: "Failed to delete template item" });
+    }
+  });
+
+  app.put("/api/onboarding-templates/:id/items/reorder", requireAuth(), async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const { items } = req.body;
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ error: "items must be an array" });
+      }
+
+      await db.transaction(async (tx) => {
+        for (const item of items) {
+          await tx.update(onboardingTemplateItems)
+            .set({ dayNumber: item.dayNumber, sortOrder: item.sortOrder })
+            .where(and(eq(onboardingTemplateItems.id, item.id), eq(onboardingTemplateItems.templateId, templateId)));
+        }
+      });
+
+      await db.update(onboardingTemplates).set({ updatedAt: new Date() }).where(eq(onboardingTemplates.id, templateId));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error reordering onboarding template items:", error);
+      res.status(500).json({ error: "Failed to reorder template items" });
+    }
+  });
+
+  app.get("/api/kb-articles/search", requireAuth(), async (req, res) => {
+    try {
+      const q = (req.query.q as string || "").trim();
+      if (!q) return res.json([]);
+
+      const results = await db.select({
+        id: knowledgeBaseArticles.id,
+        title: knowledgeBaseArticles.title,
+        categoryId: knowledgeBaseArticles.categoryId,
+        slug: knowledgeBaseArticles.slug,
+      })
+        .from(knowledgeBaseArticles)
+        .where(and(
+          eq(knowledgeBaseArticles.status, "published"),
+          ilike(knowledgeBaseArticles.title, `%${q}%`)
+        ))
+        .limit(10);
+
+      const withCategory = await Promise.all(results.map(async (article) => {
+        let categoryName = null;
+        if (article.categoryId) {
+          const [cat] = await db.select({ name: knowledgeBaseCategories.name }).from(knowledgeBaseCategories).where(eq(knowledgeBaseCategories.id, article.categoryId));
+          categoryName = cat?.name || null;
+        }
+        return { ...article, category: categoryName };
+      }));
+
+      res.json(withCategory);
+    } catch (error: any) {
+      console.error("Error searching KB articles:", error);
+      res.status(500).json({ error: "Failed to search KB articles" });
+    }
+  });
+
+  app.get("/api/training-courses/search", requireAuth(), async (req, res) => {
+    try {
+      const q = (req.query.q as string || "").trim();
+      if (!q) return res.json([]);
+
+      const results = await db.select({
+        id: trainingCourses.id,
+        title: trainingCourses.title,
+        description: trainingCourses.description,
+      })
+        .from(trainingCourses)
+        .where(and(
+          eq(trainingCourses.isPublished, true),
+          ilike(trainingCourses.title, `%${q}%`)
+        ))
+        .limit(10);
+
+      res.json(results.map(r => ({
+        ...r,
+        description: r.description ? r.description.substring(0, 100) : null,
+      })));
+    } catch (error: any) {
+      console.error("Error searching training courses:", error);
+      res.status(500).json({ error: "Failed to search training courses" });
     }
   });
 

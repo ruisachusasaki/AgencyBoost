@@ -26,7 +26,8 @@ import {
   MessageCircle,
   MoreHorizontal,
   GripVertical,
-  Network
+  Network,
+  ClipboardList
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +37,7 @@ import NewHireOnboardingFormEditor from "@/components/hr/new-hire-onboarding-for
 import ExpenseReportFormEditor from "@/components/hr/expense-report-form-editor";
 import OffboardingFormEditor from "@/components/hr/offboarding-form-editor";
 import OrgChartStructureBuilder from "@/components/hr/org-chart-structure-builder";
+import OnboardingTemplates from "@/pages/settings/OnboardingTemplates";
 import { Link } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
@@ -649,7 +651,8 @@ export default function HRSettingsPage() {
                 { id: "expense-report-form", name: "Expense Report Form", icon: Settings },
                 { id: "offboarding-form", name: "Offboarding Form", icon: Users },
                 { id: "one-on-one-settings", name: "1v1 Settings", icon: MessageCircle },
-                { id: "org-chart", name: "Org Chart", icon: Network }
+                { id: "org-chart", name: "Org Chart", icon: Network },
+                { id: "onboarding-templates", name: "Onboarding Templates", icon: ClipboardList }
               ];
               
               const visibleTabs = allTabs.slice(0, visibleTabsCount);
@@ -749,6 +752,10 @@ export default function HRSettingsPage() {
         {/* Org Chart Tab */}
         <TabsContent value="org-chart" className="space-y-6">
           <OrgChartStructureBuilder />
+        </TabsContent>
+
+        <TabsContent value="onboarding-templates" className="space-y-6">
+          <OnboardingTemplates />
         </TabsContent>
 
       </Tabs>

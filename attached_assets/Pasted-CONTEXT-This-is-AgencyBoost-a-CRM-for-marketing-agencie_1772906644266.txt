@@ -1,0 +1,175 @@
+CONTEXT:
+This is AgencyBoost, a CRM for marketing agencies. We are building a 
+"New Hire Onboarding Checklists" feature. The following are already built:
+  - DB tables: onboarding_templates, onboarding_template_items, 
+    onboarding_instances, onboarding_instance_items
+  - Template builder UI under Settings > HR Settings > Onboarding Templates
+
+This prompt adds the SPAWN LOGIC — the server-side function that 
+automatically creates an onboarding checklist instance when a new staff 
+member is created, and hooks it into the existing staff creation flow.
+
+═══════════════════════════════════════
+PART A — SPAWN SERVICE FUNCTION
+═══════════════════════════════════════
+
+Create a new file: server/services/onboardingSpawnService.ts
+
+This file exports a single async function:
+
+  spawnOnboardingChecklist(staffId: number): Promise<void>
+
+Logic inside this function:
+
+STEP 1 — Fetch the staff member
+  - Query the staff/users table for the given staffId
+  - Pull their teamId (or departmentId — use the actual column name 
+    from the existing staff table), position (use the actual column 
+    name from the existing staff table), and startDate
+  - If the staff member is not found, log a warning and return early
+
+STEP 2 — Find a matching template
+  - Query onboarding_templates where:
+      teamId = staff.teamId
+      AND positionName = staff.position (case-insensitive match using 
+      ILIKE or lower())
+      AND status is active (if a status column exists — check first)
+  - If no matching template is found:
+      - Do NOT throw an error
+      - Insert a record into a notification or log that a manager 
+        should be alerted (use the existing notification system if 
+        available — check for a notifications table; if not, just 
+        console.warn with staff name and position)
+      - Return early gracefully
+
+STEP 3 — Check for existing instance
+  - Query onboarding_instances where staffId = staffId AND status = 
+    'active'
+  - If one already exists, do NOT create a duplicate — log and return
+
+STEP 4 — Snapshot the template
+  - Fetch the full template from onboarding_templates
+  - Fetch all onboarding_template_items for that templateId ordered 
+    by dayNumber ASC, sortOrder ASC
+  - Build a JSON snapshot object:
+    {
+      templateId: number,
+      positionName: string,
+      totalDays: number,
+      dayUnlockMode: string,
+      items: [ ...all template items ]
+    }
+
+STEP 5 — Determine startDate
+  - If staff.startDate is set, use it
+  - If staff.startDate is null, use today's date (new Date()) as fallback
+  - Store as a DATE (no time component)
+
+STEP 6 — Create the onboarding_instance record
+  - Insert into onboarding_instances:
+      staffId, templateId, templateSnapshot (the JSON from Step 4), 
+      status = 'active', startDate (from Step 5), createdAt = now
+
+STEP 7 — Create onboarding_instance_items
+  - For each item in the template's items array, insert a row into 
+    onboarding_instance_items:
+      instanceId = the new instance's id
+      templateItemId = item.id
+      dayNumber = item.dayNumber
+      sortOrder = item.sortOrder
+      title = item.title
+      description = item.description
+      itemType = item.itemType
+      referenceId = item.referenceId
+      isRequired = item.isRequired
+      isCompleted = false
+      autoCompleted = false
+  - Insert all items in a single transaction with the instance creation 
+    in Step 6 — if any insert fails, roll back everything
+
+STEP 8 — Send in-app notification to the new hire
+  - Use the existing notification system (check how other parts of the 
+    app create notifications — find the notifications table or 
+    createNotification helper)
+  - Notification for the new hire:
+      title: "Your onboarding checklist is ready"
+      message: "Your {totalDays}-day onboarding checklist has been 
+      created. Head to HR > Onboarding Checklist to get started."
+      userId: staffId
+  - If no notification system exists, skip this step and leave a 
+    TODO comment
+
+═══════════════════════════════════════
+PART B — HOOK INTO STAFF CREATION
+═══════════════════════════════════════
+
+Find the existing POST /api/staff (or equivalent staff creation route) 
+in server/routes.ts.
+
+IMPORTANT: Read the existing route carefully before modifying. 
+Understand exactly what it does and where it ends.
+
+After the staff record is successfully created and saved to the database, 
+add the following at the end of the success block:
+
+  // Spawn onboarding checklist asynchronously — do not await so it 
+  // does not block the staff creation response
+  spawnOnboardingChecklist(newStaff.id).catch(err => 
+    console.error('Onboarding spawn error:', err)
+  );
+
+Import spawnOnboardingChecklist at the top of routes.ts from 
+'./services/onboardingSpawnService'.
+
+The spawn runs fire-and-forget — the staff creation API response must 
+NOT be delayed or blocked by the spawn logic.
+
+═══════════════════════════════════════
+PART C — MANUAL SPAWN API ENDPOINT
+═══════════════════════════════════════
+
+Add a new route to server/routes.ts:
+
+POST /api/staff/:staffId/spawn-onboarding
+  - requireAuth(), admin or manager only
+  - Calls spawnOnboardingChecklist(staffId)
+  - This time AWAIT it so errors surface to the caller
+  - Returns { success: true, message: "Onboarding checklist created" }
+  - Use case: manager manually triggers spawn for an existing staff 
+    member who was created before this feature existed, or whose 
+    position was assigned after account creation
+
+Also add a small UI trigger for this in the existing staff member's 
+Work Information section (Settings > Staff > Specific Staff Member > 
+Work Information):
+  - A button: "Spawn Onboarding Checklist"
+  - Only visible to Admins and Managers
+  - Only visible if the staff member does NOT already have an active 
+    onboarding_instance
+  - On click: confirmation dialog "This will create a new onboarding 
+    checklist for [name] based on their current position and department. 
+    Continue?"
+  - On confirm: call POST /api/staff/:staffId/spawn-onboarding
+  - On success: show toast "Onboarding checklist created successfully"
+  - On error (e.g. no template found): show destructive toast with the 
+    error message returned from the API
+
+═══════════════════════════════════════
+PROTECTIVE RULES
+═══════════════════════════════════════
+- Do NOT modify any existing staff creation logic — only ADD to the 
+  end of the success block
+- Do NOT modify any existing routes — only ADD new ones
+- Do NOT touch vite.config.ts, package.json, or drizzle.config.ts
+- Do NOT modify any existing schema or migrations
+- Do NOT modify any existing HR, notification, or staff components 
+  beyond adding the single "Spawn Onboarding Checklist" button to 
+  Work Information
+- The spawn function must NEVER throw an unhandled error — always 
+  catch and log
+- Check actual column names on the staff table before writing any 
+  queries (position field name, teamId field name, startDate field name)
+- Use a database transaction for Steps 6 and 7 — instance + items 
+  must be atomic
+- Toast notifications: only "default" and "destructive" variants
+- All buttons must use teal: hsl(179, 100%, 39%)

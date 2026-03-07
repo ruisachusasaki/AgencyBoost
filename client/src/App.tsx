@@ -57,6 +57,7 @@ import FormsTest from "@/pages/forms-test";
 import HRPage from "@/pages/hr";
 import ApplicantDetailPage from "@/pages/applicant-detail";
 import HRSettings from "@/pages/settings/hr-settings";
+import TemplateBuilder from "@/components/onboarding/TemplateBuilder";
 import ClientsSettings from "@/pages/settings/clients";
 import CareersPage from "@/pages/careers";
 import OnboardingPage from "@/pages/onboarding";
@@ -639,6 +640,18 @@ function Router() {
             <RequirePermission module="settings" permission="settings.px_settings.view">
               <MainLayout>
                 <HRSettings />
+              </MainLayout>
+            </RequirePermission>
+          </AuthGate>
+        )}
+      </Route>
+
+      <Route path="/settings/hr/onboarding-templates/:id">
+        {(params) => (
+          <AuthGate>
+            <RequirePermission module="settings" permission="settings.px_settings.view">
+              <MainLayout>
+                <TemplateBuilder templateId={parseInt(params.id)} />
               </MainLayout>
             </RequirePermission>
           </AuthGate>
