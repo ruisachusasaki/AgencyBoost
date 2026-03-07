@@ -44,6 +44,7 @@ const staffFormSchema = z.object({
   zip: z.string().optional(),
   country: z.string().optional(),
   hireDate: z.string().optional(),
+  startDate: z.string().optional(),
   department: z.string().optional(),
   position: z.string().optional(),
   managerId: z.string().nullable().optional(),
@@ -57,6 +58,7 @@ export default function StaffDetail() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [hireDateOpen, setHireDateOpen] = useState(false);
+  const [startDateOpen, setStartDateOpen] = useState(false);
   const [birthdateOpen, setBirthdateOpen] = useState(false);
 
   // Handle URL query parameters for Gmail linking feedback
@@ -269,6 +271,7 @@ export default function StaffDetail() {
       zip: "",
       country: "",
       hireDate: "",
+      startDate: "",
       department: "",
       managerId: "none",
       birthdate: "",
@@ -303,6 +306,7 @@ export default function StaffDetail() {
         zip: staffMember.zip || "",
         country: staffMember.country || "",
         hireDate: staffMember.hireDate ? new Date(staffMember.hireDate).toISOString().split('T')[0] : "",
+        startDate: staffMember.startDate ? new Date(staffMember.startDate).toISOString().split('T')[0] : "",
         department: staffMember.department || "none",
         position: staffMember.position || "",
         managerId: staffMember.managerId || "none",
@@ -821,6 +825,50 @@ export default function StaffDetail() {
                                 setHireDateOpen(false);
                               }}
                               disabled={(date) => date > new Date()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabelWithTooltip tooltip="Start Date = the date they physically begin working.">
+                          Start Date
+                        </FormLabelWithTooltip>
+                        <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                disabled={!isEditing}
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(new Date(field.value + "T00:00:00"), "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={field.value ? new Date(field.value + "T00:00:00") : undefined}
+                              onSelect={(date) => {
+                                field.onChange(date ? format(date, "yyyy-MM-dd") : "");
+                                setStartDateOpen(false);
+                              }}
                               initialFocus
                             />
                           </PopoverContent>
