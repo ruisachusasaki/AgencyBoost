@@ -291,6 +291,16 @@ export default function Reports() {
   const [ccEntriesOpen, setCcEntriesOpen] = useState(false);
   const [ccEntriesFilter, setCcEntriesFilter] = useState<{ userId?: string; clientId?: string }>({});
   const [ccEditingEntry, setCcEditingEntry] = useState<any>(null);
+  const [ccSortField, setCcSortField] = useState<string>("total");
+  const [ccSortOrder, setCcSortOrder] = useState<"asc" | "desc">("desc");
+  const handleCcSort = (field: string) => {
+    if (ccSortField === field) {
+      setCcSortOrder(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setCcSortField(field);
+      setCcSortOrder("desc");
+    }
+  };
   const [ccAddForm, setCcAddForm] = useState({ userId: '', clientId: '', date: formatLocalDateStr(new Date()), startTime: '09:00', endTime: '17:00' });
 
   interface CcReportUser {
@@ -5880,17 +5890,34 @@ export default function Reports() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="sticky left-0 bg-background z-10 min-w-[180px] font-semibold">Staff Member</TableHead>
+                        <SortableHeader field="staffName" sortField={ccSortField} sortOrder={ccSortOrder} onSort={handleCcSort} className="sticky left-0 bg-background z-10 min-w-[180px] font-semibold">Staff Member</SortableHeader>
                         {ccTableData.columns.map(col => (
-                          <TableHead key={col.clientId} className="text-right min-w-[120px] font-semibold">
-                            {col.clientName}
-                          </TableHead>
+                          <SortableHeader key={col.clientId} field={`client_${col.clientId}`} sortField={ccSortField} sortOrder={ccSortOrder} onSort={handleCcSort} className="text-right min-w-[120px] font-semibold">{col.clientName}</SortableHeader>
                         ))}
-                        <TableHead className="text-right min-w-[120px] font-bold bg-muted/50">Total</TableHead>
+                        <SortableHeader field="total" sortField={ccSortField} sortOrder={ccSortOrder} onSort={handleCcSort} className="text-right min-w-[120px] font-bold bg-muted/50">Total</SortableHeader>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {ccTableData.rows.map(row => (
+                      {[...ccTableData.rows].sort((a, b) => {
+                        let aVal: number | string;
+                        let bVal: number | string;
+                        if (ccSortField === "staffName") {
+                          aVal = a.userName.toLowerCase();
+                          bVal = b.userName.toLowerCase();
+                        } else if (ccSortField === "total") {
+                          aVal = a.totalCost;
+                          bVal = b.totalCost;
+                        } else if (ccSortField.startsWith("client_")) {
+                          const clientId = ccSortField.replace("client_", "");
+                          aVal = a.cells[clientId]?.cost ?? 0;
+                          bVal = b.cells[clientId]?.cost ?? 0;
+                        } else {
+                          aVal = 0; bVal = 0;
+                        }
+                        if (aVal < bVal) return ccSortOrder === "asc" ? -1 : 1;
+                        if (aVal > bVal) return ccSortOrder === "asc" ? 1 : -1;
+                        return 0;
+                      }).map(row => (
                         <TableRow key={row.userId}>
                           <TableCell className="sticky left-0 bg-background z-10 font-medium">{row.userName}</TableCell>
                           {ccTableData.columns.map(col => {
