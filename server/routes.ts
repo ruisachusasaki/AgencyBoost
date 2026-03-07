@@ -92,6 +92,7 @@ import {
   insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema
 } from "@shared/schema";
 import { spawnOnboardingChecklist } from "./services/onboardingSpawnService";
+import { syncLmsCompletion } from "./services/onboardingLmsSyncService";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
 import { z } from "zod";
@@ -34592,6 +34593,12 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         .where(eq(trainingEnrollments.id, enrollment.id));
       
       res.json({ message: "Lesson marked as completed", progress });
+
+      if (status === "completed") {
+        syncLmsCompletion(userId, lesson.courseId).catch(err =>
+          console.error('Onboarding LMS sync error:', err)
+        );
+      }
     } catch (error) {
       console.error('Error marking lesson as completed:', error);
       res.status(500).json({ error: "Failed to mark lesson as completed" });
@@ -42293,6 +42300,62 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error: any) {
       console.error("Error updating onboarding instance status:", error);
       res.status(500).json({ error: "Failed to update instance status" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ONBOARDING — LMS SYNC (ADMIN MANUAL TRIGGER)
+  // ═══════════════════════════════════════════════════════════
+
+  app.post("/api/onboarding/instances/:instanceId/sync-lms", requireAuth(), async (req, res) => {
+    try {
+      const isAdmin = await isCurrentUserAdmin(req);
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const instanceId = parseInt(req.params.instanceId);
+      const [instance] = await db.select()
+        .from(onboardingInstances)
+        .where(eq(onboardingInstances.id, instanceId));
+
+      if (!instance) {
+        return res.status(404).json({ error: "Instance not found" });
+      }
+
+      const incompleteTrainingItems = await db.select()
+        .from(onboardingInstanceItems)
+        .where(and(
+          eq(onboardingInstanceItems.instanceId, instanceId),
+          eq(onboardingInstanceItems.itemType, "training_course"),
+          sql`${onboardingInstanceItems.referenceId} IS NOT NULL`,
+          eq(onboardingInstanceItems.isCompleted, false)
+        ));
+
+      let synced = 0;
+      for (const item of incompleteTrainingItems) {
+        const courseId = String(item.referenceId);
+        const [completion] = await db.select({ id: trainingEnrollments.id })
+          .from(trainingEnrollments)
+          .where(and(
+            eq(trainingEnrollments.courseId, courseId),
+            eq(trainingEnrollments.userId, instance.staffId),
+            eq(trainingEnrollments.status, "completed")
+          ));
+
+        if (completion) {
+          await syncLmsCompletion(instance.staffId, courseId);
+          synced++;
+        }
+      }
+
+      res.json({
+        synced,
+        message: synced > 0 ? `Synced ${synced} training completion(s)` : "No new completions to sync",
+      });
+    } catch (error: any) {
+      console.error("Error syncing LMS completions:", error);
+      res.status(500).json({ error: "Failed to sync LMS completions" });
     }
   });
 

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, Lock, AlertTriangle, ExternalLink } from "lucide-react";
+import { Loader2, Lock, AlertTriangle, ExternalLink, RefreshCw } from "lucide-react";
 import { format, addDays } from "date-fns";
 import OnboardingProgressBar from "./OnboardingProgressBar";
 
@@ -33,6 +33,11 @@ export default function OnboardingInstanceDrawer({ instanceId, open, onClose }: 
   const queryClient = useQueryClient();
   const [statusAction, setStatusAction] = useState<string | null>(null);
 
+  const { data: adminStatus } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/auth/is-admin"],
+  });
+  const isAdmin = adminStatus?.isAdmin === true;
+
   const { data, isLoading } = useQuery<any>({
     queryKey: ["/api/onboarding/instances", instanceId],
     queryFn: async () => {
@@ -41,6 +46,7 @@ export default function OnboardingInstanceDrawer({ instanceId, open, onClose }: 
       return res.json();
     },
     enabled: !!instanceId && open,
+    refetchInterval: 30000,
   });
 
   const toggleMutation = useMutation({
@@ -73,6 +79,22 @@ export default function OnboardingInstanceDrawer({ instanceId, open, onClose }: 
     onError: () => {
       setStatusAction(null);
       toast({ title: "Failed to update status", variant: "destructive" });
+    },
+  });
+
+  const syncLmsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/onboarding/instances/${instanceId}/sync-lms`);
+      if (!res.ok) throw new Error("Failed to sync");
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/instances", instanceId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/instances"] });
+      toast({ title: data.message || `Synced ${data.synced} training completion(s)` });
+    },
+    onError: () => {
+      toast({ title: "Failed to sync LMS completions", variant: "destructive" });
     },
   });
 
@@ -229,6 +251,13 @@ export default function OnboardingInstanceDrawer({ instanceId, open, onClose }: 
               </div>
 
               <div className="flex gap-2 pt-4 border-t">
+                {isAdmin && data.status === "active" && (
+                  <Button variant="outline" size="sm" onClick={() => syncLmsMutation.mutate()}
+                    disabled={syncLmsMutation.isPending}>
+                    {syncLmsMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+                    Sync LMS
+                  </Button>
+                )}
                 {data.status === "active" && (
                   <Button variant="outline" size="sm" onClick={() => setStatusAction("paused")} className="flex-1">
                     Pause Onboarding

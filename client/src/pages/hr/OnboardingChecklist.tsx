@@ -85,6 +85,7 @@ export default function OnboardingChecklist() {
       if (!res.ok) throw new Error("Failed to fetch checklist");
       return res.json();
     },
+    refetchInterval: 30000,
   });
 
   const toggleMutation = useMutation({
