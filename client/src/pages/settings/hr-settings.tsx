@@ -592,7 +592,10 @@ function OnboardingAlertsSettings() {
 }
 
 export default function HRSettingsPage() {
-  const [activeTab, setActiveTab] = useState("time-off-types");
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("tab") || "time-off-types";
+  });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<TimeOffCategory | null>(null);
   const [visibleTabsCount, setVisibleTabsCount] = useState(7);
