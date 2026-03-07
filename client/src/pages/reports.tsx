@@ -291,6 +291,7 @@ export default function Reports() {
   const [ccEntriesOpen, setCcEntriesOpen] = useState(false);
   const [ccEntriesFilter, setCcEntriesFilter] = useState<{ userId?: string; clientId?: string }>({});
   const [ccEditingEntry, setCcEditingEntry] = useState<any>(null);
+  const [ccUserFilter, setCcUserFilter] = useState<string>("all");
   const [ccSortField, setCcSortField] = useState<string>("total");
   const [ccSortOrder, setCcSortOrder] = useState<"asc" | "desc">("desc");
   const handleCcSort = (field: string) => {
@@ -5803,6 +5804,17 @@ export default function Reports() {
                   <CardDescription>Call center labor cost breakdown by client based on clock-in time and hourly rates</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Select value={ccUserFilter} onValueChange={setCcUserFilter}>
+                    <SelectTrigger className="h-9 w-[180px]">
+                      <SelectValue placeholder="All Reps" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Reps</SelectItem>
+                      {staffData.filter(s => s.department?.toLowerCase() === 'call center').map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <div className="flex items-center gap-2">
                     <Popover open={ccFromOpen} onOpenChange={setCcFromOpen}>
                       <PopoverTrigger asChild>
@@ -5898,7 +5910,7 @@ export default function Reports() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {[...ccTableData.rows].sort((a, b) => {
+                      {[...ccTableData.rows].filter(row => ccUserFilter === "all" || row.userId === ccUserFilter).sort((a, b) => {
                         let aVal: number | string;
                         let bVal: number | string;
                         if (ccSortField === "staffName") {
@@ -5959,32 +5971,48 @@ export default function Reports() {
                           </TableCell>
                         </TableRow>
                       ))}
-                      <TableRow className="border-t-2 font-bold bg-muted/30">
-                        <TableCell className="sticky left-0 bg-muted/30 z-10 font-bold">Total</TableCell>
-                        {ccTableData.columns.map(col => {
-                          const t = ccTableData.columnTotals[col.clientId];
-                          return (
-                            <TableCell key={col.clientId} className="text-right font-bold">
-                              {t ? (
-                                <div>
-                                  <div>${t.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                                  <div className="text-xs text-muted-foreground font-normal">
-                                    {(t.minutes / 60).toFixed(1)}h
-                                  </div>
+                      {(() => {
+                        const filteredRows = ccTableData.rows.filter(row => ccUserFilter === "all" || row.userId === ccUserFilter);
+                        const filteredColTotals: Record<string, { cost: number; minutes: number }> = {};
+                        for (const col of ccTableData.columns) {
+                          let totalCost = 0, totalMin = 0;
+                          for (const row of filteredRows) {
+                            const cell = row.cells[col.clientId];
+                            if (cell) { totalCost += cell.cost; totalMin += cell.minutes; }
+                          }
+                          filteredColTotals[col.clientId] = { cost: totalCost, minutes: totalMin };
+                        }
+                        const grandCost = filteredRows.reduce((s, r) => s + r.totalCost, 0);
+                        const grandMin = filteredRows.reduce((s, r) => s + r.totalMinutes, 0);
+                        return (
+                          <TableRow className="border-t-2 font-bold bg-muted/30">
+                            <TableCell className="sticky left-0 bg-muted/30 z-10 font-bold">Total</TableCell>
+                            {ccTableData.columns.map(col => {
+                              const t = filteredColTotals[col.clientId];
+                              return (
+                                <TableCell key={col.clientId} className="text-right font-bold">
+                                  {t && t.minutes > 0 ? (
+                                    <div>
+                                      <div>${t.cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                      <div className="text-xs text-muted-foreground font-normal">
+                                        {(t.minutes / 60).toFixed(1)}h
+                                      </div>
+                                    </div>
+                                  ) : "—"}
+                                </TableCell>
+                              );
+                            })}
+                            <TableCell className="text-right font-bold bg-primary/10">
+                              <div>
+                                <div className="text-primary">${grandCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                <div className="text-xs text-muted-foreground font-normal">
+                                  {(grandMin / 60).toFixed(1)}h
                                 </div>
-                              ) : "—"}
+                              </div>
                             </TableCell>
-                          );
-                        })}
-                        <TableCell className="text-right font-bold bg-primary/10">
-                          <div>
-                            <div className="text-primary">${ccTableData.grandTotalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                            <div className="text-xs text-muted-foreground font-normal">
-                              {(ccTableData.grandTotalMinutes / 60).toFixed(1)}h
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                          </TableRow>
+                        );
+                      })()}
                     </TableBody>
                   </Table>
                 </div>
