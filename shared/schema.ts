@@ -5685,7 +5685,7 @@ export const onboardingTemplateItems = pgTable("onboarding_template_items", {
   title: text("title").notNull(),
   description: text("description"),
   itemType: text("item_type").notNull(),
-  referenceId: integer("reference_id"),
+  referenceId: text("reference_id"),
   isRequired: boolean("is_required").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -5710,7 +5710,7 @@ export const onboardingInstanceItems = pgTable("onboarding_instance_items", {
   title: text("title").notNull(),
   description: text("description"),
   itemType: text("item_type").notNull(),
-  referenceId: integer("reference_id"),
+  referenceId: text("reference_id"),
   isRequired: boolean("is_required").default(true),
   isCompleted: boolean("is_completed").default(false),
   completedAt: timestamp("completed_at"),

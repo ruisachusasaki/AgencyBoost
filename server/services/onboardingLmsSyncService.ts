@@ -39,7 +39,7 @@ export async function syncLmsCompletion(staffId: string, courseId: string): Prom
       .where(and(
         eq(onboardingInstanceItems.instanceId, instance.id),
         eq(onboardingInstanceItems.itemType, "training_course"),
-        sql`CAST(${onboardingInstanceItems.referenceId} AS TEXT) = ${courseId}`,
+        eq(onboardingInstanceItems.referenceId, courseId),
         eq(onboardingInstanceItems.isCompleted, false)
       ));
 
