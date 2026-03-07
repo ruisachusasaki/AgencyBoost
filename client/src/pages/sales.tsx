@@ -957,15 +957,27 @@ export default function Sales() {
     updateQuoteStatusMutation.mutate({ quoteId, newStatus });
   };
 
-  const handleCopyProposalLink = (publicToken: string) => {
-    const appUrl = window.location.origin;
-    const url = `${appUrl}/proposal/${publicToken}`;
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "Link Copied",
-      variant: "default",
-      description: "Proposal link copied to clipboard.",
-    });
+  const handleCopyProposalLink = async (quoteId: string, publicToken?: string | null) => {
+    try {
+      let token = publicToken;
+      if (!token) {
+        const res = await fetch(`/api/quotes/${quoteId}/generate-token`, { method: "POST", headers: { "Content-Type": "application/json" } });
+        if (!res.ok) throw new Error("Failed to generate link");
+        const data = await res.json();
+        token = data.publicToken;
+        queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      }
+      const appUrl = window.location.origin;
+      const url = `${appUrl}/proposal/${token}`;
+      navigator.clipboard.writeText(url);
+      toast({
+        title: "Link Copied",
+        variant: "default",
+        description: "Proposal link copied to clipboard.",
+      });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to copy proposal link.", variant: "destructive" });
+    }
   };
 
   // Update quote status mutation
@@ -2958,22 +2970,20 @@ export default function Sales() {
                                                 Send as Proposal
                                               </DropdownMenuItem>
                                             )}
+                                            <DropdownMenuItem
+                                              onClick={() => handleCopyProposalLink(quote.id, quote.publicToken)}
+                                            >
+                                              <Copy className="mr-2 h-4 w-4" />
+                                              Copy Proposal Link
+                                            </DropdownMenuItem>
                                             {quote.publicToken && (
-                                              <>
-                                                <DropdownMenuItem
-                                                  onClick={() => handleCopyProposalLink(quote.publicToken)}
-                                                >
-                                                  <Copy className="mr-2 h-4 w-4" />
-                                                  Copy Proposal Link
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                  onClick={() => resendProposalMutation.mutate({ quoteId: quote.id })}
-                                                  disabled={resendProposalMutation.isPending}
-                                                >
-                                                  <RefreshCw className="mr-2 h-4 w-4" />
-                                                  Resend Email
-                                                </DropdownMenuItem>
-                                              </>
+                                              <DropdownMenuItem
+                                                onClick={() => resendProposalMutation.mutate({ quoteId: quote.id })}
+                                                disabled={resendProposalMutation.isPending}
+                                              >
+                                                <RefreshCw className="mr-2 h-4 w-4" />
+                                                Resend Email
+                                              </DropdownMenuItem>
                                             )}
                                             <DropdownMenuItem
                                               onClick={() => setDeleteConfirmQuoteId(quote.id)}

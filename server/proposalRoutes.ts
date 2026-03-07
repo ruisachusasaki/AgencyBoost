@@ -206,6 +206,30 @@ export function registerProposalRoutes(
     }
   });
 
+  app.post("/api/quotes/:id/generate-token", requireAuth(), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
+      if (!quote) return res.status(404).json({ message: "Quote not found" });
+
+      if (quote.publicToken) {
+        return res.json({ publicToken: quote.publicToken });
+      }
+
+      const publicToken = generatePublicToken();
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      await db.update(quotes)
+        .set({ publicToken, expiresAt })
+        .where(eq(quotes.id, id));
+
+      res.json({ publicToken });
+    } catch (error) {
+      console.error("Error generating proposal token:", error);
+      res.status(500).json({ message: "Failed to generate proposal link" });
+    }
+  });
+
   app.get("/api/quotes/public/:token", async (req, res) => {
     try {
       const { token } = req.params;
