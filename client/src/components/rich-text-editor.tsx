@@ -196,7 +196,9 @@ export function RichTextEditor({ content, onChange, placeholder = "Start typing.
       if (editorRef) {
         editorRef.current = {
           insertText: (text: string) => {
-            editor.chain().focus().insertContent(text).run();
+            if (editor.isDestroyed) return;
+            editor.commands.focus('end');
+            editor.commands.insertContent(text);
           },
         };
       }

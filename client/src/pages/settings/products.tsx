@@ -3295,7 +3295,7 @@ export default function ProductsSettings() {
                                 key={option.tag}
                                 type="button"
                                 className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                onClick={() => { if (createDescEditorRef.current) { createDescEditorRef.current.insertText(option.tag); } else { setCreateTemplateDescription(prev => prev ? prev + option.tag : option.tag); } }}
+                                onClick={() => { const tag = option.tag; setTimeout(() => { if (createDescEditorRef.current) { createDescEditorRef.current.insertText(tag); } else { setCreateTemplateDescription(prev => prev ? prev + tag : tag); } }, 50); }}
                               >
                                 <span className="font-medium truncate mr-2">{option.label}</span>
                                 <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
@@ -3546,7 +3546,7 @@ export default function ProductsSettings() {
                                   key={option.tag}
                                   type="button"
                                   className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                  onClick={() => { if (editDescEditorRef.current) { editDescEditorRef.current.insertText(option.tag); } else { setEditTemplateDescription(prev => prev ? prev + option.tag : option.tag); } }}
+                                  onClick={() => { const tag = option.tag; setTimeout(() => { if (editDescEditorRef.current) { editDescEditorRef.current.insertText(tag); } else { setEditTemplateDescription(prev => prev ? prev + tag : tag); } }, 50); }}
                                 >
                                   <span className="font-medium truncate mr-2">{option.label}</span>
                                   <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
