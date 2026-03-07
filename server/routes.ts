@@ -16186,8 +16186,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       if (!data.productId && !data.bundleId && !data.packageId) {
         return res.status(400).json({ message: "At least one of productId, bundleId, or packageId is required" });
       }
-      if (!['onboarding', 'recurring'].includes(data.taskType)) {
-        return res.status(400).json({ message: "taskType must be 'onboarding' or 'recurring'" });
+      if (!['onboarding', 'recurring', 'one-time'].includes(data.taskType)) {
+        return res.status(400).json({ message: "taskType must be 'onboarding', 'recurring', or 'one-time'" });
       }
       if (data.quantityMode && !['once', 'per_unit', 'per_unit_named'].includes(data.quantityMode)) {
         return res.status(400).json({ message: "quantityMode must be 'once', 'per_unit', or 'per_unit_named'" });
@@ -16216,8 +16216,8 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       if (!data.productId && !data.bundleId && !data.packageId) {
         return res.status(400).json({ message: "At least one of productId, bundleId, or packageId is required" });
       }
-      if (data.taskType && !['onboarding', 'recurring'].includes(data.taskType)) {
-        return res.status(400).json({ message: "taskType must be 'onboarding' or 'recurring'" });
+      if (data.taskType && !['onboarding', 'recurring', 'one-time'].includes(data.taskType)) {
+        return res.status(400).json({ message: "taskType must be 'onboarding', 'recurring', or 'one-time'" });
       }
       if (data.quantityMode && !['once', 'per_unit', 'per_unit_named'].includes(data.quantityMode)) {
         return res.status(400).json({ message: "quantityMode must be 'once', 'per_unit', or 'per_unit_named'" });
