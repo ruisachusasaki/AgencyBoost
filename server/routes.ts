@@ -91,6 +91,7 @@ import {
   onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems,
   insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema
 } from "@shared/schema";
+import { spawnOnboardingChecklist } from "./services/onboardingSpawnService";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
 import { z } from "zod";
@@ -11943,6 +11944,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       );
       
       const { annualSalary: _sal2, ...sanitizedNew } = newStaff;
+
+      spawnOnboardingChecklist(newStaff.id).catch(err =>
+        console.error('Onboarding spawn error:', err)
+      );
+
       res.status(201).json(sanitizedNew);
     } catch (error: any) {
       console.error('Error creating staff:', error);
@@ -41888,6 +41894,54 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error: any) {
       console.error("Error seeding bug report form:", error);
       res.status(500).json({ error: "Failed to seed bug report form" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ONBOARDING SPAWN API
+  // ═══════════════════════════════════════════════════════════
+
+  app.post("/api/staff/:staffId/spawn-onboarding", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+      const isAdmin = await isCurrentUserAdmin(req);
+
+      if (!isAdmin) {
+        const userRolesResult = await db.select({ roleName: roles.name })
+          .from(userRoles)
+          .leftJoin(roles, eq(userRoles.roleId, roles.id))
+          .where(eq(userRoles.userId, userId));
+        const isManager = userRolesResult.some(r => r.roleName?.toLowerCase() === "manager");
+        if (!isManager) {
+          return res.status(403).json({ error: "Admin or Manager access required" });
+        }
+      }
+
+      const result = await spawnOnboardingChecklist(req.params.staffId);
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json({ error: result.message });
+      }
+    } catch (error: any) {
+      console.error("Error spawning onboarding:", error);
+      res.status(500).json({ error: "Failed to spawn onboarding checklist" });
+    }
+  });
+
+  app.get("/api/staff/:staffId/onboarding-status", requireAuth(), async (req, res) => {
+    try {
+      const [instance] = await db.select({ id: onboardingInstances.id, status: onboardingInstances.status })
+        .from(onboardingInstances)
+        .where(and(
+          eq(onboardingInstances.staffId, req.params.staffId),
+          eq(onboardingInstances.status, "active")
+        ))
+        .limit(1);
+      res.json({ hasActiveInstance: !!instance });
+    } catch (error: any) {
+      console.error("Error checking onboarding status:", error);
+      res.status(500).json({ error: "Failed to check onboarding status" });
     }
   });
 

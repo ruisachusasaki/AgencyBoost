@@ -4,12 +4,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Upload, User, Mail, Phone, MapPin, Calendar, CalendarIcon, Building, Users, Bell, Smartphone, Trash2, Plus, Link2, DollarSign, History, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowLeft, Upload, User, Mail, Phone, MapPin, Calendar, CalendarIcon, Building, Users, Bell, Smartphone, Trash2, Plus, Link2, DollarSign, History, TrendingUp, TrendingDown, ClipboardList, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,6 +60,7 @@ export default function StaffDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [hireDateOpen, setHireDateOpen] = useState(false);
   const [startDateOpen, setStartDateOpen] = useState(false);
+  const [showSpawnConfirm, setShowSpawnConfirm] = useState(false);
   const [birthdateOpen, setBirthdateOpen] = useState(false);
 
   // Handle URL query parameters for Gmail linking feedback
@@ -145,6 +147,35 @@ export default function StaffDetail() {
     queryKey: ["/api/auth/is-admin"],
   });
   const isAdmin = adminStatus?.isAdmin === true;
+
+  const { data: onboardingStatus } = useQuery<{ hasActiveInstance: boolean }>({
+    queryKey: ["/api/staff", id, "onboarding-status"],
+    queryFn: async () => {
+      const res = await fetch(`/api/staff/${id}/onboarding-status`, { credentials: "include" });
+      return res.json();
+    },
+    enabled: !!id && isAdmin,
+  });
+
+  const spawnOnboardingMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/staff/${id}/spawn-onboarding`);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to spawn onboarding");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", id, "onboarding-status"] });
+      setShowSpawnConfirm(false);
+      toast({ title: "Onboarding checklist created successfully" });
+    },
+    onError: (error: any) => {
+      setShowSpawnConfirm(false);
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   interface SalaryData {
     staffId: string;
@@ -926,7 +957,45 @@ export default function StaffDetail() {
                     )}
                   />
                 </CardContent>
+                {isAdmin && onboardingStatus && !onboardingStatus.hasActiveInstance && (
+                  <div className="px-6 pb-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full border-[hsl(179,100%,39%)] text-[hsl(179,100%,39%)] hover:bg-[hsl(179,100%,39%)]/10"
+                      onClick={() => setShowSpawnConfirm(true)}
+                      disabled={spawnOnboardingMutation.isPending}
+                    >
+                      {spawnOnboardingMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <ClipboardList className="h-4 w-4 mr-2" />
+                      )}
+                      Spawn Onboarding Checklist
+                    </Button>
+                  </div>
+                )}
               </Card>
+
+              <AlertDialog open={showSpawnConfirm} onOpenChange={setShowSpawnConfirm}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Spawn Onboarding Checklist</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will create a new onboarding checklist for {staffMember?.firstName} {staffMember?.lastName} based on their current position and department. Continue?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-[hsl(179,100%,39%)] hover:bg-[hsl(179,100%,33%)] text-white"
+                      onClick={() => spawnOnboardingMutation.mutate()}
+                    >
+                      Continue
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               {/* Compensation - Admin only, hierarchy-restricted */}
               {isAdmin && salaryData && (
