@@ -22,7 +22,10 @@ import {
   Palette,
   Upload,
   X,
-  Eye
+  Eye,
+  Mail,
+  RotateCcw,
+  Info
 } from "lucide-react";
 
 export default function SalesSettings() {
@@ -38,6 +41,20 @@ export default function SalesSettings() {
   const [brandingCompanyName, setBrandingCompanyName] = useState("");
   const [brandingColor, setBrandingColor] = useState("#00C9C6");
   const [brandingFooterText, setBrandingFooterText] = useState("");
+
+  const emailTemplateDefaults = {
+    subjectLine: "Your Proposal: {{proposalName}}",
+    headerTitle: "Your Proposal is Ready",
+    headerSubtitle: "Review, sign, and pay — all in one place",
+    greeting: "Hi {{clientName}},",
+    introText: "We've prepared a proposal for you. Please review the details, sign, and complete payment to get started.",
+    step1: "Review the proposal details and pricing",
+    step2: "Accept terms and sign electronically",
+    step3: "Complete payment via credit card or bank transfer",
+    buttonText: "View & Sign Proposal",
+    closingText: "If you have any questions, please don't hesitate to reach out.",
+  };
+  const [emailTemplate, setEmailTemplate] = useState(emailTemplateDefaults);
 
   const { data: salesSettings, isLoading: isLoadingSettings } = useQuery({
     queryKey: ['/api/sales-settings'],
@@ -89,6 +106,24 @@ export default function SalesSettings() {
     queryKey: ['/api/settings/proposal-branding'],
   });
 
+  const { data: emailTemplateData, isLoading: isLoadingEmailTemplate } = useQuery<any>({
+    queryKey: ['/api/settings/proposal-email-template'],
+  });
+
+  const saveEmailTemplateMutation = useMutation({
+    mutationFn: async (data: typeof emailTemplateDefaults) => {
+      const res = await apiRequest('PUT', '/api/settings/proposal-email-template', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/proposal-email-template'] });
+      toast({ title: "Email Template Saved", description: "Your proposal email template has been updated." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to save email template", variant: "destructive" });
+    },
+  });
+
   const saveBrandingMutation = useMutation({
     mutationFn: async (data: { logoUrl: string; companyName: string; primaryColor: string; footerText: string }) => {
       const res = await apiRequest('PUT', '/api/settings/proposal-branding', data);
@@ -136,6 +171,12 @@ export default function SalesSettings() {
       setBrandingFooterText(brandingData.footerText || "");
     }
   }, [brandingData]);
+
+  useEffect(() => {
+    if (emailTemplateData) {
+      setEmailTemplate({ ...emailTemplateDefaults, ...emailTemplateData });
+    }
+  }, [emailTemplateData]);
 
   const handleSaveSettings = () => {
     if (!minimumMargin || parseFloat(minimumMargin) < 0 || parseFloat(minimumMargin) > 100) {
@@ -203,7 +244,8 @@ export default function SalesSettings() {
           {[
             { id: "general", name: "General Settings", icon: Settings },
             { id: "terms", name: "Terms & Conditions", icon: Shield },
-            { id: "branding", name: "Proposal Branding", icon: Palette }
+            { id: "branding", name: "Proposal Branding", icon: Palette },
+            { id: "email-template", name: "Email Template", icon: Mail }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -565,6 +607,207 @@ export default function SalesSettings() {
                     View & Sign Proposal
                   </button>
                 </div>
+                {brandingFooterText && (
+                  <div className="border-t pt-3 mt-4 text-center">
+                    <p className="text-xs text-gray-400">{brandingFooterText}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "email-template" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Proposal Email Template
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="rounded-lg bg-muted/50 border p-3 flex items-start gap-2">
+                  <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    Use <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{"{{clientName}}"}</code> and <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{"{{proposalName}}"}</code> as merge tags. They will be replaced with the actual client name and proposal name when the email is sent.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tpl-subject">Email Subject Line</Label>
+                  <Input
+                    id="tpl-subject"
+                    value={emailTemplate.subjectLine}
+                    onChange={(e) => setEmailTemplate(prev => ({ ...prev, subjectLine: e.target.value }))}
+                    placeholder="Your Proposal: {{proposalName}}"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="tpl-header-title">Header Title</Label>
+                    <Input
+                      id="tpl-header-title"
+                      value={emailTemplate.headerTitle}
+                      onChange={(e) => setEmailTemplate(prev => ({ ...prev, headerTitle: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tpl-header-subtitle">Header Subtitle</Label>
+                    <Input
+                      id="tpl-header-subtitle"
+                      value={emailTemplate.headerSubtitle}
+                      onChange={(e) => setEmailTemplate(prev => ({ ...prev, headerSubtitle: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tpl-greeting">Greeting</Label>
+                  <Input
+                    id="tpl-greeting"
+                    value={emailTemplate.greeting}
+                    onChange={(e) => setEmailTemplate(prev => ({ ...prev, greeting: e.target.value }))}
+                    placeholder="Hi {{clientName}},"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tpl-intro">Introduction Text</Label>
+                  <Textarea
+                    id="tpl-intro"
+                    value={emailTemplate.introText}
+                    onChange={(e) => setEmailTemplate(prev => ({ ...prev, introText: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label>Steps (shown as numbered list)</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                      <Input
+                        value={emailTemplate.step1}
+                        onChange={(e) => setEmailTemplate(prev => ({ ...prev, step1: e.target.value }))}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                      <Input
+                        value={emailTemplate.step2}
+                        onChange={(e) => setEmailTemplate(prev => ({ ...prev, step2: e.target.value }))}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                      <Input
+                        value={emailTemplate.step3}
+                        onChange={(e) => setEmailTemplate(prev => ({ ...prev, step3: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tpl-button">Button Text</Label>
+                  <Input
+                    id="tpl-button"
+                    value={emailTemplate.buttonText}
+                    onChange={(e) => setEmailTemplate(prev => ({ ...prev, buttonText: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tpl-closing">Closing Text</Label>
+                  <Input
+                    id="tpl-closing"
+                    value={emailTemplate.closingText}
+                    onChange={(e) => setEmailTemplate(prev => ({ ...prev, closingText: e.target.value }))}
+                  />
+                </div>
+
+                <div className="flex justify-between pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEmailTemplate(emailTemplateDefaults);
+                      toast({ title: "Template Reset", description: "Fields reset to defaults. Click Save to apply." });
+                    }}
+                    className="gap-2"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Reset to Defaults
+                  </Button>
+                  <Button
+                    onClick={() => saveEmailTemplateMutation.mutate(emailTemplate)}
+                    disabled={saveEmailTemplateMutation.isPending || isLoadingEmailTemplate}
+                    className="gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    {saveEmailTemplateMutation.isPending ? "Saving..." : "Save Template"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+              <Eye className="h-4 w-4" />
+              Live Preview
+            </div>
+            <Card className="overflow-hidden shadow-lg">
+              <div className="px-4 py-2 bg-muted border-b flex items-center gap-2 text-xs text-muted-foreground">
+                <Mail className="h-3 w-3" />
+                <span className="font-medium">Subject:</span>
+                <span>{emailTemplate.subjectLine.replace(/\{\{clientName\}\}/g, "John Smith").replace(/\{\{proposalName\}\}/g, "Website Redesign Package")}</span>
+              </div>
+              <div
+                className="p-6 text-white text-center"
+                style={{ background: `linear-gradient(135deg, ${brandingColor} 0%, ${darkenColor(brandingColor, -20)} 100%)` }}
+              >
+                {brandingLogo && (
+                  <div className="inline-block bg-white/90 rounded-lg px-3 py-2 mb-3">
+                    <img src={brandingLogo} alt="Logo" className="h-10 max-w-[160px] object-contain mx-auto" />
+                  </div>
+                )}
+                {brandingCompanyName && (
+                  <p className="text-xs opacity-85 tracking-wider mb-2">{brandingCompanyName}</p>
+                )}
+                <h3 className="text-xl font-bold">{emailTemplate.headerTitle.replace(/\{\{clientName\}\}/g, "John Smith").replace(/\{\{proposalName\}\}/g, "Website Redesign Package")}</h3>
+                <p className="text-sm opacity-90 mt-1">{emailTemplate.headerSubtitle.replace(/\{\{clientName\}\}/g, "John Smith").replace(/\{\{proposalName\}\}/g, "Website Redesign Package")}</p>
+              </div>
+              <CardContent className="p-6">
+                <p className="text-sm text-gray-600 mb-3 font-medium">{emailTemplate.greeting.replace(/\{\{clientName\}\}/g, "John Smith").replace(/\{\{proposalName\}\}/g, "Website Redesign Package")}</p>
+                <p className="text-sm text-gray-600 mb-4">{emailTemplate.introText.replace(/\{\{clientName\}\}/g, "John Smith").replace(/\{\{proposalName\}\}/g, "Website Redesign Package")}</p>
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Proposal</p>
+                  <p className="font-semibold">Website Redesign Package</p>
+                </div>
+                <div className="space-y-2.5 mb-5">
+                  {[emailTemplate.step1, emailTemplate.step2, emailTemplate.step3].map((step, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <span
+                        className="w-7 h-7 rounded-full text-white flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        style={{ backgroundColor: brandingColor }}
+                      >{i + 1}</span>
+                      <span className="text-sm text-gray-700">{step.replace(/\{\{clientName\}\}/g, "John Smith").replace(/\{\{proposalName\}\}/g, "Website Redesign Package")}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-center mb-4">
+                  <button
+                    className="px-6 py-2.5 rounded-lg text-white font-semibold text-sm"
+                    style={{ backgroundColor: brandingColor }}
+                  >
+                    {emailTemplate.buttonText.replace(/\{\{clientName\}\}/g, "John Smith").replace(/\{\{proposalName\}\}/g, "Website Redesign Package")}
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500">{emailTemplate.closingText.replace(/\{\{clientName\}\}/g, "John Smith").replace(/\{\{proposalName\}\}/g, "Website Redesign Package")}</p>
                 {brandingFooterText && (
                   <div className="border-t pt-3 mt-4 text-center">
                     <p className="text-xs text-gray-400">{brandingFooterText}</p>

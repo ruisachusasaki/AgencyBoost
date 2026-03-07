@@ -12,6 +12,29 @@ function generatePublicToken(): string {
   return randomBytes(32).toString("hex");
 }
 
+async function loadEmailTemplate() {
+  const defaults = {
+    subjectLine: "Your Proposal: {{proposalName}}",
+    headerTitle: "Your Proposal is Ready",
+    headerSubtitle: "Review, sign, and pay — all in one place",
+    greeting: "Hi {{clientName}},",
+    introText: "We've prepared a proposal for you. Please review the details, sign, and complete payment to get started.",
+    step1: "Review the proposal details and pricing",
+    step2: "Accept terms and sign electronically",
+    step3: "Complete payment via credit card or bank transfer",
+    buttonText: "View & Sign Proposal",
+    closingText: "If you have any questions, please don't hesitate to reach out.",
+  };
+  try {
+    const [setting] = await db.select().from(taskSettings)
+      .where(eq(taskSettings.settingKey, 'proposal_email_template'));
+    if (setting?.settingValue) {
+      return { ...defaults, ...(setting.settingValue as any) };
+    }
+  } catch (e) {}
+  return defaults;
+}
+
 async function loadBranding() {
   let branding: any = { logoUrl: "", companyName: "", primaryColor: "#00C9C6", footerText: "" };
   const [brandingSetting] = await db.select().from(taskSettings)
@@ -111,12 +134,14 @@ export function registerProposalRoutes(
       const quoteName = quote.name || "Your Proposal";
 
       const branding = await loadBranding();
-      const html = generateProposalEmailHtml(clientName, quoteName, proposalUrl, branding);
+      const emailTpl = await loadEmailTemplate();
+      const html = generateProposalEmailHtml(clientName, quoteName, proposalUrl, branding, emailTpl);
 
+      const subject = applyMergeTags(emailTpl.subjectLine, clientName, quoteName);
       const emailResult = await notificationService.sendDirectEmail({
         to: clientEmail,
-        subject: `Your Proposal: ${quoteName}`,
-        text: `Hi ${clientName},\n\nA new proposal has been prepared for you. Please review, sign, and complete payment at the following link:\n\n${proposalUrl}\n\nThank you!`,
+        subject,
+        text: `${applyMergeTags(emailTpl.greeting, clientName, quoteName)}\n\n${applyMergeTags(emailTpl.introText, clientName, quoteName)}\n\n${proposalUrl}\n\nThank you!`,
         html,
       });
 
@@ -163,12 +188,14 @@ export function registerProposalRoutes(
 
       const proposalUrl = `${appUrl}/proposal/${quote.publicToken}`;
       const branding = await loadBranding();
-      const html = generateProposalEmailHtml(clientName, quote.name, proposalUrl, branding);
+      const emailTpl = await loadEmailTemplate();
+      const html = generateProposalEmailHtml(clientName, quote.name, proposalUrl, branding, emailTpl);
 
+      const subject = applyMergeTags(emailTpl.subjectLine, clientName, quote.name);
       const emailResult = await notificationService.sendDirectEmail({
         to: clientEmail,
-        subject: `Your Proposal: ${quote.name}`,
-        text: `Hi ${clientName},\n\nA reminder about your proposal. Please review, sign, and complete payment at:\n\n${proposalUrl}\n\nThank you!`,
+        subject,
+        text: `${applyMergeTags(emailTpl.greeting, clientName, quote.name)}\n\n${applyMergeTags(emailTpl.introText, clientName, quote.name)}\n\n${proposalUrl}\n\nThank you!`,
         html,
       });
 
@@ -565,6 +592,78 @@ export function registerProposalRoutes(
     }
   });
 
+  app.get("/api/settings/proposal-email-template", requireAuth(), async (req, res) => {
+    try {
+      const [setting] = await db.select().from(taskSettings)
+        .where(eq(taskSettings.settingKey, 'proposal_email_template'));
+
+      const defaults = {
+        subjectLine: "Your Proposal: {{proposalName}}",
+        headerTitle: "Your Proposal is Ready",
+        headerSubtitle: "Review, sign, and pay — all in one place",
+        greeting: "Hi {{clientName}},",
+        introText: "We've prepared a proposal for you. Please review the details, sign, and complete payment to get started.",
+        step1: "Review the proposal details and pricing",
+        step2: "Accept terms and sign electronically",
+        step3: "Complete payment via credit card or bank transfer",
+        buttonText: "View & Sign Proposal",
+        closingText: "If you have any questions, please don't hesitate to reach out.",
+      };
+
+      if (setting?.settingValue) {
+        res.json({ ...defaults, ...(setting.settingValue as any) });
+      } else {
+        res.json(defaults);
+      }
+    } catch (error) {
+      console.error("Error fetching proposal email template:", error);
+      res.status(500).json({ message: "Failed to fetch proposal email template" });
+    }
+  });
+
+  app.put("/api/settings/proposal-email-template", requireAuth(), async (req, res) => {
+    try {
+      const templateSchema = z.object({
+        subjectLine: z.string().max(200).default("Your Proposal: {{proposalName}}"),
+        headerTitle: z.string().max(200).default("Your Proposal is Ready"),
+        headerSubtitle: z.string().max(300).default("Review, sign, and pay — all in one place"),
+        greeting: z.string().max(200).default("Hi {{clientName}},"),
+        introText: z.string().max(1000).default("We've prepared a proposal for you. Please review the details, sign, and complete payment to get started."),
+        step1: z.string().max(300).default("Review the proposal details and pricing"),
+        step2: z.string().max(300).default("Accept terms and sign electronically"),
+        step3: z.string().max(300).default("Complete payment via credit card or bank transfer"),
+        buttonText: z.string().max(100).default("View & Sign Proposal"),
+        closingText: z.string().max(500).default("If you have any questions, please don't hesitate to reach out."),
+      });
+
+      const parsed = templateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid template data", errors: parsed.error.flatten().fieldErrors });
+      }
+
+      const templateData = parsed.data;
+
+      const [existing] = await db.select().from(taskSettings)
+        .where(eq(taskSettings.settingKey, 'proposal_email_template'));
+
+      if (existing) {
+        await db.update(taskSettings)
+          .set({ settingValue: templateData, updatedAt: new Date() })
+          .where(eq(taskSettings.settingKey, 'proposal_email_template'));
+      } else {
+        await db.insert(taskSettings).values({
+          settingKey: 'proposal_email_template',
+          settingValue: templateData,
+        });
+      }
+
+      res.json(templateData);
+    } catch (error) {
+      console.error("Error saving proposal email template:", error);
+      res.status(500).json({ message: "Failed to save proposal email template" });
+    }
+  });
+
   app.get("/api/stripe/config", async (req, res) => {
     res.json({
       configured: isStripeConfigured(),
@@ -573,11 +672,18 @@ export function registerProposalRoutes(
   });
 }
 
+function applyMergeTags(text: string, clientName: string, quoteName: string): string {
+  return text
+    .replace(/\{\{clientName\}\}/g, clientName)
+    .replace(/\{\{proposalName\}\}/g, quoteName);
+}
+
 function generateProposalEmailHtml(
   clientName: string,
   quoteName: string,
   proposalUrl: string,
-  branding: { logoUrl?: string; companyName?: string; primaryColor?: string; footerText?: string } = {}
+  branding: { logoUrl?: string; companyName?: string; primaryColor?: string; footerText?: string } = {},
+  emailTpl?: { headerTitle?: string; headerSubtitle?: string; greeting?: string; introText?: string; step1?: string; step2?: string; step3?: string; buttonText?: string; closingText?: string }
 ): string {
   const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const rawColor = branding.primaryColor || "#00C9C6";
@@ -591,12 +697,26 @@ function generateProposalEmailHtml(
     ? `<p style="margin-bottom: 8px;">${escHtml(branding.footerText)}</p>`
     : "";
 
+  const tpl = {
+    headerTitle: emailTpl?.headerTitle || "Your Proposal is Ready",
+    headerSubtitle: emailTpl?.headerSubtitle || "Review, sign, and pay — all in one place",
+    greeting: emailTpl?.greeting || "Hi {{clientName}},",
+    introText: emailTpl?.introText || "We've prepared a proposal for you. Please review the details, sign, and complete payment to get started.",
+    step1: emailTpl?.step1 || "Review the proposal details and pricing",
+    step2: emailTpl?.step2 || "Accept terms and sign electronically",
+    step3: emailTpl?.step3 || "Complete payment via credit card or bank transfer",
+    buttonText: emailTpl?.buttonText || "View & Sign Proposal",
+    closingText: emailTpl?.closingText || "If you have any questions, please don't hesitate to reach out.",
+  };
+
+  const mt = (text: string) => escHtml(applyMergeTags(text, clientName, quoteName));
+
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Proposal is Ready</title>
+  <title>${mt(tpl.headerTitle)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
     .header { background: linear-gradient(135deg, ${color} 0%, ${darkerColor} 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0; }
@@ -619,25 +739,25 @@ function generateProposalEmailHtml(
   <div class="header">
     ${logoHtml}
     ${companyName ? `<p style="font-size: 13px; opacity: 0.85; margin-bottom: 12px; letter-spacing: 0.5px;">${companyName}</p>` : ""}
-    <h1>Your Proposal is Ready</h1>
-    <p>Review, sign, and pay — all in one place</p>
+    <h1>${mt(tpl.headerTitle)}</h1>
+    <p>${mt(tpl.headerSubtitle)}</p>
   </div>
   <div class="content">
-    <p class="greeting">Hi ${escHtml(clientName)},</p>
-    <p>We've prepared a proposal for you. Please review the details, sign, and complete payment to get started.</p>
+    <p class="greeting">${mt(tpl.greeting)}</p>
+    <p>${mt(tpl.introText)}</p>
     <div class="details">
       <div class="details-label">Proposal</div>
       <div class="details-value">${escHtml(quoteName)}</div>
     </div>
     <div class="steps">
-      <div class="step"><span class="step-number">1</span><span>Review the proposal details and pricing</span></div>
-      <div class="step"><span class="step-number">2</span><span>Accept terms and sign electronically</span></div>
-      <div class="step"><span class="step-number">3</span><span>Complete payment via credit card or bank transfer</span></div>
+      <div class="step"><span class="step-number">1</span><span>${mt(tpl.step1)}</span></div>
+      <div class="step"><span class="step-number">2</span><span>${mt(tpl.step2)}</span></div>
+      <div class="step"><span class="step-number">3</span><span>${mt(tpl.step3)}</span></div>
     </div>
     <div class="cta">
-      <a href="${proposalUrl}" class="button">View & Sign Proposal</a>
+      <a href="${proposalUrl}" class="button">${mt(tpl.buttonText)}</a>
     </div>
-    <p style="font-size: 14px; color: #666;">If you have any questions, please don't hesitate to reach out.</p>
+    <p style="font-size: 14px; color: #666;">${mt(tpl.closingText)}</p>
   </div>
   <div class="footer">
     ${footerContent}
