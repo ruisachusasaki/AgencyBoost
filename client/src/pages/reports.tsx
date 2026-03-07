@@ -6010,7 +6010,7 @@ export default function Reports() {
               <Select value={ccAddForm.userId} onValueChange={(v) => setCcAddForm(prev => ({ ...prev, userId: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select staff member" /></SelectTrigger>
                 <SelectContent>
-                  {staffData.map(s => (
+                  {staffData.filter(s => s.department?.toLowerCase() === 'call center').map(s => (
                     <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}</SelectItem>
                   ))}
                 </SelectContent>
@@ -6207,7 +6207,7 @@ export default function Reports() {
                 <Select value={ccEditingEntry.editUserId} onValueChange={(v) => setCcEditingEntry((prev: any) => ({ ...prev, editUserId: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {staffData.map(s => (
+                    {staffData.filter(s => s.department?.toLowerCase() === 'call center').map(s => (
                       <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}</SelectItem>
                     ))}
                   </SelectContent>
