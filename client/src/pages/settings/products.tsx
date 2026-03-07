@@ -158,7 +158,7 @@ interface Department {
 const taskTemplateFormSchema = z.object({
   name: z.string().min(1, "Template name is required"),
   description: z.string().optional(),
-  taskType: z.enum(["onboarding", "recurring"], { required_error: "Task type is required" }),
+  taskType: z.enum(["onboarding", "recurring", "one-time"], { required_error: "Task type is required" }),
   quantityMode: z.enum(["once", "per_unit", "per_unit_named"]),
   departmentId: z.string().optional(),
   assignedStaffId: z.string().optional(),
@@ -3019,6 +3019,7 @@ export default function ProductsSettings() {
                                 const templates = getTemplatesForItem('product', product.id);
                                 const onboardingCount = templates.filter((t: TaskTemplate) => t.taskType === 'onboarding').length;
                                 const recurringCount = templates.filter((t: TaskTemplate) => t.taskType === 'recurring').length;
+                                const oneTimeCount = templates.filter((t: TaskTemplate) => t.taskType === 'one-time').length;
                                 const isExpanded = expandedTaskMappingItems.has(`product-${product.id}`);
                                 return (
                                   <div key={product.id} className="border rounded-lg mb-2">
@@ -3039,6 +3040,11 @@ export default function ProductsSettings() {
                                         {recurringCount > 0 && (
                                           <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">
                                             {recurringCount} Recurring
+                                          </Badge>
+                                        )}
+                                        {oneTimeCount > 0 && (
+                                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                            {oneTimeCount} One-Time
                                           </Badge>
                                         )}
                                         {templates.length === 0 && (
@@ -3114,8 +3120,8 @@ export default function ProductsSettings() {
                                                     </TableCell>
                                                     <TableCell className="font-medium">{tmpl.name}</TableCell>
                                                     <TableCell>
-                                                      <Badge className={tmpl.taskType === 'onboarding' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : 'bg-teal-100 text-teal-800 hover:bg-teal-100'}>
-                                                        {tmpl.taskType === 'onboarding' ? 'Onboarding' : 'Recurring'}
+                                                      <Badge className={tmpl.taskType === 'onboarding' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : tmpl.taskType === 'one-time' ? 'bg-purple-100 text-purple-800 hover:bg-purple-100' : 'bg-teal-100 text-teal-800 hover:bg-teal-100'}>
+                                                        {tmpl.taskType === 'onboarding' ? 'Onboarding' : tmpl.taskType === 'one-time' ? 'One-Time' : 'Recurring'}
                                                       </Badge>
                                                     </TableCell>
                                                     <TableCell className="hidden md:table-cell capitalize">{tmpl.quantityMode.replace('_', ' ')}</TableCell>
@@ -3323,6 +3329,7 @@ export default function ProductsSettings() {
                 <select name="taskType" id="template-taskType" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue="onboarding" required>
                   <option value="onboarding">Onboarding</option>
                   <option value="recurring">Recurring</option>
+                  <option value="one-time">One-Time</option>
                 </select>
               </div>
               <div>
@@ -3573,6 +3580,7 @@ export default function ProductsSettings() {
                   <select name="taskType" id="edit-template-taskType" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" defaultValue={editingTemplate.taskType} required>
                     <option value="onboarding">Onboarding</option>
                     <option value="recurring">Recurring</option>
+                    <option value="one-time">One-Time</option>
                   </select>
                 </div>
                 <div>
