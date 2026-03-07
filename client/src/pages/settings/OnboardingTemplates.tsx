@@ -36,6 +36,7 @@ export default function OnboardingTemplates() {
   const { toast } = useToast();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<OnboardingTemplate | null>(null);
+  const [filterDepartment, setFilterDepartment] = useState<string>("all");
   const [newTemplate, setNewTemplate] = useState({
     teamId: "",
     positionName: "",
@@ -91,7 +92,11 @@ export default function OnboardingTemplates() {
     },
   });
 
-  const grouped = templates.reduce<Record<string, OnboardingTemplate[]>>((acc, t) => {
+  const filteredTemplates = filterDepartment === "all"
+    ? templates
+    : templates.filter(t => t.teamId === filterDepartment);
+
+  const grouped = filteredTemplates.reduce<Record<string, OnboardingTemplate[]>>((acc, t) => {
     const team = t.teamName || "Unassigned";
     if (!acc[team]) acc[team] = [];
     acc[team].push(t);
@@ -113,21 +118,38 @@ export default function OnboardingTemplates() {
           <h2 className="text-xl font-semibold">Onboarding Templates</h2>
           <p className="text-sm text-muted-foreground">Design checklists for new hire onboarding by position</p>
         </div>
-        <Button
-          onClick={() => setShowCreateDialog(true)}
-          className="bg-[hsl(179,100%,39%)] hover:bg-[hsl(179,100%,33%)] text-white"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Template
-        </Button>
+        <div className="flex items-center gap-3">
+          <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Departments" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              {departmentsData.map((d) => (
+                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={() => setShowCreateDialog(true)}
+            className="bg-[hsl(179,100%,39%)] hover:bg-[hsl(179,100%,33%)] text-white"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Template
+          </Button>
+        </div>
       </div>
 
-      {templates.length === 0 ? (
+      {filteredTemplates.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <ClipboardList className="h-12 w-12 mb-4 opacity-40" />
-            <p className="text-lg font-medium">No onboarding templates yet</p>
-            <p className="text-sm">Create your first template to get started</p>
+            <p className="text-lg font-medium">
+              {filterDepartment !== "all" ? "No templates for this department" : "No onboarding templates yet"}
+            </p>
+            <p className="text-sm">
+              {filterDepartment !== "all" ? "Try selecting a different department or create a new template" : "Create your first template to get started"}
+            </p>
           </CardContent>
         </Card>
       ) : (
