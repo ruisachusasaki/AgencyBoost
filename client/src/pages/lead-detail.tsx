@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, Mail, Phone, Building2, Calendar, DollarSign, User, CheckCircle2, Tag as TagIcon, FileText, Percent, MessageSquare, StickyNote, ListTodo, CalendarCheck, Trash2, ArrowRight, X, Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Building2, Calendar, DollarSign, User, CheckCircle2, Tag as TagIcon, FileText, Percent, MessageSquare, StickyNote, ListTodo, CalendarCheck, Trash2, ArrowRight, X, Plus, ChevronDown, ChevronRight, Clock } from "lucide-react";
 import { format } from "date-fns";
 import type { Lead, Task, User as StaffUser, LeadPipelineStage, CustomField, Tag, LeadSource, Quote } from "@shared/schema";
 import LeadNotesSection from "@/components/forms/lead-notes-section";
@@ -331,6 +331,21 @@ export default function LeadDetail() {
   const handleSaveLeadField = (fieldName: string, fieldType?: string) => {
     let valueToSave = leadFieldEditValue;
     
+    if (fieldName === 'projectedDaysToClose') {
+      if (!valueToSave || valueToSave === '') {
+        updateLeadFieldMutation.mutate({ fieldName: 'projectedCloseDate', value: null });
+        return;
+      }
+      const days = parseInt(valueToSave as string);
+      if (isNaN(days) || days < 0) {
+        toast({ title: "Invalid input", description: "Please enter a valid number of business days.", variant: "destructive" });
+        return;
+      }
+      const closeDate = days === 0 ? new Date() : addBusinessDays(new Date(), days);
+      updateLeadFieldMutation.mutate({ fieldName: 'projectedCloseDate', value: closeDate });
+      return;
+    }
+
     // Handle "unassigned" sentinel for assignedTo field
     if (fieldName === 'assignedTo' && valueToSave === 'unassigned') {
       valueToSave = null;
@@ -358,8 +373,41 @@ export default function LeadDetail() {
     setLeadFieldEditValue(null);
   };
 
+  const addBusinessDays = (startDate: Date, days: number): Date => {
+    const result = new Date(startDate);
+    let added = 0;
+    while (added < days) {
+      result.setDate(result.getDate() + 1);
+      const dow = result.getDay();
+      if (dow !== 0 && dow !== 6) added++;
+    }
+    return result;
+  };
+
+  const getBusinessDaysRemaining = (targetDate: Date | string | null): number | null => {
+    if (!targetDate) return null;
+    const target = new Date(targetDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    target.setHours(0, 0, 0, 0);
+    if (target <= today) return 0;
+    let count = 0;
+    const cursor = new Date(today);
+    while (cursor < target) {
+      cursor.setDate(cursor.getDate() + 1);
+      const dow = cursor.getDay();
+      if (dow !== 0 && dow !== 6) count++;
+    }
+    return count;
+  };
+
   const handleStartEditLeadField = (fieldName: string, currentValue: any) => {
     setEditingLeadField(fieldName);
+    if (fieldName === 'projectedDaysToClose') {
+      const remaining = getBusinessDaysRemaining(lead?.projectedCloseDate);
+      setLeadFieldEditValue(remaining !== null ? String(remaining) : '');
+      return;
+    }
     // Handle date formatting for date inputs
     if (fieldName === 'lastContactDate' && currentValue) {
       const date = new Date(currentValue);
@@ -649,6 +697,65 @@ export default function LeadDetail() {
             
             {/* Probability */}
             {renderEditableField('probability', 'Probability (%)', lead.probability, Percent, 'number')}
+
+            {/* Projected Days to Close */}
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-gray-500" />
+              <div className="flex-1">
+                <div className="text-sm text-gray-500">Projected Days to Close</div>
+                {editingLeadField === 'projectedDaysToClose' ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="Business days"
+                      value={leadFieldEditValue ?? ''}
+                      onChange={(e) => setLeadFieldEditValue(e.target.value)}
+                      className="flex-1"
+                      data-testid="input-lead-projectedDaysToClose"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveLeadField('projectedDaysToClose', 'number')}
+                      disabled={updateLeadFieldMutation.isPending}
+                      data-testid="button-save-lead-projectedDaysToClose"
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleCancelLeadFieldEdit}
+                      data-testid="button-cancel-lead-projectedDaysToClose"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-colors w-fit"
+                    onClick={() => handleStartEditLeadField('projectedDaysToClose', null)}
+                    data-testid="text-lead-projectedDaysToClose"
+                  >
+                    {(() => {
+                      const remaining = getBusinessDaysRemaining(lead.projectedCloseDate);
+                      if (remaining === null) return <span className="text-gray-400">Click to set...</span>;
+                      if (remaining === 0) return (
+                        <Badge variant="destructive">Due today</Badge>
+                      );
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{remaining} business day{remaining !== 1 ? 's' : ''}</span>
+                          <span className="text-xs text-muted-foreground">
+                            (by {format(new Date(lead.projectedCloseDate!), "MMM d, yyyy")})
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
             
             {/* Assigned To - Select dropdown */}
             {editingLeadField === 'assignedTo' ? (

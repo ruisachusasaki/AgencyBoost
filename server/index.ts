@@ -2028,6 +2028,19 @@ async function ensureQuotesCostBreakdownColumns() {
   }
 }
 
+async function ensureLeadProjectedCloseDate() {
+  try {
+    log("Running startup migration: ensureLeadProjectedCloseDate");
+    await db.execute(sql`
+      ALTER TABLE leads
+      ADD COLUMN IF NOT EXISTS projected_close_date TIMESTAMP
+    `);
+    log("Lead projected close date column migration completed successfully");
+  } catch (error) {
+    log(`Error in ensureLeadProjectedCloseDate: ${error}`);
+  }
+}
+
 async function ensureTicketExternalSubmissionColumns() {
   try {
     log("Running startup migration: ensureTicketExternalSubmissionColumns");
@@ -2118,6 +2131,7 @@ async function runStartupMigrations() {
     await ensureClientBriefColumns();
     await ensureQuotesProposalColumns();
     await ensureQuotesCostBreakdownColumns();
+    await ensureLeadProjectedCloseDate();
     await ensureTicketExternalSubmissionColumns();
     await ensureFormsTablesExist();
     await initializeCoreClientBriefSections();

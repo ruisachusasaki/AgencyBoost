@@ -790,6 +790,7 @@ export const leads = pgTable("leads", {
   customFieldData: jsonb("custom_field_data"), // custom field values
   stageHistory: jsonb("stage_history").default([]), // track stage movements
   tags: text("tags").array().default([]), // array of tag names
+  projectedCloseDate: timestamp("projected_close_date"), // calculated from business days input
 });
 
 // Lead Stage Transitions - Track stage movements for pipeline analytics

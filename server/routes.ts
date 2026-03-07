@@ -5913,6 +5913,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         lastContactDate: leads.lastContactDate,
         stageHistory: leads.stageHistory,
         tags: leads.tags,
+        projectedCloseDate: leads.projectedCloseDate,
         createdAt: leads.createdAt
       }).from(leads).where(eq(leads.id, req.params.id));
       if (!oldLead) {
@@ -5924,6 +5925,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       // Convert date strings to Date objects for validation
       if (leadData.lastContactDate && typeof leadData.lastContactDate === 'string') {
         leadData.lastContactDate = new Date(leadData.lastContactDate);
+      }
+      if (leadData.projectedCloseDate && typeof leadData.projectedCloseDate === 'string') {
+        leadData.projectedCloseDate = new Date(leadData.projectedCloseDate);
       }
       
       const validatedData = insertLeadSchema.partial().parse({
