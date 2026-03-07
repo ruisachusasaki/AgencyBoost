@@ -215,6 +215,8 @@ export default function ProductsSettings() {
 
   const createNameRef = useRef<HTMLInputElement>(null);
   const editNameRef = useRef<HTMLInputElement>(null);
+  const [createTemplateName, setCreateTemplateName] = useState("");
+  const [editTemplateName, setEditTemplateName] = useState("");
   const [createTemplateDescription, setCreateTemplateDescription] = useState("");
   const [editTemplateDescription, setEditTemplateDescription] = useState("");
   const [descEditorKey, setDescEditorKey] = useState(0);
@@ -254,17 +256,16 @@ export default function ProductsSettings() {
   const insertMergeTag = (ref: React.RefObject<HTMLTextAreaElement | HTMLInputElement | null>, tag: string) => {
     const el = ref.current;
     if (!el) return;
-    const start = el.selectionStart ?? 0;
-    const end = el.selectionEnd ?? 0;
     const currentValue = el.value;
-    const newValue = currentValue.substring(0, start) + tag + currentValue.substring(end);
+    const newValue = currentValue + tag;
     const proto = el instanceof HTMLTextAreaElement ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
     nativeInputValueSetter?.call(el, newValue);
     el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.focus();
-    const newCursorPos = start + tag.length;
-    el.setSelectionRange(newCursorPos, newCursorPos);
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(newValue.length, newValue.length);
+    }, 10);
   };
 
   // Form state for controlled Select components
@@ -3243,7 +3244,7 @@ export default function ProductsSettings() {
                                 key={option.tag}
                                 type="button"
                                 className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                onClick={() => { insertMergeTag(createNameRef, option.tag); setCreateNameMTOpen(false); }}
+                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); insertMergeTag(createNameRef, option.tag); setCreateNameMTOpen(false); }}
                               >
                                 <span className="font-medium truncate mr-2">{option.label}</span>
                                 <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
@@ -3299,7 +3300,7 @@ export default function ProductsSettings() {
                                 key={option.tag}
                                 type="button"
                                 className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                onClick={() => { if (createDescEditorRef.current) { createDescEditorRef.current.insertText(option.tag); } else { setCreateTemplateDescription(prev => prev ? prev + option.tag : option.tag); } setCreateDescMTOpen(false); }}
+                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); if (createDescEditorRef.current) { createDescEditorRef.current.insertText(option.tag); } else { setCreateTemplateDescription(prev => prev ? prev + option.tag : option.tag); } setCreateDescMTOpen(false); }}
                               >
                                 <span className="font-medium truncate mr-2">{option.label}</span>
                                 <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
@@ -3494,7 +3495,7 @@ export default function ProductsSettings() {
                                   key={option.tag}
                                   type="button"
                                   className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                  onClick={() => { insertMergeTag(editNameRef, option.tag); setEditNameMTOpen(false); }}
+                                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); insertMergeTag(editNameRef, option.tag); setEditNameMTOpen(false); }}
                                 >
                                   <span className="font-medium truncate mr-2">{option.label}</span>
                                   <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
@@ -3550,7 +3551,7 @@ export default function ProductsSettings() {
                                   key={option.tag}
                                   type="button"
                                   className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                  onClick={() => { if (editDescEditorRef.current) { editDescEditorRef.current.insertText(option.tag); } else { setEditTemplateDescription(prev => prev ? prev + option.tag : option.tag); } setEditDescMTOpen(false); }}
+                                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); if (editDescEditorRef.current) { editDescEditorRef.current.insertText(option.tag); } else { setEditTemplateDescription(prev => prev ? prev + option.tag : option.tag); } setEditDescMTOpen(false); }}
                                 >
                                   <span className="font-medium truncate mr-2">{option.label}</span>
                                   <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
