@@ -228,6 +228,17 @@ export default function ProductsSettings() {
   const [editNameMTOpen, setEditNameMTOpen] = useState(false);
   const [editDescMTOpen, setEditDescMTOpen] = useState(false);
 
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      setCreateNameMTOpen(false);
+      setCreateDescMTOpen(false);
+      setEditNameMTOpen(false);
+      setEditDescMTOpen(false);
+    };
+    document.addEventListener('click', handleGlobalClick);
+    return () => document.removeEventListener('click', handleGlobalClick);
+  }, []);
+
   const nativeMergeTagOptions = [
     { tag: "{{client.name}}", label: "Client Name", description: "Company or client name", group: "Native" },
     { tag: "{{client.email}}", label: "Client Email", description: "Client's email address", group: "Native" },
@@ -253,19 +264,12 @@ export default function ProductsSettings() {
     return [...nativeMergeTagOptions, ...customFieldTags];
   }, [customFieldsList]);
 
-  const insertMergeTag = (ref: React.RefObject<HTMLTextAreaElement | HTMLInputElement | null>, tag: string) => {
-    const el = ref.current;
-    if (!el) return;
-    const currentValue = el.value;
-    const newValue = currentValue + tag;
-    const proto = el instanceof HTMLTextAreaElement ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-    nativeInputValueSetter?.call(el, newValue);
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    setTimeout(() => {
-      el.focus();
-      el.setSelectionRange(newValue.length, newValue.length);
-    }, 10);
+  const insertMergeTagToName = (isEdit: boolean, tag: string) => {
+    if (isEdit) {
+      setEditTemplateName(prev => prev + tag);
+    } else {
+      setCreateTemplateName(prev => prev + tag);
+    }
   };
 
   // Form state for controlled Select components
@@ -3149,7 +3153,7 @@ export default function ProductsSettings() {
                                                     </TableCell>
                                                     <TableCell>
                                                       <div className="flex gap-1">
-                                                        <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setEditTemplateDescription(tmpl.description || ""); setIsEditTemplateOpen(true); }} title="Edit">
+                                                        <Button variant="ghost" size="sm" onClick={() => { setEditingTemplate(tmpl); setEditTemplateName(tmpl.name || ""); setEditTemplateDescription(tmpl.description || ""); setIsEditTemplateOpen(true); }} title="Edit">
                                                           <Edit2 className="h-3.5 w-3.5" />
                                                         </Button>
                                                         <Button variant="ghost" size="sm" onClick={() => duplicateTemplateMutation.mutate(tmpl.id)} disabled={duplicateTemplateMutation.isPending} title="Duplicate">
@@ -3198,7 +3202,7 @@ export default function ProductsSettings() {
         )}
 
       {/* Create Task Template Dialog */}
-      <Dialog open={isCreateTemplateOpen} onOpenChange={(open) => { setIsCreateTemplateOpen(open); if (!open) { setCreateTemplateDescription(""); setDescEditorKey(k => k + 1); } }}>
+      <Dialog open={isCreateTemplateOpen} onOpenChange={(open) => { setIsCreateTemplateOpen(open); if (!open) { setCreateTemplateName(""); setCreateTemplateDescription(""); setDescEditorKey(k => k + 1); } }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Task Template</DialogTitle>
@@ -3210,112 +3214,114 @@ export default function ProductsSettings() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label htmlFor="template-name">Template Name *</Label>
-                <Popover open={createNameMTOpen} onOpenChange={(open) => { setCreateNameMTOpen(open); if (!open) setMergeTagSearch(""); }}>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
-                      <Tags className="h-3.5 w-3.5" />
-                      Merge Tags
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80 p-2 z-[100]" sideOffset={5} onInteractOutside={(e) => { e.preventDefault(); setCreateNameMTOpen(false); }} onOpenAutoFocus={(e) => e.preventDefault()}>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert at cursor position</p>
-                    <div className="relative mb-2">
-                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        placeholder="Search merge tags..."
-                        value={mergeTagSearch}
-                        onChange={(e) => setMergeTagSearch(e.target.value)}
-                        className="h-7 pl-7 text-xs"
-                      />
-                    </div>
-                    <div className="max-h-64 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
-                      <div className="space-y-0.5">
-                      {(() => {
-                        const filtered = mergeTagOptions.filter(o => 
-                          o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || 
-                          o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())
-                        );
-                        const groups = [...new Set(filtered.map(o => o.group))];
-                        return groups.map(group => (
-                          <div key={group}>
-                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-1.5 pb-0.5">{group}</p>
-                            {filtered.filter(o => o.group === group).map(option => (
-                              <button
-                                key={option.tag}
-                                type="button"
-                                className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); insertMergeTag(createNameRef, option.tag); setCreateNameMTOpen(false); }}
-                              >
-                                <span className="font-medium truncate mr-2">{option.label}</span>
-                                <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
-                              </button>
-                            ))}
-                          </div>
-                        ));
-                      })()}
-                      {mergeTagOptions.filter(o => o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())).length === 0 && (
-                        <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
-                      )}
+                <div className="relative">
+                  <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1" onClick={(e) => { e.stopPropagation(); setCreateNameMTOpen(!createNameMTOpen); setMergeTagSearch(""); }}>
+                    <Tags className="h-3.5 w-3.5" />
+                    Merge Tags
+                  </Button>
+                  {createNameMTOpen && (
+                    <div className="absolute right-0 top-full mt-1 w-80 bg-popover border rounded-md shadow-md p-2 z-[200]" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert at cursor position</p>
+                      <div className="relative mb-2">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          placeholder="Search merge tags..."
+                          value={mergeTagSearch}
+                          onChange={(e) => setMergeTagSearch(e.target.value)}
+                          className="h-7 pl-7 text-xs"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-64 overflow-y-auto overscroll-contain">
+                        <div className="space-y-0.5">
+                        {(() => {
+                          const filtered = mergeTagOptions.filter(o =>
+                            o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) ||
+                            o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())
+                          );
+                          const groups = [...new Set(filtered.map(o => o.group))];
+                          return groups.map(group => (
+                            <div key={group}>
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-1.5 pb-0.5">{group}</p>
+                              {filtered.filter(o => o.group === group).map(option => (
+                                <button
+                                  key={option.tag}
+                                  type="button"
+                                  className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
+                                  onClick={(e) => { e.stopPropagation(); insertMergeTagToName(false, option.tag); setCreateNameMTOpen(false); }}
+                                >
+                                  <span className="font-medium truncate mr-2">{option.label}</span>
+                                  <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
+                                </button>
+                              ))}
+                            </div>
+                          ));
+                        })()}
+                        {mergeTagOptions.filter(o => o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())).length === 0 && (
+                          <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
+                        )}
+                        </div>
                       </div>
                     </div>
-                  </PopoverContent>
-                </Popover>
+                  )}
+                </div>
               </div>
-              <Input ref={createNameRef} id="template-name" name="name" required placeholder="e.g., Set up {{product.name}} for {{client.name}}" />
+              <Input ref={createNameRef} id="template-name" name="name" required placeholder="e.g., Set up {{product.name}} for {{client.name}}" value={createTemplateName} onChange={(e) => setCreateTemplateName(e.target.value)} />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label>Description</Label>
-                <Popover open={createDescMTOpen} onOpenChange={(open) => { setCreateDescMTOpen(open); if (!open) setMergeTagSearch(""); }}>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
-                      <Tags className="h-3.5 w-3.5" />
-                      Merge Tags
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80 p-2 z-[100]" sideOffset={5} onInteractOutside={(e) => { e.preventDefault(); setCreateDescMTOpen(false); }} onOpenAutoFocus={(e) => e.preventDefault()}>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert into description</p>
-                    <div className="relative mb-2">
-                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        placeholder="Search merge tags..."
-                        value={mergeTagSearch}
-                        onChange={(e) => setMergeTagSearch(e.target.value)}
-                        className="h-7 pl-7 text-xs"
-                      />
-                    </div>
-                    <div className="max-h-64 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
-                      <div className="space-y-0.5">
-                      {(() => {
-                        const filtered = mergeTagOptions.filter(o => 
-                          o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || 
-                          o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())
-                        );
-                        const groups = [...new Set(filtered.map(o => o.group))];
-                        return groups.map(group => (
-                          <div key={group}>
-                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-1.5 pb-0.5">{group}</p>
-                            {filtered.filter(o => o.group === group).map(option => (
-                              <button
-                                key={option.tag}
-                                type="button"
-                                className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); if (createDescEditorRef.current) { createDescEditorRef.current.insertText(option.tag); } else { setCreateTemplateDescription(prev => prev ? prev + option.tag : option.tag); } setCreateDescMTOpen(false); }}
-                              >
-                                <span className="font-medium truncate mr-2">{option.label}</span>
-                                <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
-                              </button>
-                            ))}
-                          </div>
-                        ));
-                      })()}
-                      {mergeTagOptions.filter(o => o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())).length === 0 && (
-                        <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
-                      )}
+                <div className="relative">
+                  <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1" onClick={(e) => { e.stopPropagation(); setCreateDescMTOpen(!createDescMTOpen); setMergeTagSearch(""); }}>
+                    <Tags className="h-3.5 w-3.5" />
+                    Merge Tags
+                  </Button>
+                  {createDescMTOpen && (
+                    <div className="absolute right-0 top-full mt-1 w-80 bg-popover border rounded-md shadow-md p-2 z-[200]" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert into description</p>
+                      <div className="relative mb-2">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          placeholder="Search merge tags..."
+                          value={mergeTagSearch}
+                          onChange={(e) => setMergeTagSearch(e.target.value)}
+                          className="h-7 pl-7 text-xs"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-64 overflow-y-auto overscroll-contain">
+                        <div className="space-y-0.5">
+                        {(() => {
+                          const filtered = mergeTagOptions.filter(o =>
+                            o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) ||
+                            o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())
+                          );
+                          const groups = [...new Set(filtered.map(o => o.group))];
+                          return groups.map(group => (
+                            <div key={group}>
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-1.5 pb-0.5">{group}</p>
+                              {filtered.filter(o => o.group === group).map(option => (
+                                <button
+                                  key={option.tag}
+                                  type="button"
+                                  className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
+                                  onClick={(e) => { e.stopPropagation(); if (createDescEditorRef.current) { createDescEditorRef.current.insertText(option.tag); } setCreateDescMTOpen(false); }}
+                                >
+                                  <span className="font-medium truncate mr-2">{option.label}</span>
+                                  <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
+                                </button>
+                              ))}
+                            </div>
+                          ));
+                        })()}
+                        {mergeTagOptions.filter(o => o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())).length === 0 && (
+                          <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
+                        )}
+                        </div>
                       </div>
                     </div>
-                  </PopoverContent>
-                </Popover>
+                  )}
+                </div>
               </div>
               <RichTextEditor
                 key={`create-desc-${descEditorKey}`}
@@ -3461,112 +3467,114 @@ export default function ProductsSettings() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <Label htmlFor="edit-template-name">Template Name *</Label>
-                  <Popover open={editNameMTOpen} onOpenChange={(open) => { setEditNameMTOpen(open); if (!open) setMergeTagSearch(""); }}>
-                    <PopoverTrigger asChild>
-                      <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
-                        <Tags className="h-3.5 w-3.5" />
-                        Merge Tags
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-80 p-2 z-[100]" sideOffset={5} onInteractOutside={(e) => { e.preventDefault(); setEditNameMTOpen(false); }} onOpenAutoFocus={(e) => e.preventDefault()}>
-                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert at cursor position</p>
-                      <div className="relative mb-2">
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input
-                          placeholder="Search merge tags..."
-                          value={mergeTagSearch}
-                          onChange={(e) => setMergeTagSearch(e.target.value)}
-                          className="h-7 pl-7 text-xs"
-                        />
-                      </div>
-                      <div className="max-h-64 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
-                        <div className="space-y-0.5">
-                        {(() => {
-                          const filtered = mergeTagOptions.filter(o => 
-                            o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || 
-                            o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())
-                          );
-                          const groups = [...new Set(filtered.map(o => o.group))];
-                          return groups.map(group => (
-                            <div key={group}>
-                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-1.5 pb-0.5">{group}</p>
-                              {filtered.filter(o => o.group === group).map(option => (
-                                <button
-                                  key={option.tag}
-                                  type="button"
-                                  className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); insertMergeTag(editNameRef, option.tag); setEditNameMTOpen(false); }}
-                                >
-                                  <span className="font-medium truncate mr-2">{option.label}</span>
-                                  <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
-                                </button>
-                              ))}
-                            </div>
-                          ));
-                        })()}
-                        {mergeTagOptions.filter(o => o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())).length === 0 && (
-                          <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
-                        )}
+                  <div className="relative">
+                    <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1" onClick={(e) => { e.stopPropagation(); setEditNameMTOpen(!editNameMTOpen); setMergeTagSearch(""); }}>
+                      <Tags className="h-3.5 w-3.5" />
+                      Merge Tags
+                    </Button>
+                    {editNameMTOpen && (
+                      <div className="absolute right-0 top-full mt-1 w-80 bg-popover border rounded-md shadow-md p-2 z-[200]" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                        <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert at cursor position</p>
+                        <div className="relative mb-2">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            placeholder="Search merge tags..."
+                            value={mergeTagSearch}
+                            onChange={(e) => setMergeTagSearch(e.target.value)}
+                            className="h-7 pl-7 text-xs"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="max-h-64 overflow-y-auto overscroll-contain">
+                          <div className="space-y-0.5">
+                          {(() => {
+                            const filtered = mergeTagOptions.filter(o =>
+                              o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) ||
+                              o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())
+                            );
+                            const groups = [...new Set(filtered.map(o => o.group))];
+                            return groups.map(group => (
+                              <div key={group}>
+                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-1.5 pb-0.5">{group}</p>
+                                {filtered.filter(o => o.group === group).map(option => (
+                                  <button
+                                    key={option.tag}
+                                    type="button"
+                                    className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
+                                    onClick={(e) => { e.stopPropagation(); insertMergeTagToName(true, option.tag); setEditNameMTOpen(false); }}
+                                  >
+                                    <span className="font-medium truncate mr-2">{option.label}</span>
+                                    <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
+                                  </button>
+                                ))}
+                              </div>
+                            ));
+                          })()}
+                          {mergeTagOptions.filter(o => o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())).length === 0 && (
+                            <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
+                          )}
+                          </div>
                         </div>
                       </div>
-                    </PopoverContent>
-                  </Popover>
+                    )}
+                  </div>
                 </div>
-                <Input ref={editNameRef} id="edit-template-name" name="name" required defaultValue={editingTemplate.name} />
+                <Input ref={editNameRef} id="edit-template-name" name="name" required value={editTemplateName} onChange={(e) => setEditTemplateName(e.target.value)} />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <Label>Description</Label>
-                  <Popover open={editDescMTOpen} onOpenChange={(open) => { setEditDescMTOpen(open); if (!open) setMergeTagSearch(""); }}>
-                    <PopoverTrigger asChild>
-                      <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
-                        <Tags className="h-3.5 w-3.5" />
-                        Merge Tags
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-80 p-2 z-[100]" sideOffset={5} onInteractOutside={(e) => { e.preventDefault(); setEditDescMTOpen(false); }} onOpenAutoFocus={(e) => e.preventDefault()}>
-                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert into description</p>
-                      <div className="relative mb-2">
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input
-                          placeholder="Search merge tags..."
-                          value={mergeTagSearch}
-                          onChange={(e) => setMergeTagSearch(e.target.value)}
-                          className="h-7 pl-7 text-xs"
-                        />
-                      </div>
-                      <div className="max-h-64 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
-                        <div className="space-y-0.5">
-                        {(() => {
-                          const filtered = mergeTagOptions.filter(o => 
-                            o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || 
-                            o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())
-                          );
-                          const groups = [...new Set(filtered.map(o => o.group))];
-                          return groups.map(group => (
-                            <div key={group}>
-                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-1.5 pb-0.5">{group}</p>
-                              {filtered.filter(o => o.group === group).map(option => (
-                                <button
-                                  key={option.tag}
-                                  type="button"
-                                  className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); if (editDescEditorRef.current) { editDescEditorRef.current.insertText(option.tag); } else { setEditTemplateDescription(prev => prev ? prev + option.tag : option.tag); } setEditDescMTOpen(false); }}
-                                >
-                                  <span className="font-medium truncate mr-2">{option.label}</span>
-                                  <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
-                                </button>
-                              ))}
-                            </div>
-                          ));
-                        })()}
-                        {mergeTagOptions.filter(o => o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())).length === 0 && (
-                          <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
-                        )}
+                  <div className="relative">
+                    <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1" onClick={(e) => { e.stopPropagation(); setEditDescMTOpen(!editDescMTOpen); setMergeTagSearch(""); }}>
+                      <Tags className="h-3.5 w-3.5" />
+                      Merge Tags
+                    </Button>
+                    {editDescMTOpen && (
+                      <div className="absolute right-0 top-full mt-1 w-80 bg-popover border rounded-md shadow-md p-2 z-[200]" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                        <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert into description</p>
+                        <div className="relative mb-2">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            placeholder="Search merge tags..."
+                            value={mergeTagSearch}
+                            onChange={(e) => setMergeTagSearch(e.target.value)}
+                            className="h-7 pl-7 text-xs"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="max-h-64 overflow-y-auto overscroll-contain">
+                          <div className="space-y-0.5">
+                          {(() => {
+                            const filtered = mergeTagOptions.filter(o =>
+                              o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) ||
+                              o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())
+                            );
+                            const groups = [...new Set(filtered.map(o => o.group))];
+                            return groups.map(group => (
+                              <div key={group}>
+                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-1.5 pb-0.5">{group}</p>
+                                {filtered.filter(o => o.group === group).map(option => (
+                                  <button
+                                    key={option.tag}
+                                    type="button"
+                                    className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
+                                    onClick={(e) => { e.stopPropagation(); if (editDescEditorRef.current) { editDescEditorRef.current.insertText(option.tag); } setEditDescMTOpen(false); }}
+                                  >
+                                    <span className="font-medium truncate mr-2">{option.label}</span>
+                                    <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
+                                  </button>
+                                ))}
+                              </div>
+                            ));
+                          })()}
+                          {mergeTagOptions.filter(o => o.label.toLowerCase().includes(mergeTagSearch.toLowerCase()) || o.tag.toLowerCase().includes(mergeTagSearch.toLowerCase())).length === 0 && (
+                            <p className="text-xs text-muted-foreground text-center py-2">No merge tags found</p>
+                          )}
+                          </div>
                         </div>
                       </div>
-                    </PopoverContent>
-                  </Popover>
+                    )}
+                  </div>
                 </div>
                 <RichTextEditor
                   key={`edit-desc-${descEditorKey}`}
