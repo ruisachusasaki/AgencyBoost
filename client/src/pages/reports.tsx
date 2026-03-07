@@ -6013,7 +6013,32 @@ export default function Reports() {
             </div>
             <div className="space-y-2">
               <Label>Date</Label>
-              <Input type="date" value={ccAddForm.date} onChange={(e) => setCcAddForm(prev => ({ ...prev, date: e.target.value }))} />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-start text-left font-normal ${!ccAddForm.date ? "text-muted-foreground" : ""}`}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {ccAddForm.date ? format(new Date(ccAddForm.date + "T00:00:00"), "MMM d, yyyy") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 z-[200]" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={ccAddForm.date ? new Date(ccAddForm.date + "T00:00:00") : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        const y = date.getFullYear();
+                        const m = String(date.getMonth() + 1).padStart(2, '0');
+                        const d = String(date.getDate()).padStart(2, '0');
+                        setCcAddForm(prev => ({ ...prev, date: `${y}-${m}-${d}` }));
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
