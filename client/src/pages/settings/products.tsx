@@ -221,6 +221,10 @@ export default function ProductsSettings() {
   const createDescEditorRef = useRef<RichTextEditorHandle | null>(null);
   const editDescEditorRef = useRef<RichTextEditorHandle | null>(null);
   const [mergeTagSearch, setMergeTagSearch] = useState("");
+  const [createNameMTOpen, setCreateNameMTOpen] = useState(false);
+  const [createDescMTOpen, setCreateDescMTOpen] = useState(false);
+  const [editNameMTOpen, setEditNameMTOpen] = useState(false);
+  const [editDescMTOpen, setEditDescMTOpen] = useState(false);
 
   const nativeMergeTagOptions = [
     { tag: "{{client.name}}", label: "Client Name", description: "Company or client name", group: "Native" },
@@ -3205,14 +3209,14 @@ export default function ProductsSettings() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label htmlFor="template-name">Template Name *</Label>
-                <Popover onOpenChange={() => setMergeTagSearch("")}>
+                <Popover open={createNameMTOpen} onOpenChange={(open) => { setCreateNameMTOpen(open); if (!open) setMergeTagSearch(""); }}>
                   <PopoverTrigger asChild>
                     <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
                       <Tags className="h-3.5 w-3.5" />
                       Merge Tags
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80 p-2 z-[100]" sideOffset={5}>
+                  <PopoverContent align="end" className="w-80 p-2 z-[100]" sideOffset={5} onInteractOutside={(e) => { e.preventDefault(); setCreateNameMTOpen(false); }} onOpenAutoFocus={(e) => e.preventDefault()}>
                     <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert at cursor position</p>
                     <div className="relative mb-2">
                       <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -3239,7 +3243,7 @@ export default function ProductsSettings() {
                                 key={option.tag}
                                 type="button"
                                 className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                onClick={() => insertMergeTag(createNameRef, option.tag)}
+                                onClick={() => { insertMergeTag(createNameRef, option.tag); setCreateNameMTOpen(false); }}
                               >
                                 <span className="font-medium truncate mr-2">{option.label}</span>
                                 <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
@@ -3261,14 +3265,14 @@ export default function ProductsSettings() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label>Description</Label>
-                <Popover onOpenChange={() => setMergeTagSearch("")}>
+                <Popover open={createDescMTOpen} onOpenChange={(open) => { setCreateDescMTOpen(open); if (!open) setMergeTagSearch(""); }}>
                   <PopoverTrigger asChild>
                     <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
                       <Tags className="h-3.5 w-3.5" />
                       Merge Tags
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80 p-2 z-[100]" sideOffset={5}>
+                  <PopoverContent align="end" className="w-80 p-2 z-[100]" sideOffset={5} onInteractOutside={(e) => { e.preventDefault(); setCreateDescMTOpen(false); }} onOpenAutoFocus={(e) => e.preventDefault()}>
                     <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert into description</p>
                     <div className="relative mb-2">
                       <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -3295,7 +3299,7 @@ export default function ProductsSettings() {
                                 key={option.tag}
                                 type="button"
                                 className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                onClick={() => { if (createDescEditorRef.current) { createDescEditorRef.current.insertText(option.tag); } else { setCreateTemplateDescription(prev => prev ? prev + option.tag : option.tag); } }}
+                                onClick={() => { if (createDescEditorRef.current) { createDescEditorRef.current.insertText(option.tag); } else { setCreateTemplateDescription(prev => prev ? prev + option.tag : option.tag); } setCreateDescMTOpen(false); }}
                               >
                                 <span className="font-medium truncate mr-2">{option.label}</span>
                                 <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
@@ -3456,14 +3460,14 @@ export default function ProductsSettings() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <Label htmlFor="edit-template-name">Template Name *</Label>
-                  <Popover onOpenChange={() => setMergeTagSearch("")}>
+                  <Popover open={editNameMTOpen} onOpenChange={(open) => { setEditNameMTOpen(open); if (!open) setMergeTagSearch(""); }}>
                     <PopoverTrigger asChild>
                       <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
                         <Tags className="h-3.5 w-3.5" />
                         Merge Tags
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent align="end" className="w-80 p-2 z-[100]" sideOffset={5}>
+                    <PopoverContent align="end" className="w-80 p-2 z-[100]" sideOffset={5} onInteractOutside={(e) => { e.preventDefault(); setEditNameMTOpen(false); }} onOpenAutoFocus={(e) => e.preventDefault()}>
                       <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert at cursor position</p>
                       <div className="relative mb-2">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -3490,7 +3494,7 @@ export default function ProductsSettings() {
                                   key={option.tag}
                                   type="button"
                                   className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                  onClick={() => insertMergeTag(editNameRef, option.tag)}
+                                  onClick={() => { insertMergeTag(editNameRef, option.tag); setEditNameMTOpen(false); }}
                                 >
                                   <span className="font-medium truncate mr-2">{option.label}</span>
                                   <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
@@ -3512,14 +3516,14 @@ export default function ProductsSettings() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <Label>Description</Label>
-                  <Popover onOpenChange={() => setMergeTagSearch("")}>
+                  <Popover open={editDescMTOpen} onOpenChange={(open) => { setEditDescMTOpen(open); if (!open) setMergeTagSearch(""); }}>
                     <PopoverTrigger asChild>
                       <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-primary gap-1">
                         <Tags className="h-3.5 w-3.5" />
                         Merge Tags
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent align="end" className="w-80 p-2 z-[100]" sideOffset={5}>
+                    <PopoverContent align="end" className="w-80 p-2 z-[100]" sideOffset={5} onInteractOutside={(e) => { e.preventDefault(); setEditDescMTOpen(false); }} onOpenAutoFocus={(e) => e.preventDefault()}>
                       <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Click to insert into description</p>
                       <div className="relative mb-2">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -3546,7 +3550,7 @@ export default function ProductsSettings() {
                                   key={option.tag}
                                   type="button"
                                   className="w-full text-left px-2 py-1.5 rounded-md hover:bg-accent text-sm flex items-center justify-between group"
-                                  onClick={() => { if (editDescEditorRef.current) { editDescEditorRef.current.insertText(option.tag); } else { setEditTemplateDescription(prev => prev ? prev + option.tag : option.tag); } }}
+                                  onClick={() => { if (editDescEditorRef.current) { editDescEditorRef.current.insertText(option.tag); } else { setEditTemplateDescription(prev => prev ? prev + option.tag : option.tag); } setEditDescMTOpen(false); }}
                                 >
                                   <span className="font-medium truncate mr-2">{option.label}</span>
                                   <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{option.tag}</code>
