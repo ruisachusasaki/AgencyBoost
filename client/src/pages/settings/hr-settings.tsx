@@ -494,14 +494,20 @@ function OnboardingAlertsSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: allSettings = [] } = useQuery<any[]>({
+  const { data: allSettingsRaw = {} } = useQuery<any>({
     queryKey: ["/api/task-settings"],
   });
 
   const getSettingValue = (key: string, defaultVal: any) => {
-    const setting = allSettings.find((s: any) => s.settingKey === key);
-    if (!setting) return defaultVal;
-    const val = typeof setting.settingValue === 'object' ? (setting.settingValue as any).value : setting.settingValue;
+    if (Array.isArray(allSettingsRaw)) {
+      const setting = allSettingsRaw.find((s: any) => s.settingKey === key);
+      if (!setting) return defaultVal;
+      const val = typeof setting.settingValue === 'object' ? (setting.settingValue as any).value : setting.settingValue;
+      return val ?? defaultVal;
+    }
+    const val = allSettingsRaw[key];
+    if (val === undefined) return defaultVal;
+    if (typeof val === 'object' && val !== null && 'value' in val) return val.value ?? defaultVal;
     return val ?? defaultVal;
   };
 
