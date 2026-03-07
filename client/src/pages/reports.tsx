@@ -5844,17 +5844,6 @@ export default function Reports() {
                     <Download className="h-4 w-4" />
                     Export CSV
                   </Button>
-                  {(canAddCcTime || canEditCcTime) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setCcEntriesOpen(true); setCcEntriesFilter({}); }}
-                      className="h-9 gap-1"
-                    >
-                      <Clock className="h-4 w-4" />
-                      View Entries
-                    </Button>
-                  )}
                   {canAddCcTime && (
                     <Button
                       size="sm"
