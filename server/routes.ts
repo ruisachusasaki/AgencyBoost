@@ -41946,6 +41946,357 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   });
 
   // ═══════════════════════════════════════════════════════════
+  // ONBOARDING — MANAGER DASHBOARD ROUTES
+  // ═══════════════════════════════════════════════════════════
+
+  app.get("/api/onboarding/instances", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+      const isAdmin = await isCurrentUserAdmin(req);
+
+      const directReports = await db.select({ id: staff.id })
+        .from(staff)
+        .where(and(eq(staff.managerId, userId), eq(staff.isActive, true)));
+      const isManagerUser = directReports.length > 0;
+
+      if (!isAdmin && !isManagerUser) {
+        return res.status(403).json({ error: "Admin or Manager access required" });
+      }
+
+      const statusFilter = (req.query.status as string) || "active";
+      const teamIdFilter = req.query.teamId as string;
+      const searchFilter = req.query.search as string;
+
+      const conditions: any[] = [];
+      if (statusFilter !== "all") {
+        conditions.push(eq(onboardingInstances.status, statusFilter));
+      }
+
+      if (!isAdmin) {
+        const reportIds = directReports.map(r => r.id);
+        if (reportIds.length > 0) {
+          conditions.push(inArray(onboardingInstances.staffId, reportIds));
+        } else {
+          return res.json([]);
+        }
+      }
+
+      if (teamIdFilter && isAdmin) {
+        const deptStaff = await db.select({ id: staff.id })
+          .from(staff)
+          .where(eq(staff.department, teamIdFilter));
+        const deptIds = deptStaff.map(s => s.id);
+        if (deptIds.length > 0) {
+          conditions.push(inArray(onboardingInstances.staffId, deptIds));
+        } else {
+          return res.json([]);
+        }
+      }
+
+      let instances = await db.select({
+        instance: onboardingInstances,
+        staffMember: {
+          id: staff.id,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email,
+          position: staff.position,
+          department: staff.department,
+          profileImagePath: staff.profileImagePath,
+        },
+      })
+        .from(onboardingInstances)
+        .innerJoin(staff, eq(onboardingInstances.staffId, staff.id))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(onboardingInstances.createdAt));
+
+      if (searchFilter) {
+        const search = searchFilter.toLowerCase();
+        instances = instances.filter(i =>
+          `${i.staffMember.firstName} ${i.staffMember.lastName}`.toLowerCase().includes(search)
+        );
+      }
+
+      const results = await Promise.all(instances.map(async ({ instance, staffMember }) => {
+        const items = await db.select()
+          .from(onboardingInstanceItems)
+          .where(eq(onboardingInstanceItems.instanceId, instance.id));
+
+        const snapshot = instance.templateSnapshot as any;
+        const totalDays = snapshot?.totalDays || 1;
+        const dayUnlockMode = snapshot?.dayUnlockMode || "calendar";
+
+        const totalItems = items.length;
+        const completedItems = items.filter(i => i.isCompleted).length;
+        const requiredItems = items.filter(i => i.isRequired).length;
+        const completedRequiredItems = items.filter(i => i.isRequired && i.isCompleted).length;
+
+        const startDate = new Date(instance.startDate);
+        const today = new Date();
+        let daysDiff = 0;
+        const d = new Date(startDate);
+        while (d <= today) {
+          const dow = d.getDay();
+          if (dow !== 0 && dow !== 6) daysDiff++;
+          d.setDate(d.getDate() + 1);
+        }
+        const currentDay = Math.max(1, Math.min(daysDiff, totalDays));
+
+        const percentComplete = requiredItems > 0 ? Math.round((completedRequiredItems / requiredItems) * 100) : 100;
+        const isBehind = items.some(i => i.isRequired && !i.isCompleted && i.dayNumber < currentDay);
+
+        return {
+          ...instance,
+          totalDays,
+          dayUnlockMode,
+          staffMember,
+          progress: {
+            totalItems,
+            completedItems,
+            requiredItems,
+            completedRequiredItems,
+            currentDay,
+            percentComplete,
+            isBehind,
+          },
+        };
+      }));
+
+      res.json(results);
+    } catch (error: any) {
+      console.error("Error fetching onboarding instances:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding instances" });
+    }
+  });
+
+  app.get("/api/onboarding/instances/:instanceId", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+      const isAdmin = await isCurrentUserAdmin(req);
+      const instanceId = parseInt(req.params.instanceId);
+
+      const [result] = await db.select({
+        instance: onboardingInstances,
+        staffMember: {
+          id: staff.id,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email,
+          position: staff.position,
+          department: staff.department,
+          profileImagePath: staff.profileImagePath,
+        },
+      })
+        .from(onboardingInstances)
+        .innerJoin(staff, eq(onboardingInstances.staffId, staff.id))
+        .where(eq(onboardingInstances.id, instanceId));
+
+      if (!result) {
+        return res.status(404).json({ error: "Instance not found" });
+      }
+
+      if (!isAdmin) {
+        const directReports = await db.select({ id: staff.id })
+          .from(staff)
+          .where(and(eq(staff.managerId, userId), eq(staff.isActive, true)));
+        const reportIds = directReports.map(r => r.id);
+        if (!reportIds.includes(result.staffMember.id)) {
+          return res.status(403).json({ error: "You can only view instances for your team members" });
+        }
+      }
+
+      const { instance, staffMember } = result;
+      const snapshot = instance.templateSnapshot as any;
+      const totalDays = snapshot?.totalDays || 1;
+      const dayUnlockMode = snapshot?.dayUnlockMode || "calendar";
+
+      const items = await db.select()
+        .from(onboardingInstanceItems)
+        .where(eq(onboardingInstanceItems.instanceId, instance.id))
+        .orderBy(onboardingInstanceItems.dayNumber, onboardingInstanceItems.sortOrder);
+
+      const enrichedItems = await Promise.all(items.map(async (item) => {
+        let referenceTitle: string | null = null;
+        let referenceUrl: string | null = null;
+        if (item.itemType === "kb_article" && item.referenceId) {
+          const [article] = await db.select({ title: knowledgeBaseArticles.title, slug: knowledgeBaseArticles.slug })
+            .from(knowledgeBaseArticles)
+            .where(eq(knowledgeBaseArticles.id, String(item.referenceId)));
+          if (article) {
+            referenceTitle = article.title;
+            referenceUrl = `/knowledge-base/${article.slug}`;
+          }
+        } else if (item.itemType === "training_course" && item.referenceId) {
+          const [course] = await db.select({ title: trainingCourses.title })
+            .from(trainingCourses)
+            .where(eq(trainingCourses.id, String(item.referenceId)));
+          if (course) {
+            referenceTitle = course.title;
+            referenceUrl = `/training/courses/${item.referenceId}`;
+          }
+        }
+        return { ...item, referenceTitle, referenceUrl };
+      }));
+
+      const totalItems = items.length;
+      const completedItems = items.filter(i => i.isCompleted).length;
+      const requiredItems = items.filter(i => i.isRequired).length;
+      const completedRequiredItems = items.filter(i => i.isRequired && i.isCompleted).length;
+
+      const startDate = new Date(instance.startDate);
+      const today = new Date();
+      let daysDiff = 0;
+      const d = new Date(startDate);
+      while (d <= today) {
+        const dow = d.getDay();
+        if (dow !== 0 && dow !== 6) daysDiff++;
+        d.setDate(d.getDate() + 1);
+      }
+      const currentDay = Math.max(1, Math.min(daysDiff, totalDays));
+      const percentComplete = requiredItems > 0 ? Math.round((completedRequiredItems / requiredItems) * 100) : 100;
+      const isBehind = items.some(i => i.isRequired && !i.isCompleted && i.dayNumber < currentDay);
+
+      res.json({
+        ...instance,
+        totalDays,
+        dayUnlockMode,
+        staffMember,
+        progress: {
+          totalItems,
+          completedItems,
+          requiredItems,
+          completedRequiredItems,
+          currentDay,
+          percentComplete,
+          isBehind,
+        },
+        items: enrichedItems,
+      });
+    } catch (error: any) {
+      console.error("Error fetching onboarding instance detail:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding instance" });
+    }
+  });
+
+  app.patch("/api/onboarding/instances/:instanceId/items/:itemId", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+      const isAdmin = await isCurrentUserAdmin(req);
+      const instanceId = parseInt(req.params.instanceId);
+      const itemId = parseInt(req.params.itemId);
+      const { isCompleted } = req.body;
+
+      if (typeof isCompleted !== "boolean") {
+        return res.status(400).json({ error: "isCompleted must be a boolean" });
+      }
+
+      if (!isAdmin) {
+        const directReports = await db.select({ id: staff.id })
+          .from(staff)
+          .where(and(eq(staff.managerId, userId), eq(staff.isActive, true)));
+        const [inst] = await db.select({ staffId: onboardingInstances.staffId })
+          .from(onboardingInstances)
+          .where(eq(onboardingInstances.id, instanceId));
+        if (!inst || !directReports.some(r => r.id === inst.staffId)) {
+          return res.status(403).json({ error: "You can only modify items for your team members" });
+        }
+      }
+
+      const [item] = await db.select()
+        .from(onboardingInstanceItems)
+        .where(and(eq(onboardingInstanceItems.id, itemId), eq(onboardingInstanceItems.instanceId, instanceId)));
+
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      const updateData = isCompleted
+        ? { isCompleted: true, completedAt: new Date(), completedBy: userId, autoCompleted: false }
+        : { isCompleted: false, completedAt: null, completedBy: null, autoCompleted: false };
+
+      const [updated] = await db.update(onboardingInstanceItems)
+        .set(updateData)
+        .where(eq(onboardingInstanceItems.id, itemId))
+        .returning();
+
+      if (isCompleted) {
+        const allRequiredItems = await db.select()
+          .from(onboardingInstanceItems)
+          .where(and(
+            eq(onboardingInstanceItems.instanceId, instanceId),
+            eq(onboardingInstanceItems.isRequired, true)
+          ));
+        const allComplete = allRequiredItems.every(i => i.id === itemId ? true : i.isCompleted);
+        if (allComplete) {
+          await db.update(onboardingInstances)
+            .set({ status: "completed", completedAt: new Date() })
+            .where(eq(onboardingInstances.id, instanceId));
+        }
+      } else {
+        const [inst] = await db.select()
+          .from(onboardingInstances)
+          .where(eq(onboardingInstances.id, instanceId));
+        if (inst?.status === "completed") {
+          await db.update(onboardingInstances)
+            .set({ status: "active", completedAt: null })
+            .where(eq(onboardingInstances.id, instanceId));
+        }
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating onboarding item:", error);
+      res.status(500).json({ error: "Failed to update onboarding item" });
+    }
+  });
+
+  app.patch("/api/onboarding/instances/:instanceId/status", requireAuth(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req)!;
+      const isAdmin = await isCurrentUserAdmin(req);
+      const instanceId = parseInt(req.params.instanceId);
+      const { status: newStatus } = req.body;
+
+      if (!["active", "paused", "completed"].includes(newStatus)) {
+        return res.status(400).json({ error: "Status must be active, paused, or completed" });
+      }
+
+      if (!isAdmin) {
+        const directReports = await db.select({ id: staff.id })
+          .from(staff)
+          .where(and(eq(staff.managerId, userId), eq(staff.isActive, true)));
+        const [inst] = await db.select({ staffId: onboardingInstances.staffId })
+          .from(onboardingInstances)
+          .where(eq(onboardingInstances.id, instanceId));
+        if (!inst || !directReports.some(r => r.id === inst.staffId)) {
+          return res.status(403).json({ error: "You can only modify instances for your team members" });
+        }
+      }
+
+      const updateData: any = { status: newStatus };
+      if (newStatus === "completed") {
+        updateData.completedAt = new Date();
+      } else {
+        updateData.completedAt = null;
+      }
+
+      const [updated] = await db.update(onboardingInstances)
+        .set(updateData)
+        .where(eq(onboardingInstances.id, instanceId))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ error: "Instance not found" });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating onboarding instance status:", error);
+      res.status(500).json({ error: "Failed to update instance status" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════
   // ONBOARDING — NEW HIRE CHECKLIST ROUTES
   // ═══════════════════════════════════════════════════════════
 
