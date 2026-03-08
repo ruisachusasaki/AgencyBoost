@@ -227,15 +227,38 @@ export default function PublicProposal() {
       const stripe = await stripePromise;
       if (!stripe) throw new Error("Payment system not available");
 
-      const { error, paymentIntent } = await stripe.confirmUsBankAccountPayment(clientSecret, {
-        payment_method: {
-          us_bank_account: {},
-          billing_details: { name: signerName, email: signerEmail },
+      const { error, paymentIntent } = await (stripe as any).collectBankAccountForPayment({
+        clientSecret,
+        params: {
+          payment_method_type: "us_bank_account",
+          payment_method_data: {
+            billing_details: { name: signerName, email: signerEmail },
+          },
         },
+        expand: ["payment_method"],
       });
 
       if (error) {
-        setPaymentError(error.message || "Payment failed");
+        setPaymentError(error.message || "Failed to connect bank account");
+        setAchProcessing(false);
+        return;
+      }
+
+      if (paymentIntent?.status === "requires_confirmation") {
+        const { error: confirmError, paymentIntent: confirmedIntent } = await stripe.confirmUsBankAccountPayment(clientSecret);
+
+        if (confirmError) {
+          setPaymentError(confirmError.message || "Payment confirmation failed");
+        } else if (confirmedIntent?.status === "succeeded") {
+          setCurrentStep("complete");
+          refetch();
+        } else if (confirmedIntent?.status === "processing") {
+          setAchPending(true);
+          setCurrentStep("complete");
+          refetch();
+        } else if (confirmedIntent?.status === "requires_action") {
+          setPaymentError("Additional verification is required. Please follow the prompts from your bank.");
+        }
       } else if (paymentIntent?.status === "succeeded") {
         setCurrentStep("complete");
         refetch();
@@ -243,8 +266,6 @@ export default function PublicProposal() {
         setAchPending(true);
         setCurrentStep("complete");
         refetch();
-      } else if (paymentIntent?.status === "requires_action") {
-        setPaymentError("Additional verification is required. Please follow the prompts from your bank.");
       }
     } catch (err: any) {
       setPaymentError(err.message || "Payment failed");
