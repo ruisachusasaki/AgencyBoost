@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import type { UploadResult } from "@uppy/core";
 import { 
   ArrowLeft, 
@@ -366,13 +367,11 @@ export default function SalesSettings() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="terms-content">Content (HTML supported)</Label>
-                <Textarea
-                  id="terms-content"
-                  value={termsContent}
-                  onChange={(e) => setTermsContent(e.target.value)}
+                <Label>Content</Label>
+                <RichTextEditor
+                  content={termsContent}
+                  onChange={(html) => setTermsContent(html)}
                   placeholder="Enter your terms and conditions here..."
-                  className="min-h-[300px] font-mono text-sm"
                 />
               </div>
 
@@ -393,12 +392,6 @@ export default function SalesSettings() {
                 </Button>
               </div>
 
-              {activeTerms && (
-                <div className="border-t pt-4 mt-4">
-                  <Label className="text-muted-foreground text-xs mb-2 block">Preview</Label>
-                  <div className="border rounded-lg p-4 bg-white dark:bg-gray-900 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: termsContent }} />
-                </div>
-              )}
             </CardContent>
           </Card>
 
