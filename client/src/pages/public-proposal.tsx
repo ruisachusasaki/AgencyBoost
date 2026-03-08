@@ -447,7 +447,7 @@ export default function PublicProposal() {
                     {items.map((item: any, index: number) => {
                       const isRecurring = item.isRecurring;
                       return (
-                        <div key={item.id || index} className="flex items-center justify-between py-3 border-b last:border-0">
+                        <div key={item.id || index} className="flex items-center py-3 border-b last:border-0">
                           <div className="flex-1">
                             <div className="font-medium text-gray-900">{item.itemName || item.notes || `${item.itemType} Item`}</div>
                             {item.itemDescription && (
@@ -457,9 +457,6 @@ export default function PublicProposal() {
                               <Badge variant="outline" className="capitalize text-xs">{item.itemType}</Badge>
                               {item.quantity > 1 && <span className="text-xs text-gray-500">Qty: {item.quantity}</span>}
                             </div>
-                          </div>
-                          <div className="text-right pl-4">
-                            <div className="font-semibold text-gray-900">${formatCurrency(parseFloat(item.totalCost || "0"))}</div>
                           </div>
                         </div>
                       );
@@ -471,7 +468,7 @@ export default function PublicProposal() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4 text-gray-500" />
-                              <span className="font-medium text-gray-700">Build Fee</span>
+                              <span className="font-medium text-gray-700">Build Investment</span>
                               <span className="text-xs text-gray-400">(one-time)</span>
                             </div>
                             <span className="text-lg font-bold text-gray-900">${formatCurrency(buildFee)}</span>
@@ -481,7 +478,7 @@ export default function PublicProposal() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Repeat className="h-4 w-4 text-gray-500" />
-                              <span className="font-medium text-gray-700">Monthly Fee</span>
+                              <span className="font-medium text-gray-700">Monthly Investment</span>
                               <span className="text-xs text-gray-400">(recurring)</span>
                             </div>
                             <span className="text-lg font-bold text-gray-900">${formatCurrency(monthlyFee)}/mo</span>
@@ -500,7 +497,7 @@ export default function PublicProposal() {
                                 <p className="font-medium">Payment Summary</p>
                                 <p className="mt-1">
                                   {hasBuildFee
-                                    ? `You'll pay the Build Fee of $${formatCurrency(buildFee)} today. Your monthly billing of $${formatCurrency(monthlyFee)}/mo begins 30 days after payment.`
+                                    ? `You'll pay the Build Investment of $${formatCurrency(buildFee)} today. Your monthly billing of $${formatCurrency(monthlyFee)}/mo begins 30 days after payment.`
                                     : `Your monthly billing of $${formatCurrency(monthlyFee)}/mo begins 30 days from today.`
                                   }
                                 </p>
@@ -510,7 +507,7 @@ export default function PublicProposal() {
                                 <p className="font-medium">Payment Summary</p>
                                 <p className="mt-1">
                                   {hasBuildFee
-                                    ? `You'll pay $${formatCurrency(buildFee + monthlyFee)} today (Build Fee + first month). Monthly billing of $${formatCurrency(monthlyFee)}/mo continues each month after.`
+                                    ? `You'll pay $${formatCurrency(buildFee + monthlyFee)} today (Build Investment + first month). Monthly billing of $${formatCurrency(monthlyFee)}/mo continues each month after.`
                                     : `You'll pay $${formatCurrency(monthlyFee)} today. Monthly billing of $${formatCurrency(monthlyFee)}/mo continues each month after.`
                                   }
                                 </p>
@@ -707,7 +704,7 @@ export default function PublicProposal() {
                 <div className="rounded-lg border bg-gray-50 p-4 space-y-2">
                   {hasBuildFee && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Build Fee (one-time)</span>
+                      <span className="text-gray-600">Build Investment (one-time)</span>
                       <span className="font-medium">${formatCurrency(buildFee)}</span>
                     </div>
                   )}
