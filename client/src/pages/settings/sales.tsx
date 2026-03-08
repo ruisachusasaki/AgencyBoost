@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
-import { RichTextEditor } from "@/components/rich-text-editor";
+import { RichTextEditor, type RichTextEditorHandle } from "@/components/rich-text-editor";
+import { Code } from "lucide-react";
 import type { UploadResult } from "@uppy/core";
 import { 
   ArrowLeft, 
@@ -37,6 +38,46 @@ export default function SalesSettings() {
 
   const [termsTitle, setTermsTitle] = useState("");
   const [termsContent, setTermsContent] = useState("");
+  const termsEditorRef = useRef<RichTextEditorHandle | null>(null);
+  const [showMergeTagDropdown, setShowMergeTagDropdown] = useState(false);
+
+  const termsMergeTags = [
+    { category: "Client", tags: [
+      { tag: "{{clientCompany}}", label: "Company Name" },
+      { tag: "{{clientContactName}}", label: "Contact Name" },
+      { tag: "{{clientEmail}}", label: "Email" },
+      { tag: "{{clientPhone}}", label: "Phone" },
+      { tag: "{{clientAddress}}", label: "Address" },
+      { tag: "{{clientAddress2}}", label: "Address Line 2" },
+      { tag: "{{clientCity}}", label: "City" },
+      { tag: "{{clientState}}", label: "State" },
+      { tag: "{{clientZipCode}}", label: "Zip Code" },
+      { tag: "{{clientCityStateZip}}", label: "City, State ZIP" },
+      { tag: "{{clientWebsite}}", label: "Website" },
+    ]},
+    { category: "Quote / Proposal", tags: [
+      { tag: "{{proposalName}}", label: "Proposal Name" },
+      { tag: "{{effectiveDate}}", label: "Effective Date" },
+      { tag: "{{buildInvestment}}", label: "Build Investment (one-time)" },
+      { tag: "{{monthlyInvestment}}", label: "Monthly Investment (recurring)" },
+      { tag: "{{servicesList}}", label: "Services List (line items)" },
+      { tag: "{{billingFrequency}}", label: "Billing Frequency" },
+    ]},
+    { category: "Your Business", tags: [
+      { tag: "{{businessName}}", label: "Business Name" },
+      { tag: "{{businessEmail}}", label: "Business Email" },
+      { tag: "{{businessPhone}}", label: "Business Phone" },
+      { tag: "{{businessAddress}}", label: "Business Address" },
+      { tag: "{{businessCity}}", label: "Business City" },
+      { tag: "{{businessState}}", label: "Business State" },
+      { tag: "{{businessZipCode}}", label: "Business Zip Code" },
+    ]},
+    { category: "Signature (filled at signing)", tags: [
+      { tag: "{{signerName}}", label: "Signer Name" },
+      { tag: "{{signerEmail}}", label: "Signer Email" },
+      { tag: "{{signatureDate}}", label: "Signature Date" },
+    ]},
+  ];
 
   const [brandingLogo, setBrandingLogo] = useState("");
   const [brandingCompanyName, setBrandingCompanyName] = useState("");
@@ -367,11 +408,52 @@ export default function SalesSettings() {
               </div>
 
               <div className="space-y-2">
-                <Label>Content</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Content</Label>
+                  <div className="relative">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={() => setShowMergeTagDropdown(!showMergeTagDropdown)}
+                    >
+                      <Code className="h-3.5 w-3.5" />
+                      Insert Merge Tag
+                    </Button>
+                    {showMergeTagDropdown && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowMergeTagDropdown(false)} />
+                        <div className="absolute right-0 top-full mt-1 z-50 w-72 bg-white dark:bg-gray-900 border rounded-lg shadow-xl max-h-80 overflow-y-auto">
+                          {termsMergeTags.map((group) => (
+                            <div key={group.category}>
+                              <div className="px-3 py-1.5 bg-muted/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky top-0">
+                                {group.category}
+                              </div>
+                              {group.tags.map((item) => (
+                                <button
+                                  key={item.tag}
+                                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted flex items-center justify-between gap-2"
+                                  onClick={() => {
+                                    termsEditorRef.current?.insertText(item.tag);
+                                    setShowMergeTagDropdown(false);
+                                  }}
+                                >
+                                  <span>{item.label}</span>
+                                  <code className="text-xs text-muted-foreground bg-muted px-1 py-0.5 rounded font-mono">{item.tag}</code>
+                                </button>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
                 <RichTextEditor
                   content={termsContent}
                   onChange={(html) => setTermsContent(html)}
                   placeholder="Enter your terms and conditions here..."
+                  editorRef={termsEditorRef}
                 />
               </div>
 

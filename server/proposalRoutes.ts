@@ -301,6 +301,63 @@ export function registerProposalRoutes(
 
       const branding = await loadBranding();
 
+      let clientData: any = null;
+      if (quote.clientId) {
+        const [c] = await db.select().from(clients).where(eq(clients.id, quote.clientId));
+        if (c) clientData = c;
+      } else if (quote.leadId) {
+        const [l] = await db.select().from(leads).where(eq(leads.id, quote.leadId));
+        if (l) clientData = { company: l.company, name: l.name, email: l.email, phone: l.phone };
+      }
+
+      let businessData: any = null;
+      const [bp] = await db.select().from(businessProfile).limit(1);
+      if (bp) businessData = bp;
+
+      const servicesList = enrichedItems.map((item: any) => item.itemName).filter(Boolean).join(", ");
+
+      const formatCurrency = (val: number) => val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const effectiveDate = quote.sentAt ? new Date(quote.sentAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+      const resolvedTerms = activeTerms[0] ? { ...activeTerms[0] } : null;
+      if (resolvedTerms?.content) {
+        const mergeMap: Record<string, string> = {
+          "{{clientCompany}}": clientData?.company || clientData?.name || clientName || "",
+          "{{clientContactName}}": clientData?.contactName || clientData?.name || clientName || "",
+          "{{clientEmail}}": clientData?.email || "",
+          "{{clientPhone}}": clientData?.phone || "",
+          "{{clientAddress}}": clientData?.address || "",
+          "{{clientAddress2}}": clientData?.address2 || "",
+          "{{clientCity}}": clientData?.city || "",
+          "{{clientState}}": clientData?.state || "",
+          "{{clientZipCode}}": clientData?.zipCode || "",
+          "{{clientCityStateZip}}": [clientData?.city, clientData?.state, clientData?.zipCode].filter(Boolean).join(", ") || "",
+          "{{clientWebsite}}": clientData?.website || "",
+          "{{proposalName}}": quote.name || "",
+          "{{effectiveDate}}": effectiveDate,
+          "{{buildInvestment}}": `$${formatCurrency(buildFee)}`,
+          "{{monthlyInvestment}}": `$${formatCurrency(monthlyFee)}`,
+          "{{servicesList}}": servicesList,
+          "{{billingFrequency}}": monthlyFee > 0 ? "monthly" : "one-time",
+          "{{businessName}}": businessData?.companyName || "",
+          "{{businessEmail}}": businessData?.email || "",
+          "{{businessPhone}}": businessData?.phone || "",
+          "{{businessAddress}}": businessData?.address || "",
+          "{{businessCity}}": businessData?.city || "",
+          "{{businessState}}": businessData?.state || "",
+          "{{businessZipCode}}": businessData?.zipCode || "",
+          "{{signerName}}": quote.signedByName || "",
+          "{{signerEmail}}": quote.signedByEmail || "",
+          "{{signatureDate}}": quote.signedAt ? new Date(quote.signedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "",
+        };
+
+        let content = resolvedTerms.content;
+        for (const [tag, value] of Object.entries(mergeMap)) {
+          content = content.split(tag).join(value);
+        }
+        resolvedTerms.content = content;
+      }
+
       res.json({
         proposal: {
           id: quote.id,
@@ -320,7 +377,7 @@ export function registerProposalRoutes(
         quote: { name: quote.name, totalCost: quote.totalCost, clientBudget: quote.clientBudget, notes: quote.notes, oneTimeCost: quote.oneTimeCost, monthlyCost: quote.monthlyCost },
         items: enrichedItems,
         clientName,
-        terms: activeTerms[0] || null,
+        terms: resolvedTerms,
         paymentAmount,
         buildFee,
         monthlyFee,
