@@ -509,6 +509,15 @@ export function registerProposalRoutes(
         return res.status(400).json({ message: "Invalid payment amount" });
       }
 
+      const CC_SURCHARGE_RATE = 0.03;
+      let ccFee = 0;
+      let chargeAmount = payNowAmount;
+
+      if (paymentMethod === "card") {
+        ccFee = payNowAmount * CC_SURCHARGE_RATE;
+        chargeAmount = payNowAmount + ccFee;
+      }
+
       const stripe = getStripe();
       if (!stripe) return res.status(503).json({ message: "Stripe not configured" });
 
@@ -524,6 +533,8 @@ export function registerProposalRoutes(
         billingMode,
         monthlyFee: monthlyFee.toString(),
         buildFee: buildFee.toString(),
+        paymentMethod,
+        ccSurchargeRate: paymentMethod === "card" ? CC_SURCHARGE_RATE.toString() : "0",
       };
 
       let result;
@@ -543,7 +554,7 @@ export function registerProposalRoutes(
         result = { paymentIntent, clientSecret: paymentIntent.client_secret! };
       } else {
         const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(payNowAmount * 100),
+          amount: Math.round(chargeAmount * 100),
           currency: "usd",
           customer: customer.id,
           payment_method_types: ["card"],
@@ -558,7 +569,7 @@ export function registerProposalRoutes(
           paymentMethod,
           paymentIntentId: result.paymentIntent.id,
           paymentStatus: "pending",
-          paidAmount: payNowAmount.toString(),
+          paidAmount: chargeAmount.toFixed(2),
           stripeCustomerId: customer.id,
           updatedAt: new Date(),
         })
@@ -566,7 +577,7 @@ export function registerProposalRoutes(
 
       res.json({
         clientSecret: result.clientSecret,
-        payNowAmount,
+        payNowAmount: chargeAmount,
         buildFee,
         monthlyFee,
         billingMode,
@@ -902,6 +913,8 @@ export async function handleStripeWebhook(req: any, res: any, notificationServic
           const monthlyFee = parseFloat(paymentIntent.metadata?.monthlyFee || quote.clientBudget || "0");
           const billingMode = paymentIntent.metadata?.billingMode || quote.billingMode || "trial";
           const customerId = quote.stripeCustomerId || paymentIntent.customer;
+          const pmMethod = paymentIntent.metadata?.paymentMethod || quote.paymentMethod || "";
+          const ccSurchargeRate = parseFloat(paymentIntent.metadata?.ccSurchargeRate || "0");
 
           if (monthlyFee > 0 && customerId && !quote.stripeSubscriptionId) {
             try {
@@ -910,9 +923,14 @@ export async function handleStripeWebhook(req: any, res: any, notificationServic
                 ? paymentIntent.payment_method
                 : paymentIntent.payment_method?.id;
 
+              let subscriptionMonthly = monthlyFee;
+              if (pmMethod === "card" && ccSurchargeRate > 0) {
+                subscriptionMonthly = monthlyFee + (monthlyFee * ccSurchargeRate);
+              }
+
               const sub = await createSubscription(
                 customerId,
-                monthlyFee,
+                subscriptionMonthly,
                 { quoteId: quote.id, quoteName: quote.name || "Monthly Service" },
                 trialDays,
                 paymentMethodId || undefined

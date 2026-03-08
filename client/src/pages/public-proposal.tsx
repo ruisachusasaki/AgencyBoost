@@ -754,9 +754,17 @@ export default function PublicProposal() {
                       <span className="font-medium">${formatCurrency(monthlyFee)}</span>
                     </div>
                   )}
+                  {paymentMethod === "card" && (
+                    <div className="flex items-center justify-between text-sm text-amber-700">
+                      <span>Credit Card Fee (3%)</span>
+                      <span className="font-medium">${formatCurrency(payNowAmount * 0.03)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between pt-2 border-t">
                     <span className="font-semibold">Due Now</span>
-                    <span className="text-xl font-bold" style={{ color: brandColor }}>${formatCurrency(payNowAmount)}</span>
+                    <span className="text-xl font-bold" style={{ color: brandColor }}>
+                      ${formatCurrency(paymentMethod === "card" ? payNowAmount * 1.03 : payNowAmount)}
+                    </span>
                   </div>
                   {hasRecurring && (
                     <div className="flex items-center justify-between text-xs text-gray-500 pt-1">
@@ -765,7 +773,8 @@ export default function PublicProposal() {
                         Monthly recurring
                       </span>
                       <span>
-                        ${formatCurrency(monthlyFee)}/mo {billingMode === "trial" ? "(starts in 30 days)" : "(next month)"}
+                        ${formatCurrency(paymentMethod === "card" ? monthlyFee * 1.03 : monthlyFee)}/mo {billingMode === "trial" ? "(starts in 30 days)" : "(next month)"}
+                        {paymentMethod === "card" && " (incl. 3% CC fee)"}
                       </span>
                     </div>
                   )}
@@ -791,6 +800,7 @@ export default function PublicProposal() {
                         <CreditCard className="h-8 w-8 mb-3" style={{ color: paymentMethod === "card" ? brandColor : "#9ca3af" }} />
                         <div className="font-semibold">Credit / Debit Card</div>
                         <p className="text-sm text-gray-500 mt-1">Pay instantly with your card</p>
+                        <p className="text-xs text-amber-600 mt-1">3% processing fee applies</p>
                       </button>
                       <button
                         onClick={() => handleSelectPaymentMethod("ach")}
@@ -813,7 +823,7 @@ export default function PublicProposal() {
                           clientSecret={clientSecret}
                           signerName={signerName}
                           signerEmail={signerEmail}
-                          amount={payNowAmount}
+                          amount={payNowAmount * 1.03}
                           brandColor={brandColor}
                           onSuccess={() => {
                             setCurrentStep("complete");
