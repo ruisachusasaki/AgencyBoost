@@ -632,7 +632,7 @@ export default function PublicProposal() {
                 </div>
 
                 {terms && (
-                  <div className="border rounded-lg">
+                  <div className="border rounded-lg" id="terms-section">
                     <button
                       onClick={() => setShowTerms(!showTerms)}
                       className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50"
@@ -640,11 +640,12 @@ export default function PublicProposal() {
                       <div className="flex items-center gap-2">
                         <Shield className="h-5 w-5" style={{ color: brandColor }} />
                         <span className="font-medium">{terms.title || "Terms & Conditions"}</span>
+                        {!showTerms && <span className="text-xs text-gray-400 ml-1">(click to read)</span>}
                       </div>
                       {showTerms ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
                     {showTerms && (
-                      <div className="border-t p-4 max-h-64 overflow-y-auto">
+                      <div className="border-t p-4 max-h-96 overflow-y-auto">
                         <div className="prose prose-sm max-w-none text-gray-600" dangerouslySetInnerHTML={{ __html: terms.content }} />
                       </div>
                     )}
@@ -659,7 +660,25 @@ export default function PublicProposal() {
                     className="mt-0.5"
                   />
                   <Label htmlFor="terms-checkbox" className="text-sm text-gray-600 cursor-pointer leading-relaxed">
-                    I have read and agree to the {terms ? terms.title : "Terms & Conditions"}. I authorize this electronic signature as my binding signature.
+                    I have read and agree to the{" "}
+                    {terms ? (
+                      <span
+                        className="underline font-medium cursor-pointer"
+                        style={{ color: brandColor }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowTerms(true);
+                          setTimeout(() => {
+                            document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }, 100);
+                        }}
+                      >
+                        {terms.title || "Terms & Conditions"}
+                      </span>
+                    ) : (
+                      "Terms & Conditions"
+                    )}
+                    . I authorize this electronic signature as my binding signature.
                   </Label>
                 </div>
 
