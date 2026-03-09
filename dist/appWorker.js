@@ -3,16 +3,16 @@ import {
 } from "./chunk-TA3ROV2W.js";
 import {
   createOAuth2Client
-} from "./chunk-5LK54EP6.js";
+} from "./chunk-HSROCNVJ.js";
 import {
   EncryptionService
 } from "./chunk-BGP47S4B.js";
 import {
   emitTrigger
-} from "./chunk-B7CEYFWP.js";
+} from "./chunk-CQSLTYD5.js";
 import {
   storage as storage2
-} from "./chunk-RQCYWQ7X.js";
+} from "./chunk-FWBJNPH3.js";
 import {
   deleteAppointmentFromGoogleCalendar,
   syncAppointmentToGoogleCalendar
@@ -29,14 +29,14 @@ import {
 } from "./chunk-PQ4E2HEU.js";
 import {
   registerProposalRoutes
-} from "./chunk-52ZRBQWR.js";
+} from "./chunk-YGIFZRF2.js";
 import {
   generateTasksFromTemplates
-} from "./chunk-BT633BWL.js";
-import "./chunk-32ZL3CUD.js";
+} from "./chunk-ZBNZXHR3.js";
+import "./chunk-FD7TVBGA.js";
 import {
   db
-} from "./chunk-YTLD6M36.js";
+} from "./chunk-VLLFPBHL.js";
 import {
   aiAssistantSettings,
   aiIntegrations,
@@ -303,7 +303,7 @@ import {
   workflowExecutions,
   workflowTemplates,
   workflows
-} from "./chunk-3W64PGKK.js";
+} from "./chunk-TCEMRWIU.js";
 import {
   __require
 } from "./chunk-R5U7XKVJ.js";
@@ -2772,8 +2772,8 @@ function requireClientPortalAuth() {
       });
     }
     try {
-      const { db: db2 } = await import("./db-TW3R76JK.js");
-      const { clientPortalUsers: clientPortalUsers2 } = await import("./schema-OCHJQJPK.js");
+      const { db: db2 } = await import("./db-6DWHPCKR.js");
+      const { clientPortalUsers: clientPortalUsers2 } = await import("./schema-MCVKPF2W.js");
       const { eq: eq14 } = await import("drizzle-orm");
       await db2.update(clientPortalUsers2).set({
         lastLogin: /* @__PURE__ */ new Date()
@@ -8734,7 +8734,7 @@ AgencyBoost CRM`
         fileUrl: normalizedFileUrl,
         uploadedBy: userId2
       }).returning();
-      const { commentFiles: commentFiles2 } = await import("./schema-OCHJQJPK.js");
+      const { commentFiles: commentFiles2 } = await import("./schema-MCVKPF2W.js");
       try {
         await db.insert(commentFiles2).values({
           id: attachment.id,
@@ -11449,8 +11449,8 @@ AgencyBoost CRM`
   });
   async function checkFileExists(fileId) {
     try {
-      const { db: db2 } = await import("./db-TW3R76JK.js");
-      const { commentFiles: commentFiles2, taskAttachments: taskAttachments2 } = await import("./schema-OCHJQJPK.js");
+      const { db: db2 } = await import("./db-6DWHPCKR.js");
+      const { commentFiles: commentFiles2, taskAttachments: taskAttachments2 } = await import("./schema-MCVKPF2W.js");
       const { eq: eq14 } = await import("drizzle-orm");
       const [commentFile] = await db2.select().from(commentFiles2).where(eq14(commentFiles2.id, fileId));
       if (commentFile) {
@@ -11488,8 +11488,8 @@ AgencyBoost CRM`
       if (!fileCheck.exists) {
         return res.status(404).json({ error: "File not found" });
       }
-      const { db: db2 } = await import("./db-TW3R76JK.js");
-      const { imageAnnotations: imageAnnotations2 } = await import("./schema-OCHJQJPK.js");
+      const { db: db2 } = await import("./db-6DWHPCKR.js");
+      const { imageAnnotations: imageAnnotations2 } = await import("./schema-MCVKPF2W.js");
       const { eq: eq14 } = await import("drizzle-orm");
       const annotations = await db2.select().from(imageAnnotations2).where(eq14(imageAnnotations2.fileId, req.params.fileId));
       res.json(annotations);
@@ -11519,14 +11519,14 @@ AgencyBoost CRM`
         createdAt: /* @__PURE__ */ new Date(),
         updatedAt: /* @__PURE__ */ new Date()
       });
-      const { db: db2 } = await import("./db-TW3R76JK.js");
-      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-OCHJQJPK.js");
+      const { db: db2 } = await import("./db-6DWHPCKR.js");
+      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-MCVKPF2W.js");
       const result = await db2.insert(imageAnnotations2).values(insertAnnotation).returning();
       const annotation = result[0];
       res.status(201).json(annotation);
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-OCHJQJPK.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-MCVKPF2W.js");
           const { eq: eq14 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -11563,7 +11563,7 @@ AgencyBoost CRM`
         console.log(`Annotation created with mentions: ${mentions.join(", ")}`);
         (async () => {
           try {
-            const { staff: staff2 } = await import("./schema-OCHJQJPK.js");
+            const { staff: staff2 } = await import("./schema-MCVKPF2W.js");
             const { inArray: inArray6 } = await import("drizzle-orm");
             const mentionedStaff = await db2.select({
               id: staff2.id,
@@ -11613,8 +11613,8 @@ AgencyBoost CRM`
         mentions,
         updatedAt: /* @__PURE__ */ new Date()
       };
-      const { db: db2 } = await import("./db-TW3R76JK.js");
-      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-OCHJQJPK.js");
+      const { db: db2 } = await import("./db-6DWHPCKR.js");
+      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-MCVKPF2W.js");
       const { eq: eq14 } = await import("drizzle-orm");
       const result = await db2.update(imageAnnotations2).set(updateData).where(eq14(imageAnnotations2.id, req.params.annotationId)).returning();
       if (result.length === 0) {
@@ -11623,7 +11623,7 @@ AgencyBoost CRM`
       res.json(result[0]);
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-OCHJQJPK.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-MCVKPF2W.js");
           const { eq: eq15 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -11663,7 +11663,7 @@ AgencyBoost CRM`
         console.log(`Annotation updated with mentions: ${mentions.join(", ")}`);
         (async () => {
           try {
-            const { staff: staff2 } = await import("./schema-OCHJQJPK.js");
+            const { staff: staff2 } = await import("./schema-MCVKPF2W.js");
             const { inArray: inArray6 } = await import("drizzle-orm");
             const mentionedStaff = await db2.select({
               id: staff2.id,
@@ -11704,8 +11704,8 @@ AgencyBoost CRM`
   });
   app2.delete("/api/annotations/:annotationId", requireAuth(), async (req, res) => {
     try {
-      const { db: db2 } = await import("./db-TW3R76JK.js");
-      const { imageAnnotations: imageAnnotations2 } = await import("./schema-OCHJQJPK.js");
+      const { db: db2 } = await import("./db-6DWHPCKR.js");
+      const { imageAnnotations: imageAnnotations2 } = await import("./schema-MCVKPF2W.js");
       const { eq: eq14 } = await import("drizzle-orm");
       const result = await db2.delete(imageAnnotations2).where(eq14(imageAnnotations2.id, req.params.annotationId)).returning();
       if (result.length === 0) {
@@ -11715,7 +11715,7 @@ AgencyBoost CRM`
       res.status(204).send();
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-OCHJQJPK.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-MCVKPF2W.js");
           const { eq: eq15 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -11758,8 +11758,8 @@ AgencyBoost CRM`
   });
   app2.patch("/api/annotations/:annotationId/toggle-complete", requireAuth(), async (req, res) => {
     try {
-      const { db: db2 } = await import("./db-TW3R76JK.js");
-      const { imageAnnotations: imageAnnotations2 } = await import("./schema-OCHJQJPK.js");
+      const { db: db2 } = await import("./db-6DWHPCKR.js");
+      const { imageAnnotations: imageAnnotations2 } = await import("./schema-MCVKPF2W.js");
       const { eq: eq14 } = await import("drizzle-orm");
       const [currentAnnotation] = await db2.select().from(imageAnnotations2).where(eq14(imageAnnotations2.id, req.params.annotationId));
       if (!currentAnnotation) {
@@ -11777,7 +11777,7 @@ AgencyBoost CRM`
       res.json(updatedAnnotation);
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-OCHJQJPK.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-MCVKPF2W.js");
           const { eq: eq15 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -18861,7 +18861,7 @@ ${appointment.description || ""}
   });
   app2.get("/api/integrations/slack/channels", requireAuth(), async (req, res) => {
     try {
-      const { slackService } = await import("./slack-service-IL5ZOWBU.js");
+      const { slackService } = await import("./slack-service-K4E7ODAT.js");
       if (!slackService.isConfigured()) {
         return res.status(400).json({ error: "Slack not configured" });
       }
@@ -18878,7 +18878,7 @@ ${appointment.description || ""}
   });
   app2.get("/api/integrations/slack/users", requireAuth(), async (req, res) => {
     try {
-      const { slackService } = await import("./slack-service-IL5ZOWBU.js");
+      const { slackService } = await import("./slack-service-K4E7ODAT.js");
       if (!slackService.isConfigured()) {
         return res.status(400).json({ error: "Slack not configured" });
       }
@@ -21245,7 +21245,7 @@ ${appointment.description || ""}
         }
       }
       try {
-        const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-2U4QUXKC.js");
+        const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-FBB7AIQL.js");
         const responsesObj = {};
         if (answers && answers.length > 0) {
           answers.forEach((answer) => {
@@ -26552,7 +26552,7 @@ ${appointment.description || ""}
   app2.post("/api/job-applications", async (req, res) => {
     try {
       console.log("Received job application:", req.body);
-      const insertJobApplicationSchema2 = (await import("./schema-OCHJQJPK.js")).insertJobApplicationSchema;
+      const insertJobApplicationSchema2 = (await import("./schema-MCVKPF2W.js")).insertJobApplicationSchema;
       const validatedData = insertJobApplicationSchema2.parse(req.body);
       const jobOpening = await db.select().from(jobOpenings).where(eq10(jobOpenings.id, validatedData.positionId)).limit(1);
       if (!jobOpening.length) {
@@ -30291,6 +30291,7 @@ ${appointment.description || ""}
         monthlyCost: quotes.monthlyCost,
         status: quotes.status,
         notes: quotes.notes,
+        customAgreement: quotes.customAgreement,
         createdBy: quotes.createdBy,
         approvedBy: quotes.approvedBy,
         approvedAt: quotes.approvedAt,
@@ -30531,6 +30532,7 @@ ${appointment.description || ""}
           monthlyCost: calculatedMonthlyCost.toString(),
           status: effectiveStatus,
           notes: validatedQuote.notes,
+          customAgreement: req.body.customAgreement !== void 0 ? req.body.customAgreement ? req.body.customAgreement.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "").replace(/on\w+\s*=/gi, "") : null : void 0,
           updatedAt: /* @__PURE__ */ new Date(),
           createdBy: existingQuote.createdBy
         };
@@ -31631,7 +31633,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
   }
   app2.get("/api/google-calendar-events", requireAuth(), async (req, res) => {
     try {
-      const { calendarEvents: calendarEvents3 } = await import("./db-TW3R76JK.js");
+      const { calendarEvents: calendarEvents3 } = await import("./db-6DWHPCKR.js");
       const userId2 = req.session?.userId;
       if (!userId2) {
         return res.status(401).json({ error: "Not authenticated" });
@@ -31662,7 +31664,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
   app2.post("/api/calendar/events", requireAuth(), createCalendarEvent);
   app2.patch("/api/calendar/events/:eventId/status", requireAuth(), updateCalendarEventStatus);
   app2.get("/api/calendar/time-entries", requireAuth(), getEventTimeEntries);
-  const { chatWithAssistant } = await import("./ai-assistant-5VIIJTW6.js");
+  const { chatWithAssistant } = await import("./ai-assistant-5J3ARM4B.js");
   app2.get("/api/ai-assistant/settings", requireAuth(["admin"]), async (req, res) => {
     try {
       const [settings] = await db.select().from(aiAssistantSettings).limit(1);
@@ -35482,7 +35484,7 @@ router.post("/sync", async (req, res) => {
         });
       }
     }
-    const { syncUserCalendar } = await import("./googleCalendarSync-BLB5GXFL.js");
+    const { syncUserCalendar } = await import("./googleCalendarSync-EW5ARV7I.js");
     syncUserCalendar(req.session.userId, "primary").then((result) => {
       console.log(`[Sync Complete] User ${req.session?.userId}: ${result.eventsCreated} created, ${result.eventsUpdated} updated, ${result.eventsDeleted} deleted`);
     }).catch((error) => {
@@ -35546,7 +35548,7 @@ router.post("/auto-sync", async (req, res) => {
         message: "Data is recent, no sync needed"
       });
     }
-    const { syncUserCalendar } = await import("./googleCalendarSync-BLB5GXFL.js");
+    const { syncUserCalendar } = await import("./googleCalendarSync-EW5ARV7I.js");
     syncUserCalendar(req.session.userId, "primary").then((result) => {
       console.log(`[Auto-Sync Complete] User ${req.session?.userId}: ${result.eventsCreated} created, ${result.eventsUpdated} updated, ${result.eventsDeleted} deleted`);
     }).catch((error) => {
@@ -37103,7 +37105,7 @@ app.post(
           console.warn("[Slack Events] Missing signature headers");
           return res.status(401).json({ error: "Missing authentication headers" });
         }
-        const { slackService } = await import("./slack-service-IL5ZOWBU.js");
+        const { slackService } = await import("./slack-service-K4E7ODAT.js");
         if (!slackService.verifySlackRequest(timestamp, signature, rawBody)) {
           console.warn("[Slack Events] Invalid signature - rejecting request");
           return res.status(401).json({ error: "Invalid signature" });
@@ -37123,7 +37125,7 @@ app.post(
         console.log("[Slack Events] URL verification challenge received");
         return res.json({ challenge: payload.challenge });
       }
-      const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-2U4QUXKC.js");
+      const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-FBB7AIQL.js");
       if (payload.type === "event_callback") {
         const event = payload.event;
         console.log(`[Slack Events] Received event: ${event.type}`, {
@@ -37207,7 +37209,7 @@ app.post(
   express2.raw({ type: "application/json" }),
   async (req, res) => {
     try {
-      const { handleStripeWebhook: handleStripeWebhook2 } = await import("./proposalRoutes-SEY4KOP6.js");
+      const { handleStripeWebhook: handleStripeWebhook2 } = await import("./proposalRoutes-7PDUI5EW.js");
       const { getNotificationService: getNotificationService2 } = await import("./notification-service-2QQMBITT.js");
       const notificationService = getNotificationService2();
       if (notificationService) {
@@ -37474,37 +37476,37 @@ async function setupFullApp(server) {
     appFullyLoaded = true;
     log("\u2705 All routes and middleware configured");
     runStartupMigrations().then(() => {
-      import("./googleCalendarBackgroundSync-ILF3E5IF.js").then(({ startBackgroundSync }) => {
+      import("./googleCalendarBackgroundSync-SXBMBXPO.js").then(({ startBackgroundSync }) => {
         startBackgroundSync();
         log("\u2705 Google Calendar background sync started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start background calendar sync: ${err.message}`);
       });
-      import("./weeklyHoursCheckService-IFSHFMUL.js").then(({ startWeeklyHoursCheck }) => {
+      import("./weeklyHoursCheckService-2GXZIM7A.js").then(({ startWeeklyHoursCheck }) => {
         startWeeklyHoursCheck();
         log("\u2705 Weekly hours check service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start weekly hours check service: ${err.message}`);
       });
-      import("./longRunningTimerService-B7E4YZXE.js").then(({ startLongRunningTimerCheck }) => {
+      import("./longRunningTimerService-CLCCESFG.js").then(({ startLongRunningTimerCheck }) => {
         startLongRunningTimerCheck();
         log("\u2705 Long-running timer alert service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start long-running timer alert service: ${err.message}`);
       });
-      import("./proposalReminderService-J7SQNQIZ.js").then(({ startProposalReminderService }) => {
+      import("./proposalReminderService-6YXXG64D.js").then(({ startProposalReminderService }) => {
         startProposalReminderService();
         log("\u2705 Proposal reminder service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start proposal reminder service: ${err.message}`);
       });
-      import("./recurringTaskService-MO6RRHR5.js").then(({ startRecurringTaskService }) => {
+      import("./recurringTaskService-TELK5PWX.js").then(({ startRecurringTaskService }) => {
         startRecurringTaskService();
         log("\u2705 Recurring task generation service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start recurring task generation service: ${err.message}`);
       });
-      import("./onboardingNotificationService-ESWT3LFO.js").then(({ startOnboardingNotificationService }) => {
+      import("./onboardingNotificationService-HOSOGKG3.js").then(({ startOnboardingNotificationService }) => {
         startOnboardingNotificationService();
         log("\u2705 Onboarding notification service started");
       }).catch((err) => {
@@ -37539,7 +37541,7 @@ async function seedIntakeDescriptionTemplates() {
   log("Running startup migration: seedIntakeDescriptionTemplates");
   try {
     const { sectionDescriptionTemplates } = await import("./seed-description-templates-XFHPZJLE.js");
-    const { taskIntakeSections: taskIntakeSections2 } = await import("./schema-OCHJQJPK.js");
+    const { taskIntakeSections: taskIntakeSections2 } = await import("./schema-MCVKPF2W.js");
     for (const [sectionName, template] of Object.entries(sectionDescriptionTemplates)) {
       await db.update(taskIntakeSections2).set({ descriptionTemplate: template, updatedAt: /* @__PURE__ */ new Date() }).where(eq13(taskIntakeSections2.sectionName, sectionName));
     }

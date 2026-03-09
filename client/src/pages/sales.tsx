@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { RichTextEditor, type RichTextEditorHandle } from "@/components/rich-text-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -146,6 +147,8 @@ export default function Sales() {
   const [selectedProducts, setSelectedProducts] = useState<Array<{productId: string, type: 'product' | 'bundle' | 'package', quantity: number, customQuantities?: Record<string, number>, customBuildFee?: string}>>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+  const [customAgreement, setCustomAgreement] = useState<string | null>(null);
+  const [isCustomAgreementOpen, setIsCustomAgreementOpen] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [bundleProductsData, setBundleProductsData] = useState<Record<string, any[]>>({});
   const [packageItemsData, setPackageItemsData] = useState<Record<string, any>>({});
@@ -751,6 +754,8 @@ export default function Sales() {
     setProductSearch("");
     setIsEditMode(false);
     setEditingQuoteId(null);
+    setCustomAgreement(null);
+    setIsCustomAgreementOpen(false);
   };
 
   const loadQuoteForEdit = async (quoteId: string) => {
@@ -801,6 +806,7 @@ export default function Sales() {
       }));
       
       setSelectedProducts(loadedProducts);
+      setCustomAgreement(quote.customAgreement || null);
       setIsEditMode(true);
       setEditingQuoteId(quoteId);
       setIsQuoteBuilderOpen(true);
@@ -1042,6 +1048,7 @@ export default function Sales() {
       monthlyCost: totals.monthlyCost.toString(),
       status: isLowMargin ? "pending_approval" : "draft",
       notes: quoteData.description || null,
+      customAgreement: customAgreement || null,
       items: selectedProducts.map(item => {
         let unitCost = 0;
         const quantity = item.quantity || 1;
@@ -2407,22 +2414,93 @@ export default function Sales() {
                         </div>
                       </div>
 
+                      {isCustomAgreementOpen && (
+                        <div className="border rounded-lg p-4 space-y-3 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-amber-600" />
+                              <span className="font-medium text-sm text-amber-800 dark:text-amber-200">Custom Service Agreement</span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 h-7 px-2 text-xs"
+                              onClick={() => {
+                                setCustomAgreement(null);
+                                setIsCustomAgreementOpen(false);
+                              }}
+                            >
+                              <X className="h-3 w-3 mr-1" />
+                              Remove & Use Default
+                            </Button>
+                          </div>
+                          <p className="text-xs text-amber-600 dark:text-amber-400">
+                            This custom agreement will be used instead of the default Terms & Conditions for this quote's online signup.
+                          </p>
+                          <div className="bg-white dark:bg-gray-900 rounded border">
+                            <RichTextEditor
+                              content={customAgreement || ""}
+                              onChange={(html) => setCustomAgreement(html)}
+                              placeholder="Paste or type the custom agreement content here..."
+                            />
+                          </div>
+                        </div>
+                      )}
+
                       {/* Action Buttons */}
-                      <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" onClick={() => {
-                          setIsQuoteBuilderOpen(false);
-                          resetQuoteBuilder();
-                        }}>
-                          Cancel
-                        </Button>
-                        <Button 
-                          type="button" 
-                          onClick={handleSaveQuote}
-                          disabled={!quoteData.name || (!quoteData.clientId && !quoteData.leadId) || !quoteData.budget || saveQuoteMutation.isPending}
-                          data-testid="button-save-quote"
-                        >
-                          {saveQuoteMutation.isPending ? "Saving..." : (isEditMode ? "Update Quote" : "Save Quote")}
-                        </Button>
+                      <div className="flex justify-between">
+                        <div>
+                          {!isCustomAgreementOpen && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950/30"
+                              onClick={async () => {
+                                if (!customAgreement) {
+                                  try {
+                                    const termsRes = await fetch("/api/proposal-terms");
+                                    const termsData = await termsRes.json();
+                                    const activeTerms = Array.isArray(termsData)
+                                      ? termsData.find((t: any) => t.isActive) || termsData[0]
+                                      : termsData;
+                                    if (activeTerms?.content) {
+                                      setCustomAgreement(activeTerms.content);
+                                    }
+                                  } catch (e) {
+                                    console.error("Failed to load default terms:", e);
+                                  }
+                                }
+                                setIsCustomAgreementOpen(true);
+                              }}
+                            >
+                              <FileText className="h-4 w-4 mr-1" />
+                              {customAgreement ? "Edit Custom Agreement" : "Use Custom Agreement"}
+                            </Button>
+                          )}
+                          {customAgreement && !isCustomAgreementOpen && (
+                            <Badge variant="outline" className="ml-2 text-amber-700 border-amber-300 bg-amber-50">
+                              Custom Agreement Set
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="outline" onClick={() => {
+                            setIsQuoteBuilderOpen(false);
+                            resetQuoteBuilder();
+                          }}>
+                            Cancel
+                          </Button>
+                          <Button 
+                            type="button" 
+                            onClick={handleSaveQuote}
+                            disabled={!quoteData.name || (!quoteData.clientId && !quoteData.leadId) || !quoteData.budget || saveQuoteMutation.isPending}
+                            data-testid="button-save-quote"
+                          >
+                            {saveQuoteMutation.isPending ? "Saving..." : (isEditMode ? "Update Quote" : "Save Quote")}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </DialogContent>

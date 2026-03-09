@@ -37089,6 +37089,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           monthlyCost: quotes.monthlyCost,
           status: quotes.status,
           notes: quotes.notes,
+          customAgreement: quotes.customAgreement,
           createdBy: quotes.createdBy,
           approvedBy: quotes.approvedBy,
           approvedAt: quotes.approvedAt,
@@ -37419,6 +37420,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           monthlyCost: calculatedMonthlyCost.toString(),
           status: effectiveStatus,
           notes: validatedQuote.notes,
+          customAgreement: req.body.customAgreement !== undefined ? (req.body.customAgreement ? req.body.customAgreement.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').replace(/on\w+\s*=/gi, '') : null) : undefined,
           updatedAt: new Date(),
           createdBy: existingQuote.createdBy,
         };

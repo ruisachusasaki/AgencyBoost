@@ -330,6 +330,7 @@ export const quotes = pgTable("quotes", {
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   subscriptionStatus: varchar("subscription_status"),
   stripeCustomerId: varchar("stripe_customer_id"),
+  customAgreement: text("custom_agreement"),
   reminderSentAt: timestamp("reminder_sent_at"),
   reminderCount: integer("reminder_count").default(0),
   expiresAt: timestamp("expires_at"),

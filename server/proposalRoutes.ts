@@ -319,7 +319,9 @@ export function registerProposalRoutes(
       const formatCurrency = (val: number) => val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const effectiveDate = quote.sentAt ? new Date(quote.sentAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
-      const resolvedTerms = activeTerms[0] ? { ...activeTerms[0] } : null;
+      const resolvedTerms = quote.customAgreement
+        ? { id: 'custom', title: activeTerms[0]?.title || 'Service Agreement', content: quote.customAgreement, version: activeTerms[0]?.version || 1, isActive: true }
+        : activeTerms[0] ? { ...activeTerms[0] } : null;
       if (resolvedTerms?.content) {
         const mergeMap: Record<string, string> = {
           "{{clientCompany}}": clientData?.company || clientData?.name || clientName || "",
