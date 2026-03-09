@@ -2824,7 +2824,7 @@ export default function Reports() {
                         </TableCell>
                         <TableCell>
                           <span className="text-sm text-slate-600">
-                            {score.createdAt ? new Date(score.createdAt).toLocaleDateString() : '—'}
+                            {score.createdAt ? new Date(score.createdAt).toLocaleDateString('en-US') : '—'}
                           </span>
                         </TableCell>
                         <TableCell className="text-center">
