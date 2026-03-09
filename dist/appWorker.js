@@ -12125,7 +12125,8 @@ AgencyBoost CRM`
       if (!staffToDelete) {
         return res.status(404).json({ message: "Staff member not found" });
       }
-      const [deletedStaff] = await db.update(staff).set({ isActive: false }).where(eq10(staff.id, req.params.id)).returning();
+      const deletedEmail = `deleted_${Date.now()}_${staffToDelete.email}`;
+      const [deletedStaff] = await db.update(staff).set({ isActive: false, email: deletedEmail }).where(eq10(staff.id, req.params.id)).returning();
       if (!deletedStaff) {
         return res.status(404).json({ message: "Staff member not found" });
       }
@@ -12143,10 +12144,10 @@ AgencyBoost CRM`
       try {
         const [authUserRecord] = await db.select().from(authUsers).where(eq10(authUsers.userId, req.params.id));
         if (authUserRecord) {
-          const deletedEmail = `deleted_${Date.now()}_${authUserRecord.email}`;
+          const deletedEmail2 = `deleted_${Date.now()}_${authUserRecord.email}`;
           await db.update(authUsers).set({
             isActive: false,
-            email: deletedEmail,
+            email: deletedEmail2,
             passwordHash: "",
             // Clear password hash for security
             passwordResetToken: null,

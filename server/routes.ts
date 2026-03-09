@@ -12234,9 +12234,10 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(404).json({ message: "Staff member not found" });
       }
       
+      const deletedEmail = `deleted_${Date.now()}_${staffToDelete.email}`;
       const [deletedStaff] = await db
         .update(staff)
-        .set({ isActive: false })
+        .set({ isActive: false, email: deletedEmail })
         .where(eq(staff.id, req.params.id))
         .returning();
       
