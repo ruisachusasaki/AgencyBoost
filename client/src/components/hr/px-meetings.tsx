@@ -1329,7 +1329,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             {/* Attendees Section */}
             <div className="space-y-2">
               <Label>Attendees</Label>
-              <Popover open={isEditAttendeesOpen} onOpenChange={setIsEditAttendeesOpen}>
+              <Popover open={isEditAttendeesOpen} onOpenChange={setIsEditAttendeesOpen} modal={true}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-between">
                     {editFormData.attendeeIds.length === 0
@@ -1338,7 +1338,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start">
+                <PopoverContent className="w-full p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                   <Command>
                     <CommandInput placeholder="Search staff..." />
                     <CommandList>
@@ -2562,7 +2562,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
             <div className="space-y-2">
               <Label>Client</Label>
-              <Popover open={isCreateClientOpen} onOpenChange={setIsCreateClientOpen}>
+              <Popover open={isCreateClientOpen} onOpenChange={setIsCreateClientOpen} modal={true}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" className="w-full justify-between">
                     {formData.clientId
@@ -2571,7 +2571,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0">
+                <PopoverContent className="w-[300px] p-0 z-[9999]" onOpenAutoFocus={(e) => e.preventDefault()}>
                   <Command>
                     <CommandInput placeholder="Search clients..." />
                     <CommandList>
@@ -2609,7 +2609,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
             <div className="space-y-2">
               <Label>Attendees</Label>
-              <Popover open={isAttendeesOpen} onOpenChange={setIsAttendeesOpen}>
+              <Popover open={isAttendeesOpen} onOpenChange={setIsAttendeesOpen} modal={true}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-between">
                     {formData.attendeeIds.length === 0
@@ -2618,7 +2618,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start">
+                <PopoverContent className="w-full p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                   <Command>
                     <CommandInput placeholder="Search staff..." />
                     <CommandList>
@@ -2677,7 +2677,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Facilitator</Label>
-                <Popover open={isFacilitatorOpen} onOpenChange={setIsFacilitatorOpen}>
+                <Popover open={isFacilitatorOpen} onOpenChange={setIsFacilitatorOpen} modal={true}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-between">
                       {formData.facilitatorId
@@ -2689,7 +2689,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0" align="start">
+                  <PopoverContent className="w-full p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <Command>
                       <CommandInput placeholder="Search staff..." />
                       <CommandList>
@@ -2731,7 +2731,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
               <div className="space-y-2">
                 <Label>Note Taker</Label>
-                <Popover open={isNoteTakerOpen} onOpenChange={setIsNoteTakerOpen}>
+                <Popover open={isNoteTakerOpen} onOpenChange={setIsNoteTakerOpen} modal={true}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-between">
                       {formData.noteTakerId
@@ -2743,7 +2743,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0" align="start">
+                  <PopoverContent className="w-full p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <Command>
                       <CommandInput placeholder="Search staff..." />
                       <CommandList>
