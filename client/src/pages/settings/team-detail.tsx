@@ -972,10 +972,28 @@ export default function TeamDetail() {
           </DialogHeader>
           
           <Tabs value={editPositionActiveTab} onValueChange={setEditPositionActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="details" data-testid="tab-details">Details</TabsTrigger>
-              <TabsTrigger value="kpis" data-testid="tab-kpis">KPIs</TabsTrigger>
-            </TabsList>
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
+                {[
+                  { id: "details", name: "Details" },
+                  { id: "kpis", name: "KPIs" }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setEditPositionActiveTab(tab.id)}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      editPositionActiveTab === tab.id
+                        ? "border-primary text-primary"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                    data-testid={`tab-${tab.id}`}
+                  >
+                    {tab.name}
+                  </button>
+                ))}
+              </nav>
+            </div>
             
             <TabsContent value="details" className="mt-4">
               <Form {...editPositionForm}>
