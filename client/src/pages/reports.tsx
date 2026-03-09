@@ -6057,7 +6057,7 @@ export default function Reports() {
             </div>
             <div className="space-y-2">
               <Label>Date</Label>
-              <Popover>
+              <Popover modal={true}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -6067,7 +6067,7 @@ export default function Reports() {
                     {ccAddForm.date ? format(new Date(ccAddForm.date + "T00:00:00"), "MMM d, yyyy") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-[200]" align="start">
+                <PopoverContent className="w-auto p-0 z-[9999]" align="start" sideOffset={4} onOpenAutoFocus={(e) => e.preventDefault()}>
                   <CalendarComponent
                     mode="single"
                     selected={ccAddForm.date ? new Date(ccAddForm.date + "T00:00:00") : undefined}
