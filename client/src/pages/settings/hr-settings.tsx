@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -608,30 +608,33 @@ export default function HRSettingsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Responsive tab visibility - adjusted for wider layout without max-width constraints
+  // Responsive tab visibility based on available container width
+  const tabContainerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const calculateVisibleTabs = () => {
-      const width = window.innerWidth;
-      
-      if (width >= 1024) {
-        setVisibleTabsCount(7); // Show all tabs on screens >= 1024px
-      } else if (width >= 900) {
-        setVisibleTabsCount(6);
-      } else if (width >= 768) {
-        setVisibleTabsCount(5);
-      } else if (width >= 640) {
-        setVisibleTabsCount(4);
-      } else if (width >= 500) {
-        setVisibleTabsCount(3);
-      } else {
-        setVisibleTabsCount(2);
-      }
+      const container = tabContainerRef.current;
+      const availableWidth = container ? container.clientWidth : (window.innerWidth - 220);
+      const avgTabWidth = 180;
+      const overflowBtnWidth = 48;
+      const maxFit = Math.floor((availableWidth - overflowBtnWidth) / avgTabWidth);
+      setVisibleTabsCount(Math.max(2, Math.min(9, maxFit)));
     };
     
     calculateVisibleTabs();
     window.addEventListener('resize', calculateVisibleTabs);
+
+    const container = tabContainerRef.current;
+    let observer: ResizeObserver | null = null;
+    if (container && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(calculateVisibleTabs);
+      observer.observe(container);
+    }
     
-    return () => window.removeEventListener('resize', calculateVisibleTabs);
+    return () => {
+      window.removeEventListener('resize', calculateVisibleTabs);
+      observer?.disconnect();
+    };
   }, []);
 
   // Default time off categories if none exist
@@ -753,26 +756,26 @@ export default function HRSettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-2">
-            {(() => {
-              const allTabs = [
-                { id: "time-off-types", name: "Time Off Types", icon: CalendarDays },
-                { id: "job-application-form", name: "Job Application Form", icon: Briefcase },
-                { id: "new-hire-onboarding-form", name: "New Hire Onboarding Form", icon: Users },
-                { id: "expense-report-form", name: "Expense Report Form", icon: Settings },
-                { id: "offboarding-form", name: "Offboarding Form", icon: Users },
-                { id: "one-on-one-settings", name: "1v1 Settings", icon: MessageCircle },
-                { id: "org-chart", name: "Org Chart", icon: Network },
-                { id: "onboarding-templates", name: "Onboarding Templates", icon: ClipboardList },
-                { id: "onboarding-alerts", name: "Onboarding Alerts", icon: BellRing }
-              ];
-              
-              const visibleTabs = allTabs.slice(0, visibleTabsCount);
-              const overflowTabs = allTabs.slice(visibleTabsCount);
-              
-              return (
-                <>
+        {(() => {
+          const allTabs = [
+            { id: "time-off-types", name: "Time Off Types", icon: CalendarDays },
+            { id: "job-application-form", name: "Job Application Form", icon: Briefcase },
+            { id: "new-hire-onboarding-form", name: "New Hire Onboarding Form", icon: Users },
+            { id: "expense-report-form", name: "Expense Report Form", icon: Settings },
+            { id: "offboarding-form", name: "Offboarding Form", icon: Users },
+            { id: "one-on-one-settings", name: "1v1 Settings", icon: MessageCircle },
+            { id: "org-chart", name: "Org Chart", icon: Network },
+            { id: "onboarding-templates", name: "Onboarding Templates", icon: ClipboardList },
+            { id: "onboarding-alerts", name: "Onboarding Alerts", icon: BellRing }
+          ];
+          
+          const visibleTabs = allTabs.slice(0, visibleTabsCount);
+          const overflowTabs = allTabs.slice(visibleTabsCount);
+          
+          return (
+            <>
+              <div ref={tabContainerRef} className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-2">
                   {visibleTabs.map((tab) => {
                     const Icon = tab.icon;
                     return (
@@ -826,11 +829,11 @@ export default function HRSettingsPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
-                </>
-              );
-            })()}
-          </nav>
-        </div>
+                </nav>
+              </div>
+            </>
+          );
+        })()}
 
         {/* Time Off Types Tab - Simple global view of all types */}
         <TabsContent value="time-off-types" className="space-y-6">
