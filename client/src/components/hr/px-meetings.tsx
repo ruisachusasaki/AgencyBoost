@@ -201,6 +201,11 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const [isFacilitatorOpen, setIsFacilitatorOpen] = useState(false);
   const [isNoteTakerOpen, setIsNoteTakerOpen] = useState(false);
   const [isCreateClientOpen, setIsCreateClientOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState("");
+  const [attendeeSearch, setAttendeeSearch] = useState("");
+  const [facilitatorSearch, setFacilitatorSearch] = useState("");
+  const [noteTakerSearch, setNoteTakerSearch] = useState("");
+  const [editAttendeeSearch, setEditAttendeeSearch] = useState("");
   
   // Convert to Task dialog state
   const [showConvertToTaskDialog, setShowConvertToTaskDialog] = useState(false);
@@ -1329,50 +1334,56 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             {/* Attendees Section */}
             <div className="space-y-2">
               <Label>Attendees</Label>
-              <Popover open={isEditAttendeesOpen} onOpenChange={setIsEditAttendeesOpen} modal={true}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
-                    {editFormData.attendeeIds.length === 0
-                      ? "Add attendees..."
-                      : `${editFormData.attendeeIds.length} attendee${editFormData.attendeeIds.length !== 1 ? 's' : ''}`}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                  <Command>
-                    <CommandInput placeholder="Search staff..." />
-                    <CommandList>
-                      <CommandEmpty>No staff found.</CommandEmpty>
-                      <CommandGroup>
-                        {allStaff.map((member) => {
+              <div className="relative">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between"
+                  onClick={() => { setIsEditAttendeesOpen(!isEditAttendeesOpen); setEditAttendeeSearch(""); }}
+                >
+                  {editFormData.attendeeIds.length === 0
+                    ? "Add attendees..."
+                    : `${editFormData.attendeeIds.length} attendee${editFormData.attendeeIds.length !== 1 ? 's' : ''}`}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+                {isEditAttendeesOpen && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg z-[9999] max-h-[200px] overflow-hidden flex flex-col">
+                    <div className="p-2 border-b">
+                      <Input
+                        placeholder="Search staff..."
+                        value={editAttendeeSearch}
+                        onChange={(e) => setEditAttendeeSearch(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="overflow-y-auto max-h-[160px]">
+                      {allStaff
+                        .filter(m => {
+                          const name = `${m.firstName || ''} ${m.lastName || ''}`.trim().toLowerCase();
+                          return name.includes(editAttendeeSearch.toLowerCase());
+                        })
+                        .map((member) => {
                           const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown';
                           const initials = `${member.firstName?.[0] || ''}${member.lastName?.[0] || ''}`.toUpperCase() || '??';
                           return (
-                            <CommandItem
+                            <div
                               key={member.id}
-                              onSelect={() => toggleEditAttendee(member.id)}
+                              className="flex items-center px-3 py-2 cursor-pointer hover:bg-gray-100"
+                              onClick={() => toggleEditAttendee(member.id)}
                             >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  editFormData.attendeeIds.includes(member.id) ? "opacity-100" : "opacity-0"
-                                )}
-                              />
+                              <Check className={cn("mr-2 h-4 w-4", editFormData.attendeeIds.includes(member.id) ? "opacity-100" : "opacity-0")} />
                               <Avatar className="h-6 w-6 mr-2">
                                 <AvatarImage src={member.profileImagePath || undefined} />
-                                <AvatarFallback className="text-xs">
-                                  {initials}
-                                </AvatarFallback>
+                                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                               </Avatar>
                               {fullName}
-                            </CommandItem>
+                            </div>
                           );
                         })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                    </div>
+                  </div>
+                )}
+              </div>
               
               {editFormData.attendeeIds.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -2562,97 +2573,109 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
             <div className="space-y-2">
               <Label>Client</Label>
-              <Popover open={isCreateClientOpen} onOpenChange={setIsCreateClientOpen} modal={true}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" className="w-full justify-between">
-                    {formData.clientId
-                      ? (clients.find(c => c.id === formData.clientId)?.company || clients.find(c => c.id === formData.clientId)?.name || "Select client...")
-                      : "Select client..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0 z-[9999]" onOpenAutoFocus={(e) => e.preventDefault()}>
-                  <Command>
-                    <CommandInput placeholder="Search clients..." />
-                    <CommandList>
-                      <CommandEmpty>No client found.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandItem
-                          value=""
-                          onSelect={() => {
-                            setFormData(prev => ({ ...prev, clientId: "" }));
-                            setIsCreateClientOpen(false);
-                          }}
+              <div className="relative">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between"
+                  onClick={() => { setIsCreateClientOpen(!isCreateClientOpen); setClientSearch(""); }}
+                >
+                  {formData.clientId
+                    ? (clients.find(c => c.id === formData.clientId)?.company || clients.find(c => c.id === formData.clientId)?.name || "Select client...")
+                    : "Select client..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+                {isCreateClientOpen && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg z-[9999] max-h-[200px] overflow-hidden flex flex-col">
+                    <div className="p-2 border-b">
+                      <Input
+                        placeholder="Search clients..."
+                        value={clientSearch}
+                        onChange={(e) => setClientSearch(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="overflow-y-auto max-h-[160px]">
+                      <div
+                        className="flex items-center px-3 py-2 cursor-pointer hover:bg-gray-100"
+                        onClick={() => { setFormData(prev => ({ ...prev, clientId: "" })); setIsCreateClientOpen(false); }}
+                      >
+                        <Check className={cn("mr-2 h-4 w-4", !formData.clientId ? "opacity-100" : "opacity-0")} />
+                        None
+                      </div>
+                      {clients
+                        .filter(c => {
+                          const label = c.company || c.name || "";
+                          return label.toLowerCase().includes(clientSearch.toLowerCase());
+                        })
+                        .map((client) => (
+                        <div
+                          key={client.id}
+                          className="flex items-center px-3 py-2 cursor-pointer hover:bg-gray-100"
+                          onClick={() => { setFormData(prev => ({ ...prev, clientId: client.id })); setIsCreateClientOpen(false); }}
                         >
-                          <Check className={cn("mr-2 h-4 w-4", !formData.clientId ? "opacity-100" : "opacity-0")} />
-                          None
-                        </CommandItem>
-                        {clients.map((client) => (
-                          <CommandItem
-                            key={client.id}
-                            value={client.company || client.name}
-                            onSelect={() => {
-                              setFormData(prev => ({ ...prev, clientId: client.id }));
-                              setIsCreateClientOpen(false);
-                            }}
-                          >
-                            <Check className={cn("mr-2 h-4 w-4", formData.clientId === client.id ? "opacity-100" : "opacity-0")} />
-                            {client.company || client.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                          <Check className={cn("mr-2 h-4 w-4", formData.clientId === client.id ? "opacity-100" : "opacity-0")} />
+                          {client.company || client.name}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label>Attendees</Label>
-              <Popover open={isAttendeesOpen} onOpenChange={setIsAttendeesOpen} modal={true}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
-                    {formData.attendeeIds.length === 0
-                      ? "Select attendees..."
-                      : `${formData.attendeeIds.length} selected`}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                  <Command>
-                    <CommandInput placeholder="Search staff..." />
-                    <CommandList>
-                      <CommandEmpty>No staff found.</CommandEmpty>
-                      <CommandGroup>
-                        {allStaff.map((member) => {
+              <div className="relative">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between"
+                  onClick={() => { setIsAttendeesOpen(!isAttendeesOpen); setAttendeeSearch(""); }}
+                >
+                  {formData.attendeeIds.length === 0
+                    ? "Select attendees..."
+                    : `${formData.attendeeIds.length} selected`}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+                {isAttendeesOpen && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg z-[9999] max-h-[200px] overflow-hidden flex flex-col">
+                    <div className="p-2 border-b">
+                      <Input
+                        placeholder="Search staff..."
+                        value={attendeeSearch}
+                        onChange={(e) => setAttendeeSearch(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="overflow-y-auto max-h-[160px]">
+                      {allStaff
+                        .filter(m => {
+                          const name = `${m.firstName || ''} ${m.lastName || ''}`.trim().toLowerCase();
+                          return name.includes(attendeeSearch.toLowerCase());
+                        })
+                        .map((member) => {
                           const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown';
                           const initials = `${member.firstName?.[0] || ''}${member.lastName?.[0] || ''}`.toUpperCase() || '??';
                           return (
-                            <CommandItem
+                            <div
                               key={member.id}
-                              onSelect={() => toggleAttendee(member.id)}
+                              className="flex items-center px-3 py-2 cursor-pointer hover:bg-gray-100"
+                              onClick={() => toggleAttendee(member.id)}
                             >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.attendeeIds.includes(member.id) ? "opacity-100" : "opacity-0"
-                                )}
-                              />
+                              <Check className={cn("mr-2 h-4 w-4", formData.attendeeIds.includes(member.id) ? "opacity-100" : "opacity-0")} />
                               <Avatar className="h-6 w-6 mr-2">
                                 <AvatarImage src={member.profileImagePath || undefined} />
-                                <AvatarFallback className="text-xs">
-                                  {initials}
-                                </AvatarFallback>
+                                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                               </Avatar>
                               {fullName}
-                            </CommandItem>
+                            </div>
                           );
                         })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                    </div>
+                  </div>
+                )}
+              </div>
               
               {formData.attendeeIds.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -2677,110 +2700,116 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Facilitator</Label>
-                <Popover open={isFacilitatorOpen} onOpenChange={setIsFacilitatorOpen} modal={true}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
-                      {formData.facilitatorId
-                        ? (() => {
-                            const member = activeStaff.find(s => s.id === formData.facilitatorId);
-                            return member ? `${member.firstName || ''} ${member.lastName || ''}`.trim() : "Select...";
-                          })()
-                        : "Select facilitator..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                    <Command>
-                      <CommandInput placeholder="Search staff..." />
-                      <CommandList>
-                        <CommandEmpty>No staff found.</CommandEmpty>
-                        <CommandGroup>
-                          {activeStaff.map((member) => {
+                <div className="relative">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => { setIsFacilitatorOpen(!isFacilitatorOpen); setFacilitatorSearch(""); }}
+                  >
+                    {formData.facilitatorId
+                      ? (() => {
+                          const member = activeStaff.find(s => s.id === formData.facilitatorId);
+                          return member ? `${member.firstName || ''} ${member.lastName || ''}`.trim() : "Select...";
+                        })()
+                      : "Select facilitator..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                  {isFacilitatorOpen && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg z-[9999] max-h-[200px] overflow-hidden flex flex-col">
+                      <div className="p-2 border-b">
+                        <Input
+                          placeholder="Search staff..."
+                          value={facilitatorSearch}
+                          onChange={(e) => setFacilitatorSearch(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="overflow-y-auto max-h-[160px]">
+                        {activeStaff
+                          .filter(m => {
+                            const name = `${m.firstName || ''} ${m.lastName || ''}`.trim().toLowerCase();
+                            return name.includes(facilitatorSearch.toLowerCase());
+                          })
+                          .map((member) => {
                             const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown';
                             const initials = `${member.firstName?.[0] || ''}${member.lastName?.[0] || ''}`.toUpperCase() || '??';
                             return (
-                              <CommandItem
+                              <div
                                 key={member.id}
-                                onSelect={() => {
-                                  setFormData(prev => ({ ...prev, facilitatorId: member.id }));
-                                  setIsFacilitatorOpen(false);
-                                }}
+                                className="flex items-center px-3 py-2 cursor-pointer hover:bg-gray-100"
+                                onClick={() => { setFormData(prev => ({ ...prev, facilitatorId: member.id })); setIsFacilitatorOpen(false); }}
                               >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    formData.facilitatorId === member.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
+                                <Check className={cn("mr-2 h-4 w-4", formData.facilitatorId === member.id ? "opacity-100" : "opacity-0")} />
                                 <Avatar className="h-6 w-6 mr-2">
                                   <AvatarImage src={member.profileImagePath || undefined} />
-                                  <AvatarFallback className="text-xs">
-                                    {initials}
-                                  </AvatarFallback>
+                                  <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                                 </Avatar>
                                 {fullName}
-                              </CommandItem>
+                              </div>
                             );
                           })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label>Note Taker</Label>
-                <Popover open={isNoteTakerOpen} onOpenChange={setIsNoteTakerOpen} modal={true}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
-                      {formData.noteTakerId
-                        ? (() => {
-                            const member = activeStaff.find(s => s.id === formData.noteTakerId);
-                            return member ? `${member.firstName || ''} ${member.lastName || ''}`.trim() : "Select...";
-                          })()
-                        : "Select note taker..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                    <Command>
-                      <CommandInput placeholder="Search staff..." />
-                      <CommandList>
-                        <CommandEmpty>No staff found.</CommandEmpty>
-                        <CommandGroup>
-                          {activeStaff.map((member) => {
+                <div className="relative">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => { setIsNoteTakerOpen(!isNoteTakerOpen); setNoteTakerSearch(""); }}
+                  >
+                    {formData.noteTakerId
+                      ? (() => {
+                          const member = activeStaff.find(s => s.id === formData.noteTakerId);
+                          return member ? `${member.firstName || ''} ${member.lastName || ''}`.trim() : "Select...";
+                        })()
+                      : "Select note taker..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                  {isNoteTakerOpen && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg z-[9999] max-h-[200px] overflow-hidden flex flex-col">
+                      <div className="p-2 border-b">
+                        <Input
+                          placeholder="Search staff..."
+                          value={noteTakerSearch}
+                          onChange={(e) => setNoteTakerSearch(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="overflow-y-auto max-h-[160px]">
+                        {activeStaff
+                          .filter(m => {
+                            const name = `${m.firstName || ''} ${m.lastName || ''}`.trim().toLowerCase();
+                            return name.includes(noteTakerSearch.toLowerCase());
+                          })
+                          .map((member) => {
                             const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown';
                             const initials = `${member.firstName?.[0] || ''}${member.lastName?.[0] || ''}`.toUpperCase() || '??';
                             return (
-                              <CommandItem
+                              <div
                                 key={member.id}
-                                onSelect={() => {
-                                  setFormData(prev => ({ ...prev, noteTakerId: member.id }));
-                                  setIsNoteTakerOpen(false);
-                                }}
+                                className="flex items-center px-3 py-2 cursor-pointer hover:bg-gray-100"
+                                onClick={() => { setFormData(prev => ({ ...prev, noteTakerId: member.id })); setIsNoteTakerOpen(false); }}
                               >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    formData.noteTakerId === member.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
+                                <Check className={cn("mr-2 h-4 w-4", formData.noteTakerId === member.id ? "opacity-100" : "opacity-0")} />
                                 <Avatar className="h-6 w-6 mr-2">
                                   <AvatarImage src={member.profileImagePath || undefined} />
-                                  <AvatarFallback className="text-xs">
-                                    {initials}
-                                  </AvatarFallback>
+                                  <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                                 </Avatar>
                                 {fullName}
-                              </CommandItem>
+                              </div>
                             );
                           })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

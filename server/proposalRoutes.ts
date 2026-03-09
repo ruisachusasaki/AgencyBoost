@@ -264,21 +264,7 @@ export function registerProposalRoutes(
           if (b) { itemName = b.name; itemDescription = b.description || ""; }
         } else if (item.itemType === "package" && item.packageId) {
           const [pkg] = await db.select().from(productPackages).where(eq(productPackages.id, item.packageId));
-          if (pkg) {
-            itemName = pkg.name;
-            const pkgItemsList = await db.select().from(packageItems).where(eq(packageItems.packageId, item.packageId));
-            const contentNames: string[] = [];
-            for (const pi of pkgItemsList) {
-              if (pi.itemType === 'product' && pi.productId) {
-                const [p] = await db.select({ name: products.name }).from(products).where(eq(products.id, pi.productId));
-                if (p) contentNames.push(p.name);
-              } else if (pi.itemType === 'bundle' && pi.bundleId) {
-                const [b] = await db.select({ name: productBundles.name }).from(productBundles).where(eq(productBundles.id, pi.bundleId));
-                if (b) contentNames.push(b.name);
-              }
-            }
-            itemDescription = pkg.description || (contentNames.length > 0 ? `Includes: ${contentNames.join(", ")}` : "");
-          }
+          if (pkg) { itemName = pkg.name; itemDescription = pkg.description || ""; }
         }
         return { ...item, itemName, itemDescription };
       }));

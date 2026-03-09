@@ -303,6 +303,7 @@ export const quotes = pgTable("quotes", {
   clientBudget: decimal("client_budget", { precision: 10, scale: 2 }).notNull(),
   desiredMargin: decimal("desired_margin", { precision: 5, scale: 2 }).notNull(),
   totalCost: decimal("total_cost", { precision: 10, scale: 2 }).default('0'),
+  buildFee: decimal("build_fee", { precision: 10, scale: 2 }).default('0'),
   oneTimeCost: decimal("one_time_cost", { precision: 10, scale: 2 }).default('0'),
   monthlyCost: decimal("monthly_cost", { precision: 10, scale: 2 }).default('0'),
   status: text("status").notNull().default("draft"), // draft, pending_approval, approved, sent, signed, completed, accepted, rejected

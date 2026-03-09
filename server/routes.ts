@@ -36959,11 +36959,14 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           }
         }
 
+        const userBuildFee = parseFloat(req.body.buildFee || '0');
+
         const finalQuoteData = {
           ...validatedData,
           status: effectiveStatus,
+          buildFee: userBuildFee.toString(),
           totalCost: calculatedTotalCost.toString(),
-          oneTimeCost: calculatedOneTimeCost.toString(),
+          oneTimeCost: userBuildFee.toString(),
           monthlyCost: calculatedMonthlyCost.toString(),
         };
 
@@ -37412,14 +37415,17 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           });
         }
 
+        const userBuildFee = parseFloat(req.body.buildFee || '0');
+
         const updateData = {
           name: validatedQuote.name,
           clientId: validatedQuote.clientId,
           leadId: validatedQuote.leadId,
           clientBudget: validatedQuote.clientBudget,
           desiredMargin: desiredMargin.toString(),
+          buildFee: userBuildFee.toString(),
           totalCost: calculatedTotalCost.toString(),
-          oneTimeCost: calculatedOneTimeCost.toString(),
+          oneTimeCost: userBuildFee.toString(),
           monthlyCost: calculatedMonthlyCost.toString(),
           status: effectiveStatus,
           notes: validatedQuote.notes,

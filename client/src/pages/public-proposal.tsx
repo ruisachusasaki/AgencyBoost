@@ -471,9 +471,6 @@ export default function PublicProposal() {
                         <div key={item.id || index} className="flex items-center py-3 border-b last:border-0">
                           <div className="flex-1">
                             <div className="font-medium text-gray-900">{item.itemName || `${item.itemType} Item`}</div>
-                            {item.itemType === 'package' && item.itemDescription && (
-                              <p className="text-sm text-gray-500 mt-0.5">{item.itemDescription}</p>
-                            )}
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline" className="capitalize text-xs">{item.itemType}</Badge>
                               {item.quantity > 1 && <span className="text-xs text-gray-500">Qty: {item.quantity}</span>}

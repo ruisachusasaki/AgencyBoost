@@ -141,6 +141,7 @@ export default function Sales() {
     clientId: "",
     leadId: "", 
     budget: "",
+    buildFee: "",
     margin: "",
     description: "",
   });
@@ -747,6 +748,7 @@ export default function Sales() {
       clientId: "",
       leadId: "",
       budget: "",
+      buildFee: "",
       margin: "",
       description: "",
     });
@@ -768,6 +770,7 @@ export default function Sales() {
         clientId: quote.clientId || "",
         leadId: quote.leadId || "",
         budget: quote.clientBudget,
+        buildFee: quote.buildFee || "",
         margin: quote.desiredMargin,
         description: quote.notes || "",
       });
@@ -1041,8 +1044,9 @@ export default function Sales() {
       name: quoteData.name,
       clientId: quoteData.clientId || null,
       leadId: quoteData.leadId || null,
-      clientBudget: quoteData.budget, // Keep as string for decimal schema
-      desiredMargin: quoteData.margin, // Keep as string for decimal schema
+      clientBudget: quoteData.budget,
+      buildFee: quoteData.buildFee || '0',
+      desiredMargin: quoteData.margin,
       totalCost: totals.totalCost.toString(),
       oneTimeCost: (totals.oneTimeCost + (totals.buildFeeCost || 0)).toString(),
       monthlyCost: totals.monthlyCost.toString(),
@@ -1945,8 +1949,8 @@ export default function Sales() {
                         </div>
                       </div>
 
-                      {/* Budget and Margin */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Budget, Build Fee, and Margin */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <Label htmlFor="quote-budget">Client Budget ($)</Label>
@@ -1969,6 +1973,32 @@ export default function Sales() {
                               onChange={(e) => setQuoteData(prev => ({ ...prev, budget: e.target.value }))}
                               className="pl-10"
                               data-testid="input-quote-budget"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Label htmlFor="quote-build-fee">Build Fee ($)</Label>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>One-time setup/build fee the client pays upfront</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <div className="relative">
+                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                            <Input
+                              id="quote-build-fee"
+                              type="number"
+                              placeholder="0.00"
+                              value={quoteData.buildFee}
+                              onChange={(e) => setQuoteData(prev => ({ ...prev, buildFee: e.target.value }))}
+                              className="pl-10"
+                              data-testid="input-quote-build-fee"
                             />
                           </div>
                         </div>
@@ -2032,9 +2062,9 @@ export default function Sales() {
                                     <p className="font-medium" data-testid="quote-summary-budget">
                                       ${totals.budget.toLocaleString()}
                                     </p>
-                                    {totals.buildFeeCost > 0 && (
+                                    {(parseFloat(quoteData.buildFee) > 0 || totals.buildFeeCost > 0) && (
                                       <p className="text-xs text-muted-foreground mt-1">
-                                        + ${totals.buildFeeCost.toLocaleString()} build fee
+                                        + ${(parseFloat(quoteData.buildFee) || totals.buildFeeCost).toLocaleString()} build fee
                                       </p>
                                     )}
                                   </div>
