@@ -29,7 +29,7 @@ import {
 } from "./chunk-PQ4E2HEU.js";
 import {
   registerProposalRoutes
-} from "./chunk-YGIFZRF2.js";
+} from "./chunk-UPAB7HKF.js";
 import {
   generateTasksFromTemplates
 } from "./chunk-ZBNZXHR3.js";
@@ -30467,7 +30467,7 @@ ${appointment.description || ""}
             }, 0);
             unitCost = bundleCost;
           } else if (item.itemType === "package" && item.packageId) {
-            const [pkg] = await tx.select({ id: productPackages.id }).from(productPackages).where(eq10(productPackages.id, item.packageId)).limit(1);
+            const [pkg] = await tx.select({ id: productPackages.id, buildFee: productPackages.buildFee }).from(productPackages).where(eq10(productPackages.id, item.packageId)).limit(1);
             if (!pkg) throw new Error(`Package with ID ${item.packageId} not found`);
             const pkgItems = await tx.select().from(packageItems).where(eq10(packageItems.packageId, item.packageId));
             let packageOneTimeCost = 0;
@@ -30495,8 +30495,9 @@ ${appointment.description || ""}
                 }
               }
             }
-            unitCost = packageOneTimeCost + packageMonthlyCost;
-            calculatedOneTimeCost += packageOneTimeCost * quantity;
+            const pkgBuildFee = item.customQuantities?.__buildFee !== void 0 ? parseFloat(item.customQuantities.__buildFee || "0") : parseFloat(pkg.buildFee || "0");
+            unitCost = packageOneTimeCost + packageMonthlyCost + pkgBuildFee;
+            calculatedOneTimeCost += (packageOneTimeCost + pkgBuildFee) * quantity;
             calculatedMonthlyCost += packageMonthlyCost * quantity;
           }
           const itemTotalCost = unitCost * quantity;
@@ -37209,7 +37210,7 @@ app.post(
   express2.raw({ type: "application/json" }),
   async (req, res) => {
     try {
-      const { handleStripeWebhook: handleStripeWebhook2 } = await import("./proposalRoutes-7PDUI5EW.js");
+      const { handleStripeWebhook: handleStripeWebhook2 } = await import("./proposalRoutes-BDIBF66R.js");
       const { getNotificationService: getNotificationService2 } = await import("./notification-service-2QQMBITT.js");
       const notificationService = getNotificationService2();
       if (notificationService) {

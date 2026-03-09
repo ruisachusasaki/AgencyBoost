@@ -1044,7 +1044,7 @@ export default function Sales() {
       clientBudget: quoteData.budget, // Keep as string for decimal schema
       desiredMargin: quoteData.margin, // Keep as string for decimal schema
       totalCost: totals.totalCost.toString(),
-      oneTimeCost: totals.oneTimeCost.toString(),
+      oneTimeCost: (totals.oneTimeCost + (totals.buildFeeCost || 0)).toString(),
       monthlyCost: totals.monthlyCost.toString(),
       status: isLowMargin ? "pending_approval" : "draft",
       notes: quoteData.description || null,

@@ -37347,7 +37347,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             unitCost = bundleCost;
           } else if (item.itemType === 'package' && item.packageId) {
             const [pkg] = await tx
-              .select({ id: productPackages.id })
+              .select({ id: productPackages.id, buildFee: productPackages.buildFee })
               .from(productPackages)
               .where(eq(productPackages.id, item.packageId))
               .limit(1);
@@ -37379,8 +37379,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
                 }
               }
             }
-            unitCost = packageOneTimeCost + packageMonthlyCost;
-            calculatedOneTimeCost += packageOneTimeCost * quantity;
+            const pkgBuildFee = item.customQuantities?.__buildFee !== undefined
+              ? parseFloat(item.customQuantities.__buildFee || '0')
+              : parseFloat(pkg.buildFee || '0');
+            unitCost = packageOneTimeCost + packageMonthlyCost + pkgBuildFee;
+            calculatedOneTimeCost += (packageOneTimeCost + pkgBuildFee) * quantity;
             calculatedMonthlyCost += packageMonthlyCost * quantity;
           }
 
