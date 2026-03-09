@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, Users, MapPin, Phone, Mail, Edit, Trash2, Plus, Briefcase } from "lucide-react";
+import { ArrowLeft, Users, MapPin, Phone, Mail, Edit, Trash2, Plus, Briefcase, History, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +65,7 @@ export default function TeamDetail() {
   const [isEditPositionDialogOpen, setIsEditPositionDialogOpen] = useState(false);
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
   const [editPositionActiveTab, setEditPositionActiveTab] = useState("details");
+  const [previewVersion, setPreviewVersion] = useState<{ version: number; content: string; date: string; changedBy: string } | null>(null);
   const [isAddKpiDialogOpen, setIsAddKpiDialogOpen] = useState(false);
   const [isEditKpiDialogOpen, setIsEditKpiDialogOpen] = useState(false);
   const [editingKpi, setEditingKpi] = useState<PositionKpi | null>(null);
@@ -275,6 +276,7 @@ export default function TeamDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/departments", teamId, "positions"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/team-positions', editingPosition?.id, 'description-versions'] });
       setIsEditPositionDialogOpen(false);
       setEditingPosition(null);
       editPositionForm.reset();
@@ -296,6 +298,25 @@ export default function TeamDetail() {
   // Fetch KPIs for the editing position
   const { data: kpis = [], isLoading: kpisLoading } = useQuery<PositionKpi[]>({
     queryKey: [`/api/positions/${editingPosition?.id}/kpis`],
+    enabled: !!editingPosition?.id,
+  });
+
+  // Fetch description version history for the editing position
+  const { data: descriptionVersions = [] } = useQuery<Array<{
+    id: string;
+    version: number;
+    content: string | null;
+    changedByUserId: string | null;
+    createdAt: string | null;
+    changedByFirstName: string | null;
+    changedByLastName: string | null;
+  }>>({
+    queryKey: ['/api/team-positions', editingPosition?.id, 'description-versions'],
+    queryFn: async () => {
+      const res = await fetch(`/api/team-positions/${editingPosition?.id}/description-versions`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch versions');
+      return res.json();
+    },
     enabled: !!editingPosition?.id,
   });
 
@@ -976,7 +997,8 @@ export default function TeamDetail() {
               <nav className="-mb-px flex space-x-8">
                 {[
                   { id: "details", name: "Details" },
-                  { id: "kpis", name: "KPIs" }
+                  { id: "kpis", name: "KPIs" },
+                  { id: "history", name: `History${descriptionVersions.length > 0 ? ` (${descriptionVersions.length})` : ''}` }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -1051,6 +1073,7 @@ export default function TeamDetail() {
                         setEditingPosition(null);
                         editPositionForm.reset();
                         setEditPositionActiveTab("details");
+                        setPreviewVersion(null);
                       }}
                       data-testid="button-cancel-position"
                     >
@@ -1258,6 +1281,79 @@ export default function TeamDetail() {
                   </Form>
                 </DialogContent>
               </Dialog>
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-4">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium flex items-center gap-2">
+                    <History className="h-5 w-5 text-primary" />
+                    Description Version History
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Track all changes made to the position job description
+                  </p>
+                </div>
+
+                {previewVersion ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono">v{previewVersion.version}</Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {previewVersion.date} — {previewVersion.changedBy}
+                        </span>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setPreviewVersion(null)}>
+                        <ArrowLeft className="h-4 w-4 mr-1" />
+                        Back to list
+                      </Button>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-muted/30 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: previewVersion.content || '<em>No content</em>' }} />
+                  </div>
+                ) : descriptionVersions.length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                    <History className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-muted-foreground mb-2">No version history yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Changes to the job description will be tracked here automatically
+                    </p>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg divide-y">
+                    {descriptionVersions.map((v) => (
+                      <div key={v.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className="font-mono text-xs">v{v.version}</Badge>
+                          <div>
+                            <p className="text-sm font-medium">
+                              {v.changedByFirstName && v.changedByLastName
+                                ? `${v.changedByFirstName} ${v.changedByLastName}`
+                                : 'System'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {v.createdAt ? new Date(v.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPreviewVersion({
+                            version: v.version,
+                            content: v.content || '',
+                            date: v.createdAt ? new Date(v.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+                            changedBy: v.changedByFirstName && v.changedByLastName ? `${v.changedByFirstName} ${v.changedByLastName}` : 'System'
+                          })}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </DialogContent>

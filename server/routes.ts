@@ -61,7 +61,7 @@ import {
   socialMediaAccounts, socialMediaPosts, workflows, workflowTemplates, workflowExecutions, workflowActionAnalytics, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
   timeOffPolicies, timeOffTypes, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, jobApplicationWatchers, applicationStageHistory, timeOffBalances,
-  jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, expenseReportFormConfig, expenseReportSubmissions, offboardingFormConfig, offboardingSubmissions, teamPositions, clientTeamAssignments,
+  jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, expenseReportFormConfig, expenseReportSubmissions, offboardingFormConfig, offboardingSubmissions, teamPositions, clientTeamAssignments, positionDescriptionVersions,
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress, trainingCoursePermissions,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
@@ -12544,6 +12544,24 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(404).json({ message: "Team position not found" });
       }
 
+      if (updateData.description !== undefined && updateData.description !== oldPosition.description) {
+        const [latestVersion] = await db
+          .select({ version: positionDescriptionVersions.version })
+          .from(positionDescriptionVersions)
+          .where(eq(positionDescriptionVersions.positionId, req.params.id))
+          .orderBy(desc(positionDescriptionVersions.version))
+          .limit(1);
+
+        const nextVersion = (latestVersion?.version || 0) + 1;
+
+        await db.insert(positionDescriptionVersions).values({
+          positionId: req.params.id,
+          version: nextVersion,
+          content: updateData.description || "",
+          changedByUserId: userId,
+        });
+      }
+
       await createAuditLog(
         "updated",
         "team_position",
@@ -12597,6 +12615,30 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error) {
       console.error('Error deleting team position:', error);
       res.status(500).json({ message: "Failed to delete team position" });
+    }
+  });
+
+  app.get("/api/team-positions/:id/description-versions", requireAuth(), requirePermission('settings', 'canView'), async (req, res) => {
+    try {
+      const versions = await db
+        .select({
+          id: positionDescriptionVersions.id,
+          version: positionDescriptionVersions.version,
+          content: positionDescriptionVersions.content,
+          changedByUserId: positionDescriptionVersions.changedByUserId,
+          createdAt: positionDescriptionVersions.createdAt,
+          changedByFirstName: staff.firstName,
+          changedByLastName: staff.lastName,
+        })
+        .from(positionDescriptionVersions)
+        .leftJoin(staff, eq(positionDescriptionVersions.changedByUserId, staff.id))
+        .where(eq(positionDescriptionVersions.positionId, req.params.id))
+        .orderBy(desc(positionDescriptionVersions.version));
+
+      res.json(versions);
+    } catch (error) {
+      console.error('Error fetching description versions:', error);
+      res.status(500).json({ message: "Failed to fetch description versions" });
     }
   });
 

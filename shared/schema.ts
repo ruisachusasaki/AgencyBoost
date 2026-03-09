@@ -3494,6 +3494,18 @@ export const clientTeamAssignments = pgTable("client_team_assignments", {
   uniqueClientPosition: unique("client_team_assignments_client_position_unique").on(table.clientId, table.position),
 }));
 
+// Position Description Versions - track changes to position job descriptions
+export const positionDescriptionVersions = pgTable("position_description_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  positionId: varchar("position_id").notNull().references(() => teamPositions.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  content: text("content"),
+  changedByUserId: uuid("changed_by_user_id").references(() => staff.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PositionDescriptionVersion = typeof positionDescriptionVersions.$inferSelect;
+
 // Team Positions schema exports
 export const insertTeamPositionSchema = createInsertSchema(teamPositions).omit({
   id: true,
