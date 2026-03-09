@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  CheckCircle, FileText, CreditCard, Building, Pen,
+  Check, CheckCircle, FileText, CreditCard, Building, Pen,
   Shield, Loader2, AlertCircle, ChevronDown, ChevronUp,
   Calendar, Repeat
 } from "lucide-react";
@@ -466,7 +466,37 @@ export default function PublicProposal() {
                 {items.length > 0 ? (
                   <div className="space-y-4">
                     {items.map((item: any, index: number) => {
-                      const isRecurring = item.isRecurring;
+                      if (item.itemType === 'package' && item.packageContents?.length > 0) {
+                        const onboarding = item.packageContents.filter((c: any) => c.name?.toLowerCase().startsWith('onboarding'));
+                        const monthly = item.packageContents.filter((c: any) => c.name?.toLowerCase().startsWith('monthly'));
+                        const other = item.packageContents.filter((c: any) => !c.name?.toLowerCase().startsWith('onboarding') && !c.name?.toLowerCase().startsWith('monthly'));
+                        const groups = [
+                          ...(onboarding.length > 0 ? [{ label: 'Onboarding', items: onboarding }] : []),
+                          ...(monthly.length > 0 ? [{ label: 'Monthly Services', items: monthly }] : []),
+                          ...(other.length > 0 ? [{ label: 'Included Services', items: other }] : []),
+                        ];
+                        return (
+                          <div key={item.id || index} className="py-3 border-b last:border-0">
+                            <div className="font-semibold text-lg text-gray-900 mb-1">{item.itemName || 'Package'}</div>
+                            <Badge variant="outline" className="capitalize text-xs mb-4">Package</Badge>
+                            <div className="space-y-4 mt-3">
+                              {groups.map((group, gi) => (
+                                <div key={gi}>
+                                  <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide border-b pb-1 mb-2">{group.label}</div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                                    {group.items.map((content: any, ci: number) => (
+                                      <div key={ci} className="flex items-start gap-2 py-1">
+                                        <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                                        <span className="text-sm text-gray-700">{content.name}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
                       return (
                         <div key={item.id || index} className="flex items-center py-3 border-b last:border-0">
                           <div className="flex-1">

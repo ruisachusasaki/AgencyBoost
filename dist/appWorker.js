@@ -29,7 +29,7 @@ import {
 } from "./chunk-PQ4E2HEU.js";
 import {
   registerProposalRoutes
-} from "./chunk-CIRLXUYA.js";
+} from "./chunk-WSUXWG3W.js";
 import {
   generateTasksFromTemplates
 } from "./chunk-CH6BNVMI.js";
@@ -37214,7 +37214,7 @@ app.post(
   express2.raw({ type: "application/json" }),
   async (req, res) => {
     try {
-      const { handleStripeWebhook: handleStripeWebhook2 } = await import("./proposalRoutes-FJ3JNRA7.js");
+      const { handleStripeWebhook: handleStripeWebhook2 } = await import("./proposalRoutes-NOXF4L77.js");
       const { getNotificationService: getNotificationService2 } = await import("./notification-service-2QQMBITT.js");
       const notificationService = getNotificationService2();
       if (notificationService) {

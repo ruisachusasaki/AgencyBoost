@@ -1,6 +1,6 @@
 import express, { type Express } from "express";
 import { db } from "./db";
-import { proposalTerms, quotes, quoteItems, clients, leads, staff, products, productBundles, productPackages, clientProducts, clientBundles, clientPackages, packageItems, deals, leadPipelineStages, taskSettings, clientRecurringConfig, businessProfile } from "@shared/schema";
+import { proposalTerms, quotes, quoteItems, clients, leads, staff, products, productBundles, productPackages, clientProducts, clientBundles, clientPackages, packageItems, bundleProducts, deals, leadPipelineStages, taskSettings, clientRecurringConfig, businessProfile } from "@shared/schema";
 import { eq, desc, and, sql, lt, isNull, asc } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { z } from "zod";
@@ -264,7 +264,25 @@ export function registerProposalRoutes(
           if (b) { itemName = b.name; itemDescription = b.description || ""; }
         } else if (item.itemType === "package" && item.packageId) {
           const [pkg] = await db.select().from(productPackages).where(eq(productPackages.id, item.packageId));
-          if (pkg) { itemName = pkg.name; itemDescription = pkg.description || ""; }
+          if (pkg) {
+            itemName = pkg.name;
+            itemDescription = pkg.description || "";
+            const pkgItemsList = await db.select().from(packageItems).where(eq(packageItems.packageId, item.packageId));
+            const packageContents: Array<{ name: string; type: string; items?: string[] }> = [];
+            for (const pi of pkgItemsList) {
+              if (pi.itemType === 'bundle' && pi.bundleId) {
+                const [b] = await db.select({ name: productBundles.name }).from(productBundles).where(eq(productBundles.id, pi.bundleId));
+                if (b) {
+                  const bps = await db.select({ name: products.name }).from(bundleProducts).leftJoin(products, eq(bundleProducts.productId, products.id)).where(eq(bundleProducts.bundleId, pi.bundleId));
+                  packageContents.push({ name: b.name, type: 'bundle', items: bps.map(bp => bp.name || '').filter(Boolean) });
+                }
+              } else if (pi.itemType === 'product' && pi.productId) {
+                const [p] = await db.select({ name: products.name }).from(products).where(eq(products.id, pi.productId));
+                if (p) packageContents.push({ name: p.name, type: 'product' });
+              }
+            }
+            return { ...item, itemName, itemDescription, packageContents };
+          }
         }
         return { ...item, itemName, itemDescription };
       }));
