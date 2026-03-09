@@ -348,6 +348,8 @@ export function registerProposalRoutes(
           "{{businessZipCode}}": businessData?.zipCode || "",
           "{{signerName}}": quote.signedByName || "",
           "{{signerEmail}}": quote.signedByEmail || "",
+          "{{signerIpAddress}}": quote.signerIpAddress || "",
+          "{{SIGNER_IP_ADDRESS}}": quote.signerIpAddress || "",
           "{{signatureDate}}": quote.signedAt ? new Date(quote.signedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "",
         };
 
@@ -405,6 +407,10 @@ export function registerProposalRoutes(
         return res.status(400).json({ message: "You must accept the Terms & Conditions" });
       }
 
+      const signerIpAddress = req.headers["x-forwarded-for"]
+        ? (Array.isArray(req.headers["x-forwarded-for"]) ? req.headers["x-forwarded-for"][0] : req.headers["x-forwarded-for"].split(",")[0].trim())
+        : req.socket?.remoteAddress || "Unknown";
+
       const [quote] = await db
         .select()
         .from(quotes)
@@ -434,6 +440,7 @@ export function registerProposalRoutes(
           signedAt: new Date(),
           signedByName: signerName,
           signedByEmail: signerEmail,
+          signerIpAddress,
           signatureData,
           termsAccepted: true,
           termsVersionId: activeTerms[0]?.id || null,

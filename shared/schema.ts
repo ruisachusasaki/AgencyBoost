@@ -315,6 +315,7 @@ export const quotes = pgTable("quotes", {
   signedAt: timestamp("signed_at"),
   signedByName: varchar("signed_by_name"),
   signedByEmail: varchar("signed_by_email"),
+  signerIpAddress: varchar("signer_ip_address"),
   signatureData: text("signature_data"),
   termsAccepted: boolean("terms_accepted"),
   termsVersionId: varchar("terms_version_id"),

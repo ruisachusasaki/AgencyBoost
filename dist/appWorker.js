@@ -3,16 +3,16 @@ import {
 } from "./chunk-TA3ROV2W.js";
 import {
   createOAuth2Client
-} from "./chunk-KZV6AYVN.js";
+} from "./chunk-TEPYNM2H.js";
 import {
   EncryptionService
 } from "./chunk-BGP47S4B.js";
 import {
   emitTrigger
-} from "./chunk-UDNZ4W7Y.js";
+} from "./chunk-APUYAXPW.js";
 import {
   storage as storage2
-} from "./chunk-WETUJNLT.js";
+} from "./chunk-V457P6TI.js";
 import {
   deleteAppointmentFromGoogleCalendar,
   syncAppointmentToGoogleCalendar
@@ -29,14 +29,14 @@ import {
 } from "./chunk-PQ4E2HEU.js";
 import {
   registerProposalRoutes
-} from "./chunk-YFQRLFOZ.js";
+} from "./chunk-7YRXDLCT.js";
 import {
   generateTasksFromTemplates
-} from "./chunk-NA2F6IKW.js";
-import "./chunk-FFTRCWC4.js";
+} from "./chunk-DZQ6NYS3.js";
+import "./chunk-OVTADGWY.js";
 import {
   db
-} from "./chunk-BUCOPU6G.js";
+} from "./chunk-YV2QJOHU.js";
 import {
   aiAssistantSettings,
   aiIntegrations,
@@ -302,7 +302,7 @@ import {
   workflowExecutions,
   workflowTemplates,
   workflows
-} from "./chunk-MYUTWN2E.js";
+} from "./chunk-6B6DIYRO.js";
 import {
   __require
 } from "./chunk-R5U7XKVJ.js";
@@ -2771,8 +2771,8 @@ function requireClientPortalAuth() {
       });
     }
     try {
-      const { db: db2 } = await import("./db-MF7UXD6W.js");
-      const { clientPortalUsers: clientPortalUsers2 } = await import("./schema-E6UB6NWI.js");
+      const { db: db2 } = await import("./db-STJZN672.js");
+      const { clientPortalUsers: clientPortalUsers2 } = await import("./schema-JE6BBE3N.js");
       const { eq: eq14 } = await import("drizzle-orm");
       await db2.update(clientPortalUsers2).set({
         lastLogin: /* @__PURE__ */ new Date()
@@ -8733,7 +8733,7 @@ AgencyBoost CRM`
         fileUrl: normalizedFileUrl,
         uploadedBy: userId2
       }).returning();
-      const { commentFiles: commentFiles2 } = await import("./schema-E6UB6NWI.js");
+      const { commentFiles: commentFiles2 } = await import("./schema-JE6BBE3N.js");
       try {
         await db.insert(commentFiles2).values({
           id: attachment.id,
@@ -11448,8 +11448,8 @@ AgencyBoost CRM`
   });
   async function checkFileExists(fileId) {
     try {
-      const { db: db2 } = await import("./db-MF7UXD6W.js");
-      const { commentFiles: commentFiles2, taskAttachments: taskAttachments2 } = await import("./schema-E6UB6NWI.js");
+      const { db: db2 } = await import("./db-STJZN672.js");
+      const { commentFiles: commentFiles2, taskAttachments: taskAttachments2 } = await import("./schema-JE6BBE3N.js");
       const { eq: eq14 } = await import("drizzle-orm");
       const [commentFile] = await db2.select().from(commentFiles2).where(eq14(commentFiles2.id, fileId));
       if (commentFile) {
@@ -11487,8 +11487,8 @@ AgencyBoost CRM`
       if (!fileCheck.exists) {
         return res.status(404).json({ error: "File not found" });
       }
-      const { db: db2 } = await import("./db-MF7UXD6W.js");
-      const { imageAnnotations: imageAnnotations2 } = await import("./schema-E6UB6NWI.js");
+      const { db: db2 } = await import("./db-STJZN672.js");
+      const { imageAnnotations: imageAnnotations2 } = await import("./schema-JE6BBE3N.js");
       const { eq: eq14 } = await import("drizzle-orm");
       const annotations = await db2.select().from(imageAnnotations2).where(eq14(imageAnnotations2.fileId, req.params.fileId));
       res.json(annotations);
@@ -11518,14 +11518,14 @@ AgencyBoost CRM`
         createdAt: /* @__PURE__ */ new Date(),
         updatedAt: /* @__PURE__ */ new Date()
       });
-      const { db: db2 } = await import("./db-MF7UXD6W.js");
-      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-E6UB6NWI.js");
+      const { db: db2 } = await import("./db-STJZN672.js");
+      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-JE6BBE3N.js");
       const result = await db2.insert(imageAnnotations2).values(insertAnnotation).returning();
       const annotation = result[0];
       res.status(201).json(annotation);
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-E6UB6NWI.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-JE6BBE3N.js");
           const { eq: eq14 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -11562,7 +11562,7 @@ AgencyBoost CRM`
         console.log(`Annotation created with mentions: ${mentions.join(", ")}`);
         (async () => {
           try {
-            const { staff: staff2 } = await import("./schema-E6UB6NWI.js");
+            const { staff: staff2 } = await import("./schema-JE6BBE3N.js");
             const { inArray: inArray6 } = await import("drizzle-orm");
             const mentionedStaff = await db2.select({
               id: staff2.id,
@@ -11612,8 +11612,8 @@ AgencyBoost CRM`
         mentions,
         updatedAt: /* @__PURE__ */ new Date()
       };
-      const { db: db2 } = await import("./db-MF7UXD6W.js");
-      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-E6UB6NWI.js");
+      const { db: db2 } = await import("./db-STJZN672.js");
+      const { imageAnnotations: imageAnnotations2, notifications: notifications2 } = await import("./schema-JE6BBE3N.js");
       const { eq: eq14 } = await import("drizzle-orm");
       const result = await db2.update(imageAnnotations2).set(updateData).where(eq14(imageAnnotations2.id, req.params.annotationId)).returning();
       if (result.length === 0) {
@@ -11622,7 +11622,7 @@ AgencyBoost CRM`
       res.json(result[0]);
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-E6UB6NWI.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-JE6BBE3N.js");
           const { eq: eq15 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -11662,7 +11662,7 @@ AgencyBoost CRM`
         console.log(`Annotation updated with mentions: ${mentions.join(", ")}`);
         (async () => {
           try {
-            const { staff: staff2 } = await import("./schema-E6UB6NWI.js");
+            const { staff: staff2 } = await import("./schema-JE6BBE3N.js");
             const { inArray: inArray6 } = await import("drizzle-orm");
             const mentionedStaff = await db2.select({
               id: staff2.id,
@@ -11703,8 +11703,8 @@ AgencyBoost CRM`
   });
   app2.delete("/api/annotations/:annotationId", requireAuth(), async (req, res) => {
     try {
-      const { db: db2 } = await import("./db-MF7UXD6W.js");
-      const { imageAnnotations: imageAnnotations2 } = await import("./schema-E6UB6NWI.js");
+      const { db: db2 } = await import("./db-STJZN672.js");
+      const { imageAnnotations: imageAnnotations2 } = await import("./schema-JE6BBE3N.js");
       const { eq: eq14 } = await import("drizzle-orm");
       const result = await db2.delete(imageAnnotations2).where(eq14(imageAnnotations2.id, req.params.annotationId)).returning();
       if (result.length === 0) {
@@ -11714,7 +11714,7 @@ AgencyBoost CRM`
       res.status(204).send();
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-E6UB6NWI.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-JE6BBE3N.js");
           const { eq: eq15 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -11757,8 +11757,8 @@ AgencyBoost CRM`
   });
   app2.patch("/api/annotations/:annotationId/toggle-complete", requireAuth(), async (req, res) => {
     try {
-      const { db: db2 } = await import("./db-MF7UXD6W.js");
-      const { imageAnnotations: imageAnnotations2 } = await import("./schema-E6UB6NWI.js");
+      const { db: db2 } = await import("./db-STJZN672.js");
+      const { imageAnnotations: imageAnnotations2 } = await import("./schema-JE6BBE3N.js");
       const { eq: eq14 } = await import("drizzle-orm");
       const [currentAnnotation] = await db2.select().from(imageAnnotations2).where(eq14(imageAnnotations2.id, req.params.annotationId));
       if (!currentAnnotation) {
@@ -11776,7 +11776,7 @@ AgencyBoost CRM`
       res.json(updatedAnnotation);
       (async () => {
         try {
-          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-E6UB6NWI.js");
+          const { commentFiles: commentFiles2, taskComments: taskComments2, taskActivities: taskActivities2, staff: staff2 } = await import("./schema-JE6BBE3N.js");
           const { eq: eq15 } = await import("drizzle-orm");
           const fileToComment = await db2.select({
             taskId: taskComments2.taskId
@@ -18832,7 +18832,7 @@ ${appointment.description || ""}
   });
   app2.get("/api/integrations/slack/channels", requireAuth(), async (req, res) => {
     try {
-      const { slackService } = await import("./slack-service-UIHBNEMS.js");
+      const { slackService } = await import("./slack-service-7XOYSH6E.js");
       if (!slackService.isConfigured()) {
         return res.status(400).json({ error: "Slack not configured" });
       }
@@ -18849,7 +18849,7 @@ ${appointment.description || ""}
   });
   app2.get("/api/integrations/slack/users", requireAuth(), async (req, res) => {
     try {
-      const { slackService } = await import("./slack-service-UIHBNEMS.js");
+      const { slackService } = await import("./slack-service-7XOYSH6E.js");
       if (!slackService.isConfigured()) {
         return res.status(400).json({ error: "Slack not configured" });
       }
@@ -21216,7 +21216,7 @@ ${appointment.description || ""}
         }
       }
       try {
-        const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-Q7NR2ATW.js");
+        const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-FDPGM3ZC.js");
         const responsesObj = {};
         if (answers && answers.length > 0) {
           answers.forEach((answer) => {
@@ -26523,7 +26523,7 @@ ${appointment.description || ""}
   app2.post("/api/job-applications", async (req, res) => {
     try {
       console.log("Received job application:", req.body);
-      const insertJobApplicationSchema2 = (await import("./schema-E6UB6NWI.js")).insertJobApplicationSchema;
+      const insertJobApplicationSchema2 = (await import("./schema-JE6BBE3N.js")).insertJobApplicationSchema;
       const validatedData = insertJobApplicationSchema2.parse(req.body);
       const jobOpening = await db.select().from(jobOpenings).where(eq10(jobOpenings.id, validatedData.positionId)).limit(1);
       if (!jobOpening.length) {
@@ -31602,7 +31602,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
   }
   app2.get("/api/google-calendar-events", requireAuth(), async (req, res) => {
     try {
-      const { calendarEvents: calendarEvents3 } = await import("./db-MF7UXD6W.js");
+      const { calendarEvents: calendarEvents3 } = await import("./db-STJZN672.js");
       const userId2 = req.session?.userId;
       if (!userId2) {
         return res.status(401).json({ error: "Not authenticated" });
@@ -31633,7 +31633,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
   app2.post("/api/calendar/events", requireAuth(), createCalendarEvent);
   app2.patch("/api/calendar/events/:eventId/status", requireAuth(), updateCalendarEventStatus);
   app2.get("/api/calendar/time-entries", requireAuth(), getEventTimeEntries);
-  const { chatWithAssistant } = await import("./ai-assistant-K2UZRPAL.js");
+  const { chatWithAssistant } = await import("./ai-assistant-VPOBYWK6.js");
   app2.get("/api/ai-assistant/settings", requireAuth(["admin"]), async (req, res) => {
     try {
       const [settings] = await db.select().from(aiAssistantSettings).limit(1);
@@ -35453,7 +35453,7 @@ router.post("/sync", async (req, res) => {
         });
       }
     }
-    const { syncUserCalendar } = await import("./googleCalendarSync-6NOHWC3K.js");
+    const { syncUserCalendar } = await import("./googleCalendarSync-OFAK4UIR.js");
     syncUserCalendar(req.session.userId, "primary").then((result) => {
       console.log(`[Sync Complete] User ${req.session?.userId}: ${result.eventsCreated} created, ${result.eventsUpdated} updated, ${result.eventsDeleted} deleted`);
     }).catch((error) => {
@@ -35517,7 +35517,7 @@ router.post("/auto-sync", async (req, res) => {
         message: "Data is recent, no sync needed"
       });
     }
-    const { syncUserCalendar } = await import("./googleCalendarSync-6NOHWC3K.js");
+    const { syncUserCalendar } = await import("./googleCalendarSync-OFAK4UIR.js");
     syncUserCalendar(req.session.userId, "primary").then((result) => {
       console.log(`[Auto-Sync Complete] User ${req.session?.userId}: ${result.eventsCreated} created, ${result.eventsUpdated} updated, ${result.eventsDeleted} deleted`);
     }).catch((error) => {
@@ -37074,7 +37074,7 @@ app.post(
           console.warn("[Slack Events] Missing signature headers");
           return res.status(401).json({ error: "Missing authentication headers" });
         }
-        const { slackService } = await import("./slack-service-UIHBNEMS.js");
+        const { slackService } = await import("./slack-service-7XOYSH6E.js");
         if (!slackService.verifySlackRequest(timestamp, signature, rawBody)) {
           console.warn("[Slack Events] Invalid signature - rejecting request");
           return res.status(401).json({ error: "Invalid signature" });
@@ -37094,7 +37094,7 @@ app.post(
         console.log("[Slack Events] URL verification challenge received");
         return res.json({ challenge: payload.challenge });
       }
-      const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-Q7NR2ATW.js");
+      const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-FDPGM3ZC.js");
       if (payload.type === "event_callback") {
         const event = payload.event;
         console.log(`[Slack Events] Received event: ${event.type}`, {
@@ -37178,7 +37178,7 @@ app.post(
   express2.raw({ type: "application/json" }),
   async (req, res) => {
     try {
-      const { handleStripeWebhook: handleStripeWebhook2 } = await import("./proposalRoutes-J7F443ZU.js");
+      const { handleStripeWebhook: handleStripeWebhook2 } = await import("./proposalRoutes-VSLTRCM2.js");
       const { getNotificationService: getNotificationService2 } = await import("./notification-service-2QQMBITT.js");
       const notificationService = getNotificationService2();
       if (notificationService) {
@@ -37445,37 +37445,37 @@ async function setupFullApp(server) {
     appFullyLoaded = true;
     log("\u2705 All routes and middleware configured");
     runStartupMigrations().then(() => {
-      import("./googleCalendarBackgroundSync-5QEFXHEG.js").then(({ startBackgroundSync }) => {
+      import("./googleCalendarBackgroundSync-E6E7XJHS.js").then(({ startBackgroundSync }) => {
         startBackgroundSync();
         log("\u2705 Google Calendar background sync started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start background calendar sync: ${err.message}`);
       });
-      import("./weeklyHoursCheckService-IXTCOVCF.js").then(({ startWeeklyHoursCheck }) => {
+      import("./weeklyHoursCheckService-ND2MLGXN.js").then(({ startWeeklyHoursCheck }) => {
         startWeeklyHoursCheck();
         log("\u2705 Weekly hours check service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start weekly hours check service: ${err.message}`);
       });
-      import("./longRunningTimerService-EPQZRRUJ.js").then(({ startLongRunningTimerCheck }) => {
+      import("./longRunningTimerService-MAFOZSOH.js").then(({ startLongRunningTimerCheck }) => {
         startLongRunningTimerCheck();
         log("\u2705 Long-running timer alert service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start long-running timer alert service: ${err.message}`);
       });
-      import("./proposalReminderService-EP4I7GVY.js").then(({ startProposalReminderService }) => {
+      import("./proposalReminderService-ORNPXB7S.js").then(({ startProposalReminderService }) => {
         startProposalReminderService();
         log("\u2705 Proposal reminder service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start proposal reminder service: ${err.message}`);
       });
-      import("./recurringTaskService-OWOZJTCK.js").then(({ startRecurringTaskService }) => {
+      import("./recurringTaskService-MXYPHLAA.js").then(({ startRecurringTaskService }) => {
         startRecurringTaskService();
         log("\u2705 Recurring task generation service started");
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start recurring task generation service: ${err.message}`);
       });
-      import("./onboardingNotificationService-3JXV6QFR.js").then(({ startOnboardingNotificationService }) => {
+      import("./onboardingNotificationService-6CW2MGVO.js").then(({ startOnboardingNotificationService }) => {
         startOnboardingNotificationService();
         log("\u2705 Onboarding notification service started");
       }).catch((err) => {
@@ -37510,7 +37510,7 @@ async function seedIntakeDescriptionTemplates() {
   log("Running startup migration: seedIntakeDescriptionTemplates");
   try {
     const { sectionDescriptionTemplates } = await import("./seed-description-templates-XFHPZJLE.js");
-    const { taskIntakeSections: taskIntakeSections2 } = await import("./schema-E6UB6NWI.js");
+    const { taskIntakeSections: taskIntakeSections2 } = await import("./schema-JE6BBE3N.js");
     for (const [sectionName, template] of Object.entries(sectionDescriptionTemplates)) {
       await db.update(taskIntakeSections2).set({ descriptionTemplate: template, updatedAt: /* @__PURE__ */ new Date() }).where(eq13(taskIntakeSections2.sectionName, sectionName));
     }

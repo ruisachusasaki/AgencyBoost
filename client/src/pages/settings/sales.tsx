@@ -75,6 +75,7 @@ export default function SalesSettings() {
     { category: "Signature (filled at signing)", tags: [
       { tag: "{{signerName}}", label: "Signer Name" },
       { tag: "{{signerEmail}}", label: "Signer Email" },
+      { tag: "{{signerIpAddress}}", label: "Signer IP Address" },
       { tag: "{{signatureDate}}", label: "Signature Date" },
     ]},
   ];
