@@ -265,7 +265,8 @@ export async function executeWorkflow(
       contactId: event.data.clientId || (event.type.startsWith('client_') ? event.data.id : null),
       currentStep: 0,
       variables: {
-        trigger: event.data, // Make trigger data available to actions
+        trigger: event.data,
+        ...event.data,
       },
     };
 
@@ -648,8 +649,11 @@ async function executeSendSlackDM(action: WorkflowAction, context: ExecutionCont
   const workspaceId = config.workspaceId || undefined;
 
   if (!slackService.isConfigured() && !workspaceId) {
-    console.warn('    ⚠️  Slack not configured - skipping DM');
-    return { skipped: true, reason: 'Slack not configured' };
+    const hasWorkspaces = await slackService.checkActiveWorkspaces();
+    if (!hasWorkspaces) {
+      console.warn('    ⚠️  Slack not configured - skipping DM');
+      return { skipped: true, reason: 'Slack not configured' };
+    }
   }
 
   let userId = config.userId ? interpolateString(config.userId, context) : null;
@@ -657,7 +661,7 @@ async function executeSendSlackDM(action: WorkflowAction, context: ExecutionCont
 
   if (!userId && email) {
     console.log(`    🔍 Looking up Slack user by email: ${email}`);
-    const lookupResult = await slackService.lookupUserByEmail(email);
+    const lookupResult = await slackService.lookupUserByEmail(email, workspaceId);
     if (lookupResult.success && lookupResult.userId) {
       userId = lookupResult.userId;
       console.log(`    ✓ Found user: ${userId}`);
@@ -674,7 +678,8 @@ async function executeSendSlackDM(action: WorkflowAction, context: ExecutionCont
 
   const result = await slackService.sendDirectMessage({
     userId,
-    text: message, workspaceId,
+    text: message,
+    workspaceId,
   });
 
   if (result.success) {
@@ -692,8 +697,11 @@ async function executeAddSlackReaction(action: WorkflowAction, context: Executio
   const workspaceId = config.workspaceId || undefined;
 
   if (!slackService.isConfigured() && !workspaceId) {
-    console.warn('    ⚠️  Slack not configured - skipping reaction');
-    return { skipped: true, reason: 'Slack not configured' };
+    const hasWorkspaces = await slackService.checkActiveWorkspaces();
+    if (!hasWorkspaces) {
+      console.warn('    ⚠️  Slack not configured - skipping reaction');
+      return { skipped: true, reason: 'Slack not configured' };
+    }
   }
 
   const channel = config.channel || config.channelId;
@@ -708,6 +716,7 @@ async function executeAddSlackReaction(action: WorkflowAction, context: Executio
     channel,
     timestamp,
     emoji,
+    workspaceId,
   });
 
   if (result.success) {
@@ -725,8 +734,11 @@ async function executeCreateSlackChannel(action: WorkflowAction, context: Execut
   const workspaceId = config.workspaceId || undefined;
 
   if (!slackService.isConfigured() && !workspaceId) {
-    console.warn('    ⚠️  Slack not configured - skipping channel creation');
-    return { skipped: true, reason: 'Slack not configured' };
+    const hasWorkspaces = await slackService.checkActiveWorkspaces();
+    if (!hasWorkspaces) {
+      console.warn('    ⚠️  Slack not configured - skipping channel creation');
+      return { skipped: true, reason: 'Slack not configured' };
+    }
   }
 
   const channelName = interpolateString(config.name || config.channelName || '', context);
@@ -736,6 +748,7 @@ async function executeCreateSlackChannel(action: WorkflowAction, context: Execut
     name: channelName,
     isPrivate: config.isPrivate || false,
     description,
+    workspaceId,
   });
 
   if (result.success) {
@@ -744,7 +757,7 @@ async function executeCreateSlackChannel(action: WorkflowAction, context: Execut
     let inviteResult = null;
     if (config.inviteUsers && Array.isArray(config.inviteUsers) && config.inviteUsers.length > 0) {
       try {
-        inviteResult = await slackService.inviteToChannel(result.channelId!, config.inviteUsers);
+        inviteResult = await slackService.inviteToChannel(result.channelId!, config.inviteUsers, workspaceId);
         if (inviteResult.success) {
           console.log(`    👥 Invited ${config.inviteUsers.length} users to channel`);
         } else {
@@ -769,8 +782,11 @@ async function executeSetSlackTopic(action: WorkflowAction, context: ExecutionCo
   const workspaceId = config.workspaceId || undefined;
 
   if (!slackService.isConfigured() && !workspaceId) {
-    console.warn('    ⚠️  Slack not configured - skipping topic update');
-    return { skipped: true, reason: 'Slack not configured' };
+    const hasWorkspaces = await slackService.checkActiveWorkspaces();
+    if (!hasWorkspaces) {
+      console.warn('    ⚠️  Slack not configured - skipping topic update');
+      return { skipped: true, reason: 'Slack not configured' };
+    }
   }
 
   const channel = config.channel || config.channelId;
@@ -780,7 +796,7 @@ async function executeSetSlackTopic(action: WorkflowAction, context: ExecutionCo
 
   const topic = interpolateString(config.topic || '', context);
 
-  const result = await slackService.setChannelTopic(channel, topic);
+  const result = await slackService.setChannelTopic(channel, topic, workspaceId);
 
   if (result.success) {
     console.log(`    📝 Set topic for channel ${channel}`);
@@ -797,8 +813,11 @@ async function executeCreateSlackReminder(action: WorkflowAction, context: Execu
   const workspaceId = config.workspaceId || undefined;
 
   if (!slackService.isConfigured() && !workspaceId) {
-    console.warn('    ⚠️  Slack not configured - skipping reminder');
-    return { skipped: true, reason: 'Slack not configured' };
+    const hasWorkspaces = await slackService.checkActiveWorkspaces();
+    if (!hasWorkspaces) {
+      console.warn('    ⚠️  Slack not configured - skipping reminder');
+      return { skipped: true, reason: 'Slack not configured' };
+    }
   }
 
   const textValue = config.text || config.message || '';
@@ -814,6 +833,7 @@ async function executeCreateSlackReminder(action: WorkflowAction, context: Execu
     text,
     time: timeValue,
     user: config.user,
+    workspaceId,
   });
 
   if (result.success) {

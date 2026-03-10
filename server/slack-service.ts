@@ -48,24 +48,28 @@ interface SlackDM {
   userId: string;
   text: string;
   blocks?: any[];
+  workspaceId?: string;
 }
 
 interface SlackReaction {
   channel: string;
   timestamp: string;
   emoji: string;
+  workspaceId?: string;
 }
 
 interface SlackChannel {
   name: string;
   isPrivate?: boolean;
   description?: string;
+  workspaceId?: string;
 }
 
 interface SlackReminder {
   text: string;
   time: string | number;
   user?: string;
+  workspaceId?: string;
 }
 
 class SlackService {
@@ -329,9 +333,11 @@ class SlackService {
 
   async sendDirectMessage(dm: SlackDM): Promise<{ success: boolean; ts?: string; channel?: string; error?: string }> {
     try {
+      const token = await this.getTokenForWorkspace(dm.workspaceId);
+
       const openResult = await this.callSlackApi('conversations.open', {
         users: dm.userId,
-      });
+      }, token);
 
       if (!openResult.channel?.id) {
         throw new Error('Failed to open DM channel');
@@ -341,7 +347,7 @@ class SlackService {
         channel: openResult.channel.id,
         text: dm.text,
         blocks: dm.blocks,
-      });
+      }, token);
 
       return {
         success: true,
@@ -354,9 +360,10 @@ class SlackService {
     }
   }
 
-  async lookupUserByEmail(email: string): Promise<{ success: boolean; userId?: string; user?: any; error?: string }> {
+  async lookupUserByEmail(email: string, workspaceId?: string): Promise<{ success: boolean; userId?: string; user?: any; error?: string }> {
     try {
-      const result = await this.callSlackApi('users.lookupByEmail', { email });
+      const token = await this.getTokenForWorkspace(workspaceId);
+      const result = await this.callSlackApi('users.lookupByEmail', { email }, token);
       return {
         success: true,
         userId: result.user?.id,
@@ -370,11 +377,12 @@ class SlackService {
 
   async addReaction(reaction: SlackReaction): Promise<{ success: boolean; error?: string }> {
     try {
+      const token = await this.getTokenForWorkspace(reaction.workspaceId);
       await this.callSlackApi('reactions.add', {
         channel: reaction.channel,
         timestamp: reaction.timestamp,
         name: reaction.emoji.replace(/:/g, ''),
-      });
+      }, token);
       return { success: true };
     } catch (error: any) {
       console.error('Error adding Slack reaction:', error);
@@ -384,10 +392,11 @@ class SlackService {
 
   async createChannel(channel: SlackChannel): Promise<{ success: boolean; channelId?: string; error?: string }> {
     try {
+      const token = await this.getTokenForWorkspace(channel.workspaceId);
       const result = await this.callSlackApi('conversations.create', {
         name: channel.name.toLowerCase().replace(/[^a-z0-9-_]/g, '-'),
         is_private: channel.isPrivate || false,
-      });
+      }, token);
 
       const channelId = result.channel?.id;
 
@@ -395,7 +404,7 @@ class SlackService {
         await this.callSlackApi('conversations.setTopic', {
           channel: channelId,
           topic: channel.description,
-        });
+        }, token);
       }
 
       return {
@@ -408,12 +417,13 @@ class SlackService {
     }
   }
 
-  async setChannelTopic(channelId: string, topic: string): Promise<{ success: boolean; error?: string }> {
+  async setChannelTopic(channelId: string, topic: string, workspaceId?: string): Promise<{ success: boolean; error?: string }> {
     try {
+      const token = await this.getTokenForWorkspace(workspaceId);
       await this.callSlackApi('conversations.setTopic', {
         channel: channelId,
         topic,
-      });
+      }, token);
       return { success: true };
     } catch (error: any) {
       console.error('Error setting Slack channel topic:', error);
@@ -421,12 +431,13 @@ class SlackService {
     }
   }
 
-  async inviteToChannel(channelId: string, userIds: string[]): Promise<{ success: boolean; error?: string }> {
+  async inviteToChannel(channelId: string, userIds: string[], workspaceId?: string): Promise<{ success: boolean; error?: string }> {
     try {
+      const token = await this.getTokenForWorkspace(workspaceId);
       await this.callSlackApi('conversations.invite', {
         channel: channelId,
         users: userIds.join(','),
-      });
+      }, token);
       return { success: true };
     } catch (error: any) {
       console.error('Error inviting to Slack channel:', error);
@@ -436,11 +447,12 @@ class SlackService {
 
   async createReminder(reminder: SlackReminder): Promise<{ success: boolean; reminderId?: string; error?: string }> {
     try {
+      const token = await this.getTokenForWorkspace(reminder.workspaceId);
       const result = await this.callSlackApi('reminders.add', {
         text: reminder.text,
         time: reminder.time,
         user: reminder.user,
-      });
+      }, token);
       return {
         success: true,
         reminderId: result.reminder?.id,

@@ -9,7 +9,7 @@ import {
 } from "./chunk-BGP47S4B.js";
 import {
   emitTrigger
-} from "./chunk-WSIIEEDB.js";
+} from "./chunk-4J5BLPYW.js";
 import {
   storage as storage2
 } from "./chunk-4O3LFFH2.js";
@@ -33,7 +33,7 @@ import {
 import {
   generateTasksFromTemplates
 } from "./chunk-CH6BNVMI.js";
-import "./chunk-44EUD6UC.js";
+import "./chunk-4FU4QRP5.js";
 import {
   db
 } from "./chunk-24BVCQYL.js";
@@ -18879,7 +18879,7 @@ ${appointment.description || ""}
   });
   app2.get("/api/integrations/slack/channels", requireAuth(), async (req, res) => {
     try {
-      const { slackService } = await import("./slack-service-KGX6U53Q.js");
+      const { slackService } = await import("./slack-service-UPP24UOL.js");
       if (!slackService.isConfigured()) {
         const hasWorkspaces = await slackService.checkActiveWorkspaces();
         if (!hasWorkspaces) {
@@ -18900,7 +18900,7 @@ ${appointment.description || ""}
   });
   app2.get("/api/integrations/slack/users", requireAuth(), async (req, res) => {
     try {
-      const { slackService } = await import("./slack-service-KGX6U53Q.js");
+      const { slackService } = await import("./slack-service-UPP24UOL.js");
       if (!slackService.isConfigured()) {
         const hasWorkspaces = await slackService.checkActiveWorkspaces();
         if (!hasWorkspaces) {
@@ -21271,7 +21271,7 @@ ${appointment.description || ""}
         }
       }
       try {
-        const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-EM4WPFOW.js");
+        const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-U2N2OMBR.js");
         const responsesObj = {};
         if (answers && answers.length > 0) {
           answers.forEach((answer) => {
@@ -37136,7 +37136,7 @@ app.post(
           console.warn("[Slack Events] Missing signature headers");
           return res.status(401).json({ error: "Missing authentication headers" });
         }
-        const { slackService } = await import("./slack-service-KGX6U53Q.js");
+        const { slackService } = await import("./slack-service-UPP24UOL.js");
         if (!slackService.verifySlackRequest(timestamp, signature, rawBody)) {
           console.warn("[Slack Events] Invalid signature - rejecting request");
           return res.status(401).json({ error: "Invalid signature" });
@@ -37156,7 +37156,7 @@ app.post(
         console.log("[Slack Events] URL verification challenge received");
         return res.json({ challenge: payload.challenge });
       }
-      const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-EM4WPFOW.js");
+      const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-U2N2OMBR.js");
       if (payload.type === "event_callback") {
         const event = payload.event;
         console.log(`[Slack Events] Received event: ${event.type}`, {
@@ -37513,7 +37513,7 @@ async function setupFullApp(server) {
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start background calendar sync: ${err.message}`);
       });
-      import("./weeklyHoursCheckService-OXGE7YRB.js").then(({ startWeeklyHoursCheck }) => {
+      import("./weeklyHoursCheckService-VANG4DWC.js").then(({ startWeeklyHoursCheck }) => {
         startWeeklyHoursCheck();
         log("\u2705 Weekly hours check service started");
       }).catch((err) => {
