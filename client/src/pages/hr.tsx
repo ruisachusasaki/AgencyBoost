@@ -3052,7 +3052,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                     </div>
 
                     {/* Hiring Manager */}
-                    <div className="space-y-2">
+                    <div className={`space-y-2 ${hiringManagerSearchOpen ? 'relative z-50' : ''}`}>
                       <label className="text-sm font-medium">Hiring Manager *</label>
                       <div ref={hiringManagerDropdownRef}>
                         <Button
@@ -3071,7 +3071,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                         {hiringManagerSearchOpen && (
-                          <div className="mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
+                          <div className="relative z-50 mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
                             <div className="p-2">
                               <input
                                 type="text"
@@ -3287,7 +3287,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                   </div>
 
                   {/* Hiring Manager - with search */}
-                  <div className="space-y-2">
+                  <div className={`space-y-2 ${hiringManagerSearchOpen ? 'relative z-50' : ''}`}>
                     <label className="text-sm font-medium">Hiring Manager *</label>
                     <div ref={hiringManagerDropdownRef}>
                       <Button
@@ -3308,7 +3308,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                       {hiringManagerSearchOpen && (
-                        <div className="mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
+                        <div className="relative z-50 mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
                           <div className="p-2">
                             <input
                               type="text"
