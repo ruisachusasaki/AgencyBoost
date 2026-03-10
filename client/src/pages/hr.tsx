@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -267,10 +267,9 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   const [isEditJobOpeningModalOpen, setIsEditJobOpeningModalOpen] = useState(false);
   const [editingJobOpening, setEditingJobOpening] = useState<any>(null);
   
-  // Hiring manager search state
+  // Hiring manager search state (kept for potential future use)
   const [hiringManagerSearchOpen, setHiringManagerSearchOpen] = useState(false);
   const [hiringManagerSearchValue, setHiringManagerSearchValue] = useState("");
-  const hiringManagerDropdownRef = useRef<HTMLDivElement>(null);
 
   // Application sorting state
   const [applicationSortField, setApplicationSortField] = useState<'applicantName' | 'positionTitle' | 'stage' | 'rating' | 'appliedAt' | null>(null);
@@ -304,22 +303,6 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
     });
   }, [staffData, hiringManagerSearchValue]);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (hiringManagerDropdownRef.current && !hiringManagerDropdownRef.current.contains(event.target as Node)) {
-        setHiringManagerSearchOpen(false);
-      }
-    }
-    if (hiringManagerSearchOpen) {
-      const timer = setTimeout(() => {
-        document.addEventListener("mousedown", handleClickOutside);
-      }, 0);
-      return () => {
-        clearTimeout(timer);
-        document.removeEventListener("mousedown", handleClickOutside);
-      };
-    }
-  }, [hiringManagerSearchOpen]);
   
   // Check if current user is a manager (has direct reports) and get role info
   const { data: currentUser } = useQuery({
@@ -3059,69 +3042,22 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                     {/* Hiring Manager */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Hiring Manager *</label>
-                      <div className="relative" ref={hiringManagerDropdownRef}>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          role="combobox"
-                          className="w-full justify-between"
-                          data-testid="select-hiring-manager"
-                          onClick={() => setHiringManagerSearchOpen(!hiringManagerSearchOpen)}
-                        >
-                          {jobOpeningForm.hiringManagerId
-                            ? staffData.find((staff) => staff.id === jobOpeningForm.hiringManagerId)
-                                ? `${staffData.find((staff) => staff.id === jobOpeningForm.hiringManagerId)?.firstName} ${staffData.find((staff) => staff.id === jobOpeningForm.hiringManagerId)?.lastName}`
-                                : "Select Hiring Manager"
-                            : "Select Hiring Manager"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                        {hiringManagerSearchOpen && (
-                          <div
-                            className="absolute z-[9999] mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700"
-                            onMouseDown={(e) => e.stopPropagation()}
-                          >
-                            <div className="p-2">
-                              <input
-                                type="text"
-                                placeholder="Search staff members..."
-                                className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                                value={hiringManagerSearchValue}
-                                onChange={(e) => setHiringManagerSearchValue(e.target.value)}
-                                autoFocus
-                              />
-                            </div>
-                            <div className="max-h-64 overflow-y-auto p-1">
-                              {filteredStaff.length === 0 && (
-                                <div className="px-3 py-2 text-sm text-slate-500">No staff member found.</div>
-                              )}
-                              {filteredStaff.map((staff) => (
-                                <button
-                                  type="button"
-                                  key={staff.id}
-                                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-left"
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setJobOpeningForm(prev => ({...prev, hiringManagerId: staff.id}));
-                                    setHiringManagerSearchOpen(false);
-                                    setHiringManagerSearchValue("");
-                                  }}
-                                >
-                                  <Check
-                                    className={`mr-2 h-4 w-4 shrink-0 ${
-                                      jobOpeningForm.hiringManagerId === staff.id ? "opacity-100" : "opacity-0"
-                                    }`}
-                                  />
-                                  <div>
-                                    <div className="font-medium">{staff.firstName} {staff.lastName}</div>
-                                    <div className="text-sm text-slate-500">{staff.department} • {staff.position}</div>
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <Select
+                        value={jobOpeningForm.hiringManagerId || "__none__"}
+                        onValueChange={(value) => setJobOpeningForm(prev => ({...prev, hiringManagerId: value === "__none__" ? "" : value}))}
+                      >
+                        <SelectTrigger data-testid="select-hiring-manager">
+                          <SelectValue placeholder="Select Hiring Manager" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-64">
+                          <SelectItem value="__none__">Select Hiring Manager</SelectItem>
+                          {staffData.map((staff) => (
+                            <SelectItem key={staff.id} value={staff.id}>
+                              {staff.firstName} {staff.lastName} — {staff.department} • {staff.position}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     {/* Compensation */}
@@ -3299,71 +3235,22 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                   {/* Hiring Manager - with search */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Hiring Manager *</label>
-                    <div className="relative" ref={hiringManagerDropdownRef}>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        role="combobox"
-                        className="w-full justify-between"
-                        data-testid="button-edit-hiring-manager"
-                        onClick={() => setHiringManagerSearchOpen(!hiringManagerSearchOpen)}
-                      >
-                        {jobOpeningForm.hiringManagerId ? 
-                          (() => {
-                            const selectedStaff = staffData.find(s => s.id === jobOpeningForm.hiringManagerId);
-                            return selectedStaff ? `${selectedStaff.firstName} ${selectedStaff.lastName}` : "Select hiring manager...";
-                          })()
-                          : "Select hiring manager..."
-                        }
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                      {hiringManagerSearchOpen && (
-                        <div
-                          className="absolute z-[9999] mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700"
-                          onMouseDown={(e) => e.stopPropagation()}
-                        >
-                          <div className="p-2">
-                            <input
-                              type="text"
-                              placeholder="Search staff members..."
-                              className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                              value={hiringManagerSearchValue}
-                              onChange={(e) => setHiringManagerSearchValue(e.target.value)}
-                              autoFocus
-                            />
-                          </div>
-                          <div className="max-h-64 overflow-y-auto p-1">
-                            {filteredStaff.length === 0 && (
-                              <div className="px-3 py-2 text-sm text-slate-500">No staff members found.</div>
-                            )}
-                            {filteredStaff.map((staff) => (
-                              <button
-                                type="button"
-                                key={staff.id}
-                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-left"
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setJobOpeningForm(prev => ({...prev, hiringManagerId: staff.id}));
-                                  setHiringManagerSearchValue("");
-                                  setHiringManagerSearchOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={`mr-2 h-4 w-4 shrink-0 ${
-                                    jobOpeningForm.hiringManagerId === staff.id ? "opacity-100" : "opacity-0"
-                                  }`}
-                                />
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{staff.firstName} {staff.lastName}</span>
-                                  <span className="text-sm text-slate-500">{staff.department} • {staff.position}</span>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    <Select
+                      value={jobOpeningForm.hiringManagerId || "__none__"}
+                      onValueChange={(value) => setJobOpeningForm(prev => ({...prev, hiringManagerId: value === "__none__" ? "" : value}))}
+                    >
+                      <SelectTrigger data-testid="button-edit-hiring-manager">
+                        <SelectValue placeholder="Select hiring manager..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64">
+                        <SelectItem value="__none__">Select hiring manager...</SelectItem>
+                        {staffData.map((staff) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.firstName} {staff.lastName} — {staff.department} • {staff.position}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Compensation */}
