@@ -1,0 +1,59 @@
+3. Send Slack Direct Message
+
+Create another workflow (or add a second action to the one above)
+Add action: Send Slack DM
+For recipient, choose "Specify by Email" and enter your own email address
+Message: "Test DM from AgencyBoost"
+Save and activate
+Fire the trigger (e.g., create another test lead) — you should receive a DM from Agency Boost in Slack
+4. Create Slack Channel
+
+Create a new workflow with any trigger
+Add action: Create Slack Channel
+Set the channel name to something like "test-agencyboost" (no spaces, lowercase)
+Optionally set it to private and add a description
+Save, activate, and fire the trigger
+Check Slack — the new channel should appear in your workspace
+5. Set Slack Channel Topic
+
+Create a workflow with any trigger
+Add action: Set Slack Topic
+Select the channel you just created (or any existing one)
+Set the topic to something like "Managed by AgencyBoost CRM"
+Save, activate, fire the trigger
+Check that channel in Slack — the topic should be updated
+6. Add Slack Reaction
+
+This one is trickier since you need a message timestamp
+Create a workflow with a trigger that fires after a Slack message is sent
+Add action: Add Slack Reaction
+Set the channel, provide a message timestamp (you can get this from a previous workflow's output or manually), and set the emoji (e.g., "thumbsup")
+Fire the trigger and check if the reaction appears on that message
+Note: This is best tested after you're comfortable with the other features
+7. Create Slack Reminder
+
+Create a workflow with any trigger
+Add action: Create Slack Reminder
+Set the reminder text to "Follow up on test task"
+Set the time to "in 5 minutes"
+Save, activate, fire the trigger
+Wait 5 minutes — Slackbot should remind you
+8. Weekly Hours Report to Slack
+
+Create a workflow with the trigger Weekly Hours Below Threshold
+Add action: Notify Manager Hours Report
+In the config, enable "Send to Slack" and pick a channel
+Save and activate
+This one fires automatically on its weekly schedule, but you can verify the config is saved correctly. To fully test it, you'd need staff with logged hours below their threshold when the weekly check runs
+9. Merge Tags / Dynamic Content
+
+Go back to any of your test workflows (like the channel message one)
+Edit the message to include merge tags: "Lead {{name}} from {{company}} - Email: {{email}}"
+Fire the trigger by creating a lead with specific details
+Check Slack — the message should show the actual lead name, company, and email instead of the tag placeholders
+Tips for efficient testing:
+
+Create a #crm-test channel in Slack first and use it for all your tests — keeps your real channels clean
+You can reuse the same workflow and just swap out the action type between tests
+After testing, deactivate or delete your test workflows so they don't keep firing
+If a message doesn't show up, make sure the Agency Boost bot has been invited to the target channel (type
