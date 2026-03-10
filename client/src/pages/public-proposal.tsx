@@ -17,6 +17,30 @@ import { Elements, CardElement, useStripe, useElements } from "@stripe/react-str
 
 type ProposalStep = "review" | "sign" | "pay" | "complete";
 
+function CollapsibleSection({ label, defaultOpen, brandColor, children }: { label: string; defaultOpen: boolean; brandColor: string; children: React.ReactNode }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <div>
+      <button
+        type="button"
+        className="w-full flex items-center justify-between text-sm font-semibold text-gray-700 uppercase tracking-wide border-b pb-1 mb-3 hover:text-gray-900 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span>{label}</span>
+        {isOpen ? (
+          <ChevronUp className="h-4 w-4 text-gray-500" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-gray-500" />
+        )}
+      </button>
+      {isOpen && children}
+      {!isOpen && (
+        <p className="text-xs text-gray-400 italic cursor-pointer" onClick={() => setIsOpen(true)}>Click to expand</p>
+      )}
+    </div>
+  );
+}
+
 function CardPaymentForm({
   clientSecret,
   signerName,
@@ -471,9 +495,9 @@ export default function PublicProposal() {
                         const monthly = item.packageContents.filter((c: any) => c.name?.toLowerCase().startsWith('monthly'));
                         const other = item.packageContents.filter((c: any) => !c.name?.toLowerCase().startsWith('onboarding') && !c.name?.toLowerCase().startsWith('monthly'));
                         const groups = [
-                          ...(onboarding.length > 0 ? [{ label: 'Onboarding', items: onboarding }] : []),
-                          ...(monthly.length > 0 ? [{ label: 'Monthly Services', items: monthly }] : []),
-                          ...(other.length > 0 ? [{ label: 'Included Services', items: other }] : []),
+                          ...(onboarding.length > 0 ? [{ label: 'Onboarding', items: onboarding, defaultOpen: true }] : []),
+                          ...(monthly.length > 0 ? [{ label: 'Monthly Services', items: monthly, defaultOpen: false }] : []),
+                          ...(other.length > 0 ? [{ label: 'Included Services', items: other, defaultOpen: true }] : []),
                         ];
                         return (
                           <div key={item.id || index} className="py-3 border-b last:border-0">
@@ -481,8 +505,7 @@ export default function PublicProposal() {
                             <Badge variant="outline" className="capitalize text-xs mb-4">Package</Badge>
                             <div className="space-y-4 mt-3">
                               {groups.map((group, gi) => (
-                                <div key={gi}>
-                                  <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide border-b pb-1 mb-3">{group.label}</div>
+                                <CollapsibleSection key={gi} label={group.label} defaultOpen={group.defaultOpen} brandColor={brandColor}>
                                   <div className="space-y-3">
                                     {group.items.map((content: any, ci: number) => (
                                       <div key={ci}>
@@ -498,7 +521,7 @@ export default function PublicProposal() {
                                                 <span className="text-xs text-gray-600">
                                                   {typeof svc === 'string' ? svc : svc.name}
                                                   {typeof svc !== 'string' && svc.quantity > 1 && (
-                                                    <span className="text-gray-400 ml-1">x{svc.quantity}</span>
+                                                    <span className="text-gray-400 ml-1"> - {svc.quantity}</span>
                                                   )}
                                                 </span>
                                               </div>
@@ -508,7 +531,7 @@ export default function PublicProposal() {
                                       </div>
                                     ))}
                                   </div>
-                                </div>
+                                </CollapsibleSection>
                               ))}
                             </div>
                           </div>
