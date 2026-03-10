@@ -169,6 +169,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   });
   
   const [isEditAttendeesOpen, setIsEditAttendeesOpen] = useState(false);
+  const editAttendeesDropdownRef = useRef<HTMLDivElement>(null);
   
   const [newTag, setNewTag] = useState("");
   
@@ -200,6 +201,9 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isFacilitatorOpen, setIsFacilitatorOpen] = useState(false);
   const [isNoteTakerOpen, setIsNoteTakerOpen] = useState(false);
+  const attendeesDropdownRef = useRef<HTMLDivElement>(null);
+  const facilitatorDropdownRef = useRef<HTMLDivElement>(null);
+  const noteTakerDropdownRef = useRef<HTMLDivElement>(null);
   const [isCreateClientOpen, setIsCreateClientOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
   const [attendeeSearch, setAttendeeSearch] = useState("");
@@ -275,6 +279,25 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
     }
     return selectedMeeting.enabledElements.includes(elementId);
   };
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (attendeesDropdownRef.current && !attendeesDropdownRef.current.contains(e.target as Node)) {
+        setIsAttendeesOpen(false);
+      }
+      if (facilitatorDropdownRef.current && !facilitatorDropdownRef.current.contains(e.target as Node)) {
+        setIsFacilitatorOpen(false);
+      }
+      if (noteTakerDropdownRef.current && !noteTakerDropdownRef.current.contains(e.target as Node)) {
+        setIsNoteTakerOpen(false);
+      }
+      if (editAttendeesDropdownRef.current && !editAttendeesDropdownRef.current.contains(e.target as Node)) {
+        setIsEditAttendeesOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const hasInitializedRef = useRef(false);
 
@@ -1334,7 +1357,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             {/* Attendees Section */}
             <div className="space-y-2">
               <Label>Attendees</Label>
-              <div className="relative">
+              <div className="relative" ref={editAttendeesDropdownRef}>
                 <Button
                   type="button"
                   variant="outline"
@@ -2626,7 +2649,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
             <div className="space-y-2">
               <Label>Attendees</Label>
-              <div className="relative">
+              <div className="relative" ref={attendeesDropdownRef}>
                 <Button
                   type="button"
                   variant="outline"
@@ -2700,7 +2723,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Facilitator</Label>
-                <div className="relative">
+                <div className="relative" ref={facilitatorDropdownRef}>
                   <Button
                     type="button"
                     variant="outline"
@@ -2757,7 +2780,7 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
 
               <div className="space-y-2">
                 <Label>Note Taker</Label>
-                <div className="relative">
+                <div className="relative" ref={noteTakerDropdownRef}>
                   <Button
                     type="button"
                     variant="outline"

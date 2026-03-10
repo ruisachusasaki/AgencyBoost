@@ -245,7 +245,7 @@ export async function executeWorkflow(
       .insert(workflowExecutions)
       .values({
         workflowId: workflow.id,
-        contactId: event.data.id || event.data.clientId || null,
+        contactId: event.data.clientId || (event.type.startsWith('client_') ? event.data.id : null) || null,
         triggerData: event.data,
         status: "running",
         currentStep: 0,
@@ -262,7 +262,7 @@ export async function executeWorkflow(
       workflowId: workflow.id,
       executionId: execution.id,
       triggerData: event.data,
-      contactId: event.data.id || event.data.clientId,
+      contactId: event.data.clientId || (event.type.startsWith('client_') ? event.data.id : null),
       currentStep: 0,
       variables: {
         trigger: event.data, // Make trigger data available to actions
@@ -611,8 +611,11 @@ async function executeSendSlackMessage(action: WorkflowAction, context: Executio
   const workspaceId = config.workspaceId || undefined;
 
   if (!slackService.isConfigured() && !workspaceId) {
-    console.warn('    ⚠️  Slack not configured - skipping message');
-    return { skipped: true, reason: 'Slack not configured' };
+    const hasWorkspaces = await slackService.checkActiveWorkspaces();
+    if (!hasWorkspaces) {
+      console.warn('    ⚠️  Slack not configured - skipping message');
+      return { skipped: true, reason: 'Slack not configured' };
+    }
   }
 
   const message = interpolateString(config.message || config.text || '', context);

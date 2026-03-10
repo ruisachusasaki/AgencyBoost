@@ -9,7 +9,7 @@ import {
 } from "./chunk-BGP47S4B.js";
 import {
   emitTrigger
-} from "./chunk-6EX5BLSY.js";
+} from "./chunk-WSIIEEDB.js";
 import {
   storage as storage2
 } from "./chunk-4O3LFFH2.js";
@@ -21271,7 +21271,7 @@ ${appointment.description || ""}
         }
       }
       try {
-        const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-GJZMPPMQ.js");
+        const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-EM4WPFOW.js");
         const responsesObj = {};
         if (answers && answers.length > 0) {
           answers.forEach((answer) => {
@@ -37156,7 +37156,7 @@ app.post(
         console.log("[Slack Events] URL verification challenge received");
         return res.json({ challenge: payload.challenge });
       }
-      const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-GJZMPPMQ.js");
+      const { emitTrigger: emitTrigger2 } = await import("./workflow-engine-EM4WPFOW.js");
       if (payload.type === "event_callback") {
         const event = payload.event;
         console.log(`[Slack Events] Received event: ${event.type}`, {
@@ -37513,7 +37513,7 @@ async function setupFullApp(server) {
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start background calendar sync: ${err.message}`);
       });
-      import("./weeklyHoursCheckService-77ZMA3L6.js").then(({ startWeeklyHoursCheck }) => {
+      import("./weeklyHoursCheckService-OXGE7YRB.js").then(({ startWeeklyHoursCheck }) => {
         startWeeklyHoursCheck();
         log("\u2705 Weekly hours check service started");
       }).catch((err) => {
