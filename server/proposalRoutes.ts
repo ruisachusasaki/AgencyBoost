@@ -273,8 +273,13 @@ export function registerProposalRoutes(
               if (pi.itemType === 'bundle' && pi.bundleId) {
                 const [b] = await db.select({ name: productBundles.name }).from(productBundles).where(eq(productBundles.id, pi.bundleId));
                 if (b) {
-                  const bps = await db.select({ name: products.name }).from(bundleProducts).leftJoin(products, eq(bundleProducts.productId, products.id)).where(eq(bundleProducts.bundleId, pi.bundleId));
-                  packageContents.push({ name: b.name, type: 'bundle', items: bps.map(bp => bp.name || '').filter(Boolean) });
+                  const customQtys = item.customQuantities || {};
+                  const bps = await db.select({ name: products.name, productId: bundleProducts.productId, quantity: bundleProducts.quantity }).from(bundleProducts).leftJoin(products, eq(bundleProducts.productId, products.id)).where(eq(bundleProducts.bundleId, pi.bundleId));
+                  const bundleItems = bps.filter(bp => bp.name).map(bp => ({
+                    name: bp.name!,
+                    quantity: customQtys[bp.productId!] !== undefined ? customQtys[bp.productId!] : (bp.quantity || 1)
+                  }));
+                  packageContents.push({ name: b.name, type: 'bundle', items: bundleItems });
                 }
               } else if (pi.itemType === 'product' && pi.productId) {
                 const [p] = await db.select({ name: products.name }).from(products).where(eq(products.id, pi.productId));

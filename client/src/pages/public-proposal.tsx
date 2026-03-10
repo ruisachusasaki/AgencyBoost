@@ -482,12 +482,29 @@ export default function PublicProposal() {
                             <div className="space-y-4 mt-3">
                               {groups.map((group, gi) => (
                                 <div key={gi}>
-                                  <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide border-b pb-1 mb-2">{group.label}</div>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                                  <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide border-b pb-1 mb-3">{group.label}</div>
+                                  <div className="space-y-3">
                                     {group.items.map((content: any, ci: number) => (
-                                      <div key={ci} className="flex items-start gap-2 py-1">
-                                        <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                                        <span className="text-sm text-gray-700">{content.name}</span>
+                                      <div key={ci}>
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                                          <span className="text-sm font-medium text-gray-800">{content.name}</span>
+                                        </div>
+                                        {content.type === 'bundle' && content.items?.length > 0 && (
+                                          <div className="ml-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0.5">
+                                            {content.items.map((svc: any, si: number) => (
+                                              <div key={si} className="flex items-center gap-2 py-0.5">
+                                                <Check className="h-3.5 w-3.5 text-primary/70 shrink-0" />
+                                                <span className="text-xs text-gray-600">
+                                                  {typeof svc === 'string' ? svc : svc.name}
+                                                  {typeof svc !== 'string' && svc.quantity > 1 && (
+                                                    <span className="text-gray-400 ml-1">x{svc.quantity}</span>
+                                                  )}
+                                                </span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
