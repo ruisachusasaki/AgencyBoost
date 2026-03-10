@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { format, parseISO } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -270,6 +270,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   // Hiring manager search state
   const [hiringManagerSearchOpen, setHiringManagerSearchOpen] = useState(false);
   const [hiringManagerSearchValue, setHiringManagerSearchValue] = useState("");
+  const hiringManagerDropdownRef = useRef<HTMLDivElement>(null);
 
   // Application sorting state
   const [applicationSortField, setApplicationSortField] = useState<'applicantName' | 'positionTitle' | 'stage' | 'rating' | 'appliedAt' | null>(null);
@@ -302,6 +303,18 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
       return fullName.includes(searchTerm);
     });
   }, [staffData, hiringManagerSearchValue]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (hiringManagerDropdownRef.current && !hiringManagerDropdownRef.current.contains(event.target as Node)) {
+        setHiringManagerSearchOpen(false);
+      }
+    }
+    if (hiringManagerSearchOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [hiringManagerSearchOpen]);
   
   // Check if current user is a manager (has direct reports) and get role info
   const { data: currentUser } = useQuery({
@@ -2971,7 +2984,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
               <p className="text-slate-600">Manage and track job openings for your department</p>
             </div>
             {canManageJobOpenings && (
-              <Dialog open={isJobOpeningModalOpen} onOpenChange={setIsJobOpeningModalOpen}>
+              <Dialog open={isJobOpeningModalOpen} onOpenChange={(open) => { setIsJobOpeningModalOpen(open); if (!open) { setHiringManagerSearchOpen(false); setHiringManagerSearchValue(""); } }}>
                 <DialogTrigger asChild>
                   <Button data-testid="button-open-create-modal">
                     Create Job Opening
@@ -3041,61 +3054,63 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                     {/* Hiring Manager */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Hiring Manager *</label>
-                      <Popover open={hiringManagerSearchOpen} onOpenChange={setHiringManagerSearchOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={hiringManagerSearchOpen}
-                            className="w-full justify-between"
-                            data-testid="select-hiring-manager"
-                          >
-                            {jobOpeningForm.hiringManagerId
-                              ? staffData.find((staff) => staff.id === jobOpeningForm.hiringManagerId)
-                                  ? `${staffData.find((staff) => staff.id === jobOpeningForm.hiringManagerId)?.firstName} ${staffData.find((staff) => staff.id === jobOpeningForm.hiringManagerId)?.lastName}`
-                                  : "Select Hiring Manager"
-                              : "Select Hiring Manager"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                          <Command>
-                            <CommandInput 
-                              placeholder="Search staff members..." 
-                              value={hiringManagerSearchValue}
-                              onValueChange={setHiringManagerSearchValue}
-                            />
-                            <CommandList>
-                              <CommandEmpty>No staff member found.</CommandEmpty>
-                              <CommandGroup>
-                                {filteredStaff.map((staff) => (
-                                  <CommandItem
-                                    key={staff.id}
-                                    value={`${staff.firstName} ${staff.lastName}`}
-                                    onSelect={() => {
-                                      setJobOpeningForm(prev => ({...prev, hiringManagerId: staff.id}));
-                                      setHiringManagerSearchOpen(false);
-                                      setHiringManagerSearchValue("");
-                                    }}
-                                  >
-                                    <Check
-                                      className={`mr-2 h-4 w-4 ${
-                                        jobOpeningForm.hiringManagerId === staff.id ? "opacity-100" : "opacity-0"
-                                      }`}
-                                    />
-                                    <div className="flex items-center gap-2">
-                                      <div>
-                                        <div className="font-medium">{staff.firstName} {staff.lastName}</div>
-                                        <div className="text-sm text-slate-500">{staff.department} • {staff.position}</div>
-                                      </div>
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      <div className="relative" ref={hiringManagerDropdownRef}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between"
+                          data-testid="select-hiring-manager"
+                          onClick={() => setHiringManagerSearchOpen(!hiringManagerSearchOpen)}
+                        >
+                          {jobOpeningForm.hiringManagerId
+                            ? staffData.find((staff) => staff.id === jobOpeningForm.hiringManagerId)
+                                ? `${staffData.find((staff) => staff.id === jobOpeningForm.hiringManagerId)?.firstName} ${staffData.find((staff) => staff.id === jobOpeningForm.hiringManagerId)?.lastName}`
+                                : "Select Hiring Manager"
+                            : "Select Hiring Manager"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                        {hiringManagerSearchOpen && (
+                          <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
+                            <div className="p-2">
+                              <input
+                                type="text"
+                                placeholder="Search staff members..."
+                                className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-600 dark:text-white"
+                                value={hiringManagerSearchValue}
+                                onChange={(e) => setHiringManagerSearchValue(e.target.value)}
+                                autoFocus
+                              />
+                            </div>
+                            <div className="max-h-64 overflow-y-auto p-1">
+                              {filteredStaff.length === 0 && (
+                                <div className="px-3 py-2 text-sm text-slate-500">No staff member found.</div>
+                              )}
+                              {filteredStaff.map((staff) => (
+                                <div
+                                  key={staff.id}
+                                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                                  onClick={() => {
+                                    setJobOpeningForm(prev => ({...prev, hiringManagerId: staff.id}));
+                                    setHiringManagerSearchOpen(false);
+                                    setHiringManagerSearchValue("");
+                                  }}
+                                >
+                                  <Check
+                                    className={`mr-2 h-4 w-4 ${
+                                      jobOpeningForm.hiringManagerId === staff.id ? "opacity-100" : "opacity-0"
+                                    }`}
+                                  />
+                                  <div>
+                                    <div className="font-medium">{staff.firstName} {staff.lastName}</div>
+                                    <div className="text-sm text-slate-500">{staff.department} • {staff.position}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Compensation */}
@@ -3212,7 +3227,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
           </div>
 
           {/* Edit Job Opening Modal */}
-          <Dialog open={isEditJobOpeningModalOpen} onOpenChange={setIsEditJobOpeningModalOpen}>
+          <Dialog open={isEditJobOpeningModalOpen} onOpenChange={(open) => { setIsEditJobOpeningModalOpen(open); if (!open) { setHiringManagerSearchOpen(false); setHiringManagerSearchValue(""); } }}>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Edit Job Opening</DialogTitle>
@@ -3273,39 +3288,45 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                   {/* Hiring Manager - with search */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Hiring Manager *</label>
-                    <Popover open={hiringManagerSearchOpen} onOpenChange={setHiringManagerSearchOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={hiringManagerSearchOpen}
-                          className="w-full justify-between"
-                          data-testid="button-edit-hiring-manager"
-                        >
-                          {jobOpeningForm.hiringManagerId ? 
-                            (() => {
-                              const selectedStaff = filteredStaff.find(s => s.id === jobOpeningForm.hiringManagerId);
-                              return selectedStaff ? `${selectedStaff.firstName} ${selectedStaff.lastName}` : "Select hiring manager...";
-                            })()
-                            : "Select hiring manager..."
-                          }
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
-                        <Command>
-                          <CommandInput 
-                            placeholder="Search staff members..." 
-                            value={hiringManagerSearchValue}
-                            onValueChange={setHiringManagerSearchValue}
-                          />
-                          <CommandEmpty>No staff members found.</CommandEmpty>
-                          <CommandGroup className="max-h-64 overflow-y-auto">
+                    <div className="relative" ref={hiringManagerDropdownRef}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                        data-testid="button-edit-hiring-manager"
+                        onClick={() => setHiringManagerSearchOpen(!hiringManagerSearchOpen)}
+                      >
+                        {jobOpeningForm.hiringManagerId ? 
+                          (() => {
+                            const selectedStaff = staffData.find(s => s.id === jobOpeningForm.hiringManagerId);
+                            return selectedStaff ? `${selectedStaff.firstName} ${selectedStaff.lastName}` : "Select hiring manager...";
+                          })()
+                          : "Select hiring manager..."
+                        }
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                      {hiringManagerSearchOpen && (
+                        <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
+                          <div className="p-2">
+                            <input
+                              type="text"
+                              placeholder="Search staff members..."
+                              className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary dark:bg-slate-800 dark:border-slate-600 dark:text-white"
+                              value={hiringManagerSearchValue}
+                              onChange={(e) => setHiringManagerSearchValue(e.target.value)}
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-1">
+                            {filteredStaff.length === 0 && (
+                              <div className="px-3 py-2 text-sm text-slate-500">No staff members found.</div>
+                            )}
                             {filteredStaff.map((staff) => (
-                              <CommandItem
+                              <div
                                 key={staff.id}
-                                value={`${staff.firstName} ${staff.lastName}`}
-                                onSelect={() => {
+                                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                                onClick={() => {
                                   setJobOpeningForm(prev => ({...prev, hiringManagerId: staff.id}));
                                   setHiringManagerSearchValue("");
                                   setHiringManagerSearchOpen(false);
@@ -3320,12 +3341,12 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                   <span className="font-medium">{staff.firstName} {staff.lastName}</span>
                                   <span className="text-sm text-slate-500">{staff.department} • {staff.position}</span>
                                 </div>
-                              </CommandItem>
+                              </div>
                             ))}
-                          </CommandGroup>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Compensation */}
