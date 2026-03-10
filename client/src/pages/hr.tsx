@@ -311,8 +311,13 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
       }
     }
     if (hiringManagerSearchOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      const timer = setTimeout(() => {
+        document.addEventListener("mousedown", handleClickOutside);
+      }, 0);
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
     }
   }, [hiringManagerSearchOpen]);
   
@@ -3071,7 +3076,10 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                         {hiringManagerSearchOpen && (
-                          <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
+                          <div
+                            className="absolute z-[9999] mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700"
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
                             <div className="p-2">
                               <input
                                 type="text"
@@ -3087,17 +3095,20 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                 <div className="px-3 py-2 text-sm text-slate-500">No staff member found.</div>
                               )}
                               {filteredStaff.map((staff) => (
-                                <div
+                                <button
+                                  type="button"
                                   key={staff.id}
-                                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
-                                  onClick={() => {
+                                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-left"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     setJobOpeningForm(prev => ({...prev, hiringManagerId: staff.id}));
                                     setHiringManagerSearchOpen(false);
                                     setHiringManagerSearchValue("");
                                   }}
                                 >
                                   <Check
-                                    className={`mr-2 h-4 w-4 ${
+                                    className={`mr-2 h-4 w-4 shrink-0 ${
                                       jobOpeningForm.hiringManagerId === staff.id ? "opacity-100" : "opacity-0"
                                     }`}
                                   />
@@ -3105,7 +3116,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                     <div className="font-medium">{staff.firstName} {staff.lastName}</div>
                                     <div className="text-sm text-slate-500">{staff.department} • {staff.position}</div>
                                   </div>
-                                </div>
+                                </button>
                               ))}
                             </div>
                           </div>
@@ -3307,7 +3318,10 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                       {hiringManagerSearchOpen && (
-                        <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
+                        <div
+                          className="absolute z-[9999] mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700"
+                          onMouseDown={(e) => e.stopPropagation()}
+                        >
                           <div className="p-2">
                             <input
                               type="text"
@@ -3323,17 +3337,20 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                               <div className="px-3 py-2 text-sm text-slate-500">No staff members found.</div>
                             )}
                             {filteredStaff.map((staff) => (
-                              <div
+                              <button
+                                type="button"
                                 key={staff.id}
-                                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
-                                onClick={() => {
+                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-left"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
                                   setJobOpeningForm(prev => ({...prev, hiringManagerId: staff.id}));
                                   setHiringManagerSearchValue("");
                                   setHiringManagerSearchOpen(false);
                                 }}
                               >
                                 <Check
-                                  className={`mr-2 h-4 w-4 ${
+                                  className={`mr-2 h-4 w-4 shrink-0 ${
                                     jobOpeningForm.hiringManagerId === staff.id ? "opacity-100" : "opacity-0"
                                   }`}
                                 />
@@ -3341,7 +3358,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                   <span className="font-medium">{staff.firstName} {staff.lastName}</span>
                                   <span className="text-sm text-slate-500">{staff.department} • {staff.position}</span>
                                 </div>
-                              </div>
+                              </button>
                             ))}
                           </div>
                         </div>
