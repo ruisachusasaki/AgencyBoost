@@ -82,10 +82,27 @@ class SlackService {
     this.botToken = process.env.SLACK_BOT_TOKEN;
     this.defaultChannelId = process.env.SLACK_CHANNEL_ID;
     this.signingSecret = process.env.SLACK_SIGNING_SECRET;
+    this.checkActiveWorkspaces().catch(() => {});
   }
 
   isConfigured(): boolean {
-    return !!this.botToken;
+    return !!this.botToken || this.hasActiveWorkspaces;
+  }
+
+  private hasActiveWorkspaces = false;
+
+  async checkActiveWorkspaces(): Promise<boolean> {
+    try {
+      const rows = await db
+        .select({ id: slackWorkspaces.id })
+        .from(slackWorkspaces)
+        .where(eq(slackWorkspaces.isActive, true))
+        .limit(1);
+      this.hasActiveWorkspaces = rows.length > 0;
+      return this.hasActiveWorkspaces;
+    } catch {
+      return false;
+    }
   }
 
   hasDefaultChannel(): boolean {
@@ -248,13 +265,14 @@ class SlackService {
     throw new Error('No Slack workspace configured');
   }
 
-  async testConnection(): Promise<{ ok: boolean; team?: string; user?: string; error?: string }> {
+  async testConnection(workspaceId?: string): Promise<{ ok: boolean; team?: string; user?: string; error?: string }> {
     try {
+      const token = await this.getTokenForWorkspace(workspaceId);
       const response = await fetch('https://slack.com/api/auth.test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.botToken}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
       const data = await response.json() as any;
@@ -433,12 +451,13 @@ class SlackService {
     }
   }
 
-  async listChannels(): Promise<{ success: boolean; channels?: any[]; error?: string }> {
+  async listChannels(workspaceId?: string): Promise<{ success: boolean; channels?: any[]; error?: string }> {
     try {
+      const token = await this.getTokenForWorkspace(workspaceId);
       const result = await this.callSlackApi('conversations.list', {
         types: 'public_channel,private_channel',
         limit: 200,
-      });
+      }, token);
       return {
         success: true,
         channels: result.channels,
@@ -449,9 +468,10 @@ class SlackService {
     }
   }
 
-  async listUsers(): Promise<{ success: boolean; members?: any[]; error?: string }> {
+  async listUsers(workspaceId?: string): Promise<{ success: boolean; members?: any[]; error?: string }> {
     try {
-      const result = await this.callSlackApi('users.list', {});
+      const token = await this.getTokenForWorkspace(workspaceId);
+      const result = await this.callSlackApi('users.list', {}, token);
       return {
         success: true,
         members: result.members?.filter((m: any) => !m.is_bot && !m.deleted),

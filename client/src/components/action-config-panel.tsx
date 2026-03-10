@@ -113,14 +113,33 @@ export default function ActionConfigPanel({
     queryKey: ["/api/tags"],
   });
 
-  // Slack data for Slack actions
+  const selectedWorkspaceId = settings.workspaceId || "";
+
   const { data: slackChannels = [], isLoading: slackChannelsLoading } = useQuery<any[]>({
-    queryKey: ["/api/integrations/slack/channels"],
+    queryKey: ["/api/integrations/slack/channels", selectedWorkspaceId],
+    queryFn: async () => {
+      const url = selectedWorkspaceId
+        ? `/api/integrations/slack/channels?workspaceId=${encodeURIComponent(selectedWorkspaceId)}`
+        : "/api/integrations/slack/channels";
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch channels");
+      const data = await res.json();
+      return data.channels || [];
+    },
     enabled: action.type.includes('slack'),
   });
 
   const { data: slackUsers = [], isLoading: slackUsersLoading } = useQuery<any[]>({
-    queryKey: ["/api/integrations/slack/users"],
+    queryKey: ["/api/integrations/slack/users", selectedWorkspaceId],
+    queryFn: async () => {
+      const url = selectedWorkspaceId
+        ? `/api/integrations/slack/users?workspaceId=${encodeURIComponent(selectedWorkspaceId)}`
+        : "/api/integrations/slack/users";
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch users");
+      const data = await res.json();
+      return data.users || [];
+    },
     enabled: action.type.includes('slack'),
   });
 

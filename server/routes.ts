@@ -5883,6 +5883,25 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         { name: newLead.name, email: newLead.email, company: newLead.company },
         req
       );
+
+      try {
+        await emitTrigger({
+          type: "lead_created",
+          data: {
+            leadId: newLead.id,
+            leadName: newLead.name,
+            leadEmail: newLead.email,
+            source: "manual",
+            ...newLead
+          },
+          context: {
+            userId,
+            timestamp: new Date(),
+          },
+        });
+      } catch (triggerError) {
+        console.error("Error emitting lead_created trigger:", triggerError);
+      }
       
       res.status(201).json(newLead);
     } catch (error) {
@@ -21414,10 +21433,14 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const { slackService } = await import('./slack-service');
       
       if (!slackService.isConfigured()) {
-        return res.status(400).json({ error: 'Slack not configured' });
+        const hasWorkspaces = await slackService.checkActiveWorkspaces();
+        if (!hasWorkspaces) {
+          return res.status(400).json({ error: 'Slack not configured' });
+        }
       }
 
-      const result = await slackService.listChannels();
+      const workspaceId = req.query.workspaceId as string | undefined;
+      const result = await slackService.listChannels(workspaceId);
       
       if (result.success) {
         res.json({ channels: result.channels });
@@ -21436,10 +21459,14 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const { slackService } = await import('./slack-service');
       
       if (!slackService.isConfigured()) {
-        return res.status(400).json({ error: 'Slack not configured' });
+        const hasWorkspaces = await slackService.checkActiveWorkspaces();
+        if (!hasWorkspaces) {
+          return res.status(400).json({ error: 'Slack not configured' });
+        }
       }
 
-      const result = await slackService.listUsers();
+      const workspaceId = req.query.workspaceId as string | undefined;
+      const result = await slackService.listUsers(workspaceId);
       
       if (result.success) {
         res.json({ users: result.members });
