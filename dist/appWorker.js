@@ -12,7 +12,7 @@ import {
 } from "./chunk-DKI6RFKS.js";
 import {
   storage as storage2
-} from "./chunk-5ZWB4TGV.js";
+} from "./chunk-4O3LFFH2.js";
 import {
   deleteAppointmentFromGoogleCalendar,
   syncAppointmentToGoogleCalendar
@@ -37493,7 +37493,7 @@ async function setupFullApp(server) {
       }).catch((err) => {
         log(`\u26A0\uFE0F Failed to start weekly hours check service: ${err.message}`);
       });
-      import("./longRunningTimerService-I2E6WP4L.js").then(({ startLongRunningTimerCheck }) => {
+      import("./longRunningTimerService-TPNOYFMZ.js").then(({ startLongRunningTimerCheck }) => {
         startLongRunningTimerCheck();
         log("\u2705 Long-running timer alert service started");
       }).catch((err) => {

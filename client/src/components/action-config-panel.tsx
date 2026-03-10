@@ -3084,8 +3084,8 @@ export default function ActionConfigPanel({
                   <div>
                     <Label htmlFor="thousands-separator">Thousands Separator</Label>
                     <Select 
-                      value={settings.thousands_separator || ","} 
-                      onValueChange={(value) => updateSetting("thousands_separator", value)}
+                      value={settings.thousands_separator === "" ? "__none__" : (settings.thousands_separator || ",")} 
+                      onValueChange={(value) => updateSetting("thousands_separator", value === "__none__" ? "" : value)}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -3094,7 +3094,7 @@ export default function ActionConfigPanel({
                         <SelectItem value=",">Comma (,)</SelectItem>
                         <SelectItem value=".">Period (.)</SelectItem>
                         <SelectItem value=" ">Space ( )</SelectItem>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -3555,14 +3555,14 @@ export default function ActionConfigPanel({
                 </div>
               ) : slackWorkspaces.length > 0 ? (
                 <Select
-                  value={settings.workspaceId || ""}
-                  onValueChange={(value) => updateSetting("workspaceId", value)}
+                  value={settings.workspaceId || "__default__"}
+                  onValueChange={(value) => updateSetting("workspaceId", value === "__default__" ? "" : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Default workspace" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Default workspace</SelectItem>
+                    <SelectItem value="__default__">Default workspace</SelectItem>
                     {slackWorkspaces.map((ws: any) => (
                       <SelectItem key={ws.id} value={ws.id}>
                         {ws.name} {ws.teamName ? `(${ws.teamName})` : ""}
@@ -3595,7 +3595,7 @@ export default function ActionConfigPanel({
                   </SelectTrigger>
                   <SelectContent>
                     {slackChannels && slackChannels.length > 0 ? (
-                      slackChannels.map((channel: any) => (
+                      slackChannels.filter((ch: any) => ch.id).map((channel: any) => (
                         <SelectItem key={channel.id} value={channel.id}>
                           #{channel.name}
                         </SelectItem>
@@ -3699,7 +3699,7 @@ export default function ActionConfigPanel({
                     </SelectTrigger>
                     <SelectContent>
                       {slackUsers && slackUsers.length > 0 ? (
-                        slackUsers.map((user: any) => (
+                        slackUsers.filter((u: any) => u.id).map((user: any) => (
                           <SelectItem key={user.id} value={user.id}>
                             {user.real_name || user.name} {user.profile?.email ? `(${user.profile.email})` : ''}
                           </SelectItem>
@@ -3785,7 +3785,7 @@ export default function ActionConfigPanel({
                   </SelectTrigger>
                   <SelectContent>
                     {slackChannels && slackChannels.length > 0 ? (
-                      slackChannels.map((channel: any) => (
+                      slackChannels.filter((ch: any) => ch.id).map((channel: any) => (
                         <SelectItem key={channel.id} value={channel.id}>
                           #{channel.name}
                         </SelectItem>
@@ -3900,7 +3900,7 @@ export default function ActionConfigPanel({
                   </SelectTrigger>
                   <SelectContent>
                     {slackChannels && slackChannels.length > 0 ? (
-                      slackChannels.map((channel: any) => (
+                      slackChannels.filter((ch: any) => ch.id).map((channel: any) => (
                         <SelectItem key={channel.id} value={channel.id}>
                           #{channel.name}
                         </SelectItem>
@@ -3949,16 +3949,16 @@ export default function ActionConfigPanel({
                 </div>
               ) : (
                 <Select 
-                  value={settings.user || ""} 
-                  onValueChange={(value) => updateSetting("user", value)}
+                  value={settings.user || "__bot__"} 
+                  onValueChange={(value) => updateSetting("user", value === "__bot__" ? "" : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a user (defaults to bot)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Bot User (default)</SelectItem>
+                    <SelectItem value="__bot__">Bot User (default)</SelectItem>
                     {slackUsers && slackUsers.length > 0 && (
-                      slackUsers.map((user: any) => (
+                      slackUsers.filter((u: any) => u.id).map((user: any) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.real_name || user.name}
                         </SelectItem>

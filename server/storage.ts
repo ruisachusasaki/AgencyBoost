@@ -4630,6 +4630,50 @@ export class DbStorage implements IStorage {
         throw error;
       }
     };
+
+    this.seedSlackActions().catch(err => console.error("Error seeding Slack actions:", err));
+  }
+
+  private async seedSlackActions() {
+    const slackActionDefs = [
+      { id: "action-slack-message", name: "Send Slack Message", type: "send_slack_message", description: "Send a message to Slack channel or user", category: "integration", configSchema: { channel: { type: "string", label: "Channel ID", placeholder: "Leave empty for default channel" }, message: { type: "string", required: true, label: "Message", multiline: true } } },
+      { id: "action-slack-dm", name: "Send Slack DM", type: "send_slack_dm", description: "Send a direct message to a Slack user", category: "integration", configSchema: { userId: { type: "string", label: "Slack User ID", placeholder: "User ID or leave empty to use email" }, email: { type: "string", label: "User Email", placeholder: "Look up user by email if no User ID" }, message: { type: "string", required: true, label: "Message", multiline: true } } },
+      { id: "action-slack-reaction", name: "Add Slack Reaction", type: "add_slack_reaction", description: "Add an emoji reaction to a Slack message", category: "integration", configSchema: { channel: { type: "string", required: true, label: "Channel ID" }, timestamp: { type: "string", required: true, label: "Message Timestamp", placeholder: "Message ts from trigger" }, emoji: { type: "string", required: true, label: "Emoji", placeholder: "thumbsup, heart, rocket, etc." } } },
+      { id: "action-slack-channel", name: "Create Slack Channel", type: "create_slack_channel", description: "Create a new Slack channel", category: "integration", configSchema: { name: { type: "string", required: true, label: "Channel Name", placeholder: "project-{{trigger.name}}" }, description: { type: "string", label: "Channel Description" }, isPrivate: { type: "boolean", label: "Private Channel", default: false }, inviteUsers: { type: "array", items: { type: "string" }, label: "Invite User IDs" } } },
+      { id: "action-slack-topic", name: "Set Slack Channel Topic", type: "set_slack_topic", description: "Set or update a Slack channel topic", category: "integration", configSchema: { channel: { type: "string", required: true, label: "Channel ID" }, topic: { type: "string", required: true, label: "Topic", multiline: true } } },
+      { id: "action-slack-reminder", name: "Create Slack Reminder", type: "create_slack_reminder", description: "Create a reminder in Slack", category: "integration", configSchema: { text: { type: "string", required: true, label: "Reminder Text" }, time: { type: "string", required: true, label: "Time", placeholder: "in 1 hour, tomorrow at 9am, 1234567890" }, user: { type: "string", label: "User ID", placeholder: "Leave empty for yourself" } } },
+    ];
+
+    try {
+      const existing = await db.select({ id: automationActions.id, type: automationActions.type }).from(automationActions);
+      const existingTypes = new Set(existing.map(e => e.type));
+
+      for (const def of slackActionDefs) {
+        if (!existingTypes.has(def.type)) {
+          await db.insert(automationActions).values({
+            id: def.id,
+            name: def.name,
+            type: def.type,
+            description: def.description,
+            category: def.category,
+            configSchema: def.configSchema,
+            isActive: true,
+            createdAt: new Date(),
+          });
+          console.log(`[Seed] Added Slack action: ${def.name}`);
+        }
+      }
+
+      const slackTypes = slackActionDefs.map(d => d.type);
+      await db.update(automationActions)
+        .set({ category: "integration" })
+        .where(and(
+          inArray(automationActions.type, slackTypes),
+          sql`${automationActions.category} != 'integration'`
+        ));
+    } catch (error) {
+      console.error("Error seeding Slack actions:", error);
+    }
   }
 
   // Clients
