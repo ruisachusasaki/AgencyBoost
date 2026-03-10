@@ -3052,9 +3052,9 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                     </div>
 
                     {/* Hiring Manager */}
-                    <div className={`space-y-2 ${hiringManagerSearchOpen ? 'relative z-50' : ''}`}>
+                    <div className="space-y-2">
                       <label className="text-sm font-medium">Hiring Manager *</label>
-                      <div ref={hiringManagerDropdownRef}>
+                      <div className="relative" ref={hiringManagerDropdownRef}>
                         <Button
                           type="button"
                           variant="outline"
@@ -3071,7 +3071,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                         {hiringManagerSearchOpen && (
-                          <div className="relative z-50 mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
+                          <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
                             <div className="p-2">
                               <input
                                 type="text"
@@ -3082,7 +3082,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                 autoFocus
                               />
                             </div>
-                            <div className="max-h-48 overflow-y-auto p-1">
+                            <div className="max-h-64 overflow-y-auto p-1">
                               {filteredStaff.length === 0 && (
                                 <div className="px-3 py-2 text-sm text-slate-500">No staff member found.</div>
                               )}
@@ -3090,7 +3090,6 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                                 <div
                                   key={staff.id}
                                   className="flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
-                                  onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => {
                                     setJobOpeningForm(prev => ({...prev, hiringManagerId: staff.id}));
                                     setHiringManagerSearchOpen(false);
@@ -3287,9 +3286,9 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                   </div>
 
                   {/* Hiring Manager - with search */}
-                  <div className={`space-y-2 ${hiringManagerSearchOpen ? 'relative z-50' : ''}`}>
+                  <div className="space-y-2">
                     <label className="text-sm font-medium">Hiring Manager *</label>
-                    <div ref={hiringManagerDropdownRef}>
+                    <div className="relative" ref={hiringManagerDropdownRef}>
                       <Button
                         type="button"
                         variant="outline"
@@ -3308,7 +3307,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                       {hiringManagerSearchOpen && (
-                        <div className="relative z-50 mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
+                        <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
                           <div className="p-2">
                             <input
                               type="text"
@@ -3319,7 +3318,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                               autoFocus
                             />
                           </div>
-                          <div className="max-h-48 overflow-y-auto p-1">
+                          <div className="max-h-64 overflow-y-auto p-1">
                             {filteredStaff.length === 0 && (
                               <div className="px-3 py-2 text-sm text-slate-500">No staff members found.</div>
                             )}
@@ -3327,7 +3326,6 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                               <div
                                 key={staff.id}
                                 className="flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
-                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
                                   setJobOpeningForm(prev => ({...prev, hiringManagerId: staff.id}));
                                   setHiringManagerSearchValue("");
