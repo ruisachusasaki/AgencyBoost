@@ -295,9 +295,10 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
     queryKey: ["/api/client-team-assignments"],
   });
   
-  // Filtered staff for hiring manager search
+  // Filtered staff for hiring manager search - only show active staff
   const filteredStaff = useMemo(() => {
     return staffData.filter(staff => {
+      if (staff.status !== 'active') return false;
       const fullName = `${staff.firstName} ${staff.lastName}`.toLowerCase();
       const searchTerm = hiringManagerSearchValue.toLowerCase();
       return fullName.includes(searchTerm);
