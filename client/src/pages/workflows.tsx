@@ -471,7 +471,7 @@ export default function WorkflowsPage() {
               New Folder
             </Button>
             <Button 
-              onClick={() => navigate("/workflows/build")}
+              onClick={() => navigate(selectedFolder ? `/workflows/build?folder=${selectedFolder}` : "/workflows/build")}
               className="bg-primary hover:bg-primary/90"
             >
               <Plus className="h-4 w-4 mr-2" />

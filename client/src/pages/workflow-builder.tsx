@@ -43,6 +43,7 @@ export default function WorkflowBuilderPage() {
   // Parse URL parameters to see if we're editing an existing workflow
   const searchParams = new URLSearchParams(window.location.search);
   const editingWorkflowId = searchParams.get('edit');
+  const folderIdFromUrl = searchParams.get('folder');
   const [showTriggerPane, setShowTriggerPane] = useState(false);
   const [showActionPane, setShowActionPane] = useState(false);
   const [triggerSearch, setTriggerSearch] = useState("");
@@ -303,8 +304,8 @@ export default function WorkflowBuilderPage() {
     setIsSaving(true);
     
     createWorkflowMutation.mutate({
-      ...workflowData
-      // createdBy will be set by backend from authenticated session
+      ...workflowData,
+      ...(folderIdFromUrl && !editingWorkflowId ? { folderId: folderIdFromUrl } : {})
     });
   };
 
