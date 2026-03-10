@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { FormLabelWithTooltip } from "@/components/ui/form-label-with-tooltip";
@@ -69,6 +70,7 @@ export default function TeamDetail() {
   const [isAddKpiDialogOpen, setIsAddKpiDialogOpen] = useState(false);
   const [isEditKpiDialogOpen, setIsEditKpiDialogOpen] = useState(false);
   const [editingKpi, setEditingKpi] = useState<PositionKpi | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'position' | 'team' | 'kpi'; id: string; name: string } | null>(null);
   const teamId = params?.id;
 
   const positionForm = useForm<PositionFormData>({
@@ -402,15 +404,12 @@ export default function TeamDetail() {
   };
 
   const handleDeletePosition = (positionId: string, positionName: string) => {
-    if (!confirm(`Are you sure you want to delete the position "${positionName}"?`)) return;
-    deletePositionMutation.mutate(positionId);
+    setDeleteConfirm({ type: 'position', id: positionId, name: positionName });
   };
 
   const handleDeleteTeam = () => {
     if (!team || !teamId) return;
-    if (window.confirm(`Are you sure you want to delete the team "${team.name}"? This action cannot be undone and will remove all associated positions.`)) {
-      deleteTeamMutation.mutate(teamId);
-    }
+    setDeleteConfirm({ type: 'team', id: teamId, name: team.name });
   };
 
   const handleEditTeam = () => {
@@ -450,8 +449,7 @@ export default function TeamDetail() {
   };
 
   const handleDeleteKpi = (kpiId: string, kpiName: string) => {
-    if (!confirm(`Are you sure you want to delete the KPI "${kpiName}"?`)) return;
-    deleteKpiMutation.mutate(kpiId);
+    setDeleteConfirm({ type: 'kpi', id: kpiId, name: kpiName });
   };
 
   if (teamLoading) {
@@ -545,11 +543,7 @@ export default function TeamDetail() {
               variant="outline" 
               size="sm" 
               className="text-red-600 hover:text-red-700 hover:bg-red-50" 
-              onClick={() => {
-                if (window.confirm(`Are you sure you want to delete the team "${team.name}"? This action cannot be undone and will remove all associated positions.`)) {
-                  deleteTeamMutation.mutate(teamId!);
-                }
-              }}
+              onClick={() => setDeleteConfirm({ type: 'team', id: teamId!, name: team.name })}
               disabled={deleteTeamMutation.isPending}
               data-testid="button-delete-team"
             >
@@ -1358,6 +1352,41 @@ export default function TeamDetail() {
           </Tabs>
         </DialogContent>
       </Dialog>
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteConfirm?.type === 'team' ? 'Delete Team' : deleteConfirm?.type === 'position' ? 'Delete Position' : 'Delete KPI'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirm?.type === 'team'
+                ? `Are you sure you want to delete the team "${deleteConfirm?.name}"? This action cannot be undone and will remove all associated positions.`
+                : deleteConfirm?.type === 'position'
+                ? `Are you sure you want to delete the position "${deleteConfirm?.name}"?`
+                : `Are you sure you want to delete the KPI "${deleteConfirm?.name}"?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (!deleteConfirm) return;
+                if (deleteConfirm.type === 'position') {
+                  deletePositionMutation.mutate(deleteConfirm.id);
+                } else if (deleteConfirm.type === 'team') {
+                  deleteTeamMutation.mutate(deleteConfirm.id);
+                } else if (deleteConfirm.type === 'kpi') {
+                  deleteKpiMutation.mutate(deleteConfirm.id);
+                }
+                setDeleteConfirm(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
