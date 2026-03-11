@@ -517,6 +517,8 @@ export const clients = pgTable("clients", {
   clientBrief: text("client_brief"),
   lastActivity: timestamp("last_activity"),
   isArchived: boolean("is_archived").default(false),
+  onboardingToken: varchar("onboarding_token"),
+  onboardingCompleted: boolean("onboarding_completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -3310,6 +3312,22 @@ export const insertNewHireOnboardingFormConfigSchema = createInsertSchema(newHir
 
 export type NewHireOnboardingFormConfig = typeof newHireOnboardingFormConfig.$inferSelect;
 export type InsertNewHireOnboardingFormConfig = z.infer<typeof insertNewHireOnboardingFormConfigSchema>;
+
+export const clientOnboardingFormConfig = pgTable("client_onboarding_form_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  steps: jsonb("steps").notNull(),
+  branding: jsonb("branding"),
+  updatedBy: varchar("updated_by").notNull().references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertClientOnboardingFormConfigSchema = createInsertSchema(clientOnboardingFormConfig).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type ClientOnboardingFormConfig = typeof clientOnboardingFormConfig.$inferSelect;
+export type InsertClientOnboardingFormConfig = z.infer<typeof insertClientOnboardingFormConfigSchema>;
 
 // New Hire Onboarding Submissions - when someone fills out the onboarding form
 export const newHireOnboardingSubmissions = pgTable("new_hire_onboarding_submissions", {

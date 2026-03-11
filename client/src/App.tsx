@@ -61,6 +61,7 @@ import TemplateBuilder from "@/components/onboarding/TemplateBuilder";
 import ClientsSettings from "@/pages/settings/clients";
 import CareersPage from "@/pages/careers";
 import OnboardingPage from "@/pages/onboarding";
+import ClientOnboarding from "@/pages/client-onboarding";
 import KnowledgeBase from "@/pages/knowledge-base";
 import ArticleView from "@/pages/article-view";
 import Training from "@/pages/training";
@@ -116,6 +117,7 @@ function Router() {
       <Route path="/proposal/:token" component={PublicProposal} />
       <Route path="/careers" component={CareersPage} />
       <Route path="/onboarding" component={OnboardingPage} />
+      <Route path="/client-onboarding/:token" component={ClientOnboarding} />
       <Route path="/s/:shortCode">
         {(params) => <PublicSurvey shortCode={params.shortCode} />}
       </Route>

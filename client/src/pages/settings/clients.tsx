@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
+import { ClientOnboardingFormEditor } from "@/components/client-onboarding-form-editor";
 
 // Icon mapping for client brief sections
 const iconMap = {
@@ -1556,7 +1557,7 @@ function ClientHealthSettings() {
 }
 
 export default function ClientsSettings() {
-  const [activeTab, setActiveTab] = useState<"clientBrief" | "portalAccess" | "teamAssignments" | "clientHealth">("clientBrief");
+  const [activeTab, setActiveTab] = useState<"clientBrief" | "portalAccess" | "teamAssignments" | "clientHealth" | "onboardingForm">("clientBrief");
   const [editingSection, setEditingSection] = useState<ClientBriefSection | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -1843,6 +1844,18 @@ export default function ClientsSettings() {
               <Heart className="h-4 w-4" />
               Client Health
             </button>
+            <button
+              onClick={() => setActiveTab("onboardingForm")}
+              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+                activeTab === "onboardingForm"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              data-testid="tab-client-onboarding-form"
+            >
+              <FileText className="h-4 w-4" />
+              Client Onboarding Form
+            </button>
           </nav>
         </div>
 
@@ -1978,6 +1991,10 @@ export default function ClientsSettings() {
 
         {activeTab === "clientHealth" && (
           <ClientHealthSettings />
+        )}
+
+        {activeTab === "onboardingForm" && (
+          <ClientOnboardingFormEditor />
         )}
 
         {/* Create Section Dialog */}

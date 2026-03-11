@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Check, CheckCircle, FileText, CreditCard, Building, Pen,
   Shield, Loader2, AlertCircle, ChevronDown, ChevronUp,
-  Calendar, Repeat
+  Calendar, Repeat, ChevronRight
 } from "lucide-react";
 import { loadStripe, type Stripe, type StripeElements } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -148,6 +148,7 @@ export default function PublicProposal() {
   const [signatureMode, setSignatureMode] = useState<"type" | "draw">("type");
   const [typedSignature, setTypedSignature] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"card" | "ach" | null>(null);
+  const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -185,6 +186,28 @@ export default function PublicProposal() {
       setCurrentStep("pay");
     }
   }, [data]);
+
+  useEffect(() => {
+    if (currentStep === "complete" && token) {
+      let attempts = 0;
+      const maxAttempts = 5;
+      const fetchOnboardingUrl = () => {
+        fetch(`/api/quotes/public/${token}/onboarding-url`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.onboardingUrl) {
+              setOnboardingUrl(data.onboardingUrl);
+            } else if (attempts < maxAttempts) {
+              attempts++;
+              setTimeout(fetchOnboardingUrl, 3000);
+            }
+          })
+          .catch(() => {});
+      };
+      const timer = setTimeout(fetchOnboardingUrl, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, token]);
 
   const signMutation = useMutation({
     mutationFn: async (signData: any) => {
@@ -979,6 +1002,19 @@ export default function PublicProposal() {
               <CheckCircle className="h-5 w-5 text-green-500" />
               <span className="text-sm font-medium text-gray-700">Confirmation sent to {proposal?.signedByEmail || signerEmail}</span>
             </div>
+            {onboardingUrl && (
+              <div className="mt-8">
+                <p className="text-gray-600 mb-3">One more step — please complete your onboarding form so we can get started right away.</p>
+                <a
+                  href={onboardingUrl}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: brandColor || '#00C9C6' }}
+                >
+                  Complete Onboarding
+                  <ChevronRight className="h-4 w-4" />
+                </a>
+              </div>
+            )}
           </div>
         )}
       </div>

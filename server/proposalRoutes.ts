@@ -1,6 +1,6 @@
 import express, { type Express } from "express";
 import { db } from "./db";
-import { proposalTerms, quotes, quoteItems, clients, leads, staff, products, productBundles, productPackages, clientProducts, clientBundles, clientPackages, packageItems, bundleProducts, deals, leadPipelineStages, taskSettings, clientRecurringConfig, businessProfile } from "@shared/schema";
+import { proposalTerms, quotes, quoteItems, clients, leads, staff, products, productBundles, productPackages, clientProducts, clientBundles, clientPackages, packageItems, bundleProducts, deals, leadPipelineStages, taskSettings, clientRecurringConfig, businessProfile, clientOnboardingFormConfig } from "@shared/schema";
 import { eq, desc, and, sql, lt, isNull, asc } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { z } from "zod";
@@ -227,6 +227,27 @@ export function registerProposalRoutes(
     } catch (error) {
       console.error("Error generating proposal token:", error);
       res.status(500).json({ message: "Failed to generate proposal link" });
+    }
+  });
+
+  app.get("/api/quotes/public/:token/onboarding-url", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const [quote] = await db.select().from(quotes).where(eq(quotes.publicToken, token));
+      if (!quote) return res.status(404).json({ error: "Quote not found" });
+      
+      const clientId = quote.clientId;
+      if (!clientId) return res.json({ onboardingUrl: null });
+      
+      const [client] = await db.select().from(clients).where(eq(clients.id, clientId));
+      if (!client || !client.onboardingToken || client.onboardingCompleted) {
+        return res.json({ onboardingUrl: null });
+      }
+      
+      res.json({ onboardingUrl: `/client-onboarding/${client.onboardingToken}` });
+    } catch (error) {
+      console.error("Error fetching onboarding URL:", error);
+      res.json({ onboardingUrl: null });
     }
   });
 
@@ -1105,6 +1126,25 @@ async function triggerQuoteFulfillment(quote: any, notificationService: Notifica
     }
 
     if (clientId) {
+      try {
+        const [onboardingConfig] = await db.select()
+          .from(clientOnboardingFormConfig)
+          .orderBy(desc(clientOnboardingFormConfig.updatedAt))
+          .limit(1);
+        if (onboardingConfig && Array.isArray(onboardingConfig.steps) && (onboardingConfig.steps as any[]).length > 0) {
+          const [existingClient] = await db.select().from(clients).where(eq(clients.id, clientId));
+          if (existingClient && !existingClient.onboardingToken) {
+            const token = randomBytes(32).toString("hex");
+            await db.update(clients)
+              .set({ onboardingToken: token, onboardingCompleted: false })
+              .where(eq(clients.id, clientId));
+            console.log(`[Quote Fulfillment] Generated onboarding token for client ${clientId}`);
+          }
+        }
+      } catch (e) {
+        console.error("[Quote Fulfillment] Error generating onboarding token:", e);
+      }
+
       try {
         const items = await db.select().from(quoteItems).where(eq(quoteItems.quoteId, quote.id));
         let transferredCount = 0;

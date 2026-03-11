@@ -61,7 +61,7 @@ import {
   socialMediaAccounts, socialMediaPosts, workflows, workflowTemplates, workflowExecutions, workflowActionAnalytics, automationTriggers, automationActions, imageAnnotations, taskDependencies, notifications,
   taskStatuses, taskPriorities, taskSettings, teamWorkflows, teamWorkflowStatuses, taskTemplates,
   timeOffPolicies, timeOffTypes, timeOffRequests, timeOffRequestDays, jobApplications, jobApplicationComments, jobApplicationWatchers, applicationStageHistory, timeOffBalances,
-  jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, expenseReportFormConfig, expenseReportSubmissions, offboardingFormConfig, offboardingSubmissions, teamPositions, clientTeamAssignments, positionDescriptionVersions,
+  jobOpenings, jobApplicationFormConfig, newHireOnboardingFormConfig, newHireOnboardingSubmissions, expenseReportFormConfig, expenseReportSubmissions, offboardingFormConfig, offboardingSubmissions, teamPositions, clientTeamAssignments, positionDescriptionVersions, clientOnboardingFormConfig, insertClientOnboardingFormConfigSchema,
   trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress, trainingCoursePermissions,
   trainingQuizzes, trainingQuizQuestions, trainingQuizAttempts, trainingAssignments, 
   trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, trainingLessonResources,
@@ -28811,6 +28811,144 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ error: "Failed to save form configuration" });
+    }
+  });
+
+  // ==================== Client Onboarding Form Configuration ====================
+  app.get("/api/client-onboarding-form-config", async (req, res) => {
+    try {
+      const [config] = await db.select()
+        .from(clientOnboardingFormConfig)
+        .orderBy(desc(clientOnboardingFormConfig.updatedAt))
+        .limit(1);
+      res.json(config || { steps: [], branding: null });
+    } catch (error) {
+      console.error("Error fetching client onboarding form config:", error);
+      res.json({ steps: [], branding: null });
+    }
+  });
+
+  app.post("/api/client-onboarding-form-config", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
+    try {
+      const rawUserId = getAuthenticatedUserIdOrFail(req, res);
+      if (!rawUserId) return;
+      const currentUserId = await normalizeUserIdForDb(rawUserId);
+      const validatedData = insertClientOnboardingFormConfigSchema.parse({
+        ...req.body,
+        updatedBy: currentUserId
+      });
+      await db.delete(clientOnboardingFormConfig);
+      const [newConfig] = await db.insert(clientOnboardingFormConfig)
+        .values(validatedData)
+        .returning();
+      res.json(newConfig);
+    } catch (error) {
+      console.error("Error saving client onboarding form config:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ error: "Failed to save form configuration" });
+    }
+  });
+
+  app.get("/api/client-onboarding/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const [client] = await db.select().from(clients).where(eq(clients.onboardingToken, token));
+      if (!client) {
+        return res.status(404).json({ error: "Invalid or expired onboarding link" });
+      }
+      if (client.onboardingCompleted) {
+        return res.status(400).json({ error: "Onboarding has already been completed", completed: true });
+      }
+      const [config] = await db.select()
+        .from(clientOnboardingFormConfig)
+        .orderBy(desc(clientOnboardingFormConfig.updatedAt))
+        .limit(1);
+      if (!config) {
+        return res.status(404).json({ error: "No onboarding form configured" });
+      }
+      const customFieldsList = await db.select().from(customFields).orderBy(customFields.order);
+      const folders = await db.select().from(customFieldFolders).orderBy(customFieldFolders.order);
+      res.json({
+        client: { id: client.id, name: client.name, email: client.email, company: client.company },
+        config,
+        customFields: customFieldsList,
+        folders
+      });
+    } catch (error) {
+      console.error("Error fetching client onboarding data:", error);
+      res.status(500).json({ error: "Failed to load onboarding form" });
+    }
+  });
+
+  app.post("/api/client-onboarding/:token/submit", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { values } = req.body;
+      const [client] = await db.select().from(clients).where(eq(clients.onboardingToken, token));
+      if (!client) {
+        return res.status(404).json({ error: "Invalid or expired onboarding link" });
+      }
+      if (client.onboardingCompleted) {
+        return res.status(400).json({ error: "Onboarding has already been completed" });
+      }
+      const existingCustomFieldValues = (client.customFieldValues as Record<string, any>) || {};
+      const mergedValues = { ...existingCustomFieldValues, ...values };
+      await db.update(clients)
+        .set({ 
+          customFieldValues: mergedValues,
+          onboardingCompleted: true 
+        })
+        .where(eq(clients.id, client.id));
+      res.json({ success: true, message: "Onboarding completed successfully" });
+    } catch (error) {
+      console.error("Error submitting client onboarding:", error);
+      res.status(500).json({ error: "Failed to submit onboarding form" });
+    }
+  });
+
+  app.post("/api/client-onboarding-logo-upload", requireAuth(), requirePermission('settings', 'canManage'), upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ error: "Invalid file type. Only PNG, JPG, SVG, and WebP are allowed." });
+      }
+      const { ObjectStorageService, sanitizeFileName } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
+      const sanitized = sanitizeFileName(req.file.originalname);
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: req.file.buffer,
+        headers: { 'Content-Type': req.file.mimetype || 'application/octet-stream' },
+      });
+      if (!response.ok) throw new Error('Failed to upload to object storage');
+      const urlObj = new URL(uploadUrl);
+      const objectPath = urlObj.pathname;
+      const fileUrl = `/objects${objectPath}`;
+      res.json({ fileUrl, fileName: sanitized });
+    } catch (error) {
+      console.error("Error uploading client onboarding logo:", error);
+      res.status(500).json({ error: "Failed to upload logo" });
+    }
+  });
+
+  app.post("/api/clients/:id/generate-onboarding-token", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { randomUUID } = await import('crypto');
+      const token = randomUUID();
+      await db.update(clients)
+        .set({ onboardingToken: token, onboardingCompleted: false })
+        .where(eq(clients.id, id));
+      res.json({ token });
+    } catch (error) {
+      console.error("Error generating onboarding token:", error);
+      res.status(500).json({ error: "Failed to generate onboarding token" });
     }
   });
 
