@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList, Repeat, Layers } from "lucide-react";
+import { ArrowLeft, User, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, FileText, CheckCircle, Plus, ExternalLink, Edit2, Save, X, Filter, Hash, Briefcase, Workflow, Target, UserCircle, ShoppingCart, Package, Trash2, Mail, MessageSquare, Phone, PhoneOff, MailX, ShieldOff, StickyNote, Calendar, Upload, CreditCard, Search, Clock, RefreshCw, Send, AtSign, Download, MessageCircle, Bold, Italic, Underline, Type, FileImage, Paperclip, HelpCircle, Tag as TagIcon, Globe, CornerDownRight, MapPin, Edit, Users, Activity, Zap, Archive, ShoppingBag, TrendingUp, Monitor, FileX, PenTool, Palette, Heart, Star, Coffee, Lightbulb, Rocket, Contact, Settings, Loader2, AlertCircle, Pencil, ClipboardList, Repeat, Layers, ClipboardCheck, Copy, Link2 } from "lucide-react";
 import CustomFieldFileUpload from "@/components/CustomFieldFileUpload";
 import ContactCardField from "@/components/contact-card-field";
 
@@ -2841,6 +2841,151 @@ function ImportFromQuoteContent({ clientId, selectedQuoteId, setSelectedQuoteId,
   );
 }
 
+function ClientOnboardingHubSection({ client, clientId }: { client: any; clientId: string }) {
+  const [copied, setCopied] = useState(false);
+  const { data: onboardingStatus, isLoading } = useQuery<any>({
+    queryKey: ['/api/clients', clientId, 'onboarding-status'],
+    enabled: !!clientId,
+  });
+
+  const generateTokenMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/clients/${clientId}/generate-onboarding-token`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clients', clientId, 'onboarding-status'] });
+    },
+  });
+
+  const onboardingUrl = onboardingStatus?.onboardingUrl
+    ? `${window.location.origin}${onboardingStatus.onboardingUrl}`
+    : null;
+
+  const handleCopy = () => {
+    if (onboardingUrl) {
+      navigator.clipboard.writeText(onboardingUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 p-4">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span className="text-sm text-muted-foreground">Loading onboarding status...</span>
+      </div>
+    );
+  }
+
+  const hasToken = !!onboardingStatus?.hasToken;
+  const isCompleted = !!onboardingStatus?.completed;
+  const hasConfig = !!onboardingStatus?.formConfigured;
+  const totalFields = onboardingStatus?.totalFields || 0;
+  const filledFields = onboardingStatus?.filledFields || 0;
+  const totalSteps = onboardingStatus?.totalSteps || 0;
+  const currentStep = onboardingStatus?.currentStep || 0;
+  const percentComplete = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100">Onboarding Form</h3>
+      </div>
+
+      {!hasConfig ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <ClipboardCheck className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+          <p className="text-sm">No client onboarding form configured</p>
+          <p className="text-xs mt-1">Configure one in Settings &gt; Clients &gt; Client Onboarding Form</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {isCompleted ? (
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="font-medium text-green-800 dark:text-green-300">Onboarding Complete</span>
+              </div>
+              <p className="text-sm text-green-700 dark:text-green-400 ml-7">
+                This client has completed their onboarding form.
+              </p>
+            </div>
+          ) : hasToken ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Link2 className="h-4 w-4 text-blue-600" />
+                  <span className="font-medium text-blue-800 dark:text-blue-300 text-sm">Onboarding Form Link</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={onboardingUrl || ''}
+                    className="flex-1 text-xs bg-white dark:bg-gray-800 border rounded px-2 py-1.5 text-gray-600 dark:text-gray-300 font-mono"
+                  />
+                  <Button size="sm" variant="outline" onClick={handleCopy}>
+                    {copied ? <CheckCircle className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  </Button>
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={onboardingUrl || '#'} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Progress</span>
+                  <span className="text-sm font-semibold" style={{ color: percentComplete === 100 ? '#16a34a' : 'hsl(179, 100%, 39%)' }}>
+                    {percentComplete}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-3">
+                  <div
+                    className="h-2.5 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${percentComplete}%`,
+                      backgroundColor: percentComplete === 100 ? '#16a34a' : 'hsl(179, 100%, 39%)',
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <span>{filledFields} of {totalFields} fields completed</span>
+                  {totalSteps > 1 && (
+                    <span>Step {Math.min(currentStep + 1, totalSteps)} of {totalSteps}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <ClipboardCheck className="h-10 w-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                No onboarding link generated for this client yet.
+              </p>
+              <Button
+                size="sm"
+                onClick={() => generateTokenMutation.mutate()}
+                disabled={generateTokenMutation.isPending}
+                style={{ backgroundColor: 'hsl(179, 100%, 39%)' }}
+                className="text-white hover:opacity-90"
+              >
+                {generateTokenMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Generate Onboarding Link
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EnhancedClientDetail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -2862,7 +3007,7 @@ export default function EnhancedClientDetail() {
     { id: "contact-details", name: "Contact Details", isOpen: true }
   ]);
   const [activeRightSection, setActiveRightSection] = useState<"notes">("notes");
-  const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team" | "meetings" | "health">("notes");
+  const [activeHubSection, setActiveHubSection] = useState<"notes" | "tasks" | "appointments" | "documents" | "team" | "meetings" | "health" | "onboarding">("notes");
   const [showCompletedTasks, setShowCompletedTasks] = useState(false);
   const [taskStatusFilter, setTaskStatusFilter] = useState<string>("all");
   const [taskPriorityFilter, setTaskPriorityFilter] = useState<string>("all");
@@ -7654,6 +7799,24 @@ export default function EnhancedClientDetail() {
                         <p>Meeting Agenda & Notes</p>
                       </TooltipContent>
                     </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveHubSection("onboarding")}
+                          className={`flex items-center justify-center w-10 h-10 rounded-md transition-all ${
+                            activeHubSection === "onboarding"
+                              ? "bg-white text-primary shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          <ClipboardCheck className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Onboarding Form</p>
+                      </TooltipContent>
+                    </Tooltip>
                     
                   </div>
                 </TooltipProvider>
@@ -8157,6 +8320,10 @@ export default function EnhancedClientDetail() {
                 )}
 
                 {/* Meetings Section */}
+                {activeHubSection === "onboarding" && (
+                  <ClientOnboardingHubSection client={client} clientId={clientId!} />
+                )}
+
                 {activeHubSection === "meetings" && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">

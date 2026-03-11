@@ -28975,6 +28975,60 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  app.get("/api/clients/:id/onboarding-status", requireAuth(), async (req, res) => {
+    try {
+      const clientId = req.params.id;
+      const [client] = await db.select().from(clients).where(eq(clients.id, clientId));
+      if (!client) {
+        return res.status(404).json({ error: "Client not found" });
+      }
+      const [config] = await db.select()
+        .from(clientOnboardingFormConfig)
+        .orderBy(desc(clientOnboardingFormConfig.updatedAt))
+        .limit(1);
+      const formConfigured = !!config && Array.isArray(config.steps) && (config.steps as any[]).length > 0;
+      
+      let totalFields = 0;
+      let filledFields = 0;
+      let totalSteps = 0;
+      
+      if (formConfigured && config.steps) {
+        const steps = config.steps as any[];
+        totalSteps = steps.length;
+        const savedProgress = (client.onboardingProgress as Record<string, any>) || {};
+        const customFieldValues = (client.customFieldValues as Record<string, any>) || {};
+        const allValues = { ...customFieldValues, ...savedProgress };
+        
+        for (const step of steps) {
+          if (step.fields && Array.isArray(step.fields)) {
+            for (const field of step.fields) {
+              totalFields++;
+              const val = allValues[field.customFieldId];
+              if (val !== undefined && val !== null && val !== '' && 
+                  !(Array.isArray(val) && val.length === 0)) {
+                filledFields++;
+              }
+            }
+          }
+        }
+      }
+      
+      res.json({
+        hasToken: !!client.onboardingToken,
+        completed: !!client.onboardingCompleted,
+        formConfigured,
+        totalFields,
+        filledFields,
+        totalSteps,
+        currentStep: client.onboardingCurrentStep || 0,
+        onboardingUrl: client.onboardingToken ? `/client-onboarding/${client.onboardingToken}` : null,
+      });
+    } catch (error) {
+      console.error("Error fetching onboarding status:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding status" });
+    }
+  });
+
   app.post("/api/clients/:id/generate-onboarding-token", requireAuth(), requirePermission('settings', 'canManage'), async (req, res) => {
     try {
       const { id } = req.params;
