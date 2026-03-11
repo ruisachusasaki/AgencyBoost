@@ -1,0 +1,140 @@
+Before writing anything, read the existing applicant tracking tables 
+in shared/schema.ts carefully. Note the exact column names for:
+  - The applicants/applications table (id, name, email, position, 
+    status, and any other relevant columns)
+  - The existing status values/enum if defined
+  - Any existing documents or files table pattern used elsewhere 
+    in the app
+
+═══════════════════════════════════════
+TASK: ADD THE FOLLOWING NEW TABLES
+═══════════════════════════════════════
+
+1. ic_agreement_templates
+   - id (serial primary key)
+   - name (text, not null) — e.g. "Standard IC Agreement 2026"
+   - content (text, not null) — full rich text/HTML body of the 
+     agreement with dynamic placeholders in {{field_name}} format
+   - isActive (boolean, default true) — only one should be active 
+     at a time; if a new one is activated, others are deactivated
+   - createdBy (integer, references staff/users table, nullable)
+   - createdAt (timestamp, default now)
+   - updatedAt (timestamp, default now)
+
+   Supported placeholder fields (document these in a comment 
+   above the table definition):
+     {{candidate_name}}       — applicant's full name
+     {{position}}             — position they are being hired for
+     {{start_date}}           — their start date
+     {{compensation}}         — pay rate or salary
+     {{compensation_type}}    — e.g. "per hour", "per month", 
+                                "flat project rate"
+     {{manager_name}}         — hiring manager's full name
+     {{company_name}}         — static: "The Media Optimizers"
+     {{offer_date}}           — date the offer was sent
+     {{custom_terms}}         — optional additional terms
+
+2. job_offers
+   - id (serial primary key)
+   - applicationId (integer, references applicants/applications 
+     table, not null, unique) — one offer per application
+   - createdBy (integer, references staff/users table, nullable)
+   - templateId (integer, references ic_agreement_templates, 
+     nullable) — which template was used
+   - populatedContent (text, not null) — the fully rendered 
+     agreement content with all placeholders replaced with real 
+     values at send time (this is the permanent record — if the 
+     template changes later, this offer is unaffected)
+   - compensation (text, not null)
+   - compensationType (text, not null) — 'per_hour', 'per_month', 
+     'flat_rate'
+   - startDate (date, not null)
+   - customTerms (text, nullable)
+   - signingToken (text, not null, unique) — a secure random UUID 
+     used to generate the public signing URL. Format: 
+     /sign-offer/{signingToken}
+   - status (text, not null, default 'pending') — 'pending', 
+     'signed', 'declined'
+   - sentAt (timestamp, default now)
+   - expiresAt (timestamp, nullable) — optional expiry for the 
+     signing link (nullable for now, can be used later)
+   - createdAt (timestamp, default now)
+
+3. offer_signatures
+   - id (serial primary key)
+   - offerId (integer, references job_offers, not null, unique) 
+     — one signature per offer
+   - signatureType (text, not null) — 'drawn' or 'typed'
+   - signatureData (text, not null) — base64 PNG data URL if 
+     drawn, or plain text name if typed
+   - signerName (text, not null) — full name entered at signing
+   - signerEmail (text, not null) — email confirmed at signing
+   - ipAddress (text, nullable) — captured from request for 
+     legal record
+   - userAgent (text, nullable) — browser info for legal record
+   - signedAt (timestamp, not null, default now)
+
+4. offer_status_log
+   - id (serial primary key)
+   - offerId (integer, references job_offers, not null)
+   - status (text, not null) — the new status value
+   - changedBy (integer, nullable, references staff/users) — 
+     null if changed by applicant action (e.g. signing)
+   - note (text, nullable)
+   - createdAt (timestamp, default now)
+
+═══════════════════════════════════════
+EXISTING TABLE MODIFICATIONS
+═══════════════════════════════════════
+
+The existing applicants/applications table needs two new status 
+values added to support the offer workflow. Find how the existing 
+status values are defined (enum or text check constraint or just 
+text field) and add the following new statuses in a way consistent 
+with the existing pattern:
+
+  'send_offer'       — manager has initiated the offer process
+  'offer_accepted'   — applicant signed the IC Agreement
+  'offer_declined'   — applicant declined the offer
+  'hired'            — manager has confirmed hire and created 
+                       AgencyBoost account
+
+If status is a plain text field with no constraint, no migration 
+change is needed — just document the new values in a comment.
+If status is an enum or has a check constraint, add the new 
+values to it via migration.
+
+Do NOT add any other columns to the existing applicants table 
+at this time.
+
+═══════════════════════════════════════
+INDEXES
+═══════════════════════════════════════
+
+Add the following indexes for query performance:
+  - job_offers.applicationId (unique index — already implied by 
+    unique constraint but make explicit)
+  - job_offers.signingToken (unique index — this will be looked 
+    up on every page load of the public signing page)
+  - job_offers.status (non-unique — for filtering offers by status)
+  - offer_signatures.offerId (unique index)
+  - offer_status_log.offerId (non-unique — for fetching history)
+
+═══════════════════════════════════════
+PROTECTIVE RULES
+═══════════════════════════════════════
+- Do NOT modify any existing tables beyond adding the new status 
+  values described above
+- Do NOT modify any existing schema definitions, types, or 
+  relations
+- Do NOT touch vite.config.ts, package.json, or drizzle.config.ts
+- Do NOT alter any existing routes, components, or server logic
+- Only ADD — never remove or rename existing schema elements
+- Read the existing applicants/applications table carefully 
+  before writing — use actual column and table names
+- After adding to schema.ts, run the Drizzle migration to push 
+  changes to the database
+- Confirm all 4 new tables and all indexes were created 
+  successfully
+- Confirm the status values were added correctly to the existing 
+  applicants table without breaking existing status values
