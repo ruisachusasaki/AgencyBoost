@@ -26533,7 +26533,7 @@ ${appointment.description || ""}
       const [newWatcher] = await db.insert(jobApplicationWatchers).values({
         applicationId: id,
         staffId,
-        addedBy: currentUserId
+        addedBy: rawUserId
       }).returning();
       const [staffDetails] = await db.select({
         id: staff.id,
