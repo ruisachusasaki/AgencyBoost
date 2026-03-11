@@ -7056,6 +7056,16 @@ function OneOnOnePerformanceReport() {
   const [progressionFilter, setProgressionFilter] = useState<string>("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
 
+  const { data: staffData = [] } = useQuery<Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    department: string | null;
+    position: string | null;
+  }>>({
+    queryKey: ["/api/staff"],
+  });
+
   const buildQueryParams = () => {
     const params = new URLSearchParams();
     if (dateFrom) params.append('dateFrom', dateFrom.toISOString().split('T')[0]);
