@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { format, parseISO } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -69,6 +69,94 @@ import PxMeetings from "@/components/hr/px-meetings";
 import OnboardingChecklist from "@/pages/hr/OnboardingChecklist";
 import OnboardingDashboard from "@/pages/hr/OnboardingDashboard";
 import OrgChart from "@/components/hr/org-chart";
+
+function HiringManagerDropdown({ value, onChange, staffData, testId }: {
+  value: string;
+  onChange: (value: string) => void;
+  staffData: Array<{ id: string; firstName: string; lastName: string; department: string; position: string }>;
+  testId?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    if (!search) return staffData;
+    const term = search.toLowerCase();
+    return staffData.filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(term));
+  }, [staffData, search]);
+
+  const selectedStaff = staffData.find(s => s.id === value);
+  const displayText = selectedStaff
+    ? `${selectedStaff.firstName} ${selectedStaff.lastName} — ${selectedStaff.department} • ${selectedStaff.position}`
+    : "Select Hiring Manager";
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside, true);
+    return () => document.removeEventListener("mousedown", handleClickOutside, true);
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className="relative" data-testid={testId}>
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsOpen(!isOpen); setSearch(""); }}
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      >
+        <span className={`truncate ${!selectedStaff ? "text-muted-foreground" : ""}`}>{displayText}</span>
+        <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+      </button>
+      {isOpen && (
+        <div
+          className="absolute z-[9999] mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-lg"
+          style={{ maxHeight: "256px" }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-2 border-b">
+            <input
+              type="text"
+              placeholder="Search staff..."
+              className="w-full px-2 py-1.5 text-sm border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div className="overflow-y-auto" style={{ maxHeight: "200px" }}>
+            <div
+              className="px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onChange(""); setIsOpen(false); }}
+            >
+              Select Hiring Manager
+            </div>
+            {filtered.map((staff) => (
+              <div
+                key={staff.id}
+                className={`px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground ${value === staff.id ? "bg-accent" : ""}`}
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onChange(staff.id); setIsOpen(false); }}
+              >
+                {staff.firstName} {staff.lastName} — {staff.department} • {staff.position}
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <div className="px-3 py-2 text-sm text-muted-foreground">No staff found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface HRPageProps {
   initialTab?: string;
@@ -3030,19 +3118,12 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                     {/* Hiring Manager */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Hiring Manager *</label>
-                      <select
-                        data-testid="select-hiring-manager"
-                        className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      <HiringManagerDropdown
                         value={jobOpeningForm.hiringManagerId}
-                        onChange={(e) => setJobOpeningForm(prev => ({...prev, hiringManagerId: e.target.value}))}
-                      >
-                        <option value="">Select Hiring Manager</option>
-                        {staffData.map((staff) => (
-                          <option key={staff.id} value={staff.id}>
-                            {staff.firstName} {staff.lastName} — {staff.department} • {staff.position}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) => setJobOpeningForm(prev => ({...prev, hiringManagerId: value}))}
+                        staffData={staffData}
+                        testId="select-hiring-manager"
+                      />
                     </div>
 
                     {/* Compensation */}
@@ -3220,19 +3301,12 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                   {/* Hiring Manager */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Hiring Manager *</label>
-                    <select
-                      data-testid="button-edit-hiring-manager"
-                      className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    <HiringManagerDropdown
                       value={jobOpeningForm.hiringManagerId}
-                      onChange={(e) => setJobOpeningForm(prev => ({...prev, hiringManagerId: e.target.value}))}
-                    >
-                      <option value="">Select hiring manager...</option>
-                      {staffData.map((staff) => (
-                        <option key={staff.id} value={staff.id}>
-                          {staff.firstName} {staff.lastName} — {staff.department} • {staff.position}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => setJobOpeningForm(prev => ({...prev, hiringManagerId: value}))}
+                      staffData={staffData}
+                      testId="button-edit-hiring-manager"
+                    />
                   </div>
 
                   {/* Compensation */}
