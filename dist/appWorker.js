@@ -34682,6 +34682,42 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       res.status(500).json({ error: "Failed to delete onboarding template" });
     }
   });
+  app2.post("/api/onboarding-templates/:id/duplicate", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
+    try {
+      const userId2 = getAuthenticatedUserId(req);
+      const templateId = parseInt(req.params.id);
+      const [source] = await db.select().from(onboardingTemplates).where(eq10(onboardingTemplates.id, templateId));
+      if (!source) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      const sourceItems = await db.select().from(onboardingTemplateItems).where(eq10(onboardingTemplateItems.templateId, templateId)).orderBy(onboardingTemplateItems.dayNumber, onboardingTemplateItems.sortOrder);
+      const newPositionName = `${source.positionName} (Copy)`;
+      const [newTemplate] = await db.insert(onboardingTemplates).values({
+        teamId: source.teamId,
+        positionName: newPositionName,
+        totalDays: source.totalDays,
+        dayUnlockMode: source.dayUnlockMode,
+        createdBy: userId2
+      }).returning();
+      if (sourceItems.length > 0) {
+        await db.insert(onboardingTemplateItems).values(
+          sourceItems.map((item) => ({
+            templateId: newTemplate.id,
+            dayNumber: item.dayNumber,
+            title: item.title,
+            description: item.description,
+            itemType: item.itemType,
+            resourceUrl: item.resourceUrl,
+            sortOrder: item.sortOrder
+          }))
+        );
+      }
+      res.status(201).json(newTemplate);
+    } catch (error) {
+      console.error("Error duplicating onboarding template:", error);
+      res.status(500).json({ error: "Failed to duplicate onboarding template" });
+    }
+  });
   app2.post("/api/onboarding-templates/:id/items", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
     try {
       const userId2 = getAuthenticatedUserId(req);

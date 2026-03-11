@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, Pencil, Trash2, ClipboardList, Calendar, Lock, Loader2, Info } from "lucide-react";
+import { Plus, Pencil, Trash2, ClipboardList, Calendar, Lock, Loader2, Info, Copy } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface OnboardingTemplate {
@@ -67,6 +67,21 @@ export default function OnboardingTemplates() {
       setShowCreateDialog(false);
       setNewTemplate({ teamId: "", positionName: "", totalDays: 10, dayUnlockMode: "calendar" });
       toast({ title: "Template created" });
+      navigate(`/settings/hr/onboarding-templates/${template.id}`);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/onboarding-templates/${id}/duplicate`);
+      return res.json();
+    },
+    onSuccess: (template) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding-templates"] });
+      toast({ title: "Template duplicated", description: `"${template.positionName}" created. You can now edit it.` });
       navigate(`/settings/hr/onboarding-templates/${template.id}`);
     },
     onError: (error: any) => {
@@ -183,22 +198,52 @@ export default function OnboardingTemplates() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 ml-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => navigate(`/settings/hr/onboarding-templates/${template.id}`)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTarget(template)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => navigate(`/settings/hr/onboarding-templates/${template.id}`)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-blue-600 hover:text-blue-700"
+                                disabled={duplicateMutation.isPending}
+                                onClick={() => duplicateMutation.mutate(template.id)}
+                              >
+                                {duplicateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Duplicate</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setDeleteTarget(template)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Delete</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </div>
                   </CardContent>
