@@ -102,13 +102,117 @@ type SortField = 'title' | 'assignedTo' | 'dueDate' | 'status' | 'priority' | 'c
 type SortDirection = 'asc' | 'desc';
 type ViewMode = 'table' | 'kanban';
 
+function MultiSelectFilter({ 
+  selected, 
+  onChange, 
+  options, 
+  placeholder 
+}: { 
+  selected: string[]; 
+  onChange: (values: string[]) => void; 
+  options: { value: string; label: string; color?: string }[];
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [search, setSearch] = useState("");
+
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler, true);
+    return () => document.removeEventListener("mousedown", handler, true);
+  }, [open]);
+
+  const filtered = search 
+    ? options.filter(o => o.label.toLowerCase().includes(search.toLowerCase())) 
+    : options;
+
+  const toggle = (val: string) => {
+    onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val]);
+  };
+
+  const displayText = selected.length === 0 
+    ? placeholder 
+    : selected.length === 1 
+      ? options.find(o => o.value === selected[0])?.label || selected[0]
+      : `${selected.length} selected`;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => { setOpen(!open); if (!open) setSearch(""); }}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(!open); } }}
+        className={`flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${selected.length > 0 ? "ring-1 ring-[hsl(179,100%,39%)]" : ""}`}
+      >
+        <span className={`truncate ${selected.length === 0 ? "text-muted-foreground" : ""}`}>{displayText}</span>
+        <div className="flex items-center gap-1">
+          {selected.length > 0 && (
+            <span
+              role="button"
+              tabIndex={0}
+              className="h-4 w-4 flex items-center justify-center rounded-full hover:bg-gray-200 text-muted-foreground"
+              onClick={(e) => { e.stopPropagation(); onChange([]); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onChange([]); } }}
+            >
+              <X className="h-3 w-3" />
+            </span>
+          )}
+          <ChevronDown className={`h-4 w-4 opacity-50 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+        </div>
+      </div>
+      {open && (
+        <div className="absolute z-[100] mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-lg">
+          {options.length > 6 && (
+            <div className="p-2 border-b">
+              <input
+                type="text"
+                placeholder="Search..."
+                className="w-full px-2 py-1.5 text-sm border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                autoFocus
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            </div>
+          )}
+          <div className="overflow-y-auto" style={{ maxHeight: "220px" }}>
+            {filtered.map((opt) => (
+              <div
+                key={opt.value}
+                className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                onClick={() => toggle(opt.value)}
+              >
+                <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${selected.includes(opt.value) ? "bg-[hsl(179,100%,39%)] border-[hsl(179,100%,39%)] text-white" : "border-input"}`}>
+                  {selected.includes(opt.value) && <Check className="h-3 w-3" />}
+                </div>
+                {opt.color && <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: opt.color }} />}
+                <span className="truncate">{opt.label}</span>
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
-  const [clientFilter, setClientFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [assigneeFilter, setAssigneeFilter] = useState<string[]>([]);
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
+  const [clientFilter, setClientFilter] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [sortField, setSortField] = useState<SortField>('createdAt');
@@ -607,6 +711,7 @@ export default function Tasks() {
         switch (condition.operator) {
           case 'contains': return fieldValue.includes(searchValue);
           case 'equals': return fieldValue === searchValue;
+          case 'in': return condition.value.split(',').map((v: string) => v.toLowerCase().trim()).includes(fieldValue);
           case 'starts_with': return fieldValue.startsWith(searchValue);
           case 'ends_with': return fieldValue.endsWith(searchValue);
           case 'not_equals': return fieldValue !== searchValue;
@@ -647,11 +752,11 @@ export default function Tasks() {
   const areFiltersActive = (): boolean => {
     return (
       searchTerm.trim() !== "" ||
-      statusFilter !== "all" ||
-      assigneeFilter !== "all" ||
-      priorityFilter !== "all" ||
-      clientFilter !== "all" ||
-      categoryFilter !== "all" ||
+      statusFilter.length > 0 ||
+      assigneeFilter.length > 0 ||
+      priorityFilter.length > 0 ||
+      clientFilter.length > 0 ||
+      categoryFilter.length > 0 ||
       overdueFilter !== "all" ||
       timeFilter !== "all" ||
       showCompleted ||
@@ -663,11 +768,11 @@ export default function Tasks() {
   // Clear all filters to default state
   const handleClearFilters = () => {
     setSearchTerm("");
-    setStatusFilter("all");
-    setAssigneeFilter("all");
-    setPriorityFilter("all");
-    setClientFilter("all");
-    setCategoryFilter("all");
+    setStatusFilter([]);
+    setAssigneeFilter([]);
+    setPriorityFilter([]);
+    setClientFilter([]);
+    setCategoryFilter([]);
     setOverdueFilter("all");
     setTimeFilter("all");
     setShowCompleted(false);
@@ -696,81 +801,99 @@ export default function Tasks() {
       });
     }
     
-    if (statusFilter !== "all") {
+    if (statusFilter.length > 0) {
       conditions.push({
         field: 'status',
-        operator: 'equals',
-        value: statusFilter
+        operator: 'in',
+        value: statusFilter.join(',')
       });
     }
     
-    if (assigneeFilter !== "all") {
-      if (assigneeFilter === "unassigned") {
+    if (assigneeFilter.length > 0) {
+      if (assigneeFilter.includes("unassigned") && assigneeFilter.length === 1) {
         conditions.push({
           field: 'assignedTo',
           operator: 'is_empty',
           value: ''
         });
       } else {
-        conditions.push({
-          field: 'assignedTo',
-          operator: 'equals',
-          value: assigneeFilter
-        });
+        const nonUnassigned = assigneeFilter.filter(a => a !== "unassigned");
+        if (nonUnassigned.length > 0) {
+          conditions.push({
+            field: 'assignedTo',
+            operator: 'in',
+            value: nonUnassigned.join(',')
+          });
+        }
+        if (assigneeFilter.includes("unassigned")) {
+          conditions.push({
+            field: 'assignedTo',
+            operator: 'is_empty',
+            value: ''
+          });
+        }
       }
     }
     
-    if (priorityFilter !== "all") {
+    if (priorityFilter.length > 0) {
       conditions.push({
         field: 'priority',
-        operator: 'equals',
-        value: priorityFilter
+        operator: 'in',
+        value: priorityFilter.join(',')
       });
     }
     
-    if (clientFilter !== "all") {
-      if (clientFilter === "none") {
-        // Check that task has neither client nor lead
+    if (clientFilter.length > 0) {
+      const clientIds = clientFilter.filter(c => c.startsWith("client-")).map(c => c.replace("client-", ""));
+      const leadIds = clientFilter.filter(c => c.startsWith("lead-")).map(c => c.replace("lead-", ""));
+      const hasNone = clientFilter.includes("none");
+      
+      if (clientIds.length > 0) {
+        conditions.push({
+          field: 'clientId',
+          operator: 'in',
+          value: clientIds.join(',')
+        });
+      }
+      if (leadIds.length > 0) {
+        conditions.push({
+          field: 'leadId',
+          operator: 'in',
+          value: leadIds.join(',')
+        });
+      }
+      if (hasNone) {
         conditions.push({
           field: 'clientId',
           operator: 'is_empty',
           value: ''
-        });
-        conditions.push({
-          field: 'leadId',
-          operator: 'is_empty',
-          value: ''
-        });
-      } else if (clientFilter.startsWith("client-")) {
-        const clientId = clientFilter.replace("client-", "");
-        conditions.push({
-          field: 'clientId',
-          operator: 'equals',
-          value: clientId
-        });
-      } else if (clientFilter.startsWith("lead-")) {
-        const leadId = clientFilter.replace("lead-", "");
-        conditions.push({
-          field: 'leadId',
-          operator: 'equals',
-          value: leadId
         });
       }
     }
     
-    if (categoryFilter !== "all") {
-      if (categoryFilter === "none") {
+    if (categoryFilter.length > 0) {
+      if (categoryFilter.includes("none") && categoryFilter.length === 1) {
         conditions.push({
           field: 'categoryId',
           operator: 'is_empty',
           value: ''
         });
       } else {
-        conditions.push({
-          field: 'categoryId',
-          operator: 'equals',
-          value: categoryFilter
-        });
+        const nonNone = categoryFilter.filter(c => c !== "none");
+        if (nonNone.length > 0) {
+          conditions.push({
+            field: 'categoryId',
+            operator: 'in',
+            value: nonNone.join(',')
+          });
+        }
+        if (categoryFilter.includes("none")) {
+          conditions.push({
+            field: 'categoryId',
+            operator: 'is_empty',
+            value: ''
+          });
+        }
       }
     }
     
@@ -803,68 +926,64 @@ export default function Tasks() {
     setActiveSmartList(smartList.id);
     setActiveTab(smartList.id);
     
-    // Restore individual filter states from saved conditions
-    // Reset all filters first
     setSearchTerm("");
-    setStatusFilter("all");
-    setAssigneeFilter("all");
-    setPriorityFilter("all");
-    setClientFilter("all");
-    setCategoryFilter("all");
+    setStatusFilter([]);
+    setAssigneeFilter([]);
+    setPriorityFilter([]);
+    setClientFilter([]);
+    setCategoryFilter([]);
     setTimeFilter("all");
     
-    // Apply saved conditions to filter states
     if (smartList.filters?.conditions) {
+      const newStatus: string[] = [];
+      const newAssignee: string[] = [];
+      const newPriority: string[] = [];
+      const newClient: string[] = [];
+      const newCategory: string[] = [];
+      
       for (const condition of smartList.filters.conditions) {
         switch (condition.field) {
           case 'title':
-            if (condition.operator === 'contains') {
-              setSearchTerm(condition.value);
-            }
+            if (condition.operator === 'contains') setSearchTerm(condition.value);
             break;
           case 'status':
-            if (condition.operator === 'equals') {
-              setStatusFilter(condition.value);
-            }
+            if (condition.operator === 'in') newStatus.push(...condition.value.split(','));
+            else if (condition.operator === 'equals') newStatus.push(condition.value);
             break;
           case 'assignedTo':
-            if (condition.operator === 'equals') {
-              setAssigneeFilter(condition.value);
-            } else if (condition.operator === 'is_empty') {
-              setAssigneeFilter("unassigned");
-            }
+            if (condition.operator === 'in') newAssignee.push(...condition.value.split(','));
+            else if (condition.operator === 'equals') newAssignee.push(condition.value);
+            else if (condition.operator === 'is_empty') newAssignee.push("unassigned");
             break;
           case 'priority':
-            if (condition.operator === 'equals') {
-              setPriorityFilter(condition.value);
-            }
+            if (condition.operator === 'in') newPriority.push(...condition.value.split(','));
+            else if (condition.operator === 'equals') newPriority.push(condition.value);
             break;
           case 'clientId':
-            if (condition.operator === 'equals') {
-              setClientFilter(`client-${condition.value}`);
-            } else if (condition.operator === 'is_empty') {
-              setClientFilter("none");
-            }
+            if (condition.operator === 'in') newClient.push(...condition.value.split(',').map((id: string) => `client-${id}`));
+            else if (condition.operator === 'equals') newClient.push(`client-${condition.value}`);
+            else if (condition.operator === 'is_empty') newClient.push("none");
             break;
           case 'leadId':
-            if (condition.operator === 'equals') {
-              setClientFilter(`lead-${condition.value}`);
-            }
+            if (condition.operator === 'in') newClient.push(...condition.value.split(',').map((id: string) => `lead-${id}`));
+            else if (condition.operator === 'equals') newClient.push(`lead-${condition.value}`);
             break;
           case 'categoryId':
-            if (condition.operator === 'equals') {
-              setCategoryFilter(condition.value);
-            } else if (condition.operator === 'is_empty') {
-              setCategoryFilter("none");
-            }
+            if (condition.operator === 'in') newCategory.push(...condition.value.split(','));
+            else if (condition.operator === 'equals') newCategory.push(condition.value);
+            else if (condition.operator === 'is_empty') newCategory.push("none");
             break;
           case 'timeFilter':
-            if (condition.operator === 'equals') {
-              setTimeFilter(condition.value);
-            }
+            if (condition.operator === 'equals') setTimeFilter(condition.value);
             break;
         }
       }
+      
+      if (newStatus.length > 0) setStatusFilter(newStatus);
+      if (newAssignee.length > 0) setAssigneeFilter(newAssignee);
+      if (newPriority.length > 0) setPriorityFilter(newPriority);
+      if (newClient.length > 0) setClientFilter(newClient);
+      if (newCategory.length > 0) setCategoryFilter(newCategory);
     }
   };
 
@@ -1062,29 +1181,28 @@ export default function Tasks() {
         getClientOrLeadName(task)?.toLowerCase().includes(searchTerm.toLowerCase())
       );
       
-      const matchesStatus = statusFilter === "all" || task.status === statusFilter;
-      const matchesAssignee = assigneeFilter === "all" || 
-        (assigneeFilter === "unassigned" && !task.assignedTo) ||
-        task.assignedTo === assigneeFilter;
-      const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(task.status);
+      const matchesAssignee = assigneeFilter.length === 0 || 
+        (assigneeFilter.includes("unassigned") && !task.assignedTo) ||
+        (task.assignedTo && assigneeFilter.includes(task.assignedTo));
+      const matchesPriority = priorityFilter.length === 0 || (task.priority && priorityFilter.includes(task.priority));
       
-      // Handle client/lead filter with new format: "client-{id}" or "lead-{id}"
       let matchesClient = false;
-      if (clientFilter === "all") {
+      if (clientFilter.length === 0) {
         matchesClient = true;
-      } else if (clientFilter === "none") {
-        matchesClient = !task.clientId && !task.leadId;
-      } else if (clientFilter.startsWith("client-")) {
-        const clientId = clientFilter.replace("client-", "");
-        matchesClient = task.clientId === clientId;
-      } else if (clientFilter.startsWith("lead-")) {
-        const leadId = clientFilter.replace("lead-", "");
-        matchesClient = task.leadId === leadId;
+      } else {
+        const hasNone = clientFilter.includes("none");
+        const selectedClientIds = clientFilter.filter(c => c.startsWith("client-")).map(c => c.replace("client-", ""));
+        const selectedLeadIds = clientFilter.filter(c => c.startsWith("lead-")).map(c => c.replace("lead-", ""));
+        
+        if (hasNone && !task.clientId && !task.leadId) matchesClient = true;
+        if (task.clientId && selectedClientIds.includes(task.clientId)) matchesClient = true;
+        if (task.leadId && selectedLeadIds.includes(task.leadId)) matchesClient = true;
       }
-      const matchesProject = true; // Projects removed - all tasks match
-      const matchesCategory = categoryFilter === "all" || 
-        (categoryFilter === "none" && !task.categoryId) ||
-        task.categoryId === categoryFilter;
+      const matchesProject = true;
+      const matchesCategory = categoryFilter.length === 0 || 
+        (categoryFilter.includes("none") && !task.categoryId) ||
+        (task.categoryId && categoryFilter.includes(task.categoryId));
       
       // Overdue filter - check if task is overdue (due date is in the past and task is not completed)
       let matchesOverdue = true;
@@ -2699,106 +2817,54 @@ export default function Tasks() {
             {/* Filter Controls */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
               {/* Status Filter */}
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  {taskStatuses.filter(status => status.isActive).map((status) => (
-                    <SelectItem key={status.id} value={status.value}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: status.color }}
-                        />
-                        <span>{status.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelectFilter
+                selected={statusFilter}
+                onChange={setStatusFilter}
+                placeholder="All Status"
+                options={taskStatuses.filter(s => s.isActive).map(s => ({ value: s.value, label: s.name, color: s.color }))}
+              />
               
               {/* Assignee Filter */}
-              <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Assignees" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Assignees</SelectItem>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {staff.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.firstName} {member.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelectFilter
+                selected={assigneeFilter}
+                onChange={setAssigneeFilter}
+                placeholder="All Assignees"
+                options={[
+                  { value: "unassigned", label: "Unassigned" },
+                  ...staff.map(m => ({ value: m.id, label: `${m.firstName} ${m.lastName}` }))
+                ]}
+              />
               
               {/* Priority Filter */}
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Priorities" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
-                  {taskPriorities.filter(priority => priority.isActive).map((priority) => (
-                    <SelectItem key={priority.id} value={priority.value}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: priority.color }}
-                        />
-                        <span>{priority.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelectFilter
+                selected={priorityFilter}
+                onChange={setPriorityFilter}
+                placeholder="All Priorities"
+                options={taskPriorities.filter(p => p.isActive).map(p => ({ value: p.value, label: p.name, color: p.color }))}
+              />
               
               {/* Client/Lead Filter */}
-              <Select value={clientFilter} onValueChange={setClientFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Clients/Leads" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Clients/Leads</SelectItem>
-                  <SelectItem value="none">No Client/Lead</SelectItem>
-                  {clients.map((client) => (
-                    <SelectItem key={`client-${client.id}`} value={`client-${client.id}`}>
-                      {client.company || client.name} (Client)
-                    </SelectItem>
-                  ))}
-                  {leads.map((lead) => (
-                    <SelectItem key={`lead-${lead.id}`} value={`lead-${lead.id}`}>
-                      {lead.name || lead.email} (Lead)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
+              <MultiSelectFilter
+                selected={clientFilter}
+                onChange={setClientFilter}
+                placeholder="All Clients/Leads"
+                options={[
+                  { value: "none", label: "No Client/Lead" },
+                  ...clients.map(c => ({ value: `client-${c.id}`, label: `${c.company || c.name} (Client)` })),
+                  ...leads.map(l => ({ value: `lead-${l.id}`, label: `${l.name || l.email} (Lead)` }))
+                ]}
+              />
               
               {/* Category Filter */}
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="none">No Category</SelectItem>
-                  {taskCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: category.color }}
-                        />
-                        <span>{category.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelectFilter
+                selected={categoryFilter}
+                onChange={setCategoryFilter}
+                placeholder="All Categories"
+                options={[
+                  { value: "none", label: "No Category" },
+                  ...taskCategories.map(c => ({ value: c.id, label: c.name, color: c.color }))
+                ]}
+              />
               
               {/* Overdue Filter */}
               <Select value={overdueFilter} onValueChange={setOverdueFilter}>
