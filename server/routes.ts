@@ -25192,7 +25192,6 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  // Task Mapping Settings Routes (admin only)
   const TASK_MAPPING_SETTING_KEYS = [
     'task_mapping_auto_generate_on_conversion',
     'task_mapping_default_cycle_length',
@@ -25200,7 +25199,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     'task_mapping_enable_recurring_generation',
   ];
 
-  app.get("/api/settings/task-mapping", requireAuth(), requireAdmin(), async (req, res) => {
+  app.get("/api/settings/task-mapping", requireAuth(), requirePermission('products', 'canView'), async (req, res) => {
     try {
       const settings = await db.select().from(taskSettings)
         .where(sql`${taskSettings.settingKey} LIKE 'task_mapping_%'`);
@@ -25237,7 +25236,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.put("/api/settings/task-mapping", requireAuth(), requireAdmin(), async (req, res) => {
+  app.put("/api/settings/task-mapping", requireAuth(), requirePermission('products', 'canManage'), async (req, res) => {
     try {
       const { autoGenerateOnConversion, defaultCycleLength, defaultAdvanceGenerationDays, enableRecurringGeneration } = req.body;
 
@@ -42815,7 +42814,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   // ONBOARDING TEMPLATES API
   // ═══════════════════════════════════════════════════════════
 
-  app.get("/api/onboarding-templates", requireAuth(), async (req, res) => {
+  app.get("/api/onboarding-templates", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserId(req)!;
       const isAdmin = await isCurrentUserAdmin(req);
@@ -42870,7 +42869,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.get("/api/onboarding-templates/:id", requireAuth(), async (req, res) => {
+  app.get("/api/onboarding-templates/:id", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const templateId = parseInt(req.params.id);
       const [template] = await db.select({
@@ -42904,7 +42903,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.post("/api/onboarding-templates", requireAuth(), async (req, res) => {
+  app.post("/api/onboarding-templates", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserId(req)!;
       const isAdmin = await isCurrentUserAdmin(req);
@@ -42932,7 +42931,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.put("/api/onboarding-templates/:id", requireAuth(), async (req, res) => {
+  app.put("/api/onboarding-templates/:id", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserId(req)!;
       const isAdmin = await isCurrentUserAdmin(req);
@@ -42971,7 +42970,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.delete("/api/onboarding-templates/:id", requireAuth(), async (req, res) => {
+  app.delete("/api/onboarding-templates/:id", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserId(req)!;
       const isAdmin = await isCurrentUserAdmin(req);
@@ -43007,7 +43006,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.post("/api/onboarding-templates/:id/items", requireAuth(), async (req, res) => {
+  app.post("/api/onboarding-templates/:id/items", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserId(req)!;
       const isAdmin = await isCurrentUserAdmin(req);
@@ -43055,7 +43054,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.put("/api/onboarding-templates/:id/items/:itemId", requireAuth(), async (req, res) => {
+  app.put("/api/onboarding-templates/:id/items/:itemId", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const itemId = parseInt(req.params.itemId);
       const templateId = parseInt(req.params.id);
@@ -43093,7 +43092,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.delete("/api/onboarding-templates/:id/items/:itemId", requireAuth(), async (req, res) => {
+  app.delete("/api/onboarding-templates/:id/items/:itemId", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const itemId = parseInt(req.params.itemId);
       const templateId = parseInt(req.params.id);
@@ -43107,7 +43106,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.put("/api/onboarding-templates/:id/items/reorder", requireAuth(), async (req, res) => {
+  app.put("/api/onboarding-templates/:id/items/reorder", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
     try {
       const templateId = parseInt(req.params.id);
       const { items } = req.body;

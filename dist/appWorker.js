@@ -21668,7 +21668,7 @@ ${appointment.description || ""}
     "task_mapping_default_advance_generation_days",
     "task_mapping_enable_recurring_generation"
   ];
-  app2.get("/api/settings/task-mapping", requireAuth(), requireAdmin(), async (req, res) => {
+  app2.get("/api/settings/task-mapping", requireAuth(), requirePermission("products", "canView"), async (req, res) => {
     try {
       const settings = await db.select().from(taskSettings).where(sql5`${taskSettings.settingKey} LIKE 'task_mapping_%'`);
       const result = {
@@ -21700,7 +21700,7 @@ ${appointment.description || ""}
       res.status(500).json({ message: "Failed to fetch task mapping settings" });
     }
   });
-  app2.put("/api/settings/task-mapping", requireAuth(), requireAdmin(), async (req, res) => {
+  app2.put("/api/settings/task-mapping", requireAuth(), requirePermission("products", "canManage"), async (req, res) => {
     try {
       const { autoGenerateOnConversion, defaultCycleLength, defaultAdvanceGenerationDays, enableRecurringGeneration } = req.body;
       const updates = [];
@@ -34538,7 +34538,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       res.status(500).json({ error: "Failed to fetch onboarding progress" });
     }
   });
-  app2.get("/api/onboarding-templates", requireAuth(), async (req, res) => {
+  app2.get("/api/onboarding-templates", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
     try {
       const userId2 = getAuthenticatedUserId(req);
       const isAdmin = await isCurrentUserAdmin(req);
@@ -34581,7 +34581,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       res.status(500).json({ error: "Failed to fetch onboarding templates" });
     }
   });
-  app2.get("/api/onboarding-templates/:id", requireAuth(), async (req, res) => {
+  app2.get("/api/onboarding-templates/:id", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
     try {
       const templateId = parseInt(req.params.id);
       const [template] = await db.select({
@@ -34605,7 +34605,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       res.status(500).json({ error: "Failed to fetch onboarding template" });
     }
   });
-  app2.post("/api/onboarding-templates", requireAuth(), async (req, res) => {
+  app2.post("/api/onboarding-templates", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
     try {
       const userId2 = getAuthenticatedUserId(req);
       const isAdmin = await isCurrentUserAdmin(req);
@@ -34627,7 +34627,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       res.status(500).json({ error: "Failed to create onboarding template" });
     }
   });
-  app2.put("/api/onboarding-templates/:id", requireAuth(), async (req, res) => {
+  app2.put("/api/onboarding-templates/:id", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
     try {
       const userId2 = getAuthenticatedUserId(req);
       const isAdmin = await isCurrentUserAdmin(req);
@@ -34656,7 +34656,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       res.status(500).json({ error: "Failed to update onboarding template" });
     }
   });
-  app2.delete("/api/onboarding-templates/:id", requireAuth(), async (req, res) => {
+  app2.delete("/api/onboarding-templates/:id", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
     try {
       const userId2 = getAuthenticatedUserId(req);
       const isAdmin = await isCurrentUserAdmin(req);
@@ -34682,7 +34682,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       res.status(500).json({ error: "Failed to delete onboarding template" });
     }
   });
-  app2.post("/api/onboarding-templates/:id/items", requireAuth(), async (req, res) => {
+  app2.post("/api/onboarding-templates/:id/items", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
     try {
       const userId2 = getAuthenticatedUserId(req);
       const isAdmin = await isCurrentUserAdmin(req);
@@ -34721,7 +34721,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       res.status(500).json({ error: "Failed to create template item" });
     }
   });
-  app2.put("/api/onboarding-templates/:id/items/:itemId", requireAuth(), async (req, res) => {
+  app2.put("/api/onboarding-templates/:id/items/:itemId", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
     try {
       const itemId = parseInt(req.params.itemId);
       const templateId = parseInt(req.params.id);
@@ -34751,7 +34751,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       res.status(500).json({ error: "Failed to update template item" });
     }
   });
-  app2.delete("/api/onboarding-templates/:id/items/:itemId", requireAuth(), async (req, res) => {
+  app2.delete("/api/onboarding-templates/:id/items/:itemId", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
     try {
       const itemId = parseInt(req.params.itemId);
       const templateId = parseInt(req.params.id);
@@ -34763,7 +34763,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       res.status(500).json({ error: "Failed to delete template item" });
     }
   });
-  app2.put("/api/onboarding-templates/:id/items/reorder", requireAuth(), async (req, res) => {
+  app2.put("/api/onboarding-templates/:id/items/reorder", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
     try {
       const templateId = parseInt(req.params.id);
       const { items } = req.body;
