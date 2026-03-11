@@ -1995,6 +1995,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
       const minutesMap: Record<string, Record<string, number>> = {};
       const userNames: Record<string, string> = {};
+      const userDepartments: Record<string, string> = {};
       const clientNames: Record<string, string> = {};
 
       for (const task of taskTimeEntries) {
@@ -2049,10 +2050,12 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           firstName: staff.firstName,
           lastName: staff.lastName,
           annualSalary: staff.annualSalary,
+          department: staff.department,
         }).from(staff).where(inArray(staff.id, allUserIds));
 
         for (const s of staffRows) {
           userNames[s.id] = `${s.firstName} ${s.lastName}`;
+          if (s.department) userDepartments[s.id] = s.department;
           if (s.annualSalary) {
             const hourlyRate = parseFloat(s.annualSalary) / 2080;
             for (const clientId of Object.keys(minutesMap[s.id] || {})) {
@@ -2106,6 +2109,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         return {
           userId: uid,
           userName: userNames[uid] || "Unknown User",
+          department: userDepartments[uid] || "",
           cells,
           totalMinutes,
           totalCost: parseFloat(totalCost.toFixed(2)),

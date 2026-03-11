@@ -226,12 +226,13 @@ export default function Reports() {
 
   const exportCpcCsv = () => {
     if (!cpcData || cpcData.rows.length === 0) return;
-    const headers = ["Staff Member", ...cpcData.columns.map(c => c.clientName), "Total"];
+    const headers = ["Staff Member", "Department", ...cpcData.columns.map(c => c.clientName), "Total"];
     const csvRows = [headers.join(",")];
 
     for (const row of cpcData.rows) {
       const cells = [
         `"${row.userName}"`,
+        `"${row.department || ""}"`,
         ...cpcData.columns.map(c => {
           const cell = row.cells[c.clientId];
           return cell && cell.cost > 0 ? `$${cell.cost.toFixed(2)}` : "$0.00";
@@ -243,6 +244,7 @@ export default function Reports() {
 
     const totalRow = [
       '"Total"',
+      '""',
       ...cpcData.columns.map(c => {
         const t = cpcData.columnTotals[c.clientId];
         return t ? `$${t.cost.toFixed(2)}` : "$0.00";
@@ -253,12 +255,13 @@ export default function Reports() {
 
     const hoursHeaders = ["\nHours Breakdown"];
     csvRows.push(hoursHeaders.join(","));
-    const hHeaders = ["Staff Member", ...cpcData.columns.map(c => c.clientName), "Total"];
+    const hHeaders = ["Staff Member", "Department", ...cpcData.columns.map(c => c.clientName), "Total"];
     csvRows.push(hHeaders.join(","));
 
     for (const row of cpcData.rows) {
       const cells = [
         `"${row.userName}"`,
+        `"${row.department || ""}"`,
         ...cpcData.columns.map(c => {
           const cell = row.cells[c.clientId];
           return cell ? (cell.minutes / 60).toFixed(2) : "0.00";
@@ -5713,6 +5716,7 @@ export default function Reports() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="sticky left-0 bg-background z-10 min-w-[180px] font-semibold">Staff Member</TableHead>
+                        <TableHead className="min-w-[120px] font-semibold">Department</TableHead>
                         {cpcData.columns.map(col => (
                           <TableHead key={col.clientId} className="text-right min-w-[120px] font-semibold">
                             {col.clientName}
@@ -5725,6 +5729,7 @@ export default function Reports() {
                       {cpcData.rows.map(row => (
                         <TableRow key={row.userId}>
                           <TableCell className="sticky left-0 bg-background z-10 font-medium">{row.userName}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{row.department || "—"}</TableCell>
                           {cpcData.columns.map(col => {
                             const cell = row.cells[col.clientId];
                             const hasCost = cell && cell.cost > 0;
@@ -5758,6 +5763,7 @@ export default function Reports() {
                       ))}
                       <TableRow className="border-t-2 font-bold bg-muted/30">
                         <TableCell className="sticky left-0 bg-muted/30 z-10 font-bold">Total</TableCell>
+                        <TableCell className="bg-muted/30"></TableCell>
                         {cpcData.columns.map(col => {
                           const t = cpcData.columnTotals[col.clientId];
                           return (

@@ -4163,6 +4163,7 @@ AgencyBoost CRM`
       const taskTimeEntries = await storage2.getTimeEntriesByDateRange(dateFrom, dateTo);
       const minutesMap = {};
       const userNames = {};
+      const userDepartments = {};
       const clientNames = {};
       for (const task of taskTimeEntries) {
         if (!task.timeEntries || task.timeEntries.length === 0) continue;
@@ -4205,10 +4206,12 @@ AgencyBoost CRM`
           id: staff.id,
           firstName: staff.firstName,
           lastName: staff.lastName,
-          annualSalary: staff.annualSalary
+          annualSalary: staff.annualSalary,
+          department: staff.department
         }).from(staff).where(inArray5(staff.id, allUserIds));
         for (const s of staffRows) {
           userNames[s.id] = `${s.firstName} ${s.lastName}`;
+          if (s.department) userDepartments[s.id] = s.department;
           if (s.annualSalary) {
             const hourlyRate = parseFloat(s.annualSalary) / 2080;
             for (const clientId of Object.keys(minutesMap[s.id] || {})) {
@@ -4254,6 +4257,7 @@ AgencyBoost CRM`
         return {
           userId: uid,
           userName: userNames[uid] || "Unknown User",
+          department: userDepartments[uid] || "",
           cells,
           totalMinutes,
           totalCost: parseFloat(totalCost.toFixed(2))
