@@ -42814,7 +42814,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   // ONBOARDING TEMPLATES API
   // ═══════════════════════════════════════════════════════════
 
-  app.get("/api/onboarding-templates", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
+  app.get("/api/onboarding-templates", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
       const userId = getAuthenticatedUserId(req)!;
       const isAdmin = await isCurrentUserAdmin(req);
@@ -42869,7 +42869,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.get("/api/onboarding-templates/:id", requireAuth(), requirePermission('hr', 'canManage'), async (req, res) => {
+  app.get("/api/onboarding-templates/:id", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
       const templateId = parseInt(req.params.id);
       const [template] = await db.select({

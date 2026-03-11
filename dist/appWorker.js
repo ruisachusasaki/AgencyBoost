@@ -34538,7 +34538,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       res.status(500).json({ error: "Failed to fetch onboarding progress" });
     }
   });
-  app2.get("/api/onboarding-templates", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
+  app2.get("/api/onboarding-templates", requireAuth(), requirePermission("hr", "canView"), async (req, res) => {
     try {
       const userId2 = getAuthenticatedUserId(req);
       const isAdmin = await isCurrentUserAdmin(req);
@@ -34581,7 +34581,7 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
       res.status(500).json({ error: "Failed to fetch onboarding templates" });
     }
   });
-  app2.get("/api/onboarding-templates/:id", requireAuth(), requirePermission("hr", "canManage"), async (req, res) => {
+  app2.get("/api/onboarding-templates/:id", requireAuth(), requirePermission("hr", "canView"), async (req, res) => {
     try {
       const templateId = parseInt(req.params.id);
       const [template] = await db.select({
