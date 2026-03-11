@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, CheckCircle, ChevronRight, ChevronLeft, Upload, X } from "lucide-react";
+import { Loader2, CheckCircle, ChevronRight, ChevronLeft, Upload, X, Save } from "lucide-react";
 
 function lightenColor(hex: string, percent: number): string {
   const num = parseInt(hex.replace('#', ''), 16);
@@ -42,6 +42,8 @@ export default function ClientOnboarding() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [fileUploading, setFileUploading] = useState<string | null>(null);
+  const [progressLoaded, setProgressLoaded] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['/api/client-onboarding', token],
@@ -56,6 +58,20 @@ export default function ClientOnboarding() {
     enabled: !!token,
   });
 
+  useEffect(() => {
+    if (data && !progressLoaded) {
+      if (data.savedProgress && typeof data.savedProgress === 'object') {
+        setValues(data.savedProgress as Record<string, any>);
+      }
+      if (data.savedStep && typeof data.savedStep === 'number') {
+        const steps = (data.config?.steps as any[]) || [];
+        const maxStep = Math.max(0, steps.length - 1);
+        setCurrentStep(Math.min(Math.max(0, data.savedStep), maxStep));
+      }
+      setProgressLoaded(true);
+    }
+  }, [data, progressLoaded]);
+
   const submitMutation = useMutation({
     mutationFn: async (formValues: Record<string, any>) => {
       const res = await fetch(`/api/client-onboarding/${token}/submit`, {
@@ -68,6 +84,26 @@ export default function ClientOnboarding() {
     },
     onSuccess: () => {
       setSubmitted(true);
+    },
+  });
+
+  const saveProgressMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/client-onboarding/${token}/save-progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values, currentStep }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      return res.json();
+    },
+    onSuccess: () => {
+      setSaveMessage("Progress saved! You can close this page and come back later.");
+      setTimeout(() => setSaveMessage(null), 5000);
+    },
+    onError: () => {
+      setSaveMessage(null);
+      alert("Failed to save progress. Please check your connection and try again.");
     },
   });
 
@@ -505,9 +541,16 @@ export default function ClientOnboarding() {
               </div>
             )}
 
+            {saveMessage && (
+              <div className="mt-6 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 shrink-0" />
+                {saveMessage}
+              </div>
+            )}
+
             {/* Navigation */}
             <div className="flex items-center justify-between mt-8 pt-6 border-t">
-              <div>
+              <div className="flex items-center gap-2">
                 {currentStep > 0 && (
                   <Button variant="outline" onClick={handleBack}>
                     <ChevronLeft className="h-4 w-4 mr-1" />
@@ -516,6 +559,18 @@ export default function ClientOnboarding() {
                 )}
               </div>
               <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => saveProgressMutation.mutate()}
+                  disabled={saveProgressMutation.isPending}
+                >
+                  {saveProgressMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Save & Continue Later
+                </Button>
                 {totalSteps > 1 && (
                   <span className="text-sm text-muted-foreground">
                     Step {currentStep + 1} of {totalSteps}

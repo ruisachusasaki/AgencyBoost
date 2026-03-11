@@ -519,6 +519,8 @@ export const clients = pgTable("clients", {
   isArchived: boolean("is_archived").default(false),
   onboardingToken: varchar("onboarding_token"),
   onboardingCompleted: boolean("onboarding_completed").default(false),
+  onboardingProgress: jsonb("onboarding_progress"),
+  onboardingCurrentStep: integer("onboarding_current_step").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

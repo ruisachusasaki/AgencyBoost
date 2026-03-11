@@ -28874,11 +28874,47 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         client: { id: client.id, name: client.name, email: client.email, company: client.company },
         config,
         customFields: customFieldsList,
-        folders
+        folders,
+        savedProgress: client.onboardingProgress || null,
+        savedStep: client.onboardingCurrentStep || 0
       });
     } catch (error) {
       console.error("Error fetching client onboarding data:", error);
       res.status(500).json({ error: "Failed to load onboarding form" });
+    }
+  });
+
+  app.post("/api/client-onboarding/:token/save-progress", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { values, currentStep } = req.body;
+      if (!values || typeof values !== 'object' || Array.isArray(values)) {
+        return res.status(400).json({ error: "Invalid values format" });
+      }
+      const stepNum = typeof currentStep === 'number' ? Math.max(0, Math.floor(currentStep)) : 0;
+      const [client] = await db.select().from(clients).where(eq(clients.onboardingToken, token));
+      if (!client) {
+        return res.status(404).json({ error: "Invalid or expired onboarding link" });
+      }
+      if (client.onboardingCompleted) {
+        return res.status(400).json({ error: "Onboarding has already been completed" });
+      }
+      const [config] = await db.select()
+        .from(clientOnboardingFormConfig)
+        .orderBy(desc(clientOnboardingFormConfig.updatedAt))
+        .limit(1);
+      const maxStep = config?.steps ? Math.max(0, (config.steps as any[]).length - 1) : 0;
+      const clampedStep = Math.min(stepNum, maxStep);
+      await db.update(clients)
+        .set({ 
+          onboardingProgress: values,
+          onboardingCurrentStep: clampedStep
+        })
+        .where(eq(clients.id, client.id));
+      res.json({ success: true, message: "Progress saved" });
+    } catch (error) {
+      console.error("Error saving onboarding progress:", error);
+      res.status(500).json({ error: "Failed to save progress" });
     }
   });
 
@@ -28898,7 +28934,9 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       await db.update(clients)
         .set({ 
           customFieldValues: mergedValues,
-          onboardingCompleted: true 
+          onboardingCompleted: true,
+          onboardingProgress: null,
+          onboardingCurrentStep: 0
         })
         .where(eq(clients.id, client.id));
       res.json({ success: true, message: "Onboarding completed successfully" });
