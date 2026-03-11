@@ -2554,7 +2554,7 @@ export default function Sales() {
                 </div>
 
                 {/* Advanced Filters */}
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 p-4 bg-muted/30 rounded-lg border">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end p-4 bg-muted/30 rounded-lg border">
                   {/* Status Filter */}
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Status</Label>
@@ -2703,7 +2703,7 @@ export default function Sales() {
                   </div>
 
                   {/* Low Margin Filter */}
-                  <div className="space-y-1 flex items-end">
+                  <div className="space-y-1">
                     <label className="flex items-center space-x-2 cursor-pointer h-9">
                       <input
                         type="checkbox"
