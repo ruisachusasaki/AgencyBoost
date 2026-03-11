@@ -1,5 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { format, parseISO } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -79,9 +78,7 @@ function HiringManagerDropdown({ value, onChange, staffData, testId }: {
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
     if (!search) return staffData;
@@ -94,59 +91,20 @@ function HiringManagerDropdown({ value, onChange, staffData, testId }: {
     ? `${selectedStaff.firstName} ${selectedStaff.lastName} — ${selectedStaff.department} • ${selectedStaff.position}`
     : "Select Hiring Manager";
 
-  const updatePosition = useCallback(() => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    updatePosition();
-    const onScroll = () => updatePosition();
-    window.addEventListener("scroll", onScroll, true);
-    return () => window.removeEventListener("scroll", onScroll, true);
-  }, [isOpen, updatePosition]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (buttonRef.current?.contains(target)) return;
-      if (dropdownRef.current?.contains(target)) return;
-      setIsOpen(false);
-    };
-    document.addEventListener("pointerdown", handleClickOutside, true);
-    return () => document.removeEventListener("pointerdown", handleClickOutside, true);
-  }, [isOpen]);
-
-  const handleSelect = (staffId: string) => {
-    onChange(staffId);
-    setIsOpen(false);
-    setSearch("");
-  };
-
   return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        data-testid={testId}
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsOpen(!isOpen); setSearch(""); }}
-        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+    <div ref={containerRef} data-testid={testId}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => { setIsOpen(!isOpen); if (!isOpen) setSearch(""); }}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsOpen(!isOpen); } }}
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
       >
         <span className={`truncate ${!selectedStaff ? "text-muted-foreground" : ""}`}>{displayText}</span>
-        <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-      </button>
-      {isOpen && createPortal(
-        <div
-          ref={dropdownRef}
-          style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width, zIndex: 99999, maxHeight: "260px" }}
-          className="rounded-md border bg-popover text-popover-foreground shadow-lg"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
+        <ChevronDown className={`h-4 w-4 opacity-50 shrink-0 ml-2 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </div>
+      {isOpen && (
+        <div className="mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
           <div className="p-2 border-b">
             <input
               type="text"
@@ -161,15 +119,15 @@ function HiringManagerDropdown({ value, onChange, staffData, testId }: {
           <div className="overflow-y-auto" style={{ maxHeight: "200px" }}>
             <div
               className="px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground text-muted-foreground"
-              onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); handleSelect(""); }}
+              onClick={() => { onChange(""); setIsOpen(false); setSearch(""); }}
             >
-              Select Hiring Manager
+              — None —
             </div>
             {filtered.map((s) => (
               <div
                 key={s.id}
-                className={`px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground ${value === s.id ? "bg-accent" : ""}`}
-                onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); handleSelect(s.id); }}
+                className={`px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground ${value === s.id ? "bg-accent font-medium" : ""}`}
+                onClick={() => { onChange(s.id); setIsOpen(false); setSearch(""); }}
               >
                 {s.firstName} {s.lastName} — {s.department} • {s.position}
               </div>
@@ -178,10 +136,9 @@ function HiringManagerDropdown({ value, onChange, staffData, testId }: {
               <div className="px-3 py-2 text-sm text-muted-foreground">No staff found</div>
             )}
           </div>
-        </div>,
-        document.body
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
