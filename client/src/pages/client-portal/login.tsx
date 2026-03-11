@@ -37,13 +37,10 @@ export default function ClientPortalLogin() {
     setError(null);
 
     try {
-      const response = await apiRequest("/api/client-portal/login", {
-        method: "POST",
-        body: data,
-      });
+      const res = await apiRequest("POST", "/api/client-portal/login", data);
+      const response = await res.json();
 
       if (response.success) {
-        // Store user data in sessionStorage for client portal
         sessionStorage.setItem("clientPortalUser", JSON.stringify(response.user));
         navigate("/client-portal/dashboard");
       } else {
