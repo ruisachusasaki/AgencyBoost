@@ -259,10 +259,55 @@ export default function ApplicantDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Clock className="h-8 w-8 animate-spin mx-auto mb-2 text-blue-600" />
-          <p className="text-gray-600">Loading applicant details...</p>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="h-9 w-24 bg-gray-200 rounded animate-pulse" />
+          </div>
+          <div className="h-10 w-80 bg-gray-200 rounded animate-pulse mb-2" />
+          <div className="h-5 w-48 bg-gray-200 rounded animate-pulse mb-6" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="h-6 w-48 bg-gray-200 rounded animate-pulse" />
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[1,2,3,4].map(i => (
+                      <div key={i} className="space-y-2">
+                        <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-5 w-40 bg-gray-200 rounded animate-pulse" />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <div className="h-6 w-40 bg-gray-200 rounded animate-pulse" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[1,2,3].map(i => (
+                      <div key={i} className="h-5 w-full bg-gray-200 rounded animate-pulse" />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="h-6 w-40 bg-gray-200 rounded animate-pulse" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="h-10 w-full bg-gray-200 rounded animate-pulse" />
+                  <div className="h-8 w-32 bg-gray-200 rounded animate-pulse" />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </div>
     );
