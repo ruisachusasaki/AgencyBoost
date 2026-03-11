@@ -266,10 +266,6 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   const [isJobOpeningModalOpen, setIsJobOpeningModalOpen] = useState(false);
   const [isEditJobOpeningModalOpen, setIsEditJobOpeningModalOpen] = useState(false);
   const [editingJobOpening, setEditingJobOpening] = useState<any>(null);
-  
-  // Hiring manager search state (kept for potential future use)
-  const [hiringManagerSearchOpen, setHiringManagerSearchOpen] = useState(false);
-  const [hiringManagerSearchValue, setHiringManagerSearchValue] = useState("");
 
   // Application sorting state
   const [applicationSortField, setApplicationSortField] = useState<'applicantName' | 'positionTitle' | 'stage' | 'rating' | 'appliedAt' | null>(null);
@@ -294,14 +290,6 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
     queryKey: ["/api/client-team-assignments"],
   });
   
-  // Filtered staff for hiring manager search
-  const filteredStaff = useMemo(() => {
-    return staffData.filter(staff => {
-      const fullName = `${staff.firstName} ${staff.lastName}`.toLowerCase();
-      const searchTerm = hiringManagerSearchValue.toLowerCase();
-      return fullName.includes(searchTerm);
-    });
-  }, [staffData, hiringManagerSearchValue]);
 
   
   // Check if current user is a manager (has direct reports) and get role info
@@ -2972,7 +2960,7 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
               <p className="text-slate-600">Manage and track job openings for your department</p>
             </div>
             {canManageJobOpenings && (
-              <Dialog open={isJobOpeningModalOpen} onOpenChange={(open) => { setIsJobOpeningModalOpen(open); if (!open) { setHiringManagerSearchOpen(false); setHiringManagerSearchValue(""); } }}>
+              <Dialog open={isJobOpeningModalOpen} onOpenChange={setIsJobOpeningModalOpen}>
                 <DialogTrigger asChild>
                   <Button data-testid="button-open-create-modal">
                     Create Job Opening
@@ -3042,22 +3030,19 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                     {/* Hiring Manager */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Hiring Manager *</label>
-                      <Select
-                        value={jobOpeningForm.hiringManagerId || "__none__"}
-                        onValueChange={(value) => setJobOpeningForm(prev => ({...prev, hiringManagerId: value === "__none__" ? "" : value}))}
+                      <select
+                        data-testid="select-hiring-manager"
+                        className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={jobOpeningForm.hiringManagerId}
+                        onChange={(e) => setJobOpeningForm(prev => ({...prev, hiringManagerId: e.target.value}))}
                       >
-                        <SelectTrigger data-testid="select-hiring-manager">
-                          <SelectValue placeholder="Select Hiring Manager" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-64">
-                          <SelectItem value="__none__">Select Hiring Manager</SelectItem>
-                          {staffData.map((staff) => (
-                            <SelectItem key={staff.id} value={staff.id}>
-                              {staff.firstName} {staff.lastName} — {staff.department} • {staff.position}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        <option value="">Select Hiring Manager</option>
+                        {staffData.map((staff) => (
+                          <option key={staff.id} value={staff.id}>
+                            {staff.firstName} {staff.lastName} — {staff.department} • {staff.position}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     {/* Compensation */}
@@ -3232,25 +3217,22 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                     </Select>
                   </div>
 
-                  {/* Hiring Manager - with search */}
+                  {/* Hiring Manager */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Hiring Manager *</label>
-                    <Select
-                      value={jobOpeningForm.hiringManagerId || "__none__"}
-                      onValueChange={(value) => setJobOpeningForm(prev => ({...prev, hiringManagerId: value === "__none__" ? "" : value}))}
+                    <select
+                      data-testid="button-edit-hiring-manager"
+                      className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={jobOpeningForm.hiringManagerId}
+                      onChange={(e) => setJobOpeningForm(prev => ({...prev, hiringManagerId: e.target.value}))}
                     >
-                      <SelectTrigger data-testid="button-edit-hiring-manager">
-                        <SelectValue placeholder="Select hiring manager..." />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-64">
-                        <SelectItem value="__none__">Select hiring manager...</SelectItem>
-                        {staffData.map((staff) => (
-                          <SelectItem key={staff.id} value={staff.id}>
-                            {staff.firstName} {staff.lastName} — {staff.department} • {staff.position}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <option value="">Select hiring manager...</option>
+                      {staffData.map((staff) => (
+                        <option key={staff.id} value={staff.id}>
+                          {staff.firstName} {staff.lastName} — {staff.department} • {staff.position}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Compensation */}
