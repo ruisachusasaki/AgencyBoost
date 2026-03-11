@@ -2498,7 +2498,8 @@ function requireAuth() {
 }
 async function hasPermission(userId2, module, permission) {
   const moduleAliases = {
-    "calendars": "calendar"
+    "calendars": "calendar",
+    "hr": "staff"
   };
   const normalizedModule = moduleAliases[module] || module;
   const cacheKey = `${userId2}:${normalizedModule}:${permission}`;

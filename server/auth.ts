@@ -149,6 +149,7 @@ export async function hasPermission(
   
   const moduleAliases: Record<string, string> = {
     'calendars': 'calendar',
+    'hr': 'staff',
   };
   const normalizedModule = moduleAliases[module] || module;
   const cacheKey = `${userId}:${normalizedModule}:${permission}`;
