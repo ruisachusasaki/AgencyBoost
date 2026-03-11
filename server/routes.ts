@@ -32095,7 +32095,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         .values({
           applicationId: id,
           staffId: staffId,
-          addedBy: currentUserId
+          addedBy: rawUserId
         })
         .returning();
       
