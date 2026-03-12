@@ -93,7 +93,7 @@ export function ClientOnboardingFormEditor() {
     queryKey: ['/api/client-onboarding-form-config'],
   });
 
-  const { data: customFieldsData } = useQuery({
+  const { data: customFieldsData, isLoading: customFieldsLoading } = useQuery({
     queryKey: ['/api/custom-fields'],
   });
 
@@ -338,9 +338,9 @@ export function ClientOnboardingFormEditor() {
           </button>
         </div>
 
-        <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-primary hover:bg-primary/90">
+        <Button onClick={handleSave} disabled={saveMutation.isPending || customFieldsLoading} className="bg-primary hover:bg-primary/90">
           {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-          Save Configuration
+          {customFieldsLoading ? 'Loading fields...' : 'Save Configuration'}
         </Button>
       </div>
 
@@ -456,30 +456,29 @@ export function ClientOnboardingFormEditor() {
                                           );
                                         }
                                         const field = getFieldById(fieldConfig.customFieldId);
-                                        if (!field) return null;
                                         return (
                                           <Draggable key={fieldConfig.customFieldId} draggableId={fieldConfig.customFieldId} index={fieldIndex}>
                                             {(fieldDragProvided) => (
                                               <div
                                                 ref={fieldDragProvided.innerRef}
                                                 {...fieldDragProvided.draggableProps}
-                                                className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border"
+                                                className={`flex items-center gap-3 p-3 rounded-lg border ${field ? 'bg-muted/50' : 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800'}`}
                                               >
                                                 <div {...fieldDragProvided.dragHandleProps} className="cursor-grab">
                                                   <GripVertical className="h-4 w-4 text-muted-foreground" />
                                                 </div>
-                                                <span className="text-lg w-6 text-center">{fieldTypeIcons[field.type] || '?'}</span>
+                                                <span className="text-lg w-6 text-center">{field ? (fieldTypeIcons[field.type] || '?') : '⏳'}</span>
                                                 <div className="flex-1">
-                                                  <div className="font-medium text-sm">{field.name}</div>
+                                                  <div className="font-medium text-sm">{field ? field.name : (customFieldsLoading ? 'Loading field...' : `Field (${fieldConfig.customFieldId.substring(0, 8)}...)`)}</div>
                                                   <div className="text-xs text-muted-foreground">
-                                                    {getFolderName(field.folderId)} · {field.type}
+                                                    {field ? `${getFolderName(field.folderId)} · ${field.type}` : (customFieldsLoading ? 'Loading...' : 'Custom field not found')}
                                                   </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                   {fieldConfig.required && (
                                                     <Badge variant="destructive" className="text-xs">Required</Badge>
                                                   )}
-                                                  <Badge variant="secondary" className="text-xs">{field.type}</Badge>
+                                                  {field && <Badge variant="secondary" className="text-xs">{field.type}</Badge>}
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                   <Label className="text-xs text-muted-foreground">Required</Label>
