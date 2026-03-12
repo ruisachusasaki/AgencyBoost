@@ -2852,7 +2852,7 @@ function ImportFromQuoteContent({ clientId, selectedQuoteId, setSelectedQuoteId,
   );
 }
 
-function ClientOnboardingHubSection({ client, clientId }: { client: any; clientId: string }) {
+function ClientOnboardingHubSection({ client, clientId, isAdmin }: { client: any; clientId: string; isAdmin: boolean }) {
   const [copied, setCopied] = useState(false);
   const { data: onboardingStatus, isLoading } = useQuery<any>({
     queryKey: ['/api/clients', clientId, 'onboarding-status'],
@@ -2906,49 +2906,50 @@ function ClientOnboardingHubSection({ client, clientId }: { client: any; clientI
         <h3 className="font-semibold text-gray-900 dark:text-gray-100">Onboarding Form</h3>
       </div>
 
-      {!hasConfig ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          <ClipboardCheck className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-          <p className="text-sm">No client onboarding form configured</p>
-          <p className="text-xs mt-1">Configure one in Settings &gt; Clients &gt; Client Onboarding Form</p>
+      {!hasConfig && (
+        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <p className="text-sm text-yellow-800 dark:text-yellow-300">No client onboarding form configured yet.</p>
+          <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">Configure one in Settings &gt; Clients &gt; Client Onboarding Form to define the form fields.</p>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {isCompleted ? (
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-              <div className="flex items-center gap-2 mb-1">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span className="font-medium text-green-800 dark:text-green-300">Onboarding Complete</span>
-              </div>
-              <p className="text-sm text-green-700 dark:text-green-400 ml-7">
-                This client has completed their onboarding form.
-              </p>
-            </div>
-          ) : hasToken ? (
-            <div className="space-y-4">
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Link2 className="h-4 w-4 text-blue-600" />
-                  <span className="font-medium text-blue-800 dark:text-blue-300 text-sm">Onboarding Form Link</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={onboardingUrl || ''}
-                    className="flex-1 text-xs bg-white dark:bg-gray-800 border rounded px-2 py-1.5 text-gray-600 dark:text-gray-300 font-mono"
-                  />
-                  <Button size="sm" variant="outline" onClick={handleCopy}>
-                    {copied ? <CheckCircle className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
-                  </Button>
-                  <Button size="sm" variant="outline" asChild>
-                    <a href={onboardingUrl || '#'} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </Button>
-                </div>
-              </div>
+      )}
 
+      <div className="space-y-4">
+        {isCompleted ? (
+          <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <span className="font-medium text-green-800 dark:text-green-300">Onboarding Complete</span>
+            </div>
+            <p className="text-sm text-green-700 dark:text-green-400 ml-7">
+              This client has completed their onboarding form.
+            </p>
+          </div>
+        ) : hasToken ? (
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Link2 className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-blue-800 dark:text-blue-300 text-sm">Onboarding Form Link</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={onboardingUrl || ''}
+                  className="flex-1 text-xs bg-white dark:bg-gray-800 border rounded px-2 py-1.5 text-gray-600 dark:text-gray-300 font-mono"
+                />
+                <Button size="sm" variant="outline" onClick={handleCopy}>
+                  {copied ? <CheckCircle className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <a href={onboardingUrl || '#'} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+
+            {hasConfig && (
               <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border rounded-lg">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Progress</span>
@@ -2972,13 +2973,28 @@ function ClientOnboardingHubSection({ client, clientId }: { client: any; clientI
                   )}
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-6">
-              <ClipboardCheck className="h-10 w-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                No onboarding link generated for this client yet.
-              </p>
+            )}
+
+            {isAdmin && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => generateTokenMutation.mutate()}
+                disabled={generateTokenMutation.isPending}
+                className="w-full"
+              >
+                {generateTokenMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Regenerate Onboarding Link
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <ClipboardCheck className="h-10 w-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              No onboarding link generated for this client yet.
+            </p>
+            {isAdmin ? (
               <Button
                 size="sm"
                 onClick={() => generateTokenMutation.mutate()}
@@ -2989,10 +3005,14 @@ function ClientOnboardingHubSection({ client, clientId }: { client: any; clientI
                 {generateTokenMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Generate Onboarding Link
               </Button>
-            </div>
-          )}
-        </div>
-      )}
+            ) : (
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Contact an admin to generate an onboarding link for this client.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -8334,7 +8354,7 @@ export default function EnhancedClientDetail() {
 
                 {/* Meetings Section */}
                 {activeHubSection === "onboarding" && (
-                  <ClientOnboardingHubSection client={client} clientId={clientId!} />
+                  <ClientOnboardingHubSection client={client} clientId={clientId!} isAdmin={isAdmin} />
                 )}
 
                 {activeHubSection === "meetings" && (
