@@ -193,7 +193,7 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()} style={{ pointerEvents: "auto" }}>
                         <Calendar
                           mode="single"
                           selected={field.value}
@@ -237,7 +237,7 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()} style={{ pointerEvents: "auto" }}>
                         <Calendar
                           mode="single"
                           selected={field.value}
@@ -247,7 +247,7 @@ export default function TimeOffRequestForm({ open, onOpenChange }: TimeOffReques
                           }}
                           disabled={(date) => date < (watchedStartDate || new Date())}
                           month={watchedStartDate || new Date()}
-                          onMonthChange={() => {}} // Prevent external month changes
+                          onMonthChange={() => {}}
                           initialFocus
                         />
                       </PopoverContent>

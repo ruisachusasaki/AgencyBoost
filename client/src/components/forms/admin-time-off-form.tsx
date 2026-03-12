@@ -207,7 +207,7 @@ export default function AdminTimeOffForm({ open, onOpenChange, staffList }: Admi
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()} style={{ pointerEvents: "auto" }}>
                         <Calendar
                           mode="single"
                           selected={field.value}
@@ -246,7 +246,7 @@ export default function AdminTimeOffForm({ open, onOpenChange, staffList }: Admi
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()} style={{ pointerEvents: "auto" }}>
                         <Calendar
                           mode="single"
                           selected={field.value}
