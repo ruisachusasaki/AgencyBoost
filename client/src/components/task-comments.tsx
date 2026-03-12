@@ -922,23 +922,23 @@ export default function TaskComments({ taskId, highlightedCommentId }: TaskComme
               {/* File Upload */}
               <FileUploader
                 onGetUploadParameters={async () => {
-                  const response = await fetch('/api/comments/upload-url');
+                  const response = await fetch('/api/comments/upload-url', { credentials: "include" });
                   const { uploadURL } = await response.json();
                   return { method: 'PUT', url: uploadURL };
                 }}
                 onComplete={(result) => {
-                  if (result.successful?.[0]?.uploadURL) {
-                    const file = result.successful[0].data;
-                    setPendingFiles(prev => [...prev, {
-                      url: result.successful[0].uploadURL,
-                      name: file.name,
-                      size: file.size,
-                      type: file.type
-                    }]);
+                  if (result.successful && result.successful.length > 0) {
+                    const newFiles = result.successful.map((uploaded) => ({
+                      url: uploaded.uploadURL,
+                      name: uploaded.data.name,
+                      size: uploaded.data.size,
+                      type: uploaded.data.type
+                    }));
+                    setPendingFiles(prev => [...prev, ...newFiles]);
                     toast({
-                      title: "File uploaded successfully",
-                      variant: "default", 
-                      description: "File will be attached to your comment"
+                      title: result.successful.length === 1 ? "File uploaded successfully" : `${result.successful.length} files uploaded successfully`,
+                      variant: "default",
+                      description: result.successful.length === 1 ? "File will be attached to your comment" : "Files will be attached to your comment"
                     });
                   }
                 }}
