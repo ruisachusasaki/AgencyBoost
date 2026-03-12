@@ -11968,11 +11968,13 @@ AgencyBoost CRM`
           }
         }
       }
-      if (cleanedBody.hireDate === "" || cleanedBody.hireDate === void 0) {
-        delete cleanedBody.hireDate;
-      }
-      if (cleanedBody.birthdate === "" || cleanedBody.birthdate === void 0) {
-        delete cleanedBody.birthdate;
+      const dateFields = ["hireDate", "startDate", "birthdate"];
+      for (const field of dateFields) {
+        if (cleanedBody[field] === "") {
+          cleanedBody[field] = null;
+        } else if (cleanedBody[field] === void 0) {
+          delete cleanedBody[field];
+        }
       }
       if (cleanedBody.roleId) {
         await db.delete(userRoles).where(eq10(userRoles.userId, req.params.id));
