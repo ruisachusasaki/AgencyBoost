@@ -25063,6 +25063,10 @@ AgencyBoost CRM`
       if (!hasAccess) {
         const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq18(userRoles.userId, userId2));
         const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        const staffRecord = await db.select({ roleId: staff.roleId }).from(staff).where(eq18(staff.id, userId2)).limit(1);
+        if (staffRecord.length > 0 && staffRecord[0].roleId && !roleIds.includes(staffRecord[0].roleId)) {
+          roleIds.push(staffRecord[0].roleId);
+        }
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and16(
@@ -25236,7 +25240,26 @@ AgencyBoost CRM`
       }
       const isAdminOrManager = userRoleName && (userRoleName.toLowerCase() === "admin" || userRoleName.toLowerCase() === "manager");
       console.log("DEBUG time-entries endpoint - isAdminOrManager:", isAdminOrManager, "userRoleName:", userRoleName);
-      if (!isAdminOrManager && currentUserId2 !== req.params.userId) {
+      let canViewOthersTimeEntries = !!isAdminOrManager;
+      if (!canViewOthersTimeEntries && currentUserId2 && currentUserId2 !== req.params.userId) {
+        const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq18(userRoles.userId, currentUserId2));
+        const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        const staffRecord = await db.select({ roleId: staff.roleId }).from(staff).where(eq18(staff.id, currentUserId2)).limit(1);
+        if (staffRecord.length > 0 && staffRecord[0].roleId && !roleIds.includes(staffRecord[0].roleId)) {
+          roleIds.push(staffRecord[0].roleId);
+        }
+        if (roleIds.length > 0) {
+          const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
+            and16(
+              inArray7(granularPermissions.roleId, roleIds),
+              eq18(granularPermissions.permissionKey, "reports.timesheet.view_all"),
+              eq18(granularPermissions.enabled, true)
+            )
+          );
+          canViewOthersTimeEntries = perms.length > 0;
+        }
+      }
+      if (!canViewOthersTimeEntries && currentUserId2 !== req.params.userId) {
         return res.status(403).json({ error: "Not authorized to view other users' time entries" });
       }
       const { userId: userId2, date: date2 } = req.params;
@@ -25273,6 +25296,10 @@ AgencyBoost CRM`
       if (!hasTimesheetEditPermission && userId2) {
         const userRolesList = await db.select({ roleId: userRoles.roleId }).from(userRoles).where(eq18(userRoles.userId, userId2));
         const roleIds = userRolesList.map((ur) => ur.roleId).filter(Boolean);
+        const staffRecord = await db.select({ roleId: staff.roleId }).from(staff).where(eq18(staff.id, userId2)).limit(1);
+        if (staffRecord.length > 0 && staffRecord[0].roleId && !roleIds.includes(staffRecord[0].roleId)) {
+          roleIds.push(staffRecord[0].roleId);
+        }
         if (roleIds.length > 0) {
           const perms = await db.select({ permissionKey: granularPermissions.permissionKey }).from(granularPermissions).where(
             and16(

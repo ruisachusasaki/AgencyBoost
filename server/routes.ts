@@ -1962,6 +1962,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           .where(eq(userRoles.userId, userId));
         const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
 
+        const staffRecord = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, userId)).limit(1);
+        if (staffRecord.length > 0 && staffRecord[0].roleId && !roleIds.includes(staffRecord[0].roleId)) {
+          roleIds.push(staffRecord[0].roleId);
+        }
+
         if (roleIds.length > 0) {
           const perms = await db
             .select({ permissionKey: granularPermissions.permissionKey })
@@ -2177,8 +2182,35 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       const isAdminOrManager = userRoleName && (userRoleName.toLowerCase() === 'admin' || userRoleName.toLowerCase() === 'manager');
       console.log("DEBUG time-entries endpoint - isAdminOrManager:", isAdminOrManager, "userRoleName:", userRoleName);
       
-      // Only admins and managers can view other users' time entries
-      if (!isAdminOrManager && currentUserId !== req.params.userId) {
+      let canViewOthersTimeEntries = !!isAdminOrManager;
+      if (!canViewOthersTimeEntries && currentUserId && currentUserId !== req.params.userId) {
+        const userRolesList = await db
+          .select({ roleId: userRoles.roleId })
+          .from(userRoles)
+          .where(eq(userRoles.userId, currentUserId));
+        const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+        
+        const staffRecord = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, currentUserId)).limit(1);
+        if (staffRecord.length > 0 && staffRecord[0].roleId && !roleIds.includes(staffRecord[0].roleId)) {
+          roleIds.push(staffRecord[0].roleId);
+        }
+        
+        if (roleIds.length > 0) {
+          const perms = await db
+            .select({ permissionKey: granularPermissions.permissionKey })
+            .from(granularPermissions)
+            .where(
+              and(
+                inArray(granularPermissions.roleId, roleIds),
+                eq(granularPermissions.permissionKey, 'reports.timesheet.view_all'),
+                eq(granularPermissions.enabled, true)
+              )
+            );
+          canViewOthersTimeEntries = perms.length > 0;
+        }
+      }
+      
+      if (!canViewOthersTimeEntries && currentUserId !== req.params.userId) {
         return res.status(403).json({ error: "Not authorized to view other users' time entries" });
       }
       
@@ -2233,6 +2265,11 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           .from(userRoles)
           .where(eq(userRoles.userId, userId));
         const roleIds = userRolesList.map(ur => ur.roleId).filter(Boolean);
+        
+        const staffRecord = await db.select({ roleId: staff.roleId }).from(staff).where(eq(staff.id, userId)).limit(1);
+        if (staffRecord.length > 0 && staffRecord[0].roleId && !roleIds.includes(staffRecord[0].roleId)) {
+          roleIds.push(staffRecord[0].roleId);
+        }
         
         if (roleIds.length > 0) {
           const perms = await db
