@@ -7,12 +7,18 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Briefcase, MapPin, DollarSign, Building2, Clock, CheckCircle } from "lucide-react";
 import JobApplicationFormSimple from "@/components/forms/job-application-form-simple";
 
-// Utility function to strip HTML tags and convert to plain text
 function stripHtml(html: string): string {
-  // Create a temporary div element to parse HTML
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = html;
   return tempDiv.textContent || tempDiv.innerText || '';
+}
+
+function lightenColor(hex: string, amount: number): string {
+  if (!hex || hex.length < 7) return '#ffffff';
+  const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + amount);
+  const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + amount);
+  const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + amount);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
 interface JobOpening {
@@ -29,17 +35,72 @@ interface JobOpening {
   approvalStatus: string;
 }
 
+interface CareersConfig {
+  fields?: any[];
+  branding?: {
+    companyName?: string;
+    logoUrl?: string;
+    primaryColor?: string;
+    pageHeading?: string;
+    pageDescription?: string;
+    applyButtonText?: string;
+    successHeading?: string;
+    successDescription?: string;
+    whyWorkHeading?: string;
+    benefit1Title?: string;
+    benefit1Description?: string;
+    benefit2Title?: string;
+    benefit2Description?: string;
+    benefit3Title?: string;
+    benefit3Description?: string;
+  };
+}
+
+const defaults = {
+  primaryColor: '#2563eb',
+  pageHeading: 'Join Our Team',
+  pageDescription: "We're looking for talented individuals to help us build the future. Explore our open positions and become part of something amazing.",
+  applyButtonText: 'Apply Now',
+  successHeading: 'Application Submitted Successfully!',
+  successDescription: 'Thank you for your interest. We\'ll review your application and get back to you soon.',
+  whyWorkHeading: 'Why Work With Us?',
+  benefit1Title: 'Growth Opportunities',
+  benefit1Description: 'We invest in our people with continuous learning and career development programs.',
+  benefit2Title: 'Great Benefits',
+  benefit2Description: 'Comprehensive health coverage, flexible time off, and competitive compensation packages.',
+  benefit3Title: 'Great Culture',
+  benefit3Description: 'Join a collaborative team that values innovation, creativity, and work-life balance.',
+};
+
 export default function CareersPage() {
   const [selectedPosition, setSelectedPosition] = useState<JobOpening | null>(null);
   const [applicationSubmitted, setApplicationSubmitted] = useState(false);
 
-  // Fetch open job positions (only approved and open status)
   const { data: jobOpenings, isLoading } = useQuery<JobOpening[]>({
     queryKey: ["/api/job-openings/public"],
     retry: false,
   });
 
-  // Backend already filters for open and approved positions
+  const { data: configData } = useQuery<CareersConfig>({
+    queryKey: ["/api/job-application-form-config"],
+    retry: false,
+  });
+
+  const b = configData?.branding || {};
+  const primaryColor = b.primaryColor || defaults.primaryColor;
+  const pageHeading = b.pageHeading || defaults.pageHeading;
+  const pageDescription = b.pageDescription || defaults.pageDescription;
+  const applyButtonText = b.applyButtonText || defaults.applyButtonText;
+  const successHeading = b.successHeading || defaults.successHeading;
+  const successDescription = b.successDescription || defaults.successDescription;
+  const whyWorkHeading = b.whyWorkHeading || defaults.whyWorkHeading;
+  const benefit1Title = b.benefit1Title || defaults.benefit1Title;
+  const benefit1Description = b.benefit1Description || defaults.benefit1Description;
+  const benefit2Title = b.benefit2Title || defaults.benefit2Title;
+  const benefit2Description = b.benefit2Description || defaults.benefit2Description;
+  const benefit3Title = b.benefit3Title || defaults.benefit3Title;
+  const benefit3Description = b.benefit3Description || defaults.benefit3Description;
+
   const openPositions = jobOpenings || [];
 
   const handleApplicationSuccess = () => {
@@ -49,9 +110,12 @@ export default function CareersPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: `linear-gradient(135deg, ${lightenColor(primaryColor, 200)} 0%, ${lightenColor(primaryColor, 180)} 100%)` }}
+      >
         <div className="text-center">
-          <Clock className="h-8 w-8 animate-spin mx-auto mb-2 text-blue-600" />
+          <Clock className="h-8 w-8 animate-spin mx-auto mb-2" style={{ color: primaryColor }} />
           <p className="text-gray-600">Loading available positions...</p>
         </div>
       </div>
@@ -59,35 +123,44 @@ export default function CareersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
+    <div
+      className="min-h-screen"
+      style={{ background: `linear-gradient(135deg, ${lightenColor(primaryColor, 200)} 0%, ${lightenColor(primaryColor, 180)} 100%)` }}
+    >
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Join Our Team</h1>
+            {(b.logoUrl || b.companyName) && (
+              <div className="flex items-center justify-center gap-3 mb-4">
+                {b.logoUrl && (
+                  <img src={b.logoUrl} alt="Company logo" className="h-12 w-auto object-contain" />
+                )}
+                {b.companyName && (
+                  <span className="text-xl font-semibold text-gray-800">{b.companyName}</span>
+                )}
+              </div>
+            )}
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">{pageHeading}</h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We're looking for talented individuals to help us build the future. 
-              Explore our open positions and become part of something amazing.
+              {pageDescription}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {applicationSubmitted && (
           <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center gap-2 text-green-800">
               <CheckCircle className="h-5 w-5" />
-              <p className="font-semibold">Application Submitted Successfully!</p>
+              <p className="font-semibold">{successHeading}</p>
             </div>
             <p className="text-green-700 mt-1">
-              Thank you for your interest. We'll review your application and get back to you soon.
+              {successDescription}
             </p>
           </div>
         )}
 
-        {/* Job Openings */}
         {openPositions.length === 0 ? (
           <div className="text-center py-12">
             <Briefcase className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -132,8 +205,12 @@ export default function CareersPage() {
                         onOpenChange={(open) => setSelectedPosition(open ? position : null)}
                       >
                         <DialogTrigger asChild>
-                          <Button data-testid={`button-apply-${position.id}`}>
-                            Apply Now
+                          <Button
+                            data-testid={`button-apply-${position.id}`}
+                            style={{ backgroundColor: primaryColor }}
+                            className="text-white hover:opacity-90"
+                          >
+                            {applyButtonText}
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -180,7 +257,6 @@ export default function CareersPage() {
           </>
         )}
 
-        {/* Application Form Section */}
         <div className="mt-16 max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Apply for a Position</h2>
@@ -191,38 +267,40 @@ export default function CareersPage() {
           <JobApplicationFormSimple onSuccess={handleApplicationSuccess} />
         </div>
 
-        {/* Company Info Section */}
         <div className="mt-16 text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Why Work With Us?</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">{whyWorkHeading}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Briefcase className="h-8 w-8 text-blue-600" />
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: lightenColor(primaryColor, 200) }}
+              >
+                <Briefcase className="h-8 w-8" style={{ color: primaryColor }} />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Growth Opportunities</h3>
-              <p className="text-gray-600">
-                We invest in our people with continuous learning and career development programs.
-              </p>
+              <h3 className="text-lg font-semibold mb-2">{benefit1Title}</h3>
+              <p className="text-gray-600">{benefit1Description}</p>
             </div>
             
             <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: lightenColor(primaryColor, 200) }}
+              >
+                <CheckCircle className="h-8 w-8" style={{ color: primaryColor }} />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Great Benefits</h3>
-              <p className="text-gray-600">
-                Comprehensive health coverage, flexible time off, and competitive compensation packages.
-              </p>
+              <h3 className="text-lg font-semibold mb-2">{benefit2Title}</h3>
+              <p className="text-gray-600">{benefit2Description}</p>
             </div>
             
             <div className="text-center">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Building2 className="h-8 w-8 text-purple-600" />
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: lightenColor(primaryColor, 200) }}
+              >
+                <Building2 className="h-8 w-8" style={{ color: primaryColor }} />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Great Culture</h3>
-              <p className="text-gray-600">
-                Join a collaborative team that values innovation, creativity, and work-life balance.
-              </p>
+              <h3 className="text-lg font-semibold mb-2">{benefit3Title}</h3>
+              <p className="text-gray-600">{benefit3Description}</p>
             </div>
           </div>
         </div>

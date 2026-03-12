@@ -46,6 +46,7 @@ Salary/Compensation: All admins can view and edit salary data for any staff memb
 - **Lead Management**: Customizable lead source options.
 - **Product Packages**: Allows creating packages of bundles and individual products with configurable quantities, including build fees, monthly retail prices, and profit margin calculations.
 - **Quote to Client Products Transfer**: Automatic transfer of accepted quote products/bundles/packages to the client.
+- **Job Application Form**: Configurable public careers page at `/careers`. Settings > HR Settings > "Job Application Form" tab with two sub-tabs: Form Fields (drag-and-drop field editor) and Branding & Style (company logo, primary color, page text, apply button text, success messages, "Why Work With Us" section with 3 customizable benefits). Branding stored as jsonb in `job_application_form_config` table. The public careers page dynamically renders using saved branding settings. Logo upload reuses the onboarding logo upload endpoint.
 - **Predictive Hiring Alerts**: Staffing capacity prediction with configurable alerts.
 - **Team Workload Reports**: Analytics for staff workload.
 - **Activity & Comments**: Global timer, activity logging, and a threaded comments system with @mentions and emoji picker.

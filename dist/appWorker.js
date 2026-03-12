@@ -3325,7 +3325,7 @@ var init_schema = __esm({
     jobApplicationFormConfig = pgTable("job_application_form_config", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
       fields: jsonb("fields").notNull(),
-      // Array of form field configurations
+      branding: jsonb("branding"),
       updatedBy: varchar("updated_by").notNull(),
       updatedAt: timestamp("updated_at").defaultNow()
     });
