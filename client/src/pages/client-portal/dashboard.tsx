@@ -997,7 +997,7 @@ export default function ClientPortalDashboard() {
             {upcomingTasks.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium mb-2">No upcoming tasks</h3>
                   <p className="text-muted-foreground">
                     Future tasks scheduled by your agency will appear here.
