@@ -22332,6 +22332,93 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
+  // ============== STRIPE INTEGRATION ENDPOINTS ==============
+
+  app.get("/api/integrations/stripe/status", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
+    try {
+      const configured = isStripeConfigured();
+      const hasPublishableKey = !!process.env.STRIPE_PUBLISHABLE_KEY;
+      const hasWebhookSecret = !!process.env.STRIPE_WEBHOOK_SECRET;
+
+      if (!configured) {
+        return res.json({
+          connected: false,
+          status: "disconnected",
+          secretKey: false,
+          publishableKey: false,
+          webhookSecret: false
+        });
+      }
+
+      let accountName: string | null = null;
+      try {
+        const stripe = getStripe();
+        if (stripe) {
+          const account = await stripe.accounts.retrieve();
+          accountName = account.settings?.dashboard?.display_name || account.business_profile?.name || null;
+        }
+      } catch (e) {
+        // If we can't retrieve account info, keys might be invalid
+        return res.json({
+          connected: false,
+          status: "error",
+          secretKey: true,
+          publishableKey: hasPublishableKey,
+          webhookSecret: hasWebhookSecret,
+          error: "Could not verify Stripe credentials"
+        });
+      }
+
+      res.json({
+        connected: true,
+        status: "connected",
+        secretKey: true,
+        publishableKey: hasPublishableKey,
+        webhookSecret: hasWebhookSecret,
+        accountName
+      });
+    } catch (error) {
+      console.error('Error checking Stripe status:', error);
+      res.status(500).json({
+        connected: false,
+        message: "Failed to check Stripe status"
+      });
+    }
+  });
+
+  app.post("/api/integrations/stripe/test", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      if (!isStripeConfigured()) {
+        return res.status(400).json({
+          success: false,
+          message: "Stripe is not configured. Set STRIPE_SECRET_KEY in environment variables."
+        });
+      }
+
+      const stripe = getStripe();
+      if (!stripe) {
+        return res.status(500).json({ success: false, message: "Could not initialize Stripe" });
+      }
+
+      const balance = await stripe.balance.retrieve();
+      const account = await stripe.accounts.retrieve();
+
+      res.json({
+        success: true,
+        message: "Stripe connection is working",
+        accountName: account.settings?.dashboard?.display_name || account.business_profile?.name || "Unknown",
+        currency: balance.available?.[0]?.currency?.toUpperCase() || "USD",
+        livemode: balance.livemode
+      });
+    } catch (error: any) {
+      console.error('Stripe test error:', error);
+      res.status(400).json({
+        success: false,
+        message: error.message || "Failed to connect to Stripe"
+      });
+    }
+  });
+
   // ============== MAILGUN EMAIL INTEGRATION ENDPOINTS ==============
 
   // ============== TWILIO VOIP CALLING ENDPOINTS ==============

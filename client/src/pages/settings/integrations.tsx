@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw, Smartphone, Send, Zap, Copy, RotateCcw, Brain, Trash2, Plus, Edit, Star } from "lucide-react";
+import { Plug, Settings, Check, X, Calendar, Mail, DollarSign, MessageSquare, ExternalLink, ArrowLeft, RefreshCw, Smartphone, Send, Zap, Copy, RotateCcw, Brain, Trash2, Plus, Edit, Star, CreditCard } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -107,6 +107,16 @@ export default function Integrations() {
       lastSync: "",
       features: ["AI Chat Widget", "Knowledge Base Search", "SOP/Playbook Q&A", "Context-Aware Answers"],
       settingsRequired: true
+    },
+    {
+      id: "stripe",
+      name: "Stripe",
+      description: "Accept payments, process invoices, and manage subscriptions for proposals and quotes",
+      icon: CreditCard,
+      status: "disconnected",
+      lastSync: "",
+      features: ["Credit Card Payments", "ACH Bank Transfers", "Recurring Subscriptions", "Webhook Events"],
+      settingsRequired: true
     }
   ]);
 
@@ -134,6 +144,10 @@ export default function Integrations() {
   const [openaiModel, setOpenaiModel] = useState("gpt-4o");
   const [openaiStatus, setOpenaiStatus] = useState<"connected" | "disconnected" | "error">("disconnected");
   const [openaiTestResult, setOpenaiTestResult] = useState<string | null>(null);
+
+  const [showStripeDialog, setShowStripeDialog] = useState(false);
+  const [stripeStatus, setStripeStatus] = useState<any>(null);
+  const [stripeTestResult, setStripeTestResult] = useState<any>(null);
 
   // Check for OAuth callback parameters and Google Calendar status on load
   useEffect(() => {
@@ -182,6 +196,9 @@ export default function Integrations() {
     
     // Check OpenAI status
     checkOpenAIStatus();
+    
+    // Check Stripe status
+    checkStripeStatus();
   }, []);
 
   const checkGoogleCalendarStatus = async () => {
@@ -295,6 +312,64 @@ export default function Integrations() {
     } catch (error) {
       console.error('Error checking OpenAI status:', error);
       setOpenaiStatus("disconnected");
+    }
+  };
+
+  const checkStripeStatus = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/integrations/stripe/status');
+      const status = await response.json();
+      
+      setStripeStatus(status);
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "stripe" 
+          ? { 
+              ...integration, 
+              status: status.connected ? "connected" as const : status.status === "error" ? "error" as const : "disconnected" as const,
+              lastSync: status.accountName ? `Account: ${status.accountName}` : ""
+            }
+          : integration
+      ));
+    } catch (error) {
+      console.error('Error checking Stripe status:', error);
+      setIntegrations(prev => prev.map(integration => 
+        integration.id === "stripe" 
+          ? { ...integration, status: "disconnected" as const }
+          : integration
+      ));
+    }
+  };
+
+  const testStripeConnection = async () => {
+    setIsLoading(true);
+    setStripeTestResult(null);
+    try {
+      const response = await apiRequest('POST', '/api/integrations/stripe/test');
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        setStripeTestResult(result);
+        toast({
+          title: "Success",
+          variant: "default",
+          description: "Stripe connection test successful!",
+        });
+      } else {
+        toast({
+          title: "Test Failed",
+          description: result.message || "Stripe connection test failed",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Stripe test error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to test Stripe connection",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -644,8 +719,10 @@ export default function Integrations() {
       }
       return;
     } else if (integrationId === "openai") {
-      // Open OpenAI configuration dialog
       setShowOpenAIDialog(true);
+      return;
+    } else if (integrationId === "stripe") {
+      setShowStripeDialog(true);
       return;
     }
 
@@ -657,6 +734,14 @@ export default function Integrations() {
   };
 
   const handleDisconnect = async (integrationId: string, integrationName: string) => {
+    if (integrationId === "stripe") {
+      toast({
+        title: "Environment Configuration",
+        description: "Stripe keys are managed via environment variables. Remove STRIPE_SECRET_KEY to disconnect.",
+      });
+      return;
+    }
+    
     if (!confirm(`Are you sure you want to disconnect ${integrationName}? This will stop all data syncing.`)) return;
     
     if (integrationId === "google-calendar") {
@@ -856,6 +941,9 @@ export default function Integrations() {
       } finally {
         setIsLoading(false);
       }
+      return;
+    } else if (integrationId === "stripe") {
+      await testStripeConnection();
       return;
     }
 
@@ -1504,7 +1592,17 @@ export default function Integrations() {
                               Settings
                             </Button>
                           )}
-                          {integration.id !== "twilio" && integration.id !== "slack" && (
+                          {integration.id === "stripe" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowStripeDialog(true)}
+                            >
+                              <Settings className="h-4 w-4 mr-2" />
+                              Settings
+                            </Button>
+                          )}
+                          {integration.id !== "twilio" && integration.id !== "slack" && integration.id !== "stripe" && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -2268,6 +2366,154 @@ export default function Integrations() {
           </DialogContent>
         </Dialog>
 
+        {/* Stripe Configuration Dialog */}
+        <Dialog open={showStripeDialog} onOpenChange={setShowStripeDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Stripe Integration
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {stripeStatus?.connected ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <Check className="h-5 w-5 text-green-600" />
+                    <span className="text-green-700 font-medium">Stripe Connected</span>
+                  </div>
+
+                  {stripeStatus.accountName && (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <p className="text-sm text-gray-600">Account</p>
+                      <p className="text-sm font-medium">{stripeStatus.accountName}</p>
+                    </div>
+                  )}
+
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                    <h4 className="font-medium text-sm">Configuration Status</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Secret Key</span>
+                        {stripeStatus.secretKey ? (
+                          <Badge className="bg-green-100 text-green-800"><Check className="h-3 w-3 mr-1" />Set</Badge>
+                        ) : (
+                          <Badge variant="destructive"><X className="h-3 w-3 mr-1" />Missing</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Publishable Key</span>
+                        {stripeStatus.publishableKey ? (
+                          <Badge className="bg-green-100 text-green-800"><Check className="h-3 w-3 mr-1" />Set</Badge>
+                        ) : (
+                          <Badge variant="secondary"><X className="h-3 w-3 mr-1" />Missing</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Webhook Secret</span>
+                        {stripeStatus.webhookSecret ? (
+                          <Badge className="bg-green-100 text-green-800"><Check className="h-3 w-3 mr-1" />Set</Badge>
+                        ) : (
+                          <Badge variant="secondary"><X className="h-3 w-3 mr-1" />Missing</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {stripeTestResult && (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-1">
+                      <p className="text-sm text-gray-600">Last Test Result:</p>
+                      <p className="text-sm font-medium">{stripeTestResult.message}</p>
+                      <p className="text-xs text-gray-500">
+                        Mode: {stripeTestResult.livemode ? "Live" : "Test"} | Currency: {stripeTestResult.currency}
+                      </p>
+                    </div>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    onClick={testStripeConnection}
+                    disabled={isLoading}
+                    className="w-full"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+                    Test Connection
+                  </Button>
+
+                  <p className="text-xs text-gray-500 text-center">
+                    Stripe keys are configured via environment variables. Contact your administrator to update them.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Stripe powers payment processing for proposals and quotes. Configure it by setting environment variables.
+                  </p>
+
+                  {stripeStatus?.status === "error" && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <X className="h-5 w-5 text-red-600" />
+                      <span className="text-red-700 text-sm">{stripeStatus.error || "Connection error"}</span>
+                    </div>
+                  )}
+
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                    <h4 className="font-medium text-sm">Required Environment Variables</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <code className="text-xs bg-gray-200 px-2 py-1 rounded">STRIPE_SECRET_KEY</code>
+                        {stripeStatus?.secretKey ? (
+                          <Badge className="bg-green-100 text-green-800"><Check className="h-3 w-3 mr-1" />Set</Badge>
+                        ) : (
+                          <Badge variant="destructive"><X className="h-3 w-3 mr-1" />Missing</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <code className="text-xs bg-gray-200 px-2 py-1 rounded">STRIPE_PUBLISHABLE_KEY</code>
+                        {stripeStatus?.publishableKey ? (
+                          <Badge className="bg-green-100 text-green-800"><Check className="h-3 w-3 mr-1" />Set</Badge>
+                        ) : (
+                          <Badge variant="secondary"><X className="h-3 w-3 mr-1" />Not Set</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <code className="text-xs bg-gray-200 px-2 py-1 rounded">STRIPE_WEBHOOK_SECRET</code>
+                        {stripeStatus?.webhookSecret ? (
+                          <Badge className="bg-green-100 text-green-800"><Check className="h-3 w-3 mr-1" />Set</Badge>
+                        ) : (
+                          <Badge variant="secondary"><X className="h-3 w-3 mr-1" />Not Set</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-3">
+                    <details className="group">
+                      <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900">
+                        How to set up Stripe
+                      </summary>
+                      <div className="mt-3 text-sm text-gray-600 space-y-2 ml-4">
+                        <ol className="list-decimal space-y-1">
+                          <li>Go to <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Stripe Dashboard → API Keys</a></li>
+                          <li>Copy your Secret Key and Publishable Key</li>
+                          <li>Set them as environment variables in your deployment settings</li>
+                          <li>For webhooks, create a webhook endpoint and copy the signing secret</li>
+                        </ol>
+                      </div>
+                    </details>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2">
+                <Button variant="outline" onClick={() => setShowStripeDialog(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Info Card */}
         <Card className="mt-8 border-blue-200 bg-blue-50">
           <CardContent className="p-4">
@@ -2282,6 +2528,7 @@ export default function Integrations() {
                   <li>• Gmail needs Google Workspace admin approval for organization-wide access</li>
                   <li>• QuickBooks requires a developer account and app registration</li>
                   <li>• Slack integration needs workspace admin permissions</li>
+                  <li>• Stripe requires API keys set as environment variables</li>
                 </ul>
               </div>
             </div>
