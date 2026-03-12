@@ -3286,7 +3286,7 @@ export const insertFormSchema = createInsertSchema(forms).omit({
 export const jobApplicationFormConfig = pgTable("job_application_form_config", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   fields: jsonb("fields").notNull(), // Array of form field configurations
-  updatedBy: varchar("updated_by").notNull().references(() => users.id),
+  updatedBy: varchar("updated_by").notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
@@ -3303,7 +3303,7 @@ export const newHireOnboardingFormConfig = pgTable("new_hire_onboarding_form_con
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   fields: jsonb("fields").notNull(), // Array of form field configurations
   branding: jsonb("branding"), // Branding & style settings (logo, colors, text)
-  updatedBy: varchar("updated_by").notNull().references(() => users.id),
+  updatedBy: varchar("updated_by").notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
@@ -3319,7 +3319,7 @@ export const clientOnboardingFormConfig = pgTable("client_onboarding_form_config
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   steps: jsonb("steps").notNull(),
   branding: jsonb("branding"),
-  updatedBy: varchar("updated_by").notNull().references(() => users.id),
+  updatedBy: varchar("updated_by").notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
