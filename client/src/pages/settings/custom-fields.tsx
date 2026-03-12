@@ -60,7 +60,9 @@ export default function CustomFields() {
     type: "text",
     required: false,
     folderId: "",
-    options: [] as string[]
+    options: [] as string[],
+    placeholderText: "",
+    tooltipText: ""
   });
 
   const [newFolder, setNewFolder] = useState({
@@ -99,10 +101,11 @@ export default function CustomFields() {
   // Add field mutation
   const addFieldMutation = useMutation({
     mutationFn: async (data: typeof newField) => {
+      const payload = { ...data, folderId: data.folderId || null };
       const response = await fetch("/api/custom-fields", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
         credentials: "include"
       });
       if (!response.ok) throw new Error('Failed to create field');
@@ -112,7 +115,7 @@ export default function CustomFields() {
       queryClient.invalidateQueries({ queryKey: ["/api/custom-fields"] });
       toast({ title: "Success", description: "Custom field created successfully." });
       setIsAddFieldDialogOpen(false);
-      setNewField({ name: "", type: "text", required: false, folderId: "", options: [] });
+      setNewField({ name: "", type: "text", required: false, folderId: "", options: [], placeholderText: "", tooltipText: "" });
     },
     onError: (error: any) => {
       toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create field" });
@@ -551,7 +554,7 @@ export default function CustomFields() {
                       </div>
                       <div>
                         <Label htmlFor="fieldFolder">Folder (Optional)</Label>
-                        <Select value={newField.folderId || "no-folder"} onValueChange={(value) => setNewField({...newField, folderId: value === "no-folder" ? "" : value})}>
+                        <Select value={newField.folderId || "no-folder"} onValueChange={(value) => setNewField({...newField, folderId: value === "no-folder" ? "" : value})} key="add-folder-select">
                           <SelectTrigger>
                             <SelectValue placeholder="Select a folder" />
                           </SelectTrigger>
@@ -566,6 +569,34 @@ export default function CustomFields() {
                         </Select>
                       </div>
                       
+                      {['text', 'multiline', 'email', 'phone', 'number', 'url', 'currency', 'date', 'dropdown', 'dropdown_multiple'].includes(newField.type) && (
+                        <div>
+                          <Label htmlFor="placeholderText">Placeholder Text</Label>
+                          <Input
+                            id="placeholderText"
+                            value={newField.placeholderText}
+                            onChange={(e) => setNewField({...newField, placeholderText: e.target.value})}
+                            placeholder="e.g., Enter value here..."
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Hint text shown inside the field when empty
+                          </p>
+                        </div>
+                      )}
+
+                      <div>
+                        <Label htmlFor="tooltipText">Tooltip Text</Label>
+                        <Input
+                          id="tooltipText"
+                          value={newField.tooltipText}
+                          onChange={(e) => setNewField({...newField, tooltipText: e.target.value})}
+                          placeholder="e.g., Additional info about this field"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Help text shown when hovering over the field label
+                        </p>
+                      </div>
+
                       {/* Options management for dropdown, checkbox, radio fields */}
                       {fieldTypeRequiresOptions(newField.type) && (
                         <div>
@@ -665,6 +696,18 @@ export default function CustomFields() {
                                 {field.name}
                                 {field.required && (
                                   <Badge variant="secondary" className="text-xs">Required</Badge>
+                                )}
+                                {field.tooltipText && (
+                                  <span title={`Tooltip: ${field.tooltipText}`} className="text-gray-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.061-1.061 3 3 0 112.871 5.026v.345a.75.75 0 01-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 108.94 6.94zM10 15a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                    </svg>
+                                  </span>
+                                )}
+                                {field.placeholderText && (
+                                  <span title={`Placeholder: ${field.placeholderText}`} className="text-gray-400 text-xs italic">
+                                    [{field.placeholderText}]
+                                  </span>
                                 )}
                               </div>
                             </TableCell>
@@ -1005,6 +1048,34 @@ export default function CustomFields() {
                   </Select>
                 </div>
                 
+                {['text', 'multiline', 'email', 'phone', 'number', 'url', 'currency', 'date', 'dropdown', 'dropdown_multiple'].includes(editingField.type) && (
+                  <div>
+                    <Label htmlFor="editPlaceholderText">Placeholder Text</Label>
+                    <Input
+                      id="editPlaceholderText"
+                      value={editingField.placeholderText || ""}
+                      onChange={(e) => setEditingField({...editingField, placeholderText: e.target.value})}
+                      placeholder="e.g., Enter value here..."
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Hint text shown inside the field when empty
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="editTooltipText">Tooltip Text</Label>
+                  <Input
+                    id="editTooltipText"
+                    value={editingField.tooltipText || ""}
+                    onChange={(e) => setEditingField({...editingField, tooltipText: e.target.value})}
+                    placeholder="e.g., Additional info about this field"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Help text shown when hovering over the field label
+                  </p>
+                </div>
+
                 {/* Options management for dropdown, checkbox, radio fields in edit dialog */}
                 {fieldTypeRequiresOptions(editingField.type) && (
                   <div>
