@@ -9,6 +9,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle, ChevronRight, ChevronLeft, Upload, X, Save } from "lucide-react";
 
+function formatInline(text: string): (string | JSX.Element)[] {
+  const parts: (string | JSX.Element)[] = [];
+  let remaining = text;
+  let key = 0;
+  while (remaining.length > 0) {
+    const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+    const italicMatch = remaining.match(/\*(.+?)\*/);
+    const match = boldMatch && italicMatch
+      ? (boldMatch.index! <= italicMatch.index! ? boldMatch : italicMatch)
+      : boldMatch || italicMatch;
+    if (!match || match.index === undefined) {
+      parts.push(remaining);
+      break;
+    }
+    if (match.index > 0) parts.push(remaining.slice(0, match.index));
+    if (match[0].startsWith('**')) {
+      parts.push(<strong key={key++}>{match[1]}</strong>);
+    } else {
+      parts.push(<em key={key++}>{match[1]}</em>);
+    }
+    remaining = remaining.slice(match.index + match[0].length);
+  }
+  return parts;
+}
+
 function lightenColor(hex: string, percent: number): string {
   const num = parseInt(hex.replace('#', ''), 16);
   const r = Math.min(255, (num >> 16) + Math.round((255 - (num >> 16)) * percent / 100));
@@ -21,7 +46,7 @@ interface StepConfig {
   id: string;
   title: string;
   description: string;
-  fields: { customFieldId: string; required: boolean }[];
+  fields: { customFieldId: string; required: boolean; type?: "field" | "text_block"; textContent?: string }[];
 }
 
 interface OnboardingBranding {
@@ -168,7 +193,7 @@ export default function ClientOnboarding() {
     if (currentStep >= steps.length) return true;
     const step = steps[currentStep];
     const newErrors: Record<string, string> = {};
-    step.fields.forEach(fc => {
+    step.fields.filter(fc => fc.type !== 'text_block').forEach(fc => {
       if (fc.required) {
         const val = values[fc.customFieldId];
         const field = getFieldById(fc.customFieldId);
@@ -532,7 +557,24 @@ export default function ClientOnboarding() {
             </div>
 
             <div className="space-y-5">
-              {currentStepConfig.fields.map(fc => renderField(fc))}
+              {currentStepConfig.fields.map((fc, idx) => {
+                if (fc.type === 'text_block') {
+                  return (
+                    <div key={fc.customFieldId || `text-block-${idx}`} className="prose prose-sm max-w-none">
+                      {(fc.textContent || '').split('\n').map((line, i) => {
+                        const trimmed = line.trim();
+                        if (!trimmed) return <div key={i} className="h-2" />;
+                        if (trimmed.startsWith('### ')) return <h4 key={i} className="text-base font-semibold mt-3 mb-1">{trimmed.slice(4)}</h4>;
+                        if (trimmed.startsWith('## ')) return <h3 key={i} className="text-lg font-semibold mt-4 mb-1">{trimmed.slice(3)}</h3>;
+                        if (trimmed.startsWith('# ')) return <h2 key={i} className="text-xl font-bold mt-4 mb-2">{trimmed.slice(2)}</h2>;
+                        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) return <li key={i} className="ml-4 list-disc text-sm text-gray-700">{formatInline(trimmed.slice(2))}</li>;
+                        return <p key={i} className="text-sm text-gray-700 leading-relaxed">{formatInline(trimmed)}</p>;
+                      })}
+                    </div>
+                  );
+                }
+                return renderField(fc);
+              })}
             </div>
 
             {currentStepConfig.fields.length === 0 && (

@@ -57,6 +57,8 @@ interface StepConfig {
 interface StepFieldConfig {
   customFieldId: string;
   required: boolean;
+  type?: "field" | "text_block";
+  textContent?: string;
 }
 
 const fieldTypeIcons: Record<string, string> = {
@@ -130,7 +132,7 @@ export function ClientOnboardingFormEditor() {
   const customFields: any[] = customFieldsData || [];
   const folders: any[] = foldersData || [];
 
-  const allAssignedFieldIds = steps.flatMap(s => s.fields.map(f => f.customFieldId));
+  const allAssignedFieldIds = steps.flatMap(s => s.fields.filter(f => f.type !== 'text_block').map(f => f.customFieldId));
   const availableFields = customFields.filter((cf: any) => !allAssignedFieldIds.includes(cf.id));
 
   const getFolderName = (folderId: string | null) => {
@@ -189,6 +191,28 @@ export function ClientOnboardingFormEditor() {
         ...s,
         fields: s.fields.map(f =>
           f.customFieldId === customFieldId ? { ...f, required: !f.required } : f
+        )
+      };
+    }));
+    setHasChanges(true);
+  };
+
+  const handleAddTextBlock = (stepId: string) => {
+    const blockId = `text-block-${Date.now()}`;
+    setSteps(steps.map(s => {
+      if (s.id !== stepId) return s;
+      return { ...s, fields: [...s.fields, { customFieldId: blockId, required: false, type: 'text_block' as const, textContent: '' }] };
+    }));
+    setHasChanges(true);
+  };
+
+  const handleUpdateTextBlock = (stepId: string, blockId: string, textContent: string) => {
+    setSteps(steps.map(s => {
+      if (s.id !== stepId) return s;
+      return {
+        ...s,
+        fields: s.fields.map(f =>
+          f.customFieldId === blockId ? { ...f, textContent } : f
         )
       };
     }));
@@ -391,6 +415,46 @@ export function ClientOnboardingFormEditor() {
                                         </div>
                                       )}
                                       {step.fields.map((fieldConfig, fieldIndex) => {
+                                        if (fieldConfig.type === 'text_block') {
+                                          return (
+                                            <Draggable key={fieldConfig.customFieldId} draggableId={fieldConfig.customFieldId} index={fieldIndex}>
+                                              {(fieldDragProvided) => (
+                                                <div
+                                                  ref={fieldDragProvided.innerRef}
+                                                  {...fieldDragProvided.draggableProps}
+                                                  className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800"
+                                                >
+                                                  <div className="flex items-center gap-3 mb-2">
+                                                    <div {...fieldDragProvided.dragHandleProps} className="cursor-grab">
+                                                      <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                                    </div>
+                                                    <span className="text-lg w-6 text-center">📝</span>
+                                                    <div className="flex-1">
+                                                      <div className="font-medium text-sm">Text Block</div>
+                                                      <div className="text-xs text-muted-foreground">Rich text content displayed on the form</div>
+                                                    </div>
+                                                    <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">Text Block</Badge>
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      onClick={() => handleRemoveFieldFromStep(step.id, fieldConfig.customFieldId)}
+                                                      className="text-destructive hover:text-destructive"
+                                                    >
+                                                      <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                  </div>
+                                                  <Textarea
+                                                    value={fieldConfig.textContent || ''}
+                                                    onChange={(e) => handleUpdateTextBlock(step.id, fieldConfig.customFieldId, e.target.value)}
+                                                    placeholder="Enter text content... Use **bold**, *italic*, ## Heading, or - bullet points (Markdown supported)"
+                                                    rows={3}
+                                                    className="ml-12 text-sm"
+                                                  />
+                                                </div>
+                                              )}
+                                            </Draggable>
+                                          );
+                                        }
                                         const field = getFieldById(fieldConfig.customFieldId);
                                         if (!field) return null;
                                         return (
@@ -443,33 +507,44 @@ export function ClientOnboardingFormEditor() {
                                 </Droppable>
                               </DragDropContext>
 
-                              {availableFields.length > 0 && (
-                                <div className="mt-4">
-                                  <Select onValueChange={(val) => handleAddFieldToStep(step.id, val)}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="+ Add a custom field to this step..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Object.entries(groupedAvailableFields).map(([folderName, fields]) => (
-                                        <div key={folderName}>
-                                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                            {folderName}
+                              <div className="mt-4 flex gap-2">
+                                {availableFields.length > 0 && (
+                                  <div className="flex-1">
+                                    <Select onValueChange={(val) => handleAddFieldToStep(step.id, val)}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="+ Add a custom field to this step..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {Object.entries(groupedAvailableFields).map(([folderName, fields]) => (
+                                          <div key={folderName}>
+                                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                              {folderName}
+                                            </div>
+                                            {(fields as any[]).map((field: any) => (
+                                              <SelectItem key={field.id} value={field.id}>
+                                                <div className="flex items-center gap-2">
+                                                  <span>{fieldTypeIcons[field.type] || '?'}</span>
+                                                  <span>{field.name}</span>
+                                                  <span className="text-xs text-muted-foreground">({field.type})</span>
+                                                </div>
+                                              </SelectItem>
+                                            ))}
                                           </div>
-                                          {(fields as any[]).map((field: any) => (
-                                            <SelectItem key={field.id} value={field.id}>
-                                              <div className="flex items-center gap-2">
-                                                <span>{fieldTypeIcons[field.type] || '?'}</span>
-                                                <span>{field.name}</span>
-                                                <span className="text-xs text-muted-foreground">({field.type})</span>
-                                              </div>
-                                            </SelectItem>
-                                          ))}
-                                        </div>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="default"
+                                  onClick={() => handleAddTextBlock(step.id)}
+                                  className="whitespace-nowrap border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950"
+                                >
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Text Block
+                                </Button>
+                              </div>
                             </CardContent>
                           </Card>
                         </div>
