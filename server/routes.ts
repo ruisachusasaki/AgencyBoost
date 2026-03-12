@@ -12023,12 +12023,14 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         }
       }
       
-      // Convert empty strings to null for date fields and remove undefined values
-      if (cleanedBody.hireDate === '' || cleanedBody.hireDate === undefined) {
-        delete cleanedBody.hireDate;
-      }
-      if (cleanedBody.birthdate === '' || cleanedBody.birthdate === undefined) {
-        delete cleanedBody.birthdate;
+      // Convert empty strings to null for date fields so they can be cleared; remove undefined values
+      const dateFields = ['hireDate', 'startDate', 'birthdate'];
+      for (const field of dateFields) {
+        if (cleanedBody[field] === '') {
+          cleanedBody[field] = null;
+        } else if (cleanedBody[field] === undefined) {
+          delete cleanedBody[field];
+        }
       }
       
       // Also handle role assignment in user_roles table if roleId is provided
