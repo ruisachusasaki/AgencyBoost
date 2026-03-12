@@ -73,7 +73,7 @@ import {
   insertSurveySchema, insertSurveyFolderSchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema,
   taskIntakeForms, taskIntakeSections, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules, taskIntakeSubmissions, taskIntakeAnswers,
   insertTaskIntakeFormSchema, insertTaskIntakeSectionSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema,
-  aiIntegrations,
+  aiIntegrations, stripeIntegrations,
   aiAssistantSettings,
   slackWorkspaces,
   callCenterTimeEntries,
@@ -105,7 +105,7 @@ import twilio from "twilio";
 import mailgun from "mailgun.js";
 import formData from "form-data";
 import { NotificationService, setNotificationServiceInstance } from "./notification-service";
-import { getStripe, isStripeConfigured, createPaymentIntent, createACHPaymentIntent, constructWebhookEvent } from "./stripe";
+import { getStripe, getStripeAsync, isStripeConfigured, isStripeConfiguredAsync, createPaymentIntent, createACHPaymentIntent, constructWebhookEvent, resetStripeInstance, getStripePublishableKey, getStripeWebhookSecret } from "./stripe";
 import { registerProposalRoutes, handleStripeWebhook } from "./proposalRoutes";
 import { EncryptionService } from "./encryption";
 import { eq, like, ilike, or, and, asc, desc, sql, inArray, isNotNull, isNull, gt, gte, lt, lte, getTableColumns } from "drizzle-orm";
@@ -22336,9 +22336,17 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
   app.get("/api/integrations/stripe/status", requireAuth(), requirePermission('integrations', 'canView'), async (req, res) => {
     try {
-      const configured = isStripeConfigured();
-      const hasPublishableKey = !!process.env.STRIPE_PUBLISHABLE_KEY;
-      const hasWebhookSecret = !!process.env.STRIPE_WEBHOOK_SECRET;
+      const configured = await isStripeConfiguredAsync();
+      const publishableKey = await getStripePublishableKey();
+      const webhookSecret = await getStripeWebhookSecret();
+
+      const [dbConfig] = await db
+        .select()
+        .from(stripeIntegrations)
+        .where(eq(stripeIntegrations.isActive, true))
+        .limit(1);
+
+      const source = dbConfig ? "database" : (process.env.STRIPE_SECRET_KEY ? "environment" : "none");
 
       if (!configured) {
         return res.json({
@@ -22346,26 +22354,27 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           status: "disconnected",
           secretKey: false,
           publishableKey: false,
-          webhookSecret: false
+          webhookSecret: false,
+          source
         });
       }
 
       let accountName: string | null = null;
       try {
-        const stripe = getStripe();
+        const stripe = await getStripeAsync();
         if (stripe) {
           const account = await stripe.accounts.retrieve();
           accountName = account.settings?.dashboard?.display_name || account.business_profile?.name || null;
         }
       } catch (e) {
-        // If we can't retrieve account info, keys might be invalid
         return res.json({
           connected: false,
           status: "error",
           secretKey: true,
-          publishableKey: hasPublishableKey,
-          webhookSecret: hasWebhookSecret,
-          error: "Could not verify Stripe credentials"
+          publishableKey: !!publishableKey,
+          webhookSecret: !!webhookSecret,
+          error: "Could not verify Stripe credentials",
+          source
         });
       }
 
@@ -22373,9 +22382,10 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         connected: true,
         status: "connected",
         secretKey: true,
-        publishableKey: hasPublishableKey,
-        webhookSecret: hasWebhookSecret,
-        accountName
+        publishableKey: !!publishableKey,
+        webhookSecret: !!webhookSecret,
+        accountName,
+        source
       });
     } catch (error) {
       console.error('Error checking Stripe status:', error);
@@ -22386,16 +22396,93 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.post("/api/integrations/stripe/test", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+  app.post("/api/integrations/stripe/connect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
     try {
-      if (!isStripeConfigured()) {
+      const { secretKey, publishableKey, webhookSecret } = req.body;
+
+      if (!secretKey) {
+        return res.status(400).json({ message: "Secret Key is required" });
+      }
+
+      const testStripe = new (await import('stripe')).default(secretKey, {
+        apiVersion: '2024-12-18.acacia' as any,
+      });
+
+      let accountName: string | null = null;
+      try {
+        const account = await testStripe.accounts.retrieve();
+        accountName = account.settings?.dashboard?.display_name || account.business_profile?.name || null;
+      } catch (e: any) {
         return res.status(400).json({
-          success: false,
-          message: "Stripe is not configured. Set STRIPE_SECRET_KEY in environment variables."
+          message: "Invalid Stripe Secret Key. Could not verify credentials.",
+          error: e.message
         });
       }
 
-      const stripe = getStripe();
+      const encryptedSecretKey = EncryptionService.encrypt(secretKey);
+      const encryptedPublishableKey = publishableKey ? EncryptionService.encrypt(publishableKey) : null;
+      const encryptedWebhookSecret = webhookSecret ? EncryptionService.encrypt(webhookSecret) : null;
+
+      await db.update(stripeIntegrations).set({ isActive: false, updatedAt: new Date() });
+
+      const [saved] = await db.insert(stripeIntegrations).values({
+        name: accountName || "Primary",
+        secretKey: encryptedSecretKey,
+        publishableKey: encryptedPublishableKey,
+        webhookSecret: encryptedWebhookSecret,
+        isActive: true,
+        accountName,
+        lastTestAt: new Date(),
+      }).returning();
+
+      resetStripeInstance();
+
+      res.json({
+        success: true,
+        message: "Stripe connected successfully",
+        accountName,
+        id: saved.id
+      });
+    } catch (error: any) {
+      console.error('Stripe connect error:', error);
+      res.status(500).json({
+        message: error.message || "Failed to connect Stripe"
+      });
+    }
+  });
+
+  app.post("/api/integrations/stripe/disconnect", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      await db.update(stripeIntegrations).set({
+        isActive: false,
+        updatedAt: new Date()
+      });
+
+      resetStripeInstance();
+
+      res.json({
+        success: true,
+        message: "Stripe disconnected successfully"
+      });
+    } catch (error: any) {
+      console.error('Stripe disconnect error:', error);
+      res.status(500).json({
+        message: error.message || "Failed to disconnect Stripe"
+      });
+    }
+  });
+
+  app.post("/api/integrations/stripe/test", requireAuth(), requirePermission('integrations', 'canManage'), async (req, res) => {
+    try {
+      const configured = await isStripeConfiguredAsync();
+      if (!configured) {
+        return res.status(400).json({
+          success: false,
+          message: "Stripe is not configured. Enter your API keys to connect."
+        });
+      }
+
+      const stripe = await getStripeAsync();
       if (!stripe) {
         return res.status(500).json({ success: false, message: "Could not initialize Stripe" });
       }

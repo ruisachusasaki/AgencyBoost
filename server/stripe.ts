@@ -1,22 +1,116 @@
 import Stripe from 'stripe';
+import { db } from './db';
+import { stripeIntegrations } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
+import { EncryptionService } from './encryption';
 
 let stripeInstance: Stripe | null = null;
+let lastSecretKey: string | null = null;
+
+async function getStripeSecretKey(): Promise<string | null> {
+  try {
+    const [dbConfig] = await db
+      .select()
+      .from(stripeIntegrations)
+      .where(eq(stripeIntegrations.isActive, true))
+      .limit(1);
+
+    if (dbConfig?.secretKey) {
+      try {
+        return EncryptionService.decrypt(dbConfig.secretKey);
+      } catch {
+        return dbConfig.secretKey;
+      }
+    }
+  } catch {
+  }
+
+  return process.env.STRIPE_SECRET_KEY || null;
+}
+
+async function getStripePublishableKey(): Promise<string | null> {
+  try {
+    const [dbConfig] = await db
+      .select()
+      .from(stripeIntegrations)
+      .where(eq(stripeIntegrations.isActive, true))
+      .limit(1);
+
+    if (dbConfig?.publishableKey) {
+      try {
+        return EncryptionService.decrypt(dbConfig.publishableKey);
+      } catch {
+        return dbConfig.publishableKey;
+      }
+    }
+  } catch {
+  }
+
+  return process.env.STRIPE_PUBLISHABLE_KEY || null;
+}
+
+async function getStripeWebhookSecret(): Promise<string | null> {
+  try {
+    const [dbConfig] = await db
+      .select()
+      .from(stripeIntegrations)
+      .where(eq(stripeIntegrations.isActive, true))
+      .limit(1);
+
+    if (dbConfig?.webhookSecret) {
+      try {
+        return EncryptionService.decrypt(dbConfig.webhookSecret);
+      } catch {
+        return dbConfig.webhookSecret;
+      }
+    }
+  } catch {
+  }
+
+  return process.env.STRIPE_WEBHOOK_SECRET || null;
+}
+
+export async function getStripeAsync(): Promise<Stripe | null> {
+  const secretKey = await getStripeSecretKey();
+  if (!secretKey) return null;
+
+  if (!stripeInstance || lastSecretKey !== secretKey) {
+    stripeInstance = new Stripe(secretKey, {
+      apiVersion: '2024-12-18.acacia' as any,
+    });
+    lastSecretKey = secretKey;
+  }
+  return stripeInstance;
+}
 
 export function getStripe(): Stripe | null {
-  if (!process.env.STRIPE_SECRET_KEY) {
+  if (!process.env.STRIPE_SECRET_KEY && !stripeInstance) {
     return null;
   }
   if (!stripeInstance) {
-    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY!, {
       apiVersion: '2024-12-18.acacia' as any,
     });
+    lastSecretKey = process.env.STRIPE_SECRET_KEY!;
   }
   return stripeInstance;
 }
 
 export function isStripeConfigured(): boolean {
-  return !!process.env.STRIPE_SECRET_KEY;
+  return !!process.env.STRIPE_SECRET_KEY || !!stripeInstance;
 }
+
+export async function isStripeConfiguredAsync(): Promise<boolean> {
+  const key = await getStripeSecretKey();
+  return !!key;
+}
+
+export function resetStripeInstance(): void {
+  stripeInstance = null;
+  lastSecretKey = null;
+}
+
+export { getStripePublishableKey, getStripeWebhookSecret, getStripeSecretKey };
 
 export async function createPaymentIntent(
   amount: number,
@@ -24,7 +118,7 @@ export async function createPaymentIntent(
   paymentMethodTypes: string[] = ['card'],
   metadata: Record<string, string> = {}
 ): Promise<Stripe.PaymentIntent | null> {
-  const stripe = getStripe();
+  const stripe = await getStripeAsync();
   if (!stripe) return null;
 
   return stripe.paymentIntents.create({
@@ -41,7 +135,7 @@ export async function createACHPaymentIntent(
   customerName: string,
   metadata: Record<string, string> = {}
 ): Promise<{ paymentIntent: Stripe.PaymentIntent; clientSecret: string } | null> {
-  const stripe = getStripe();
+  const stripe = await getStripeAsync();
   if (!stripe) return null;
 
   let customer: Stripe.Customer | undefined;
@@ -80,7 +174,7 @@ export async function getOrCreateCustomer(
   email: string,
   name: string
 ): Promise<Stripe.Customer | null> {
-  const stripe = getStripe();
+  const stripe = await getStripeAsync();
   if (!stripe) return null;
 
   const existing = await stripe.customers.list({ email, limit: 1 });
@@ -96,7 +190,7 @@ export async function createSubscription(
   trialDays: number = 0,
   defaultPaymentMethodId?: string
 ): Promise<Stripe.Subscription | null> {
-  const stripe = getStripe();
+  const stripe = await getStripeAsync();
   if (!stripe) return null;
 
   if (defaultPaymentMethodId) {
@@ -141,7 +235,7 @@ export async function createSubscription(
 }
 
 export async function retrievePaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent | null> {
-  const stripe = getStripe();
+  const stripe = await getStripeAsync();
   if (!stripe) return null;
   return stripe.paymentIntents.retrieve(paymentIntentId);
 }

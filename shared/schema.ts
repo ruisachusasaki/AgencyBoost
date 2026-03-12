@@ -2793,6 +2793,28 @@ export const insertAiIntegrationSchema = createInsertSchema(aiIntegrations).omit
 });
 
 export type AiIntegration = typeof aiIntegrations.$inferSelect;
+
+export const stripeIntegrations = pgTable("stripe_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().default("Primary"),
+  secretKey: text("secret_key").notNull(),
+  publishableKey: text("publishable_key"),
+  webhookSecret: text("webhook_secret"),
+  isActive: boolean("is_active").default(true),
+  lastTestAt: timestamp("last_test_at"),
+  connectionErrors: text("connection_errors"),
+  accountName: text("account_name"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertStripeIntegrationSchema = createInsertSchema(stripeIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type StripeIntegration = typeof stripeIntegrations.$inferSelect;
 export type InsertAiIntegration = z.infer<typeof insertAiIntegrationSchema>;
 
 // AI Assistant Settings (custom instructions, context)

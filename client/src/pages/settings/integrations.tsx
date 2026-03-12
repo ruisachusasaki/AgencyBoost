@@ -148,6 +148,10 @@ export default function Integrations() {
   const [showStripeDialog, setShowStripeDialog] = useState(false);
   const [stripeStatus, setStripeStatus] = useState<any>(null);
   const [stripeTestResult, setStripeTestResult] = useState<any>(null);
+  const [stripeSecretKey, setStripeSecretKey] = useState("");
+  const [stripePublishableKey, setStripePublishableKey] = useState("");
+  const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
+  const [stripeConnecting, setStripeConnecting] = useState(false);
 
   // Check for OAuth callback parameters and Google Calendar status on load
   useEffect(() => {
@@ -733,12 +737,81 @@ export default function Integrations() {
     });
   };
 
+  const handleStripeConnect = async () => {
+    if (!stripeSecretKey) {
+      toast({
+        title: "Error",
+        description: "Secret Key is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setStripeConnecting(true);
+    try {
+      const response = await apiRequest('POST', '/api/integrations/stripe/connect', {
+        secretKey: stripeSecretKey,
+        publishableKey: stripePublishableKey || undefined,
+        webhookSecret: stripeWebhookSecret || undefined,
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: `Stripe connected successfully${result.accountName ? ` (${result.accountName})` : ''}`,
+        });
+        setStripeSecretKey("");
+        setStripePublishableKey("");
+        setStripeWebhookSecret("");
+        await checkStripeStatus();
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to connect Stripe",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to connect Stripe",
+        variant: "destructive",
+      });
+    } finally {
+      setStripeConnecting(false);
+    }
+  };
+
+  const handleStripeDisconnect = async () => {
+    if (!confirm("Are you sure you want to disconnect Stripe? Payment processing will stop working.")) return;
+
+    setIsLoading(true);
+    try {
+      const response = await apiRequest('POST', '/api/integrations/stripe/disconnect');
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Disconnected",
+          description: "Stripe has been disconnected",
+        });
+        await checkStripeStatus();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to disconnect Stripe",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleDisconnect = async (integrationId: string, integrationName: string) => {
     if (integrationId === "stripe") {
-      toast({
-        title: "Environment Configuration",
-        description: "Stripe keys are managed via environment variables. Remove STRIPE_SECRET_KEY to disconnect.",
-      });
+      await handleStripeDisconnect();
       return;
     }
     
@@ -2367,7 +2440,15 @@ export default function Integrations() {
         </Dialog>
 
         {/* Stripe Configuration Dialog */}
-        <Dialog open={showStripeDialog} onOpenChange={setShowStripeDialog}>
+        <Dialog open={showStripeDialog} onOpenChange={(open) => {
+          setShowStripeDialog(open);
+          if (!open) {
+            setStripeSecretKey("");
+            setStripePublishableKey("");
+            setStripeWebhookSecret("");
+            setStripeTestResult(null);
+          }
+        }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -2406,7 +2487,7 @@ export default function Integrations() {
                         {stripeStatus.publishableKey ? (
                           <Badge className="bg-green-100 text-green-800"><Check className="h-3 w-3 mr-1" />Set</Badge>
                         ) : (
-                          <Badge variant="secondary"><X className="h-3 w-3 mr-1" />Missing</Badge>
+                          <Badge variant="secondary"><X className="h-3 w-3 mr-1" />Not Set</Badge>
                         )}
                       </div>
                       <div className="flex items-center justify-between">
@@ -2414,7 +2495,7 @@ export default function Integrations() {
                         {stripeStatus.webhookSecret ? (
                           <Badge className="bg-green-100 text-green-800"><Check className="h-3 w-3 mr-1" />Set</Badge>
                         ) : (
-                          <Badge variant="secondary"><X className="h-3 w-3 mr-1" />Missing</Badge>
+                          <Badge variant="secondary"><X className="h-3 w-3 mr-1" />Not Set</Badge>
                         )}
                       </div>
                     </div>
@@ -2440,14 +2521,71 @@ export default function Integrations() {
                     Test Connection
                   </Button>
 
-                  <p className="text-xs text-gray-500 text-center">
-                    Stripe keys are configured via environment variables. Contact your administrator to update them.
-                  </p>
+                  <div className="border-t pt-3">
+                    <details className="group">
+                      <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900">
+                        Update Stripe Keys
+                      </summary>
+                      <div className="mt-3 space-y-3">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Secret Key <span className="text-red-500">*</span></label>
+                          <Input
+                            type="password"
+                            placeholder="sk_live_... or sk_test_..."
+                            value={stripeSecretKey}
+                            onChange={(e) => setStripeSecretKey(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Publishable Key</label>
+                          <Input
+                            type="password"
+                            placeholder="pk_live_... or pk_test_..."
+                            value={stripePublishableKey}
+                            onChange={(e) => setStripePublishableKey(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Webhook Secret</label>
+                          <Input
+                            type="password"
+                            placeholder="whsec_..."
+                            value={stripeWebhookSecret}
+                            onChange={(e) => setStripeWebhookSecret(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <Button
+                          onClick={handleStripeConnect}
+                          disabled={stripeConnecting || !stripeSecretKey}
+                          className="w-full"
+                        >
+                          {stripeConnecting ? (
+                            <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Updating...</>
+                          ) : (
+                            "Update Keys"
+                          )}
+                        </Button>
+                      </div>
+                    </details>
+                  </div>
+
+                  <Button
+                    variant="destructive"
+                    onClick={handleStripeDisconnect}
+                    disabled={isLoading}
+                    className="w-full"
+                    size="sm"
+                  >
+                    Disconnect Stripe
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-600">
-                    Stripe powers payment processing for proposals and quotes. Configure it by setting environment variables.
+                    Stripe powers payment processing for proposals and quotes. Enter your API keys below to connect.
                   </p>
 
                   {stripeStatus?.status === "error" && (
@@ -2457,46 +2595,61 @@ export default function Integrations() {
                     </div>
                   )}
 
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                    <h4 className="font-medium text-sm">Required Environment Variables</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <code className="text-xs bg-gray-200 px-2 py-1 rounded">STRIPE_SECRET_KEY</code>
-                        {stripeStatus?.secretKey ? (
-                          <Badge className="bg-green-100 text-green-800"><Check className="h-3 w-3 mr-1" />Set</Badge>
-                        ) : (
-                          <Badge variant="destructive"><X className="h-3 w-3 mr-1" />Missing</Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <code className="text-xs bg-gray-200 px-2 py-1 rounded">STRIPE_PUBLISHABLE_KEY</code>
-                        {stripeStatus?.publishableKey ? (
-                          <Badge className="bg-green-100 text-green-800"><Check className="h-3 w-3 mr-1" />Set</Badge>
-                        ) : (
-                          <Badge variant="secondary"><X className="h-3 w-3 mr-1" />Not Set</Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <code className="text-xs bg-gray-200 px-2 py-1 rounded">STRIPE_WEBHOOK_SECRET</code>
-                        {stripeStatus?.webhookSecret ? (
-                          <Badge className="bg-green-100 text-green-800"><Check className="h-3 w-3 mr-1" />Set</Badge>
-                        ) : (
-                          <Badge variant="secondary"><X className="h-3 w-3 mr-1" />Not Set</Badge>
-                        )}
-                      </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Secret Key <span className="text-red-500">*</span></label>
+                      <Input
+                        type="password"
+                        placeholder="sk_live_... or sk_test_..."
+                        value={stripeSecretKey}
+                        onChange={(e) => setStripeSecretKey(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Publishable Key</label>
+                      <Input
+                        type="password"
+                        placeholder="pk_live_... or pk_test_..."
+                        value={stripePublishableKey}
+                        onChange={(e) => setStripePublishableKey(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Webhook Secret</label>
+                      <Input
+                        type="password"
+                        placeholder="whsec_..."
+                        value={stripeWebhookSecret}
+                        onChange={(e) => setStripeWebhookSecret(e.target.value)}
+                        className="mt-1"
+                      />
                     </div>
                   </div>
+
+                  <Button
+                    onClick={handleStripeConnect}
+                    disabled={stripeConnecting || !stripeSecretKey}
+                    className="w-full"
+                  >
+                    {stripeConnecting ? (
+                      <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Connecting...</>
+                    ) : (
+                      "Connect Stripe"
+                    )}
+                  </Button>
 
                   <div className="border-t pt-3">
                     <details className="group">
                       <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900">
-                        How to set up Stripe
+                        How to get your Stripe keys
                       </summary>
                       <div className="mt-3 text-sm text-gray-600 space-y-2 ml-4">
                         <ol className="list-decimal space-y-1">
-                          <li>Go to <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Stripe Dashboard → API Keys</a></li>
+                          <li>Go to <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Stripe Dashboard &rarr; API Keys</a></li>
                           <li>Copy your Secret Key and Publishable Key</li>
-                          <li>Set them as environment variables in your deployment settings</li>
+                          <li>Paste them in the fields above</li>
                           <li>For webhooks, create a webhook endpoint and copy the signing secret</li>
                         </ol>
                       </div>
@@ -2528,7 +2681,7 @@ export default function Integrations() {
                   <li>• Gmail needs Google Workspace admin approval for organization-wide access</li>
                   <li>• QuickBooks requires a developer account and app registration</li>
                   <li>• Slack integration needs workspace admin permissions</li>
-                  <li>• Stripe requires API keys set as environment variables</li>
+                  <li>• Stripe API keys can be configured directly from the integration settings</li>
                 </ul>
               </div>
             </div>
