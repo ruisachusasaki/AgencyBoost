@@ -371,19 +371,19 @@ export function ClientOnboardingFormEditor() {
                           {...provided.draggableProps}
                           className={`${snapshot.isDragging ? 'shadow-lg' : ''}`}
                         >
-                          <Card>
+                          <Card className="overflow-hidden">
                             <CardHeader className="pb-3">
                               <div className="flex items-center gap-3">
-                                <div {...provided.dragHandleProps} className="cursor-grab">
+                                <div {...provided.dragHandleProps} className="cursor-grab flex-shrink-0">
                                   <GripVertical className="h-5 w-5 text-muted-foreground" />
                                 </div>
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="outline" className="text-xs flex-shrink-0">
                                   Step {stepIndex + 1}
                                 </Badge>
                                 <Input
                                   value={step.title}
                                   onChange={(e) => handleUpdateStep(step.id, { title: e.target.value })}
-                                  className="flex-1 font-semibold border-none shadow-none focus-visible:ring-0 p-0 h-auto text-base"
+                                  className="flex-1 min-w-0 font-semibold border-none shadow-none focus-visible:ring-0 p-0 h-auto text-base"
                                   placeholder="Step Title"
                                 />
                                 {steps.length > 1 && (
@@ -400,7 +400,7 @@ export function ClientOnboardingFormEditor() {
                               <Input
                                 value={step.description}
                                 onChange={(e) => handleUpdateStep(step.id, { description: e.target.value })}
-                                className="text-sm text-muted-foreground border-none shadow-none focus-visible:ring-0 p-0 h-auto ml-12"
+                                className="text-sm text-muted-foreground border-none shadow-none focus-visible:ring-0 p-0 h-auto pl-12"
                                 placeholder="Optional step description..."
                               />
                             </CardHeader>
@@ -448,7 +448,7 @@ export function ClientOnboardingFormEditor() {
                                                     onChange={(e) => handleUpdateTextBlock(step.id, fieldConfig.customFieldId, e.target.value)}
                                                     placeholder="Enter text content... Use **bold**, *italic*, ## Heading, or - bullet points (Markdown supported)"
                                                     rows={3}
-                                                    className="ml-12 text-sm"
+                                                    className="text-sm"
                                                   />
                                                 </div>
                                               )}
