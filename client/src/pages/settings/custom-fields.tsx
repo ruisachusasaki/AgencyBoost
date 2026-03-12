@@ -73,7 +73,7 @@ export default function CustomFields() {
     queryKey: ["/api/custom-fields", searchTerm],
     queryFn: async () => {
       const url = `/api/custom-fields${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ""}`;
-      const response = await fetch(url);
+      const response = await fetch(url, { credentials: "include" });
       if (!response.ok) throw new Error('Failed to fetch custom fields');
       return response.json();
     },
@@ -83,7 +83,7 @@ export default function CustomFields() {
   const { data: folders = [], isLoading: foldersLoading } = useQuery<CustomFieldFolder[]>({
     queryKey: ["/api/custom-field-folders"],
     queryFn: async () => {
-      const response = await fetch("/api/custom-field-folders");
+      const response = await fetch("/api/custom-field-folders", { credentials: "include" });
       if (!response.ok) throw new Error('Failed to fetch folders');
       return response.json();
     },
@@ -102,7 +102,8 @@ export default function CustomFields() {
       const response = await fetch("/api/custom-fields", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        credentials: "include"
       });
       if (!response.ok) throw new Error('Failed to create field');
       return response.json();
@@ -124,7 +125,8 @@ export default function CustomFields() {
       const response = await fetch("/api/custom-field-folders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        credentials: "include"
       });
       if (!response.ok) throw new Error('Failed to create folder');
       return response.json();
@@ -146,7 +148,8 @@ export default function CustomFields() {
       const response = await fetch(`/api/custom-fields/${field.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(field)
+        body: JSON.stringify(field),
+        credentials: "include"
       });
       if (!response.ok) throw new Error('Failed to update field');
       return response.json();
@@ -167,7 +170,8 @@ export default function CustomFields() {
   const deleteFieldMutation = useMutation({
     mutationFn: async (fieldId: string) => {
       const response = await fetch(`/api/custom-fields/${fieldId}`, {
-        method: "DELETE"
+        method: "DELETE",
+        credentials: "include"
       });
       if (!response.ok) throw new Error('Failed to delete field');
       return response.json();
@@ -185,7 +189,8 @@ export default function CustomFields() {
   const deleteFolderMutation = useMutation({
     mutationFn: async (folderId: string) => {
       const response = await fetch(`/api/custom-field-folders/${folderId}`, {
-        method: "DELETE"
+        method: "DELETE",
+        credentials: "include"
       });
       if (!response.ok) throw new Error('Failed to delete folder');
       return response.json();
@@ -206,7 +211,8 @@ export default function CustomFields() {
       const response = await fetch('/api/custom-field-folders/reorder', {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ folderIds })
+        body: JSON.stringify({ folderIds }),
+        credentials: "include"
       });
       if (!response.ok) throw new Error('Failed to reorder folders');
       return response.json();
@@ -227,6 +233,7 @@ export default function CustomFields() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fieldIds }),
+        credentials: "include"
       });
       if (!response.ok) throw new Error('Failed to reorder fields');
       return response.json();
