@@ -581,6 +581,7 @@ export const clientPortalUsers = pgTable("client_portal_users", {
   lastName: text("last_name").notNull(),
   isActive: boolean("is_active").default(true),
   lastLogin: timestamp("last_login"),
+  lastActivity: timestamp("last_activity"),
   passwordResetToken: text("password_reset_token"),
   passwordResetExpires: timestamp("password_reset_expires"),
   createdAt: timestamp("created_at").defaultNow(),
