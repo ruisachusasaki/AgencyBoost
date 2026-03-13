@@ -1,0 +1,348 @@
+CONTEXT:
+This is AgencyBoost, a CRM for marketing agencies. We are building a 
+NEW HIRE WORKFLOW feature. The following has already been completed:
+  - DB tables: ic_agreement_templates, job_offers, offer_signatures, 
+    offer_status_log
+  - New status values on applicants table: 'send_offer', 
+    'offer_accepted', 'offer_declined', 'hired'
+  - IC Agreement template builder under Settings > HR Settings > 
+    IC Agreement
+
+This prompt builds the SEND OFFER FLOW — when a manager sets an 
+applicant's status to "Send Offer", a modal opens to collect offer 
+details, AgencyBoost populates the IC Agreement template, generates 
+a unique signing link, auto-emails it to the applicant, and shows 
+the manager a copyable link.
+
+ALWAYS use the primary teal theme color (hsl(179, 100%, 39%) / #00C9C6) 
+for buttons, accents, and interactive elements. Never use blue.
+
+═══════════════════════════════════════
+PART A — BACKEND API ROUTES
+═══════════════════════════════════════
+
+Add the following routes to server/routes.ts. All require 
+requireAuth(). Admin and Manager roles only unless noted.
+
+─────────────────────────────────────
+POST /api/applications/:applicationId/send-offer
+─────────────────────────────────────
+Purpose: Creates a job_offer record, populates the IC Agreement 
+template with real values, generates a signing token, sends the 
+signing link email to the applicant.
+
+Body:
+  {
+    compensation: string,
+    compensationType: 'per_hour' | 'per_month' | 'flat_rate',
+    startDate: string (ISO date),
+    customTerms: string (optional, nullable)
+  }
+
+Logic:
+
+STEP 1 — Validate application
+  - Fetch the application by applicationId
+  - If not found: return 404
+  - If application already has a job_offer record (check 
+    job_offers where applicationId = this id): return 400 
+    with message "An offer has already been sent for this 
+    application."
+  - If application status is already 'offer_accepted', 
+    'offer_declined', or 'hired': return 400 with message 
+    "This application is no longer in an offerable state."
+
+STEP 2 — Fetch active IC Agreement template
+  - Query ic_agreement_templates where isActive = true
+  - If none found: return 400 with message "No active IC 
+    Agreement template found. Please configure one under 
+    Settings > HR Settings > IC Agreement before sending 
+    offers."
+
+STEP 3 — Populate template content
+  - Take template.content (HTML string with {{placeholders}})
+  - Replace ALL placeholders with real values:
+      {{candidate_name}}    → application's full name 
+                              (check actual column name)
+      {{position}}          → application's position
+      {{start_date}}        → startDate from request body, 
+                              formatted as "March 13, 2026"
+      {{compensation}}      → compensation from request body
+      {{compensation_type}} → human-readable version:
+                              'per_hour' → 'per hour'
+                              'per_month' → 'per month'
+                              'flat_rate' → 'flat rate'
+      {{offer_date}}        → today's date formatted as 
+                              "March 13, 2026"
+      {{custom_terms}}      → customTerms from body, or 
+                              empty string if null
+      {{manager_name}}      → req.user's full name
+      {{company_name}}      → "The Media Optimizers"
+  - Store the fully populated content as populatedContent
+  - This is the permanent legal record — immutable after creation
+
+STEP 4 — Generate signing token
+  - Generate a cryptographically secure random UUID using 
+    Node.js crypto.randomUUID()
+  - This becomes the signingToken
+  - The public signing URL will be: 
+    {APP_BASE_URL}/sign-offer/{signingToken}
+  - APP_BASE_URL: read from environment variable APP_BASE_URL 
+    or VITE_APP_URL — check which env var holds the base URL 
+    in the existing codebase. Fall back to 
+    'https://agencyboost.app' if not found.
+
+STEP 5 — Create job_offer record (in a transaction):
+  - Insert into job_offers:
+      applicationId, createdBy = req.user.id, 
+      templateId = template.id,
+      populatedContent, compensation, compensationType,
+      startDate, customTerms, signingToken,
+      status = 'pending', sentAt = now()
+  - Insert into offer_status_log:
+      offerId = new offer id, status = 'pending',
+      changedBy = req.user.id,
+      note = 'Offer created and sent'
+
+STEP 6 — Update application status
+  - Update the application record: status = 'send_offer'
+  - Use the actual column and table names from the existing 
+    applicants table
+
+STEP 7 — Send signing link email to applicant
+  - Use the existing email sending pattern in the codebase 
+    (check how other emails are sent — Nodemailer, SendGrid, 
+    or similar — use the SAME pattern)
+  - To: application's email address
+  - Subject: "Your offer from The Media Optimizers — 
+    Action Required"
+  - Body (HTML email):
+      Greeting: "Hi [candidate_name],"
+      
+      Paragraph: "We're excited to extend this offer to you 
+      for the [position] role at The Media Optimizers. Please 
+      review your Independent Contractor Agreement and sign 
+      it at the link below."
+      
+      CTA Button (teal): "Review & Sign Your Agreement"
+      href: the full signing URL
+
+      Paragraph: "This link is unique to you. Please do not 
+      share it. If you have any questions, reply to this email 
+      or contact your hiring manager directly."
+      
+      Signature: "The Media Optimizers Team"
+  - If email sending fails: do NOT roll back the offer 
+    creation — the offer is still valid. Log the error and 
+    return a success response with a warning flag:
+      { success: true, signingUrl: '...', emailSent: false, 
+        warning: 'Offer created but email failed to send. 
+        Please share the link manually.' }
+  - If email sends successfully:
+      { success: true, signingUrl: '...', emailSent: true }
+
+─────────────────────────────────────
+GET /api/applications/:applicationId/offer
+─────────────────────────────────────
+- Return the job_offer record for this application (if exists)
+- Include: all job_offer fields EXCEPT populatedContent 
+  (keep that for the signing page only)
+- Include offer_signatures record if signed
+- Include offer_status_log entries ordered by createdAt ASC
+- If no offer exists: return { offer: null }
+
+─────────────────────────────────────
+POST /api/applications/:applicationId/resend-offer
+─────────────────────────────────────
+- Admin or Manager only
+- Fetch existing job_offer for this application
+- If no offer exists or status != 'pending': return 400
+- Re-send the signing link email (same template as above)
+- Do NOT generate a new token — reuse the existing signingToken
+- Log to offer_status_log: note = 'Offer link resent'
+- Return { success: true, emailSent: boolean }
+
+═══════════════════════════════════════
+PART B — SEND OFFER MODAL (FRONTEND)
+═══════════════════════════════════════
+
+Create the following new files:
+  client/src/components/applications/SendOfferModal.tsx
+  client/src/components/applications/OfferStatusPanel.tsx
+
+─────────────────────────────────────
+Trigger — Intercept Status Change
+─────────────────────────────────────
+Find the existing applicant detail page (the page shown in 
+Applicants-Screenshot-2 — where the manager views a single 
+applicant with status dropdown on the right panel).
+
+Find where the status dropdown change is handled. When the 
+manager selects "Send Offer" from the status dropdown:
+  - Do NOT immediately save the status change via the existing 
+    status update API call
+  - Instead: intercept this selection and open SendOfferModal
+  - Only save the status (and create the offer) when the 
+    manager completes and submits the modal
+  - If the manager closes/cancels the modal: revert the 
+    dropdown back to the previous status — do not save anything
+
+─────────────────────────────────────
+SendOfferModal.tsx
+─────────────────────────────────────
+A large dialog/modal (not a drawer — centered modal, max-width 
+700px) that opens when manager selects "Send Offer".
+
+MODAL HEADER:
+  - Title: "Send Offer to [Candidate Name]"
+  - Subtitle: "Complete the offer details below. The IC 
+    Agreement will be automatically populated and sent."
+  - Close (X) button — reverts status dropdown on close
+
+SECTION 1 — Offer Details (left column in a 2-col grid):
+  
+  Compensation Amount (required):
+  - Text input
+  - Placeholder: "e.g. 5000 or 25"
+  - Label: "Compensation"
+
+  Compensation Type (required):
+  - Select dropdown:
+      "Per Hour" → per_hour
+      "Per Month" → per_month  
+      "Flat Rate" → flat_rate
+
+  Start Date (required):
+  - Date picker input
+  - Label: "Start Date"
+  - Note beneath: "This will be used as Day 1 of their 
+    onboarding checklist"
+
+  Custom Terms (optional):
+  - Textarea, 3 rows
+  - Label: "Additional Terms (optional)"
+  - Placeholder: "Any additional terms or conditions to 
+    include in the agreement..."
+
+SECTION 2 — Agreement Preview (below offer details):
+  - Collapsible section, collapsed by default
+  - Header: "Preview IC Agreement" with ChevronDown icon
+  - When expanded: shows a read-only preview of the active 
+    IC Agreement template content with a light gray background
+  - Placeholders shown as teal chips (same visual as the 
+    template editor)
+  - Note at top of preview: "This is the template that will 
+    be populated with the details above when sent."
+  - If no active template: show a yellow warning instead:
+    "⚠ No active IC Agreement template found. Please 
+    configure one under Settings > HR Settings > IC Agreement 
+    before sending offers." — and disable the Send button
+
+SECTION 3 — Delivery confirmation (bottom of modal, above 
+footer):
+  - Info box (light teal background):
+    "📧 The signing link will be automatically emailed to 
+    [applicant email]. You will also receive a copyable link 
+    after sending."
+
+MODAL FOOTER:
+  - Left: "Cancel" button (ghost) — closes modal, reverts 
+    status dropdown
+  - Right: "Send Offer & Agreement" button (teal, solid)
+    - Disabled if required fields are empty or no active 
+      template
+    - Shows loading spinner during API call
+
+ON SUCCESS (offer sent):
+  - Close the offer modal
+  - Open OfferStatusPanel in its place OR transition the 
+    right panel of the applicant page to show offer status
+  - Show a success toast: "Offer sent to [candidate name]"
+  - Display the signing URL in a prominent copyable field:
+      Label: "Signing Link"
+      Input (read-only) with the full URL
+      "Copy Link" button beside it (copies to clipboard, 
+      shows "Copied!" feedback)
+  - If emailSent = false: show a destructive banner above 
+    the copy field: "⚠ Email failed to send. Please share 
+    the link below manually."
+
+ON ERROR:
+  - Keep modal open
+  - Show destructive toast with the error message returned 
+    from the API
+
+─────────────────────────────────────
+OfferStatusPanel.tsx
+─────────────────────────────────────
+Replaces or extends the right-side "Update Application" panel 
+on the applicant detail page when an offer exists (status is 
+'send_offer', 'offer_accepted', or 'offer_declined').
+
+Query GET /api/applications/:applicationId/offer on page load.
+
+IF offer exists, render OfferStatusPanel:
+
+OFFER STATUS HEADER:
+  - "IC Agreement" section title
+  - Status badge:
+      Pending → yellow "Awaiting Signature"
+      Signed  → green "Offer Accepted ✓"
+      Declined → red "Offer Declined"
+
+OFFER DETAILS (compact, read-only):
+  - Compensation: "[amount] [type]"
+  - Start Date: formatted date
+  - Sent: relative time (e.g. "2 days ago")
+  - Signed At: formatted datetime (if signed)
+
+SIGNING LINK (if status = 'pending'):
+  - Read-only input with full signing URL
+  - "Copy Link" button
+  - "Resend Email" button (outline) — calls resend endpoint
+    with confirmation: "Resend the signing link to 
+    [email]?"
+    On success: toast "Email resent successfully"
+
+STATUS TIMELINE (offer_status_log entries):
+  - Small vertical timeline showing each status change 
+    with timestamp and who triggered it
+  - "Applicant" shown as actor for signature events 
+    (changedBy = null)
+
+IF no offer exists: render the original "Update Application" 
+panel as normal (status dropdown + rating). Do not change 
+existing behavior when no offer is present.
+
+═══════════════════════════════════════
+PROTECTIVE RULES
+═══════════════════════════════════════
+- Do NOT modify any existing applicant status update logic 
+  beyond intercepting the 'send_offer' selection
+- Do NOT modify any other status change behaviors — only 
+  'send_offer' gets the modal intercept
+- Do NOT modify any existing email sending infrastructure — 
+  use the exact same pattern already in the codebase
+- Do NOT touch vite.config.ts, package.json, or 
+  drizzle.config.ts
+- Do NOT modify any existing schema or migrations
+- Do NOT modify any existing HR, applicant list, or 
+  careers page components
+- Use TanStack Query v5 object form for all queries:
+  useQuery({ queryKey: [...], queryFn: ... })
+- useMutation for POST operations
+- After send-offer mutation succeeds: invalidate the 
+  application detail query AND the offer query
+- Toast notifications: only "default" and "destructive" 
+  variants
+- Icons from lucide-react only
+- All teal accents: hsl(179, 100%, 39%)
+- The signing token must be generated server-side using 
+  crypto.randomUUID() — never client-side
+- The populatedContent must be generated and stored 
+  server-side — never send raw template + values to 
+  the client for population
+- Email failure must NOT roll back offer creation — 
+  always return the signing URL even if email fails
+- Check actual applicant table column names before 
+  writing any queries (name, email, position, status)

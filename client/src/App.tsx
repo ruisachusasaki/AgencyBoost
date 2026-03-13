@@ -58,6 +58,7 @@ import HRPage from "@/pages/hr";
 import ApplicantDetailPage from "@/pages/applicant-detail";
 import HRSettings from "@/pages/settings/hr-settings";
 import TemplateBuilder from "@/components/onboarding/TemplateBuilder";
+import ICAgreementEditor from "@/components/icagreement/ICAgreementEditor";
 import ClientsSettings from "@/pages/settings/clients";
 import CareersPage from "@/pages/careers";
 import OnboardingPage from "@/pages/onboarding";
@@ -660,6 +661,30 @@ function Router() {
         )}
       </Route>
       
+      <Route path="/settings/hr/ic-agreement/new">
+        {() => (
+          <AuthGate>
+            <RequirePermission module="settings" permission="settings.px_settings.view">
+              <MainLayout>
+                <ICAgreementEditor />
+              </MainLayout>
+            </RequirePermission>
+          </AuthGate>
+        )}
+      </Route>
+
+      <Route path="/settings/hr/ic-agreement/:id">
+        {() => (
+          <AuthGate>
+            <RequirePermission module="settings" permission="settings.px_settings.view">
+              <MainLayout>
+                <ICAgreementEditor />
+              </MainLayout>
+            </RequirePermission>
+          </AuthGate>
+        )}
+      </Route>
+
       <Route path="/settings/clients">
         {() => (
           <AuthGate>

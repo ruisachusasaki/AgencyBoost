@@ -28,7 +28,8 @@ import {
   GripVertical,
   Network,
   ClipboardList,
-  BellRing
+  BellRing,
+  FileText
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +40,7 @@ import ExpenseReportFormEditor from "@/components/hr/expense-report-form-editor"
 import OffboardingFormEditor from "@/components/hr/offboarding-form-editor";
 import OrgChartStructureBuilder from "@/components/hr/org-chart-structure-builder";
 import OnboardingTemplates from "@/pages/settings/OnboardingTemplates";
+import ICAgreementTemplates from "@/pages/settings/ICAgreementTemplates";
 import { Link } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -766,7 +768,8 @@ export default function HRSettingsPage() {
             { id: "one-on-one-settings", name: "1v1 Settings", icon: MessageCircle },
             { id: "org-chart", name: "Org Chart", icon: Network },
             { id: "onboarding-templates", name: "Onboarding Templates", icon: ClipboardList },
-            { id: "onboarding-alerts", name: "Onboarding Alerts", icon: BellRing }
+            { id: "onboarding-alerts", name: "Onboarding Alerts", icon: BellRing },
+            { id: "ic-agreement", name: "IC Agreement", icon: FileText }
           ];
           
           const visibleTabs = allTabs.slice(0, visibleTabsCount);
@@ -876,6 +879,10 @@ export default function HRSettingsPage() {
 
         <TabsContent value="onboarding-alerts" className="space-y-6">
           <OnboardingAlertsSettings />
+        </TabsContent>
+
+        <TabsContent value="ic-agreement" className="space-y-6">
+          <ICAgreementTemplates />
         </TabsContent>
 
       </Tabs>

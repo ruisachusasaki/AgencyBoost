@@ -90,6 +90,7 @@ __export(schema_exports, {
   goHighLevelIntegration: () => goHighLevelIntegration,
   granularPermissions: () => granularPermissions,
   healthScoreFilterSchema: () => healthScoreFilterSchema,
+  icAgreementTemplates: () => icAgreementTemplates,
   imageAnnotations: () => imageAnnotations,
   inputClientHealthScoreSchema: () => inputClientHealthScoreSchema,
   insertActivitySchema: () => insertActivitySchema,
@@ -158,11 +159,13 @@ __export(schema_exports, {
   insertFormSubmissionSchema: () => insertFormSubmissionSchema,
   insertGoHighLevelIntegrationSchema: () => insertGoHighLevelIntegrationSchema,
   insertGranularPermissionSchema: () => insertGranularPermissionSchema,
+  insertIcAgreementTemplateSchema: () => insertIcAgreementTemplateSchema,
   insertImageAnnotationSchema: () => insertImageAnnotationSchema,
   insertInvoiceSchema: () => insertInvoiceSchema,
   insertJobApplicationFormConfigSchema: () => insertJobApplicationFormConfigSchema,
   insertJobApplicationSchema: () => insertJobApplicationSchema,
   insertJobApplicationWatcherSchema: () => insertJobApplicationWatcherSchema,
+  insertJobOfferSchema: () => insertJobOfferSchema,
   insertJobOpeningSchema: () => insertJobOpeningSchema,
   insertKnowledgeBaseArticleSchema: () => insertKnowledgeBaseArticleSchema,
   insertKnowledgeBaseArticleVersionSchema: () => insertKnowledgeBaseArticleVersionSchema,
@@ -187,6 +190,8 @@ __export(schema_exports, {
   insertNotificationSettingsSchema: () => insertNotificationSettingsSchema,
   insertOffboardingFormConfigSchema: () => insertOffboardingFormConfigSchema,
   insertOffboardingSubmissionSchema: () => insertOffboardingSubmissionSchema,
+  insertOfferSignatureSchema: () => insertOfferSignatureSchema,
+  insertOfferStatusLogSchema: () => insertOfferStatusLogSchema,
   insertOnboardingInstanceItemSchema: () => insertOnboardingInstanceItemSchema,
   insertOnboardingInstanceSchema: () => insertOnboardingInstanceSchema,
   insertOnboardingTemplateItemSchema: () => insertOnboardingTemplateItemSchema,
@@ -308,6 +313,7 @@ __export(schema_exports, {
   jobApplicationFormConfig: () => jobApplicationFormConfig,
   jobApplicationWatchers: () => jobApplicationWatchers,
   jobApplications: () => jobApplications,
+  jobOffers: () => jobOffers,
   jobOpenings: () => jobOpenings,
   knowledgeBaseArticleVersions: () => knowledgeBaseArticleVersions,
   knowledgeBaseArticles: () => knowledgeBaseArticles,
@@ -332,6 +338,8 @@ __export(schema_exports, {
   notifications: () => notifications,
   offboardingFormConfig: () => offboardingFormConfig,
   offboardingSubmissions: () => offboardingSubmissions,
+  offerSignatures: () => offerSignatures,
+  offerStatusLog: () => offerStatusLog,
   onboardingInstanceItems: () => onboardingInstanceItems,
   onboardingInstances: () => onboardingInstances,
   onboardingTemplateItems: () => onboardingTemplateItems,
@@ -462,7 +470,7 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, uuid, date, serial, unique, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-var sessions, uuidDefault, users, businessProfile, customFieldFolders, customFields, clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, clientTransactions, tags, clientGroups, productCategories, products, productBundles, bundleProducts, productPackages, packageItems, clientProducts, clientBundles, clientPackages, quotes, quoteItems, salesSettings, salesTargets, capacitySettings, notes, appointments, documents, activities, clients, clientRoadmapEntries, insertClientRoadmapEntrySchema, clientRoadmapComments, insertClientRoadmapCommentSchema, clientPortalUsers, clientHealthScores, clientBriefSections, clientBriefValues, projects2, campaigns, templateFolders, emailTemplates, smsTemplates, scheduledEmails, leadPipelineStages, leadSources, leadNoteTemplates, leads, leadStageTransitions, salesActivities, deals, smartLists, tasks, taskDependencies, taskComments, taskCommentReactions, commentFiles, imageAnnotations, timeOffPolicies, timeOffTypes, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, jobApplicationComments, jobApplicationWatchers, timeOffBalances, taskActivities, invoices, socialMediaAccounts, socialMediaPosts, socialMediaTemplates, socialMediaAnalytics, insertUserSchema, insertCustomFieldFolderSchema, insertCustomFieldSchema, insertClientGroupSchema, insertClientProductSchema, insertClientBundleSchema, insertClientAppointmentSchema, insertNoteSchema, insertDocumentSchema, insertActivitySchema, insertClientSchema, inputClientHealthScoreSchema, insertClientHealthScoreSchema, insertClientBriefSectionSchema, insertClientBriefValueSchema, insertCampaignSchema, insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema, insertScheduledEmailSchema, insertSmartListSchema, insertLeadPipelineStagSchema, insertLeadSourceSchema, insertLeadNoteTemplateSchema, insertLeadSchema, insertLeadStageTransitionSchema, insertSalesActivitySchema, insertDealSchema, insertTaskSchema, insertTaskSchemaValidated, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, insertSocialMediaAnalyticsSchema, insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema, insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertJobApplicationWatcherSchema, insertTimeOffBalanceSchema, insertTimeOffRequestDaySchema, workflows, workflowExecutions, workflowActionAnalytics, workflowTemplates, taskCategories, taskTemplates, enhancedTasks, taskHistory, automationTriggers, automationActions, notifications, roles, permissions, userRoles, granularPermissions, permissionAuditLogs, permissionChangeHistory, insertWorkflowSchema, insertWorkflowExecutionSchema, insertWorkflowActionAnalyticsSchema, insertWorkflowTemplateSchema, insertTaskCategorySchema, insertTaskTemplateSchema, insertEnhancedTaskSchema, insertTaskHistorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema, insertNotificationSchema, insertClientNoteSchema, insertClientTaskSchema, insertClientDocumentSchema, insertClientContactSchema, insertClientTransactionSchema, healthScoreFilterSchema, departments, positions, positionKpis2, insertPositionKpiSchema, staff, salaryHistory, insertStaffSchema, authUsers, insertAuthUserSchema, staffLinkedEmails, insertStaffLinkedEmailSchema, jobOpenings, insertJobOpeningSchema, insertDepartmentSchema, insertPositionSchema, insertTagSchema, insertProductCategorySchema, insertProductSchema, insertProductBundleSchema, insertBundleProductSchema, insertProductPackageSchema, insertPackageItemSchema, insertClientPackageSchema, auditLogs, insertAuditLogSchema, insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertGranularPermissionSchema, insertPermissionAuditLogSchema, insertPermissionChangeHistorySchema, notificationSettings, insertNotificationSettingsSchema, calendars, calendarStaff, calendarAvailability, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, aiIntegrations, insertAiIntegrationSchema, stripeIntegrations, insertStripeIntegrationSchema, aiAssistantSettings, insertAiAssistantSettingsSchema, goHighLevelIntegration, insertGoHighLevelIntegrationSchema, slackWorkspaces, insertSlackWorkspaceSchema, leadNotes, leadAppointments, insertLeadNoteSchema, insertLeadAppointmentSchema, calendarAppointments, appointmentReminders, roundRobinTracking, insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema, insertCalendarDateOverrideSchema, insertCalendarIntegrationSchema, insertSmsIntegrationSchema, insertEmailIntegrationSchema, insertCalendarAppointmentSchema, insertAppointmentReminderSchema, insertRoundRobinTrackingSchema, customFieldFileUploads, insertCustomFieldFileUploadSchema, taskAttachments, insertTaskAttachmentSchema, taskStatuses, teamWorkflows, teamWorkflowStatuses, taskPriorities, taskSettings, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema, insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema, formFolders, forms, formFields, formSubmissions, insertFormSchema, jobApplicationFormConfig, insertJobApplicationFormConfigSchema, newHireOnboardingFormConfig, insertNewHireOnboardingFormConfigSchema, clientOnboardingFormConfig, insertClientOnboardingFormConfigSchema, newHireOnboardingSubmissions, insertNewHireOnboardingSubmissionSchema, expenseReportFormConfig, insertExpenseReportFormConfigSchema, expenseReportSubmissions, insertExpenseReportSubmissionSchema, offboardingFormConfig, insertOffboardingFormConfigSchema, offboardingSubmissions, insertOffboardingSubmissionSchema, insertFormFieldSchema, insertFormSubmissionSchema, insertFormFolderSchema, insertTaskDependencySchema, teamPositions, clientTeamAssignments, positionDescriptionVersions, insertTeamPositionSchema, reorderTeamPositionsSchema, insertClientTeamAssignmentSchema, knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks, knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings, knowledgeBaseArticleVersions, insertKnowledgeBaseCategorySchema, insertKnowledgeBaseArticleSchema, insertKnowledgeBasePermissionSchema, insertKnowledgeBaseBookmarkSchema, insertKnowledgeBaseLikeSchema, insertKnowledgeBaseCommentSchema, insertKnowledgeBaseViewSchema, insertKnowledgeBaseSettingSchema, insertKnowledgeBaseArticleVersionSchema, trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress, trainingCoursePermissions, trainingQuizzes, trainingQuizQuestions, trainingLessonResources, trainingQuizAttempts, trainingAssignments, trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, userViewPreferences, dashboards, dashboardWidgets, userDashboardWidgets, insertTrainingCategorySchema, insertTrainingCourseSchema, insertTrainingModuleSchema, insertTrainingLessonSchema, insertTrainingEnrollmentSchema, insertTrainingProgressSchema, insertTrainingCoursePermissionSchema, insertTrainingQuizSchema, insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema, insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema, insertTrainingLessonResourceSchema, insertUserViewPreferenceSchema, insertDashboardSchema, insertDashboardWidgetSchema, insertUserDashboardWidgetSchema, insertQuoteSchema, insertQuoteItemSchema, insertSalesSettingsSchema, updateSalesSettingsSchema, insertSalesTargetSchema, updateSalesTargetSchema, insertCapacitySettingsSchema, updateCapacitySettingsSchema, timeTrackingReportFiltersSchema, oneOnOneMeetings, insertOneOnOneMeetingSchema, oneOnOneTalkingPoints, insertOneOnOneTalkingPointSchema, oneOnOneWins, insertOneOnOneWinSchema, oneOnOneActionItems, insertOneOnOneActionItemSchema, oneOnOneGoals, insertOneOnOneGoalSchema, oneOnOneMeetingKpiStatuses, insertOneOnOneMeetingKpiStatusSchema, oneOnOneComments, insertOneOnOneCommentSchema, oneOnOneProgressionStatuses, insertOneOnOneProgressionStatusSchema, orgChartStructures, insertOrgChartStructureSchema, orgChartNodes, insertOrgChartNodeSchema, orgChartNodeAssignments, insertOrgChartNodeAssignmentSchema, insertTimeOffTypeSchema, calendarConnections, calendarSyncState, calendarEvents, calendarEventCache, insertCalendarConnectionSchema, insertCalendarSyncStateSchema, insertCalendarEventSchema, eventTimeEntries, insertEventTimeEntrySchema, surveyFolders, surveys, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers, insertSurveyFolderSchema, PX_MEETING_SEGMENTS, pxMeetings, pxMeetingAttendees, insertPxMeetingSchema, insertPxMeetingAttendeeSchema, staffIncidents, insertStaffIncidentSchema, insertSurveySchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema, insertSurveySubmissionAnswerSchema, taskIntakeForms, taskIntakeSections, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules, insertTaskIntakeFormSchema, insertTaskIntakeSectionSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema, taskIntakeSubmissions, taskIntakeAnswers, insertTaskIntakeSubmissionSchema, insertTaskIntakeAnswerSchema, toolDirectoryCategories, toolDirectoryTools, insertToolDirectoryCategorySchema, insertToolDirectoryToolSchema, tickets, ticketRoutingRules, ticketComments, ticketAttachments, insertTicketSchema, insertTicketCommentSchema, insertTicketAttachmentSchema, insertTicketRoutingRuleSchema, callCenterTimeEntries, insertCallCenterTimeEntrySchema, productTaskTemplates, insertProductTaskTemplateSchema, clientTaskGenerations, insertClientTaskGenerationSchema, clientRecurringConfig, insertClientRecurringConfigSchema, proposals, insertProposalSchema, proposalTerms, insertProposalTermsSchema, customForms, customFormFields, customFormSubmissions, insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema, onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems, insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema, insertOnboardingInstanceSchema, insertOnboardingInstanceItemSchema;
+var sessions, uuidDefault, users, businessProfile, customFieldFolders, customFields, clientNotes, clientTasks, clientAppointments, clientDocuments, clientContacts, clientTransactions, tags, clientGroups, productCategories, products, productBundles, bundleProducts, productPackages, packageItems, clientProducts, clientBundles, clientPackages, quotes, quoteItems, salesSettings, salesTargets, capacitySettings, notes, appointments, documents, activities, clients, clientRoadmapEntries, insertClientRoadmapEntrySchema, clientRoadmapComments, insertClientRoadmapCommentSchema, clientPortalUsers, clientHealthScores, clientBriefSections, clientBriefValues, projects2, campaigns, templateFolders, emailTemplates, smsTemplates, scheduledEmails, leadPipelineStages, leadSources, leadNoteTemplates, leads, leadStageTransitions, salesActivities, deals, smartLists, tasks, taskDependencies, taskComments, taskCommentReactions, commentFiles, imageAnnotations, timeOffPolicies, timeOffTypes, timeOffRequests, timeOffRequestDays, jobApplications, applicationStageHistory, jobApplicationComments, jobApplicationWatchers, timeOffBalances, taskActivities, invoices, socialMediaAccounts, socialMediaPosts, socialMediaTemplates, socialMediaAnalytics, insertUserSchema, insertCustomFieldFolderSchema, insertCustomFieldSchema, insertClientGroupSchema, insertClientProductSchema, insertClientBundleSchema, insertClientAppointmentSchema, insertNoteSchema, insertDocumentSchema, insertActivitySchema, insertClientSchema, inputClientHealthScoreSchema, insertClientHealthScoreSchema, insertClientBriefSectionSchema, insertClientBriefValueSchema, insertCampaignSchema, insertTemplateFolderSchema, insertEmailTemplateSchema, insertSmsTemplateSchema, insertScheduledEmailSchema, insertSmartListSchema, insertLeadPipelineStagSchema, insertLeadSourceSchema, insertLeadNoteTemplateSchema, insertLeadSchema, insertLeadStageTransitionSchema, insertSalesActivitySchema, insertDealSchema, insertTaskSchema, insertTaskSchemaValidated, insertTaskActivitySchema, insertInvoiceSchema, insertSocialMediaAccountSchema, insertSocialMediaPostSchema, insertSocialMediaTemplateSchema, insertSocialMediaAnalyticsSchema, insertTaskCommentSchema, insertTaskCommentReactionSchema, insertCommentFileSchema, insertImageAnnotationSchema, insertTimeOffRequestSchema, insertJobApplicationSchema, insertApplicationStageHistorySchema, insertJobApplicationWatcherSchema, insertTimeOffBalanceSchema, insertTimeOffRequestDaySchema, workflows, workflowExecutions, workflowActionAnalytics, workflowTemplates, taskCategories, taskTemplates, enhancedTasks, taskHistory, automationTriggers, automationActions, notifications, roles, permissions, userRoles, granularPermissions, permissionAuditLogs, permissionChangeHistory, insertWorkflowSchema, insertWorkflowExecutionSchema, insertWorkflowActionAnalyticsSchema, insertWorkflowTemplateSchema, insertTaskCategorySchema, insertTaskTemplateSchema, insertEnhancedTaskSchema, insertTaskHistorySchema, insertAutomationTriggerSchema, insertAutomationActionSchema, insertNotificationSchema, insertClientNoteSchema, insertClientTaskSchema, insertClientDocumentSchema, insertClientContactSchema, insertClientTransactionSchema, healthScoreFilterSchema, departments, positions, positionKpis2, insertPositionKpiSchema, staff, salaryHistory, insertStaffSchema, authUsers, insertAuthUserSchema, staffLinkedEmails, insertStaffLinkedEmailSchema, jobOpenings, insertJobOpeningSchema, insertDepartmentSchema, insertPositionSchema, insertTagSchema, insertProductCategorySchema, insertProductSchema, insertProductBundleSchema, insertBundleProductSchema, insertProductPackageSchema, insertPackageItemSchema, insertClientPackageSchema, auditLogs, insertAuditLogSchema, insertRoleSchema, insertPermissionSchema, insertUserRoleSchema, insertGranularPermissionSchema, insertPermissionAuditLogSchema, insertPermissionChangeHistorySchema, notificationSettings, insertNotificationSettingsSchema, calendars, calendarStaff, calendarAvailability, calendarDateOverrides, calendarIntegrations, smsIntegrations, emailIntegrations, aiIntegrations, insertAiIntegrationSchema, stripeIntegrations, insertStripeIntegrationSchema, aiAssistantSettings, insertAiAssistantSettingsSchema, goHighLevelIntegration, insertGoHighLevelIntegrationSchema, slackWorkspaces, insertSlackWorkspaceSchema, leadNotes, leadAppointments, insertLeadNoteSchema, insertLeadAppointmentSchema, calendarAppointments, appointmentReminders, roundRobinTracking, insertCalendarSchema, insertCalendarStaffSchema, insertCalendarAvailabilitySchema, insertCalendarDateOverrideSchema, insertCalendarIntegrationSchema, insertSmsIntegrationSchema, insertEmailIntegrationSchema, insertCalendarAppointmentSchema, insertAppointmentReminderSchema, insertRoundRobinTrackingSchema, customFieldFileUploads, insertCustomFieldFileUploadSchema, taskAttachments, insertTaskAttachmentSchema, taskStatuses, teamWorkflows, teamWorkflowStatuses, taskPriorities, taskSettings, insertTaskStatusSchema, insertTaskPrioritySchema, insertTaskSettingsSchema, insertTeamWorkflowSchema, insertTeamWorkflowStatusSchema, formFolders, forms, formFields, formSubmissions, insertFormSchema, jobApplicationFormConfig, insertJobApplicationFormConfigSchema, newHireOnboardingFormConfig, insertNewHireOnboardingFormConfigSchema, clientOnboardingFormConfig, insertClientOnboardingFormConfigSchema, newHireOnboardingSubmissions, insertNewHireOnboardingSubmissionSchema, expenseReportFormConfig, insertExpenseReportFormConfigSchema, expenseReportSubmissions, insertExpenseReportSubmissionSchema, offboardingFormConfig, insertOffboardingFormConfigSchema, offboardingSubmissions, insertOffboardingSubmissionSchema, insertFormFieldSchema, insertFormSubmissionSchema, insertFormFolderSchema, insertTaskDependencySchema, teamPositions, clientTeamAssignments, positionDescriptionVersions, insertTeamPositionSchema, reorderTeamPositionsSchema, insertClientTeamAssignmentSchema, knowledgeBaseCategories, knowledgeBaseArticles, knowledgeBasePermissions, knowledgeBaseBookmarks, knowledgeBaseLikes, knowledgeBaseComments, knowledgeBaseViews, knowledgeBaseSettings, knowledgeBaseArticleVersions, insertKnowledgeBaseCategorySchema, insertKnowledgeBaseArticleSchema, insertKnowledgeBasePermissionSchema, insertKnowledgeBaseBookmarkSchema, insertKnowledgeBaseLikeSchema, insertKnowledgeBaseCommentSchema, insertKnowledgeBaseViewSchema, insertKnowledgeBaseSettingSchema, insertKnowledgeBaseArticleVersionSchema, trainingCategories, trainingCourses, trainingModules, trainingLessons, trainingEnrollments, trainingProgress, trainingCoursePermissions, trainingQuizzes, trainingQuizQuestions, trainingLessonResources, trainingQuizAttempts, trainingAssignments, trainingAssignmentSubmissions, trainingDiscussions, trainingDiscussionLikes, userViewPreferences, dashboards, dashboardWidgets, userDashboardWidgets, insertTrainingCategorySchema, insertTrainingCourseSchema, insertTrainingModuleSchema, insertTrainingLessonSchema, insertTrainingEnrollmentSchema, insertTrainingProgressSchema, insertTrainingCoursePermissionSchema, insertTrainingQuizSchema, insertTrainingQuizQuestionSchema, insertTrainingQuizAttemptSchema, insertTrainingAssignmentSchema, insertTrainingAssignmentSubmissionSchema, insertTrainingDiscussionSchema, insertTrainingDiscussionLikeSchema, insertTrainingLessonResourceSchema, insertUserViewPreferenceSchema, insertDashboardSchema, insertDashboardWidgetSchema, insertUserDashboardWidgetSchema, insertQuoteSchema, insertQuoteItemSchema, insertSalesSettingsSchema, updateSalesSettingsSchema, insertSalesTargetSchema, updateSalesTargetSchema, insertCapacitySettingsSchema, updateCapacitySettingsSchema, timeTrackingReportFiltersSchema, oneOnOneMeetings, insertOneOnOneMeetingSchema, oneOnOneTalkingPoints, insertOneOnOneTalkingPointSchema, oneOnOneWins, insertOneOnOneWinSchema, oneOnOneActionItems, insertOneOnOneActionItemSchema, oneOnOneGoals, insertOneOnOneGoalSchema, oneOnOneMeetingKpiStatuses, insertOneOnOneMeetingKpiStatusSchema, oneOnOneComments, insertOneOnOneCommentSchema, oneOnOneProgressionStatuses, insertOneOnOneProgressionStatusSchema, orgChartStructures, insertOrgChartStructureSchema, orgChartNodes, insertOrgChartNodeSchema, orgChartNodeAssignments, insertOrgChartNodeAssignmentSchema, insertTimeOffTypeSchema, calendarConnections, calendarSyncState, calendarEvents, calendarEventCache, insertCalendarConnectionSchema, insertCalendarSyncStateSchema, insertCalendarEventSchema, eventTimeEntries, insertEventTimeEntrySchema, surveyFolders, surveys, surveySlides, surveyFields, surveyLogicRules, surveySubmissions, surveySubmissionAnswers, insertSurveyFolderSchema, PX_MEETING_SEGMENTS, pxMeetings, pxMeetingAttendees, insertPxMeetingSchema, insertPxMeetingAttendeeSchema, staffIncidents, insertStaffIncidentSchema, insertSurveySchema, insertSurveySlideSchema, insertSurveyFieldSchema, insertSurveyLogicRuleSchema, insertSurveySubmissionSchema, insertSurveySubmissionAnswerSchema, taskIntakeForms, taskIntakeSections, taskIntakeQuestions, taskIntakeOptions, taskIntakeLogicRules, taskIntakeAssignmentRules, insertTaskIntakeFormSchema, insertTaskIntakeSectionSchema, insertTaskIntakeQuestionSchema, insertTaskIntakeOptionSchema, insertTaskIntakeLogicRuleSchema, insertTaskIntakeAssignmentRuleSchema, taskIntakeSubmissions, taskIntakeAnswers, insertTaskIntakeSubmissionSchema, insertTaskIntakeAnswerSchema, toolDirectoryCategories, toolDirectoryTools, insertToolDirectoryCategorySchema, insertToolDirectoryToolSchema, tickets, ticketRoutingRules, ticketComments, ticketAttachments, insertTicketSchema, insertTicketCommentSchema, insertTicketAttachmentSchema, insertTicketRoutingRuleSchema, callCenterTimeEntries, insertCallCenterTimeEntrySchema, productTaskTemplates, insertProductTaskTemplateSchema, clientTaskGenerations, insertClientTaskGenerationSchema, clientRecurringConfig, insertClientRecurringConfigSchema, proposals, insertProposalSchema, proposalTerms, insertProposalTermsSchema, customForms, customFormFields, customFormSubmissions, insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema, onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems, insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema, insertOnboardingInstanceSchema, insertOnboardingInstanceItemSchema, icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog, insertIcAgreementTemplateSchema, insertJobOfferSchema, insertOfferSignatureSchema, insertOfferStatusLogSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -1505,7 +1513,7 @@ var init_schema = __esm({
       coverLetterUrl: text("cover_letter_url"),
       portfolioUrl: text("portfolio_url"),
       stage: text("stage").notNull().default("new"),
-      // new, review, interview, not_selected, test_sent, send_offer, offer_sent, offer_accepted, offer_rejected
+      // new, review, interview, not_selected, test_sent, send_offer, offer_sent, offer_accepted, offer_declined, hired
       rating: integer("rating").default(0),
       // 1-5 star rating
       notes: text("notes"),
@@ -5347,6 +5355,65 @@ var init_schema = __esm({
     insertOnboardingTemplateItemSchema = createInsertSchema(onboardingTemplateItems).omit({ id: true, createdAt: true });
     insertOnboardingInstanceSchema = createInsertSchema(onboardingInstances).omit({ id: true, createdAt: true });
     insertOnboardingInstanceItemSchema = createInsertSchema(onboardingInstanceItems).omit({ id: true, createdAt: true });
+    icAgreementTemplates = pgTable("ic_agreement_templates", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull(),
+      content: text("content").notNull(),
+      isActive: boolean("is_active").default(true),
+      createdBy: uuid("created_by").references(() => staff.id),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    jobOffers = pgTable("job_offers", {
+      id: serial("id").primaryKey(),
+      applicationId: varchar("application_id").notNull().references(() => jobApplications.id, { onDelete: "cascade" }),
+      createdBy: uuid("created_by").references(() => staff.id),
+      templateId: integer("template_id").references(() => icAgreementTemplates.id),
+      populatedContent: text("populated_content").notNull(),
+      compensation: text("compensation").notNull(),
+      compensationType: text("compensation_type").notNull(),
+      // 'per_hour', 'per_month', 'flat_rate'
+      startDate: date("start_date").notNull(),
+      customTerms: text("custom_terms"),
+      signingToken: text("signing_token").notNull(),
+      status: text("status").notNull().default("pending"),
+      // 'pending', 'signed', 'declined'
+      sentAt: timestamp("sent_at").defaultNow(),
+      expiresAt: timestamp("expires_at"),
+      createdAt: timestamp("created_at").defaultNow()
+    }, (table) => [
+      unique("job_offers_application_id_unique").on(table.applicationId),
+      unique("job_offers_signing_token_unique").on(table.signingToken),
+      index("job_offers_status_idx").on(table.status)
+    ]);
+    offerSignatures = pgTable("offer_signatures", {
+      id: serial("id").primaryKey(),
+      offerId: integer("offer_id").notNull().references(() => jobOffers.id, { onDelete: "cascade" }),
+      signatureType: text("signature_type").notNull(),
+      // 'drawn' or 'typed'
+      signatureData: text("signature_data").notNull(),
+      signerName: text("signer_name").notNull(),
+      signerEmail: text("signer_email").notNull(),
+      ipAddress: text("ip_address"),
+      userAgent: text("user_agent"),
+      signedAt: timestamp("signed_at").notNull().defaultNow()
+    }, (table) => [
+      unique("offer_signatures_offer_id_unique").on(table.offerId)
+    ]);
+    offerStatusLog = pgTable("offer_status_log", {
+      id: serial("id").primaryKey(),
+      offerId: integer("offer_id").notNull().references(() => jobOffers.id, { onDelete: "cascade" }),
+      status: text("status").notNull(),
+      changedBy: uuid("changed_by").references(() => staff.id),
+      note: text("note"),
+      createdAt: timestamp("created_at").defaultNow()
+    }, (table) => [
+      index("offer_status_log_offer_id_idx").on(table.offerId)
+    ]);
+    insertIcAgreementTemplateSchema = createInsertSchema(icAgreementTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+    insertJobOfferSchema = createInsertSchema(jobOffers).omit({ id: true, createdAt: true, sentAt: true });
+    insertOfferSignatureSchema = createInsertSchema(offerSignatures).omit({ id: true, signedAt: true });
+    insertOfferStatusLogSchema = createInsertSchema(offerStatusLog).omit({ id: true, createdAt: true });
   }
 });
 
@@ -56340,6 +56407,131 @@ Rejection reason: ${rejectionReason}` : `Rejection reason: ${rejectionReason}` :
     } catch (error) {
       console.error("Error searching training courses:", error);
       res.status(500).json({ error: "Failed to search training courses" });
+    }
+  });
+  app2.get("/api/ic-agreement-templates/active", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const staffAlias = alias(staff, "createdByStaff");
+      const [template] = await db.select({
+        id: icAgreementTemplates.id,
+        name: icAgreementTemplates.name,
+        content: icAgreementTemplates.content,
+        isActive: icAgreementTemplates.isActive,
+        createdBy: icAgreementTemplates.createdBy,
+        createdByName: staffAlias.fullName,
+        createdAt: icAgreementTemplates.createdAt,
+        updatedAt: icAgreementTemplates.updatedAt
+      }).from(icAgreementTemplates).leftJoin(staffAlias, eq18(icAgreementTemplates.createdBy, staffAlias.id)).where(eq18(icAgreementTemplates.isActive, true)).limit(1);
+      res.json({ template: template || null });
+    } catch (error) {
+      console.error("Error fetching active IC agreement template:", error);
+      res.status(500).json({ error: "Failed to fetch active template" });
+    }
+  });
+  app2.get("/api/ic-agreement-templates", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const staffAlias = alias(staff, "createdByStaff");
+      const templates = await db.select({
+        id: icAgreementTemplates.id,
+        name: icAgreementTemplates.name,
+        isActive: icAgreementTemplates.isActive,
+        createdBy: icAgreementTemplates.createdBy,
+        createdByName: staffAlias.fullName,
+        createdAt: icAgreementTemplates.createdAt,
+        updatedAt: icAgreementTemplates.updatedAt
+      }).from(icAgreementTemplates).leftJoin(staffAlias, eq18(icAgreementTemplates.createdBy, staffAlias.id)).orderBy(desc4(icAgreementTemplates.createdAt));
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching IC agreement templates:", error);
+      res.status(500).json({ error: "Failed to fetch templates" });
+    }
+  });
+  app2.get("/api/ic-agreement-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid template ID" });
+      const staffAlias = alias(staff, "createdByStaff");
+      const [template] = await db.select({
+        id: icAgreementTemplates.id,
+        name: icAgreementTemplates.name,
+        content: icAgreementTemplates.content,
+        isActive: icAgreementTemplates.isActive,
+        createdBy: icAgreementTemplates.createdBy,
+        createdByName: staffAlias.fullName,
+        createdAt: icAgreementTemplates.createdAt,
+        updatedAt: icAgreementTemplates.updatedAt
+      }).from(icAgreementTemplates).leftJoin(staffAlias, eq18(icAgreementTemplates.createdBy, staffAlias.id)).where(eq18(icAgreementTemplates.id, id));
+      if (!template) return res.status(404).json({ error: "Template not found" });
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching IC agreement template:", error);
+      res.status(500).json({ error: "Failed to fetch template" });
+    }
+  });
+  app2.post("/api/ic-agreement-templates", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const userId2 = getAuthenticatedUserId(req);
+      const { name, content, isActive } = req.body;
+      if (!name || !content) return res.status(400).json({ error: "Name and content are required" });
+      const result = await db.transaction(async (tx) => {
+        if (isActive) {
+          await tx.update(icAgreementTemplates).set({ isActive: false }).where(eq18(icAgreementTemplates.isActive, true));
+        }
+        const [created] = await tx.insert(icAgreementTemplates).values({
+          name,
+          content,
+          isActive: !!isActive,
+          createdBy: userId2
+        }).returning();
+        return created;
+      });
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error creating IC agreement template:", error);
+      res.status(500).json({ error: "Failed to create template" });
+    }
+  });
+  app2.put("/api/ic-agreement-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid template ID" });
+      const { name, content, isActive } = req.body;
+      const result = await db.transaction(async (tx) => {
+        if (isActive === true) {
+          await tx.update(icAgreementTemplates).set({ isActive: false }).where(eq18(icAgreementTemplates.isActive, true));
+        }
+        const updates = { updatedAt: /* @__PURE__ */ new Date() };
+        if (name !== void 0) updates.name = name;
+        if (content !== void 0) updates.content = content;
+        if (isActive !== void 0) updates.isActive = isActive;
+        const [updated] = await tx.update(icAgreementTemplates).set(updates).where(eq18(icAgreementTemplates.id, id)).returning();
+        return updated;
+      });
+      if (!result) return res.status(404).json({ error: "Template not found" });
+      res.json(result);
+    } catch (error) {
+      console.error("Error updating IC agreement template:", error);
+      res.status(500).json({ error: "Failed to update template" });
+    }
+  });
+  app2.delete("/api/ic-agreement-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid template ID" });
+      const [template] = await db.select().from(icAgreementTemplates).where(eq18(icAgreementTemplates.id, id));
+      if (!template) return res.status(404).json({ error: "Template not found" });
+      if (template.isActive) {
+        return res.status(400).json({ error: "Cannot delete the active template. Set another template as active first." });
+      }
+      const [usedInOffer] = await db.select({ id: jobOffers.id }).from(jobOffers).where(eq18(jobOffers.templateId, id)).limit(1);
+      if (usedInOffer) {
+        return res.status(400).json({ error: "Cannot delete \u2014 this template has been used in sent offers." });
+      }
+      await db.delete(icAgreementTemplates).where(eq18(icAgreementTemplates.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting IC agreement template:", error);
+      res.status(500).json({ error: "Failed to delete template" });
     }
   });
   return httpServer;

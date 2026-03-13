@@ -89,7 +89,8 @@ import {
   customForms, customFormFields, customFormSubmissions,
   insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema,
   onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems,
-  insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema
+  insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema,
+  icAgreementTemplates, jobOffers
 } from "@shared/schema";
 import { spawnOnboardingChecklist } from "./services/onboardingSpawnService";
 import { syncLmsCompletion } from "./services/onboardingLmsSyncService";
@@ -43716,6 +43717,176 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error: any) {
       console.error("Error searching training courses:", error);
       res.status(500).json({ error: "Failed to search training courses" });
+    }
+  });
+
+  // ═══════════════════════════════════════
+  // IC Agreement Templates API
+  // ═══════════════════════════════════════
+
+  app.get("/api/ic-agreement-templates/active", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const staffAlias = alias(staff, "createdByStaff");
+      const [template] = await db
+        .select({
+          id: icAgreementTemplates.id,
+          name: icAgreementTemplates.name,
+          content: icAgreementTemplates.content,
+          isActive: icAgreementTemplates.isActive,
+          createdBy: icAgreementTemplates.createdBy,
+          createdByName: staffAlias.fullName,
+          createdAt: icAgreementTemplates.createdAt,
+          updatedAt: icAgreementTemplates.updatedAt,
+        })
+        .from(icAgreementTemplates)
+        .leftJoin(staffAlias, eq(icAgreementTemplates.createdBy, staffAlias.id))
+        .where(eq(icAgreementTemplates.isActive, true))
+        .limit(1);
+
+      res.json({ template: template || null });
+    } catch (error: any) {
+      console.error("Error fetching active IC agreement template:", error);
+      res.status(500).json({ error: "Failed to fetch active template" });
+    }
+  });
+
+  app.get("/api/ic-agreement-templates", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const staffAlias = alias(staff, "createdByStaff");
+      const templates = await db
+        .select({
+          id: icAgreementTemplates.id,
+          name: icAgreementTemplates.name,
+          isActive: icAgreementTemplates.isActive,
+          createdBy: icAgreementTemplates.createdBy,
+          createdByName: staffAlias.fullName,
+          createdAt: icAgreementTemplates.createdAt,
+          updatedAt: icAgreementTemplates.updatedAt,
+        })
+        .from(icAgreementTemplates)
+        .leftJoin(staffAlias, eq(icAgreementTemplates.createdBy, staffAlias.id))
+        .orderBy(desc(icAgreementTemplates.createdAt));
+
+      res.json(templates);
+    } catch (error: any) {
+      console.error("Error fetching IC agreement templates:", error);
+      res.status(500).json({ error: "Failed to fetch templates" });
+    }
+  });
+
+  app.get("/api/ic-agreement-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid template ID" });
+
+      const staffAlias = alias(staff, "createdByStaff");
+      const [template] = await db
+        .select({
+          id: icAgreementTemplates.id,
+          name: icAgreementTemplates.name,
+          content: icAgreementTemplates.content,
+          isActive: icAgreementTemplates.isActive,
+          createdBy: icAgreementTemplates.createdBy,
+          createdByName: staffAlias.fullName,
+          createdAt: icAgreementTemplates.createdAt,
+          updatedAt: icAgreementTemplates.updatedAt,
+        })
+        .from(icAgreementTemplates)
+        .leftJoin(staffAlias, eq(icAgreementTemplates.createdBy, staffAlias.id))
+        .where(eq(icAgreementTemplates.id, id));
+
+      if (!template) return res.status(404).json({ error: "Template not found" });
+      res.json(template);
+    } catch (error: any) {
+      console.error("Error fetching IC agreement template:", error);
+      res.status(500).json({ error: "Failed to fetch template" });
+    }
+  });
+
+  app.post("/api/ic-agreement-templates", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      const { name, content, isActive } = req.body;
+
+      if (!name || !content) return res.status(400).json({ error: "Name and content are required" });
+
+      const result = await db.transaction(async (tx) => {
+        if (isActive) {
+          await tx.update(icAgreementTemplates).set({ isActive: false }).where(eq(icAgreementTemplates.isActive, true));
+        }
+
+        const [created] = await tx.insert(icAgreementTemplates).values({
+          name,
+          content,
+          isActive: !!isActive,
+          createdBy: userId,
+        }).returning();
+
+        return created;
+      });
+
+      res.status(201).json(result);
+    } catch (error: any) {
+      console.error("Error creating IC agreement template:", error);
+      res.status(500).json({ error: "Failed to create template" });
+    }
+  });
+
+  app.put("/api/ic-agreement-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid template ID" });
+
+      const { name, content, isActive } = req.body;
+
+      const result = await db.transaction(async (tx) => {
+        if (isActive === true) {
+          await tx.update(icAgreementTemplates).set({ isActive: false }).where(eq(icAgreementTemplates.isActive, true));
+        }
+
+        const updates: any = { updatedAt: new Date() };
+        if (name !== undefined) updates.name = name;
+        if (content !== undefined) updates.content = content;
+        if (isActive !== undefined) updates.isActive = isActive;
+
+        const [updated] = await tx.update(icAgreementTemplates)
+          .set(updates)
+          .where(eq(icAgreementTemplates.id, id))
+          .returning();
+
+        return updated;
+      });
+
+      if (!result) return res.status(404).json({ error: "Template not found" });
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error updating IC agreement template:", error);
+      res.status(500).json({ error: "Failed to update template" });
+    }
+  });
+
+  app.delete("/api/ic-agreement-templates/:id", requireAuth(), requireAdmin(), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid template ID" });
+
+      const [template] = await db.select().from(icAgreementTemplates).where(eq(icAgreementTemplates.id, id));
+      if (!template) return res.status(404).json({ error: "Template not found" });
+
+      if (template.isActive) {
+        return res.status(400).json({ error: "Cannot delete the active template. Set another template as active first." });
+      }
+
+      const [usedInOffer] = await db.select({ id: jobOffers.id }).from(jobOffers).where(eq(jobOffers.templateId, id)).limit(1);
+      if (usedInOffer) {
+        return res.status(400).json({ error: "Cannot delete — this template has been used in sent offers." });
+      }
+
+      await db.delete(icAgreementTemplates).where(eq(icAgreementTemplates.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting IC agreement template:", error);
+      res.status(500).json({ error: "Failed to delete template" });
     }
   });
 
