@@ -805,6 +805,10 @@ export const leads = pgTable("leads", {
   stageHistory: jsonb("stage_history").default([]), // track stage movements
   tags: text("tags").array().default([]), // array of tag names
   projectedCloseDate: timestamp("projected_close_date"), // calculated from business days input
+  isConverted: boolean("is_converted").default(false),
+  convertedAt: timestamp("converted_at"),
+  clientId: varchar("client_id"),
+  convertedBy: text("converted_by"),
 });
 
 // Lead Stage Transitions - Track stage movements for pipeline analytics
@@ -1447,6 +1451,10 @@ export const insertLeadNoteTemplateSchema = createInsertSchema(leadNoteTemplates
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
+  isConverted: true,
+  convertedAt: true,
+  clientId: true,
+  convertedBy: true,
 }).extend({
   value: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => {
     if (val === '' || val === null || val === undefined) return null;

@@ -1,0 +1,468 @@
+import { db } from "../db";
+import {
+  leads,
+  clients,
+  quotes,
+  quoteItems,
+  deals,
+  clientProducts,
+  clientBundles,
+  clientPackages,
+  packageItems,
+  leadPipelineStages,
+  taskSettings,
+  clientRecurringConfig,
+} from "@shared/schema";
+import { eq, and, desc, sql } from "drizzle-orm";
+import { randomUUID } from "crypto";
+import { generateTasksFromTemplates } from "../taskGenerationEngine";
+
+type ConversionTrigger = "online_proposal" | "manual" | "ach_signing";
+
+interface ConversionResult {
+  success: true;
+  clientId: string;
+  alreadyConverted: boolean;
+}
+
+export async function convertLeadToClient(
+  leadId: string,
+  triggeredBy: ConversionTrigger,
+  options?: { quoteId?: string }
+): Promise<ConversionResult> {
+  const [lead] = await db
+    .select()
+    .from(leads)
+    .where(eq(leads.id, leadId))
+    .limit(1);
+
+  if (!lead) {
+    throw new Error(`Lead ${leadId} not found`);
+  }
+
+  if (lead.isConverted && lead.clientId) {
+    return { success: true, clientId: lead.clientId, alreadyConverted: true };
+  }
+
+  const existingClient = await db
+    .select()
+    .from(clients)
+    .where(eq(clients.email, lead.email))
+    .limit(1);
+
+  if (existingClient.length > 0) {
+    await db
+      .update(leads)
+      .set({
+        isConverted: true,
+        convertedAt: new Date(),
+        clientId: existingClient[0].id,
+        convertedBy: triggeredBy,
+        status: "Won",
+      })
+      .where(eq(leads.id, leadId));
+
+    return { success: true, clientId: existingClient[0].id, alreadyConverted: true };
+  }
+
+  return await db.transaction(async (tx) => {
+    const [client] = await tx
+      .insert(clients)
+      .values({
+        id: randomUUID(),
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone || null,
+        company: lead.company || null,
+        status: "active",
+        contactType: "client",
+        contactSource: lead.source || null,
+        contactOwner: lead.assignedTo || null,
+        notes: lead.notes || null,
+        tags: lead.tags || [],
+        createdAt: new Date(),
+      })
+      .returning();
+
+    let quote = null;
+    if (options?.quoteId) {
+      const [selected] = await tx
+        .select()
+        .from(quotes)
+        .where(eq(quotes.id, options.quoteId))
+        .limit(1);
+      quote = selected || null;
+    } else {
+      const acceptedQuotes = await tx
+        .select()
+        .from(quotes)
+        .where(
+          and(
+            eq(quotes.leadId, leadId),
+            sql`${quotes.status} IN ('accepted', 'signed', 'completed')`
+          )
+        )
+        .orderBy(desc(quotes.createdAt))
+        .limit(1);
+      quote = acceptedQuotes.length > 0 ? acceptedQuotes[0] : null;
+    }
+
+    if (quote) {
+      if (quote.status !== "accepted") {
+        await tx
+          .update(quotes)
+          .set({ status: "accepted" })
+          .where(eq(quotes.id, quote.id));
+      }
+
+      await tx
+        .update(quotes)
+        .set({ clientId: client.id })
+        .where(eq(quotes.id, quote.id));
+
+      const existingDeal = await tx
+        .select()
+        .from(deals)
+        .where(eq(deals.leadId, leadId))
+        .limit(1);
+
+      if (existingDeal.length === 0) {
+        const dealValue = quote.totalCost || lead.value || "0";
+        const dealData = {
+          leadId: leadId,
+          clientId: client.id,
+          name: `${client.name || lead.name} - ${lead.company || "Deal"}`,
+          assignedTo: lead.assignedTo!,
+          value: dealValue,
+          mrr: "0",
+          wonDate: new Date(),
+          notes: `Deal created from quote #${quote.id}. Total value: $${dealValue}`,
+        };
+
+        await tx.insert(deals).values(dealData);
+        console.log(
+          `✅ [LeadConversion] Created deal for client ${client.id} from quote ${quote.id}`
+        );
+      }
+
+      const items = await tx
+        .select()
+        .from(quoteItems)
+        .where(eq(quoteItems.quoteId, quote.id));
+
+      let transferredCount = 0;
+
+      for (const item of items) {
+        if (item.itemType === "product" && item.productId) {
+          const existing = await tx
+            .select()
+            .from(clientProducts)
+            .where(
+              and(
+                eq(clientProducts.clientId, client.id),
+                eq(clientProducts.productId, item.productId)
+              )
+            )
+            .limit(1);
+
+          if (existing.length === 0) {
+            await tx.insert(clientProducts).values({
+              clientId: client.id,
+              productId: item.productId,
+            });
+            transferredCount++;
+          }
+        } else if (item.itemType === "bundle" && item.bundleId) {
+          const existing = await tx
+            .select()
+            .from(clientBundles)
+            .where(
+              and(
+                eq(clientBundles.clientId, client.id),
+                eq(clientBundles.bundleId, item.bundleId)
+              )
+            )
+            .limit(1);
+
+          if (existing.length === 0) {
+            await tx.insert(clientBundles).values({
+              clientId: client.id,
+              bundleId: item.bundleId,
+              customQuantities: item.customQuantities,
+            });
+            transferredCount++;
+          }
+        } else if (item.itemType === "package" && item.packageId) {
+          const existingPkg = await tx
+            .select()
+            .from(clientPackages)
+            .where(
+              and(
+                eq(clientPackages.clientId, client.id),
+                eq(clientPackages.packageId, item.packageId)
+              )
+            )
+            .limit(1);
+
+          if (existingPkg.length === 0) {
+            await tx.insert(clientPackages).values({
+              clientId: client.id,
+              packageId: item.packageId,
+              customQuantities: item.customQuantities,
+            });
+            transferredCount++;
+          }
+
+          const pkgItems = await tx
+            .select()
+            .from(packageItems)
+            .where(eq(packageItems.packageId, item.packageId));
+
+          for (const pkgItem of pkgItems) {
+            if (pkgItem.itemType === "bundle" && pkgItem.bundleId) {
+              const existingBundle = await tx
+                .select()
+                .from(clientBundles)
+                .where(
+                  and(
+                    eq(clientBundles.clientId, client.id),
+                    eq(clientBundles.bundleId, pkgItem.bundleId)
+                  )
+                )
+                .limit(1);
+
+              if (existingBundle.length === 0) {
+                await tx.insert(clientBundles).values({
+                  clientId: client.id,
+                  bundleId: pkgItem.bundleId,
+                  customQuantities: item.customQuantities || null,
+                });
+                transferredCount++;
+              }
+            } else if (pkgItem.itemType === "product" && pkgItem.productId) {
+              const existingProd = await tx
+                .select()
+                .from(clientProducts)
+                .where(
+                  and(
+                    eq(clientProducts.clientId, client.id),
+                    eq(clientProducts.productId, pkgItem.productId)
+                  )
+                )
+                .limit(1);
+
+              if (existingProd.length === 0) {
+                await tx.insert(clientProducts).values({
+                  clientId: client.id,
+                  productId: pkgItem.productId,
+                });
+                transferredCount++;
+              }
+            }
+          }
+        }
+      }
+
+      console.log(
+        `✅ [LeadConversion] Transferred ${transferredCount} items from quote ${quote.id} to client ${client.id}`
+      );
+    }
+
+    const closedWonStage = await tx
+      .select()
+      .from(leadPipelineStages)
+      .where(sql`LOWER(${leadPipelineStages.name}) = 'closed won'`)
+      .limit(1);
+
+    const leadUpdateData: Record<string, any> = {
+      status: "Won",
+      isConverted: true,
+      convertedAt: new Date(),
+      clientId: client.id,
+      convertedBy: triggeredBy,
+    };
+
+    if (closedWonStage.length > 0) {
+      leadUpdateData.stageId = closedWonStage[0].id;
+      console.log(
+        `✅ [LeadConversion] Moving lead ${leadId} to "Closed Won" stage`
+      );
+    }
+
+    await tx
+      .update(leads)
+      .set(leadUpdateData)
+      .where(eq(leads.id, leadId));
+
+    console.log(
+      `✅ [LeadConversion] Lead ${leadId} converted to client ${client.id} (triggered by: ${triggeredBy})`
+    );
+
+    const [cycleLengthSetting] = await tx
+      .select()
+      .from(taskSettings)
+      .where(
+        eq(taskSettings.settingKey, "task_mapping_default_cycle_length")
+      );
+    const defaultCycleLength =
+      (cycleLengthSetting?.settingValue as any)?.value ?? 30;
+
+    const [advanceGenSetting] = await tx
+      .select()
+      .from(taskSettings)
+      .where(
+        eq(
+          taskSettings.settingKey,
+          "task_mapping_default_advance_generation_days"
+        )
+      );
+    const defaultAdvanceDays =
+      (advanceGenSetting?.settingValue as any)?.value ?? 3;
+
+    const existingConfig = await tx
+      .select()
+      .from(clientRecurringConfig)
+      .where(eq(clientRecurringConfig.clientId, client.id))
+      .limit(1);
+
+    if (existingConfig.length === 0) {
+      await tx.insert(clientRecurringConfig).values({
+        clientId: client.id,
+        cycleStartDate: new Date(),
+        cycleLengthDays: defaultCycleLength,
+        advanceGenerationDays: defaultAdvanceDays,
+        status: "active",
+      });
+      console.log(
+        `✅ [LeadConversion] Created recurring config for client ${client.id}`
+      );
+    }
+
+    return {
+      success: true as const,
+      clientId: client.id,
+      alreadyConverted: false,
+      quoteId: quote?.id || null,
+    };
+  });
+
+  if (!result.alreadyConverted) {
+    try {
+      const [autoGenSetting] = await db
+        .select()
+        .from(taskSettings)
+        .where(
+          eq(taskSettings.settingKey, "task_mapping_auto_generate_on_conversion")
+        );
+      const autoGenerateEnabled =
+        (autoGenSetting?.settingValue as any)?.value ?? true;
+
+      if (autoGenerateEnabled) {
+        const assignedProducts = await db
+          .select({ productId: clientProducts.productId })
+          .from(clientProducts)
+          .where(eq(clientProducts.clientId, result.clientId));
+
+        const assignedBundles = await db
+          .select({ bundleId: clientBundles.bundleId })
+          .from(clientBundles)
+          .where(eq(clientBundles.clientId, result.clientId));
+
+        const assignedPackages = await db
+          .select({ packageId: clientPackages.packageId })
+          .from(clientPackages)
+          .where(eq(clientPackages.clientId, result.clientId));
+
+        const generationItems: Array<{
+          productId?: string;
+          bundleId?: string;
+          packageId?: string;
+          quantity: number;
+        }> = [];
+
+        for (const cp of assignedProducts) {
+          let qty = 1;
+          if (result.quoteId) {
+            const [qi] = await db
+              .select({ quantity: quoteItems.quantity })
+              .from(quoteItems)
+              .where(
+                and(
+                  eq(quoteItems.quoteId, result.quoteId),
+                  eq(quoteItems.productId, cp.productId),
+                  eq(quoteItems.itemType, "product")
+                )
+              )
+              .limit(1);
+            if (qi) qty = qi.quantity;
+          }
+          generationItems.push({ productId: cp.productId, quantity: qty });
+        }
+
+        for (const cb of assignedBundles) {
+          let qty = 1;
+          if (result.quoteId) {
+            const [qi] = await db
+              .select({ quantity: quoteItems.quantity })
+              .from(quoteItems)
+              .where(
+                and(
+                  eq(quoteItems.quoteId, result.quoteId),
+                  eq(quoteItems.bundleId, cb.bundleId),
+                  eq(quoteItems.itemType, "bundle")
+                )
+              )
+              .limit(1);
+            if (qi) qty = qi.quantity;
+          }
+          generationItems.push({ bundleId: cb.bundleId, quantity: qty });
+        }
+
+        for (const cpkg of assignedPackages) {
+          let qty = 1;
+          if (result.quoteId) {
+            const [qi] = await db
+              .select({ quantity: quoteItems.quantity })
+              .from(quoteItems)
+              .where(
+                and(
+                  eq(quoteItems.quoteId, result.quoteId),
+                  eq(quoteItems.packageId, cpkg.packageId),
+                  eq(quoteItems.itemType, "package")
+                )
+              )
+              .limit(1);
+            if (qi) qty = qi.quantity;
+          }
+          generationItems.push({ packageId: cpkg.packageId, quantity: qty });
+        }
+
+        if (generationItems.length > 0) {
+          const summary = await generateTasksFromTemplates({
+            clientId: result.clientId,
+            items: generationItems,
+            generationType: "onboarding",
+            cycleStartDate: new Date(),
+          });
+
+          console.log(
+            `✅ [LeadConversion] Task generation for client ${result.clientId}: ${summary.totalTasksCreated} onboarding tasks created`
+          );
+          if (summary.errors.length > 0) {
+            console.warn(
+              `⚠️ [LeadConversion] Task generation warnings:`,
+              summary.errors
+            );
+          }
+        }
+      }
+    } catch (taskGenError) {
+      console.error(
+        "[LeadConversion] Error generating onboarding tasks (non-blocking):",
+        taskGenError
+      );
+    }
+  }
+
+  return { success: result.success, clientId: result.clientId, alreadyConverted: result.alreadyConverted };
+}
