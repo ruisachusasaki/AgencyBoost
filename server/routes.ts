@@ -90,7 +90,7 @@ import {
   insertCustomFormSchema, insertCustomFormFieldSchema, insertCustomFormSubmissionSchema,
   onboardingTemplates, onboardingTemplateItems, onboardingInstances, onboardingInstanceItems,
   insertOnboardingTemplateSchema, insertOnboardingTemplateItemSchema,
-  icAgreementTemplates, jobOffers
+  icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog
 } from "@shared/schema";
 import { spawnOnboardingChecklist } from "./services/onboardingSpawnService";
 import { syncLmsCompletion } from "./services/onboardingLmsSyncService";
@@ -43887,6 +43887,345 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     } catch (error: any) {
       console.error("Error deleting IC agreement template:", error);
       res.status(500).json({ error: "Failed to delete template" });
+    }
+  });
+
+  // ═══════════════════════════════════════
+  // Job Offer Routes
+  // ═══════════════════════════════════════
+
+  app.post("/api/applications/:applicationId/send-offer", requireAuth(), async (req, res) => {
+    try {
+      const { applicationId } = req.params;
+      const userId = getAuthenticatedUserId(req);
+      const { compensation, compensationType, startDate, customTerms } = req.body;
+
+      if (!compensation || !compensationType || !startDate) {
+        return res.status(400).json({ error: "compensation, compensationType, and startDate are required" });
+      }
+      if (!["per_hour", "per_month", "flat_rate"].includes(compensationType)) {
+        return res.status(400).json({ error: "compensationType must be per_hour, per_month, or flat_rate" });
+      }
+
+      const [application] = await db.select().from(jobApplications).where(eq(jobApplications.id, applicationId));
+      if (!application) return res.status(404).json({ error: "Application not found" });
+
+      const [existingOffer] = await db.select({ id: jobOffers.id }).from(jobOffers).where(eq(jobOffers.applicationId, applicationId)).limit(1);
+      if (existingOffer) return res.status(409).json({ error: "An offer has already been sent for this application" });
+
+      const [activeTemplate] = await db.select().from(icAgreementTemplates).where(eq(icAgreementTemplates.isActive, true)).limit(1);
+      if (!activeTemplate) return res.status(400).json({ error: "No active IC Agreement template. Configure one in HR Settings first." });
+
+      let senderName = "Team";
+      if (userId) {
+        const [staffMember] = await db.select().from(staff).where(eq(staff.id, userId)).limit(1);
+        if (staffMember) senderName = staffMember.fullName || "Team";
+      }
+
+      const compTypeLabel = compensationType === "per_hour" ? "per hour" : compensationType === "per_month" ? "per month" : "flat rate";
+      const formattedStartDate = new Date(startDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+      const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+      let populatedContent = activeTemplate.content;
+      const replacements: Record<string, string> = {
+        "{{contractor_name}}": application.applicantName || "Contractor",
+        "{{contractor_email}}": application.applicantEmail || "",
+        "{{position_title}}": application.positionTitle || "Position",
+        "{{compensation}}": `${compensation} ${compTypeLabel}`,
+        "{{start_date}}": formattedStartDate,
+        "{{company_name}}": "The Media Optimizers",
+        "{{sender_name}}": senderName,
+        "{{today_date}}": today,
+        "{{custom_terms}}": customTerms || "",
+      };
+      for (const [placeholder, value] of Object.entries(replacements)) {
+        populatedContent = populatedContent.split(placeholder).join(value);
+      }
+
+      const signingToken = randomUUID();
+
+      const [offer] = await db.insert(jobOffers).values({
+        applicationId,
+        createdBy: userId || undefined,
+        templateId: activeTemplate.id,
+        populatedContent,
+        compensation,
+        compensationType,
+        startDate,
+        customTerms: customTerms || null,
+        signingToken,
+        status: "pending",
+      }).returning();
+
+      await db.update(jobApplications).set({ stage: "offer_sent" }).where(eq(jobApplications.id, applicationId));
+
+      await db.insert(offerStatusLog).values({
+        offerId: offer.id,
+        status: "offer_sent",
+        changedBy: userId || undefined,
+        note: `Offer sent to ${application.applicantEmail}`,
+      });
+
+      const appUrl = process.env.REPLIT_DOMAINS
+        ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+        : process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : "https://agencyflow.app";
+
+      const signingUrl = `${appUrl}/sign-offer/${signingToken}`;
+
+      let emailSent = false;
+      let warning: string | undefined;
+      try {
+        const emailResult = await notificationService.sendDirectEmail({
+          to: application.applicantEmail || "",
+          subject: `Your IC Agreement from The Media Optimizers`,
+          text: `Hello ${application.applicantName || "there"},\n\nYou have been sent an Independent Contractor Agreement for the ${application.positionTitle || "position"} role.\n\nPlease review and sign the agreement at:\n${signingUrl}\n\nThank you!`,
+          html: `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, hsl(179, 100%, 39%), hsl(179, 100%, 29%)); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">IC Agreement</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0;">The Media Optimizers</p>
+  </div>
+  <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
+    <p style="font-size: 16px; color: #333;">Hello <strong>${application.applicantName || "there"}</strong>,</p>
+    <p style="font-size: 14px; color: #555; line-height: 1.6;">
+      We're pleased to send you an Independent Contractor Agreement for the <strong>${application.positionTitle || "position"}</strong> role.
+    </p>
+    <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <p style="margin: 4px 0; font-size: 14px;"><strong>Compensation:</strong> ${compensation} ${compTypeLabel}</p>
+      <p style="margin: 4px 0; font-size: 14px;"><strong>Start Date:</strong> ${formattedStartDate}</p>
+    </div>
+    <div style="text-align: center; margin: 25px 0;">
+      <a href="${signingUrl}" style="display: inline-block; background: hsl(179, 100%, 39%); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Review & Sign Agreement</a>
+    </div>
+    <p style="font-size: 12px; color: #888; text-align: center; margin-top: 20px;">
+      If the button doesn't work, copy and paste this link: <br/>
+      <a href="${signingUrl}" style="color: hsl(179, 100%, 39%);">${signingUrl}</a>
+    </p>
+  </div>
+</div>`,
+        });
+        emailSent = emailResult.sent;
+        if (!emailSent) warning = "Email could not be sent. Please share the signing link manually.";
+      } catch (emailErr) {
+        console.error("Failed to send offer email:", emailErr);
+        warning = "Email failed to send. Please share the signing link manually.";
+      }
+
+      res.json({ offer, signingUrl, emailSent, warning });
+    } catch (error: any) {
+      console.error("Error sending offer:", error);
+      res.status(500).json({ error: "Failed to send offer" });
+    }
+  });
+
+  app.get("/api/applications/:applicationId/offer", requireAuth(), async (req, res) => {
+    try {
+      const { applicationId } = req.params;
+      const [offer] = await db.select().from(jobOffers).where(eq(jobOffers.applicationId, applicationId)).limit(1);
+      if (!offer) return res.json({ offer: null });
+
+      const [signature] = await db.select().from(offerSignatures).where(eq(offerSignatures.offerId, offer.id)).limit(1);
+
+      const statusLogRows = await db.select({
+        id: offerStatusLog.id,
+        status: offerStatusLog.status,
+        note: offerStatusLog.note,
+        changedBy: offerStatusLog.changedBy,
+        createdAt: offerStatusLog.createdAt,
+      }).from(offerStatusLog).where(eq(offerStatusLog.offerId, offer.id)).orderBy(desc(offerStatusLog.createdAt));
+
+      const enrichedLog = await Promise.all(statusLogRows.map(async (entry) => {
+        let changedByName: string | null = null;
+        if (entry.changedBy) {
+          const [staffMember] = await db.select({ fullName: staff.fullName }).from(staff).where(eq(staff.id, entry.changedBy)).limit(1);
+          if (staffMember) changedByName = staffMember.fullName;
+        }
+        return { ...entry, changedByName };
+      }));
+
+      const appUrl = process.env.REPLIT_DOMAINS
+        ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+        : process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : "https://agencyflow.app";
+
+      res.json({
+        offer,
+        signature: signature || null,
+        statusLog: enrichedLog,
+        signingUrl: offer.status === "pending" ? `${appUrl}/sign-offer/${offer.signingToken}` : null,
+      });
+    } catch (error: any) {
+      console.error("Error fetching offer:", error);
+      res.status(500).json({ error: "Failed to fetch offer" });
+    }
+  });
+
+  app.post("/api/applications/:applicationId/resend-offer", requireAuth(), async (req, res) => {
+    try {
+      const { applicationId } = req.params;
+      const [offer] = await db.select().from(jobOffers).where(eq(jobOffers.applicationId, applicationId)).limit(1);
+      if (!offer) return res.status(404).json({ error: "No offer found" });
+      if (offer.status !== "pending") return res.status(400).json({ error: "Can only resend pending offers" });
+
+      const [application] = await db.select().from(jobApplications).where(eq(jobApplications.id, applicationId));
+      if (!application) return res.status(404).json({ error: "Application not found" });
+
+      const appUrl = process.env.REPLIT_DOMAINS
+        ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+        : process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : "https://agencyflow.app";
+
+      const signingUrl = `${appUrl}/sign-offer/${offer.signingToken}`;
+      const compTypeLabel = offer.compensationType === "per_hour" ? "per hour" : offer.compensationType === "per_month" ? "per month" : "flat rate";
+      const formattedStartDate = new Date(offer.startDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+      const emailResult = await notificationService.sendDirectEmail({
+        to: application.applicantEmail || "",
+        subject: `Reminder: Your IC Agreement from The Media Optimizers`,
+        text: `Hello ${application.applicantName || "there"},\n\nThis is a reminder to review and sign your Independent Contractor Agreement.\n\n${signingUrl}\n\nThank you!`,
+        html: `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, hsl(179, 100%, 39%), hsl(179, 100%, 29%)); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">IC Agreement Reminder</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0;">The Media Optimizers</p>
+  </div>
+  <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
+    <p style="font-size: 16px; color: #333;">Hello <strong>${application.applicantName || "there"}</strong>,</p>
+    <p style="font-size: 14px; color: #555; line-height: 1.6;">This is a friendly reminder to review and sign your Independent Contractor Agreement for the <strong>${application.positionTitle || "position"}</strong> role.</p>
+    <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <p style="margin: 4px 0; font-size: 14px;"><strong>Compensation:</strong> ${offer.compensation} ${compTypeLabel}</p>
+      <p style="margin: 4px 0; font-size: 14px;"><strong>Start Date:</strong> ${formattedStartDate}</p>
+    </div>
+    <div style="text-align: center; margin: 25px 0;">
+      <a href="${signingUrl}" style="display: inline-block; background: hsl(179, 100%, 39%); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Review & Sign Agreement</a>
+    </div>
+  </div>
+</div>`,
+      });
+
+      const userId = getAuthenticatedUserId(req);
+      await db.insert(offerStatusLog).values({
+        offerId: offer.id,
+        status: "email_resent",
+        changedBy: userId || undefined,
+        note: "Signing email resent",
+      });
+
+      res.json({ emailSent: emailResult.sent });
+    } catch (error: any) {
+      console.error("Error resending offer:", error);
+      res.status(500).json({ error: "Failed to resend offer email" });
+    }
+  });
+
+  // Public signing page - fetch offer by token (no auth required)
+  app.get("/api/public/sign-offer/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const [offer] = await db.select().from(jobOffers).where(eq(jobOffers.signingToken, token)).limit(1);
+      if (!offer) return res.status(404).json({ error: "Offer not found or invalid link" });
+
+      const [application] = await db.select({
+        applicantName: jobApplications.applicantName,
+        positionTitle: jobApplications.positionTitle,
+      }).from(jobApplications).where(eq(jobApplications.id, offer.applicationId)).limit(1);
+
+      res.json({
+        id: offer.id,
+        status: offer.status,
+        populatedContent: offer.populatedContent,
+        compensation: offer.compensation,
+        compensationType: offer.compensationType,
+        startDate: offer.startDate,
+        applicantName: application?.applicantName || "Contractor",
+        positionTitle: application?.positionTitle || "Position",
+        sentAt: offer.sentAt,
+      });
+    } catch (error: any) {
+      console.error("Error fetching public offer:", error);
+      res.status(500).json({ error: "Failed to load offer" });
+    }
+  });
+
+  // Public signing - submit signature (no auth required)
+  app.post("/api/public/sign-offer/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { signatureType, signatureData, signerName, signerEmail } = req.body;
+
+      if (!signatureType || !signatureData || !signerName || !signerEmail) {
+        return res.status(400).json({ error: "signatureType, signatureData, signerName, and signerEmail are required" });
+      }
+      if (!["drawn", "typed"].includes(signatureType)) {
+        return res.status(400).json({ error: "signatureType must be 'drawn' or 'typed'" });
+      }
+
+      const [offer] = await db.select().from(jobOffers).where(eq(jobOffers.signingToken, token)).limit(1);
+      if (!offer) return res.status(404).json({ error: "Offer not found or invalid link" });
+      if (offer.status !== "pending") return res.status(400).json({ error: `This offer has already been ${offer.status}` });
+
+      const ipAddress = req.headers["x-forwarded-for"]?.toString().split(",")[0] || req.socket.remoteAddress || null;
+      const userAgent = req.headers["user-agent"] || null;
+
+      const signature = await db.transaction(async (tx) => {
+        const [sig] = await tx.insert(offerSignatures).values({
+          offerId: offer.id,
+          signatureType,
+          signatureData,
+          signerName,
+          signerEmail,
+          ipAddress,
+          userAgent,
+        }).returning();
+
+        await tx.update(jobOffers).set({ status: "signed" }).where(eq(jobOffers.id, offer.id));
+        await tx.update(jobApplications).set({ stage: "offer_accepted" }).where(eq(jobApplications.id, offer.applicationId));
+
+        await tx.insert(offerStatusLog).values({
+          offerId: offer.id,
+          status: "signed",
+          note: `Agreement signed by ${signerName} (${signerEmail})`,
+        });
+
+        return sig;
+      });
+
+      res.json({ success: true, signature });
+    } catch (error: any) {
+      console.error("Error signing offer:", error);
+      res.status(500).json({ error: "Failed to submit signature" });
+    }
+  });
+
+  // Public decline - decline offer (no auth required)
+  app.post("/api/public/decline-offer/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { reason } = req.body;
+
+      const [offer] = await db.select().from(jobOffers).where(eq(jobOffers.signingToken, token)).limit(1);
+      if (!offer) return res.status(404).json({ error: "Offer not found" });
+      if (offer.status !== "pending") return res.status(400).json({ error: `This offer has already been ${offer.status}` });
+
+      await db.transaction(async (tx) => {
+        await tx.update(jobOffers).set({ status: "declined" }).where(eq(jobOffers.id, offer.id));
+        await tx.update(jobApplications).set({ stage: "offer_declined" }).where(eq(jobApplications.id, offer.applicationId));
+
+        await tx.insert(offerStatusLog).values({
+          offerId: offer.id,
+          status: "declined",
+          note: reason ? `Offer declined. Reason: ${reason}` : "Offer declined by applicant",
+        });
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error declining offer:", error);
+      res.status(500).json({ error: "Failed to decline offer" });
     }
   });
 

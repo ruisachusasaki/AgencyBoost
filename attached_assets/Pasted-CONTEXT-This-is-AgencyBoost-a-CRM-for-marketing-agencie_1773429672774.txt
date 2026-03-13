@@ -1,0 +1,358 @@
+CONTEXT:
+This is AgencyBoost, a CRM for marketing agencies. We are building a 
+NEW HIRE WORKFLOW feature. The following has already been completed:
+  - DB tables: ic_agreement_templates, job_offers, offer_signatures, 
+    offer_status_log
+  - New status values on applicants table: 'send_offer', 
+    'offer_accepted', 'offer_declined', 'hired'
+  - IC Agreement template builder under Settings > HR Settings > 
+    IC Agreement
+  - Send Offer modal + offer creation + auto-email
+  - Public signing page + signature capture + Offer Accepted/Declined 
+    flow + signed document archive
+
+This final prompt wires up the AUTOMATION TRIGGERS that complete the 
+new hire workflow:
+  1. Offer Accepted → notify manager to create Google Workspace account
+  2. Hired status → send welcome email + onboarding form link to the 
+     new hire's work email
+
+═══════════════════════════════════════
+PART A — UNDERSTAND EXISTING AUTOMATION
+        AND EMAIL PATTERNS
+═══════════════════════════════════════
+
+Before writing any code, carefully read the existing codebase:
+
+1. Find the existing workflow automation system
+   - AgencyBoost has a workflow/automation engine 
+     (referenced in system docs as "API-driven, database-backed 
+     workflow engine with triggers and action types")
+   - Find where automation triggers are defined and fired
+   - Find where automation actions are executed (email sending, 
+     notifications, etc.)
+   - Note the exact pattern used to fire a trigger from a 
+     route handler
+
+2. Find the existing email template system
+   - Marketing > Emails contains email templates
+   - Find the email templates table (name, content, subject, 
+     status columns — verify actual names)
+   - Find how templates are rendered with variable substitution
+   - Find the email sending service/helper used throughout 
+     the app (Nodemailer, SendGrid, or similar)
+
+3. Find the existing notification creation pattern
+   - Same pattern used in onboardingSpawnService.ts and 
+     onboardingLmsSyncService.ts (built in earlier prompts)
+   - Confirm the notifications table structure and insert 
+     pattern — use the EXACT same approach
+
+4. Check how the "Hired" status change is currently handled
+   - Find the existing route that handles applicant status 
+     updates (PUT or PATCH on the applications/applicants table)
+   - Understand the full handler before modifying it
+
+Document findings in a comment block at the top of each new 
+service file before writing any logic.
+
+═══════════════════════════════════════
+PART B — TRIGGER 1: OFFER ACCEPTED →
+         GOOGLE ACCOUNT NOTIFICATION
+═══════════════════════════════════════
+
+This trigger already partially fires in Prompt D — when the 
+applicant signs, we notify the hiring manager (offer.createdBy) 
+that the agreement was signed. We now need to ADD an additional 
+notification specifically prompting the manager to create the 
+Google Workspace account.
+
+─────────────────────────────────────
+Update server/services (or routes.ts)
+─────────────────────────────────────
+
+Find the location in the POST /api/sign-offer/:token/sign 
+handler (built in Prompt D) where the manager is notified 
+after signing.
+
+AFTER the existing "agreement signed" notification, add a 
+SECOND notification to the same manager:
+
+  title: "Action Required: Create Google Workspace account 
+          for [Candidate Name]"
+  message: "Great news — [Full Name] has signed their IC 
+  Agreement for the [position] role with a start date of 
+  [formatted start date]. Next step: please create their 
+  Google Workspace email account at 
+  admin.google.com using their full name, then create their 
+  AgencyBoost staff account using their new 
+  @themediaoptimizers.com email address."
+  userId: offer.createdBy
+
+This notification should:
+  - Use the existing notification system (same pattern)
+  - Be fire-and-forget (do not await, do not block response)
+  - Fire ONLY on signing — not on any other status change
+
+Additionally, if the existing automation engine supports 
+creating automation trigger events, fire a trigger event:
+  triggerType: 'offer_accepted'
+  payload: { applicationId, candidateName, position, 
+             startDate, managerId: offer.createdBy }
+
+Check if a trigger firing pattern exists elsewhere in the 
+codebase. If yes, follow it exactly. If no automation 
+trigger pattern exists, the in-app notification above is 
+sufficient — do not invent a new automation pattern.
+
+═══════════════════════════════════════
+PART C — TRIGGER 2: HIRED STATUS →
+         WELCOME EMAIL + ONBOARDING LINK
+═══════════════════════════════════════
+
+─────────────────────────────────────
+Create: server/services/hiredNotificationService.ts
+─────────────────────────────────────
+
+Export a single async function:
+
+  sendHiredNotifications(applicationId: number, 
+                         changedBy: number): Promise<void>
+
+This function must NEVER throw an unhandled error. Wrap all 
+logic in try/catch — log errors and return gracefully.
+
+Logic:
+
+STEP 1 — Fetch application and offer details
+  - Query the applications table for this applicationId
+  - Join job_offers to get: startDate, compensation, 
+    compensationType
+  - If application not found: log warning and return
+  - Extract: candidateName, candidateEmail (their personal 
+    email from the application), position, startDate
+
+STEP 2 — Determine the work email address
+  - The welcome email should be sent to the hire's NEW 
+    work email (@themediaoptimizers.com), not their 
+    personal application email
+  - Problem: we don't store the work email on the 
+    applicant record — it's created externally in 
+    Google Workspace
+  - Solution: check if a staff record now exists in the 
+    staff table where email matches a 
+    @themediaoptimizers.com pattern AND the staff member's 
+    name closely matches the candidate name (case-insensitive 
+    first + last name match)
+  - If a matching staff record is found: send to the work 
+    email (staff.email)
+  - If no matching staff record found: 
+      - Send to the personal email (application email) as 
+        fallback
+      - Add a note in the notification to the manager 
+        (see Step 5) that the welcome email was sent to 
+        the personal email because no AgencyBoost staff 
+        account was found
+
+STEP 3 — Find and render the welcome email template
+  - Search the email templates table for a template with 
+    name containing 'welcome' or 'onboarding' 
+    (case-insensitive) that is active/published
+  - If a matching template is found: use it, substituting 
+    these variables using whatever substitution pattern the 
+    existing email system uses:
+      {{candidate_name}} or {{name}} → candidateName
+      {{position}}                   → position
+      {{start_date}}                 → formatted start date
+      {{onboarding_link}}            → 
+        'https://agencyboost.app/onboarding'
+      {{company_name}}               → 'The Media Optimizers'
+  - If NO matching welcome template is found: use this 
+    fallback HTML email body:
+
+    Subject: "Welcome to The Media Optimizers, [name]! 🎉"
+    
+    Body (HTML):
+    "Hi [candidateName],
+
+    We are thrilled to welcome you to The Media Optimizers 
+    as our new [position]!
+
+    Your start date is [formatted start date]. Before your 
+    first day, please take a few minutes to complete your 
+    new hire onboarding form — it only takes a few minutes 
+    and helps us get everything set up for you.
+
+    [CTA Button — teal]: Complete Your Onboarding Form
+    href: https://agencyboost.app/onboarding
+
+    Once you log into AgencyBoost with your new work email, 
+    you will also find your personalized onboarding checklist 
+    ready and waiting for you under HR > Onboarding Checklist.
+
+    We cannot wait to have you on the team. If you have any 
+    questions before your start date, do not hesitate to 
+    reach out.
+
+    Welcome aboard!
+    The Media Optimizers Team"
+
+STEP 4 — Send the welcome email
+  - Use the existing email sending helper (same as used 
+    throughout the codebase — Nodemailer/SendGrid/etc.)
+  - To: work email (or personal email fallback from Step 2)
+  - Subject: from template or fallback subject above
+  - Body: rendered HTML
+  - On failure: log error, continue to Step 5 — do NOT 
+    throw or halt
+
+STEP 5 — Notify the hiring manager in-app
+  - Find the manager: use changedBy (the staff member who 
+    set the status to 'hired') as the managerId
+  - Send in-app notification:
+      title: "[Candidate Name] has been marked as Hired"
+      message: "You have successfully hired [Full Name] 
+      for the [position] role. A welcome email has been 
+      sent to [email used]. Their AgencyBoost onboarding 
+      checklist will be ready on their start date of 
+      [formatted start date]."
+      userId: managerId
+  - If email was sent to personal fallback, append to 
+    message: " Note: The welcome email was sent to their 
+    personal email ([personal email]) because no matching 
+    AgencyBoost staff account was found. Please ensure 
+    their staff account is created with their work email."
+
+STEP 6 — Fire automation trigger (if system exists)
+  - Same as Part B — if an automation trigger firing 
+    pattern exists, fire:
+      triggerType: 'applicant_hired'
+      payload: { applicationId, candidateName, position, 
+                 startDate, managerId: changedBy }
+  - If no automation trigger pattern: skip this step
+
+═══════════════════════════════════════
+PART D — HOOK INTO HIRED STATUS CHANGE
+═══════════════════════════════════════
+
+Find the existing route that handles applicant status 
+updates (PUT or PATCH on the applicants/applications table).
+
+IMPORTANT: Read the full existing handler carefully before 
+modifying. Only ADD to it — do not change any existing logic.
+
+When the new status being set = 'hired':
+  - After the status is successfully saved to the database
+  - Add at the end of the success block, fire-and-forget:
+
+    sendHiredNotifications(applicationId, req.user.id)
+      .catch(err => console.error(
+        'Hired notification error:', err
+      ));
+
+  Import sendHiredNotifications at the top of routes.ts from 
+  './services/hiredNotificationService'.
+
+  The status update API response must NOT be delayed or 
+  blocked by the notification logic.
+
+Additionally, when status is set to 'hired':
+  - Insert into offer_status_log IF a job_offer exists 
+    for this application:
+      offerId = offer.id,
+      status = 'hired',
+      changedBy = req.user.id,
+      note = 'Applicant marked as hired'
+  - If no job_offer exists (edge case — hired without 
+    going through offer flow): skip the log insert, 
+    just fire the notification
+
+═══════════════════════════════════════
+PART E — HIRED STATUS UI UPDATE
+═══════════════════════════════════════
+
+Find the existing applicant detail page status dropdown 
+(the same one modified in Prompt C to intercept 'send_offer').
+
+Add similar handling for the 'hired' status selection:
+
+When manager selects "Hired" from the status dropdown:
+  - Show a confirmation dialog BEFORE saving:
+      Title: "Mark [Candidate Name] as Hired?"
+      Body: "This will trigger a welcome email to the new 
+      hire and notify your team. Make sure their AgencyBoost 
+      staff account has already been created with their 
+      work email address before proceeding."
+      Buttons: "Cancel" (ghost) + "Yes, Mark as Hired" (teal)
+  - If cancelled: revert dropdown to previous status
+  - If confirmed: proceed with the status update API call
+
+After successful status update to 'hired':
+  - Show success toast: "[Name] has been marked as hired. 
+    Welcome email sent!"
+  - Invalidate the application detail query to refresh 
+    the page
+  - The status dropdown should now show "Hired" and be 
+    read-only (no further status changes make sense after 
+    hired — disable the dropdown or remove it)
+
+═══════════════════════════════════════
+PART F — FULL WORKFLOW STATUS DISPLAY
+═══════════════════════════════════════
+
+Now that all statuses exist and are functional, ensure the 
+applicant detail page right panel displays them clearly.
+
+Find the existing status dropdown/display on the applicant 
+detail page. Ensure these statuses render with appropriate 
+visual treatment:
+
+  'send_offer'      → yellow badge "Offer Sent"
+  'offer_accepted'  → teal badge "Offer Accepted ✓"
+  'offer_declined'  → red badge "Offer Declined"
+  'hired'           → green badge "Hired 🎉" (read-only, 
+                      no dropdown — terminal state)
+
+For the applicant LIST page (HR > Applications table):
+  - Ensure the same status badges render in the Status 
+    column for these new statuses
+  - Do not modify any existing status badge styles — 
+    only ADD styles for the four new statuses
+
+═══════════════════════════════════════
+PROTECTIVE RULES
+═══════════════════════════════════════
+- Do NOT modify the POST /api/sign-offer/:token/sign 
+  handler beyond adding the second Google account 
+  notification — do not restructure existing logic
+- Do NOT modify any existing status update route logic — 
+  only ADD the fire-and-forget call for 'hired'
+- Do NOT modify any existing email templates or the 
+  Marketing > Emails section
+- Do NOT modify any existing automation/workflow engine 
+  rules or triggers — only ADD new trigger fire calls 
+  if the pattern already exists
+- Do NOT touch vite.config.ts, package.json, or 
+  drizzle.config.ts
+- Do NOT modify any existing schema or migrations
+- Do NOT modify any existing applicant list or detail 
+  page logic beyond the specific additions described 
+  above (hired confirmation dialog + status badges)
+- hiredNotificationService must NEVER throw unhandled 
+  errors — full try/catch required
+- Both triggers must be fire-and-forget — never block 
+  API responses
+- Work email detection (Step 2) must fail gracefully — 
+  always fall back to personal email rather than failing
+- Use TanStack Query v5 object form for all queries:
+  useQuery({ queryKey: [...], queryFn: ... })
+- After hired status mutation: invalidate both the 
+  applications list query AND the application detail query
+- Toast notifications: only "default" and "destructive" 
+  variants
+- Icons from lucide-react only
+- All teal accents: hsl(179, 100%, 39%)
+- Check actual column names on applications, staff, and 
+  email templates tables before writing any queries
+- The 'hired' status is a TERMINAL state — once set, 
+  the status dropdown should be disabled or hidden

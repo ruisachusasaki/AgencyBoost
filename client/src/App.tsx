@@ -84,6 +84,7 @@ import ResetPasswordPage from "@/pages/reset-password";
 import PublicSurvey from "@/pages/public-survey";
 import PublicTicketForm from "@/pages/public-ticket-form";
 import PublicProposal from "@/pages/public-proposal";
+import SignOfferPage from "@/pages/sign-offer";
 import TicketsPage from "@/pages/tickets";
 import TicketDetailPage from "@/pages/ticket-detail";
 import CallCenter from "@/pages/call-center";
@@ -116,6 +117,7 @@ function Router() {
       <Route path="/book/:customUrl" component={PublicBooking} />
       <Route path="/embed/:customUrl" component={BookingEmbed} />
       <Route path="/proposal/:token" component={PublicProposal} />
+      <Route path="/sign-offer/:token" component={SignOfferPage} />
       <Route path="/careers" component={CareersPage} />
       <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/client-onboarding/:token" component={ClientOnboarding} />

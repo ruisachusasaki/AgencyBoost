@@ -1,0 +1,522 @@
+CONTEXT:
+This is AgencyBoost, a CRM for marketing agencies. We are building a 
+NEW HIRE WORKFLOW feature. The following has already been completed:
+  - DB tables: ic_agreement_templates, job_offers, offer_signatures, 
+    offer_status_log
+  - New status values on applicants table: 'send_offer', 
+    'offer_accepted', 'offer_declined', 'hired'
+  - IC Agreement template builder under Settings > HR Settings > 
+    IC Agreement
+  - Send Offer modal + offer creation + auto-email on the applicant 
+    detail page
+
+This prompt builds the PUBLIC SIGNING PAGE — the applicant-facing 
+page at /sign-offer/{token} where they read their populated IC 
+Agreement, sign it by drawing or typing, and submit. No login 
+required. On submission the status auto-updates and the signed 
+document is permanently archived.
+
+ALWAYS use the primary teal theme color (hsl(179, 100%, 39%) / #00C9C6) 
+for buttons, accents, and interactive elements. Never use blue.
+
+═══════════════════════════════════════
+PART A — BACKEND API ROUTES
+═══════════════════════════════════════
+
+These routes are PUBLIC — they do NOT use requireAuth() because 
+the applicant has no AgencyBoost account. Security is provided 
+by the unique unguessable signingToken (UUID).
+
+─────────────────────────────────────
+GET /api/sign-offer/:token
+─────────────────────────────────────
+Purpose: Load the offer details for the signing page.
+
+Logic:
+  - Query job_offers where signingToken = token
+  - If not found: return 404 with { error: 'not_found' }
+  - If offer.status = 'signed': return 200 with 
+    { status: 'already_signed', signedAt: offer signature 
+    timestamp }
+  - If offer.status = 'declined': return 200 with 
+    { status: 'already_declined' }
+  - If offer.expiresAt is set AND now() > expiresAt: 
+    return 200 with { status: 'expired' }
+  - Otherwise return:
+    {
+      status: 'pending',
+      offer: {
+        id,
+        populatedContent,   — the full HTML agreement
+        compensation,
+        compensationType,
+        startDate,
+        sentAt
+      },
+      applicant: {
+        name,               — from joined applications table
+        email,              — from joined applications table
+        position
+      }
+    }
+  - Do NOT expose: signingToken, createdBy, templateId, 
+    applicationId, or any internal IDs in this response
+
+─────────────────────────────────────
+POST /api/sign-offer/:token/sign
+─────────────────────────────────────
+Purpose: Submit the applicant's signature and mark offer accepted.
+
+Body:
+  {
+    signatureType: 'drawn' | 'typed',
+    signatureData: string,  — base64 PNG data URL if drawn, 
+                              plain text name if typed
+    signerName: string,     — full name entered by applicant
+    signerEmail: string     — email confirmed by applicant
+  }
+
+Logic:
+
+STEP 1 — Validate token and offer state
+  - Query job_offers where signingToken = token
+  - If not found: return 404
+  - If offer.status != 'pending': return 400 with message 
+    "This offer has already been signed or declined."
+  - If expiresAt is set and expired: return 400 with message 
+    "This signing link has expired. Please contact your 
+    hiring manager."
+
+STEP 2 — Validate body
+  - signerName: required, non-empty string
+  - signerEmail: required, valid email format
+  - signatureType: must be 'drawn' or 'typed'
+  - signatureData: required, non-empty
+  - If drawn: signatureData must start with 'data:image/png;base64,'
+  - Return 400 with descriptive message if any validation fails
+
+STEP 3 — Capture metadata
+  - ipAddress: req.ip or req.headers['x-forwarded-for'] 
+    (check which is available — use x-forwarded-for first 
+    as the app likely sits behind a proxy)
+  - userAgent: req.headers['user-agent']
+
+STEP 4 — Save signature and update offer (in a transaction):
+  - Insert into offer_signatures:
+      offerId, signatureType, signatureData, signerName,
+      signerEmail, ipAddress, userAgent, signedAt = now()
+  - Update job_offers: status = 'signed'
+  - Insert into offer_status_log:
+      offerId, status = 'signed', changedBy = null,
+      note = 'Applicant signed the IC Agreement'
+
+STEP 5 — Update application status
+  - Find the application via offer.applicationId
+  - Update application status = 'offer_accepted'
+
+STEP 6 — Notify the hiring manager
+  - Find the job_offer.createdBy (the manager who sent the offer)
+  - Use the existing notification system (same pattern as 
+    onboarding notifications)
+  - Notification:
+      title: "[Candidate Name] signed their IC Agreement"
+      message: "[Full Name] has reviewed and signed their 
+      IC Agreement for the [position] role. Their start 
+      date is [formatted start date]."
+      userId: offer.createdBy
+  - Fire-and-forget — do not await, do not block the response
+
+STEP 7 — Return success
+  - Return { success: true, message: 'Agreement signed 
+    successfully.' }
+
+─────────────────────────────────────
+POST /api/sign-offer/:token/decline
+─────────────────────────────────────
+Purpose: Applicant declines the offer from the signing page.
+
+Body:
+  {
+    reason: string (optional)
+  }
+
+Logic:
+
+STEP 1 — Validate token
+  - Query job_offers where signingToken = token
+  - If not found: return 404
+  - If offer.status != 'pending': return 400 "This offer 
+    has already been responded to."
+
+STEP 2 — Update offer and application (in a transaction):
+  - Update job_offers: status = 'declined'
+  - Insert into offer_status_log:
+      offerId, status = 'declined', changedBy = null,
+      note = reason if provided, else 'Applicant declined 
+      the offer'
+  - Update application status = 'offer_declined'
+
+STEP 3 — Notify the hiring manager
+  - Same notification pattern as above:
+      title: "[Candidate Name] declined their offer"
+      message: "[Full Name] has declined the offer for 
+      the [position] role.[reason text if provided: 
+      ' Reason: {reason}']"
+      userId: offer.createdBy
+  - Fire-and-forget
+
+STEP 4 — Return { success: true }
+
+═══════════════════════════════════════
+PART B — PUBLIC SIGNING PAGE (FRONTEND)
+═══════════════════════════════════════
+
+Create the following new files:
+  client/src/pages/public/SignOfferPage.tsx
+  client/src/components/signing/SignatureCapture.tsx
+  client/src/components/signing/SigningComplete.tsx
+  client/src/components/signing/SigningDeclined.tsx
+  client/src/components/signing/SigningError.tsx
+
+This page is entirely public — no authentication, no sidebar, 
+no top navigation bar. It is a standalone full-page experience.
+
+─────────────────────────────────────
+SignOfferPage.tsx (Main Page)
+─────────────────────────────────────
+Route: /sign-offer/:token
+This route must be added OUTSIDE the authenticated route 
+wrapper — accessible without login.
+
+On mount: fetch GET /api/sign-offer/:token
+
+LOADING STATE:
+  - Centered spinner with AgencyBoost logo above it
+  - "Loading your agreement..." text
+
+ERROR STATES (based on response):
+  - status: 'not_found' → render SigningError with:
+      heading: "Link Not Found"
+      message: "This signing link is invalid or has been 
+      removed. Please contact your hiring manager."
+  - status: 'already_signed' → render SigningComplete 
+    in read-only mode (see below)
+  - status: 'already_declined' → render SigningDeclined
+  - status: 'expired' → render SigningError with:
+      heading: "Link Expired"
+      message: "This signing link has expired. Please 
+      contact your hiring manager to request a new one."
+
+SUCCESS STATE (status: 'pending'):
+  Render the full signing page layout:
+
+PAGE HEADER (no sidebar — standalone):
+  - AgencyBoost logo top left (or The Media Optimizers 
+    wordmark if available)
+  - Right side: applicant name + position in gray text
+    "Signing as: [name] — [position]"
+
+MAIN CONTENT (max-width 860px, centered):
+
+  SECTION 1 — Introduction Card:
+    - Heading: "Independent Contractor Agreement"
+    - Subtext: "Please read the agreement below carefully 
+      before signing. By signing you confirm you have read, 
+      understood, and agree to all terms."
+    - Info row (gray, small):
+        "Sent by The Media Optimizers · 
+        [sentAt formatted as 'March 13, 2026']"
+
+  SECTION 2 — Agreement Content:
+    - Full populated agreement rendered as clean HTML
+    - White card with subtle border and shadow
+    - Generous padding (p-8 or p-10)
+    - Max-height: none — full document visible, no scroll 
+      truncation (applicant must see the full agreement)
+    - Typography: readable font size (base or lg), proper 
+      line height, headings styled
+    - A light gray "— End of Agreement —" divider at the 
+      bottom of the content
+
+  SECTION 3 — Signature Capture (SignatureCapture.tsx):
+    See component spec below.
+
+  SECTION 4 — Decline Option:
+    - Small text link below the sign button:
+      "I do not wish to accept this offer"
+    - On click: open a confirmation dialog:
+        Title: "Decline this offer?"
+        Body: "Are you sure you want to decline? This 
+        action cannot be undone."
+        Optional textarea: "Reason for declining (optional)"
+        Buttons: "Go Back" (ghost) + "Decline Offer" (red)
+    - On confirm: call POST /api/sign-offer/:token/decline
+    - On success: replace page with SigningDeclined component
+
+PAGE FOOTER (below all content):
+  - Small gray text: "This document was prepared by 
+    The Media Optimizers · Powered by AgencyBoost"
+  - Legal note: "Your signature, IP address, and timestamp 
+    are recorded for verification purposes."
+
+─────────────────────────────────────
+SignatureCapture.tsx
+─────────────────────────────────────
+Props: { onSign: (data: SignaturePayload) => void, 
+         isLoading: boolean }
+
+Where SignaturePayload = {
+  signatureType: 'drawn' | 'typed',
+  signatureData: string,
+  signerName: string,
+  signerEmail: string
+}
+
+Layout:
+
+SIGNATURE TYPE TOGGLE:
+  - Two tabs/buttons: "Draw Signature" | "Type Signature"
+  - Active tab: teal underline or filled style
+  - Switching clears current signature data
+
+SIGNER DETAILS (above signature area, always shown):
+  - Full Name input (required)
+    - Pre-populated with applicant.name from the offer data
+    - Editable in case of typo
+  - Email input (required)
+    - Pre-populated with applicant.email
+    - Editable
+
+DRAWN SIGNATURE MODE:
+  - HTML5 Canvas element (600px wide, 200px tall on desktop, 
+    full-width on mobile)
+  - Dashed border, white background, light gray "Sign here" 
+    watermark text centered when empty
+  - Mouse and touch events for drawing:
+      onMouseDown / onTouchStart: begin drawing path
+      onMouseMove / onTouchMove: draw line to current point
+      onMouseUp / onTouchEnd: end path
+  - Use canvas 2D context — strokeStyle teal, lineWidth 2, 
+    lineCap 'round', lineJoin 'round'
+  - "Clear" button (ghost, small) below canvas — clears 
+    canvas and resets signature data
+  - Track whether canvas has been drawn on (isEmpty state)
+
+TYPED SIGNATURE MODE:
+  - Text input with large cursive-style font 
+    (font-family: 'Dancing Script', cursive — load from 
+    Google Fonts, or use a system cursive fallback)
+  - Placeholder: "Type your full name"
+  - Preview: as the applicant types, show their name 
+    rendered in the cursive font in a large preview box 
+    beneath the input (light gray background, centered)
+  - This typed name IS the signatureData for typed mode
+
+SUBMIT BUTTON:
+  - "Sign Agreement" (teal, full-width, large)
+  - Disabled if:
+      signerName is empty
+      signerEmail is empty or invalid format
+      drawn mode: canvas isEmpty
+      typed mode: input is empty
+  - Shows spinner when isLoading = true
+  - On click: call onSign() with the payload
+
+LEGAL ACKNOWLEDGMENT (above submit button):
+  - Checkbox (required to be checked before submit is enabled):
+    "I have read and agree to the terms of this Independent 
+    Contractor Agreement. I understand that my electronic 
+    signature is legally binding."
+  - Checkbox must be checked — submit disabled if unchecked
+
+─────────────────────────────────────
+SigningComplete.tsx
+─────────────────────────────────────
+Shown after successful submission OR if token is already_signed.
+
+Layout (centered, max-width 560px):
+  - Large teal checkmark circle icon (CheckCircle from 
+    lucide-react, size 64)
+  - Heading: "Agreement Signed!"
+  - Subtext: "Thank you, [signerName]. Your Independent 
+    Contractor Agreement has been successfully signed and 
+    recorded. You will hear from your hiring manager soon 
+    with next steps."
+  - Info box (light teal background):
+      "📅 Your start date is [formatted start date]"
+  - Small gray text: "A copy of this agreement is on file 
+    with The Media Optimizers. If you need a copy for your 
+    records, please contact your hiring manager."
+  - If shown because status = 'already_signed' (not just 
+    submitted): change subtext to "You have already signed 
+    this agreement."
+
+─────────────────────────────────────
+SigningDeclined.tsx
+─────────────────────────────────────
+Shown after applicant declines.
+
+Layout (centered, max-width 560px):
+  - XCircle icon (lucide-react, size 64, gray)
+  - Heading: "Offer Declined"
+  - Subtext: "You have declined this offer. If this was 
+    a mistake or you would like to reconsider, please 
+    reach out to your hiring manager directly."
+  - Small gray text: "The Media Optimizers team has been 
+    notified."
+
+─────────────────────────────────────
+SigningError.tsx
+─────────────────────────────────────
+Generic error state component.
+
+Props: { heading: string, message: string }
+
+Layout (centered, max-width 560px):
+  - AlertCircle icon (lucide-react, size 64, red/destructive)
+  - Heading (from props)
+  - Message (from props)
+  - "Contact your hiring manager for assistance." in gray
+
+═══════════════════════════════════════
+PART C — SIGNED DOCUMENT ARCHIVE
+═══════════════════════════════════════
+
+Once an offer is signed, the signed agreement needs to be 
+permanently accessible on the applicant record inside 
+AgencyBoost.
+
+─────────────────────────────────────
+New API Route
+─────────────────────────────────────
+
+GET /api/applications/:applicationId/offer/signed-document
+  - requireAuth() — Admin or Manager only
+  - Fetch the job_offer for this application
+  - If not signed: return 404
+  - Return:
+    {
+      populatedContent: string,  — full HTML agreement
+      signature: {
+        signatureType,
+        signatureData,          — base64 PNG or typed name
+        signerName,
+        signerEmail,
+        signedAt,
+        ipAddress
+      },
+      offer: {
+        compensation,
+        compensationType,
+        startDate,
+        sentAt
+      },
+      applicant: {
+        name,
+        email,
+        position
+      }
+    }
+
+─────────────────────────────────────
+Signed Document Viewer (Frontend)
+─────────────────────────────────────
+
+Create:
+  client/src/components/applications/SignedDocumentModal.tsx
+
+In OfferStatusPanel.tsx (built in Prompt C), when 
+offer.status = 'signed', add a button:
+  "View Signed Agreement" (outline, teal)
+  
+On click: opens SignedDocumentModal.
+
+SignedDocumentModal.tsx:
+  Full-screen modal (max-width 900px).
+  
+  MODAL HEADER:
+    - "Signed IC Agreement — [Candidate Name]"
+    - "Signed [date] at [time]" in gray subtext
+    - Close button (X)
+    - "Print / Save as PDF" button — calls window.print() 
+      targeting the modal content area only. Add a 
+      print-specific CSS class that hides everything except 
+      the modal content when printing.
+
+  MODAL BODY:
+    SECTION 1 — Verification Banner (teal background):
+      - ✓ "Agreement signed by [signerName] ([signerEmail])"
+      - "Signed at: [signedAt formatted datetime]"
+      - "IP Address: [ipAddress]"
+      - "Signature type: [Drawn / Typed]"
+
+    SECTION 2 — Full Agreement Content:
+      - Render populatedContent as clean HTML
+      - Same typography as the signing page
+
+    SECTION 3 — Signature Block (at bottom of document):
+      - Heading: "Signature"
+      - If signatureType = 'drawn':
+          Render the base64 PNG in an <img> tag
+          Max-width: 300px, border-bottom: 1px solid gray
+      - If signatureType = 'typed':
+          Render the typed name in large cursive font
+          (same font used on the signing page)
+      - Beneath signature: 
+          "[signerName]"
+          "Date: [signedAt formatted as 'March 13, 2026']"
+
+═══════════════════════════════════════
+PART D — ROUTING
+═══════════════════════════════════════
+
+Add /sign-offer/:token to the router as a PUBLIC route — 
+outside any authentication wrapper or protected route group.
+
+Verify that:
+  - Visiting /sign-offer/{any-token} does NOT redirect 
+    to login
+  - The page renders with NO sidebar, NO top navigation 
+    bar, NO authenticated app chrome
+  - The page is completely self-contained
+
+Check how other public routes (e.g. /careers, /onboarding) 
+are structured in the router and follow the EXACT same 
+pattern.
+
+═══════════════════════════════════════
+PROTECTIVE RULES
+═══════════════════════════════════════
+- Do NOT add requireAuth() to any /api/sign-offer routes — 
+  these must be fully public
+- Do NOT expose internal IDs, tokens, or sensitive fields 
+  in the GET /api/sign-offer/:token response
+- Do NOT modify any existing applicant tracking routes or 
+  components beyond adding the "View Signed Agreement" 
+  button to OfferStatusPanel
+- Do NOT modify any existing public pages (/careers, 
+  /onboarding) — only ADD the new signing route
+- Do NOT touch vite.config.ts, package.json, or 
+  drizzle.config.ts
+- Do NOT modify any existing schema or migrations
+- Do NOT introduce any new npm packages for signature 
+  capture — use native HTML5 Canvas for drawn signatures
+- The sign and decline transactions MUST be atomic — 
+  use database transactions
+- Manager notifications must be fire-and-forget — never 
+  block the signing response
+- The signing page must be fully functional on mobile — 
+  canvas touch events required
+- Canvas signature must export as PNG base64 via 
+  canvas.toDataURL('image/png') on submit
+- Toast notifications (if any): only "default" and 
+  "destructive" variants
+- Icons from lucide-react only
+- All teal accents: hsl(179, 100%, 39%)
+- The legal acknowledgment checkbox is mandatory — submit 
+  button must remain disabled until checked
+- IP address capture: always check x-forwarded-for first, 
+  fall back to req.ip
+- Check actual column names on the applications/applicants 
+  table before writing any joins (name vs firstName/lastName, 
+  email, position, status)

@@ -29,6 +29,8 @@ import {
 import { apiRequest } from "@/lib/queryClient";
 import { JobApplication, JobApplicationComment } from "@shared/schema";
 import { LinkifyText } from "@/components/ui/linkify-text";
+import SendOfferModal from "@/components/applications/SendOfferModal";
+import OfferStatusPanel from "@/components/applications/OfferStatusPanel";
 
 export default function ApplicantDetailPage() {
   const { id } = useParams();
@@ -40,6 +42,7 @@ export default function ApplicantDetailPage() {
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [isWatcherPopoverOpen, setIsWatcherPopoverOpen] = useState(false);
+  const [showSendOfferModal, setShowSendOfferModal] = useState(false);
 
   // Fetch applicant details
   const { data: application, isLoading, error } = useQuery<JobApplication>({
@@ -153,6 +156,10 @@ export default function ApplicantDetailPage() {
   });
 
   const handleStatusUpdate = async (stage: string) => {
+    if (stage === "send_offer") {
+      setShowSendOfferModal(true);
+      return;
+    }
     await updateApplicationMutation.mutateAsync({ stage });
   };
 
@@ -572,7 +579,7 @@ export default function ApplicantDetailPage() {
                       <SelectItem value="send_offer">Send Offer</SelectItem>
                       <SelectItem value="offer_sent">Offer Sent</SelectItem>
                       <SelectItem value="offer_accepted">Offer Accepted</SelectItem>
-                      <SelectItem value="offer_rejected">Offer Rejected</SelectItem>
+                      <SelectItem value="offer_declined">Offer Declined</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -597,6 +604,14 @@ export default function ApplicantDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Offer Status Panel */}
+            {application && (
+              <OfferStatusPanel
+                applicationId={application.id}
+                applicantEmail={application.applicantEmail || ""}
+              />
+            )}
 
             {/* Watchers */}
             <Card>
@@ -795,6 +810,19 @@ export default function ApplicantDetailPage() {
           </div>
         </div>
       </div>
+
+      {application && (
+        <SendOfferModal
+          open={showSendOfferModal}
+          onClose={() => setShowSendOfferModal(false)}
+          application={{
+            id: application.id,
+            applicantName: application.applicantName || "",
+            applicantEmail: application.applicantEmail || "",
+            positionTitle: application.positionTitle || "",
+          }}
+        />
+      )}
     </div>
   );
 }
