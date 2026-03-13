@@ -1199,7 +1199,8 @@ export default function ArticleView() {
                     key={`article-${id}`}
                     value={currentContent}
                     onChange={handleContentChange}
-                    placeholder="Start typing to edit this article... Type '/' for commands, highlight text for formatting!"
+                    readOnly={true}
+                    placeholder=""
                   />
                 )}
               </div>

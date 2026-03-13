@@ -300,6 +300,7 @@ interface SlateEditorProps {
   value: Descendant[];
   onChange: (value: Descendant[]) => void;
   placeholder?: string;
+  readOnly?: boolean;
 }
 
 // Custom editor with inline and void element handling
@@ -319,7 +320,7 @@ const withInlines = (editor: Editor) => {
   return editor;
 };
 
-export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, placeholder }) => {
+export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, placeholder, readOnly = false }) => {
   const editor = useMemo(() => withInlines(withHistory(withReact(createEditor()))), []);
   
   // Ensure we always have a valid value
@@ -1014,15 +1015,16 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
     <div className="slate-editor-container" ref={editorRef} data-slate-editor>
       <Slate editor={editor} initialValue={safeValue} onValueChange={handleEditorChange}>
         <Editable
+          readOnly={readOnly}
           renderElement={renderElement}
           renderLeaf={renderLeaf}
           placeholder={placeholder || "Type '/' for commands..."}
-          onKeyDown={handleKeyDown}
-          className="slate-editor first:mt-0 [&>*:first-child]:mt-0 [&>.slate-empty-element:first-child]:hidden [&>.slate-empty-element:first-child+.slate-empty-element]:hidden"
+          onKeyDown={readOnly ? undefined : handleKeyDown}
+          className={`slate-editor first:mt-0 [&>*:first-child]:mt-0 [&>.slate-empty-element:first-child]:hidden [&>.slate-empty-element:first-child+.slate-empty-element]:hidden ${readOnly ? 'cursor-default' : ''}`}
           data-slate-editable
           style={{
-            minHeight: '200px',
-            padding: '1rem',
+            minHeight: readOnly ? undefined : '200px',
+            padding: readOnly ? '0' : '1rem',
             borderRadius: '0.5rem',
             outline: 'none'
           }}
@@ -1030,7 +1032,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       </Slate>
 
       {/* Slash Menu */}
-      {showSlashMenu && (
+      {!readOnly && showSlashMenu && (
         <div
           className="slash-menu bg-background border border-border"
           style={{
@@ -1071,7 +1073,7 @@ export const SlateEditor: React.FC<SlateEditorProps> = ({ value, onChange, place
       )}
 
       {/* Selection Toolbar */}
-      {showSelectionToolbar && (
+      {!readOnly && showSelectionToolbar && (
         <div
           className="selection-toolbar"
           style={{
@@ -1517,9 +1519,15 @@ const Element = (props: any) => {
         <a 
           {...attributes} 
           href={element.url} 
-          className="text-blue-600 underline hover:text-blue-800"
+          className="text-blue-600 underline hover:text-blue-800 cursor-pointer"
           target="_blank"
           rel="noopener noreferrer"
+          onClick={(e) => {
+            if (element.url) {
+              e.preventDefault();
+              window.open(element.url, '_blank', 'noopener,noreferrer');
+            }
+          }}
         >
           {children}
         </a>
