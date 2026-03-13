@@ -43894,7 +43894,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   // Job Offer Routes
   // ═══════════════════════════════════════
 
-  app.post("/api/applications/:applicationId/send-offer", requireAuth(), async (req, res) => {
+  app.post("/api/applications/:applicationId/send-offer", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
     try {
       const { applicationId } = req.params;
       const userId = getAuthenticatedUserId(req);
@@ -44020,7 +44020,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.get("/api/applications/:applicationId/offer", requireAuth(), async (req, res) => {
+  app.get("/api/applications/:applicationId/offer", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
     try {
       const { applicationId } = req.params;
       const [offer] = await db.select().from(jobOffers).where(eq(jobOffers.applicationId, applicationId)).limit(1);
@@ -44063,7 +44063,7 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  app.post("/api/applications/:applicationId/resend-offer", requireAuth(), async (req, res) => {
+  app.post("/api/applications/:applicationId/resend-offer", requireAuth(), requirePermission('hr', 'canEdit'), async (req, res) => {
     try {
       const { applicationId } = req.params;
       const [offer] = await db.select().from(jobOffers).where(eq(jobOffers.applicationId, applicationId)).limit(1);
@@ -44122,28 +44122,50 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  // Public signing page - fetch offer by token (no auth required)
-  app.get("/api/public/sign-offer/:token", async (req, res) => {
+  // ═══════════════════════════════════════
+  // Public Signing Page Routes (no auth)
+  // ═══════════════════════════════════════
+
+  app.get("/api/sign-offer/:token", async (req, res) => {
     try {
       const { token } = req.params;
       const [offer] = await db.select().from(jobOffers).where(eq(jobOffers.signingToken, token)).limit(1);
-      if (!offer) return res.status(404).json({ error: "Offer not found or invalid link" });
+      if (!offer) return res.status(404).json({ status: "not_found", error: "not_found" });
+
+      if (offer.status === "signed") {
+        const [sig] = await db.select({ signedAt: offerSignatures.signedAt })
+          .from(offerSignatures).where(eq(offerSignatures.offerId, offer.id)).limit(1);
+        return res.json({ status: "already_signed", signedAt: sig?.signedAt || null });
+      }
+
+      if (offer.status === "declined") {
+        return res.json({ status: "already_declined" });
+      }
+
+      if (offer.expiresAt && new Date() > new Date(offer.expiresAt)) {
+        return res.json({ status: "expired" });
+      }
 
       const [application] = await db.select({
         applicantName: jobApplications.applicantName,
+        applicantEmail: jobApplications.applicantEmail,
         positionTitle: jobApplications.positionTitle,
       }).from(jobApplications).where(eq(jobApplications.id, offer.applicationId)).limit(1);
 
       res.json({
-        id: offer.id,
-        status: offer.status,
-        populatedContent: offer.populatedContent,
-        compensation: offer.compensation,
-        compensationType: offer.compensationType,
-        startDate: offer.startDate,
-        applicantName: application?.applicantName || "Contractor",
-        positionTitle: application?.positionTitle || "Position",
-        sentAt: offer.sentAt,
+        status: "pending",
+        offer: {
+          populatedContent: offer.populatedContent,
+          compensation: offer.compensation,
+          compensationType: offer.compensationType,
+          startDate: offer.startDate,
+          sentAt: offer.sentAt,
+        },
+        applicant: {
+          name: application?.applicantName || "Contractor",
+          email: application?.applicantEmail || "",
+          position: application?.positionTitle || "Position",
+        },
       });
     } catch (error: any) {
       console.error("Error fetching public offer:", error);
@@ -44151,36 +44173,49 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
     }
   });
 
-  // Public signing - submit signature (no auth required)
-  app.post("/api/public/sign-offer/:token", async (req, res) => {
+  app.post("/api/sign-offer/:token/sign", async (req, res) => {
     try {
       const { token } = req.params;
       const { signatureType, signatureData, signerName, signerEmail } = req.body;
 
-      if (!signatureType || !signatureData || !signerName || !signerEmail) {
-        return res.status(400).json({ error: "signatureType, signatureData, signerName, and signerEmail are required" });
+      if (!signerName || typeof signerName !== "string" || !signerName.trim()) {
+        return res.status(400).json({ error: "Full name is required." });
       }
-      if (!["drawn", "typed"].includes(signatureType)) {
-        return res.status(400).json({ error: "signatureType must be 'drawn' or 'typed'" });
+      if (!signerEmail || typeof signerEmail !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signerEmail)) {
+        return res.status(400).json({ error: "A valid email address is required." });
+      }
+      if (!signatureType || !["drawn", "typed"].includes(signatureType)) {
+        return res.status(400).json({ error: "Signature type must be 'drawn' or 'typed'." });
+      }
+      if (!signatureData || typeof signatureData !== "string" || !signatureData.trim()) {
+        return res.status(400).json({ error: "Signature data is required." });
+      }
+      if (signatureType === "drawn" && !signatureData.startsWith("data:image/png;base64,")) {
+        return res.status(400).json({ error: "Drawn signature must be a PNG data URL." });
       }
 
       const [offer] = await db.select().from(jobOffers).where(eq(jobOffers.signingToken, token)).limit(1);
-      if (!offer) return res.status(404).json({ error: "Offer not found or invalid link" });
-      if (offer.status !== "pending") return res.status(400).json({ error: `This offer has already been ${offer.status}` });
+      if (!offer) return res.status(404).json({ error: "Offer not found or invalid link." });
+      if (offer.status !== "pending") {
+        return res.status(400).json({ error: "This offer has already been signed or declined." });
+      }
+      if (offer.expiresAt && new Date() > new Date(offer.expiresAt)) {
+        return res.status(400).json({ error: "This signing link has expired. Please contact your hiring manager." });
+      }
 
-      const ipAddress = req.headers["x-forwarded-for"]?.toString().split(",")[0] || req.socket.remoteAddress || null;
+      const ipAddress = (req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim()) || req.ip || null;
       const userAgent = req.headers["user-agent"] || null;
 
-      const signature = await db.transaction(async (tx) => {
-        const [sig] = await tx.insert(offerSignatures).values({
+      await db.transaction(async (tx) => {
+        await tx.insert(offerSignatures).values({
           offerId: offer.id,
           signatureType,
           signatureData,
-          signerName,
-          signerEmail,
+          signerName: signerName.trim(),
+          signerEmail: signerEmail.trim(),
           ipAddress,
           userAgent,
-        }).returning();
+        });
 
         await tx.update(jobOffers).set({ status: "signed" }).where(eq(jobOffers.id, offer.id));
         await tx.update(jobApplications).set({ stage: "offer_accepted" }).where(eq(jobApplications.id, offer.applicationId));
@@ -44188,28 +44223,55 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         await tx.insert(offerStatusLog).values({
           offerId: offer.id,
           status: "signed",
-          note: `Agreement signed by ${signerName} (${signerEmail})`,
+          changedBy: null,
+          note: "Applicant signed the IC Agreement",
         });
-
-        return sig;
       });
 
-      res.json({ success: true, signature });
+      if (offer.createdBy) {
+        const [application] = await db.select({
+          applicantName: jobApplications.applicantName,
+          positionTitle: jobApplications.positionTitle,
+        }).from(jobApplications).where(eq(jobApplications.id, offer.applicationId)).limit(1);
+
+        const candidateName = application?.applicantName || signerName.trim();
+        const position = application?.positionTitle || "the position";
+        const formattedStart = new Date(offer.startDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+        void notificationService.notify({
+          userId: offer.createdBy,
+          type: "offer_signed",
+          title: `${candidateName} signed their IC Agreement`,
+          message: `${candidateName} has reviewed and signed their IC Agreement for the ${position} role. Their start date is ${formattedStart}.`,
+          entityType: "job_application",
+          entityId: offer.applicationId,
+          actionUrl: `/applicants/${offer.applicationId}`,
+          actionText: "View Application",
+          priority: "normal",
+          metadata: { offerId: offer.id },
+        }).catch(err => console.error("[Notification] Failed to send offer signed notification:", err));
+      }
+
+      res.json({ success: true, message: "Agreement signed successfully." });
     } catch (error: any) {
       console.error("Error signing offer:", error);
-      res.status(500).json({ error: "Failed to submit signature" });
+      res.status(500).json({ error: "Failed to submit signature." });
     }
   });
 
-  // Public decline - decline offer (no auth required)
-  app.post("/api/public/decline-offer/:token", async (req, res) => {
+  app.post("/api/sign-offer/:token/decline", async (req, res) => {
     try {
       const { token } = req.params;
       const { reason } = req.body;
 
       const [offer] = await db.select().from(jobOffers).where(eq(jobOffers.signingToken, token)).limit(1);
-      if (!offer) return res.status(404).json({ error: "Offer not found" });
-      if (offer.status !== "pending") return res.status(400).json({ error: `This offer has already been ${offer.status}` });
+      if (!offer) return res.status(404).json({ error: "Offer not found." });
+      if (offer.status !== "pending") {
+        return res.status(400).json({ error: "This offer has already been responded to." });
+      }
+      if (offer.expiresAt && new Date() > new Date(offer.expiresAt)) {
+        return res.status(400).json({ error: "This signing link has expired. Please contact your hiring manager." });
+      }
 
       await db.transaction(async (tx) => {
         await tx.update(jobOffers).set({ status: "declined" }).where(eq(jobOffers.id, offer.id));
@@ -44218,14 +44280,91 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
         await tx.insert(offerStatusLog).values({
           offerId: offer.id,
           status: "declined",
-          note: reason ? `Offer declined. Reason: ${reason}` : "Offer declined by applicant",
+          changedBy: null,
+          note: reason ? `Applicant declined the offer. Reason: ${reason}` : "Applicant declined the offer",
         });
       });
+
+      if (offer.createdBy) {
+        const [application] = await db.select({
+          applicantName: jobApplications.applicantName,
+          positionTitle: jobApplications.positionTitle,
+        }).from(jobApplications).where(eq(jobApplications.id, offer.applicationId)).limit(1);
+
+        const candidateName = application?.applicantName || "A candidate";
+        const position = application?.positionTitle || "the position";
+        const reasonText = reason ? ` Reason: ${reason}` : "";
+
+        void notificationService.notify({
+          userId: offer.createdBy,
+          type: "offer_declined",
+          title: `${candidateName} declined their offer`,
+          message: `${candidateName} has declined the offer for the ${position} role.${reasonText}`,
+          entityType: "job_application",
+          entityId: offer.applicationId,
+          actionUrl: `/applicants/${offer.applicationId}`,
+          actionText: "View Application",
+          priority: "normal",
+          metadata: { offerId: offer.id },
+        }).catch(err => console.error("[Notification] Failed to send offer declined notification:", err));
+      }
 
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error declining offer:", error);
-      res.status(500).json({ error: "Failed to decline offer" });
+      res.status(500).json({ error: "Failed to decline offer." });
+    }
+  });
+
+  // ═══════════════════════════════════════
+  // Signed Document Archive
+  // ═══════════════════════════════════════
+
+  app.get("/api/applications/:applicationId/offer/signed-document", requireAuth(), requirePermission('hr', 'canView'), async (req, res) => {
+    try {
+      const { applicationId } = req.params;
+
+      const [offer] = await db.select().from(jobOffers).where(eq(jobOffers.applicationId, applicationId)).limit(1);
+      if (!offer || offer.status !== "signed") {
+        return res.status(404).json({ error: "No signed document found for this application." });
+      }
+
+      const [signature] = await db.select().from(offerSignatures).where(eq(offerSignatures.offerId, offer.id)).limit(1);
+      if (!signature) {
+        return res.status(404).json({ error: "Signature record not found." });
+      }
+
+      const [application] = await db.select({
+        applicantName: jobApplications.applicantName,
+        applicantEmail: jobApplications.applicantEmail,
+        positionTitle: jobApplications.positionTitle,
+      }).from(jobApplications).where(eq(jobApplications.id, applicationId)).limit(1);
+
+      res.json({
+        populatedContent: offer.populatedContent,
+        signature: {
+          signatureType: signature.signatureType,
+          signatureData: signature.signatureData,
+          signerName: signature.signerName,
+          signerEmail: signature.signerEmail,
+          signedAt: signature.signedAt,
+          ipAddress: signature.ipAddress,
+        },
+        offer: {
+          compensation: offer.compensation,
+          compensationType: offer.compensationType,
+          startDate: offer.startDate,
+          sentAt: offer.sentAt,
+        },
+        applicant: {
+          name: application?.applicantName || "Contractor",
+          email: application?.applicantEmail || "",
+          position: application?.positionTitle || "Position",
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching signed document:", error);
+      res.status(500).json({ error: "Failed to load signed document." });
     }
   });
 

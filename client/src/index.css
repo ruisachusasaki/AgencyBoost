@@ -1886,3 +1886,29 @@ ul[data-type="taskList"] li[data-type="taskItem"] > div > p {
 .ProseMirror > p:first-child:empty + * {
   margin-top: 0 !important;
 }
+
+@media print {
+  body > *:not([data-radix-portal]) {
+    display: none !important;
+  }
+  [data-radix-portal] > [data-radix-dialog-overlay] {
+    display: none !important;
+  }
+  [data-radix-portal] [role="dialog"] {
+    position: static !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    transform: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  [data-radix-portal] [data-state="closed"] {
+    display: none !important;
+  }
+  .print\\:hidden {
+    display: none !important;
+  }
+}
