@@ -6,7 +6,9 @@ import {
   clients,
   products,
   productBundles,
+  bundleProducts,
   productPackages,
+  packageItems,
   productTaskTemplates,
   clientTaskGenerations,
   staff,
@@ -120,7 +122,49 @@ export async function generateTasksFromTemplates(
     });
   };
 
+  const expandedItems: GenerationItem[] = [];
   for (const item of items) {
+    expandedItems.push(item);
+
+    if (item.bundleId) {
+      const bps = await db
+        .select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity })
+        .from(bundleProducts)
+        .where(eq(bundleProducts.bundleId, item.bundleId));
+      for (const bp of bps) {
+        expandedItems.push({ productId: bp.productId, quantity: bp.quantity || 1 });
+      }
+    }
+
+    if (item.packageId) {
+      const pkgItems = await db
+        .select()
+        .from(packageItems)
+        .where(eq(packageItems.packageId, item.packageId));
+      for (const pi of pkgItems) {
+        if (pi.itemType === "product" && pi.productId) {
+          expandedItems.push({ productId: pi.productId, quantity: pi.quantity || 1 });
+        } else if (pi.itemType === "bundle" && pi.bundleId) {
+          expandedItems.push({ bundleId: pi.bundleId, quantity: pi.quantity || 1 });
+          const bps = await db
+            .select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity })
+            .from(bundleProducts)
+            .where(eq(bundleProducts.bundleId, pi.bundleId));
+          for (const bp of bps) {
+            expandedItems.push({ productId: bp.productId, quantity: bp.quantity || 1 });
+          }
+        }
+      }
+    }
+  }
+
+  const processedKeys = new Set<string>();
+
+  for (const item of expandedItems) {
+    const dedupeKey = `${item.productId || ''}_${item.bundleId || ''}_${item.packageId || ''}`;
+    if (processedKeys.has(dedupeKey)) continue;
+    processedKeys.add(dedupeKey);
+
     try {
       const conditions: any[] = [
         eq(productTaskTemplates.taskType, generationType),
