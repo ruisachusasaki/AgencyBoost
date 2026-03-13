@@ -954,18 +954,42 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
   };
 
   const getApplicationStageBadge = (stage: string) => {
-    const stageColors = {
+    const stageColors: Record<string, string> = {
+      new: "bg-blue-100 text-blue-800",
       applied: "bg-blue-100 text-blue-800",
+      review: "bg-yellow-100 text-yellow-800",
       screening: "bg-yellow-100 text-yellow-800",
       interview: "bg-purple-100 text-purple-800",
+      not_selected: "bg-red-100 text-red-800",
+      test_sent: "bg-orange-100 text-orange-800",
       offer: "bg-green-100 text-green-800",
+      send_offer: "bg-yellow-100 text-yellow-800",
+      offer_sent: "bg-yellow-100 text-yellow-800",
+      offer_accepted: "bg-[hsl(179,100%,39%)]/15 text-[hsl(179,100%,30%)]",
+      offer_declined: "bg-red-100 text-red-800",
       hired: "bg-green-500 text-white",
-      rejected: "bg-red-100 text-red-800"
+      rejected: "bg-red-100 text-red-800",
     };
     
+    const stageLabels: Record<string, string> = {
+      new: "New",
+      applied: "Applied",
+      review: "Review",
+      screening: "Screening",
+      interview: "Interview",
+      not_selected: "Not Selected",
+      test_sent: "Test Sent",
+      send_offer: "Send Offer",
+      offer_sent: "Offer Sent",
+      offer_accepted: "Offer Accepted \u2713",
+      offer_declined: "Offer Declined",
+      hired: "Hired \uD83C\uDF89",
+      rejected: "Rejected",
+    };
+
     return (
-      <Badge className={stageColors[stage as keyof typeof stageColors] || "bg-gray-100 text-gray-800"}>
-        {stage.charAt(0).toUpperCase() + stage.slice(1)}
+      <Badge className={stageColors[stage] || "bg-gray-100 text-gray-800"}>
+        {stageLabels[stage] || stage.charAt(0).toUpperCase() + stage.slice(1).replace(/_/g, " ")}
       </Badge>
     );
   };
@@ -1848,7 +1872,8 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                     <SelectItem value="send_offer">Send Offer</SelectItem>
                     <SelectItem value="offer_sent">Offer Sent</SelectItem>
                     <SelectItem value="offer_accepted">Offer Accepted</SelectItem>
-                    <SelectItem value="offer_rejected">Offer Rejected</SelectItem>
+                    <SelectItem value="offer_declined">Offer Declined</SelectItem>
+                    <SelectItem value="hired">Hired</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1897,51 +1922,55 @@ export default function HRPage({ initialTab, meetingId }: HRPageProps = {}) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Select
-                          value={application.stage}
-                          onValueChange={async (newStage) => {
-                            try {
-                              const response = await fetch(`/api/hr/job-applications/${application.id}`, {
-                                method: 'PATCH',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({ stage: newStage }),
-                              });
-                              
-                              if (response.ok) {
-                                queryClient.invalidateQueries({ queryKey: ['/api/hr/job-applications'] });
+                        {application.stage === 'hired' ? (
+                          <Badge className="bg-green-500 text-white">Hired 🎉</Badge>
+                        ) : (
+                          <Select
+                            value={application.stage}
+                            onValueChange={async (newStage) => {
+                              try {
+                                const response = await fetch(`/api/hr/job-applications/${application.id}`, {
+                                  method: 'PATCH',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({ stage: newStage }),
+                                });
+                                
+                                if (response.ok) {
+                                  queryClient.invalidateQueries({ queryKey: ['/api/hr/job-applications'] });
+                                }
+                              } catch (error) {
+                                console.error('Failed to update status:', error);
                               }
-                            } catch (error) {
-                              console.error('Failed to update status:', error);
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="w-[150px]" data-testid={`select-status-${application.id}`}>
-                            <SelectValue placeholder="Select status">
-                              {application.stage === 'new' && 'New'}
-                              {application.stage === 'review' && 'Review'}
-                              {application.stage === 'interview' && 'Interview'}
-                              {application.stage === 'not_selected' && 'Not Selected'}
-                              {application.stage === 'test_sent' && 'Test Sent'}
-                              {application.stage === 'send_offer' && 'Send Offer'}
-                              {application.stage === 'offer_sent' && 'Offer Sent'}
-                              {application.stage === 'offer_accepted' && 'Offer Accepted'}
-                              {application.stage === 'offer_rejected' && 'Offer Rejected'}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="new">New</SelectItem>
-                            <SelectItem value="review">Review</SelectItem>
-                            <SelectItem value="interview">Interview</SelectItem>
-                            <SelectItem value="not_selected">Not Selected</SelectItem>
-                            <SelectItem value="test_sent">Test Sent</SelectItem>
-                            <SelectItem value="send_offer">Send Offer</SelectItem>
-                            <SelectItem value="offer_sent">Offer Sent</SelectItem>
-                            <SelectItem value="offer_accepted">Offer Accepted</SelectItem>
-                            <SelectItem value="offer_rejected">Offer Rejected</SelectItem>
-                          </SelectContent>
-                        </Select>
+                            }}
+                          >
+                            <SelectTrigger className="w-[150px]" data-testid={`select-status-${application.id}`}>
+                              <SelectValue placeholder="Select status">
+                                {application.stage === 'new' && 'New'}
+                                {application.stage === 'review' && 'Review'}
+                                {application.stage === 'interview' && 'Interview'}
+                                {application.stage === 'not_selected' && 'Not Selected'}
+                                {application.stage === 'test_sent' && 'Test Sent'}
+                                {application.stage === 'send_offer' && 'Send Offer'}
+                                {application.stage === 'offer_sent' && 'Offer Sent'}
+                                {application.stage === 'offer_accepted' && 'Offer Accepted'}
+                                {application.stage === 'offer_declined' && 'Offer Declined'}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="new">New</SelectItem>
+                              <SelectItem value="review">Review</SelectItem>
+                              <SelectItem value="interview">Interview</SelectItem>
+                              <SelectItem value="not_selected">Not Selected</SelectItem>
+                              <SelectItem value="test_sent">Test Sent</SelectItem>
+                              <SelectItem value="send_offer">Send Offer</SelectItem>
+                              <SelectItem value="offer_sent">Offer Sent</SelectItem>
+                              <SelectItem value="offer_accepted">Offer Accepted</SelectItem>
+                              <SelectItem value="offer_declined">Offer Declined</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">

@@ -93,6 +93,7 @@ import {
   icAgreementTemplates, jobOffers, offerSignatures, offerStatusLog
 } from "@shared/schema";
 import { spawnOnboardingChecklist } from "./services/onboardingSpawnService";
+import { sendHiredNotifications } from "./services/hiredNotificationService";
 import { syncLmsCompletion } from "./services/onboardingLmsSyncService";
 import { SALES_CONFIG, ROLE_NAMES } from "@shared/constants";
 import { canAccessWidget, isKnownWidgetType } from "@shared/widget-permissions";
@@ -32333,10 +32334,20 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   });
 
   // Update job application status and rating
-  app.patch('/api/hr/job-applications/:id', async (req, res) => {
+  app.patch('/api/hr/job-applications/:id', requireAuth(), async (req, res) => {
     try {
       const { id } = req.params;
       const { stage, rating } = req.body;
+
+      const [existingApp] = await db
+        .select({ stage: jobApplications.stage })
+        .from(jobApplications)
+        .where(eq(jobApplications.id, id))
+        .limit(1);
+
+      if (!existingApp) {
+        return res.status(404).json({ message: "Application not found" });
+      }
       
       const updateData: any = {};
       if (stage !== undefined) updateData.stage = stage;
@@ -32351,6 +32362,34 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
       
       if (!updatedApplication) {
         return res.status(404).json({ message: "Application not found" });
+      }
+
+      if (stage === "hired" && existingApp.stage !== "hired") {
+        const userId = getAuthenticatedUserId(req);
+        const changedBy = userId || "system";
+
+        try {
+          const [offer] = await db
+            .select()
+            .from(jobOffers)
+            .where(eq(jobOffers.applicationId, id))
+            .limit(1);
+
+          if (offer) {
+            await db.insert(offerStatusLog).values({
+              offerId: offer.id,
+              status: "hired",
+              changedBy: userId || null,
+              note: "Applicant marked as hired",
+            });
+          }
+        } catch (logErr) {
+          console.error("[HiredStatus] Error logging offer status:", logErr);
+        }
+
+        sendHiredNotifications(id, changedBy).catch((err) =>
+          console.error("Hired notification error:", err)
+        );
       }
       
       res.json(updatedApplication);
@@ -44250,6 +44289,31 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
           priority: "normal",
           metadata: { offerId: offer.id },
         }).catch(err => console.error("[Notification] Failed to send offer signed notification:", err));
+
+        void notificationService.notify({
+          userId: offer.createdBy,
+          type: "offer_accepted_action",
+          title: `Action Required: Create Google Workspace account for ${candidateName}`,
+          message: `Great news — ${candidateName} has signed their IC Agreement for the ${position} role with a start date of ${formattedStart}. Next step: please create their Google Workspace email account at admin.google.com using their full name, then create their AgencyBoost staff account using their new @themediaoptimizers.com email address.`,
+          entityType: "job_application",
+          entityId: offer.applicationId,
+          actionUrl: `/applicants/${offer.applicationId}`,
+          actionText: "View Application",
+          priority: "high",
+          metadata: { offerId: offer.id },
+        }).catch(err => console.error("[Notification] Failed to send Google account notification:", err));
+
+        void emitTrigger({
+          type: "offer_accepted",
+          data: {
+            applicationId: offer.applicationId,
+            candidateName,
+            position,
+            startDate: offer.startDate,
+            managerId: offer.createdBy,
+          },
+          context: { timestamp: new Date() },
+        }).catch(err => console.error("[Trigger] offer_accepted failed:", err));
       }
 
       res.json({ success: true, message: "Agreement signed successfully." });

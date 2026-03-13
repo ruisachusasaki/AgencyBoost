@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   ArrowLeft, 
   Star, 
@@ -24,11 +25,13 @@ import {
   Send,
   Eye,
   UserPlus,
-  X
+  X,
+  PartyPopper
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { JobApplication, JobApplicationComment } from "@shared/schema";
 import { LinkifyText } from "@/components/ui/linkify-text";
+import { useToast } from "@/hooks/use-toast";
 import SendOfferModal from "@/components/applications/SendOfferModal";
 import OfferStatusPanel from "@/components/applications/OfferStatusPanel";
 
@@ -43,6 +46,8 @@ export default function ApplicantDetailPage() {
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [isWatcherPopoverOpen, setIsWatcherPopoverOpen] = useState(false);
   const [showSendOfferModal, setShowSendOfferModal] = useState(false);
+  const [showHiredConfirm, setShowHiredConfirm] = useState(false);
+  const { toast } = useToast();
 
   // Fetch applicant details
   const { data: application, isLoading, error } = useQuery<JobApplication>({
@@ -160,7 +165,24 @@ export default function ApplicantDetailPage() {
       setShowSendOfferModal(true);
       return;
     }
+    if (stage === "hired") {
+      setShowHiredConfirm(true);
+      return;
+    }
     await updateApplicationMutation.mutateAsync({ stage });
+  };
+
+  const confirmHired = async () => {
+    try {
+      await updateApplicationMutation.mutateAsync({ stage: "hired" });
+      toast({
+        title: `${application?.applicantName || "Applicant"} has been marked as hired. Welcome email sent!`,
+      });
+    } catch {
+      toast({ title: "Failed to update status", variant: "destructive" });
+    } finally {
+      setShowHiredConfirm(false);
+    }
   };
 
   const handleRatingUpdate = async (rating: number) => {
@@ -235,22 +257,24 @@ export default function ApplicantDetailPage() {
   );
 
   const getStatusBadgeColor = (stage: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       new: "bg-blue-100 text-blue-800",
       review: "bg-yellow-100 text-yellow-800",
       interview: "bg-purple-100 text-purple-800",
       not_selected: "bg-red-100 text-red-800",
       test_sent: "bg-orange-100 text-orange-800",
-      send_offer: "bg-green-100 text-green-800",
-      offer_sent: "bg-green-200 text-green-900",
-      offer_accepted: "bg-green-500 text-white",
-      offer_rejected: "bg-red-500 text-white"
+      send_offer: "bg-yellow-100 text-yellow-800",
+      offer_sent: "bg-yellow-100 text-yellow-800",
+      offer_accepted: "bg-[hsl(179,100%,39%)]/15 text-[hsl(179,100%,30%)]",
+      offer_declined: "bg-red-100 text-red-800",
+      offer_rejected: "bg-red-500 text-white",
+      hired: "bg-green-500 text-white",
     };
-    return colors[stage as keyof typeof colors] || "bg-gray-100 text-gray-800";
+    return colors[stage] || "bg-gray-100 text-gray-800";
   };
 
   const formatStatusLabel = (stage: string) => {
-    const labels = {
+    const labels: Record<string, string> = {
       new: "New",
       review: "Review",
       interview: "Interview",
@@ -258,10 +282,12 @@ export default function ApplicantDetailPage() {
       test_sent: "Test Sent",
       send_offer: "Send Offer",
       offer_sent: "Offer Sent",
-      offer_accepted: "Offer Accepted",
-      offer_rejected: "Offer Rejected"
+      offer_accepted: "Offer Accepted \u2713",
+      offer_declined: "Offer Declined",
+      offer_rejected: "Offer Rejected",
+      hired: "Hired \uD83C\uDF89",
     };
-    return labels[stage as keyof typeof labels] || stage;
+    return labels[stage] || stage;
   };
 
   if (isLoading) {
@@ -566,22 +592,29 @@ export default function ApplicantDetailPage() {
               <CardContent className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
-                  <Select value={application?.stage || 'new'} onValueChange={handleStatusUpdate}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="new">New</SelectItem>
-                      <SelectItem value="review">Review</SelectItem>
-                      <SelectItem value="interview">Interview</SelectItem>
-                      <SelectItem value="not_selected">Not Selected</SelectItem>
-                      <SelectItem value="test_sent">Test Sent</SelectItem>
-                      <SelectItem value="send_offer">Send Offer</SelectItem>
-                      <SelectItem value="offer_sent">Offer Sent</SelectItem>
-                      <SelectItem value="offer_accepted">Offer Accepted</SelectItem>
-                      <SelectItem value="offer_declined">Offer Declined</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {application?.stage === "hired" ? (
+                    <Badge className="bg-green-500 text-white text-base px-4 py-2 flex items-center gap-2">
+                      <PartyPopper className="h-4 w-4" /> Hired
+                    </Badge>
+                  ) : (
+                    <Select value={application?.stage || 'new'} onValueChange={handleStatusUpdate}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="review">Review</SelectItem>
+                        <SelectItem value="interview">Interview</SelectItem>
+                        <SelectItem value="not_selected">Not Selected</SelectItem>
+                        <SelectItem value="test_sent">Test Sent</SelectItem>
+                        <SelectItem value="send_offer">Send Offer</SelectItem>
+                        <SelectItem value="offer_sent">Offer Sent</SelectItem>
+                        <SelectItem value="offer_accepted">Offer Accepted</SelectItem>
+                        <SelectItem value="offer_declined">Offer Declined</SelectItem>
+                        <SelectItem value="hired">Hired</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 <div>
@@ -823,6 +856,27 @@ export default function ApplicantDetailPage() {
           }}
         />
       )}
+
+      <Dialog open={showHiredConfirm} onOpenChange={setShowHiredConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark {application?.applicantName || "this applicant"} as Hired?</DialogTitle>
+            <DialogDescription>
+              This will trigger a welcome email to the new hire and notify your team. Make sure their AgencyBoost staff account has already been created with their work email address before proceeding.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setShowHiredConfirm(false)}>Cancel</Button>
+            <Button
+              onClick={confirmHired}
+              disabled={updateApplicationMutation.isPending}
+              className="bg-[hsl(179,100%,39%)] hover:bg-[hsl(179,100%,32%)] text-white"
+            >
+              {updateApplicationMutation.isPending ? "Updating..." : "Yes, Mark as Hired"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
