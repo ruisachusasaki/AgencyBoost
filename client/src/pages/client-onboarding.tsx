@@ -182,6 +182,9 @@ export default function ClientOnboarding() {
     successDescription: 'Thank you for completing your onboarding form.',
     ...(config.branding || {}),
   };
+  if (branding.logoUrl) {
+    branding.logoUrl = '/api/public/onboarding-logo';
+  }
 
   const primaryColor = branding.primaryColor || '#00C9C6';
   const totalSteps = steps.length;

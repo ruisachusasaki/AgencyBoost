@@ -11402,6 +11402,35 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
 
   // Object Storage endpoints for image uploads
 
+  app.get("/api/public/onboarding-logo", async (req, res) => {
+    try {
+      const [config] = await db.select()
+        .from(clientOnboardingFormConfig)
+        .orderBy(desc(clientOnboardingFormConfig.updatedAt))
+        .limit(1);
+      if (!config) {
+        return res.sendStatus(404);
+      }
+      const branding = (config as any).branding as any;
+      const logoUrl = branding?.logoUrl;
+      if (!logoUrl || typeof logoUrl !== 'string') {
+        return res.sendStatus(404);
+      }
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(logoUrl);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      await objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error serving onboarding logo:", error);
+      const { ObjectNotFoundError } = await import("./objectStorage");
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
   app.get("/objects/:objectPath(*)", requireAuth(), async (req, res) => {
     try {
       console.log("Serving object for path:", req.path);
