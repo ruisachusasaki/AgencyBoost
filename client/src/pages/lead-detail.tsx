@@ -112,18 +112,27 @@ export default function LeadDetail() {
   const convertToClientMutation = useMutation({
     mutationFn: async () => {
       if (!lead) throw new Error("Lead data not available");
-      const response = await apiRequest("POST", `/api/leads/${lead.id}/convert`);
-      return await response.json();
+      const response = await apiRequest("POST", `/api/leads/${lead.id}/convert`, { force: false });
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        console.error("Failed to parse conversion response:", text.substring(0, 200));
+        throw new Error("Server returned an unexpected response. Please try again.");
+      }
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/leads/${leadId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leads", leadId] });
 
       if (data.alreadyConverted) {
         toast({
           title: "Already converted",
           description: "This lead has already been converted to a client.",
         });
+        if (data.clientId) {
+          setLocation(`/clients/${data.clientId}`);
+        }
       } else {
         toast({
           title: "Lead converted to client",

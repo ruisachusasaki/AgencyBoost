@@ -12,6 +12,7 @@ import {
   leadPipelineStages,
   taskSettings,
   clientRecurringConfig,
+  staff,
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -23,6 +24,7 @@ interface ConversionResult {
   success: true;
   clientId: string;
   alreadyConverted: boolean;
+  quoteId?: string | null;
 }
 
 export async function convertLeadToClient(
@@ -30,6 +32,8 @@ export async function convertLeadToClient(
   triggeredBy: ConversionTrigger,
   options?: { quoteId?: string }
 ): Promise<ConversionResult> {
+  console.log(`[LeadConversion] Starting conversion for lead ${leadId} (trigger: ${triggeredBy})`);
+
   const [lead] = await db
     .select()
     .from(leads)
@@ -40,7 +44,10 @@ export async function convertLeadToClient(
     throw new Error(`Lead ${leadId} not found`);
   }
 
+  console.log(`[LeadConversion] Lead found: "${lead.name}" (email: ${lead.email}, assignedTo: ${lead.assignedTo}, isConverted: ${lead.isConverted}, clientId: ${lead.clientId})`);
+
   if (lead.isConverted && lead.clientId) {
+    console.log(`[LeadConversion] Path 1: Lead already converted → clientId=${lead.clientId}`);
     return { success: true, clientId: lead.clientId, alreadyConverted: true };
   }
 
@@ -51,6 +58,7 @@ export async function convertLeadToClient(
     .limit(1);
 
   if (existingClient.length > 0) {
+    console.log(`[LeadConversion] Path 2: Existing client found by email "${lead.email}" → clientId=${existingClient[0].id}, name="${existingClient[0].name}"`);
     await db
       .update(leads)
       .set({
@@ -65,7 +73,9 @@ export async function convertLeadToClient(
     return { success: true, clientId: existingClient[0].id, alreadyConverted: true };
   }
 
-  return await db.transaction(async (tx) => {
+  console.log(`[LeadConversion] Path 3: No existing client found, creating new client via transaction`);
+
+  const result = await db.transaction(async (tx) => {
     const [client] = await tx
       .insert(clients)
       .values({
@@ -83,6 +93,8 @@ export async function convertLeadToClient(
         createdAt: new Date(),
       })
       .returning();
+
+    console.log(`[LeadConversion] Client created: ${client.id} ("${client.name}")`);
 
     let quote = null;
     if (options?.quoteId) {
@@ -107,6 +119,8 @@ export async function convertLeadToClient(
       quote = acceptedQuotes.length > 0 ? acceptedQuotes[0] : null;
     }
 
+    console.log(`[LeadConversion] Quote lookup result: ${quote ? `found quote ${quote.id} (status: ${quote.status})` : 'no qualifying quote found'}`);
+
     if (quote) {
       if (quote.status !== "accepted") {
         await tx
@@ -127,22 +141,37 @@ export async function convertLeadToClient(
         .limit(1);
 
       if (existingDeal.length === 0) {
-        const dealValue = quote.totalCost || lead.value || "0";
-        const dealData = {
-          leadId: leadId,
-          clientId: client.id,
-          name: `${client.name || lead.name} - ${lead.company || "Deal"}`,
-          assignedTo: lead.assignedTo!,
-          value: dealValue,
-          mrr: "0",
-          wonDate: new Date(),
-          notes: `Deal created from quote #${quote.id}. Total value: $${dealValue}`,
-        };
+        let dealAssignedTo = lead.assignedTo;
+        if (!dealAssignedTo) {
+          const [firstStaff] = await tx
+            .select({ id: staff.id })
+            .from(staff)
+            .where(eq(staff.role, "admin"))
+            .limit(1);
+          dealAssignedTo = firstStaff?.id || null;
+          console.log(`[LeadConversion] Lead has no assignedTo, using fallback staff: ${dealAssignedTo}`);
+        }
 
-        await tx.insert(deals).values(dealData);
-        console.log(
-          `✅ [LeadConversion] Created deal for client ${client.id} from quote ${quote.id}`
-        );
+        if (dealAssignedTo) {
+          const dealValue = quote.totalCost || lead.value || "0";
+          const dealData = {
+            leadId: leadId,
+            clientId: client.id,
+            name: `${client.name || lead.name} - ${lead.company || "Deal"}`,
+            assignedTo: dealAssignedTo,
+            value: dealValue,
+            mrr: "0",
+            wonDate: new Date(),
+            notes: `Deal created from quote #${quote.id}. Total value: $${dealValue}`,
+          };
+
+          await tx.insert(deals).values(dealData);
+          console.log(
+            `✅ [LeadConversion] Created deal for client ${client.id} from quote ${quote.id}`
+          );
+        } else {
+          console.warn(`⚠️ [LeadConversion] Skipped deal creation: no assignedTo available for lead ${leadId}`);
+        }
       }
 
       const items = await tx
@@ -346,6 +375,8 @@ export async function convertLeadToClient(
     };
   });
 
+  console.log(`[LeadConversion] Transaction completed. clientId=${result.clientId}, alreadyConverted=${result.alreadyConverted}`);
+
   if (!result.alreadyConverted) {
     try {
       const [autoGenSetting] = await db
@@ -454,7 +485,11 @@ export async function convertLeadToClient(
               summary.errors
             );
           }
+        } else {
+          console.log(`[LeadConversion] No products/bundles/packages to generate tasks for`);
         }
+      } else {
+        console.log(`[LeadConversion] Auto task generation is disabled`);
       }
     } catch (taskGenError) {
       console.error(
@@ -464,5 +499,6 @@ export async function convertLeadToClient(
     }
   }
 
+  console.log(`[LeadConversion] Conversion complete. Returning clientId=${result.clientId}`);
   return { success: result.success, clientId: result.clientId, alreadyConverted: result.alreadyConverted };
 }

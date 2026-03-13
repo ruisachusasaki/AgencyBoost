@@ -3101,11 +3101,29 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
   app.post("/api/leads/:id/convert", requireAuth(), requirePermission('leads', 'canEdit'), async (req, res) => {
     try {
       const leadId = req.params.id;
+      const force = req.body?.force === true;
+
+      if (force) {
+        console.log(`[LeadConversion] Force mode: resetting conversion state for lead ${leadId}`);
+        await db
+          .update(leads)
+          .set({
+            isConverted: false,
+            convertedAt: null,
+            clientId: null,
+            convertedBy: null,
+          })
+          .where(eq(leads.id, leadId));
+      }
+
       const result = await convertLeadToClient(leadId, "manual");
+      console.log(`[LeadConversion] Route handler result:`, JSON.stringify(result));
       res.json(result);
     } catch (error) {
       console.error("Error converting lead to client:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error("Error stack:", errorStack);
       res.status(500).json({ message: "Failed to convert lead to client", error: errorMessage });
     }
   });
