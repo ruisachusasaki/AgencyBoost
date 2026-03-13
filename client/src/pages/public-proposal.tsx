@@ -152,6 +152,8 @@ export default function PublicProposal() {
   const [typedSignature, setTypedSignature] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"card" | "ach" | null>(null);
   const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
+  const [convertedClientId, setConvertedClientId] = useState<string | null>(null);
+  const [onboardingPollingDone, setOnboardingPollingDone] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -203,18 +205,24 @@ export default function PublicProposal() {
     if (currentStep === "complete" && token) {
       let attempts = 0;
       const maxAttempts = 5;
+      setOnboardingPollingDone(false);
       const fetchOnboardingUrl = () => {
         fetch(`/api/quotes/public/${token}/onboarding-url`)
           .then(res => res.json())
           .then(data => {
             if (data.onboardingUrl) {
               setOnboardingUrl(data.onboardingUrl);
+              setOnboardingPollingDone(true);
             } else if (attempts < maxAttempts) {
               attempts++;
               setTimeout(fetchOnboardingUrl, 3000);
+            } else {
+              setOnboardingPollingDone(true);
             }
           })
-          .catch(() => {});
+          .catch(() => {
+            setOnboardingPollingDone(true);
+          });
       };
       const timer = setTimeout(fetchOnboardingUrl, 2000);
       return () => clearTimeout(timer);
@@ -234,7 +242,10 @@ export default function PublicProposal() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      if (data?.clientId) {
+        setConvertedClientId(data.clientId);
+      }
       refetch();
       setCurrentStep("pay");
     },
@@ -1054,7 +1065,7 @@ export default function PublicProposal() {
               <CheckCircle className="h-5 w-5 text-green-500" />
               <span className="text-sm font-medium text-gray-700">Confirmation sent to {proposal?.signedByEmail || signerEmail}</span>
             </div>
-            {onboardingUrl && (
+            {onboardingUrl ? (
               <div className="mt-8">
                 <p className="text-gray-600 mb-3">One more step — please complete your onboarding form so we can get started right away.</p>
                 <a
@@ -1066,7 +1077,16 @@ export default function PublicProposal() {
                   <ChevronRight className="h-4 w-4" />
                 </a>
               </div>
-            )}
+            ) : !onboardingPollingDone && currentStep === "complete" ? (
+              <div className="mt-8">
+                <div className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium opacity-60 cursor-not-allowed"
+                  style={{ backgroundColor: brandColor || '#00C9C6' }}
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Setting up your account...
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </div>

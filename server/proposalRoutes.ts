@@ -7,6 +7,7 @@ import { z } from "zod";
 import { createPaymentIntent, createACHPaymentIntent, isStripeConfigured, constructWebhookEvent, getStripe, getOrCreateCustomer, createSubscription } from "./stripe";
 import { NotificationService } from "./notification-service";
 import { generateTasksFromTemplates } from "./taskGenerationEngine";
+import { convertLeadToClient } from "./services/leadConversionService";
 import PDFDocument from "pdfkit";
 import { ObjectStorageService } from "./objectStorage";
 
@@ -687,7 +688,18 @@ export function registerProposalRoutes(
         }
       })();
 
-      res.json({ success: true, proposal: { status: updated.status, signedAt: updated.signedAt } });
+      let conversionClientId: string | null = null;
+      if (quote.leadId) {
+        try {
+          const conversionResult = await convertLeadToClient(quote.leadId, "online_proposal", { quoteId: quote.id });
+          conversionClientId = conversionResult.clientId;
+          console.log(`✅ [ProposalSign] Auto-converted lead ${quote.leadId} → client ${conversionClientId} (alreadyConverted: ${conversionResult.alreadyConverted})`);
+        } catch (conversionError) {
+          console.error(`❌ [ProposalSign] Auto-conversion failed for lead ${quote.leadId}:`, conversionError);
+        }
+      }
+
+      res.json({ success: true, clientId: conversionClientId, proposal: { status: updated.status, signedAt: updated.signedAt } });
     } catch (error) {
       console.error("Error signing proposal:", error);
       res.status(500).json({ message: "Failed to sign proposal" });
