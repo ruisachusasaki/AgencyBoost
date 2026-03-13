@@ -564,9 +564,12 @@ export default function ClientOnboarding() {
                       {(fc.textContent || '').split('\n').map((line, i) => {
                         const trimmed = line.trim();
                         if (!trimmed) return <div key={i} className="h-2" />;
-                        if (trimmed.startsWith('### ')) return <h4 key={i} className="text-base font-semibold mt-3 mb-1">{trimmed.slice(4)}</h4>;
-                        if (trimmed.startsWith('## ')) return <h3 key={i} className="text-lg font-semibold mt-4 mb-1">{trimmed.slice(3)}</h3>;
-                        if (trimmed.startsWith('# ')) return <h2 key={i} className="text-xl font-bold mt-4 mb-2">{trimmed.slice(2)}</h2>;
+                        const h3Match = trimmed.match(/^###\s*(.+?)(?:\s*###)?$/);
+                        if (h3Match) return <h4 key={i} className="text-base font-semibold mt-3 mb-1">{h3Match[1]}</h4>;
+                        const h2Match = trimmed.match(/^##\s*(.+?)(?:\s*##)?$/);
+                        if (h2Match) return <h3 key={i} className="text-lg font-semibold mt-4 mb-1">{h2Match[1]}</h3>;
+                        const h1Match = trimmed.match(/^#\s*(.+?)(?:\s*#)?$/);
+                        if (h1Match) return <h2 key={i} className="text-xl font-bold mt-4 mb-2">{h1Match[1]}</h2>;
                         if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) return <li key={i} className="ml-4 list-disc text-sm text-gray-700">{formatInline(trimmed.slice(2))}</li>;
                         return <p key={i} className="text-sm text-gray-700 leading-relaxed">{formatInline(trimmed)}</p>;
                       })}
