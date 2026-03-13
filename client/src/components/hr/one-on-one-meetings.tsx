@@ -1737,7 +1737,7 @@ function MeetingEditor({
     }
   };
 
-  const isReadOnly = viewMode === "my-meetings";
+  const isReadOnly = false;
 
   // Show loading state while fetching user data in "My 1v1 Meetings" view
   if (isLoadingUserData) {
@@ -1796,7 +1796,7 @@ function MeetingEditor({
           data-testid="button-back-to-meetings"
         >
           <ChevronLeft className="h-4 w-4 mr-2" />
-          {isReadOnly ? "Back to My Meetings" : "Back to Meetings"}
+          {viewMode === "my-meetings" ? "Back to My Meetings" : "Back to Meetings"}
         </Button>
         {!isReadOnly && (
           <div className="flex items-center gap-2">

@@ -1097,11 +1097,9 @@ export default function PxMeetings({ meetingId }: PxMeetingsProps) {
                 Auto-saving...
               </span>
             )}
-            {hasUnsavedChanges && (
-              <Button onClick={handleUpdate} disabled={updateMutation.isPending} className="bg-primary hover:bg-primary/90">
-                {updateMutation.isPending ? "Saving..." : "Save Meeting"}
-              </Button>
-            )}
+            <Button onClick={handleUpdate} disabled={updateMutation.isPending} className="bg-primary hover:bg-primary/90">
+              {updateMutation.isPending ? "Saving..." : "Save Meeting"}
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm">
