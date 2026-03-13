@@ -219,8 +219,20 @@ export async function convertLeadToClient(
             .limit(1);
 
           if (existing.length === 0) {
-            const bundleCustomQtys = item.customQuantities as Record<string, number> | null;
-            console.log(`[LeadConversion] Inserting client bundle ${item.bundleId} with customQuantities: ${JSON.stringify(bundleCustomQtys)}`);
+            let bundleCustomQtys = item.customQuantities as Record<string, number> | null;
+            
+            const bps = await tx
+              .select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity })
+              .from(bundleProducts)
+              .where(eq(bundleProducts.bundleId, item.bundleId));
+            
+            const normalizedQtys: Record<string, number> = {};
+            for (const bp of bps) {
+              normalizedQtys[bp.productId] = bundleCustomQtys?.[bp.productId] ?? bp.quantity ?? 1;
+            }
+            bundleCustomQtys = Object.keys(normalizedQtys).length > 0 ? normalizedQtys : null;
+            console.log(`[LeadConversion] Inserting client bundle ${item.bundleId} with normalized customQuantities: ${JSON.stringify(bundleCustomQtys)}`);
+            
             await tx.insert(clientBundles).values({
               clientId: client.id,
               bundleId: item.bundleId,
@@ -287,8 +299,17 @@ export async function convertLeadToClient(
                   }
                 }
 
-                const finalBundleQtys = Object.keys(bundleProductQtys).length > 0 ? bundleProductQtys : null;
-                console.log(`[LeadConversion] Package bundle ${pkgItem.bundleId} extracted customQuantities: ${JSON.stringify(finalBundleQtys)}`);
+                const bpsAll = await tx
+                  .select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity })
+                  .from(bundleProducts)
+                  .where(eq(bundleProducts.bundleId, pkgItem.bundleId));
+                
+                const normalizedBundleQtys: Record<string, number> = {};
+                for (const bp of bpsAll) {
+                  normalizedBundleQtys[bp.productId] = bundleProductQtys[bp.productId] ?? bp.quantity ?? 1;
+                }
+                const finalBundleQtys: Record<string, number> | null = Object.keys(normalizedBundleQtys).length > 0 ? normalizedBundleQtys : null;
+                console.log(`[LeadConversion] Package bundle ${pkgItem.bundleId} normalized customQuantities: ${JSON.stringify(finalBundleQtys)}`);
 
                 await tx.insert(clientBundles).values({
                   clientId: client.id,

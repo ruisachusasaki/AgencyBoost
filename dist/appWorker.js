@@ -1,4 +1,3 @@
-import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 var __defProp = Object.defineProperty;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
@@ -6092,8 +6091,14 @@ async function convertLeadToClient(leadId, triggeredBy, options) {
             )
           ).limit(1);
           if (existing.length === 0) {
-            const bundleCustomQtys = item.customQuantities;
-            console.log(`[LeadConversion] Inserting client bundle ${item.bundleId} with customQuantities: ${JSON.stringify(bundleCustomQtys)}`);
+            let bundleCustomQtys = item.customQuantities;
+            const bps = await tx.select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity }).from(bundleProducts).where(eq6(bundleProducts.bundleId, item.bundleId));
+            const normalizedQtys = {};
+            for (const bp of bps) {
+              normalizedQtys[bp.productId] = bundleCustomQtys?.[bp.productId] ?? bp.quantity ?? 1;
+            }
+            bundleCustomQtys = Object.keys(normalizedQtys).length > 0 ? normalizedQtys : null;
+            console.log(`[LeadConversion] Inserting client bundle ${item.bundleId} with normalized customQuantities: ${JSON.stringify(bundleCustomQtys)}`);
             await tx.insert(clientBundles).values({
               clientId: client.id,
               bundleId: item.bundleId,
@@ -6139,8 +6144,13 @@ async function convertLeadToClient(leadId, triggeredBy, options) {
                     bundleProductQtys[bp.productId] = Number(pkgCustomQtys[bp.productId]);
                   }
                 }
-                const finalBundleQtys = Object.keys(bundleProductQtys).length > 0 ? bundleProductQtys : null;
-                console.log(`[LeadConversion] Package bundle ${pkgItem.bundleId} extracted customQuantities: ${JSON.stringify(finalBundleQtys)}`);
+                const bpsAll = await tx.select({ productId: bundleProducts.productId, quantity: bundleProducts.quantity }).from(bundleProducts).where(eq6(bundleProducts.bundleId, pkgItem.bundleId));
+                const normalizedBundleQtys = {};
+                for (const bp of bpsAll) {
+                  normalizedBundleQtys[bp.productId] = bundleProductQtys[bp.productId] ?? bp.quantity ?? 1;
+                }
+                const finalBundleQtys = Object.keys(normalizedBundleQtys).length > 0 ? normalizedBundleQtys : null;
+                console.log(`[LeadConversion] Package bundle ${pkgItem.bundleId} normalized customQuantities: ${JSON.stringify(finalBundleQtys)}`);
                 await tx.insert(clientBundles).values({
                   clientId: client.id,
                   bundleId: pkgItem.bundleId,
@@ -52238,12 +52248,21 @@ ${appointment.description || ""}
               }
               itemIsOneTime = bundle.type === "one_time";
               const bundleProductsList = await tx.select({
+                productId: bundleProducts.productId,
+                baseQuantity: bundleProducts.quantity,
                 productCost: products.cost
               }).from(bundleProducts).leftJoin(products, eq20(bundleProducts.productId, products.id)).where(eq20(bundleProducts.bundleId, item.bundleId));
+              const clientCustomQtys = item.customQuantities || {};
+              let completeCustomQuantities = {};
               const bundleCost = bundleProductsList.reduce((sum, bp) => {
                 const cost = parseFloat(bp.productCost || "0");
-                return sum + cost;
+                const qty = clientCustomQtys[bp.productId] ?? bp.baseQuantity ?? 1;
+                if (bp.productId) {
+                  completeCustomQuantities[bp.productId] = qty;
+                }
+                return sum + cost * qty;
               }, 0);
+              item.customQuantities = Object.keys(completeCustomQuantities).length > 0 ? completeCustomQuantities : null;
               unitCost = bundleCost;
             } else if (item.itemType === "package" && item.packageId) {
               const [pkg] = await tx.select({ id: productPackages.id, name: productPackages.name }).from(productPackages).where(eq20(productPackages.id, item.packageId)).limit(1);
@@ -52571,12 +52590,21 @@ ${appointment.description || ""}
             }
             itemIsOneTime = bundle.type === "one_time";
             const bundleProductsList = await tx.select({
+              productId: bundleProducts.productId,
+              baseQuantity: bundleProducts.quantity,
               productCost: products.cost
             }).from(bundleProducts).leftJoin(products, eq20(bundleProducts.productId, products.id)).where(eq20(bundleProducts.bundleId, item.bundleId));
+            const clientCustomQtys = item.customQuantities || {};
+            let completeCustomQuantities = {};
             const bundleCost = bundleProductsList.reduce((sum, bp) => {
               const cost = parseFloat(bp.productCost || "0");
-              return sum + cost;
+              const qty = clientCustomQtys[bp.productId] ?? bp.baseQuantity ?? 1;
+              if (bp.productId) {
+                completeCustomQuantities[bp.productId] = qty;
+              }
+              return sum + cost * qty;
             }, 0);
+            item.customQuantities = Object.keys(completeCustomQuantities).length > 0 ? completeCustomQuantities : null;
             unitCost = bundleCost;
           } else if (item.itemType === "package" && item.packageId) {
             const [pkg] = await tx.select({ id: productPackages.id, buildFee: productPackages.buildFee }).from(productPackages).where(eq20(productPackages.id, item.packageId)).limit(1);

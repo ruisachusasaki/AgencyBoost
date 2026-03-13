@@ -37461,16 +37461,27 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
               
               const bundleProductsList = await tx
                 .select({
+                  productId: bundleProducts.productId,
+                  baseQuantity: bundleProducts.quantity,
                   productCost: products.cost,
                 })
                 .from(bundleProducts)
                 .leftJoin(products, eq(bundleProducts.productId, products.id))
                 .where(eq(bundleProducts.bundleId, item.bundleId));
               
+              const clientCustomQtys = (item.customQuantities || {}) as Record<string, number>;
+              let completeCustomQuantities: Record<string, number> = {};
+              
               const bundleCost = bundleProductsList.reduce((sum, bp) => {
                 const cost = parseFloat(bp.productCost || '0');
-                return sum + cost;
+                const qty = clientCustomQtys[bp.productId] ?? bp.baseQuantity ?? 1;
+                if (bp.productId) {
+                  completeCustomQuantities[bp.productId] = qty;
+                }
+                return sum + (cost * qty);
               }, 0);
+              
+              item.customQuantities = Object.keys(completeCustomQuantities).length > 0 ? completeCustomQuantities : null;
               
               unitCost = bundleCost;
             } else if (item.itemType === 'package' && item.packageId) {
@@ -37918,16 +37929,27 @@ export async function registerRoutes(app: Express, httpServer?: Server): Promise
             
             const bundleProductsList = await tx
               .select({
+                productId: bundleProducts.productId,
+                baseQuantity: bundleProducts.quantity,
                 productCost: products.cost,
               })
               .from(bundleProducts)
               .leftJoin(products, eq(bundleProducts.productId, products.id))
               .where(eq(bundleProducts.bundleId, item.bundleId));
             
+            const clientCustomQtys = (item.customQuantities || {}) as Record<string, number>;
+            let completeCustomQuantities: Record<string, number> = {};
+            
             const bundleCost = bundleProductsList.reduce((sum, bp) => {
               const cost = parseFloat(bp.productCost || '0');
-              return sum + cost;
+              const qty = clientCustomQtys[bp.productId] ?? bp.baseQuantity ?? 1;
+              if (bp.productId) {
+                completeCustomQuantities[bp.productId] = qty;
+              }
+              return sum + (cost * qty);
             }, 0);
+            
+            item.customQuantities = Object.keys(completeCustomQuantities).length > 0 ? completeCustomQuantities : null;
             
             unitCost = bundleCost;
           } else if (item.itemType === 'package' && item.packageId) {
